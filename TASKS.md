@@ -241,6 +241,430 @@
 | Suite | File | Tests |
 |-------|------|-------|
 | Core (Phase 1) | `tests/agent-shield.ts` | 39 |
-| Jupiter (Phase 2) | `tests/jupiter-integration.ts` | 9 |
+| Jupiter (Phase 2) | `tests/jupiter-integration.ts` | 8 |
 | Flash Trade (Phase 3) | `tests/flash-trade-integration.ts` | 9 |
-| **Total** | | **57** |
+| Wrapper SDK (Phase A) | `sdk/wrapper/tests/wrapper.test.ts` | 41 |
+| **Total** | | **97** |
+
+---
+
+## Phase A: Wrapper SDK (`@agent-shield/solana`) — THE WEDGE ✅
+
+> **Strategic pivot:** The vault-deposit model is the wrong entry point. Developers expect 3-line integrations, not PDA custody management. The wrapper is the OpenZeppelin play — importable security that makes the easy path the safe path. The vault program (Level 3) becomes the enterprise upgrade for agents managing serious capital.
+
+### Architecture: Three-Tier Security Model
+
+```
+┌──────────────────────────────────────────────────────┐
+│  LEVEL 1: Client-Side Wrapper (Zero Friction)         │
+│  shield(wallet, { maxSpend: '500 USDC/day' })         │
+│  - Intercepts signTransaction()                       │
+│  - Client-side policy enforcement                     │
+│  - Zero on-chain overhead, works with ANY wallet      │
+│  - 3 lines of code to integrate                       │
+├──────────────────────────────────────────────────────┤
+│  LEVEL 2: TEE-Backed Signing (Key Isolation)          │
+│  shield(wallet, { custody: 'turnkey' })               │
+│  - Keys held in TEE (Turnkey, Privy, Coinbase)        │
+│  - Policy enforcement at signing boundary             │
+│  - Agent code never touches private keys              │
+│  - Adapter pattern — bring your own custody provider  │
+├──────────────────────────────────────────────────────┤
+│  LEVEL 3: On-Chain Vault (Cryptographic Guarantees)   │
+│  shield.harden(wallet, { onChain: true })             │
+│  - PDA vault with on-chain PolicyConfig               │
+│  - Cannot be bypassed even by compromised software    │
+│  - Progressive upgrade from Level 1/2                 │
+│  - THE EXISTING PROGRAM — nothing wasted              │
+└──────────────────────────────────────────────────────┘
+```
+
+### A.1 Wrapper Package ✅
+- [x] Scaffold `sdk/wrapper/` with package.json (`@agent-shield/solana`), tsconfig
+- [x] Zero Anchor dependency — only `@solana/web3.js` and `@solana/spl-token`
+- [x] `@agent-shield/sdk` as optional peer dep (only for `harden()`)
+- [x] Added to root workspace, builds successfully
+
+### A.2 Core Implementation ✅
+- [x] `src/errors.ts` — `ShieldDeniedError` with violations array, `ShieldConfigError`
+- [x] `src/policies.ts` — `ShieldPolicies` config type, defaults, human-readable parsing ("500 USDC/day" → BigInt)
+- [x] `src/registry.ts` — 30+ known Solana protocol program IDs + 10 common token mints
+- [x] `src/inspector.ts` — Transaction deserialization, SPL Transfer/TransferChecked detection, program ID extraction
+- [x] `src/state.ts` — In-memory spending tracker with rolling windows + pluggable storage persistence
+- [x] `src/engine.ts` — Policy evaluation engine (spending caps, protocol allowlist, token allowlist, rate limiting, custom checks)
+- [x] `src/shield.ts` — `shield()` function wrapping any wallet with policy interception
+- [x] `src/harden.ts` — `shield.harden()` stub for on-chain vault upgrade (requires `@agent-shield/sdk`)
+- [x] `src/index.ts` — Clean barrel exports
+
+### A.3 Shield Features ✅
+- [x] Human-readable policy strings: `"500 USDC/day"`, `"10 SOL/hour"`
+- [x] Secure defaults with no config: 1000 USDC/day, 1000 USDT/day, 10 SOL/day, block unknown programs, 60 tx/hr rate limit
+- [x] Known protocol registry: Jupiter, Drift, Flash Trade, Raydium, Orca, Meteora, Kamino, Marginfi, Solend, Marinade, Jito
+- [x] System programs (Token, ATA, Compute Budget) always allowed
+- [x] Rolling 24h spend tracking with window-based expiry
+- [x] Cumulative spend enforcement across `signAllTransactions` batches
+- [x] Runtime policy updates via `updatePolicies()`
+- [x] State reset via `resetState()`
+- [x] `onDenied` / `onApproved` event callbacks
+- [x] Pluggable storage backend (auto-detects localStorage in browser, in-memory in Node.js)
+- [x] Custom policy check hook for extensibility
+
+### A.4 Tests ✅ (41 tests)
+- [x] `parseSpendLimit` — parses USDC/day, SOL/hour, fractional amounts, defaults, error cases
+- [x] Registry — protocol lookup, token lookup, system program detection
+- [x] `analyzeTransaction` — system instructions, SPL TransferChecked, unknown program detection
+- [x] `ShieldState` — rolling spend, rate limit counting, reset, storage persistence/reload
+- [x] `evaluatePolicy` — within/over cap, cumulative spend, unknown programs, allowlists, rate limits, token allowlists
+- [x] `shield()` — signs within policy, blocks over-limit, blocks unknown programs, allows Jupiter, cumulative tracking, onDenied callback, signAllTransactions batch enforcement, runtime policy updates, state reset, secure defaults, custom checks
+
+### A.5 TODO (Future) — _now tracked in later phases_
+- `harden()` → Phase G.1
+- Custody adapters → Phase G.2 (research) / Phase I.2 (implementation)
+- `shieldedFetch()` / x402 → Phase I.1
+- VersionedTransaction → Phase F.5
+- Publish `@agent-shield/solana` to npm → Phase 0.2
+
+---
+
+## Phase 0: Project Restructure
+
+> **Goal:** Migrate to pnpm workspaces, extract shared policy engine into `@agent-shield/core`, and set up CI. Foundation for all future phases.
+
+### 0.1 Package Manager Migration ✅
+- [x] Migrate yarn v1 → pnpm workspaces
+- [x] Configure `pnpm-workspace.yaml` with existing layout (`sdk/`, `plugins/`, `programs/`)
+- [x] Remove `yarn.lock`, generate `pnpm-lock.yaml`
+- [x] Shared `tsconfig.base.json` for all TypeScript packages
+- [x] Fix integration tests (sync with dual fee model: `developer_fee_rate`, `protocolTreasuryTokenAccount`, `.accountsPartial()`)
+- [x] **Gate: 97 tests passing (39 core + 8 Jupiter + 9 Flash Trade + 41 wrapper)**
+
+> **Ship 0.1 as its own PR before starting 0.2.** pnpm migration touches every lockfile and build script — keep the blast radius small and bisectable.
+
+### 0.2 Extract `@agent-shield/core`
+- [ ] Scaffold `sdk/core/` with package.json (`@agent-shield/core`), tsconfig
+- [ ] Zero Solana dependencies — pure TypeScript policy engine
+- [ ] Move from `sdk/wrapper/src/`: `engine.ts`, `policies.ts`, `state.ts`, `errors.ts`, `registry.ts`
+- [ ] `@agent-shield/solana` imports policy engine from `@agent-shield/core`
+- [ ] `@agent-shield/sdk` can optionally import shared types from `@agent-shield/core`
+- [ ] Update all internal imports and verify builds
+- [ ] Publish `@agent-shield/core` to npm (required before `@agent-shield/solana` can depend on it externally)
+- [ ] Publish `@agent-shield/solana` to npm (was never published — A.5 TODO)
+- [ ] **Gate: verify all 97 tests still pass before merging**
+
+> **Ship 0.2 as its own PR after 0.1 lands.** Core extraction rewrites every import path in the wrapper — don't combine with the pnpm migration.
+
+### 0.3 CI Pipeline
+- [ ] GitHub Actions workflow: build → lint → test per package
+- [ ] Matrix strategy for each workspace package
+- [ ] Cache pnpm dependencies
+- [ ] Run `cargo fmt --check` and `cargo clippy` for Rust
+- [ ] Run wrapper tests (no validator needed)
+- [ ] Run on-chain tests with `solana-test-validator`
+
+---
+
+## Phase B: Framework Plugins v2
+
+> **Goal:** Rewrite plugins to use `shield()` wrapper internally (Level 1 by default), add new framework support, and improve ShieldedWallet API.
+
+### B.1 Plugin Rewrites
+- [ ] Rewrite Solana Agent Kit plugin → `shield()` wrapper internally (Level 1 default)
+- [ ] Rewrite ElizaOS plugin → `shield()` wrapper internally (Level 1 default)
+- [ ] Optional vault upgrade path in both plugins (Level 3 when configured)
+
+### B.2 ShieldedWallet API Improvements
+- [ ] Add `pause()` / `resume()` to ShieldedWallet (temporary policy bypass for owner)
+- [ ] Add event emitter: `onDenied`, `onApproved`, `onPolicyUpdate`, `onPause`, `onResume`
+- [ ] Add `getSpendingSummary()` — current 24h spend, remaining budget, rate limit status
+- [ ] Tests for new ShieldedWallet features
+
+### B.3 Upstream PRs
+- [ ] Submit PR to Solana Agent Kit repo
+- [ ] Submit PR to ElizaOS repo
+
+---
+
+## Phase C: MCP Security Server
+
+> **Goal:** MCP server that lets any AI tool (Claude Desktop, Cursor, Copilot) manage vaults and enforce policies. Ship standalone mode first — proxy mode is a follow-up.
+
+### C.1 Standalone Mode (ship first)
+- [ ] Scaffold `packages/mcp/` with package.json (`@agent-shield/mcp`), tsconfig
+- [ ] MCP server entrypoint using `@modelcontextprotocol/sdk`
+- [ ] Tool: `shield_create_vault` — initialize vault with policy
+- [ ] Tool: `shield_deposit` / `shield_withdraw` — fund management
+- [ ] Tool: `shield_register_agent` — register agent key to vault
+- [ ] Tool: `shield_update_policy` — modify spending caps, whitelists
+- [ ] Tool: `shield_check_vault` — read vault state (read-only)
+- [ ] Tool: `shield_check_spending` — read 24h rolling spend (read-only)
+- [ ] Tool: `shield_execute_swap` — compose + send Jupiter swap through vault
+- [ ] Tool: `shield_open_position` / `shield_close_position` — Flash Trade perps through vault
+- [ ] Tool: `shield_revoke_agent` — kill switch
+- [ ] Tool: `shield_reactivate_vault` — unfreeze vault
+
+### C.2 MCP Resources
+- [ ] Resource: `shield://policy` — current policy configuration
+- [ ] Resource: `shield://spending` — live 24h spending state
+- [ ] Resource: `shield://activity` — recent transaction history
+
+### C.3 Packaging + Publish
+- [ ] JSON Schema input validation for all tools
+- [ ] Error handling: map `AgentShieldError` codes to human-readable MCP responses
+- [ ] README with Claude Desktop / Cursor configuration examples
+- [ ] Tests for standalone mode
+- [ ] Publish `@agent-shield/mcp` to npm
+
+### C.4 Proxy Mode (follow-up, after C.1-C.3 shipped)
+
+> **Ship standalone first.** Proxy mode (intercepting arbitrary MCP tool calls) is a harder problem with different security implications. The standalone MCP server alone is a strong differentiator.
+
+- [ ] Intercept MCP tool calls and enforce `@agent-shield/core` policies before forwarding
+- [ ] Policy config via env vars + JSON config file
+- [ ] Transparent to downstream MCP tools — no code changes required
+- [ ] Tests for proxy mode
+
+---
+
+## Phase F: Protocol Integrations
+
+> **Goal:** Expand DeFi protocol coverage. Drift and Jupiter Perps are the highest-priority gaps.
+
+### F.1 Drift Protocol Integration
+- [ ] Add `sdk/typescript/src/integrations/drift.ts`
+- [ ] Map Drift instructions: `place_perp_order`, `cancel_order`, `modify_order`, `close_position`
+- [ ] Compose: `[SetComputeBudget, ValidateAndAuthorize, DriftInstruction, FinalizeSession]`
+- [ ] Handle Drift account model (User, UserStats, PerpMarket, SpotMarket)
+- [ ] Leverage validation from PolicyConfig (`max_leverage_bps`)
+- [ ] Position tracking (increment/decrement `open_positions` on open/close)
+- [ ] Add `client.composeDriftOrder()` and `client.composeDriftClose()` to `AgentShieldClient`
+- [ ] Integration tests in `tests/drift-integration.ts`
+- [ ] Add Drift analyzer to wrapper registry (`sdk/wrapper/src/registry.ts`)
+
+### F.2 Jupiter Perps Integration
+- [ ] Add `sdk/typescript/src/integrations/jupiter-perps.ts`
+- [ ] Map Jupiter Perps instructions: `open_position`, `close_position`, `increase_size`, `decrease_size`
+- [ ] Compose: `[SetComputeBudget, ValidateAndAuthorize, JupiterPerpsInstruction, FinalizeSession]`
+- [ ] Reuse Jupiter account patterns from existing swap integration
+- [ ] Leverage validation from PolicyConfig (`max_leverage_bps`)
+- [ ] Position tracking (increment/decrement `open_positions` on open/close)
+- [ ] Add `client.composeJupiterPerpsOpen()` / `client.composeJupiterPerpsClose()` to `AgentShieldClient`
+- [ ] Integration tests in `tests/jupiter-perps-integration.ts`
+- [ ] Add Jupiter Perps analyzer to wrapper registry
+
+### F.3 GOAT SDK Plugin
+
+> **Moved from Phase B.** GOAT adoption is speculative — ship it in parallel with protocol work rather than blocking plugin rewrites.
+
+- [ ] Scaffold `plugins/goat-sdk/` with package.json (`@agent-shield/plugin-goat-sdk`)
+- [ ] Implement GOAT SDK plugin interface
+- [ ] Shield wrapper integration for all GOAT tools
+- [ ] Tests for GOAT SDK plugin
+- [ ] Submit PR to GOAT SDK repo
+
+### F.4 Plugin Updates
+- [ ] Update Solana Agent Kit plugin with Drift + Jupiter Perps tools
+- [ ] Update ElizaOS plugin with Drift + Jupiter Perps actions
+- [ ] Update GOAT SDK plugin with Drift + Jupiter Perps tools (if F.3 complete)
+
+### F.5 VersionedTransaction Support
+- [ ] Add VersionedTransaction with address lookup tables to `inspector.ts`
+- [ ] Required for Jupiter v6 routes and modern Solana DeFi protocols
+- [ ] Update wrapper `shield()` to handle both legacy and versioned transactions
+- [ ] Tests: versioned transaction inspection, ALT resolution
+
+---
+
+## Phase G: On-Chain Vault + Mainnet
+
+> **Goal:** Complete the Level 1 → Level 3 upgrade path, security hardening, formal audit, and mainnet deployment. TEE research runs in parallel with Phase F. Sequence: security review → audit → ops prep → mainnet.
+
+### G.0 LiteSVM Test Migration — _do before G.3 security review_
+
+> **Moved from Phase J.** Fast tests (target <30s vs ~2min) pay for themselves during security review and audit iteration. Every exploit test you write in G.3 runs 4x faster.
+
+- [ ] Replace `solana-test-validator` with LiteSVM for CI
+- [ ] Migrate all test suites (core, Jupiter, Flash Trade)
+- [ ] Target <30s full test suite
+- [ ] Keep validator-based tests as optional integration smoke tests
+
+### G.1 `harden()` Implementation
+- [ ] `harden()` full implementation — create vault, register agent, map wrapper policies to on-chain config
+- [ ] `shield.withVault()` auto-setup helper — Level 3 in one call
+- [ ] Level 1 → Level 3 migration helper — preserves spending history
+
+### G.2 TEE Adapter Research (Level 2) — _can run in parallel with Phase F_
+- [ ] Research Turnkey TEE signing integration
+- [ ] Research Privy embedded wallet TEE integration
+- [ ] Research Coinbase Agentic Wallet TEE integration
+- [ ] Define `CustodyAdapter` interface: `signTransaction(tx)`, `getPublicKey()`, `getNetwork()`
+- [ ] Prototype at least one adapter (Turnkey recommended — most developer-friendly)
+- [ ] Write research findings doc with recommendation for Phase I.2 full implementation
+
+### G.3 Security Review — _gates G.4_
+- [ ] Add exploit scenario tests:
+  - Session replay attacks
+  - Fee destination manipulation
+  - Spending cap bypass via token switching
+  - Concurrent session creation attempts
+  - Rent exemption edge cases
+- [ ] Static analysis: `cargo clippy` with all warnings as errors
+- [ ] Formal specification document covering all instructions and invariants
+- [ ] Document all PDA derivation paths and access control matrix
+- [ ] **Gate: all exploit tests pass and spec document reviewed before proceeding to G.4**
+
+### G.4 Security Audit — _blocked by G.3_
+- [ ] Submit program + spec document to audit firm (OtterSec / Neodyme)
+- [ ] Address findings (Critical/High within 48h, Medium within 1 week)
+- [ ] Re-deploy to devnet with fixes if needed
+- [ ] Publish audit report to GitHub
+- [ ] **Gate: all Critical/High findings resolved before proceeding to G.5**
+
+### G.5 Pre-Mainnet Operations & Publishing — _start during G.4, ship after audit resolves_
+
+> **Start this work while the audit is in progress.** These items don't depend on audit results — build them in parallel. But don't ship mainnet (G.6) until both G.4 and G.5 are complete.
+
+- [ ] Define versioning strategy for `@agent-shield/core` (semver, what constitutes breaking)
+- [ ] npm publish workflow in CI (automated on tag push)
+- [ ] Migration guide for existing `@agent-shield/solana` users when wrapper imports change after core extraction
+- [ ] Monitoring/alerting for mainnet program (Helius webhooks + PagerDuty/Discord alerts)
+- [ ] Runbook: incident response for mainnet issues (freeze program, emergency upgrade)
+- [ ] Program upgrade authority management (document who holds it, multisig plan)
+- [ ] Examples repo or `examples/` directory with working integration samples
+- [ ] Changelog process (conventional commits → auto-generated CHANGELOG.md)
+
+### G.6 Mainnet Deployment — _blocked by G.4 + G.5_
+- [ ] Audit all hardcoded devnet references in SDK, plugins, and tests
+- [ ] Add `MAINNET_PROGRAM_ID` constant alongside existing devnet ID
+- [ ] Network-aware program ID selection in `AgentShieldClient` constructor
+- [ ] Deploy program to mainnet-beta (retain upgrade authority until stable)
+- [ ] Upload IDL to mainnet
+- [ ] Verify program on Solana Explorer / Solana.fm
+- [ ] Set up Helius RPC for mainnet (Professional tier)
+- [ ] Update and republish all npm packages with mainnet support
+- [ ] Add audit badge to README
+
+---
+
+## Phase I: x402 + Identity + Reputation
+
+> **Goal:** Integrate x402 payments, custody adapters, cross-chain identity (ERC-8004), and on-chain reputation scoring.
+
+### I.1 x402 Detection + `shieldedFetch()`
+- [ ] Detect HTTP 402 responses with x402 V2 payment headers
+- [ ] `shieldedFetch()` — auto-pay x402 requests through shield policies
+- [ ] x402 payments tracked as `Swap`-type action (spending cap applies)
+- [ ] Works at Level 1 (wrapper) and Level 3 (vault)
+- [ ] Tests: x402 payment flow, policy enforcement, spending cap tracking
+
+### I.2 TEE / Custody Adapters (Level 2 Implementation) — _builds on G.2 research_
+
+> **Consolidates old I.2 + J.4.** The TEE providers (Turnkey, Privy, Coinbase) ARE the custody providers — one adapter per provider, not two separate phases.
+
+- [ ] Full Turnkey adapter: TEE signing + shield policy enforcement
+- [ ] Full Privy adapter: embedded wallet + shield policy enforcement
+- [ ] Full Coinbase adapter: agentic wallet + shield policy enforcement
+- [ ] Custody adapters are optional peer dependencies
+- [ ] Level 2 end-to-end tests with mock TEE signing
+- [ ] Tests: each adapter signs transactions through shield policies correctly
+
+### I.3 ERC-8004 Identity Bridge — _exploratory / research_
+
+> **High risk, high reward.** Cross-chain identity bridging via Wormhole Queries is genuinely hard and the ERC-8004 standard is still evolving. Treat as research — don't commit to shipping until feasibility is proven.
+
+- [ ] Research ERC-8004 spec status and Wormhole Queries Solana support
+- [ ] Prototype: read EVM identity attestation from Solana via Wormhole Queries
+- [ ] If feasible: map cross-chain identity to trust score for dynamic spending caps
+- [ ] Write findings doc — go/no-go decision before full implementation
+
+### I.4 Civic Pass Trust Score Adapter
+- [ ] Read Civic Gateway token state for on-chain identity verification
+- [ ] Define `TrustScoreProvider` interface for pluggable identity providers
+- [ ] Trust tiers: Unverified (1x), Basic (1.5x), Verified (2x), Established (3x)
+- [ ] Falls back to base cap if no trust score provided
+
+### I.5 On-Chain Reputation System — _requires program upgrade_
+
+> **This modifies the on-chain program.** Adding ReputationScore PDA and changing `finalize_session` requires a program upgrade on mainnet. Must include: devnet testing of upgraded program, security review of changes, and coordinated mainnet upgrade via retained upgrade authority.
+
+- [ ] New PDA account: `ReputationScore` with seeds `[b"reputation", vault]`
+  - `policy_compliant_days: u32` — consecutive compliant days
+  - `total_transactions_compliant: u64`
+  - `total_transactions_denied: u64`
+  - `compliance_ratio: u16` — BPS (e.g., 9950 = 99.5%)
+  - `reputation_tier: u8` — 0=New, 1=Established, 2=Trusted, 3=Exemplary
+- [ ] Update `finalize_session` to increment compliant transaction count
+- [ ] Daily crank instruction: `update_reputation`
+- [ ] Dynamic spending cap multipliers based on reputation tier
+- [ ] SDK: `client.getReputationScore(vault)` + dashboard badge
+- [ ] Tests: score accumulation, tier progression, compliance ratio
+
+---
+
+## Phase J: Scale & Advanced Features
+
+> **Goal:** Long-term features that unlock enterprise adoption and deeper protocol composability. Audit and LiteSVM now happen in Phase G (before mainnet). TEE adapters consolidated into Phase I.2.
+
+### J.1 Multi-sig Vault Support (Squads)
+- [ ] Replace single `owner: Pubkey` with Squads V4 multisig support
+- [ ] Policy changes require N-of-M signatures
+- [ ] Emergency kill switch can be single-sig (configurable threshold)
+- [ ] Integration with Squads SDK for proposal creation
+- [ ] Tests: multi-sig policy updates, emergency revoke
+
+### J.2 Time-locked Policy Changes
+- [ ] Add `policy_change_delay` field to vault (e.g., 24h timelock)
+- [ ] `propose_policy_change` instruction — queues change with timestamp
+- [ ] `execute_policy_change` instruction — executes after delay expires
+- [ ] Prevents rug-pull scenarios where owner suddenly removes all limits
+- [ ] Tests: timelock creation, execution, cancellation
+
+### J.3 Protocol Partnerships
+- [ ] Partner with Drift for native AgentShield integration
+- [ ] Partner with Jupiter for perps integration
+- [ ] Partner with Squads for multi-sig vault support
+- [ ] Co-marketing with custody providers (Turnkey, Privy, Coinbase)
+
+---
+
+## Implementation Critical Path
+
+```
+Phase A (wrapper SDK) ✅
+    ↓
+Phase 0.1 (pnpm) → Phase 0.2 (core + publish) → Phase 0.3 (CI)
+    ↓
+┌───────────────┬──────────────────┬──────────────────────┐
+│               │                  │                      │
+Phase B         Phase C.1-C.3     Phase F                 Phase G.2
+(plugins v2)   (MCP standalone)   (Drift + Jup Perps     (TEE research)
+│               │                  + GOAT + VersionedTx)  │
+└───────────────┴──────────────────┴──────────────────────┘
+                    ↓                                      │
+              Phase G.0 (LiteSVM — fast tests)             │
+                    ↓                                      │
+              Phase G.1 (harden)                           │
+                    ↓                                      │
+              Phase G.3 (security review) ←────────────────┘
+                    ↓ gates
+              Phase G.4 (security audit)
+                ↓ parallel ↓
+              Phase G.5 (ops, publishing, DX)
+                    ↓ both complete
+              Phase G.6 (mainnet deploy, audited ✓)
+                    ↓
+         ┌──────────┴──────────┐
+         │                     │
+    Phase C.4              Phase I
+    (MCP proxy)            (x402 + TEE adapters +
+         │                  identity + reputation)
+         │                     │
+         └──────────┬──────────┘
+                    ↓
+              Phase J (squads + timelocks + partnerships)
+```
+
+**What was folded or dropped:**
+- Pre-flight validation (old 6.2) → already built into `shield()` wrapper
+- SDK DX improvements (old 6.4) → already built into wrapper error handling
+- @solana/kit compatibility (old 8.2) → migrate when Anchor migrates, no shim needed
+- Cauldron/Frostbite (old 9.3) → too speculative, revisit when Cauldron ships

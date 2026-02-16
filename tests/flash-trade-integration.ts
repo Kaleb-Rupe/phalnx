@@ -6,6 +6,7 @@ import {
   PublicKey,
   SystemProgram,
   LAMPORTS_PER_SOL,
+  Transaction,
   TransactionInstruction,
   TransactionMessage,
   VersionedTransaction,
@@ -17,6 +18,8 @@ import {
   createMint,
   createAssociatedTokenAccount,
   mintTo,
+  getAssociatedTokenAddressSync,
+  createAssociatedTokenAccountIdempotentInstruction,
 } from "@solana/spl-token";
 import { expect } from "chai";
 import BN from "bn.js";
@@ -51,6 +54,11 @@ describe("flash-trade-integration", () => {
   const feeDestination = Keypair.generate();
 
   let usdcMint: PublicKey;
+
+  // Protocol treasury (must match hardcoded constant in program)
+  const protocolTreasury = new PublicKey("ASHie1dFTnDSnrHMPGmniJhMgfJVGPm3rAaEPnrtWDiT");
+  let protocolTreasuryUsdcAta: PublicKey;
+  let vaultUsdcAta: PublicKey;
 
   // Use Flash Trade program ID as the allowed protocol
   const flashProtocol = FLASH_TRADE_PROGRAM_ID;
@@ -105,32 +113,33 @@ describe("flash-trade-integration", () => {
         targetProtocol,
         leverageBps
       )
-      .accounts({
+      .accountsPartial({
         agent: agentKp.publicKey,
         vault,
         policy,
         tracker,
         session,
         systemProgram: SystemProgram.programId,
-      } as any)
+      })
       .instruction();
 
     const mockDefiIx = createMockDefiInstruction(agentKp.publicKey);
 
     const finalizeIx = await program.methods
       .finalizeSession(success)
-      .accounts({
+      .accountsPartial({
         payer: agentKp.publicKey,
         vault,
         policy,
         tracker,
         session,
         sessionRentRecipient: agentKp.publicKey,
-        vaultTokenAccount: null,
+        vaultTokenAccount: vaultUsdcAta,
         feeDestinationTokenAccount: null,
+        protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
-      } as any)
+      })
       .instruction();
 
     const { blockhash, lastValidBlockHeight } =
@@ -184,6 +193,22 @@ describe("flash-trade-integration", () => {
       6
     );
 
+    // Create protocol treasury ATA (needed for fee transfers)
+    // Protocol treasury is an off-curve address, so we need allowOwnerOffCurve=true
+    protocolTreasuryUsdcAta = getAssociatedTokenAddressSync(
+      usdcMint,
+      protocolTreasury,
+      true, // allowOwnerOffCurve
+    );
+    const createAtaIx = createAssociatedTokenAccountIdempotentInstruction(
+      (owner as any).payer.publicKey,
+      protocolTreasuryUsdcAta,
+      protocolTreasury,
+      usdcMint,
+    );
+    const ataTx = new Transaction().add(createAtaIx);
+    await provider.sendAndConfirm(ataTx);
+
     // Derive PDAs
     [vaultPda] = PublicKey.findProgramAddressSync(
       [
@@ -202,6 +227,9 @@ describe("flash-trade-integration", () => {
       program.programId
     );
 
+    // Derive vault ATA
+    vaultUsdcAta = getAssociatedTokenAddressSync(usdcMint, vaultPda, true);
+
     // Initialize vault with perp-friendly policy:
     //   daily cap = 1000 USDC
     //   max tx = 500 USDC
@@ -216,25 +244,56 @@ describe("flash-trade-integration", () => {
         [usdcMint],
         [flashProtocol],
         10000, // max leverage: 100x (10000 bps)
-        3      // max concurrent positions
+        3,     // max concurrent positions
+        0      // developer fee rate
       )
-      .accounts({
+      .accountsPartial({
         owner: owner.publicKey,
         vault: vaultPda,
         policy: policyPda,
         tracker: trackerPda,
         feeDestination: feeDestination.publicKey,
         systemProgram: SystemProgram.programId,
-      } as any)
+      })
       .rpc();
 
     // Register agent
     await program.methods
       .registerAgent(agent.publicKey)
-      .accounts({
+      .accountsPartial({
         owner: owner.publicKey,
         vault: vaultPda,
-      } as any)
+      })
+      .rpc();
+
+    // Fund the vault with USDC (needed for protocol fee transfers)
+    const ownerUsdcAta = await createAssociatedTokenAccount(
+      connection,
+      (owner as any).payer,
+      usdcMint,
+      owner.publicKey
+    );
+    await mintTo(
+      connection,
+      (owner as any).payer,
+      usdcMint,
+      ownerUsdcAta,
+      owner.publicKey,
+      2_000_000_000 // 2000 USDC
+    );
+
+    await program.methods
+      .depositFunds(new BN(1_000_000_000)) // 1000 USDC
+      .accountsPartial({
+        owner: owner.publicKey,
+        vault: vaultPda,
+        mint: usdcMint,
+        ownerTokenAccount: ownerUsdcAta,
+        vaultTokenAccount: vaultUsdcAta,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
       .rpc();
   });
 
@@ -468,27 +527,28 @@ describe("flash-trade-integration", () => {
           [usdcMint],
           [flashProtocol],
           10000,
-          3
+          3,
+          0 // developer fee rate
         )
-        .accounts({
+        .accountsPartial({
           owner: owner.publicKey,
           vault: frozenVault,
           policy: frozenPolicy,
           tracker: frozenTracker,
           feeDestination: feeDestination.publicKey,
           systemProgram: SystemProgram.programId,
-        } as any)
+        })
         .rpc();
 
       await program.methods
         .registerAgent(agent.publicKey)
-        .accounts({ owner: owner.publicKey, vault: frozenVault } as any)
+        .accountsPartial({ owner: owner.publicKey, vault: frozenVault })
         .rpc();
 
       // Freeze vault
       const revokeSig = await program.methods
         .revokeAgent()
-        .accounts({ owner: owner.publicKey, vault: frozenVault } as any)
+        .accountsPartial({ owner: owner.publicKey, vault: frozenVault })
         .rpc();
       await connection.confirmTransaction(revokeSig, "confirmed");
     });
@@ -509,7 +569,13 @@ describe("flash-trade-integration", () => {
         expect.fail("Should have thrown");
       } catch (err: any) {
         if (err.message === "Should have thrown") throw err;
-        expect(err.message || err.toString()).to.include("VaultNotActive");
+        // revokeAgent clears the agent key, so the constraint check fails
+        // with UnauthorizedAgent before the handler's VaultNotActive check
+        const msg = err.message || err.toString();
+        expect(msg).to.satisfy(
+          (s: string) => s.includes("VaultNotActive") || s.includes("UnauthorizedAgent"),
+          "Expected VaultNotActive or UnauthorizedAgent"
+        );
       }
     });
   });
@@ -549,21 +615,22 @@ describe("flash-trade-integration", () => {
           [usdcMint],
           [flashProtocol],
           10000,
-          3
+          3,
+          0 // developer fee rate
         )
-        .accounts({
+        .accountsPartial({
           owner: owner.publicKey,
           vault: disabledVault,
           policy: disabledPolicy,
           tracker: disabledTracker,
           feeDestination: feeDestination.publicKey,
           systemProgram: SystemProgram.programId,
-        } as any)
+        })
         .rpc();
 
       await program.methods
         .registerAgent(agent.publicKey)
-        .accounts({ owner: owner.publicKey, vault: disabledVault } as any)
+        .accountsPartial({ owner: owner.publicKey, vault: disabledVault })
         .rpc();
 
       // Disable position opening
@@ -575,13 +642,14 @@ describe("flash-trade-integration", () => {
           null, // allowedProtocols
           null, // maxLeverageBps
           false, // canOpenPositions = false
-          null  // maxConcurrentPositions
+          null,  // maxConcurrentPositions
+          null   // developerFeeRate
         )
-        .accounts({
+        .accountsPartial({
           owner: owner.publicKey,
           vault: disabledVault,
           policy: disabledPolicy,
-        } as any)
+        })
         .rpc();
 
       // Wait for confirmation and verify update took effect
