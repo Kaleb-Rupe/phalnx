@@ -1,3 +1,4 @@
+import * as path from "path";
 import { LiteSVM, Clock } from "litesvm";
 import { fromWorkspace, LiteSVMProvider } from "anchor-litesvm";
 import * as anchor from "@coral-xyz/anchor";
@@ -24,6 +25,9 @@ import {
 
 const IDL = require("../../target/idl/agent_shield.json");
 
+// Resolve workspace root relative to this file (tests/helpers/ → project root)
+const WORKSPACE_ROOT = path.resolve(__dirname, "../..");
+
 /**
  * Create and return a fully configured LiteSVM test environment.
  * Loads the program from the workspace and sets up a provider + program.
@@ -33,9 +37,7 @@ export function createTestEnv(): {
   provider: LiteSVMProvider;
   program: Program<AgentShield>;
 } {
-  const svm = fromWorkspace(
-    "/Users/kalebrupe/Downloads/Middleware-Agent-Layer/agent-middleware"
-  );
+  const svm = fromWorkspace(WORKSPACE_ROOT);
   // Disable transaction history to allow duplicate transaction patterns
   // (authorize+finalize cycles reuse same session PDA)
   svm.withTransactionHistory(BigInt(0));
