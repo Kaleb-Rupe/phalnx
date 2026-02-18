@@ -89,11 +89,11 @@ describe("ElizaOS Plugin", () => {
       expect(config.walletPrivateKey).to.be.a("string");
     });
 
-    it("throws if wallet private key is missing", () => {
+    it("throws if wallet private key is missing and no custody provider", () => {
       const runtime = {
         getSetting: () => null,
       };
-      expect(() => getConfig(runtime)).to.throw("missing required setting");
+      expect(() => getConfig(runtime)).to.throw();
     });
 
     it("defaults blockUnknown to true", () => {
@@ -114,9 +114,9 @@ describe("ElizaOS Plugin", () => {
   });
 
   describe("getOrCreateShieldedWallet", () => {
-    it("creates a shielded wallet from runtime settings", () => {
+    it("creates a shielded wallet from runtime settings", async () => {
       const { runtime } = createMockRuntime();
-      const { wallet, publicKey } = getOrCreateShieldedWallet(runtime);
+      const { wallet, publicKey } = await getOrCreateShieldedWallet(runtime);
 
       expect(wallet).to.have.property("isPaused");
       expect(wallet).to.have.property("signTransaction");
@@ -124,18 +124,18 @@ describe("ElizaOS Plugin", () => {
       expect(publicKey).to.exist;
     });
 
-    it("caches wallet per runtime instance", () => {
+    it("caches wallet per runtime instance", async () => {
       const { runtime } = createMockRuntime();
-      const result1 = getOrCreateShieldedWallet(runtime);
-      const result2 = getOrCreateShieldedWallet(runtime);
+      const result1 = await getOrCreateShieldedWallet(runtime);
+      const result2 = await getOrCreateShieldedWallet(runtime);
       expect(result1.wallet).to.equal(result2.wallet);
     });
 
-    it("creates different wallets for different runtimes", () => {
+    it("creates different wallets for different runtimes", async () => {
       const { runtime: rt1 } = createMockRuntime();
       const { runtime: rt2 } = createMockRuntime();
-      const w1 = getOrCreateShieldedWallet(rt1);
-      const w2 = getOrCreateShieldedWallet(rt2);
+      const w1 = await getOrCreateShieldedWallet(rt1);
+      const w2 = await getOrCreateShieldedWallet(rt2);
       expect(w1.wallet).to.not.equal(w2.wallet);
     });
   });
@@ -232,13 +232,13 @@ describe("ElizaOS Plugin", () => {
       expect(responses).to.have.length(1);
       expect(responses[0].text).to.include("paused");
 
-      const { wallet } = getOrCreateShieldedWallet(runtime);
+      const { wallet } = await getOrCreateShieldedWallet(runtime);
       expect(wallet.isPaused).to.be.true;
     });
 
     it("resumes enforcement", async () => {
       const { runtime } = createMockRuntime();
-      const { wallet } = getOrCreateShieldedWallet(runtime);
+      const { wallet } = await getOrCreateShieldedWallet(runtime);
       wallet.pause();
 
       const { responses, callback } = captureCallback();
@@ -310,7 +310,7 @@ describe("ElizaOS Plugin", () => {
       const { runtime } = createMockRuntime({
         AGENT_SHIELD_MAX_SPEND: "100 USDC/day",
       });
-      const { wallet } = getOrCreateShieldedWallet(runtime);
+      const { wallet } = await getOrCreateShieldedWallet(runtime);
 
       // Manually record 80% spending via the state
       const usdcMint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
@@ -326,7 +326,7 @@ describe("ElizaOS Plugin", () => {
       const { runtime } = createMockRuntime({
         AGENT_SHIELD_MAX_SPEND: "100 USDC/day",
       });
-      const { wallet } = getOrCreateShieldedWallet(runtime);
+      const { wallet } = await getOrCreateShieldedWallet(runtime);
 
       const usdcMint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
       wallet.shieldState.recordSpend(usdcMint, BigInt(79_000_000)); // 79 USDC of 100 cap
@@ -337,9 +337,9 @@ describe("ElizaOS Plugin", () => {
   });
 
   describe("event callback wiring", () => {
-    it("logs events via runtime logger", () => {
+    it("logs events via runtime logger", async () => {
       const { runtime, logs } = createMockRuntime();
-      const { wallet } = getOrCreateShieldedWallet(runtime);
+      const { wallet } = await getOrCreateShieldedWallet(runtime);
 
       wallet.pause();
       const pauseLog = logs.find(

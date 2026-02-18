@@ -11,7 +11,7 @@ export const shieldStatusProvider = {
 
   get: async (runtime: any, _message: any, _state: any) => {
     try {
-      const { wallet, publicKey } = getOrCreateShieldedWallet(runtime);
+      const { wallet, publicKey } = await getOrCreateShieldedWallet(runtime);
 
       const paused = wallet.isPaused;
       const summary = wallet.getSpendingSummary();

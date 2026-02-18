@@ -6,7 +6,7 @@ import {
 } from "@solana/web3.js";
 import { shield } from "@agent-shield/solana";
 import type { ShieldedWallet, WalletLike } from "@agent-shield/solana";
-import { ENV_KEYS, AgentShieldElizaConfig } from "./types";
+import { ENV_KEYS, AgentShieldElizaConfig, CustodyProvider } from "./types";
 
 /** Minimal wallet wrapper around a Keypair (no Anchor dependency). */
 class KeypairWallet implements WalletLike {
@@ -33,22 +33,45 @@ const walletCache = new WeakMap<
 
 /**
  * Reads AgentShield config from ElizaOS runtime settings.
+ * Supports both raw keypair and TEE custody provider paths.
  */
 export function getConfig(runtime: any): AgentShieldElizaConfig {
-  const get = (key: string): string => {
-    const val = runtime.getSetting(key);
-    if (!val)
-      throw new Error(`AgentShield: missing required setting '${key}'`);
-    return val;
-  };
-
   const blockRaw = runtime.getSetting(ENV_KEYS.BLOCK_UNKNOWN);
   const blockUnknown = blockRaw !== "false";
+
+  const custodyRaw = runtime.getSetting(ENV_KEYS.CUSTODY_PROVIDER) as
+    | string
+    | null;
+  const custodyProvider = custodyRaw
+    ? (custodyRaw as CustodyProvider)
+    : undefined;
+
+  if (custodyProvider) {
+    // TEE custody path — no raw private key needed
+    return {
+      maxSpend: runtime.getSetting(ENV_KEYS.MAX_SPEND) || undefined,
+      blockUnknown,
+      custodyProvider,
+      crossmintApiKey:
+        runtime.getSetting(ENV_KEYS.CROSSMINT_API_KEY) || undefined,
+      crossmintLocator:
+        runtime.getSetting(ENV_KEYS.CROSSMINT_LOCATOR) || undefined,
+    };
+  }
+
+  // Legacy path — raw private key
+  const walletPrivateKey = runtime.getSetting(ENV_KEYS.WALLET_PRIVATE_KEY);
+  if (!walletPrivateKey) {
+    throw new Error(
+      `AgentShield: either set '${ENV_KEYS.CUSTODY_PROVIDER}' to a custody provider ` +
+        `(crossmint, turnkey, privy) or provide '${ENV_KEYS.WALLET_PRIVATE_KEY}'.`,
+    );
+  }
 
   return {
     maxSpend: runtime.getSetting(ENV_KEYS.MAX_SPEND) || undefined,
     blockUnknown,
-    walletPrivateKey: get(ENV_KEYS.WALLET_PRIVATE_KEY),
+    walletPrivateKey,
   };
 }
 
@@ -69,21 +92,85 @@ function parseKeypair(raw: string): Keypair {
 }
 
 /**
+ * Create a WalletLike from a TEE custody provider.
+ * Dynamically imports the provider adapter to avoid hard dependencies.
+ */
+async function createCustodyWallet(
+  config: AgentShieldElizaConfig,
+): Promise<WalletLike> {
+  switch (config.custodyProvider) {
+    case "crossmint": {
+      if (!config.crossmintApiKey) {
+        throw new Error(
+          `AgentShield: '${ENV_KEYS.CROSSMINT_API_KEY}' is required when ` +
+            `'${ENV_KEYS.CUSTODY_PROVIDER}' is set to 'crossmint'.`,
+        );
+      }
+      // Dynamic require to avoid hard dependency on custody adapter.
+      // The package is optional — only needed when AGENT_SHIELD_CUSTODY=crossmint.
+      let mod: any;
+      try {
+        mod = require("@agent-shield/custody-crossmint");
+      } catch {
+        throw new Error(
+          "AgentShield: @agent-shield/custody-crossmint is not installed. " +
+            "Run: npm install @agent-shield/custody-crossmint",
+        );
+      }
+      return mod.crossmint({
+        apiKey: config.crossmintApiKey,
+        locator: config.crossmintLocator,
+      });
+    }
+    case "turnkey":
+      throw new Error(
+        "AgentShield: Turnkey custody adapter is not yet available. " +
+          "Install @agent-shield/custody-turnkey when released.",
+      );
+    case "privy":
+      throw new Error(
+        "AgentShield: Privy custody adapter is not yet available. " +
+          "Install @agent-shield/custody-privy when released.",
+      );
+    default:
+      throw new Error(
+        `AgentShield: unknown custody provider '${config.custodyProvider}'. ` +
+          "Supported: crossmint, turnkey, privy.",
+      );
+  }
+}
+
+/**
  * Gets or creates a ShieldedWallet for the given ElizaOS runtime.
  * Cached per runtime instance via WeakMap.
+ *
+ * Supports two paths:
+ * 1. TEE custody: AGENT_SHIELD_CUSTODY=crossmint → uses Crossmint TEE adapter
+ * 2. Raw keypair: SOLANA_WALLET_PRIVATE_KEY → wraps local keypair (legacy)
  */
-export function getOrCreateShieldedWallet(runtime: any): {
+export async function getOrCreateShieldedWallet(runtime: any): Promise<{
   wallet: ShieldedWallet;
   publicKey: PublicKey;
-} {
+}> {
   const cached = walletCache.get(runtime);
   if (cached) return cached;
 
   const config = getConfig(runtime);
-  const keypair = parseKeypair(config.walletPrivateKey);
-  const innerWallet = new KeypairWallet(keypair);
-
   const logger = runtime.logger ?? console;
+
+  let innerWallet: WalletLike;
+
+  if (config.custodyProvider) {
+    // Level 2: TEE custody — private key never leaves the enclave
+    (logger.info ?? console.info)(
+      `[AgentShield] Using TEE custody provider: ${config.custodyProvider}`,
+    );
+    innerWallet = await createCustodyWallet(config);
+  } else {
+    // Legacy: raw keypair in memory
+    const keypair = parseKeypair(config.walletPrivateKey!);
+    innerWallet = new KeypairWallet(keypair);
+  }
 
   const shielded = shield(
     innerWallet,
@@ -116,7 +203,7 @@ export function getOrCreateShieldedWallet(runtime: any): {
     },
   );
 
-  const result = { wallet: shielded, publicKey: keypair.publicKey };
+  const result = { wallet: shielded, publicKey: innerWallet.publicKey };
   walletCache.set(runtime, result);
   return result;
 }

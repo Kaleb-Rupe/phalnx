@@ -15,7 +15,7 @@ export const updatePolicyAction = {
 
   validate: async (runtime: any, message: any): Promise<boolean> => {
     try {
-      getOrCreateShieldedWallet(runtime);
+      await getOrCreateShieldedWallet(runtime);
     } catch {
       return false;
     }
@@ -39,7 +39,7 @@ export const updatePolicyAction = {
     callback: (response: any) => void,
   ) => {
     try {
-      const { wallet } = getOrCreateShieldedWallet(runtime);
+      const { wallet } = await getOrCreateShieldedWallet(runtime);
       const params = message.content;
 
       const newPolicies: ShieldPolicies = {};

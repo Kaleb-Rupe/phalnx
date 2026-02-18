@@ -14,7 +14,7 @@ export const statusAction = {
 
   validate: async (runtime: any, message: any): Promise<boolean> => {
     try {
-      getOrCreateShieldedWallet(runtime);
+      await getOrCreateShieldedWallet(runtime);
     } catch {
       return false;
     }
@@ -38,7 +38,7 @@ export const statusAction = {
     callback: (response: any) => void,
   ) => {
     try {
-      const { wallet } = getOrCreateShieldedWallet(runtime);
+      const { wallet } = await getOrCreateShieldedWallet(runtime);
       const summary = wallet.getSpendingSummary();
 
       const lines = [

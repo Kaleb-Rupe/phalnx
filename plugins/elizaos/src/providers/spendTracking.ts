@@ -11,7 +11,7 @@ export const spendTrackingProvider = {
 
   get: async (runtime: any, _message: any, _state: any) => {
     try {
-      const { wallet } = getOrCreateShieldedWallet(runtime);
+      const { wallet } = await getOrCreateShieldedWallet(runtime);
       const summary = wallet.getSpendingSummary();
 
       const lines = [`AgentShield Spending:`];

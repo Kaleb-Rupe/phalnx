@@ -22,7 +22,7 @@ export const policyCheckEvaluator = {
 
   handler: async (runtime: any, _message: any) => {
     try {
-      const { wallet } = getOrCreateShieldedWallet(runtime);
+      const { wallet } = await getOrCreateShieldedWallet(runtime);
       const summary = wallet.getSpendingSummary();
 
       if (summary.isPaused) return null;

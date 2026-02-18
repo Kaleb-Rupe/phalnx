@@ -16,7 +16,7 @@ export const pauseResumeAction = {
 
   validate: async (runtime: any, message: any): Promise<boolean> => {
     try {
-      getOrCreateShieldedWallet(runtime);
+      await getOrCreateShieldedWallet(runtime);
     } catch {
       return false;
     }
@@ -41,7 +41,7 @@ export const pauseResumeAction = {
     callback: (response: any) => void,
   ) => {
     try {
-      const { wallet } = getOrCreateShieldedWallet(runtime);
+      const { wallet } = await getOrCreateShieldedWallet(runtime);
       const text = (message.content?.text || "").toLowerCase();
 
       // Determine intent from message text

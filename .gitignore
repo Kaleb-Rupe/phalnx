@@ -17,8 +17,5 @@ test-ledger/
 .next/
 
 # Internal development docs (not for public repo)
-INSTRUCTIONS.md
-PROJECT.md
-TASKS.md
+docs/
 CLAUDE.md
-agentshield-pivot-findings.md

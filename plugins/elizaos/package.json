@@ -20,12 +20,19 @@
   "peerDependencies": {
     "@elizaos/core": ">=0.1.0",
     "@agent-shield/solana": ">=0.1.1",
+    "@agent-shield/custody-crossmint": ">=0.1.0",
     "@solana/web3.js": ">=1.90.0"
+  },
+  "peerDependenciesMeta": {
+    "@agent-shield/custody-crossmint": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "typescript": "^5.3.3",
     "@elizaos/core": "^0.1.0",
     "@agent-shield/solana": "workspace:*",
+    "@agent-shield/custody-crossmint": "workspace:*",
     "@solana/web3.js": "^1.95.0",
     "@types/chai": "^4.3.11",
     "@types/mocha": "^10.0.6",

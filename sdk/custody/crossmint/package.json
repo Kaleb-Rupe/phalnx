@@ -1,0 +1,58 @@
+{
+  "name": "@agent-shield/custody-crossmint",
+  "version": "0.1.0",
+  "description": "Crossmint TEE custody adapter for AgentShield — hardware-enclave signing for AI agents",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build",
+    "test": "TS_NODE_PROJECT=tsconfig.test.json mocha --require ts-node/register tests/**/*.test.ts --timeout 30000"
+  },
+  "dependencies": {
+    "@crossmint/wallets-sdk": "^0.2.0",
+    "@solana/web3.js": "^1.95.0"
+  },
+  "peerDependencies": {
+    "@agent-shield/solana": ">=0.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@agent-shield/solana": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@agent-shield/solana": "workspace:*",
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.11.0",
+    "chai": "^4.4.1",
+    "mocha": "^10.3.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "keywords": [
+    "solana",
+    "ai-agent",
+    "tee",
+    "custody",
+    "crossmint",
+    "hardware-enclave",
+    "wallet"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agent-shield/agent-shield",
+    "directory": "sdk/custody/crossmint"
+  }
+}
