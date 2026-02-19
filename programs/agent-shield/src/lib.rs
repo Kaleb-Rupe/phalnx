@@ -1,14 +1,18 @@
+#![allow(unexpected_cfgs)]
+
 use anchor_lang::prelude::*;
 
 pub mod errors;
 pub mod events;
 pub mod instructions;
+pub mod oracle;
 pub mod state;
 
 use instructions::*;
 
 declare_id!("4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL");
 
+#[allow(clippy::too_many_arguments)]
 #[program]
 pub mod agent_shield {
     use super::*;
@@ -18,24 +22,28 @@ pub mod agent_shield {
     pub fn initialize_vault(
         ctx: Context<InitializeVault>,
         vault_id: u64,
-        daily_spending_cap: u64,
-        max_transaction_size: u64,
-        allowed_tokens: Vec<Pubkey>,
+        daily_spending_cap_usd: u64,
+        max_transaction_size_usd: u64,
+        allowed_tokens: Vec<state::AllowedToken>,
         allowed_protocols: Vec<Pubkey>,
         max_leverage_bps: u16,
         max_concurrent_positions: u8,
         developer_fee_rate: u16,
+        timelock_duration: u64,
+        allowed_destinations: Vec<Pubkey>,
     ) -> Result<()> {
         instructions::initialize_vault::handler(
             ctx,
             vault_id,
-            daily_spending_cap,
-            max_transaction_size,
+            daily_spending_cap_usd,
+            max_transaction_size_usd,
             allowed_tokens,
             allowed_protocols,
             max_leverage_bps,
             max_concurrent_positions,
             developer_fee_rate,
+            timelock_duration,
+            allowed_destinations,
         )
     }
 
@@ -53,33 +61,39 @@ pub mod agent_shield {
 
     /// Update the policy configuration for a vault.
     /// Only the owner can call this. Cannot be called by the agent.
+    /// Blocked when timelock_duration > 0 — use queue_policy_update instead.
     pub fn update_policy(
         ctx: Context<UpdatePolicy>,
-        daily_spending_cap: Option<u64>,
-        max_transaction_size: Option<u64>,
-        allowed_tokens: Option<Vec<Pubkey>>,
+        daily_spending_cap_usd: Option<u64>,
+        max_transaction_size_usd: Option<u64>,
+        allowed_tokens: Option<Vec<state::AllowedToken>>,
         allowed_protocols: Option<Vec<Pubkey>>,
         max_leverage_bps: Option<u16>,
         can_open_positions: Option<bool>,
         max_concurrent_positions: Option<u8>,
         developer_fee_rate: Option<u16>,
+        timelock_duration: Option<u64>,
+        allowed_destinations: Option<Vec<Pubkey>>,
     ) -> Result<()> {
         instructions::update_policy::handler(
             ctx,
-            daily_spending_cap,
-            max_transaction_size,
+            daily_spending_cap_usd,
+            max_transaction_size_usd,
             allowed_tokens,
             allowed_protocols,
             max_leverage_bps,
             can_open_positions,
             max_concurrent_positions,
             developer_fee_rate,
+            timelock_duration,
+            allowed_destinations,
         )
     }
 
     /// Core permission check. Called by the agent before a DeFi action.
-    /// Validates the action against all policy constraints.
-    /// If approved, creates a SessionAuthority PDA and updates spend tracking.
+    /// Validates the action against all policy constraints (USD caps, per-token caps).
+    /// If approved, creates a SessionAuthority PDA, delegates tokens to agent,
+    /// and updates spend tracking.
     /// If denied, reverts the entire transaction (including subsequent DeFi instructions).
     pub fn validate_and_authorize(
         ctx: Context<ValidateAndAuthorize>,
@@ -100,7 +114,8 @@ pub mod agent_shield {
     }
 
     /// Finalize a session after the DeFi action completes.
-    /// Closes the SessionAuthority PDA and records the transaction in the audit log.
+    /// Revokes token delegation, collects fees, closes the SessionAuthority PDA,
+    /// and records the transaction in the audit log.
     /// Can be called by the agent or permissionlessly (for cleanup of expired sessions).
     pub fn finalize_session(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
         instructions::finalize_session::handler(ctx, success)
@@ -131,5 +146,55 @@ pub mod agent_shield {
     /// Reclaims rent. Vault must have no open positions. Only the owner can call this.
     pub fn close_vault(ctx: Context<CloseVault>) -> Result<()> {
         instructions::close_vault::handler(ctx)
+    }
+
+    /// Queue a policy update when timelock is active.
+    /// Creates a PendingPolicyUpdate PDA that becomes executable after
+    /// the timelock period expires.
+    pub fn queue_policy_update(
+        ctx: Context<QueuePolicyUpdate>,
+        daily_spending_cap_usd: Option<u64>,
+        max_transaction_amount_usd: Option<u64>,
+        allowed_tokens: Option<Vec<state::AllowedToken>>,
+        allowed_protocols: Option<Vec<Pubkey>>,
+        max_leverage_bps: Option<u16>,
+        can_open_positions: Option<bool>,
+        max_concurrent_positions: Option<u8>,
+        developer_fee_rate: Option<u16>,
+        timelock_duration: Option<u64>,
+        allowed_destinations: Option<Vec<Pubkey>>,
+    ) -> Result<()> {
+        instructions::queue_policy_update::handler(
+            ctx,
+            daily_spending_cap_usd,
+            max_transaction_amount_usd,
+            allowed_tokens,
+            allowed_protocols,
+            max_leverage_bps,
+            can_open_positions,
+            max_concurrent_positions,
+            developer_fee_rate,
+            timelock_duration,
+            allowed_destinations,
+        )
+    }
+
+    /// Apply a queued policy update after the timelock period has expired.
+    /// Closes the PendingPolicyUpdate PDA and returns rent to the owner.
+    pub fn apply_pending_policy(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
+        instructions::apply_pending_policy::handler(ctx)
+    }
+
+    /// Cancel a queued policy update. Closes the PendingPolicyUpdate PDA
+    /// and returns rent to the owner.
+    pub fn cancel_pending_policy(ctx: Context<CancelPendingPolicy>) -> Result<()> {
+        instructions::cancel_pending_policy::handler(ctx)
+    }
+
+    /// Transfer tokens from the vault to an allowed destination.
+    /// Only the agent can call this. Respects destination allowlist,
+    /// spending caps, and per-token limits.
+    pub fn agent_transfer(ctx: Context<AgentTransfer>, amount: u64) -> Result<()> {
+        instructions::agent_transfer::handler(ctx, amount)
     }
 }

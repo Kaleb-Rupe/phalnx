@@ -1,17 +1,18 @@
 import { z } from "zod";
 import { BN } from "@coral-xyz/anchor";
+import { PublicKey } from "@solana/web3.js";
 import type { AgentShieldClient } from "@agent-shield/sdk";
 import { toPublicKey, toBN } from "../utils";
 import { formatError } from "../errors";
 
 export const createVaultSchema = z.object({
   vaultId: z.string().describe("Unique vault ID number"),
-  dailySpendingCap: z
+  dailySpendingCapUsd: z
     .string()
-    .describe("Maximum daily spending in token base units (e.g. lamports)"),
-  maxTransactionSize: z
+    .describe("Maximum daily spending in USD base units"),
+  maxTransactionSizeUsd: z
     .string()
-    .describe("Maximum single transaction size in token base units"),
+    .describe("Maximum single transaction size in USD base units"),
   allowedTokens: z
     .array(z.string())
     .describe("Array of allowed token mint addresses (base58). Max 10."),
@@ -26,7 +27,9 @@ export const createVaultSchema = z.object({
     .describe("Maximum number of concurrent open positions"),
   feeDestination: z
     .string()
-    .describe("Fee destination wallet address (base58). Immutable after creation."),
+    .describe(
+      "Fee destination wallet address (base58). Immutable after creation.",
+    ),
   developerFeeRate: z
     .number()
     .optional()
@@ -38,14 +41,20 @@ export type CreateVaultInput = z.infer<typeof createVaultSchema>;
 
 export async function createVault(
   client: AgentShieldClient,
-  input: CreateVaultInput
+  input: CreateVaultInput,
 ): Promise<string> {
   try {
     const params = {
       vaultId: toBN(input.vaultId),
-      dailySpendingCap: toBN(input.dailySpendingCap),
-      maxTransactionSize: toBN(input.maxTransactionSize),
-      allowedTokens: input.allowedTokens.map(toPublicKey),
+      dailySpendingCapUsd: toBN(input.dailySpendingCapUsd),
+      maxTransactionSizeUsd: toBN(input.maxTransactionSizeUsd),
+      allowedTokens: input.allowedTokens.map((addr) => ({
+        mint: toPublicKey(addr),
+        oracleFeed: PublicKey.default,
+        decimals: 6,
+        dailyCapBase: new BN(0),
+        maxTxBase: new BN(0),
+      })),
       allowedProtocols: input.allowedProtocols.map(toPublicKey),
       maxLeverageBps: input.maxLeverageBps,
       maxConcurrentPositions: input.maxConcurrentPositions,

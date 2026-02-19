@@ -23,14 +23,22 @@ pub struct SessionAuthority {
     /// Slot-based expiry: session is valid until this slot
     pub expires_at_slot: u64,
 
+    /// Whether token delegation was set up (approve CPI)
+    pub delegated: bool,
+
+    /// The vault's token account that was delegated to the agent
+    /// (only meaningful when delegated == true)
+    pub delegation_token_account: Pubkey,
+
     /// Bump seed for PDA
     pub bump: u8,
 }
 
 impl SessionAuthority {
     /// discriminator (8) + vault (32) + agent (32) + authorized (1) +
-    /// amount (8) + token (32) + protocol (32) + action_type (1) + expires (8) + bump (1)
-    pub const SIZE: usize = 8 + 32 + 32 + 1 + 8 + 32 + 32 + 1 + 8 + 1;
+    /// amount (8) + token (32) + protocol (32) + action_type (1) + expires (8) +
+    /// delegated (1) + delegation_token_account (32) + bump (1)
+    pub const SIZE: usize = 8 + 32 + 32 + 1 + 8 + 32 + 32 + 1 + 8 + 1 + 32 + 1;
 
     pub fn is_expired(&self, current_slot: u64) -> bool {
         current_slot > self.expires_at_slot

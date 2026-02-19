@@ -8,7 +8,10 @@ import {
 } from "@solana/web3.js";
 import { Program } from "@coral-xyz/anchor";
 import type { AgentShield, ComposeActionParams } from "./types";
-import { buildValidateAndAuthorize, buildFinalizeSession } from "./instructions";
+import {
+  buildValidateAndAuthorize,
+  buildFinalizeSession,
+} from "./instructions";
 
 /** Default compute budget for composed transactions (1.4M CU) */
 const DEFAULT_COMPUTE_UNITS = 1_400_000;
@@ -22,29 +25,37 @@ const DEFAULT_COMPUTE_UNITS = 1_400_000;
 export async function composePermittedAction(
   program: Program<AgentShield>,
   params: ComposeActionParams,
-  computeUnits: number = DEFAULT_COMPUTE_UNITS
+  computeUnits: number = DEFAULT_COMPUTE_UNITS,
 ): Promise<TransactionInstruction[]> {
   const computeBudgetIx = ComputeBudgetProgram.setComputeUnitLimit({
     units: computeUnits,
   });
 
-  const validateIx = await buildValidateAndAuthorize(program, params.agent, params.vault, {
-    actionType: params.actionType,
-    tokenMint: params.tokenMint,
-    amount: params.amount,
-    targetProtocol: params.targetProtocol,
-    leverageBps: params.leverageBps,
-  }).instruction();
+  const validateIx = await buildValidateAndAuthorize(
+    program,
+    params.agent,
+    params.vault,
+    params.vaultTokenAccount,
+    {
+      actionType: params.actionType,
+      tokenMint: params.tokenMint,
+      amount: params.amount,
+      targetProtocol: params.targetProtocol,
+      leverageBps: params.leverageBps,
+    },
+    params.oracleFeedAccount,
+  ).instruction();
 
   const finalizeIx = await buildFinalizeSession(
     program,
     params.agent,
     params.vault,
     params.agent,
+    params.tokenMint,
     params.success ?? true,
     params.vaultTokenAccount,
     params.feeDestinationTokenAccount,
-    params.protocolTreasuryTokenAccount
+    params.protocolTreasuryTokenAccount,
   ).instruction();
 
   return [computeBudgetIx, validateIx, ...params.defiInstructions, finalizeIx];
@@ -58,9 +69,13 @@ export async function composePermittedTransaction(
   program: Program<AgentShield>,
   connection: Connection,
   params: ComposeActionParams,
-  computeUnits: number = DEFAULT_COMPUTE_UNITS
+  computeUnits: number = DEFAULT_COMPUTE_UNITS,
 ): Promise<VersionedTransaction> {
-  const instructions = await composePermittedAction(program, params, computeUnits);
+  const instructions = await composePermittedAction(
+    program,
+    params,
+    computeUnits,
+  );
   const { blockhash } = await connection.getLatestBlockhash();
 
   const messageV0 = new TransactionMessage({
@@ -79,11 +94,11 @@ export async function composePermittedTransaction(
 export async function composePermittedSwap(
   program: Program<AgentShield>,
   params: Omit<ComposeActionParams, "actionType">,
-  computeUnits: number = DEFAULT_COMPUTE_UNITS
+  computeUnits: number = DEFAULT_COMPUTE_UNITS,
 ): Promise<TransactionInstruction[]> {
   return composePermittedAction(
     program,
     { ...params, actionType: { swap: {} } },
-    computeUnits
+    computeUnits,
   );
 }

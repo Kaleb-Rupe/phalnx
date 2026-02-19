@@ -85,4 +85,57 @@ pub enum AgentShieldError {
 
     #[msg("Arithmetic overflow")]
     Overflow,
+
+    // --- Delegation + Oracle errors ---
+    #[msg("Token delegation approval failed")]
+    DelegationFailed,
+
+    #[msg("Token delegation revocation failed")]
+    RevocationFailed,
+
+    #[msg("Oracle feed value is too stale")]
+    OracleFeedStale,
+
+    #[msg("Cannot parse oracle feed data")]
+    OracleFeedInvalid,
+
+    #[msg("Unpriced token cannot be spent (receive-only)")]
+    TokenSpendBlocked,
+
+    #[msg("Token account does not belong to vault or has wrong mint")]
+    InvalidTokenAccount,
+
+    #[msg("Oracle-priced token requires feed account in remaining_accounts")]
+    OracleAccountMissing,
+
+    #[msg("Per-token daily spending cap would be exceeded")]
+    PerTokenCapExceeded,
+
+    #[msg("Per-token single transaction limit exceeded")]
+    PerTokenTxLimitExceeded,
+
+    #[msg("Oracle price confidence interval too wide")]
+    OracleConfidenceTooWide,
+
+    #[msg("Oracle account owner is not a recognized oracle program")]
+    OracleUnsupportedType,
+
+    #[msg("Pyth price update not fully verified by Wormhole")]
+    OracleNotVerified,
+
+    // --- Timelock + Destination errors ---
+    #[msg("Timelock period has not expired yet")]
+    TimelockNotExpired,
+
+    #[msg("Vault has timelock active — use queue_policy_update instead")]
+    TimelockActive,
+
+    #[msg("No timelock configured on this vault")]
+    NoTimelockConfigured,
+
+    #[msg("Destination not in allowed list")]
+    DestinationNotAllowed,
+
+    #[msg("Too many destinations (max 10)")]
+    TooManyDestinations,
 }

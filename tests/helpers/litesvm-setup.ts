@@ -489,6 +489,23 @@ export function advancePastSlot(svm: LiteSVM, targetSlot: number): void {
   svm.warpToSlot(newSlot);
 }
 
+/**
+ * Advance the SVM clock's unix_timestamp by a given number of seconds.
+ * Useful for testing timelock expiry without waiting for real time.
+ */
+export function advanceTime(svm: LiteSVM, seconds: number): void {
+  const c = svm.getClock();
+  svm.setClock(
+    new Clock(
+      c.slot,
+      c.epochStartTimestamp,
+      c.epoch,
+      c.leaderScheduleEpoch,
+      c.unixTimestamp + BigInt(seconds)
+    )
+  );
+}
+
 // ─── Composed TX helper for LiteSVM ─────────────────────────────────────────
 
 export function sendVersionedTx(

@@ -6,6 +6,7 @@ import {
   VersionedTransaction,
   AddressLookupTableAccount,
 } from "@solana/web3.js";
+import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { ShieldedWallet, WalletLike } from "./shield";
 import { ResolvedPolicies, TransactionAnalysis } from "./policies";
 import { ShieldDeniedError } from "./errors";
@@ -288,6 +289,12 @@ function createHardenedWallet(
 
       const { BN } = await import("@coral-xyz/anchor");
 
+      const vaultTokenAccount = getAssociatedTokenAddressSync(
+        tokenMint,
+        vaultAddress,
+        true,
+      );
+
       const composedTx = await sdk.composePermittedTransaction(
         // We need a Program instance — create a minimal client
         // The SDK's composePermittedTransaction needs program + connection
@@ -304,6 +311,7 @@ function createHardenedWallet(
           amount: new BN(amount.toString()),
           targetProtocol,
           defiInstructions: originalIxs,
+          vaultTokenAccount,
         },
       );
 
@@ -482,13 +490,19 @@ export async function harden(
     },
   );
 
-  // Convert bigints to BN for the SDK
+  // Convert bigints to BN and wrap tokens as AllowedToken for the SDK
   const { BN } = await import("@coral-xyz/anchor");
   const vaultParams = {
     vaultId: new BN(mapped.vaultId),
-    dailySpendingCap: new BN(mapped.dailySpendingCap.toString()),
-    maxTransactionSize: new BN(mapped.maxTransactionSize.toString()),
-    allowedTokens: mapped.allowedTokens,
+    dailySpendingCapUsd: new BN(mapped.dailySpendingCap.toString()),
+    maxTransactionSizeUsd: new BN(mapped.maxTransactionSize.toString()),
+    allowedTokens: mapped.allowedTokens.map((mint: PublicKey) => ({
+      mint,
+      oracleFeed: PublicKey.default, // stablecoin (1:1 USD) by default
+      decimals: 6,
+      dailyCapBase: new BN(0),
+      maxTxBase: new BN(0),
+    })),
     allowedProtocols: mapped.allowedProtocols,
     maxLeverageBps: mapped.maxLeverageBps,
     maxConcurrentPositions: mapped.maxConcurrentPositions,

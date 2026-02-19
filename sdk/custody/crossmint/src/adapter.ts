@@ -78,17 +78,14 @@ export class CrossmintRESTClient implements CrossmintSDKClient {
       body.linkedUser = params.linkedUser;
     }
 
-    const res = await fetch(
-      `${this.baseUrl}/api/2022-06-09/wallets`,
-      {
-        method: "POST",
-        headers: {
-          "X-API-KEY": this.apiKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
+    const res = await fetch(`${this.baseUrl}/api/2022-06-09/wallets`, {
+      method: "POST",
+      headers: {
+        "X-API-KEY": this.apiKey,
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify(body),
+    });
 
     if (!res.ok) {
       const text = await res.text();
@@ -110,9 +107,7 @@ export class CrossmintRESTClient implements CrossmintSDKClient {
     return { address, locator };
   }
 
-  async getWallet(
-    locator: string,
-  ): Promise<{ address: string }> {
+  async getWallet(locator: string): Promise<{ address: string }> {
     const encodedLocator = encodeURIComponent(locator);
     const res = await fetch(
       `${this.baseUrl}/api/2022-06-09/wallets/${encodedLocator}`,
@@ -126,9 +121,7 @@ export class CrossmintRESTClient implements CrossmintSDKClient {
 
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(
-        `Crossmint get wallet failed (${res.status}): ${text}`,
-      );
+      throw new Error(`Crossmint get wallet failed (${res.status}): ${text}`);
     }
 
     const data = (await res.json()) as Record<string, unknown>;

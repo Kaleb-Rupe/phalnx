@@ -27,8 +27,8 @@ pub struct AgentRegistered {
 #[event]
 pub struct PolicyUpdated {
     pub vault: Pubkey,
-    pub daily_cap: u64,
-    pub max_transaction_size: u64,
+    pub daily_cap_usd: u64,
+    pub max_transaction_size_usd: u64,
     pub allowed_tokens_count: u8,
     pub allowed_protocols_count: u8,
     pub max_leverage_bps: u16,
@@ -43,9 +43,13 @@ pub struct ActionAuthorized {
     pub action_type: ActionType,
     pub token_mint: Pubkey,
     pub amount: u64,
+    pub usd_amount: u64,
     pub protocol: Pubkey,
-    pub rolling_spend_after: u64,
-    pub daily_cap: u64,
+    pub rolling_spend_usd_after: u64,
+    pub daily_cap_usd: u64,
+    pub delegated: bool,
+    pub oracle_price: Option<i128>,
+    pub oracle_source: Option<u8>,
     pub timestamp: i64,
 }
 
@@ -62,6 +66,13 @@ pub struct SessionFinalized {
     pub vault: Pubkey,
     pub agent: Pubkey,
     pub success: bool,
+    pub timestamp: i64,
+}
+
+#[event]
+pub struct DelegationRevoked {
+    pub vault: Pubkey,
+    pub token_account: Pubkey,
     pub timestamp: i64,
 }
 
@@ -108,4 +119,29 @@ pub struct VaultClosed {
     pub vault: Pubkey,
     pub owner: Pubkey,
     pub timestamp: i64,
+}
+
+#[event]
+pub struct PolicyChangeQueued {
+    pub vault: Pubkey,
+    pub executes_at: i64,
+}
+
+#[event]
+pub struct PolicyChangeApplied {
+    pub vault: Pubkey,
+    pub applied_at: i64,
+}
+
+#[event]
+pub struct PolicyChangeCancelled {
+    pub vault: Pubkey,
+}
+
+#[event]
+pub struct AgentTransferExecuted {
+    pub vault: Pubkey,
+    pub destination: Pubkey,
+    pub amount: u64,
+    pub mint: Pubkey,
 }

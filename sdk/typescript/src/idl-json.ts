@@ -1,7 +1,8 @@
 // Auto-generated — do not edit. Regenerate with:
 //   RUSTUP_TOOLCHAIN=nightly anchor idl build -o target/idl/agent_shield.json
 //   Then copy JSON into this file.
-export const IDL = {
+export const IDL =
+{
   "address": "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL",
   "metadata": {
     "name": "agent_shield",
@@ -10,6 +11,349 @@ export const IDL = {
     "description": "AI Agent Financial Middleware for Solana - Permission controls, spending limits, and audit infrastructure for autonomous agents"
   },
   "instructions": [
+    {
+      "name": "agent_transfer",
+      "docs": [
+        "Transfer tokens from the vault to an allowed destination.",
+        "Only the agent can call this. Respects destination allowlist,",
+        "spending caps, and per-token limits."
+      ],
+      "discriminator": [
+        199,
+        111,
+        151,
+        49,
+        124,
+        13,
+        150,
+        44
+      ],
+      "accounts": [
+        {
+          "name": "agent",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.owner",
+                "account": "AgentVault"
+              },
+              {
+                "kind": "account",
+                "path": "vault.vault_id",
+                "account": "AgentVault"
+              }
+            ]
+          },
+          "relations": [
+            "policy",
+            "tracker"
+          ]
+        },
+        {
+          "name": "policy",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "tracker",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  99,
+                  107,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_token_account",
+          "docs": [
+            "Vault's PDA-owned token account (source)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "destination_token_account",
+          "docs": [
+            "Destination token account (must be in allowed destinations if configured)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "fee_destination_token_account",
+          "docs": [
+            "Developer fee destination token account \u2014 must match vault.fee_destination"
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "protocol_treasury_token_account",
+          "docs": [
+            "Protocol treasury token account"
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "apply_pending_policy",
+      "docs": [
+        "Apply a queued policy update after the timelock period has expired.",
+        "Closes the PendingPolicyUpdate PDA and returns rent to the owner."
+      ],
+      "discriminator": [
+        114,
+        212,
+        19,
+        227,
+        89,
+        199,
+        74,
+        62
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "vault.vault_id",
+                "account": "AgentVault"
+              }
+            ]
+          },
+          "relations": [
+            "policy",
+            "pending_policy"
+          ]
+        },
+        {
+          "name": "policy",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "pending_policy",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancel_pending_policy",
+      "docs": [
+        "Cancel a queued policy update. Closes the PendingPolicyUpdate PDA",
+        "and returns rent to the owner."
+      ],
+      "discriminator": [
+        153,
+        36,
+        104,
+        200,
+        50,
+        94,
+        207,
+        33
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "vault.vault_id",
+                "account": "AgentVault"
+              }
+            ]
+          },
+          "relations": [
+            "pending_policy"
+          ]
+        },
+        {
+          "name": "pending_policy",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
     {
       "name": "close_vault",
       "docs": [
@@ -384,7 +728,8 @@ export const IDL = {
       "name": "finalize_session",
       "docs": [
         "Finalize a session after the DeFi action completes.",
-        "Closes the SessionAuthority PDA and records the transaction in the audit log.",
+        "Revokes token delegation, collects fees, closes the SessionAuthority PDA,",
+        "and records the transaction in the audit log.",
         "Can be called by the agent or permissionlessly (for cleanup of expired sessions)."
       ],
       "discriminator": [
@@ -486,7 +831,8 @@ export const IDL = {
           "name": "session",
           "docs": [
             "Session rent is returned to the session's agent (who paid for it),",
-            "not the arbitrary payer, to prevent rent theft."
+            "not the arbitrary payer, to prevent rent theft.",
+            "Seeds include token_mint for per-token concurrent sessions."
           ],
           "writable": true,
           "pda": {
@@ -511,6 +857,11 @@ export const IDL = {
                 "kind": "account",
                 "path": "session.agent",
                 "account": "SessionAuthority"
+              },
+              {
+                "kind": "account",
+                "path": "session.authorized_token",
+                "account": "SessionAuthority"
               }
             ]
           }
@@ -525,7 +876,7 @@ export const IDL = {
         {
           "name": "vault_token_account",
           "docs": [
-            "Vault's PDA token account for the session's token (fee source)"
+            "Vault's PDA token account for the session's token (fee source + delegation revocation)"
           ],
           "writable": true,
           "optional": true
@@ -674,17 +1025,21 @@ export const IDL = {
           "type": "u64"
         },
         {
-          "name": "daily_spending_cap",
+          "name": "daily_spending_cap_usd",
           "type": "u64"
         },
         {
-          "name": "max_transaction_size",
+          "name": "max_transaction_size_usd",
           "type": "u64"
         },
         {
           "name": "allowed_tokens",
           "type": {
-            "vec": "pubkey"
+            "vec": {
+              "defined": {
+                "name": "AllowedToken"
+              }
+            }
           }
         },
         {
@@ -704,6 +1059,202 @@ export const IDL = {
         {
           "name": "developer_fee_rate",
           "type": "u16"
+        },
+        {
+          "name": "timelock_duration",
+          "type": "u64"
+        },
+        {
+          "name": "allowed_destinations",
+          "type": {
+            "vec": "pubkey"
+          }
+        }
+      ]
+    },
+    {
+      "name": "queue_policy_update",
+      "docs": [
+        "Queue a policy update when timelock is active.",
+        "Creates a PendingPolicyUpdate PDA that becomes executable after",
+        "the timelock period expires."
+      ],
+      "discriminator": [
+        149,
+        18,
+        76,
+        197,
+        179,
+        193,
+        91,
+        77
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "vault.vault_id",
+                "account": "AgentVault"
+              }
+            ]
+          },
+          "relations": [
+            "policy"
+          ]
+        },
+        {
+          "name": "policy",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "pending_policy",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "daily_spending_cap_usd",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "max_transaction_amount_usd",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "allowed_tokens",
+          "type": {
+            "option": {
+              "vec": {
+                "defined": {
+                  "name": "AllowedToken"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "allowed_protocols",
+          "type": {
+            "option": {
+              "vec": "pubkey"
+            }
+          }
+        },
+        {
+          "name": "max_leverage_bps",
+          "type": {
+            "option": "u16"
+          }
+        },
+        {
+          "name": "can_open_positions",
+          "type": {
+            "option": "bool"
+          }
+        },
+        {
+          "name": "max_concurrent_positions",
+          "type": {
+            "option": "u8"
+          }
+        },
+        {
+          "name": "developer_fee_rate",
+          "type": {
+            "option": "u16"
+          }
+        },
+        {
+          "name": "timelock_duration",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "allowed_destinations",
+          "type": {
+            "option": {
+              "vec": "pubkey"
+            }
+          }
         }
       ]
     },
@@ -885,7 +1436,8 @@ export const IDL = {
       "name": "update_policy",
       "docs": [
         "Update the policy configuration for a vault.",
-        "Only the owner can call this. Cannot be called by the agent."
+        "Only the owner can call this. Cannot be called by the agent.",
+        "Blocked when timelock_duration > 0 \u2014 use queue_policy_update instead."
       ],
       "discriminator": [
         212,
@@ -960,13 +1512,13 @@ export const IDL = {
       ],
       "args": [
         {
-          "name": "daily_spending_cap",
+          "name": "daily_spending_cap_usd",
           "type": {
             "option": "u64"
           }
         },
         {
-          "name": "max_transaction_size",
+          "name": "max_transaction_size_usd",
           "type": {
             "option": "u64"
           }
@@ -975,7 +1527,11 @@ export const IDL = {
           "name": "allowed_tokens",
           "type": {
             "option": {
-              "vec": "pubkey"
+              "vec": {
+                "defined": {
+                  "name": "AllowedToken"
+                }
+              }
             }
           }
         },
@@ -1010,6 +1566,20 @@ export const IDL = {
           "type": {
             "option": "u16"
           }
+        },
+        {
+          "name": "timelock_duration",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "allowed_destinations",
+          "type": {
+            "option": {
+              "vec": "pubkey"
+            }
+          }
         }
       ]
     },
@@ -1017,8 +1587,9 @@ export const IDL = {
       "name": "validate_and_authorize",
       "docs": [
         "Core permission check. Called by the agent before a DeFi action.",
-        "Validates the action against all policy constraints.",
-        "If approved, creates a SessionAuthority PDA and updates spend tracking.",
+        "Validates the action against all policy constraints (USD caps, per-token caps).",
+        "If approved, creates a SessionAuthority PDA, delegates tokens to agent,",
+        "and updates spend tracking.",
         "If denied, reverts the entire transaction (including subsequent DeFi instructions)."
       ],
       "discriminator": [
@@ -1118,7 +1689,8 @@ export const IDL = {
         {
           "name": "session",
           "docs": [
-            "Ephemeral session PDA \u2014 `init` ensures no double-authorization"
+            "Ephemeral session PDA \u2014 `init` ensures no double-authorization.",
+            "Seeds include token_mint for per-token concurrent sessions."
           ],
           "writable": true,
           "pda": {
@@ -1142,9 +1714,30 @@ export const IDL = {
               {
                 "kind": "account",
                 "path": "agent"
+              },
+              {
+                "kind": "arg",
+                "path": "token_mint"
               }
             ]
           }
+        },
+        {
+          "name": "vault_token_account",
+          "docs": [
+            "Vault's PDA-owned token account for the spend token (delegation source)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_mint_account",
+          "docs": [
+            "The token mint being spent"
+          ]
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
           "name": "system_program",
@@ -1448,6 +2041,19 @@ export const IDL = {
       ]
     },
     {
+      "name": "PendingPolicyUpdate",
+      "discriminator": [
+        77,
+        255,
+        2,
+        51,
+        79,
+        237,
+        183,
+        239
+      ]
+    },
+    {
       "name": "PolicyConfig",
       "discriminator": [
         219,
@@ -1541,6 +2147,32 @@ export const IDL = {
       ]
     },
     {
+      "name": "AgentTransferExecuted",
+      "discriminator": [
+        88,
+        52,
+        117,
+        69,
+        112,
+        152,
+        167,
+        40
+      ]
+    },
+    {
+      "name": "DelegationRevoked",
+      "discriminator": [
+        59,
+        158,
+        142,
+        49,
+        164,
+        116,
+        220,
+        8
+      ]
+    },
+    {
       "name": "FeesCollected",
       "discriminator": [
         233,
@@ -1577,6 +2209,45 @@ export const IDL = {
         92,
         11,
         118
+      ]
+    },
+    {
+      "name": "PolicyChangeApplied",
+      "discriminator": [
+        104,
+        89,
+        5,
+        100,
+        180,
+        202,
+        52,
+        73
+      ]
+    },
+    {
+      "name": "PolicyChangeCancelled",
+      "discriminator": [
+        200,
+        158,
+        226,
+        255,
+        25,
+        211,
+        30,
+        151
+      ]
+    },
+    {
+      "name": "PolicyChangeQueued",
+      "discriminator": [
+        73,
+        231,
+        182,
+        136,
+        141,
+        120,
+        32,
+        79
       ]
     },
     {
@@ -1785,6 +2456,91 @@ export const IDL = {
       "code": 6027,
       "name": "Overflow",
       "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6028,
+      "name": "DelegationFailed",
+      "msg": "Token delegation approval failed"
+    },
+    {
+      "code": 6029,
+      "name": "RevocationFailed",
+      "msg": "Token delegation revocation failed"
+    },
+    {
+      "code": 6030,
+      "name": "OracleFeedStale",
+      "msg": "Oracle feed value is too stale"
+    },
+    {
+      "code": 6031,
+      "name": "OracleFeedInvalid",
+      "msg": "Cannot parse oracle feed data"
+    },
+    {
+      "code": 6032,
+      "name": "TokenSpendBlocked",
+      "msg": "Unpriced token cannot be spent (receive-only)"
+    },
+    {
+      "code": 6033,
+      "name": "InvalidTokenAccount",
+      "msg": "Token account does not belong to vault or has wrong mint"
+    },
+    {
+      "code": 6034,
+      "name": "OracleAccountMissing",
+      "msg": "Oracle-priced token requires feed account in remaining_accounts"
+    },
+    {
+      "code": 6035,
+      "name": "PerTokenCapExceeded",
+      "msg": "Per-token daily spending cap would be exceeded"
+    },
+    {
+      "code": 6036,
+      "name": "PerTokenTxLimitExceeded",
+      "msg": "Per-token single transaction limit exceeded"
+    },
+    {
+      "code": 6037,
+      "name": "OracleConfidenceTooWide",
+      "msg": "Oracle price confidence interval too wide"
+    },
+    {
+      "code": 6038,
+      "name": "OracleUnsupportedType",
+      "msg": "Oracle account owner is not a recognized oracle program"
+    },
+    {
+      "code": 6039,
+      "name": "OracleNotVerified",
+      "msg": "Pyth price update not fully verified by Wormhole"
+    },
+    {
+      "code": 6040,
+      "name": "TimelockNotExpired",
+      "msg": "Timelock period has not expired yet"
+    },
+    {
+      "code": 6041,
+      "name": "TimelockActive",
+      "msg": "Vault has timelock active \u2014 use queue_policy_update instead"
+    },
+    {
+      "code": 6042,
+      "name": "NoTimelockConfigured",
+      "msg": "No timelock configured on this vault"
+    },
+    {
+      "code": 6043,
+      "name": "DestinationNotAllowed",
+      "msg": "Destination not in allowed list"
+    },
+    {
+      "code": 6044,
+      "name": "TooManyDestinations",
+      "msg": "Too many destinations (max 10)"
     }
   ],
   "types": [
@@ -1818,16 +2574,36 @@ export const IDL = {
             "type": "u64"
           },
           {
+            "name": "usd_amount",
+            "type": "u64"
+          },
+          {
             "name": "protocol",
             "type": "pubkey"
           },
           {
-            "name": "rolling_spend_after",
+            "name": "rolling_spend_usd_after",
             "type": "u64"
           },
           {
-            "name": "daily_cap",
+            "name": "daily_cap_usd",
             "type": "u64"
+          },
+          {
+            "name": "delegated",
+            "type": "bool"
+          },
+          {
+            "name": "oracle_price",
+            "type": {
+              "option": "i128"
+            }
+          },
+          {
+            "name": "oracle_source",
+            "type": {
+              "option": "u8"
+            }
           },
           {
             "name": "timestamp",
@@ -1888,6 +2664,9 @@ export const IDL = {
           },
           {
             "name": "Withdraw"
+          },
+          {
+            "name": "Transfer"
           }
         ]
       }
@@ -1928,6 +2707,30 @@ export const IDL = {
           {
             "name": "timestamp",
             "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentTransferExecuted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "destination",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
           }
         ]
       }
@@ -2020,6 +2823,82 @@ export const IDL = {
               "Protocol fees are tracked separately via events."
             ],
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AllowedToken",
+      "docs": [
+        "Per-token configuration including oracle feed and per-token caps.",
+        "Replaces the old `Vec<Pubkey>` allowed_tokens with richer metadata.",
+        "",
+        "Oracle feed classification:",
+        "- `Pubkey::default()` = stablecoin (1:1 USD, no oracle needed)",
+        "- `UNPRICED_SENTINEL` ([0xFF; 32]) = unpriced token (receive-only)",
+        "- Any other pubkey = Oracle feed account (Pyth PriceUpdateV2 or Switchboard PullFeed)"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mint",
+            "docs": [
+              "Token mint address"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "oracle_feed",
+            "docs": [
+              "Oracle feed account (Pyth PriceUpdateV2 or Switchboard PullFeed) for USD pricing.",
+              "`Pubkey::default()` = stablecoin (1:1 USD).",
+              "`UNPRICED_SENTINEL` = unpriced (receive-only, cannot be spent)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "decimals",
+            "docs": [
+              "Token decimals (e.g., 6 for USDC, 9 for SOL)"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "daily_cap_base",
+            "docs": [
+              "Per-token daily cap in base units (0 = no per-token limit,",
+              "only the aggregate USD cap applies)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "max_tx_base",
+            "docs": [
+              "Per-token max single transaction in base units",
+              "(0 = no per-token tx limit, only USD tx limit applies)"
+            ],
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DelegationRevoked",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
           }
         ]
       }
@@ -2129,6 +3008,163 @@ export const IDL = {
       }
     },
     {
+      "name": "PendingPolicyUpdate",
+      "docs": [
+        "Queued policy update that becomes executable after a timelock period.",
+        "Created by `queue_policy_update`, applied by `apply_pending_policy`,",
+        "or cancelled by `cancel_pending_policy`.",
+        "",
+        "PDA seeds: `[b\"pending_policy\", vault.key().as_ref()]`"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "docs": [
+              "Associated vault pubkey"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "queued_at",
+            "docs": [
+              "Unix timestamp when this update was queued"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "executes_at",
+            "docs": [
+              "Unix timestamp when this update becomes executable"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "daily_spending_cap_usd",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "max_transaction_amount_usd",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "allowed_tokens",
+            "type": {
+              "option": {
+                "vec": {
+                  "defined": {
+                    "name": "AllowedToken"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "name": "allowed_protocols",
+            "type": {
+              "option": {
+                "vec": "pubkey"
+              }
+            }
+          },
+          {
+            "name": "max_leverage_bps",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "can_open_positions",
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "max_concurrent_positions",
+            "type": {
+              "option": "u8"
+            }
+          },
+          {
+            "name": "developer_fee_rate",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "timelock_duration",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "allowed_destinations",
+            "type": {
+              "option": {
+                "vec": "pubkey"
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "Bump seed for PDA"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PolicyChangeApplied",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "applied_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PolicyChangeCancelled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PolicyChangeQueued",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "executes_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
       "name": "PolicyConfig",
       "type": {
         "kind": "struct",
@@ -2141,27 +3177,32 @@ export const IDL = {
             "type": "pubkey"
           },
           {
-            "name": "daily_spending_cap",
+            "name": "daily_spending_cap_usd",
             "docs": [
-              "Maximum spend per rolling 24h period (in token base units)"
+              "Maximum aggregate spend per rolling 24h period in USD (6 decimals).",
+              "$500 = 500_000_000. This is the primary spending cap."
             ],
             "type": "u64"
           },
           {
-            "name": "max_transaction_size",
+            "name": "max_transaction_size_usd",
             "docs": [
-              "Maximum single transaction size (in token base units)"
+              "Maximum single transaction size in USD (6 decimals)."
             ],
             "type": "u64"
           },
           {
             "name": "allowed_tokens",
             "docs": [
-              "Allowed token mints the agent can interact with",
-              "Bounded to MAX_ALLOWED_TOKENS entries"
+              "Allowed token mints with oracle feeds and per-token caps.",
+              "Bounded to MAX_ALLOWED_TOKENS entries."
             ],
             "type": {
-              "vec": "pubkey"
+              "vec": {
+                "defined": {
+                  "name": "AllowedToken"
+                }
+              }
             }
           },
           {
@@ -2208,6 +3249,25 @@ export const IDL = {
             "type": "u16"
           },
           {
+            "name": "timelock_duration",
+            "docs": [
+              "Timelock duration in seconds for policy changes. 0 = no timelock",
+              "(immediate updates allowed). When > 0, policy changes must go",
+              "through queue_policy_update \u2192 apply_pending_policy."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "allowed_destinations",
+            "docs": [
+              "Allowed destination addresses for agent transfers.",
+              "Empty = any destination allowed. Bounded to MAX_ALLOWED_DESTINATIONS."
+            ],
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
             "name": "bump",
             "docs": [
               "Bump seed for PDA"
@@ -2227,11 +3287,11 @@ export const IDL = {
             "type": "pubkey"
           },
           {
-            "name": "daily_cap",
+            "name": "daily_cap_usd",
             "type": "u64"
           },
           {
-            "name": "max_transaction_size",
+            "name": "max_transaction_size_usd",
             "type": "u64"
           },
           {
@@ -2317,6 +3377,21 @@ export const IDL = {
             "type": "u64"
           },
           {
+            "name": "delegated",
+            "docs": [
+              "Whether token delegation was set up (approve CPI)"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "delegation_token_account",
+            "docs": [
+              "The vault's token account that was delegated to the agent",
+              "(only meaningful when delegated == true)"
+            ],
+            "type": "pubkey"
+          },
+          {
             "name": "bump",
             "docs": [
               "Bump seed for PDA"
@@ -2357,10 +3432,23 @@ export const IDL = {
         "fields": [
           {
             "name": "token_mint",
+            "docs": [
+              "Token mint for audit trail"
+            ],
             "type": "pubkey"
           },
           {
-            "name": "amount_spent",
+            "name": "usd_amount",
+            "docs": [
+              "USD value of this spend (6 decimals, e.g., $500 = 500_000_000)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "base_amount",
+            "docs": [
+              "Original amount in token base units (for per-token cap checks)"
+            ],
             "type": "u64"
           },
           {
@@ -2385,7 +3473,7 @@ export const IDL = {
           {
             "name": "rolling_spends",
             "docs": [
-              "Rolling spend entries: (token_mint, amount, timestamp)",
+              "Rolling spend entries: (token_mint, usd_amount, base_amount, timestamp)",
               "Entries older than ROLLING_WINDOW_SECONDS are pruned on each access"
             ],
             "type": {

@@ -10,8 +10,8 @@ describe("shield_create_vault", () => {
 
   const validInput = {
     vaultId: "1",
-    dailySpendingCap: "10000000000",
-    maxTransactionSize: "1000000000",
+    dailySpendingCapUsd: "10000000000",
+    maxTransactionSizeUsd: "1000000000",
     allowedTokens: [mint],
     allowedProtocols: [protocol],
     maxLeverageBps: 30000,
@@ -66,14 +66,14 @@ describe("shield_create_vault", () => {
     expect(call!.args[0].allowedTokens).to.have.length(0);
   });
 
-  it("handles amount = '0' for dailySpendingCap", async () => {
+  it("handles amount = '0' for dailySpendingCapUsd", async () => {
     const client = createMockClient();
     const result = await createVault(client as any, {
       ...validInput,
-      dailySpendingCap: "0",
+      dailySpendingCapUsd: "0",
     });
     expect(result).to.include("Vault Created Successfully");
     const call = client.calls.find((c) => c.method === "createVault");
-    expect(call!.args[0].dailySpendingCap.toString()).to.equal("0");
+    expect(call!.args[0].dailySpendingCapUsd.toString()).to.equal("0");
   });
 });

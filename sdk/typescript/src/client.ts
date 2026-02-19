@@ -8,17 +8,17 @@ import {
   AddressLookupTableAccount,
 } from "@solana/web3.js";
 import { AnchorProvider, BN, Program, Wallet } from "@coral-xyz/anchor";
-import {
-  FEE_RATE_DENOMINATOR,
-  PROTOCOL_FEE_RATE,
-} from "./types";
+import { FEE_RATE_DENOMINATOR, PROTOCOL_FEE_RATE } from "./types";
 import type {
   AgentShield,
   AgentVaultAccount,
   PolicyConfigAccount,
   SpendTrackerAccount,
+  PendingPolicyUpdateAccount,
   InitializeVaultParams,
   UpdatePolicyParams,
+  QueuePolicyUpdateParams,
+  AgentTransferParams,
   AuthorizeParams,
   ComposeActionParams,
 } from "./types";
@@ -27,12 +27,14 @@ import {
   getPolicyPDA,
   getTrackerPDA,
   getSessionPDA,
+  getPendingPolicyPDA,
   fetchVault,
   fetchPolicy,
   fetchTracker,
   fetchVaultByAddress,
   fetchPolicyByAddress,
   fetchTrackerByAddress,
+  fetchPendingPolicy,
 } from "./accounts";
 import {
   buildInitializeVault,
@@ -45,12 +47,17 @@ import {
   buildReactivateVault,
   buildWithdrawFunds,
   buildCloseVault,
+  buildQueuePolicyUpdate,
+  buildApplyPendingPolicy,
+  buildCancelPendingPolicy,
+  buildAgentTransfer,
 } from "./instructions";
 import {
   composePermittedAction,
   composePermittedTransaction,
   composePermittedSwap,
 } from "./composer";
+import { wrapTransaction, type WrapTransactionParams } from "./wrap";
 import {
   fetchJupiterQuote,
   composeJupiterSwap,
@@ -85,7 +92,7 @@ export class AgentShieldClient {
     connection: Connection,
     wallet: Wallet,
     programId?: PublicKey,
-    idl?: any
+    idl?: any,
   ) {
     this.provider = new AnchorProvider(connection, wallet, {
       commitment: "confirmed",
@@ -94,10 +101,7 @@ export class AgentShieldClient {
     if (programId) {
       resolvedIdl.address = programId.toBase58();
     }
-    this.program = new Program<AgentShield>(
-      resolvedIdl,
-      this.provider
-    ) as any;
+    this.program = new Program<AgentShield>(resolvedIdl, this.provider) as any;
   }
 
   // --- PDA Helpers ---
@@ -114,8 +118,16 @@ export class AgentShieldClient {
     return getTrackerPDA(vault, this.program.programId);
   }
 
-  getSessionPDA(vault: PublicKey, agent: PublicKey): [PublicKey, number] {
-    return getSessionPDA(vault, agent, this.program.programId);
+  getSessionPDA(
+    vault: PublicKey,
+    agent: PublicKey,
+    tokenMint: PublicKey,
+  ): [PublicKey, number] {
+    return getSessionPDA(vault, agent, tokenMint, this.program.programId);
+  }
+
+  getPendingPolicyPDA(vault: PublicKey): [PublicKey, number] {
+    return getPendingPolicyPDA(vault, this.program.programId);
   }
 
   // --- Account Fetching ---
@@ -140,8 +152,16 @@ export class AgentShieldClient {
     return fetchTracker(this.program, vault);
   }
 
-  async fetchTrackerByAddress(address: PublicKey): Promise<SpendTrackerAccount> {
+  async fetchTrackerByAddress(
+    address: PublicKey,
+  ): Promise<SpendTrackerAccount> {
     return fetchTrackerByAddress(this.program, address);
+  }
+
+  async fetchPendingPolicy(
+    vault: PublicKey,
+  ): Promise<PendingPolicyUpdateAccount | null> {
+    return fetchPendingPolicy(this.program, vault);
   }
 
   // --- Instruction Execution (sends + confirms) ---
@@ -151,7 +171,11 @@ export class AgentShieldClient {
     return buildInitializeVault(this.program, owner, params).rpc();
   }
 
-  async deposit(vault: PublicKey, mint: PublicKey, amount: BN): Promise<string> {
+  async deposit(
+    vault: PublicKey,
+    mint: PublicKey,
+    amount: BN,
+  ): Promise<string> {
     const owner = this.provider.wallet.publicKey;
     return buildDepositFunds(this.program, owner, vault, mint, amount).rpc();
   }
@@ -161,23 +185,37 @@ export class AgentShieldClient {
     return buildRegisterAgent(this.program, owner, vault, agent).rpc();
   }
 
-  async updatePolicy(vault: PublicKey, params: UpdatePolicyParams): Promise<string> {
+  async updatePolicy(
+    vault: PublicKey,
+    params: UpdatePolicyParams,
+  ): Promise<string> {
     const owner = this.provider.wallet.publicKey;
     return buildUpdatePolicy(this.program, owner, vault, params).rpc();
   }
 
-  async authorizeAction(vault: PublicKey, params: AuthorizeParams): Promise<string> {
+  async authorizeAction(
+    vault: PublicKey,
+    vaultTokenAccount: PublicKey,
+    params: AuthorizeParams,
+  ): Promise<string> {
     const agent = this.provider.wallet.publicKey;
-    return buildValidateAndAuthorize(this.program, agent, vault, params).rpc();
+    return buildValidateAndAuthorize(
+      this.program,
+      agent,
+      vault,
+      vaultTokenAccount,
+      params,
+    ).rpc();
   }
 
   async finalizeSession(
     vault: PublicKey,
     agent: PublicKey,
+    tokenMint: PublicKey,
     success: boolean,
-    vaultTokenAccount?: PublicKey | null,
+    vaultTokenAccount: PublicKey,
     feeDestinationTokenAccount?: PublicKey | null,
-    protocolTreasuryTokenAccount?: PublicKey | null
+    protocolTreasuryTokenAccount?: PublicKey | null,
   ): Promise<string> {
     const payer = this.provider.wallet.publicKey;
     return buildFinalizeSession(
@@ -185,10 +223,11 @@ export class AgentShieldClient {
       payer,
       vault,
       agent,
+      tokenMint,
       success,
       vaultTokenAccount,
       feeDestinationTokenAccount,
-      protocolTreasuryTokenAccount
+      protocolTreasuryTokenAccount,
     ).rpc();
   }
 
@@ -197,7 +236,7 @@ export class AgentShieldClient {
    */
   static calculateFees(
     amount: BN,
-    developerFeeRate: number
+    developerFeeRate: number,
   ): { protocolFee: BN; developerFee: BN; totalFee: BN } {
     const protocolFee = amount
       .mul(new BN(PROTOCOL_FEE_RATE))
@@ -217,12 +256,19 @@ export class AgentShieldClient {
     return buildRevokeAgent(this.program, owner, vault).rpc();
   }
 
-  async reactivateVault(vault: PublicKey, newAgent?: PublicKey | null): Promise<string> {
+  async reactivateVault(
+    vault: PublicKey,
+    newAgent?: PublicKey | null,
+  ): Promise<string> {
     const owner = this.provider.wallet.publicKey;
     return buildReactivateVault(this.program, owner, vault, newAgent).rpc();
   }
 
-  async withdraw(vault: PublicKey, mint: PublicKey, amount: BN): Promise<string> {
+  async withdraw(
+    vault: PublicKey,
+    mint: PublicKey,
+    amount: BN,
+  ): Promise<string> {
     const owner = this.provider.wallet.publicKey;
     return buildWithdrawFunds(this.program, owner, vault, mint, amount).rpc();
   }
@@ -232,30 +278,63 @@ export class AgentShieldClient {
     return buildCloseVault(this.program, owner, vault).rpc();
   }
 
+  async queuePolicyUpdate(
+    vault: PublicKey,
+    params: QueuePolicyUpdateParams,
+  ): Promise<string> {
+    const owner = this.provider.wallet.publicKey;
+    return buildQueuePolicyUpdate(this.program, owner, vault, params).rpc();
+  }
+
+  async applyPendingPolicy(vault: PublicKey): Promise<string> {
+    const owner = this.provider.wallet.publicKey;
+    return buildApplyPendingPolicy(this.program, owner, vault).rpc();
+  }
+
+  async cancelPendingPolicy(vault: PublicKey): Promise<string> {
+    const owner = this.provider.wallet.publicKey;
+    return buildCancelPendingPolicy(this.program, owner, vault).rpc();
+  }
+
+  async agentTransfer(
+    vault: PublicKey,
+    params: AgentTransferParams,
+    oracleFeedAccount?: PublicKey,
+  ): Promise<string> {
+    const agent = this.provider.wallet.publicKey;
+    return buildAgentTransfer(
+      this.program,
+      agent,
+      vault,
+      params,
+      oracleFeedAccount,
+    ).rpc();
+  }
+
   // --- Composition ---
 
   async composePermittedAction(
     params: ComposeActionParams,
-    computeUnits?: number
+    computeUnits?: number,
   ): Promise<TransactionInstruction[]> {
     return composePermittedAction(this.program, params, computeUnits);
   }
 
   async composePermittedTransaction(
     params: ComposeActionParams,
-    computeUnits?: number
+    computeUnits?: number,
   ): Promise<VersionedTransaction> {
     return composePermittedTransaction(
       this.program,
       this.provider.connection,
       params,
-      computeUnits
+      computeUnits,
     );
   }
 
   async composePermittedSwap(
     params: Omit<ComposeActionParams, "actionType">,
-    computeUnits?: number
+    computeUnits?: number,
   ): Promise<TransactionInstruction[]> {
     return composePermittedSwap(this.program, params, computeUnits);
   }
@@ -267,9 +346,12 @@ export class AgentShieldClient {
   async composeAndSend(
     params: ComposeActionParams,
     signers?: Signer[],
-    computeUnits?: number
+    computeUnits?: number,
   ): Promise<string> {
-    const instructions = await this.composePermittedAction(params, computeUnits);
+    const instructions = await this.composePermittedAction(
+      params,
+      computeUnits,
+    );
     const { blockhash, lastValidBlockHeight } =
       await this.provider.connection.getLatestBlockhash();
 
@@ -286,10 +368,44 @@ export class AgentShieldClient {
     }
 
     const signed = await this.provider.wallet.signTransaction(tx);
-    const sig = await this.provider.connection.sendRawTransaction(signed.serialize());
+    const sig = await this.provider.connection.sendRawTransaction(
+      signed.serialize(),
+    );
     await this.provider.connection.confirmTransaction(
       { signature: sig, blockhash, lastValidBlockHeight },
-      "confirmed"
+      "confirmed",
+    );
+
+    return sig;
+  }
+
+  /**
+   * Protocol-agnostic: wrap DeFi instructions, sign, send, and confirm.
+   * Handles authority rewriting, delegation, and fee collection automatically.
+   */
+  async wrapAndSend(
+    params: WrapTransactionParams,
+    signers?: Signer[],
+  ): Promise<string> {
+    const tx = await wrapTransaction(
+      this.program,
+      this.provider.connection,
+      params,
+    );
+
+    if (signers && signers.length > 0) {
+      tx.sign(signers);
+    }
+
+    const signed = await this.provider.wallet.signTransaction(tx);
+    const sig = await this.provider.connection.sendRawTransaction(
+      signed.serialize(),
+    );
+    const { blockhash, lastValidBlockHeight } =
+      await this.provider.connection.getLatestBlockhash();
+    await this.provider.connection.confirmTransaction(
+      { signature: sig, blockhash, lastValidBlockHeight },
+      "confirmed",
     );
 
     return sig;
@@ -300,7 +416,9 @@ export class AgentShieldClient {
   /**
    * Fetch a swap quote from Jupiter V6 API.
    */
-  async getJupiterQuote(params: JupiterQuoteParams): Promise<JupiterQuoteResponse> {
+  async getJupiterQuote(
+    params: JupiterQuoteParams,
+  ): Promise<JupiterQuoteResponse> {
     return fetchJupiterQuote(params);
   }
 
@@ -313,7 +431,7 @@ export class AgentShieldClient {
     return composeJupiterSwapTransaction(
       this.program,
       this.provider.connection,
-      params
+      params,
     );
   }
 
@@ -323,12 +441,12 @@ export class AgentShieldClient {
    */
   async executeJupiterSwap(
     params: JupiterSwapParams,
-    signers?: Signer[]
+    signers?: Signer[],
   ): Promise<string> {
     const { instructions, addressLookupTables } = await composeJupiterSwap(
       this.program,
       this.provider.connection,
-      params
+      params,
     );
 
     const { blockhash, lastValidBlockHeight } =
@@ -347,10 +465,12 @@ export class AgentShieldClient {
     }
 
     const signed = await this.provider.wallet.signTransaction(tx);
-    const sig = await this.provider.connection.sendRawTransaction(signed.serialize());
+    const sig = await this.provider.connection.sendRawTransaction(
+      signed.serialize(),
+    );
     await this.provider.connection.confirmTransaction(
       { signature: sig, blockhash, lastValidBlockHeight },
-      "confirmed"
+      "confirmed",
     );
 
     return sig;
@@ -376,7 +496,7 @@ export class AgentShieldClient {
    */
   getFlashPoolConfig(
     poolName: string = "Crypto.1",
-    cluster: "mainnet-beta" | "devnet" = "mainnet-beta"
+    cluster: "mainnet-beta" | "devnet" = "mainnet-beta",
   ): PoolConfig {
     if (!this._poolConfig) {
       this._poolConfig = getPoolConfig(poolName, cluster);
@@ -389,7 +509,7 @@ export class AgentShieldClient {
    */
   async flashTradeOpen(
     params: FlashOpenPositionParams,
-    poolConfig?: PoolConfig
+    poolConfig?: PoolConfig,
   ): Promise<FlashTradeResult> {
     const perpClient = this.createFlashTradeClient();
     const config = poolConfig ?? this.getFlashPoolConfig();
@@ -401,7 +521,7 @@ export class AgentShieldClient {
    */
   async flashTradeClose(
     params: FlashClosePositionParams,
-    poolConfig?: PoolConfig
+    poolConfig?: PoolConfig,
   ): Promise<FlashTradeResult> {
     const perpClient = this.createFlashTradeClient();
     const config = poolConfig ?? this.getFlashPoolConfig();
@@ -413,7 +533,7 @@ export class AgentShieldClient {
    */
   async flashTradeIncrease(
     params: FlashIncreasePositionParams,
-    poolConfig?: PoolConfig
+    poolConfig?: PoolConfig,
   ): Promise<FlashTradeResult> {
     const perpClient = this.createFlashTradeClient();
     const config = poolConfig ?? this.getFlashPoolConfig();
@@ -425,7 +545,7 @@ export class AgentShieldClient {
    */
   async flashTradeDecrease(
     params: FlashDecreasePositionParams,
-    poolConfig?: PoolConfig
+    poolConfig?: PoolConfig,
   ): Promise<FlashTradeResult> {
     const perpClient = this.createFlashTradeClient();
     const config = poolConfig ?? this.getFlashPoolConfig();
@@ -438,26 +558,31 @@ export class AgentShieldClient {
   async executeFlashTrade(
     result: FlashTradeResult,
     agent: PublicKey,
-    signers?: Signer[]
+    signers?: Signer[],
   ): Promise<string> {
     const tx = await composeFlashTradeTransaction(
       this.provider.connection,
       agent,
-      result
+      result,
     );
 
-    const allSigners = [...(result.additionalSigners || []), ...(signers || [])];
+    const allSigners = [
+      ...(result.additionalSigners || []),
+      ...(signers || []),
+    ];
     if (allSigners.length > 0) {
       tx.sign(allSigners);
     }
 
     const signed = await this.provider.wallet.signTransaction(tx);
-    const sig = await this.provider.connection.sendRawTransaction(signed.serialize());
+    const sig = await this.provider.connection.sendRawTransaction(
+      signed.serialize(),
+    );
     const { blockhash, lastValidBlockHeight } =
       await this.provider.connection.getLatestBlockhash();
     await this.provider.connection.confirmTransaction(
       { signature: sig, blockhash, lastValidBlockHeight },
-      "confirmed"
+      "confirmed",
     );
 
     return sig;

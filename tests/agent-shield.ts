@@ -26,9 +26,21 @@ import {
   getBalance,
   accountExists,
   advancePastSlot,
+  advanceTime,
   TestEnv,
   LiteSVM,
 } from "./helpers/litesvm-setup";
+
+// Helper to build AllowedToken objects for the IDL
+function makeAllowedToken(
+  mint: PublicKey,
+  oracleFeed: PublicKey = PublicKey.default, // default = stablecoin
+  decimals: number = 6,
+  dailyCapBase: BN = new BN(0),
+  maxTxBase: BN = new BN(0),
+) {
+  return { mint, oracleFeed, decimals, dailyCapBase, maxTxBase };
+}
 
 describe("agent-shield", () => {
   let env: TestEnv;
@@ -73,6 +85,8 @@ describe("agent-shield", () => {
     owner = env.provider.wallet;
 
     // Airdrop to test accounts
+    // Owner needs extra SOL for larger PolicyConfig (AllowedToken is 81 bytes each)
+    airdropSol(svm, owner.publicKey, 100 * LAMPORTS_PER_SOL);
     airdropSol(svm, agent.publicKey, 10 * LAMPORTS_PER_SOL);
     airdropSol(svm, unauthorizedUser.publicKey, 10 * LAMPORTS_PER_SOL);
     airdropSol(svm, feeDestination.publicKey, 2 * LAMPORTS_PER_SOL);
@@ -106,7 +120,7 @@ describe("agent-shield", () => {
       usdcMint,
       ownerUsdcAta,
       owner.publicKey,
-      1_000_000_000n // 1000 USDC
+      2_000_000_000n // 2000 USDC
     );
 
     // Create protocol treasury ATA (needed for fee transfers)
@@ -153,11 +167,13 @@ describe("agent-shield", () => {
           vaultId,
           dailyCap,
           maxTxSize,
-          [usdcMint],
+          [makeAllowedToken(usdcMint)],
           [jupiterProgramId],
           new BN(0) as any, // max_leverage_bps (u16)
           3, // max_concurrent_positions
-          0 // developer_fee_rate
+          0, // developer_fee_rate
+          new BN(0), // timelockDuration
+          [] // allowedDestinations
         )
         .accounts({
           owner: owner.publicKey,
@@ -183,10 +199,10 @@ describe("agent-shield", () => {
       // Verify policy state
       const policy = await program.account.policyConfig.fetch(policyPda);
       expect(policy.vault.toString()).to.equal(vaultPda.toString());
-      expect(policy.dailySpendingCap.toNumber()).to.equal(500_000_000);
-      expect(policy.maxTransactionSize.toNumber()).to.equal(100_000_000);
+      expect(policy.dailySpendingCapUsd.toNumber()).to.equal(500_000_000);
+      expect(policy.maxTransactionSizeUsd.toNumber()).to.equal(100_000_000);
       expect(policy.allowedTokens.length).to.equal(1);
-      expect(policy.allowedTokens[0].toString()).to.equal(usdcMint.toString());
+      expect(policy.allowedTokens[0].mint.toString()).to.equal(usdcMint.toString());
       expect(policy.allowedProtocols.length).to.equal(1);
       expect(policy.allowedProtocols[0].toString()).to.equal(jupiterProgramId.toString());
       expect(policy.canOpenPositions).to.equal(true);
@@ -211,7 +227,9 @@ describe("agent-shield", () => {
             [],
             new BN(0) as any,
             1,
-            0
+            0,
+            new BN(0),
+            []
           )
           .accounts({
             owner: owner.publicKey,
@@ -245,10 +263,10 @@ describe("agent-shield", () => {
       );
 
       // 11 tokens exceeds MAX_ALLOWED_TOKENS (10)
-      const tooManyTokens = Array.from({ length: 11 }, () => Keypair.generate().publicKey);
+      const tooManyTokens = Array.from({ length: 11 }, () => makeAllowedToken(Keypair.generate().publicKey));
       try {
         await program.methods
-          .initializeVault(vaultId2, new BN(100), new BN(100), tooManyTokens, [], new BN(0) as any, 1, 0)
+          .initializeVault(vaultId2, new BN(100), new BN(100), tooManyTokens, [], new BN(0) as any, 1, 0, new BN(0), [])
           .accounts({
             owner: owner.publicKey,
             vault: vault2,
@@ -260,7 +278,11 @@ describe("agent-shield", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("TooManyAllowedTokens");
+        // With AllowedToken at 81 bytes each, 11 entries may exceed tx size
+        // before the on-chain check fires — both are valid rejections
+        expect(err.toString()).to.satisfy(
+          (s: string) => s.includes("TooManyAllowedTokens") || s.includes("Transaction too large")
+        );
       }
     });
   });
@@ -324,9 +346,9 @@ describe("agent-shield", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        // Seeds constraint or has_one will fail
+        // Anchor's PDA re-derivation fails before the handler runs
         expect(err.toString()).to.satisfy(
-          (s: string) => s.includes("ConstraintSeeds") || s.includes("Unauthorized") || s.includes("2006") || s.includes("has_one")
+          (s: string) => s.includes("ConstraintSeeds") || s.includes("has_one")
         );
       }
     });
@@ -382,7 +404,7 @@ describe("agent-shield", () => {
 
       // First create the vault
       await program.methods
-        .initializeVault(vid, new BN(1000), new BN(1000), [], [], new BN(0) as any, 1, 0)
+        .initializeVault(vid, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 0, new BN(0), [])
         .accounts({
           owner: owner.publicKey,
           vault: v,
@@ -406,7 +428,7 @@ describe("agent-shield", () => {
         expect.fail("Should have thrown");
       } catch (err: any) {
         expect(err.toString()).to.satisfy(
-          (s: string) => s.includes("Unauthorized") || s.includes("ConstraintSeeds") || s.includes("has_one") || s.includes("2006")
+          (s: string) => s.includes("ConstraintSeeds") || s.includes("has_one")
         );
       }
     });
@@ -426,7 +448,9 @@ describe("agent-shield", () => {
           null,                // keep max_leverage_bps
           null,                // keep can_open_positions
           null,                // keep max_concurrent_positions
-          null                 // keep developer_fee_rate
+          null,                // keep developer_fee_rate
+          null,                // keep timelockDuration
+          null                 // keep allowedDestinations
         )
         .accounts({
           owner: owner.publicKey,
@@ -436,16 +460,16 @@ describe("agent-shield", () => {
         .rpc();
 
       const policy = await program.account.policyConfig.fetch(policyPda);
-      expect(policy.dailySpendingCap.toNumber()).to.equal(200_000_000);
+      expect(policy.dailySpendingCapUsd.toNumber()).to.equal(200_000_000);
       // Other fields unchanged
-      expect(policy.maxTransactionSize.toNumber()).to.equal(100_000_000);
+      expect(policy.maxTransactionSizeUsd.toNumber()).to.equal(100_000_000);
       expect(policy.allowedTokens.length).to.equal(1);
     });
 
     it("rejects non-owner signer", async () => {
       try {
         await program.methods
-          .updatePolicy(new BN(999), null, null, null, null, null, null, null)
+          .updatePolicy(new BN(999), null, null, null, null, null, null, null, null, null)
           .accounts({
             owner: unauthorizedUser.publicKey,
             vault: vaultPda,
@@ -456,7 +480,7 @@ describe("agent-shield", () => {
         expect.fail("Should have thrown");
       } catch (err: any) {
         expect(err.toString()).to.satisfy(
-          (s: string) => s.includes("Unauthorized") || s.includes("ConstraintSeeds") || s.includes("has_one") || s.includes("2006")
+          (s: string) => s.includes("ConstraintSeeds") || s.includes("has_one")
         );
       }
     });
@@ -465,7 +489,7 @@ describe("agent-shield", () => {
       const tooManyProtocols = Array.from({ length: 11 }, () => Keypair.generate().publicKey);
       try {
         await program.methods
-          .updatePolicy(null, null, null, tooManyProtocols, null, null, null, null)
+          .updatePolicy(null, null, null, tooManyProtocols, null, null, null, null, null, null)
           .accounts({
             owner: owner.publicKey,
             vault: vaultPda,
@@ -502,7 +526,7 @@ describe("agent-shield", () => {
       );
 
       await program.methods
-        .initializeVault(revokeVaultId, new BN(1000), new BN(1000), [], [], new BN(0) as any, 1, 0)
+        .initializeVault(revokeVaultId, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 0, new BN(0), [])
         .accounts({
           owner: owner.publicKey,
           vault: revokeVaultPda,
@@ -527,7 +551,7 @@ describe("agent-shield", () => {
 
       const vault = await program.account.agentVault.fetch(revokeVaultPda);
       // VaultStatus::Frozen is represented as { frozen: {} }
-      expect(JSON.stringify(vault.status)).to.include("frozen");
+      expect(vault.status).to.have.property("frozen");
     });
 
     it("is idempotent (can freeze already-frozen vault)", async () => {
@@ -537,7 +561,7 @@ describe("agent-shield", () => {
         .rpc();
 
       const vault = await program.account.agentVault.fetch(revokeVaultPda);
-      expect(JSON.stringify(vault.status)).to.include("frozen");
+      expect(vault.status).to.have.property("frozen");
     });
 
     it("rejects non-owner signer", async () => {
@@ -550,7 +574,7 @@ describe("agent-shield", () => {
         expect.fail("Should have thrown");
       } catch (err: any) {
         expect(err.toString()).to.satisfy(
-          (s: string) => s.includes("Unauthorized") || s.includes("ConstraintSeeds") || s.includes("has_one") || s.includes("2006")
+          (s: string) => s.includes("ConstraintSeeds") || s.includes("has_one")
         );
       }
     });
@@ -578,7 +602,7 @@ describe("agent-shield", () => {
       );
 
       await program.methods
-        .initializeVault(reactVaultId, new BN(1000), new BN(1000), [], [], new BN(0) as any, 1, 0)
+        .initializeVault(reactVaultId, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 0, new BN(0), [])
         .accounts({
           owner: owner.publicKey,
           vault: reactVaultPda,
@@ -603,7 +627,7 @@ describe("agent-shield", () => {
         .rpc();
 
       const vault = await program.account.agentVault.fetch(reactVaultPda);
-      expect(JSON.stringify(vault.status)).to.include("active");
+      expect(vault.status).to.have.property("active");
     });
 
     it("rejects reactivating an already-active vault", async () => {
@@ -633,7 +657,7 @@ describe("agent-shield", () => {
 
       const vault = await program.account.agentVault.fetch(reactVaultPda);
       expect(vault.agent.toString()).to.equal(newAgent.publicKey.toString());
-      expect(JSON.stringify(vault.status)).to.include("active");
+      expect(vault.status).to.have.property("active");
     });
   });
 
@@ -701,7 +725,7 @@ describe("agent-shield", () => {
         expect.fail("Should have thrown");
       } catch (err: any) {
         expect(err.toString()).to.satisfy(
-          (s: string) => s.includes("Unauthorized") || s.includes("ConstraintSeeds") || s.includes("has_one") || s.includes("2006")
+          (s: string) => s.includes("ConstraintSeeds") || s.includes("has_one")
         );
       }
     });
@@ -715,7 +739,7 @@ describe("agent-shield", () => {
 
     before(async () => {
       [sessionPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("session"), vaultPda.toBuffer(), agent.publicKey.toBuffer()],
+        [Buffer.from("session"), vaultPda.toBuffer(), agent.publicKey.toBuffer(), usdcMint.toBuffer()],
         program.programId
       );
     });
@@ -737,6 +761,9 @@ describe("agent-shield", () => {
           policy: policyPda,
           tracker: trackerPda,
           session: sessionPda,
+          vaultTokenAccount: vaultUsdcAta,
+          tokenMintAccount: usdcMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
         .signers([agent])
@@ -750,11 +777,14 @@ describe("agent-shield", () => {
       expect(session.authorizedAmount.toNumber()).to.equal(50_000_000);
       expect(session.authorizedToken.toString()).to.equal(usdcMint.toString());
       expect(session.authorizedProtocol.toString()).to.equal(jupiterProgramId.toString());
+      expect(session.delegated).to.equal(true);
+      expect(session.delegationTokenAccount.toString()).to.equal(vaultUsdcAta.toString());
 
-      // Verify spend was tracked
+      // Verify spend was tracked (USD amount for stablecoin = base amount)
       const tracker = await program.account.spendTracker.fetch(trackerPda);
       expect(tracker.rollingSpends.length).to.equal(1);
-      expect(tracker.rollingSpends[0].amountSpent.toNumber()).to.equal(50_000_000);
+      expect(tracker.rollingSpends[0].usdAmount.toNumber()).to.equal(50_000_000);
+      expect(tracker.rollingSpends[0].baseAmount.toNumber()).to.equal(50_000_000);
     });
 
     it("prevents double-authorization (session already exists)", async () => {
@@ -773,6 +803,9 @@ describe("agent-shield", () => {
             policy: policyPda,
             tracker: trackerPda,
             session: sessionPda,
+            vaultTokenAccount: vaultUsdcAta,
+            tokenMintAccount: usdcMint,
+            tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
           .signers([agent])
@@ -793,7 +826,7 @@ describe("agent-shield", () => {
 
     before(async () => {
       [sessionPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("session"), vaultPda.toBuffer(), agent.publicKey.toBuffer()],
+        [Buffer.from("session"), vaultPda.toBuffer(), agent.publicKey.toBuffer(), usdcMint.toBuffer()],
         program.programId
       );
     });
@@ -823,6 +856,8 @@ describe("agent-shield", () => {
         await program.account.sessionAuthority.fetch(sessionPda);
         expect.fail("Session should have been closed");
       } catch (err: any) {
+        // LiteSVM proxy returns "Account does not exist"; Anchor provider
+        // returns "Could not find". Both confirm the session PDA was closed.
         expect(err.toString()).to.satisfy(
           (s: string) => s.includes("Account does not exist") || s.includes("Could not find")
         );
@@ -849,12 +884,26 @@ describe("agent-shield", () => {
 
     beforeEach(async () => {
       [sessionPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("session"), vaultPda.toBuffer(), agent.publicKey.toBuffer()],
+        [Buffer.from("session"), vaultPda.toBuffer(), agent.publicKey.toBuffer(), usdcMint.toBuffer()],
         program.programId
       );
     });
 
     it("rejects disallowed token", async () => {
+      // Session PDA for solMint (disallowed token)
+      const [solSession] = PublicKey.findProgramAddressSync(
+        [Buffer.from("session"), vaultPda.toBuffer(), agent.publicKey.toBuffer(), solMint.toBuffer()],
+        program.programId
+      );
+      // Create vault ATA for solMint so Anchor account validation passes,
+      // allowing the handler's TokenNotAllowed check to fire.
+      const vaultSolAta = createAtaIdempotentHelper(
+        svm,
+        (owner as any).payer,
+        solMint,
+        vaultPda,
+        true, // allowOwnerOffCurve — vault is a PDA
+      );
       try {
         await program.methods
           .validateAndAuthorize(
@@ -869,7 +918,10 @@ describe("agent-shield", () => {
             vault: vaultPda,
             policy: policyPda,
             tracker: trackerPda,
-            session: sessionPda,
+            session: solSession,
+            vaultTokenAccount: vaultSolAta,
+            tokenMintAccount: solMint,
+            tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
           .signers([agent])
@@ -897,6 +949,9 @@ describe("agent-shield", () => {
             policy: policyPda,
             tracker: trackerPda,
             session: sessionPda,
+            vaultTokenAccount: vaultUsdcAta,
+            tokenMintAccount: usdcMint,
+            tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
           .signers([agent])
@@ -923,6 +978,9 @@ describe("agent-shield", () => {
             policy: policyPda,
             tracker: trackerPda,
             session: sessionPda,
+            vaultTokenAccount: vaultUsdcAta,
+            tokenMintAccount: usdcMint,
+            tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
           .signers([agent])
@@ -951,6 +1009,9 @@ describe("agent-shield", () => {
             policy: policyPda,
             tracker: trackerPda,
             session: sessionPda,
+            vaultTokenAccount: vaultUsdcAta,
+            tokenMintAccount: usdcMint,
+            tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
           .signers([agent])
@@ -991,6 +1052,9 @@ describe("agent-shield", () => {
             policy: policyPda,
             tracker: trackerPda,
             session: sessionPda,
+            vaultTokenAccount: vaultUsdcAta,
+            tokenMintAccount: usdcMint,
+            tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
           .signers([agent])
@@ -1006,7 +1070,7 @@ describe("agent-shield", () => {
       airdropSol(svm, fakeAgent.publicKey, LAMPORTS_PER_SOL);
 
       const [fakeSession] = PublicKey.findProgramAddressSync(
-        [Buffer.from("session"), vaultPda.toBuffer(), fakeAgent.publicKey.toBuffer()],
+        [Buffer.from("session"), vaultPda.toBuffer(), fakeAgent.publicKey.toBuffer(), usdcMint.toBuffer()],
         program.programId
       );
 
@@ -1025,6 +1089,9 @@ describe("agent-shield", () => {
             policy: policyPda,
             tracker: trackerPda,
             session: fakeSession,
+            vaultTokenAccount: vaultUsdcAta,
+            tokenMintAccount: usdcMint,
+            tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
           .signers([fakeAgent])
@@ -1054,8 +1121,18 @@ describe("agent-shield", () => {
         program.programId
       );
       const [frozenSession] = PublicKey.findProgramAddressSync(
-        [Buffer.from("session"), frozenVault.toBuffer(), agent.publicKey.toBuffer()],
+        [Buffer.from("session"), frozenVault.toBuffer(), agent.publicKey.toBuffer(), usdcMint.toBuffer()],
         program.programId
+      );
+
+      // Create vault ATA so Anchor account validation passes,
+      // allowing the agent/status checks to fire.
+      const frozenVaultUsdcAta = createAtaIdempotentHelper(
+        svm,
+        (owner as any).payer,
+        usdcMint,
+        frozenVault,
+        true, // allowOwnerOffCurve — vault is a PDA
       );
 
       try {
@@ -1073,16 +1150,21 @@ describe("agent-shield", () => {
             policy: frozenPolicy,
             tracker: frozenTracker,
             session: frozenSession,
+            vaultTokenAccount: frozenVaultUsdcAta,
+            tokenMintAccount: usdcMint,
+            tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
           .signers([agent])
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        // revoke_agent clears the agent key, so the constraint fires UnauthorizedAgent
-        // before the handler's VaultNotActive check — both indicate the vault is locked down
+        // revoke_agent clears the agent key, so is_agent() constraint fails
+        // before the handler's VaultNotActive check can run.
         expect(err.toString()).to.satisfy(
-          (s: string) => s.includes("VaultNotActive") || s.includes("UnauthorizedAgent")
+          (s: string) =>
+            s.includes("UnauthorizedAgent") ||
+            s.includes("ConstraintRaw")
         );
       }
     });
@@ -1112,7 +1194,7 @@ describe("agent-shield", () => {
       );
 
       await program.methods
-        .initializeVault(closeVaultId, new BN(1000), new BN(1000), [], [], new BN(0) as any, 1, 0)
+        .initializeVault(closeVaultId, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 0, new BN(0), [])
         .accounts({
           owner: owner.publicKey,
           vault: closeVaultPda,
@@ -1165,7 +1247,7 @@ describe("agent-shield", () => {
       );
 
       await program.methods
-        .initializeVault(vid, new BN(1000), new BN(1000), [], [], new BN(0) as any, 1, 0)
+        .initializeVault(vid, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 0, new BN(0), [])
         .accounts({
           owner: owner.publicKey,
           vault: v,
@@ -1191,7 +1273,7 @@ describe("agent-shield", () => {
         expect.fail("Should have thrown");
       } catch (err: any) {
         expect(err.toString()).to.satisfy(
-          (s: string) => s.includes("Unauthorized") || s.includes("ConstraintSeeds") || s.includes("has_one") || s.includes("2006")
+          (s: string) => s.includes("ConstraintSeeds") || s.includes("has_one")
         );
       }
     });
@@ -1227,11 +1309,13 @@ describe("agent-shield", () => {
           feeVaultId,
           new BN(500_000_000),
           new BN(100_000_000),
-          [usdcMint],
+          [makeAllowedToken(usdcMint)],
           [jupiterProgramId],
           new BN(0) as any,
           3,
-          30 // developer_fee_rate = 30 (0.3 BPS)
+          30, // developer_fee_rate = 30 (0.3 BPS)
+          new BN(0),
+          []
         )
         .accounts({
           owner: owner.publicKey,
@@ -1264,7 +1348,7 @@ describe("agent-shield", () => {
 
       try {
         await program.methods
-          .initializeVault(badVaultId, new BN(1000), new BN(1000), [], [], new BN(0) as any, 1, 51)
+          .initializeVault(badVaultId, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 51, new BN(0), [])
           .accounts({
             owner: owner.publicKey,
             vault: bv,
@@ -1283,7 +1367,7 @@ describe("agent-shield", () => {
     it("update_policy changes developer_fee_rate 0→30 → stored", async () => {
       // Use the fee vault created above, first set to 0
       await program.methods
-        .updatePolicy(null, null, null, null, null, null, null, 0)
+        .updatePolicy(null, null, null, null, null, null, null, 0, null, null)
         .accounts({
           owner: owner.publicKey,
           vault: feeVaultPda,
@@ -1296,7 +1380,7 @@ describe("agent-shield", () => {
 
       // Now update to 30
       await program.methods
-        .updatePolicy(null, null, null, null, null, null, null, 30)
+        .updatePolicy(null, null, null, null, null, null, null, 30, null, null)
         .accounts({
           owner: owner.publicKey,
           vault: feeVaultPda,
@@ -1311,7 +1395,7 @@ describe("agent-shield", () => {
     it("update_policy with developer_fee_rate 51 → rejects", async () => {
       try {
         await program.methods
-          .updatePolicy(null, null, null, null, null, null, null, 51)
+          .updatePolicy(null, null, null, null, null, null, null, 51, null, null)
           .accounts({
             owner: owner.publicKey,
             vault: feeVaultPda,
@@ -1327,7 +1411,7 @@ describe("agent-shield", () => {
     it("finalize with developer_fee=0 → only protocol fee transferred", async () => {
       // Set developer fee to 0
       await program.methods
-        .updatePolicy(null, null, null, null, null, null, null, 0)
+        .updatePolicy(null, null, null, null, null, null, null, 0, null, null)
         .accounts({
           owner: owner.publicKey,
           vault: feeVaultPda,
@@ -1363,7 +1447,7 @@ describe("agent-shield", () => {
 
       // Authorize action
       [feeSessionPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("session"), feeVaultPda.toBuffer(), agent.publicKey.toBuffer()],
+        [Buffer.from("session"), feeVaultPda.toBuffer(), agent.publicKey.toBuffer(), usdcMint.toBuffer()],
         program.programId
       );
 
@@ -1381,6 +1465,9 @@ describe("agent-shield", () => {
           policy: feePolicyPda,
           tracker: feeTrackerPda,
           session: feeSessionPda,
+          vaultTokenAccount: feeVaultUsdcAta,
+          tokenMintAccount: usdcMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
         .signers([agent])
@@ -1415,7 +1502,7 @@ describe("agent-shield", () => {
     it("finalize with developer_fee=50 → both fees transferred", async () => {
       // Set developer fee to 50 (max, 0.5 BPS)
       await program.methods
-        .updatePolicy(null, null, null, null, null, null, null, 50)
+        .updatePolicy(null, null, null, null, null, null, null, 50, null, null)
         .accounts({
           owner: owner.publicKey,
           vault: feeVaultPda,
@@ -1441,7 +1528,7 @@ describe("agent-shield", () => {
 
       // Authorize
       [feeSessionPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("session"), feeVaultPda.toBuffer(), agent.publicKey.toBuffer()],
+        [Buffer.from("session"), feeVaultPda.toBuffer(), agent.publicKey.toBuffer(), usdcMint.toBuffer()],
         program.programId
       );
 
@@ -1459,6 +1546,9 @@ describe("agent-shield", () => {
           policy: feePolicyPda,
           tracker: feeTrackerPda,
           session: feeSessionPda,
+          vaultTokenAccount: feeVaultUsdcAta,
+          tokenMintAccount: usdcMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
         .signers([agent])
@@ -1491,7 +1581,7 @@ describe("agent-shield", () => {
     it("finalize with success=false → no fees", async () => {
       // Authorize
       [feeSessionPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("session"), feeVaultPda.toBuffer(), agent.publicKey.toBuffer()],
+        [Buffer.from("session"), feeVaultPda.toBuffer(), agent.publicKey.toBuffer(), usdcMint.toBuffer()],
         program.programId
       );
 
@@ -1509,6 +1599,9 @@ describe("agent-shield", () => {
           policy: feePolicyPda,
           tracker: feeTrackerPda,
           session: feeSessionPda,
+          vaultTokenAccount: feeVaultUsdcAta,
+          tokenMintAccount: usdcMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
         .signers([agent])
@@ -1557,7 +1650,7 @@ describe("agent-shield", () => {
       );
 
       await program.methods
-        .initializeVault(maxFeeVaultId, new BN(1000), new BN(1000), [], [], new BN(0) as any, 1, 50)
+        .initializeVault(maxFeeVaultId, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 50, new BN(0), [])
         .accounts({
           owner: owner.publicKey,
           vault: mv,
@@ -1602,7 +1695,7 @@ describe("agent-shield", () => {
         program.programId
       );
       [expirySessionPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("session"), expiryVaultPda.toBuffer(), expiryAgent.publicKey.toBuffer()],
+        [Buffer.from("session"), expiryVaultPda.toBuffer(), expiryAgent.publicKey.toBuffer(), usdcMint.toBuffer()],
         program.programId
       );
 
@@ -1612,11 +1705,13 @@ describe("agent-shield", () => {
           expiryVaultId,
           new BN(500_000_000),
           new BN(100_000_000),
-          [usdcMint],
+          [makeAllowedToken(usdcMint)],
           [jupiterProgramId],
           new BN(0) as any,
           3,
-          0
+          0,
+          new BN(0),
+          []
         )
         .accounts({
           owner: owner.publicKey,
@@ -1671,6 +1766,9 @@ describe("agent-shield", () => {
           policy: expiryPolicyPda,
           tracker: expiryTrackerPda,
           session: expirySessionPda,
+          vaultTokenAccount: expiryVaultUsdcAta,
+          tokenMintAccount: usdcMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
         .signers([expiryAgent])
@@ -1709,6 +1807,8 @@ describe("agent-shield", () => {
         await program.account.sessionAuthority.fetch(expirySessionPda);
         expect.fail("Session should have been closed");
       } catch (err: any) {
+        // LiteSVM proxy returns "Account does not exist"; Anchor provider
+        // returns "Could not find". Both confirm the session PDA was closed.
         expect(err.toString()).to.satisfy(
           (s: string) => s.includes("Account does not exist") || s.includes("Could not find")
         );
@@ -1740,6 +1840,9 @@ describe("agent-shield", () => {
           policy: expiryPolicyPda,
           tracker: expiryTrackerPda,
           session: expirySessionPda,
+          vaultTokenAccount: expiryVaultUsdcAta,
+          tokenMintAccount: usdcMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
         .signers([expiryAgent])
@@ -1774,6 +1877,8 @@ describe("agent-shield", () => {
         await program.account.sessionAuthority.fetch(expirySessionPda);
         expect.fail("Session should have been closed");
       } catch (err: any) {
+        // LiteSVM proxy returns "Account does not exist"; Anchor provider
+        // returns "Could not find". Both confirm the session PDA was closed.
         expect(err.toString()).to.satisfy(
           (s: string) => s.includes("Account does not exist") || s.includes("Could not find")
         );
@@ -1796,6 +1901,9 @@ describe("agent-shield", () => {
           policy: expiryPolicyPda,
           tracker: expiryTrackerPda,
           session: expirySessionPda,
+          vaultTokenAccount: expiryVaultUsdcAta,
+          tokenMintAccount: usdcMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
         .signers([expiryAgent])
@@ -1861,6 +1969,9 @@ describe("agent-shield", () => {
           policy: expiryPolicyPda,
           tracker: expiryTrackerPda,
           session: expirySessionPda,
+          vaultTokenAccount: expiryVaultUsdcAta,
+          tokenMintAccount: usdcMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
         .signers([expiryAgent])
@@ -1931,7 +2042,7 @@ describe("agent-shield", () => {
       );
 
       await program.methods
-        .initializeVault(vid, new BN(1000), new BN(1000), [], [], new BN(0) as any, 1, 0)
+        .initializeVault(vid, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 0, new BN(0), [])
         .accounts({
           owner: owner.publicKey,
           vault: v,
@@ -1991,7 +2102,7 @@ describe("agent-shield", () => {
 
       // Now try to use the ORIGINAL agent (who was revoked)
       const [oldSession] = PublicKey.findProgramAddressSync(
-        [Buffer.from("session"), rv.toBuffer(), agent.publicKey.toBuffer()],
+        [Buffer.from("session"), rv.toBuffer(), agent.publicKey.toBuffer(), usdcMint.toBuffer()],
         program.programId
       );
 
@@ -2010,13 +2121,19 @@ describe("agent-shield", () => {
             policy: rp,
             tracker: rt,
             session: oldSession,
+            vaultTokenAccount: vaultUsdcAta,
+            tokenMintAccount: usdcMint,
+            tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
           .signers([agent])
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("UnauthorizedAgent");
+        // Anchor's is_agent() constraint fires before the handler runs
+        expect(err.toString()).to.satisfy(
+          (s: string) => s.includes("UnauthorizedAgent") || s.includes("ConstraintRaw")
+        );
       }
     });
   });
@@ -2041,7 +2158,7 @@ describe("agent-shield", () => {
       );
 
       await program.methods
-        .initializeVault(frozenVaultId, new BN(1000), new BN(1000), [usdcMint], [], new BN(0) as any, 1, 0)
+        .initializeVault(frozenVaultId, new BN(1000), new BN(1000), [makeAllowedToken(usdcMint)], [], new BN(0) as any, 1, 0, new BN(0), [])
         .accounts({
           owner: owner.publicKey,
           vault: fv,
@@ -2098,7 +2215,7 @@ describe("agent-shield", () => {
       );
 
       await program.methods
-        .initializeVault(closedVaultId, new BN(1000), new BN(1000), [usdcMint], [], new BN(0) as any, 1, 0)
+        .initializeVault(closedVaultId, new BN(1000), new BN(1000), [makeAllowedToken(usdcMint)], [], new BN(0) as any, 1, 0, new BN(0), [])
         .accounts({
           owner: owner.publicKey,
           vault: cv,
@@ -2144,9 +2261,11 @@ describe("agent-shield", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        // Vault account no longer exists after close
+        // Vault PDA was closed — Anchor can't deserialize a zeroed/missing account.
+        // LiteSVM proxy returns "Account does not exist"; Anchor provider
+        // returns "Could not find" or "AccountNotInitialized".
         expect(err.toString()).to.satisfy(
-          (s: string) => s.includes("VaultAlreadyClosed") || s.includes("AccountNotInitialized") || s.includes("not found") || s.includes("does not exist") || s.includes("Could not find")
+          (s: string) => s.includes("AccountNotInitialized") || s.includes("does not exist") || s.includes("Could not find")
         );
       }
     });
@@ -2166,12 +2285,12 @@ describe("agent-shield", () => {
         program.programId
       );
       const [cs] = PublicKey.findProgramAddressSync(
-        [Buffer.from("session"), cv.toBuffer(), agent.publicKey.toBuffer()],
+        [Buffer.from("session"), cv.toBuffer(), agent.publicKey.toBuffer(), usdcMint.toBuffer()],
         program.programId
       );
 
       await program.methods
-        .initializeVault(closedVaultId, new BN(1000), new BN(1000), [usdcMint], [jupiterProgramId], new BN(0) as any, 1, 0)
+        .initializeVault(closedVaultId, new BN(1000), new BN(1000), [makeAllowedToken(usdcMint)], [jupiterProgramId], new BN(0) as any, 1, 0, new BN(0), [])
         .accounts({
           owner: owner.publicKey,
           vault: cv,
@@ -2214,15 +2333,20 @@ describe("agent-shield", () => {
             policy: cp,
             tracker: ct,
             session: cs,
+            vaultTokenAccount: anchor.utils.token.associatedAddress({ mint: usdcMint, owner: cv }),
+            tokenMintAccount: usdcMint,
+            tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
           .signers([agent])
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        // Vault PDA closed — account not found
+        // Vault PDA was closed — Anchor can't deserialize it.
+        // LiteSVM returns "does not exist"; Anchor returns "Could not find"
+        // or "AccountNotInitialized".
         expect(err.toString()).to.satisfy(
-          (s: string) => s.includes("VaultNotActive") || s.includes("AccountNotInitialized") || s.includes("not found") || s.includes("does not exist") || s.includes("Could not find")
+          (s: string) => s.includes("AccountNotInitialized") || s.includes("does not exist") || s.includes("Could not find")
         );
       }
     });
@@ -2261,11 +2385,13 @@ describe("agent-shield", () => {
           ringVaultId,
           new BN(999_000_000_000), // 999k USDC daily cap
           new BN(100_000_000),     // 100 USDC max tx
-          [usdcMint],
+          [makeAllowedToken(usdcMint)],
           [jupiterProgramId],
           new BN(0) as any,
           3,
-          0
+          0,
+          new BN(0),
+          []
         )
         .accounts({
           owner: owner.publicKey,
@@ -2305,7 +2431,7 @@ describe("agent-shield", () => {
 
     it("51+ transactions → oldest evicted, newest preserved, count stays at 50", async () => {
       const [sessionPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("session"), ringVaultPda.toBuffer(), ringAgent.publicKey.toBuffer()],
+        [Buffer.from("session"), ringVaultPda.toBuffer(), ringAgent.publicKey.toBuffer(), usdcMint.toBuffer()],
         program.programId
       );
 
@@ -2325,6 +2451,9 @@ describe("agent-shield", () => {
             policy: ringPolicyPda,
             tracker: ringTrackerPda,
             session: sessionPda,
+            vaultTokenAccount: ringVaultUsdcAta,
+            tokenMintAccount: usdcMint,
+            tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
           .signers([ringAgent])
@@ -2397,11 +2526,13 @@ describe("agent-shield", () => {
           feeEdgeVaultId,
           new BN(999_000_000),
           new BN(100_000_000),
-          [usdcMint],
+          [makeAllowedToken(usdcMint)],
           [jupiterProgramId],
           new BN(0) as any,
           3,
-          0 // developer_fee_rate = 0
+          0, // developer_fee_rate = 0
+          new BN(0),
+          []
         )
         .accounts({
           owner: owner.publicKey,
@@ -2440,7 +2571,7 @@ describe("agent-shield", () => {
 
     it("amount = 1 lamport → protocol_fee = 0 → no fee transfer", async () => {
       const [sessionPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("session"), feeEdgeVaultPda.toBuffer(), feeEdgeAgent.publicKey.toBuffer()],
+        [Buffer.from("session"), feeEdgeVaultPda.toBuffer(), feeEdgeAgent.publicKey.toBuffer(), usdcMint.toBuffer()],
         program.programId
       );
 
@@ -2459,6 +2590,9 @@ describe("agent-shield", () => {
           policy: feeEdgePolicyPda,
           tracker: feeEdgeTrackerPda,
           session: sessionPda,
+          vaultTokenAccount: feeEdgeVaultUsdcAta,
+          tokenMintAccount: usdcMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
         .signers([feeEdgeAgent])
@@ -2492,7 +2626,7 @@ describe("agent-shield", () => {
 
     it("amount = 49999 → fee = 0; amount = 50000 → fee = 1", async () => {
       const [sessionPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("session"), feeEdgeVaultPda.toBuffer(), feeEdgeAgent.publicKey.toBuffer()],
+        [Buffer.from("session"), feeEdgeVaultPda.toBuffer(), feeEdgeAgent.publicKey.toBuffer(), usdcMint.toBuffer()],
         program.programId
       );
 
@@ -2511,6 +2645,9 @@ describe("agent-shield", () => {
           policy: feeEdgePolicyPda,
           tracker: feeEdgeTrackerPda,
           session: sessionPda,
+          vaultTokenAccount: feeEdgeVaultUsdcAta,
+          tokenMintAccount: usdcMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
         .signers([feeEdgeAgent])
@@ -2550,6 +2687,9 @@ describe("agent-shield", () => {
           policy: feeEdgePolicyPda,
           tracker: feeEdgeTrackerPda,
           session: sessionPda,
+          vaultTokenAccount: feeEdgeVaultUsdcAta,
+          tokenMintAccount: usdcMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
         .signers([feeEdgeAgent])
@@ -2579,6 +2719,1463 @@ describe("agent-shield", () => {
       // Vault balance should decrease by exactly 1 (protocol fee)
       const vaultBalAfter = getTokenBalance(svm, feeEdgeVaultUsdcAta);
       expect(Number(vaultBalBefore) - Number(vaultBalAfter)).to.equal(1);
+    });
+  });
+
+  // =========================================================================
+  // Oracle Pricing (Pyth + Switchboard dual-oracle)
+  // =========================================================================
+  describe("Oracle Pricing", () => {
+    // Pyth Receiver program ID
+    const PYTH_RECEIVER_PROGRAM = new PublicKey(
+      "rec5EKMGg6MxZYaMdyBfgwp4d5rB9T1VQH5pJv5LtFJ"
+    );
+    // Switchboard On-Demand program ID
+    const SWITCHBOARD_ON_DEMAND_PROGRAM = new PublicKey(
+      "SBondMDrcV3K4kxZR1HNVT7osZxAHVHgYXL5Ze1oMUv"
+    );
+
+    // Oracle vault state
+    const oracleVaultId = new BN(500);
+    let oracleVaultPda: PublicKey;
+    let oraclePolicyPda: PublicKey;
+    let oracleTrackerPda: PublicKey;
+    const oracleAgent = Keypair.generate();
+
+    // SOL-like oracle-priced token (9 decimals)
+    let oracleMint: PublicKey;
+    let ownerOracleAta: PublicKey;
+    let vaultOracleAta: PublicKey;
+
+    // Mock oracle feed address
+    const pythFeedKeypair = Keypair.generate();
+    const switchboardFeedKeypair = Keypair.generate();
+
+    /**
+     * Build a mock Pyth PriceUpdateV2 account (133 bytes, Borsh-serialized).
+     *
+     * Layout:
+     *   [0..8]    discriminator (8 bytes, zeros)
+     *   [8..40]   write_authority (32 bytes)
+     *   [40]      verification_level (1 byte: 0=Partial, 1=Full)
+     *   [41..73]  feed_id (32 bytes)
+     *   [73..81]  price (i64 LE)
+     *   [81..89]  conf (u64 LE)
+     *   [89..93]  exponent (i32 LE)
+     *   [93..101] publish_time (i64 LE)
+     *   [101..133] remaining fields (prev_publish_time, ema_price, ema_conf, posted_slot)
+     */
+    function createMockPythAccount(
+      feedAddress: PublicKey,
+      price: bigint,       // i64, e.g. 15000000000n for $150 with exponent -8
+      conf: bigint,        // u64, confidence interval
+      exponent: number,    // i32, typically -8
+      publishTime: bigint, // i64, unix timestamp in seconds
+      verificationLevel: number = 1, // 1 = Full (Wormhole verified)
+    ): void {
+      const data = Buffer.alloc(133);
+      // discriminator [0..8] — zeros
+      // write_authority [8..40] — zeros
+      // verification_level [40]
+      data.writeUInt8(verificationLevel, 40);
+      // feed_id [41..73] — zeros
+      // price [73..81]
+      data.writeBigInt64LE(price, 73);
+      // conf [81..89]
+      data.writeBigUInt64LE(conf, 81);
+      // exponent [89..93]
+      data.writeInt32LE(exponent, 89);
+      // publish_time [93..101]
+      data.writeBigInt64LE(publishTime, 93);
+      // remaining fields are zero
+
+      svm.setAccount(feedAddress, {
+        lamports: 1_000_000,
+        data,
+        owner: PYTH_RECEIVER_PROGRAM,
+        executable: false,
+      });
+    }
+
+    /**
+     * Build a mock Switchboard PullFeed account (discriminator + 32 submissions).
+     * Each submission: [oracle(32) | slot(8) | padding(8) | value(16)] = 64 bytes.
+     */
+    function createMockSwitchboardAccount(
+      feedAddress: PublicKey,
+      priceI128: bigint, // i128 with 18 implicit decimals
+      currentSlot: bigint,
+      numSamples: number = 5,
+    ): void {
+      const DISC = 8;
+      const STRIDE = 64;
+      const data = Buffer.alloc(DISC + 32 * STRIDE);
+
+      for (let i = 0; i < numSamples; i++) {
+        const base = DISC + i * STRIDE;
+        // oracle pubkey — non-zero (use index as fill byte)
+        data.fill(i + 1, base, base + 32);
+        // slot (u64 LE)
+        data.writeBigUInt64LE(currentSlot, base + 32);
+        // padding (8 bytes, zeros)
+        // value (i128 LE) — write as two 64-bit halves
+        const low = priceI128 & 0xFFFFFFFFFFFFFFFFn;
+        const high = (priceI128 >> 64n) & 0xFFFFFFFFFFFFFFFFn;
+        data.writeBigUInt64LE(low, base + 48);
+        data.writeBigInt64LE(high, base + 56);
+      }
+
+      svm.setAccount(feedAddress, {
+        lamports: 1_000_000,
+        data,
+        owner: SWITCHBOARD_ON_DEMAND_PROGRAM,
+        executable: false,
+      });
+    }
+
+    // Protocol treasury ATA for oracle mint
+    let protocolTreasuryOracleAta: PublicKey;
+
+    before(async () => {
+      // Airdrop
+      airdropSol(svm, oracleAgent.publicKey, 10 * LAMPORTS_PER_SOL);
+
+      // Create oracle-priced token (9 decimals, SOL-like)
+      oracleMint = createMintHelper(
+        svm,
+        (owner as any).payer,
+        owner.publicKey,
+        9
+      );
+
+      // Create owner ATA and mint tokens
+      ownerOracleAta = createAtaHelper(
+        svm,
+        (owner as any).payer,
+        oracleMint,
+        owner.publicKey
+      );
+      mintToHelper(
+        svm,
+        (owner as any).payer,
+        oracleMint,
+        ownerOracleAta,
+        owner.publicKey,
+        10_000_000_000n // 10 tokens (9 decimals)
+      );
+
+      // Create protocol treasury ATA for oracle mint (needed for fee transfers)
+      protocolTreasuryOracleAta = createAtaIdempotentHelper(
+        svm,
+        (owner as any).payer,
+        oracleMint,
+        protocolTreasury,
+        true
+      );
+
+      // Derive oracle vault PDAs
+      [oracleVaultPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("vault"), owner.publicKey.toBuffer(), oracleVaultId.toArrayLike(Buffer, "le", 8)],
+        program.programId
+      );
+      [oraclePolicyPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("policy"), oracleVaultPda.toBuffer()],
+        program.programId
+      );
+      [oracleTrackerPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("tracker"), oracleVaultPda.toBuffer()],
+        program.programId
+      );
+
+      // Initialize vault with oracle-priced token (Pyth feed) and stablecoin
+      await program.methods
+        .initializeVault(
+          oracleVaultId,
+          new BN(10_000_000_000), // $10,000 daily cap
+          new BN(1_000_000_000),  // $1,000 max tx
+          [
+            makeAllowedToken(oracleMint, pythFeedKeypair.publicKey, 9),
+            makeAllowedToken(usdcMint),
+          ],
+          [jupiterProgramId],
+          new BN(0) as any,
+          3,
+          0,
+          new BN(0),
+          []
+        )
+        .accounts({
+          owner: owner.publicKey,
+          vault: oracleVaultPda,
+          policy: oraclePolicyPda,
+          tracker: oracleTrackerPda,
+          feeDestination: feeDestination.publicKey,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+
+      // Register agent
+      await program.methods
+        .registerAgent(oracleAgent.publicKey)
+        .accounts({
+          owner: owner.publicKey,
+          vault: oracleVaultPda,
+        } as any)
+        .rpc();
+
+      // Create vault ATA for oracle-priced token and deposit
+      vaultOracleAta = createAtaIdempotentHelper(
+        svm,
+        (owner as any).payer,
+        oracleMint,
+        oracleVaultPda,
+        true
+      );
+
+      await program.methods
+        .depositFunds(new BN(5_000_000_000)) // 5 tokens
+        .accounts({
+          owner: owner.publicKey,
+          vault: oracleVaultPda,
+          mint: oracleMint,
+          ownerTokenAccount: ownerOracleAta,
+          vaultTokenAccount: vaultOracleAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+    });
+
+    it("Pyth oracle pricing — correct USD conversion", async () => {
+      // SOL/USD = $150.00 (price=15000000000, exponent=-8)
+      // 1 SOL (1_000_000_000 base units) at $150 = $150 USD = 150_000_000 (6 decimals)
+      const clock = svm.getClock();
+      createMockPythAccount(
+        pythFeedKeypair.publicKey,
+        15_000_000_000n,  // price i64 ($150 with 8 decimal places)
+        50_000_000n,       // conf (low: ~0.33% of price)
+        -8,                // exponent
+        clock.unixTimestamp // fresh publish_time
+      );
+
+      const [sessionPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("session"), oracleVaultPda.toBuffer(), oracleAgent.publicKey.toBuffer(), oracleMint.toBuffer()],
+        program.programId
+      );
+
+      await program.methods
+        .validateAndAuthorize(
+          { swap: {} },
+          oracleMint,
+          new BN(1_000_000_000), // 1 token (9 decimals)
+          jupiterProgramId,
+          null
+        )
+        .accounts({
+          agent: oracleAgent.publicKey,
+          vault: oracleVaultPda,
+          policy: oraclePolicyPda,
+          tracker: oracleTrackerPda,
+          session: sessionPda,
+          vaultTokenAccount: vaultOracleAta,
+          tokenMintAccount: oracleMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .remainingAccounts([
+          { pubkey: pythFeedKeypair.publicKey, isWritable: false, isSigner: false },
+        ])
+        .signers([oracleAgent])
+        .rpc();
+
+      // Verify session was created with correct USD amount
+      const session = await program.account.sessionAuthority.fetch(sessionPda);
+      expect(session.authorized).to.equal(true);
+      expect(session.authorizedAmount.toNumber()).to.equal(1_000_000_000);
+
+      // Check tracker recorded correct USD value
+      const tracker = await program.account.spendTracker.fetch(oracleTrackerPda);
+      const lastSpend = tracker.rollingSpends[tracker.rollingSpends.length - 1];
+      // 1 token * $150 = $150 = 150_000_000 in USD-6
+      expect(lastSpend.usdAmount.toNumber()).to.equal(150_000_000);
+
+      // Clean up: finalize session (pass treasury ATA for protocol fee)
+      await program.methods
+        .finalizeSession(true)
+        .accounts({
+          payer: oracleAgent.publicKey,
+          vault: oracleVaultPda,
+          policy: oraclePolicyPda,
+          tracker: oracleTrackerPda,
+          session: sessionPda,
+          sessionRentRecipient: oracleAgent.publicKey,
+          vaultTokenAccount: vaultOracleAta,
+          feeDestinationTokenAccount: null,
+          protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .signers([oracleAgent])
+        .rpc();
+    });
+
+    it("Switchboard oracle pricing — correct USD conversion", async () => {
+      // SOL/USD = $150.00 as i128 with 18 decimals
+      // $150 = 150 * 10^18 = 150_000_000_000_000_000_000
+      const clock = svm.getClock();
+      const priceI128 = 150_000_000_000_000_000_000n;
+
+      // Update policy to use Switchboard feed for this token
+      await program.methods
+        .updatePolicy(
+          null, null,
+          [
+            makeAllowedToken(oracleMint, switchboardFeedKeypair.publicKey, 9),
+            makeAllowedToken(usdcMint),
+          ],
+          null, null, null, null, null, null, null
+        )
+        .accounts({
+          owner: owner.publicKey,
+          vault: oracleVaultPda,
+          policy: oraclePolicyPda,
+        } as any)
+        .rpc();
+
+      createMockSwitchboardAccount(
+        switchboardFeedKeypair.publicKey,
+        priceI128,
+        clock.slot
+      );
+
+      const [sessionPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("session"), oracleVaultPda.toBuffer(), oracleAgent.publicKey.toBuffer(), oracleMint.toBuffer()],
+        program.programId
+      );
+
+      await program.methods
+        .validateAndAuthorize(
+          { swap: {} },
+          oracleMint,
+          new BN(1_000_000_000), // 1 token
+          jupiterProgramId,
+          null
+        )
+        .accounts({
+          agent: oracleAgent.publicKey,
+          vault: oracleVaultPda,
+          policy: oraclePolicyPda,
+          tracker: oracleTrackerPda,
+          session: sessionPda,
+          vaultTokenAccount: vaultOracleAta,
+          tokenMintAccount: oracleMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .remainingAccounts([
+          { pubkey: switchboardFeedKeypair.publicKey, isWritable: false, isSigner: false },
+        ])
+        .signers([oracleAgent])
+        .rpc();
+
+      const tracker = await program.account.spendTracker.fetch(oracleTrackerPda);
+      const lastSpend = tracker.rollingSpends[tracker.rollingSpends.length - 1];
+      expect(lastSpend.usdAmount.toNumber()).to.equal(150_000_000);
+
+      // Finalize (pass treasury ATA for protocol fee)
+      await program.methods
+        .finalizeSession(true)
+        .accounts({
+          payer: oracleAgent.publicKey,
+          vault: oracleVaultPda,
+          policy: oraclePolicyPda,
+          tracker: oracleTrackerPda,
+          session: sessionPda,
+          sessionRentRecipient: oracleAgent.publicKey,
+          vaultTokenAccount: vaultOracleAta,
+          feeDestinationTokenAccount: null,
+          protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .signers([oracleAgent])
+        .rpc();
+
+      // Restore policy to Pyth for subsequent tests
+      await program.methods
+        .updatePolicy(
+          null, null,
+          [
+            makeAllowedToken(oracleMint, pythFeedKeypair.publicKey, 9),
+            makeAllowedToken(usdcMint),
+          ],
+          null, null, null, null, null, null, null
+        )
+        .accounts({
+          owner: owner.publicKey,
+          vault: oracleVaultPda,
+          policy: oraclePolicyPda,
+        } as any)
+        .rpc();
+    });
+
+    it("stale Pyth feed — rejects with OracleFeedStale", async () => {
+      const clock = svm.getClock();
+      // Set publish_time to >60s ago
+      createMockPythAccount(
+        pythFeedKeypair.publicKey,
+        15_000_000_000n,
+        50_000_000n,
+        -8,
+        clock.unixTimestamp - 120n // 120 seconds ago — stale
+      );
+
+      const [sessionPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("session"), oracleVaultPda.toBuffer(), oracleAgent.publicKey.toBuffer(), oracleMint.toBuffer()],
+        program.programId
+      );
+
+      try {
+        await program.methods
+          .validateAndAuthorize(
+            { swap: {} },
+            oracleMint,
+            new BN(100_000_000),
+            jupiterProgramId,
+            null
+          )
+          .accounts({
+            agent: oracleAgent.publicKey,
+            vault: oracleVaultPda,
+            policy: oraclePolicyPda,
+            tracker: oracleTrackerPda,
+            session: sessionPda,
+            vaultTokenAccount: vaultOracleAta,
+            tokenMintAccount: oracleMint,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          } as any)
+          .remainingAccounts([
+            { pubkey: pythFeedKeypair.publicKey, isWritable: false, isSigner: false },
+          ])
+          .signers([oracleAgent])
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err: any) {
+        expect(err.toString()).to.include("OracleFeedStale");
+      }
+    });
+
+    it("wide confidence Pyth feed — rejects with OracleConfidenceTooWide", async () => {
+      const clock = svm.getClock();
+      // conf = 20% of price (2000 BPS > MAX_CONFIDENCE_BPS of 1000)
+      createMockPythAccount(
+        pythFeedKeypair.publicKey,
+        15_000_000_000n,
+        3_000_000_000n, // 20% of price → way over 10%
+        -8,
+        clock.unixTimestamp
+      );
+
+      const [sessionPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("session"), oracleVaultPda.toBuffer(), oracleAgent.publicKey.toBuffer(), oracleMint.toBuffer()],
+        program.programId
+      );
+
+      try {
+        await program.methods
+          .validateAndAuthorize(
+            { swap: {} },
+            oracleMint,
+            new BN(100_000_000),
+            jupiterProgramId,
+            null
+          )
+          .accounts({
+            agent: oracleAgent.publicKey,
+            vault: oracleVaultPda,
+            policy: oraclePolicyPda,
+            tracker: oracleTrackerPda,
+            session: sessionPda,
+            vaultTokenAccount: vaultOracleAta,
+            tokenMintAccount: oracleMint,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          } as any)
+          .remainingAccounts([
+            { pubkey: pythFeedKeypair.publicKey, isWritable: false, isSigner: false },
+          ])
+          .signers([oracleAgent])
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err: any) {
+        expect(err.toString()).to.include("OracleConfidenceTooWide");
+      }
+    });
+
+    it("unverified Pyth feed — rejects with OracleNotVerified", async () => {
+      const clock = svm.getClock();
+      // verification_level = 0 (Partial, not Wormhole-verified)
+      createMockPythAccount(
+        pythFeedKeypair.publicKey,
+        15_000_000_000n,
+        50_000_000n,
+        -8,
+        clock.unixTimestamp,
+        0 // Partial — not verified
+      );
+
+      const [sessionPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("session"), oracleVaultPda.toBuffer(), oracleAgent.publicKey.toBuffer(), oracleMint.toBuffer()],
+        program.programId
+      );
+
+      try {
+        await program.methods
+          .validateAndAuthorize(
+            { swap: {} },
+            oracleMint,
+            new BN(100_000_000),
+            jupiterProgramId,
+            null
+          )
+          .accounts({
+            agent: oracleAgent.publicKey,
+            vault: oracleVaultPda,
+            policy: oraclePolicyPda,
+            tracker: oracleTrackerPda,
+            session: sessionPda,
+            vaultTokenAccount: vaultOracleAta,
+            tokenMintAccount: oracleMint,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          } as any)
+          .remainingAccounts([
+            { pubkey: pythFeedKeypair.publicKey, isWritable: false, isSigner: false },
+          ])
+          .signers([oracleAgent])
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err: any) {
+        expect(err.toString()).to.include("OracleNotVerified");
+      }
+    });
+
+    it("unknown oracle owner — rejects with OracleUnsupportedType", async () => {
+      // Create an account with a random owner (not Pyth or Switchboard)
+      const unknownFeed = Keypair.generate();
+      const data = Buffer.alloc(133);
+      svm.setAccount(unknownFeed.publicKey, {
+        lamports: 1_000_000,
+        data,
+        owner: SystemProgram.programId, // wrong owner
+        executable: false,
+      });
+
+      // Update policy to reference this unknown feed
+      await program.methods
+        .updatePolicy(
+          null, null,
+          [
+            makeAllowedToken(oracleMint, unknownFeed.publicKey, 9),
+            makeAllowedToken(usdcMint),
+          ],
+          null, null, null, null, null, null, null
+        )
+        .accounts({
+          owner: owner.publicKey,
+          vault: oracleVaultPda,
+          policy: oraclePolicyPda,
+        } as any)
+        .rpc();
+
+      const [sessionPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("session"), oracleVaultPda.toBuffer(), oracleAgent.publicKey.toBuffer(), oracleMint.toBuffer()],
+        program.programId
+      );
+
+      try {
+        await program.methods
+          .validateAndAuthorize(
+            { swap: {} },
+            oracleMint,
+            new BN(100_000_000),
+            jupiterProgramId,
+            null
+          )
+          .accounts({
+            agent: oracleAgent.publicKey,
+            vault: oracleVaultPda,
+            policy: oraclePolicyPda,
+            tracker: oracleTrackerPda,
+            session: sessionPda,
+            vaultTokenAccount: vaultOracleAta,
+            tokenMintAccount: oracleMint,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          } as any)
+          .remainingAccounts([
+            { pubkey: unknownFeed.publicKey, isWritable: false, isSigner: false },
+          ])
+          .signers([oracleAgent])
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err: any) {
+        expect(err.toString()).to.include("OracleUnsupportedType");
+      }
+
+      // Restore policy to Pyth feed
+      await program.methods
+        .updatePolicy(
+          null, null,
+          [
+            makeAllowedToken(oracleMint, pythFeedKeypair.publicKey, 9),
+            makeAllowedToken(usdcMint),
+          ],
+          null, null, null, null, null, null, null
+        )
+        .accounts({
+          owner: owner.publicKey,
+          vault: oracleVaultPda,
+          policy: oraclePolicyPda,
+        } as any)
+        .rpc();
+    });
+
+    it("missing oracle account for oracle-priced token — rejects with OracleAccountMissing", async () => {
+      const [sessionPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("session"), oracleVaultPda.toBuffer(), oracleAgent.publicKey.toBuffer(), oracleMint.toBuffer()],
+        program.programId
+      );
+
+      try {
+        // No remainingAccounts — oracle feed not provided
+        await program.methods
+          .validateAndAuthorize(
+            { swap: {} },
+            oracleMint,
+            new BN(100_000_000),
+            jupiterProgramId,
+            null
+          )
+          .accounts({
+            agent: oracleAgent.publicKey,
+            vault: oracleVaultPda,
+            policy: oraclePolicyPda,
+            tracker: oracleTrackerPda,
+            session: sessionPda,
+            vaultTokenAccount: vaultOracleAta,
+            tokenMintAccount: oracleMint,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          } as any)
+          .signers([oracleAgent])
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err: any) {
+        expect(err.toString()).to.include("OracleAccountMissing");
+      }
+    });
+  });
+
+  // =========================================================================
+  // Timelock policy changes
+  // =========================================================================
+  describe("timelock policy changes", () => {
+    const tlVaultId = new BN(600);
+    let tlVaultPda: PublicKey;
+    let tlPolicyPda: PublicKey;
+    let tlTrackerPda: PublicKey;
+    let tlPendingPda: PublicKey;
+    const tlAgent = Keypair.generate();
+
+    before(async () => {
+      airdropSol(svm, tlAgent.publicKey, 5 * LAMPORTS_PER_SOL);
+
+      [tlVaultPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("vault"), owner.publicKey.toBuffer(), tlVaultId.toArrayLike(Buffer, "le", 8)],
+        program.programId
+      );
+      [tlPolicyPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("policy"), tlVaultPda.toBuffer()],
+        program.programId
+      );
+      [tlTrackerPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("tracker"), tlVaultPda.toBuffer()],
+        program.programId
+      );
+      [tlPendingPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("pending_policy"), tlVaultPda.toBuffer()],
+        program.programId
+      );
+
+      // Create vault WITH timelock (60 seconds)
+      await program.methods
+        .initializeVault(
+          tlVaultId,
+          new BN(500_000_000),
+          new BN(100_000_000),
+          [makeAllowedToken(usdcMint)],
+          [jupiterProgramId],
+          new BN(0) as any,
+          3,
+          0,
+          new BN(60), // 60 second timelock
+          []
+        )
+        .accounts({
+          owner: owner.publicKey,
+          vault: tlVaultPda,
+          policy: tlPolicyPda,
+          tracker: tlTrackerPda,
+          feeDestination: feeDestination.publicKey,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+
+      await program.methods
+        .registerAgent(tlAgent.publicKey)
+        .accounts({ owner: owner.publicKey, vault: tlVaultPda } as any)
+        .rpc();
+    });
+
+    it("immediate update_policy blocked when timelock > 0", async () => {
+      try {
+        await program.methods
+          .updatePolicy(
+            new BN(999), null, null, null, null, null, null, null, null, null
+          )
+          .accounts({
+            owner: owner.publicKey,
+            vault: tlVaultPda,
+            policy: tlPolicyPda,
+          } as any)
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err: any) {
+        expect(err.toString()).to.include("TimelockActive");
+      }
+    });
+
+    it("queue policy update succeeds when timelock > 0", async () => {
+      await program.methods
+        .queuePolicyUpdate(
+          new BN(200_000_000), // new daily cap
+          null, null, null, null, null, null, null, null, null
+        )
+        .accounts({
+          owner: owner.publicKey,
+          vault: tlVaultPda,
+          policy: tlPolicyPda,
+          pendingPolicy: tlPendingPda,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+
+      const pending = await program.account.pendingPolicyUpdate.fetch(tlPendingPda);
+      expect(pending.vault.toString()).to.equal(tlVaultPda.toString());
+      expect(pending.dailySpendingCapUsd.toNumber()).to.equal(200_000_000);
+      expect(pending.executesAt.toNumber()).to.be.greaterThan(pending.queuedAt.toNumber());
+    });
+
+    it("apply fails before timelock expires", async () => {
+      try {
+        await program.methods
+          .applyPendingPolicy()
+          .accounts({
+            owner: owner.publicKey,
+            vault: tlVaultPda,
+            policy: tlPolicyPda,
+            pendingPolicy: tlPendingPda,
+          } as any)
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err: any) {
+        expect(err.toString()).to.include("TimelockNotExpired");
+      }
+    });
+
+    it("apply succeeds after timelock expires", async () => {
+      // Advance time past timelock (60 seconds + buffer)
+      advanceTime(svm, 61);
+
+      await program.methods
+        .applyPendingPolicy()
+        .accounts({
+          owner: owner.publicKey,
+          vault: tlVaultPda,
+          policy: tlPolicyPda,
+          pendingPolicy: tlPendingPda,
+        } as any)
+        .rpc();
+
+      // Verify policy was updated
+      const policy = await program.account.policyConfig.fetch(tlPolicyPda);
+      expect(policy.dailySpendingCapUsd.toNumber()).to.equal(200_000_000);
+
+      // Pending PDA should be closed
+      try {
+        await program.account.pendingPolicyUpdate.fetch(tlPendingPda);
+        expect.fail("PendingPolicyUpdate should have been closed");
+      } catch (err: any) {
+        expect(err.toString()).to.satisfy(
+          (s: string) => s.includes("Account does not exist") || s.includes("Could not find")
+        );
+      }
+    });
+
+    it("cancel pending policy succeeds and returns rent", async () => {
+      // Queue another update
+      await program.methods
+        .queuePolicyUpdate(
+          new BN(300_000_000), null, null, null, null, null, null, null, null, null
+        )
+        .accounts({
+          owner: owner.publicKey,
+          vault: tlVaultPda,
+          policy: tlPolicyPda,
+          pendingPolicy: tlPendingPda,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+
+      const ownerBalBefore = getBalance(svm, owner.publicKey);
+
+      await program.methods
+        .cancelPendingPolicy()
+        .accounts({
+          owner: owner.publicKey,
+          vault: tlVaultPda,
+          pendingPolicy: tlPendingPda,
+        } as any)
+        .rpc();
+
+      // Rent should be returned
+      const ownerBalAfter = getBalance(svm, owner.publicKey);
+      expect(ownerBalAfter).to.be.greaterThan(ownerBalBefore);
+
+      // Policy unchanged
+      const policy = await program.account.policyConfig.fetch(tlPolicyPda);
+      expect(policy.dailySpendingCapUsd.toNumber()).to.equal(200_000_000);
+    });
+
+    it("only one pending update at a time (init fails if PDA exists)", async () => {
+      // Queue an update
+      await program.methods
+        .queuePolicyUpdate(
+          new BN(400_000_000), null, null, null, null, null, null, null, null, null
+        )
+        .accounts({
+          owner: owner.publicKey,
+          vault: tlVaultPda,
+          policy: tlPolicyPda,
+          pendingPolicy: tlPendingPda,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+
+      // Try to queue another (should fail — PDA already exists)
+      try {
+        await program.methods
+          .queuePolicyUpdate(
+            new BN(500_000_000), null, null, null, null, null, null, null, null, null
+          )
+          .accounts({
+            owner: owner.publicKey,
+            vault: tlVaultPda,
+            policy: tlPolicyPda,
+            pendingPolicy: tlPendingPda,
+            systemProgram: SystemProgram.programId,
+          } as any)
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err: any) {
+        // Anchor init constraint fails when PDA already exists
+        expect(err.toString()).to.not.include("Should have thrown");
+      }
+
+      // Clean up
+      await program.methods
+        .cancelPendingPolicy()
+        .accounts({
+          owner: owner.publicKey,
+          vault: tlVaultPda,
+          pendingPolicy: tlPendingPda,
+        } as any)
+        .rpc();
+    });
+
+    it("queue fails when timelock = 0 (NoTimelockConfigured)", async () => {
+      // Create a vault with timelock = 0
+      const noTlVaultId = new BN(601);
+      const [noTlVault] = PublicKey.findProgramAddressSync(
+        [Buffer.from("vault"), owner.publicKey.toBuffer(), noTlVaultId.toArrayLike(Buffer, "le", 8)],
+        program.programId
+      );
+      const [noTlPolicy] = PublicKey.findProgramAddressSync(
+        [Buffer.from("policy"), noTlVault.toBuffer()],
+        program.programId
+      );
+      const [noTlTracker] = PublicKey.findProgramAddressSync(
+        [Buffer.from("tracker"), noTlVault.toBuffer()],
+        program.programId
+      );
+      const [noTlPending] = PublicKey.findProgramAddressSync(
+        [Buffer.from("pending_policy"), noTlVault.toBuffer()],
+        program.programId
+      );
+
+      await program.methods
+        .initializeVault(
+          noTlVaultId, new BN(1000), new BN(1000), [] as any[], [],
+          new BN(0) as any, 1, 0, new BN(0), []
+        )
+        .accounts({
+          owner: owner.publicKey,
+          vault: noTlVault,
+          policy: noTlPolicy,
+          tracker: noTlTracker,
+          feeDestination: feeDestination.publicKey,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+
+      try {
+        await program.methods
+          .queuePolicyUpdate(
+            new BN(999), null, null, null, null, null, null, null, null, null
+          )
+          .accounts({
+            owner: owner.publicKey,
+            vault: noTlVault,
+            policy: noTlPolicy,
+            pendingPolicy: noTlPending,
+            systemProgram: SystemProgram.programId,
+          } as any)
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err: any) {
+        expect(err.toString()).to.include("NoTimelockConfigured");
+      }
+    });
+
+    it("changing timelock_duration itself goes through queue", async () => {
+      // Queue a timelock change from 60 to 120
+      await program.methods
+        .queuePolicyUpdate(
+          null, null, null, null, null, null, null, null,
+          new BN(120), // new timelock_duration
+          null
+        )
+        .accounts({
+          owner: owner.publicKey,
+          vault: tlVaultPda,
+          policy: tlPolicyPda,
+          pendingPolicy: tlPendingPda,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+
+      advanceTime(svm, 61);
+
+      await program.methods
+        .applyPendingPolicy()
+        .accounts({
+          owner: owner.publicKey,
+          vault: tlVaultPda,
+          policy: tlPolicyPda,
+          pendingPolicy: tlPendingPda,
+        } as any)
+        .rpc();
+
+      const policy = await program.account.policyConfig.fetch(tlPolicyPda);
+      expect(policy.timelockDuration.toNumber()).to.equal(120);
+    });
+
+    it("setting timelock to 0 via queue (disabling)", async () => {
+      // Queue timelock disable (set to 0)
+      await program.methods
+        .queuePolicyUpdate(
+          null, null, null, null, null, null, null, null,
+          new BN(0), // disable timelock
+          null
+        )
+        .accounts({
+          owner: owner.publicKey,
+          vault: tlVaultPda,
+          policy: tlPolicyPda,
+          pendingPolicy: tlPendingPda,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+
+      advanceTime(svm, 121);
+
+      await program.methods
+        .applyPendingPolicy()
+        .accounts({
+          owner: owner.publicKey,
+          vault: tlVaultPda,
+          policy: tlPolicyPda,
+          pendingPolicy: tlPendingPda,
+        } as any)
+        .rpc();
+
+      const policy = await program.account.policyConfig.fetch(tlPolicyPda);
+      expect(policy.timelockDuration.toNumber()).to.equal(0);
+
+      // Now immediate update should work
+      await program.methods
+        .updatePolicy(
+          new BN(999_000_000), null, null, null, null, null, null, null, null, null
+        )
+        .accounts({
+          owner: owner.publicKey,
+          vault: tlVaultPda,
+          policy: tlPolicyPda,
+        } as any)
+        .rpc();
+
+      const updated = await program.account.policyConfig.fetch(tlPolicyPda);
+      expect(updated.dailySpendingCapUsd.toNumber()).to.equal(999_000_000);
+    });
+
+    it("revoke_agent bypasses timelock (emergency)", async () => {
+      // Re-enable timelock
+      await program.methods
+        .updatePolicy(
+          null, null, null, null, null, null, null, null, new BN(60), null
+        )
+        .accounts({
+          owner: owner.publicKey,
+          vault: tlVaultPda,
+          policy: tlPolicyPda,
+        } as any)
+        .rpc();
+
+      // Revoke agent should work immediately (no timelock)
+      await program.methods
+        .revokeAgent()
+        .accounts({ owner: owner.publicKey, vault: tlVaultPda } as any)
+        .rpc();
+
+      const vault = await program.account.agentVault.fetch(tlVaultPda);
+      expect(JSON.stringify(vault.status)).to.include("frozen");
+    });
+  });
+
+  // =========================================================================
+  // Destination allowlist + agent_transfer
+  // =========================================================================
+  describe("destination allowlist & agent_transfer", () => {
+    const destVaultId = new BN(510);
+    let destVaultPda: PublicKey;
+    let destPolicyPda: PublicKey;
+    let destTrackerPda: PublicKey;
+    const destAgent = Keypair.generate();
+    const allowedDest = Keypair.generate();
+    const blockedDest = Keypair.generate();
+    let destVaultUsdcAta: PublicKey;
+    let allowedDestAta: PublicKey;
+    let blockedDestAta: PublicKey;
+
+    before(async () => {
+      airdropSol(svm, destAgent.publicKey, 5 * LAMPORTS_PER_SOL);
+      airdropSol(svm, allowedDest.publicKey, 2 * LAMPORTS_PER_SOL);
+      airdropSol(svm, blockedDest.publicKey, 2 * LAMPORTS_PER_SOL);
+
+      [destVaultPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("vault"), owner.publicKey.toBuffer(), destVaultId.toArrayLike(Buffer, "le", 8)],
+        program.programId
+      );
+      [destPolicyPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("policy"), destVaultPda.toBuffer()],
+        program.programId
+      );
+      [destTrackerPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("tracker"), destVaultPda.toBuffer()],
+        program.programId
+      );
+
+      // Create vault with destination allowlist
+      await program.methods
+        .initializeVault(
+          destVaultId,
+          new BN(500_000_000), // 500 USDC daily cap
+          new BN(100_000_000), // 100 USDC max tx
+          [makeAllowedToken(usdcMint)],
+          [jupiterProgramId],
+          new BN(0) as any,
+          3,
+          0,
+          new BN(0), // no timelock
+          [allowedDest.publicKey] // only allow transfers to this address
+        )
+        .accounts({
+          owner: owner.publicKey,
+          vault: destVaultPda,
+          policy: destPolicyPda,
+          tracker: destTrackerPda,
+          feeDestination: feeDestination.publicKey,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+
+      await program.methods
+        .registerAgent(destAgent.publicKey)
+        .accounts({ owner: owner.publicKey, vault: destVaultPda } as any)
+        .rpc();
+
+      // Deposit USDC
+      destVaultUsdcAta = getAssociatedTokenAddressSync(usdcMint, destVaultPda, true);
+      await program.methods
+        .depositFunds(new BN(600_000_000)) // 600 USDC
+        .accounts({
+          owner: owner.publicKey,
+          vault: destVaultPda,
+          mint: usdcMint,
+          ownerTokenAccount: ownerUsdcAta,
+          vaultTokenAccount: destVaultUsdcAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+
+      // Create destination ATAs
+      allowedDestAta = createAtaHelper(
+        svm, (owner as any).payer, usdcMint, allowedDest.publicKey
+      );
+      blockedDestAta = createAtaHelper(
+        svm, (owner as any).payer, usdcMint, blockedDest.publicKey
+      );
+    });
+
+    it("agent_transfer to allowed destination succeeds", async () => {
+      const balBefore = getTokenBalance(svm, allowedDestAta);
+
+      await program.methods
+        .agentTransfer(new BN(10_000_000)) // 10 USDC
+        .accounts({
+          agent: destAgent.publicKey,
+          vault: destVaultPda,
+          policy: destPolicyPda,
+          tracker: destTrackerPda,
+          vaultTokenAccount: destVaultUsdcAta,
+          destinationTokenAccount: allowedDestAta,
+          feeDestinationTokenAccount: null,
+          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        } as any)
+        .signers([destAgent])
+        .rpc();
+
+      // Transfer is net of fees — protocol fee = 10_000_000 * 20 / 1_000_000 = 200
+      // developer fee = 0 (rate is 0), so net = 10_000_000 - 200 = 9_999_800
+      const balAfter = getTokenBalance(svm, allowedDestAta);
+      expect(Number(balAfter) - Number(balBefore)).to.equal(9_999_800);
+    });
+
+    it("agent_transfer to non-allowed destination fails", async () => {
+      try {
+        await program.methods
+          .agentTransfer(new BN(10_000_000))
+          .accounts({
+            agent: destAgent.publicKey,
+            vault: destVaultPda,
+            policy: destPolicyPda,
+            tracker: destTrackerPda,
+            vaultTokenAccount: destVaultUsdcAta,
+            destinationTokenAccount: blockedDestAta,
+            feeDestinationTokenAccount: null,
+            protocolTreasuryTokenAccount: null,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          } as any)
+          .signers([destAgent])
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err: any) {
+        expect(err.toString()).to.include("DestinationNotAllowed");
+      }
+    });
+
+    it("empty allowlist = any destination allowed", async () => {
+      // Create vault with empty allowlist
+      const anyDestVaultId = new BN(511);
+      const [anyVault] = PublicKey.findProgramAddressSync(
+        [Buffer.from("vault"), owner.publicKey.toBuffer(), anyDestVaultId.toArrayLike(Buffer, "le", 8)],
+        program.programId
+      );
+      const [anyPolicy] = PublicKey.findProgramAddressSync(
+        [Buffer.from("policy"), anyVault.toBuffer()],
+        program.programId
+      );
+      const [anyTracker] = PublicKey.findProgramAddressSync(
+        [Buffer.from("tracker"), anyVault.toBuffer()],
+        program.programId
+      );
+
+      await program.methods
+        .initializeVault(
+          anyDestVaultId, new BN(500_000_000), new BN(100_000_000),
+          [makeAllowedToken(usdcMint)], [jupiterProgramId],
+          new BN(0) as any, 3, 0, new BN(0), [] // empty allowlist
+        )
+        .accounts({
+          owner: owner.publicKey,
+          vault: anyVault,
+          policy: anyPolicy,
+          tracker: anyTracker,
+          feeDestination: feeDestination.publicKey,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+
+      await program.methods
+        .registerAgent(destAgent.publicKey)
+        .accounts({ owner: owner.publicKey, vault: anyVault } as any)
+        .rpc();
+
+      const anyVaultAta = getAssociatedTokenAddressSync(usdcMint, anyVault, true);
+      await program.methods
+        .depositFunds(new BN(50_000_000))
+        .accounts({
+          owner: owner.publicKey,
+          vault: anyVault,
+          mint: usdcMint,
+          ownerTokenAccount: ownerUsdcAta,
+          vaultTokenAccount: anyVaultAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+
+      // Transfer to any destination should work
+      await program.methods
+        .agentTransfer(new BN(5_000_000))
+        .accounts({
+          agent: destAgent.publicKey,
+          vault: anyVault,
+          policy: anyPolicy,
+          tracker: anyTracker,
+          vaultTokenAccount: anyVaultAta,
+          destinationTokenAccount: blockedDestAta,
+          feeDestinationTokenAccount: null,
+          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        } as any)
+        .signers([destAgent])
+        .rpc();
+    });
+
+    it("too many destinations on init fails", async () => {
+      const badVid = new BN(512);
+      const [bv] = PublicKey.findProgramAddressSync(
+        [Buffer.from("vault"), owner.publicKey.toBuffer(), badVid.toArrayLike(Buffer, "le", 8)],
+        program.programId
+      );
+      const [bp] = PublicKey.findProgramAddressSync(
+        [Buffer.from("policy"), bv.toBuffer()],
+        program.programId
+      );
+      const [bt] = PublicKey.findProgramAddressSync(
+        [Buffer.from("tracker"), bv.toBuffer()],
+        program.programId
+      );
+
+      // Generate 11 destinations (max is 10)
+      const tooMany = Array.from({ length: 11 }, () => Keypair.generate().publicKey);
+
+      try {
+        await program.methods
+          .initializeVault(
+            badVid, new BN(1000), new BN(1000), [] as any[], [],
+            new BN(0) as any, 1, 0, new BN(0), tooMany
+          )
+          .accounts({
+            owner: owner.publicKey,
+            vault: bv,
+            policy: bp,
+            tracker: bt,
+            feeDestination: feeDestination.publicKey,
+            systemProgram: SystemProgram.programId,
+          } as any)
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err: any) {
+        expect(err.toString()).to.include("TooManyDestinations");
+      }
+    });
+
+    it("agent_transfer respects daily spending cap", async () => {
+      // The destVault has 500 USDC daily cap and 100 USDC max-tx.
+      // We already spent 10 USDC. Make 4 more transfers of 100 USDC
+      // to bring total to 410 USDC, then try 100 USDC which would
+      // push total to 510 USDC (exceeding 500 cap).
+      for (let i = 0; i < 4; i++) {
+        await program.methods
+          .agentTransfer(new BN(100_000_000)) // 100 USDC each
+          .accounts({
+            agent: destAgent.publicKey,
+            vault: destVaultPda,
+            policy: destPolicyPda,
+            tracker: destTrackerPda,
+            vaultTokenAccount: destVaultUsdcAta,
+            destinationTokenAccount: allowedDestAta,
+            feeDestinationTokenAccount: null,
+            protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          } as any)
+          .signers([destAgent])
+          .rpc();
+      }
+      // Total spent: 10 + 4*100 = 410 USDC. Remaining: 90 USDC.
+      // Try 100 USDC → total would be 510 > 500 cap
+      try {
+        await program.methods
+          .agentTransfer(new BN(100_000_000)) // 100 USDC (would push past cap)
+          .accounts({
+            agent: destAgent.publicKey,
+            vault: destVaultPda,
+            policy: destPolicyPda,
+            tracker: destTrackerPda,
+            vaultTokenAccount: destVaultUsdcAta,
+            destinationTokenAccount: allowedDestAta,
+            feeDestinationTokenAccount: null,
+            protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          } as any)
+          .signers([destAgent])
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err: any) {
+        expect(err.toString()).to.include("DailyCapExceeded");
+      }
+    });
+
+    it("agent_transfer respects per-tx limit", async () => {
+      // Max tx size is 100 USDC
+      try {
+        await program.methods
+          .agentTransfer(new BN(101_000_000)) // 101 USDC (exceeds max tx)
+          .accounts({
+            agent: destAgent.publicKey,
+            vault: destVaultPda,
+            policy: destPolicyPda,
+            tracker: destTrackerPda,
+            vaultTokenAccount: destVaultUsdcAta,
+            destinationTokenAccount: allowedDestAta,
+            feeDestinationTokenAccount: null,
+            protocolTreasuryTokenAccount: null,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          } as any)
+          .signers([destAgent])
+          .rpc();
+        expect.fail("Should have thrown");
+      } catch (err: any) {
+        expect(err.toString()).to.include("TransactionTooLarge");
+      }
+    });
+
+    it("agent_transfer records in tracker audit log", async () => {
+      const tracker = await program.account.spendTracker.fetch(destTrackerPda);
+      const records = tracker.recentTransactions as any[];
+      const transferRecords = records.filter((r: any) =>
+        JSON.stringify(r.actionType).includes("transfer")
+      );
+      expect(transferRecords.length).to.be.greaterThan(0);
+    });
+
+    it("agent_transfer with fees (protocol + developer)", async () => {
+      // Create a vault with developer fee
+      const feeDestVaultId = new BN(513);
+      const [fv] = PublicKey.findProgramAddressSync(
+        [Buffer.from("vault"), owner.publicKey.toBuffer(), feeDestVaultId.toArrayLike(Buffer, "le", 8)],
+        program.programId
+      );
+      const [fp] = PublicKey.findProgramAddressSync(
+        [Buffer.from("policy"), fv.toBuffer()],
+        program.programId
+      );
+      const [ft] = PublicKey.findProgramAddressSync(
+        [Buffer.from("tracker"), fv.toBuffer()],
+        program.programId
+      );
+
+      await program.methods
+        .initializeVault(
+          feeDestVaultId, new BN(500_000_000), new BN(100_000_000),
+          [makeAllowedToken(usdcMint)], [jupiterProgramId],
+          new BN(0) as any, 3, 50, // developer_fee_rate = 50 (0.5 BPS)
+          new BN(0), []
+        )
+        .accounts({
+          owner: owner.publicKey,
+          vault: fv,
+          policy: fp,
+          tracker: ft,
+          feeDestination: feeDestination.publicKey,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+
+      await program.methods
+        .registerAgent(destAgent.publicKey)
+        .accounts({ owner: owner.publicKey, vault: fv } as any)
+        .rpc();
+
+      const fvAta = getAssociatedTokenAddressSync(usdcMint, fv, true);
+      await program.methods
+        .depositFunds(new BN(100_000_000))
+        .accounts({
+          owner: owner.publicKey,
+          vault: fv,
+          mint: usdcMint,
+          ownerTokenAccount: ownerUsdcAta,
+          vaultTokenAccount: fvAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+
+      // Create fee dest ATA if needed
+      try {
+        feeDestUsdcAta = createAtaHelper(svm, (owner as any).payer, usdcMint, feeDestination.publicKey);
+      } catch {
+        feeDestUsdcAta = getAssociatedTokenAddressSync(usdcMint, feeDestination.publicKey);
+      }
+
+      const destBalBefore = getTokenBalance(svm, allowedDestAta);
+
+      // Transfer 10 USDC with fees
+      // protocol_fee = 10_000_000 * 20 / 1_000_000 = 200
+      // developer_fee = 10_000_000 * 50 / 1_000_000 = 500
+      // net = 10_000_000 - 200 - 500 = 9_999_300
+      await program.methods
+        .agentTransfer(new BN(10_000_000))
+        .accounts({
+          agent: destAgent.publicKey,
+          vault: fv,
+          policy: fp,
+          tracker: ft,
+          vaultTokenAccount: fvAta,
+          destinationTokenAccount: allowedDestAta,
+          feeDestinationTokenAccount: feeDestUsdcAta,
+          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        } as any)
+        .signers([destAgent])
+        .rpc();
+
+      const destBalAfter = getTokenBalance(svm, allowedDestAta);
+      expect(Number(destBalAfter) - Number(destBalBefore)).to.equal(9_999_300);
+
+      // Check vault fees
+      const vault = await program.account.agentVault.fetch(fv);
+      expect(vault.totalFeesCollected.toNumber()).to.equal(500);
     });
   });
 });

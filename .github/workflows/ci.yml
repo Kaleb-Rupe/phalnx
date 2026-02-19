@@ -2,9 +2,11 @@
 #
 # Runs on every push to main and on pull requests.
 # Three parallel jobs:
-#   1. build-lint-test  — TypeScript builds, Prettier, wrapper + plugin + MCP tests
+#   1. build-lint-test  — TypeScript builds, Prettier (8 packages), 371 TS tests across 7 suites
 #   2. rust-checks      — cargo fmt + cargo clippy
 #   3. on-chain-tests   — Anchor build + LiteSVM in-process + 68 on-chain tests
+#
+# Total: 439 tests across 11 suites (371 TS + 68 on-chain)
 
 name: CI
 
@@ -26,10 +28,10 @@ env:
 
 jobs:
   # ──────────────────────────────────────────────────────────────
-  # Job 1: TypeScript build, lint, and wrapper tests
+  # Job 1: TypeScript build, lint, and tests (7 suites, 371 tests)
   # ──────────────────────────────────────────────────────────────
   build-lint-test:
-    name: Build, Lint & Wrapper Tests
+    name: Build, Lint & TS Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -52,12 +54,35 @@ jobs:
       - name: Build all packages
         run: pnpm -r run build
 
-      - name: Lint (Prettier)
-        # Scoped to actively maintained packages for now.
-        # TODO: enable repo-wide after running `npx prettier --write .`
-        run: npx prettier --check "sdk/core/src/**/*.ts" "sdk/wrapper/src/**/*.ts"
+      - name: Lint (Prettier — 8 packages)
+        run: |
+          npx prettier --check \
+            "sdk/core/src/**/*.ts" \
+            "sdk/wrapper/src/**/*.ts" \
+            "sdk/typescript/src/**/*.ts" \
+            "sdk/platform/src/**/*.ts" \
+            "sdk/custody/crossmint/src/**/*.ts" \
+            "plugins/solana-agent-kit/src/**/*.ts" \
+            "plugins/elizaos/src/**/*.ts" \
+            "packages/mcp/src/**/*.ts"
 
-      - name: Wrapper tests (73 tests, no validator needed)
+      - name: Core policy engine tests (66 tests)
+        working-directory: sdk/core
+        run: pnpm test
+
+      - name: SDK type & account tests (24 tests)
+        working-directory: sdk/typescript
+        run: pnpm test
+
+      - name: Platform client tests (17 tests)
+        working-directory: sdk/platform
+        run: pnpm test
+
+      - name: Crossmint custody adapter tests (29 tests)
+        working-directory: sdk/custody/crossmint
+        run: pnpm test
+
+      - name: Wrapper tests (96 tests)
         working-directory: sdk/wrapper
         run: pnpm test
 
@@ -106,14 +131,11 @@ jobs:
         #   unexpected_cfgs — anchor-debug, custom-heap, custom-panic, solana
         #   too_many_arguments — Anchor instruction handlers need many params
         #   ambiguous_glob_reexports — all instruction modules export `handler`
-        # TODO: fix remaining clippy::unnecessary_cast and clippy::derivable_impls
         run: |
           cargo clippy --manifest-path programs/agent-shield/Cargo.toml -- -D warnings \
             -A unexpected_cfgs \
             -A clippy::too_many_arguments \
-            -A ambiguous_glob_reexports \
-            -A clippy::unnecessary_cast \
-            -A clippy::derivable_impls
+            -A ambiguous_glob_reexports
 
   # ──────────────────────────────────────────────────────────────
   # Job 3: On-chain tests (LiteSVM in-process, no validator)

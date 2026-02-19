@@ -13,13 +13,13 @@ export type DepositInput = z.infer<typeof depositSchema>;
 
 export async function deposit(
   client: AgentShieldClient,
-  input: DepositInput
+  input: DepositInput,
 ): Promise<string> {
   try {
     const sig = await client.deposit(
       toPublicKey(input.vault),
       toPublicKey(input.mint),
-      toBN(input.amount)
+      toBN(input.amount),
     );
 
     return [

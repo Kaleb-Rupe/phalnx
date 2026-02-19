@@ -21,7 +21,7 @@ export type ExecuteSwapInput = z.infer<typeof executeSwapSchema>;
 export async function executeSwap(
   client: AgentShieldClient,
   config: McpConfig,
-  input: ExecuteSwapInput
+  input: ExecuteSwapInput,
 ): Promise<string> {
   try {
     const agentKeypair = loadAgentKeypair(config);
@@ -42,7 +42,7 @@ export async function executeSwap(
         amount: toBN(input.amount),
         slippageBps: input.slippageBps,
       },
-      [agentKeypair]
+      [agentKeypair],
     );
 
     return [

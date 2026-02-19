@@ -8,11 +8,11 @@ describe("shield_update_policy", () => {
     const client = createMockClient();
     const result = await updatePolicy(client as any, {
       vault: TEST_VAULT_PDA.toBase58(),
-      dailySpendingCap: "50000000000",
+      dailySpendingCapUsd: "50000000000",
     });
     expect(result).to.include("Policy Updated");
     expect(result).to.include("mock-sig-update");
-    expect(result).to.include("dailySpendingCap");
+    expect(result).to.include("dailySpendingCapUsd");
   });
 
   it("passes only provided fields to SDK", async () => {
@@ -27,7 +27,7 @@ describe("shield_update_policy", () => {
     const params = call!.args[1];
     expect(params.maxLeverageBps).to.equal(50000);
     expect(params.canOpenPositions).to.equal(false);
-    expect(params.dailySpendingCap).to.be.undefined;
+    expect(params.dailySpendingCapUsd).to.be.undefined;
   });
 
   it("handles allowedTokens update", async () => {

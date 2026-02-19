@@ -4,11 +4,15 @@ export const provisionSchema = z.object({
   platformUrl: z
     .string()
     .optional()
-    .describe("AgentShield platform URL (default: https://app.agentshield.dev)"),
+    .describe(
+      "AgentShield platform URL (default: https://app.agentshield.dev)",
+    ),
   template: z
     .enum(["conservative", "moderate", "aggressive"])
     .optional()
-    .describe("Policy template: conservative (500 USDC/day), moderate (2000), aggressive (10000)"),
+    .describe(
+      "Policy template: conservative (500 USDC/day), moderate (2000), aggressive (10000)",
+    ),
   dailyCap: z
     .number()
     .optional()
@@ -26,11 +30,11 @@ export type ProvisionInput = z.infer<typeof provisionSchema>;
 export async function provision(
   _agent: any,
   _config: any,
-  input: ProvisionInput
+  input: ProvisionInput,
 ): Promise<string> {
   const baseUrl = (input.platformUrl || "https://app.agentshield.dev").replace(
     /\/$/,
-    ""
+    "",
   );
   const template = input.template || "conservative";
 

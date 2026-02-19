@@ -5,12 +5,16 @@ export const provisionSchema = z.object({
     .string()
     .optional()
     .default("https://app.agentshield.dev")
-    .describe("AgentShield platform URL (default: https://app.agentshield.dev)"),
+    .describe(
+      "AgentShield platform URL (default: https://app.agentshield.dev)",
+    ),
   template: z
     .enum(["conservative", "moderate", "aggressive"])
     .optional()
     .default("conservative")
-    .describe("Policy template: conservative (500 USDC/day), moderate (2000), aggressive (10000)"),
+    .describe(
+      "Policy template: conservative (500 USDC/day), moderate (2000), aggressive (10000)",
+    ),
   dailyCap: z
     .number()
     .optional()
@@ -28,7 +32,7 @@ export type ProvisionInput = z.infer<typeof provisionSchema>;
  */
 export async function provision(
   _client: any,
-  input: ProvisionInput
+  input: ProvisionInput,
 ): Promise<string> {
   const baseUrl = input.platformUrl.replace(/\/$/, "");
 
@@ -41,11 +45,13 @@ export async function provision(
   const actionUrl = `${baseUrl}/api/actions/provision?${params.toString()}`;
   const blinkUrl = `https://dial.to/?action=solana-action:${encodeURIComponent(actionUrl)}`;
 
-  const dailyCap = input.dailyCap || {
-    conservative: 500,
-    moderate: 2000,
-    aggressive: 10000,
-  }[input.template];
+  const dailyCap =
+    input.dailyCap ||
+    {
+      conservative: 500,
+      moderate: 2000,
+      aggressive: 10000,
+    }[input.template];
 
   return [
     "## Vault Provisioning Request",

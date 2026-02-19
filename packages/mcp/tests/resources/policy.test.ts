@@ -11,7 +11,7 @@ describe("resource: shield://vault/{address}/policy", () => {
     );
     const data = JSON.parse(json);
     expect(data.vault).to.equal(TEST_VAULT_PDA.toBase58());
-    expect(data.dailySpendingCap).to.equal("10000000000");
+    expect(data.dailySpendingCapUsd).to.equal("10000000000");
     expect(data.maxLeverageBps).to.equal(30000);
     expect(data.allowedTokens).to.be.an("array");
     expect(data.canOpenPositions).to.be.true;
@@ -27,7 +27,7 @@ describe("resource: shield://vault/{address}/policy", () => {
     );
     const data = JSON.parse(json);
     expect(data.error).to.include("not found");
-    expect(data.dailySpendingCap).to.equal("0");
+    expect(data.dailySpendingCapUsd).to.equal("0");
     expect(data.allowedTokens).to.deep.equal([]);
   });
 

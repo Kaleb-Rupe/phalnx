@@ -9,7 +9,7 @@ export const reactivateVaultSchema = z.object({
     .string()
     .optional()
     .describe(
-      "Optional new agent public key (base58). If omitted, the previous agent is re-registered."
+      "Optional new agent public key (base58). If omitted, the previous agent is re-registered.",
     ),
 });
 
@@ -17,16 +17,14 @@ export type ReactivateVaultInput = z.infer<typeof reactivateVaultSchema>;
 
 export async function reactivateVault(
   client: AgentShieldClient,
-  input: ReactivateVaultInput
+  input: ReactivateVaultInput,
 ): Promise<string> {
   try {
-    const newAgent = input.newAgent
-      ? toPublicKey(input.newAgent)
-      : undefined;
+    const newAgent = input.newAgent ? toPublicKey(input.newAgent) : undefined;
 
     const sig = await client.reactivateVault(
       toPublicKey(input.vault),
-      newAgent
+      newAgent,
     );
 
     return [

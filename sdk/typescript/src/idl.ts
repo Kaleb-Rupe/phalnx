@@ -14,6 +14,349 @@ export type AgentShield = {
   },
   "instructions": [
     {
+      "name": "agentTransfer",
+      "docs": [
+        "Transfer tokens from the vault to an allowed destination.",
+        "Only the agent can call this. Respects destination allowlist,",
+        "spending caps, and per-token limits."
+      ],
+      "discriminator": [
+        199,
+        111,
+        151,
+        49,
+        124,
+        13,
+        150,
+        44
+      ],
+      "accounts": [
+        {
+          "name": "agent",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.owner",
+                "account": "agentVault"
+              },
+              {
+                "kind": "account",
+                "path": "vault.vault_id",
+                "account": "agentVault"
+              }
+            ]
+          },
+          "relations": [
+            "policy",
+            "tracker"
+          ]
+        },
+        {
+          "name": "policy",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "tracker",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  99,
+                  107,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vaultTokenAccount",
+          "docs": [
+            "Vault's PDA-owned token account (source)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "destinationTokenAccount",
+          "docs": [
+            "Destination token account (must be in allowed destinations if configured)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "feeDestinationTokenAccount",
+          "docs": [
+            "Developer fee destination token account — must match vault.fee_destination"
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "protocolTreasuryTokenAccount",
+          "docs": [
+            "Protocol treasury token account"
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "applyPendingPolicy",
+      "docs": [
+        "Apply a queued policy update after the timelock period has expired.",
+        "Closes the PendingPolicyUpdate PDA and returns rent to the owner."
+      ],
+      "discriminator": [
+        114,
+        212,
+        19,
+        227,
+        89,
+        199,
+        74,
+        62
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "vault.vault_id",
+                "account": "agentVault"
+              }
+            ]
+          },
+          "relations": [
+            "policy",
+            "pendingPolicy"
+          ]
+        },
+        {
+          "name": "policy",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "pendingPolicy",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancelPendingPolicy",
+      "docs": [
+        "Cancel a queued policy update. Closes the PendingPolicyUpdate PDA",
+        "and returns rent to the owner."
+      ],
+      "discriminator": [
+        153,
+        36,
+        104,
+        200,
+        50,
+        94,
+        207,
+        33
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "vault.vault_id",
+                "account": "agentVault"
+              }
+            ]
+          },
+          "relations": [
+            "pendingPolicy"
+          ]
+        },
+        {
+          "name": "pendingPolicy",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "closeVault",
       "docs": [
         "Close the vault entirely. Withdraws all remaining funds and closes all PDAs.",
@@ -59,8 +402,8 @@ export type AgentShield = {
               },
               {
                 "kind": "account",
-                "path": "vault.vaultId",
-                "account": "AgentVault"
+                "path": "vault.vault_id",
+                "account": "agentVault"
               }
             ]
           },
@@ -168,8 +511,8 @@ export type AgentShield = {
               },
               {
                 "kind": "account",
-                "path": "vault.vaultId",
-                "account": "AgentVault"
+                "path": "vault.vault_id",
+                "account": "agentVault"
               }
             ]
           }
@@ -387,7 +730,8 @@ export type AgentShield = {
       "name": "finalizeSession",
       "docs": [
         "Finalize a session after the DeFi action completes.",
-        "Closes the SessionAuthority PDA and records the transaction in the audit log.",
+        "Revokes token delegation, collects fees, closes the SessionAuthority PDA,",
+        "and records the transaction in the audit log.",
         "Can be called by the agent or permissionlessly (for cleanup of expired sessions)."
       ],
       "discriminator": [
@@ -424,12 +768,12 @@ export type AgentShield = {
               {
                 "kind": "account",
                 "path": "vault.owner",
-                "account": "AgentVault"
+                "account": "agentVault"
               },
               {
                 "kind": "account",
-                "path": "vault.vaultId",
-                "account": "AgentVault"
+                "path": "vault.vault_id",
+                "account": "agentVault"
               }
             ]
           },
@@ -489,7 +833,8 @@ export type AgentShield = {
           "name": "session",
           "docs": [
             "Session rent is returned to the session's agent (who paid for it),",
-            "not the arbitrary payer, to prevent rent theft."
+            "not the arbitrary payer, to prevent rent theft.",
+            "Seeds include token_mint for per-token concurrent sessions."
           ],
           "writable": true,
           "pda": {
@@ -513,7 +858,12 @@ export type AgentShield = {
               {
                 "kind": "account",
                 "path": "session.agent",
-                "account": "SessionAuthority"
+                "account": "sessionAuthority"
+              },
+              {
+                "kind": "account",
+                "path": "session.authorized_token",
+                "account": "sessionAuthority"
               }
             ]
           }
@@ -528,7 +878,7 @@ export type AgentShield = {
         {
           "name": "vaultTokenAccount",
           "docs": [
-            "Vault's PDA token account for the session's token (fee source)"
+            "Vault's PDA token account for the session's token (fee source + delegation revocation)"
           ],
           "writable": true,
           "optional": true
@@ -536,7 +886,7 @@ export type AgentShield = {
         {
           "name": "feeDestinationTokenAccount",
           "docs": [
-            "Developer fee destination token account \u2014 must match vault.fee_destination"
+            "Developer fee destination token account — must match vault.fee_destination"
           ],
           "writable": true,
           "optional": true
@@ -544,7 +894,7 @@ export type AgentShield = {
         {
           "name": "protocolTreasuryTokenAccount",
           "docs": [
-            "Protocol treasury token account \u2014 must be owned by PROTOCOL_TREASURY"
+            "Protocol treasury token account — must be owned by PROTOCOL_TREASURY"
           ],
           "writable": true,
           "optional": true
@@ -677,17 +1027,21 @@ export type AgentShield = {
           "type": "u64"
         },
         {
-          "name": "dailySpendingCap",
+          "name": "dailySpendingCapUsd",
           "type": "u64"
         },
         {
-          "name": "maxTransactionSize",
+          "name": "maxTransactionSizeUsd",
           "type": "u64"
         },
         {
           "name": "allowedTokens",
           "type": {
-            "vec": "pubkey"
+            "vec": {
+              "defined": {
+                "name": "allowedToken"
+              }
+            }
           }
         },
         {
@@ -707,6 +1061,202 @@ export type AgentShield = {
         {
           "name": "developerFeeRate",
           "type": "u16"
+        },
+        {
+          "name": "timelockDuration",
+          "type": "u64"
+        },
+        {
+          "name": "allowedDestinations",
+          "type": {
+            "vec": "pubkey"
+          }
+        }
+      ]
+    },
+    {
+      "name": "queuePolicyUpdate",
+      "docs": [
+        "Queue a policy update when timelock is active.",
+        "Creates a PendingPolicyUpdate PDA that becomes executable after",
+        "the timelock period expires."
+      ],
+      "discriminator": [
+        149,
+        18,
+        76,
+        197,
+        179,
+        193,
+        91,
+        77
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "vault.vault_id",
+                "account": "agentVault"
+              }
+            ]
+          },
+          "relations": [
+            "policy"
+          ]
+        },
+        {
+          "name": "policy",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "pendingPolicy",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "dailySpendingCapUsd",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "maxTransactionAmountUsd",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "allowedTokens",
+          "type": {
+            "option": {
+              "vec": {
+                "defined": {
+                  "name": "allowedToken"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "allowedProtocols",
+          "type": {
+            "option": {
+              "vec": "pubkey"
+            }
+          }
+        },
+        {
+          "name": "maxLeverageBps",
+          "type": {
+            "option": "u16"
+          }
+        },
+        {
+          "name": "canOpenPositions",
+          "type": {
+            "option": "bool"
+          }
+        },
+        {
+          "name": "maxConcurrentPositions",
+          "type": {
+            "option": "u8"
+          }
+        },
+        {
+          "name": "developerFeeRate",
+          "type": {
+            "option": "u16"
+          }
+        },
+        {
+          "name": "timelockDuration",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "allowedDestinations",
+          "type": {
+            "option": {
+              "vec": "pubkey"
+            }
+          }
         }
       ]
     },
@@ -755,8 +1305,8 @@ export type AgentShield = {
               },
               {
                 "kind": "account",
-                "path": "vault.vaultId",
-                "account": "AgentVault"
+                "path": "vault.vault_id",
+                "account": "agentVault"
               }
             ]
           }
@@ -816,8 +1366,8 @@ export type AgentShield = {
               },
               {
                 "kind": "account",
-                "path": "vault.vaultId",
-                "account": "AgentVault"
+                "path": "vault.vault_id",
+                "account": "agentVault"
               }
             ]
           }
@@ -875,8 +1425,8 @@ export type AgentShield = {
               },
               {
                 "kind": "account",
-                "path": "vault.vaultId",
-                "account": "AgentVault"
+                "path": "vault.vault_id",
+                "account": "agentVault"
               }
             ]
           }
@@ -888,7 +1438,8 @@ export type AgentShield = {
       "name": "updatePolicy",
       "docs": [
         "Update the policy configuration for a vault.",
-        "Only the owner can call this. Cannot be called by the agent."
+        "Only the owner can call this. Cannot be called by the agent.",
+        "Blocked when timelock_duration > 0 — use queue_policy_update instead."
       ],
       "discriminator": [
         212,
@@ -928,8 +1479,8 @@ export type AgentShield = {
               },
               {
                 "kind": "account",
-                "path": "vault.vaultId",
-                "account": "AgentVault"
+                "path": "vault.vault_id",
+                "account": "agentVault"
               }
             ]
           },
@@ -963,13 +1514,13 @@ export type AgentShield = {
       ],
       "args": [
         {
-          "name": "dailySpendingCap",
+          "name": "dailySpendingCapUsd",
           "type": {
             "option": "u64"
           }
         },
         {
-          "name": "maxTransactionSize",
+          "name": "maxTransactionSizeUsd",
           "type": {
             "option": "u64"
           }
@@ -978,7 +1529,11 @@ export type AgentShield = {
           "name": "allowedTokens",
           "type": {
             "option": {
-              "vec": "pubkey"
+              "vec": {
+                "defined": {
+                  "name": "allowedToken"
+                }
+              }
             }
           }
         },
@@ -1013,6 +1568,20 @@ export type AgentShield = {
           "type": {
             "option": "u16"
           }
+        },
+        {
+          "name": "timelockDuration",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "allowedDestinations",
+          "type": {
+            "option": {
+              "vec": "pubkey"
+            }
+          }
         }
       ]
     },
@@ -1020,8 +1589,9 @@ export type AgentShield = {
       "name": "validateAndAuthorize",
       "docs": [
         "Core permission check. Called by the agent before a DeFi action.",
-        "Validates the action against all policy constraints.",
-        "If approved, creates a SessionAuthority PDA and updates spend tracking.",
+        "Validates the action against all policy constraints (USD caps, per-token caps).",
+        "If approved, creates a SessionAuthority PDA, delegates tokens to agent,",
+        "and updates spend tracking.",
         "If denied, reverts the entire transaction (including subsequent DeFi instructions)."
       ],
       "discriminator": [
@@ -1058,12 +1628,12 @@ export type AgentShield = {
               {
                 "kind": "account",
                 "path": "vault.owner",
-                "account": "AgentVault"
+                "account": "agentVault"
               },
               {
                 "kind": "account",
-                "path": "vault.vaultId",
-                "account": "AgentVault"
+                "path": "vault.vault_id",
+                "account": "agentVault"
               }
             ]
           },
@@ -1121,7 +1691,8 @@ export type AgentShield = {
         {
           "name": "session",
           "docs": [
-            "Ephemeral session PDA \u2014 `init` ensures no double-authorization"
+            "Ephemeral session PDA — `init` ensures no double-authorization.",
+            "Seeds include token_mint for per-token concurrent sessions."
           ],
           "writable": true,
           "pda": {
@@ -1145,9 +1716,30 @@ export type AgentShield = {
               {
                 "kind": "account",
                 "path": "agent"
+              },
+              {
+                "kind": "arg",
+                "path": "tokenMint"
               }
             ]
           }
+        },
+        {
+          "name": "vaultTokenAccount",
+          "docs": [
+            "Vault's PDA-owned token account for the spend token (delegation source)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "tokenMintAccount",
+          "docs": [
+            "The token mint being spent"
+          ]
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
           "name": "systemProgram",
@@ -1159,7 +1751,7 @@ export type AgentShield = {
           "name": "actionType",
           "type": {
             "defined": {
-              "name": "ActionType"
+              "name": "actionType"
             }
           }
         },
@@ -1228,8 +1820,8 @@ export type AgentShield = {
               },
               {
                 "kind": "account",
-                "path": "vault.vaultId",
-                "account": "AgentVault"
+                "path": "vault.vault_id",
+                "account": "agentVault"
               }
             ]
           }
@@ -1438,7 +2030,7 @@ export type AgentShield = {
   ],
   "accounts": [
     {
-      "name": "AgentVault",
+      "name": "agentVault",
       "discriminator": [
         232,
         220,
@@ -1451,7 +2043,20 @@ export type AgentShield = {
       ]
     },
     {
-      "name": "PolicyConfig",
+      "name": "pendingPolicyUpdate",
+      "discriminator": [
+        77,
+        255,
+        2,
+        51,
+        79,
+        237,
+        183,
+        239
+      ]
+    },
+    {
+      "name": "policyConfig",
       "discriminator": [
         219,
         7,
@@ -1464,7 +2069,7 @@ export type AgentShield = {
       ]
     },
     {
-      "name": "SessionAuthority",
+      "name": "sessionAuthority",
       "discriminator": [
         48,
         9,
@@ -1477,7 +2082,7 @@ export type AgentShield = {
       ]
     },
     {
-      "name": "SpendTracker",
+      "name": "spendTracker",
       "discriminator": [
         180,
         17,
@@ -1492,7 +2097,7 @@ export type AgentShield = {
   ],
   "events": [
     {
-      "name": "ActionAuthorized",
+      "name": "actionAuthorized",
       "discriminator": [
         85,
         90,
@@ -1505,7 +2110,7 @@ export type AgentShield = {
       ]
     },
     {
-      "name": "ActionDenied",
+      "name": "actionDenied",
       "discriminator": [
         243,
         239,
@@ -1518,7 +2123,7 @@ export type AgentShield = {
       ]
     },
     {
-      "name": "AgentRegistered",
+      "name": "agentRegistered",
       "discriminator": [
         191,
         78,
@@ -1531,7 +2136,7 @@ export type AgentShield = {
       ]
     },
     {
-      "name": "AgentRevoked",
+      "name": "agentRevoked",
       "discriminator": [
         12,
         251,
@@ -1544,7 +2149,33 @@ export type AgentShield = {
       ]
     },
     {
-      "name": "FeesCollected",
+      "name": "agentTransferExecuted",
+      "discriminator": [
+        88,
+        52,
+        117,
+        69,
+        112,
+        152,
+        167,
+        40
+      ]
+    },
+    {
+      "name": "delegationRevoked",
+      "discriminator": [
+        59,
+        158,
+        142,
+        49,
+        164,
+        116,
+        220,
+        8
+      ]
+    },
+    {
+      "name": "feesCollected",
       "discriminator": [
         233,
         23,
@@ -1557,7 +2188,7 @@ export type AgentShield = {
       ]
     },
     {
-      "name": "FundsDeposited",
+      "name": "fundsDeposited",
       "discriminator": [
         157,
         209,
@@ -1570,7 +2201,7 @@ export type AgentShield = {
       ]
     },
     {
-      "name": "FundsWithdrawn",
+      "name": "fundsWithdrawn",
       "discriminator": [
         56,
         130,
@@ -1583,7 +2214,46 @@ export type AgentShield = {
       ]
     },
     {
-      "name": "PolicyUpdated",
+      "name": "policyChangeApplied",
+      "discriminator": [
+        104,
+        89,
+        5,
+        100,
+        180,
+        202,
+        52,
+        73
+      ]
+    },
+    {
+      "name": "policyChangeCancelled",
+      "discriminator": [
+        200,
+        158,
+        226,
+        255,
+        25,
+        211,
+        30,
+        151
+      ]
+    },
+    {
+      "name": "policyChangeQueued",
+      "discriminator": [
+        73,
+        231,
+        182,
+        136,
+        141,
+        120,
+        32,
+        79
+      ]
+    },
+    {
+      "name": "policyUpdated",
       "discriminator": [
         225,
         112,
@@ -1596,7 +2266,7 @@ export type AgentShield = {
       ]
     },
     {
-      "name": "SessionFinalized",
+      "name": "sessionFinalized",
       "discriminator": [
         33,
         12,
@@ -1609,7 +2279,7 @@ export type AgentShield = {
       ]
     },
     {
-      "name": "VaultClosed",
+      "name": "vaultClosed",
       "discriminator": [
         238,
         129,
@@ -1622,7 +2292,7 @@ export type AgentShield = {
       ]
     },
     {
-      "name": "VaultCreated",
+      "name": "vaultCreated",
       "discriminator": [
         117,
         25,
@@ -1635,7 +2305,7 @@ export type AgentShield = {
       ]
     },
     {
-      "name": "VaultReactivated",
+      "name": "vaultReactivated",
       "discriminator": [
         197,
         52,
@@ -1651,148 +2321,233 @@ export type AgentShield = {
   "errors": [
     {
       "code": 6000,
-      "name": "VaultNotActive",
+      "name": "vaultNotActive",
       "msg": "Vault is not active"
     },
     {
       "code": 6001,
-      "name": "UnauthorizedAgent",
+      "name": "unauthorizedAgent",
       "msg": "Unauthorized: signer is not the registered agent"
     },
     {
       "code": 6002,
-      "name": "UnauthorizedOwner",
+      "name": "unauthorizedOwner",
       "msg": "Unauthorized: signer is not the vault owner"
     },
     {
       "code": 6003,
-      "name": "TokenNotAllowed",
+      "name": "tokenNotAllowed",
       "msg": "Token not in allowed list"
     },
     {
       "code": 6004,
-      "name": "ProtocolNotAllowed",
+      "name": "protocolNotAllowed",
       "msg": "Protocol not in allowed list"
     },
     {
       "code": 6005,
-      "name": "TransactionTooLarge",
+      "name": "transactionTooLarge",
       "msg": "Transaction exceeds maximum single transaction size"
     },
     {
       "code": 6006,
-      "name": "DailyCapExceeded",
+      "name": "dailyCapExceeded",
       "msg": "Daily spending cap would be exceeded"
     },
     {
       "code": 6007,
-      "name": "LeverageTooHigh",
+      "name": "leverageTooHigh",
       "msg": "Leverage exceeds maximum allowed"
     },
     {
       "code": 6008,
-      "name": "TooManyPositions",
+      "name": "tooManyPositions",
       "msg": "Maximum concurrent open positions reached"
     },
     {
       "code": 6009,
-      "name": "PositionOpeningDisallowed",
+      "name": "positionOpeningDisallowed",
       "msg": "Cannot open new positions (policy disallows)"
     },
     {
       "code": 6010,
-      "name": "SessionExpired",
+      "name": "sessionExpired",
       "msg": "Session has expired"
     },
     {
       "code": 6011,
-      "name": "SessionNotAuthorized",
+      "name": "sessionNotAuthorized",
       "msg": "Session not authorized"
     },
     {
       "code": 6012,
-      "name": "InvalidSession",
+      "name": "invalidSession",
       "msg": "Invalid session: does not belong to this vault"
     },
     {
       "code": 6013,
-      "name": "OpenPositionsExist",
+      "name": "openPositionsExist",
       "msg": "Vault has open positions, cannot close"
     },
     {
       "code": 6014,
-      "name": "TooManyAllowedTokens",
+      "name": "tooManyAllowedTokens",
       "msg": "Policy configuration invalid: too many allowed tokens"
     },
     {
       "code": 6015,
-      "name": "TooManyAllowedProtocols",
+      "name": "tooManyAllowedProtocols",
       "msg": "Policy configuration invalid: too many allowed protocols"
     },
     {
       "code": 6016,
-      "name": "AgentAlreadyRegistered",
+      "name": "agentAlreadyRegistered",
       "msg": "Agent already registered for this vault"
     },
     {
       "code": 6017,
-      "name": "NoAgentRegistered",
+      "name": "noAgentRegistered",
       "msg": "No agent registered for this vault"
     },
     {
       "code": 6018,
-      "name": "VaultNotFrozen",
+      "name": "vaultNotFrozen",
       "msg": "Vault is not frozen (expected frozen for reactivation)"
     },
     {
       "code": 6019,
-      "name": "VaultAlreadyClosed",
+      "name": "vaultAlreadyClosed",
       "msg": "Vault is already closed"
     },
     {
       "code": 6020,
-      "name": "InsufficientBalance",
+      "name": "insufficientBalance",
       "msg": "Insufficient vault balance for withdrawal"
     },
     {
       "code": 6021,
-      "name": "DeveloperFeeTooHigh",
+      "name": "developerFeeTooHigh",
       "msg": "Developer fee rate exceeds maximum (50 / 1,000,000 = 0.5 BPS)"
     },
     {
       "code": 6022,
-      "name": "InvalidFeeDestination",
+      "name": "invalidFeeDestination",
       "msg": "Fee destination account invalid"
     },
     {
       "code": 6023,
-      "name": "InvalidProtocolTreasury",
+      "name": "invalidProtocolTreasury",
       "msg": "Protocol treasury account does not match expected address"
     },
     {
       "code": 6024,
-      "name": "TooManySpendEntries",
+      "name": "tooManySpendEntries",
       "msg": "Spend entry limit reached (too many active entries in rolling window)"
     },
     {
       "code": 6025,
-      "name": "InvalidAgentKey",
+      "name": "invalidAgentKey",
       "msg": "Invalid agent: cannot be the zero address"
     },
     {
       "code": 6026,
-      "name": "AgentIsOwner",
+      "name": "agentIsOwner",
       "msg": "Invalid agent: agent cannot be the vault owner"
     },
     {
       "code": 6027,
-      "name": "Overflow",
+      "name": "overflow",
       "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6028,
+      "name": "delegationFailed",
+      "msg": "Token delegation approval failed"
+    },
+    {
+      "code": 6029,
+      "name": "revocationFailed",
+      "msg": "Token delegation revocation failed"
+    },
+    {
+      "code": 6030,
+      "name": "oracleFeedStale",
+      "msg": "Oracle feed value is too stale"
+    },
+    {
+      "code": 6031,
+      "name": "oracleFeedInvalid",
+      "msg": "Cannot parse oracle feed data"
+    },
+    {
+      "code": 6032,
+      "name": "tokenSpendBlocked",
+      "msg": "Unpriced token cannot be spent (receive-only)"
+    },
+    {
+      "code": 6033,
+      "name": "invalidTokenAccount",
+      "msg": "Token account does not belong to vault or has wrong mint"
+    },
+    {
+      "code": 6034,
+      "name": "oracleAccountMissing",
+      "msg": "Oracle-priced token requires feed account in remaining_accounts"
+    },
+    {
+      "code": 6035,
+      "name": "perTokenCapExceeded",
+      "msg": "Per-token daily spending cap would be exceeded"
+    },
+    {
+      "code": 6036,
+      "name": "perTokenTxLimitExceeded",
+      "msg": "Per-token single transaction limit exceeded"
+    },
+    {
+      "code": 6037,
+      "name": "oracleConfidenceTooWide",
+      "msg": "Oracle price confidence interval too wide"
+    },
+    {
+      "code": 6038,
+      "name": "oracleUnsupportedType",
+      "msg": "Oracle account owner is not a recognized oracle program"
+    },
+    {
+      "code": 6039,
+      "name": "oracleNotVerified",
+      "msg": "Pyth price update not fully verified by Wormhole"
+    },
+    {
+      "code": 6040,
+      "name": "timelockNotExpired",
+      "msg": "Timelock period has not expired yet"
+    },
+    {
+      "code": 6041,
+      "name": "timelockActive",
+      "msg": "Vault has timelock active — use queue_policy_update instead"
+    },
+    {
+      "code": 6042,
+      "name": "noTimelockConfigured",
+      "msg": "No timelock configured on this vault"
+    },
+    {
+      "code": 6043,
+      "name": "destinationNotAllowed",
+      "msg": "Destination not in allowed list"
+    },
+    {
+      "code": 6044,
+      "name": "tooManyDestinations",
+      "msg": "Too many destinations (max 10)"
     }
   ],
   "types": [
     {
-      "name": "ActionAuthorized",
+      "name": "actionAuthorized",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1808,7 +2563,7 @@ export type AgentShield = {
             "name": "actionType",
             "type": {
               "defined": {
-                "name": "ActionType"
+                "name": "actionType"
               }
             }
           },
@@ -1821,16 +2576,36 @@ export type AgentShield = {
             "type": "u64"
           },
           {
+            "name": "usdAmount",
+            "type": "u64"
+          },
+          {
             "name": "protocol",
             "type": "pubkey"
           },
           {
-            "name": "rollingSpendAfter",
+            "name": "rollingSpendUsdAfter",
             "type": "u64"
           },
           {
-            "name": "dailyCap",
+            "name": "dailyCapUsd",
             "type": "u64"
+          },
+          {
+            "name": "delegated",
+            "type": "bool"
+          },
+          {
+            "name": "oraclePrice",
+            "type": {
+              "option": "i128"
+            }
+          },
+          {
+            "name": "oracleSource",
+            "type": {
+              "option": "u8"
+            }
           },
           {
             "name": "timestamp",
@@ -1840,7 +2615,7 @@ export type AgentShield = {
       }
     },
     {
-      "name": "ActionDenied",
+      "name": "actionDenied",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1864,7 +2639,7 @@ export type AgentShield = {
       }
     },
     {
-      "name": "ActionType",
+      "name": "actionType",
       "docs": [
         "Action types that agents can request"
       ],
@@ -1872,31 +2647,34 @@ export type AgentShield = {
         "kind": "enum",
         "variants": [
           {
-            "name": "Swap"
+            "name": "swap"
           },
           {
-            "name": "OpenPosition"
+            "name": "openPosition"
           },
           {
-            "name": "ClosePosition"
+            "name": "closePosition"
           },
           {
-            "name": "IncreasePosition"
+            "name": "increasePosition"
           },
           {
-            "name": "DecreasePosition"
+            "name": "decreasePosition"
           },
           {
-            "name": "Deposit"
+            "name": "deposit"
           },
           {
-            "name": "Withdraw"
+            "name": "withdraw"
+          },
+          {
+            "name": "transfer"
           }
         ]
       }
     },
     {
-      "name": "AgentRegistered",
+      "name": "agentRegistered",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1916,7 +2694,7 @@ export type AgentShield = {
       }
     },
     {
-      "name": "AgentRevoked",
+      "name": "agentRevoked",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1936,7 +2714,31 @@ export type AgentShield = {
       }
     },
     {
-      "name": "AgentVault",
+      "name": "agentTransferExecuted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "destination",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "agentVault",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1957,7 +2759,7 @@ export type AgentShield = {
           {
             "name": "feeDestination",
             "docs": [
-              "Developer fee destination \u2014 the wallet that receives developer fees",
+              "Developer fee destination — the wallet that receives developer fees",
               "on every finalized transaction. Set at vault creation, immutable after",
               "initialization. Protocol fees go to PROTOCOL_TREASURY separately."
             ],
@@ -1977,7 +2779,7 @@ export type AgentShield = {
             ],
             "type": {
               "defined": {
-                "name": "VaultStatus"
+                "name": "vaultStatus"
               }
             }
           },
@@ -2028,7 +2830,83 @@ export type AgentShield = {
       }
     },
     {
-      "name": "FeesCollected",
+      "name": "allowedToken",
+      "docs": [
+        "Per-token configuration including oracle feed and per-token caps.",
+        "Replaces the old `Vec<Pubkey>` allowed_tokens with richer metadata.",
+        "",
+        "Oracle feed classification:",
+        "- `Pubkey::default()` = stablecoin (1:1 USD, no oracle needed)",
+        "- `UNPRICED_SENTINEL` ([0xFF; 32]) = unpriced token (receive-only)",
+        "- Any other pubkey = Oracle feed account (Pyth PriceUpdateV2 or Switchboard PullFeed)"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mint",
+            "docs": [
+              "Token mint address"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "oracleFeed",
+            "docs": [
+              "Oracle feed account (Pyth PriceUpdateV2 or Switchboard PullFeed) for USD pricing.",
+              "`Pubkey::default()` = stablecoin (1:1 USD).",
+              "`UNPRICED_SENTINEL` = unpriced (receive-only, cannot be spent)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "decimals",
+            "docs": [
+              "Token decimals (e.g., 6 for USDC, 9 for SOL)"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "dailyCapBase",
+            "docs": [
+              "Per-token daily cap in base units (0 = no per-token limit,",
+              "only the aggregate USD cap applies)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "maxTxBase",
+            "docs": [
+              "Per-token max single transaction in base units",
+              "(0 = no per-token tx limit, only USD tx limit applies)"
+            ],
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "delegationRevoked",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "tokenAccount",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "feesCollected",
       "type": {
         "kind": "struct",
         "fields": [
@@ -2080,7 +2958,7 @@ export type AgentShield = {
       }
     },
     {
-      "name": "FundsDeposited",
+      "name": "fundsDeposited",
       "type": {
         "kind": "struct",
         "fields": [
@@ -2104,7 +2982,7 @@ export type AgentShield = {
       }
     },
     {
-      "name": "FundsWithdrawn",
+      "name": "fundsWithdrawn",
       "type": {
         "kind": "struct",
         "fields": [
@@ -2132,7 +3010,14 @@ export type AgentShield = {
       }
     },
     {
-      "name": "PolicyConfig",
+      "name": "pendingPolicyUpdate",
+      "docs": [
+        "Queued policy update that becomes executable after a timelock period.",
+        "Created by `queue_policy_update`, applied by `apply_pending_policy`,",
+        "or cancelled by `cancel_pending_policy`.",
+        "",
+        "PDA seeds: `[b\"pending_policy\", vault.key().as_ref()]`"
+      ],
       "type": {
         "kind": "struct",
         "fields": [
@@ -2144,27 +3029,182 @@ export type AgentShield = {
             "type": "pubkey"
           },
           {
-            "name": "dailySpendingCap",
+            "name": "queuedAt",
             "docs": [
-              "Maximum spend per rolling 24h period (in token base units)"
+              "Unix timestamp when this update was queued"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "executesAt",
+            "docs": [
+              "Unix timestamp when this update becomes executable"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "dailySpendingCapUsd",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "maxTransactionAmountUsd",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "allowedTokens",
+            "type": {
+              "option": {
+                "vec": {
+                  "defined": {
+                    "name": "allowedToken"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "name": "allowedProtocols",
+            "type": {
+              "option": {
+                "vec": "pubkey"
+              }
+            }
+          },
+          {
+            "name": "maxLeverageBps",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "canOpenPositions",
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "maxConcurrentPositions",
+            "type": {
+              "option": "u8"
+            }
+          },
+          {
+            "name": "developerFeeRate",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "timelockDuration",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "allowedDestinations",
+            "type": {
+              "option": {
+                "vec": "pubkey"
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "Bump seed for PDA"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "policyChangeApplied",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "appliedAt",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "policyChangeCancelled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "policyChangeQueued",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "executesAt",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "policyConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "docs": [
+              "Associated vault pubkey"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "dailySpendingCapUsd",
+            "docs": [
+              "Maximum aggregate spend per rolling 24h period in USD (6 decimals).",
+              "$500 = 500_000_000. This is the primary spending cap."
             ],
             "type": "u64"
           },
           {
-            "name": "maxTransactionSize",
+            "name": "maxTransactionSizeUsd",
             "docs": [
-              "Maximum single transaction size (in token base units)"
+              "Maximum single transaction size in USD (6 decimals)."
             ],
             "type": "u64"
           },
           {
             "name": "allowedTokens",
             "docs": [
-              "Allowed token mints the agent can interact with",
-              "Bounded to MAX_ALLOWED_TOKENS entries"
+              "Allowed token mints with oracle feeds and per-token caps.",
+              "Bounded to MAX_ALLOWED_TOKENS entries."
             ],
             "type": {
-              "vec": "pubkey"
+              "vec": {
+                "defined": {
+                  "name": "allowedToken"
+                }
+              }
             }
           },
           {
@@ -2211,6 +3251,25 @@ export type AgentShield = {
             "type": "u16"
           },
           {
+            "name": "timelockDuration",
+            "docs": [
+              "Timelock duration in seconds for policy changes. 0 = no timelock",
+              "(immediate updates allowed). When > 0, policy changes must go",
+              "through queue_policy_update → apply_pending_policy."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "allowedDestinations",
+            "docs": [
+              "Allowed destination addresses for agent transfers.",
+              "Empty = any destination allowed. Bounded to MAX_ALLOWED_DESTINATIONS."
+            ],
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
             "name": "bump",
             "docs": [
               "Bump seed for PDA"
@@ -2221,7 +3280,7 @@ export type AgentShield = {
       }
     },
     {
-      "name": "PolicyUpdated",
+      "name": "policyUpdated",
       "type": {
         "kind": "struct",
         "fields": [
@@ -2230,11 +3289,11 @@ export type AgentShield = {
             "type": "pubkey"
           },
           {
-            "name": "dailyCap",
+            "name": "dailyCapUsd",
             "type": "u64"
           },
           {
-            "name": "maxTransactionSize",
+            "name": "maxTransactionSizeUsd",
             "type": "u64"
           },
           {
@@ -2261,7 +3320,7 @@ export type AgentShield = {
       }
     },
     {
-      "name": "SessionAuthority",
+      "name": "sessionAuthority",
       "type": {
         "kind": "struct",
         "fields": [
@@ -2308,7 +3367,7 @@ export type AgentShield = {
             ],
             "type": {
               "defined": {
-                "name": "ActionType"
+                "name": "actionType"
               }
             }
           },
@@ -2318,6 +3377,21 @@ export type AgentShield = {
               "Slot-based expiry: session is valid until this slot"
             ],
             "type": "u64"
+          },
+          {
+            "name": "delegated",
+            "docs": [
+              "Whether token delegation was set up (approve CPI)"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "delegationTokenAccount",
+            "docs": [
+              "The vault's token account that was delegated to the agent",
+              "(only meaningful when delegated == true)"
+            ],
+            "type": "pubkey"
           },
           {
             "name": "bump",
@@ -2330,7 +3404,7 @@ export type AgentShield = {
       }
     },
     {
-      "name": "SessionFinalized",
+      "name": "sessionFinalized",
       "type": {
         "kind": "struct",
         "fields": [
@@ -2354,16 +3428,29 @@ export type AgentShield = {
       }
     },
     {
-      "name": "SpendEntry",
+      "name": "spendEntry",
       "type": {
         "kind": "struct",
         "fields": [
           {
             "name": "tokenMint",
+            "docs": [
+              "Token mint for audit trail"
+            ],
             "type": "pubkey"
           },
           {
-            "name": "amountSpent",
+            "name": "usdAmount",
+            "docs": [
+              "USD value of this spend (6 decimals, e.g., $500 = 500_000_000)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "baseAmount",
+            "docs": [
+              "Original amount in token base units (for per-token cap checks)"
+            ],
             "type": "u64"
           },
           {
@@ -2374,7 +3461,7 @@ export type AgentShield = {
       }
     },
     {
-      "name": "SpendTracker",
+      "name": "spendTracker",
       "type": {
         "kind": "struct",
         "fields": [
@@ -2388,13 +3475,13 @@ export type AgentShield = {
           {
             "name": "rollingSpends",
             "docs": [
-              "Rolling spend entries: (token_mint, amount, timestamp)",
+              "Rolling spend entries: (token_mint, usd_amount, base_amount, timestamp)",
               "Entries older than ROLLING_WINDOW_SECONDS are pruned on each access"
             ],
             "type": {
               "vec": {
                 "defined": {
-                  "name": "SpendEntry"
+                  "name": "spendEntry"
                 }
               }
             }
@@ -2408,7 +3495,7 @@ export type AgentShield = {
             "type": {
               "vec": {
                 "defined": {
-                  "name": "TransactionRecord"
+                  "name": "transactionRecord"
                 }
               }
             }
@@ -2424,7 +3511,7 @@ export type AgentShield = {
       }
     },
     {
-      "name": "TransactionRecord",
+      "name": "transactionRecord",
       "type": {
         "kind": "struct",
         "fields": [
@@ -2436,7 +3523,7 @@ export type AgentShield = {
             "name": "actionType",
             "type": {
               "defined": {
-                "name": "ActionType"
+                "name": "actionType"
               }
             }
           },
@@ -2464,7 +3551,7 @@ export type AgentShield = {
       }
     },
     {
-      "name": "VaultClosed",
+      "name": "vaultClosed",
       "type": {
         "kind": "struct",
         "fields": [
@@ -2484,7 +3571,7 @@ export type AgentShield = {
       }
     },
     {
-      "name": "VaultCreated",
+      "name": "vaultCreated",
       "type": {
         "kind": "struct",
         "fields": [
@@ -2508,7 +3595,7 @@ export type AgentShield = {
       }
     },
     {
-      "name": "VaultReactivated",
+      "name": "vaultReactivated",
       "type": {
         "kind": "struct",
         "fields": [
@@ -2530,7 +3617,7 @@ export type AgentShield = {
       }
     },
     {
-      "name": "VaultStatus",
+      "name": "vaultStatus",
       "docs": [
         "Vault status enum"
       ],
@@ -2538,13 +3625,13 @@ export type AgentShield = {
         "kind": "enum",
         "variants": [
           {
-            "name": "Active"
+            "name": "active"
           },
           {
-            "name": "Frozen"
+            "name": "frozen"
           },
           {
-            "name": "Closed"
+            "name": "closed"
           }
         ]
       }

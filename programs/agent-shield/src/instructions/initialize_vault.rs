@@ -44,16 +44,19 @@ pub struct InitializeVault<'info> {
     pub system_program: Program<'info, System>,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn handler(
     ctx: Context<InitializeVault>,
     vault_id: u64,
-    daily_spending_cap: u64,
-    max_transaction_size: u64,
-    allowed_tokens: Vec<Pubkey>,
+    daily_spending_cap_usd: u64,
+    max_transaction_size_usd: u64,
+    allowed_tokens: Vec<AllowedToken>,
     allowed_protocols: Vec<Pubkey>,
     max_leverage_bps: u16,
     max_concurrent_positions: u8,
     developer_fee_rate: u16,
+    timelock_duration: u64,
+    allowed_destinations: Vec<Pubkey>,
 ) -> Result<()> {
     require!(
         allowed_tokens.len() <= MAX_ALLOWED_TOKENS,
@@ -70,6 +73,10 @@ pub fn handler(
     require!(
         ctx.accounts.fee_destination.key() != Pubkey::default(),
         AgentShieldError::InvalidFeeDestination
+    );
+    require!(
+        allowed_destinations.len() <= MAX_ALLOWED_DESTINATIONS,
+        AgentShieldError::TooManyDestinations
     );
 
     let clock = Clock::get()?;
@@ -91,14 +98,16 @@ pub fn handler(
     // Initialize policy
     let policy = &mut ctx.accounts.policy;
     policy.vault = vault.key();
-    policy.daily_spending_cap = daily_spending_cap;
-    policy.max_transaction_size = max_transaction_size;
+    policy.daily_spending_cap_usd = daily_spending_cap_usd;
+    policy.max_transaction_size_usd = max_transaction_size_usd;
     policy.allowed_tokens = allowed_tokens;
     policy.allowed_protocols = allowed_protocols;
     policy.max_leverage_bps = max_leverage_bps;
     policy.can_open_positions = true;
     policy.max_concurrent_positions = max_concurrent_positions;
     policy.developer_fee_rate = developer_fee_rate;
+    policy.timelock_duration = timelock_duration;
+    policy.allowed_destinations = allowed_destinations;
     policy.bump = ctx.bumps.policy;
 
     // Initialize tracker

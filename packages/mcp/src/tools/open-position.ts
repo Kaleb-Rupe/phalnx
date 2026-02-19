@@ -7,16 +7,12 @@ import { loadAgentKeypair, type McpConfig } from "../config";
 export const openPositionSchema = z.object({
   vault: z.string().describe("Vault PDA address (base58)"),
   market: z.string().describe("Market/pool name (e.g. 'SOL', 'ETH')"),
-  collateralMint: z
-    .string()
-    .describe("Collateral token mint address (base58)"),
+  collateralMint: z.string().describe("Collateral token mint address (base58)"),
   collateralAmount: z
     .string()
     .describe("Collateral amount in token base units"),
   sizeUsd: z.string().describe("Position size in USD base units"),
-  side: z
-    .enum(["long", "short"])
-    .describe("Position side: 'long' or 'short'"),
+  side: z.enum(["long", "short"]).describe("Position side: 'long' or 'short'"),
   leverageBps: z
     .number()
     .describe("Leverage in basis points (e.g. 20000 = 2x)"),
@@ -25,7 +21,7 @@ export const openPositionSchema = z.object({
 export type OpenPositionInput = z.infer<typeof openPositionSchema>;
 
 function parseSide(
-  side: "long" | "short"
+  side: "long" | "short",
 ): { long: Record<string, never> } | { short: Record<string, never> } {
   return side === "long" ? { long: {} } : { short: {} };
 }
@@ -33,7 +29,7 @@ function parseSide(
 export async function openPosition(
   client: AgentShieldClient,
   config: McpConfig,
-  input: OpenPositionInput
+  input: OpenPositionInput,
 ): Promise<string> {
   try {
     const agentKeypair = loadAgentKeypair(config);
@@ -53,11 +49,9 @@ export async function openPosition(
       leverageBps: input.leverageBps,
     });
 
-    const sig = await client.executeFlashTrade(
-      result,
-      agentKeypair.publicKey,
-      [agentKeypair]
-    );
+    const sig = await client.executeFlashTrade(result, agentKeypair.publicKey, [
+      agentKeypair,
+    ]);
 
     return [
       "## Position Opened",

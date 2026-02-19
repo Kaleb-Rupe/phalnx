@@ -68,11 +68,14 @@ export const provisionAction = {
       const actionUrl = `${baseUrl}/api/actions/provision?${params.toString()}`;
       const blinkUrl = `https://dial.to/?action=solana-action:${encodeURIComponent(actionUrl)}`;
 
-      const capDisplay = dailyCap || {
-        conservative: 500,
-        moderate: 2000,
-        aggressive: 10000,
-      }[template as string] || 500;
+      const capDisplay =
+        dailyCap ||
+        {
+          conservative: 500,
+          moderate: 2000,
+          aggressive: 10000,
+        }[template as string] ||
+        500;
 
       const lines = [
         "I need a protected wallet to trade. Please approve the vault creation:",

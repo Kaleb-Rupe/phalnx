@@ -1,8 +1,10 @@
+pub mod pending_policy;
 pub mod policy;
 pub mod session;
 pub mod tracker;
 pub mod vault;
 
+pub use pending_policy::*;
 pub use policy::*;
 pub use session::*;
 pub use tracker::*;
@@ -13,6 +15,9 @@ pub const MAX_ALLOWED_TOKENS: usize = 10;
 
 /// Maximum number of allowed protocols in a policy
 pub const MAX_ALLOWED_PROTOCOLS: usize = 10;
+
+/// Maximum number of allowed destination addresses for agent transfers
+pub const MAX_ALLOWED_DESTINATIONS: usize = 10;
 
 /// Maximum number of recent transactions stored on-chain
 pub const MAX_RECENT_TRANSACTIONS: usize = 50;
@@ -42,21 +47,52 @@ pub const PROTOCOL_TREASURY: Pubkey = Pubkey::new_from_array([
     239, 33, 251, 37, 93, 179, 29, 45, 226, 14, 172,
 ]);
 
+// --- Oracle constants ---
+
+/// Pyth Receiver program (same mainnet/devnet).
+/// Base58: rec5EKMGg6MxZYaMdyBfgwp4d5rB9T1VQH5pJv5LtFJ
+pub const PYTH_RECEIVER_PROGRAM: Pubkey = Pubkey::new_from_array([
+    12, 183, 250, 187, 82, 247, 166, 72, 187, 91, 49, 125, 154, 1, 139, 144, 87, 203, 2, 71, 116,
+    250, 254, 1, 230, 196, 223, 152, 204, 56, 88, 129,
+]);
+
+/// Switchboard On-Demand program (same mainnet/devnet).
+/// Base58: SBondMDrcV3K4kxZR1HNVT7osZxAHVHgYXL5Ze1oMUv
+pub const SWITCHBOARD_ON_DEMAND_PROGRAM: Pubkey = Pubkey::new_from_array([
+    6, 115, 189, 70, 242, 228, 126, 4, 241, 43, 217, 47, 183, 49, 150, 142, 205, 157, 151, 87, 194,
+    116, 218, 135, 71, 111, 70, 92, 4, 12, 101, 115,
+]);
+
+/// Maximum staleness for Switchboard feed values (in slots).
+/// At ~400ms per slot, 100 slots ≈ 40 seconds.
+pub const MAX_ORACLE_STALE_SLOTS: u32 = 100;
+
+/// Minimum number of oracle samples required for a valid price.
+pub const MIN_ORACLE_SAMPLES: u32 = 3;
+
+/// Maximum age for Pyth price updates (seconds). 60s is conservative.
+pub const MAX_PYTH_AGE_SECONDS: i64 = 60;
+
+/// Maximum confidence/price ratio in BPS. 1000 = 10%.
+pub const MAX_CONFIDENCE_BPS: u64 = 1000;
+
+/// USD amounts use 6 decimal places (matching USDC/USDT precision).
+/// $1.00 = 1_000_000, $500.00 = 500_000_000
+pub const USD_DECIMALS: u8 = 6;
+
+/// 10^6 — base multiplier for USD amounts with 6 decimals
+pub const USD_BASE: u64 = 1_000_000;
+
 /// Vault status enum
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Default, PartialEq, Eq)]
 pub enum VaultStatus {
     /// Vault is active, agent can execute actions
+    #[default]
     Active,
     /// Vault is frozen (kill switch activated), no agent actions allowed
     Frozen,
     /// Vault is closed, all funds withdrawn, PDAs can be reclaimed
     Closed,
-}
-
-impl Default for VaultStatus {
-    fn default() -> Self {
-        VaultStatus::Active
-    }
 }
 
 /// Action types that agents can request
@@ -76,6 +112,8 @@ pub enum ActionType {
     Deposit,
     /// Withdraw from a lending/yield protocol
     Withdraw,
+    /// Direct token transfer to an allowed destination
+    Transfer,
 }
 
 use anchor_lang::prelude::*;

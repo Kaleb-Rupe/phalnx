@@ -11,7 +11,7 @@ export type RevokeAgentInput = z.infer<typeof revokeAgentSchema>;
 
 export async function revokeAgent(
   client: AgentShieldClient,
-  input: RevokeAgentInput
+  input: RevokeAgentInput,
 ): Promise<string> {
   try {
     const sig = await client.revokeAgent(toPublicKey(input.vault));

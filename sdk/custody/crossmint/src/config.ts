@@ -77,6 +77,8 @@ export function configFromEnv(): CrossmintWalletConfig {
  */
 export function validateConfig(config: CrossmintWalletConfig): void {
   if (!config.apiKey || config.apiKey.trim() === "") {
-    throw new Error("Crossmint custody: apiKey is required and cannot be empty.");
+    throw new Error(
+      "Crossmint custody: apiKey is required and cannot be empty.",
+    );
   }
 }

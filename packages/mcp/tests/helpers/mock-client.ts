@@ -42,9 +42,9 @@ export function makePolicyAccount(
 ): PolicyConfigAccount {
   return {
     vault: TEST_VAULT_PDA,
-    dailySpendingCap: new BN("10000000000"),
-    maxTransactionSize: new BN("1000000000"),
-    allowedTokens: [TEST_MINT],
+    dailySpendingCapUsd: new BN("10000000000"),
+    maxTransactionSizeUsd: new BN("1000000000"),
+    allowedTokens: [{ mint: TEST_MINT, oracleFeed: PublicKey.default, decimals: 6, dailyCapBase: new BN(0), maxTxBase: new BN(0) }],
     allowedProtocols: [TEST_PROTOCOL],
     maxLeverageBps: 30000,
     canOpenPositions: true,
@@ -60,7 +60,8 @@ export function makeSpendEntry(
 ): SpendEntry {
   return {
     tokenMint: TEST_MINT,
-    amountSpent: new BN("500000000"),
+    usdAmount: new BN("500000000"),
+    baseAmount: new BN("500000000"),
     timestamp: new BN(1700000100),
     ...overrides,
   };
@@ -137,8 +138,8 @@ export function createMockClient(overrides: {
       return [Keypair.generate().publicKey, 253];
     },
 
-    getSessionPDA(vault: PublicKey, agent: PublicKey): [PublicKey, number] {
-      calls.push({ method: "getSessionPDA", args: [vault, agent] });
+    getSessionPDA(vault: PublicKey, agent: PublicKey, tokenMint: PublicKey): [PublicKey, number] {
+      calls.push({ method: "getSessionPDA", args: [vault, agent, tokenMint] });
       return [Keypair.generate().publicKey, 252];
     },
 

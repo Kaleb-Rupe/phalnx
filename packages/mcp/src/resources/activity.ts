@@ -8,7 +8,7 @@ import {
 
 export async function getActivityResource(
   client: AgentShieldClient,
-  vaultAddress: string
+  vaultAddress: string,
 ): Promise<string> {
   try {
     const vault = toPublicKey(vaultAddress);
@@ -31,7 +31,7 @@ export async function getActivityResource(
         transactions,
       },
       null,
-      2
+      2,
     );
   } catch {
     return JSON.stringify(
@@ -42,7 +42,7 @@ export async function getActivityResource(
         transactions: [],
       },
       null,
-      2
+      2,
     );
   }
 }

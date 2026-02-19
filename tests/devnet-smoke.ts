@@ -121,7 +121,9 @@ describe("devnet-smoke-test", () => {
         [jupiterProgramId],
         new BN(0) as any,
         3,
-        0 // developer_fee_rate: 0 bps
+        0, // developer_fee_rate: 0 bps
+        new BN(0), // timelockDuration
+        [] // allowedDestinations
       )
       .accounts({
         owner: owner.publicKey,
@@ -183,7 +185,9 @@ describe("devnet-smoke-test", () => {
         new BN(5000) as any, // set leverage to 50x
         null,  // keep can_open_positions
         null,  // keep max_concurrent_positions
-        null   // keep developer_fee_rate
+        null,  // keep developer_fee_rate
+        null,  // keep timelockDuration
+        null   // keep allowedDestinations
       )
       .accounts({
         owner: owner.publicKey,

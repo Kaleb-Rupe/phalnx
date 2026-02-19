@@ -50,9 +50,7 @@ export const statusAction = {
       for (const t of summary.tokens) {
         const label = t.symbol ?? t.mint.slice(0, 8) + "...";
         const pct =
-          t.limit > BigInt(0)
-            ? Number((t.spent * BigInt(100)) / t.limit)
-            : 0;
+          t.limit > BigInt(0) ? Number((t.spent * BigInt(100)) / t.limit) : 0;
         lines.push(
           `${label}: ${t.spent.toString()} / ${t.limit.toString()} (${pct}% used)`,
         );

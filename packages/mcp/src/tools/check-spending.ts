@@ -16,14 +16,14 @@ export type CheckSpendingInput = z.infer<typeof checkSpendingSchema>;
 
 export async function checkSpending(
   client: AgentShieldClient,
-  input: CheckSpendingInput
+  input: CheckSpendingInput,
 ): Promise<string> {
   try {
     const vaultAddress = toPublicKey(input.vault);
     const tracker = await client.fetchTracker(vaultAddress);
     const policy = await client.fetchPolicy(vaultAddress);
 
-    const cap = formatBN(policy.dailySpendingCap);
+    const cap = formatBN(policy.dailySpendingCapUsd);
     const lines: string[] = [
       `## Spending Report: ${vaultAddress.toBase58()}`,
       `- **Daily Cap:** ${cap}`,
@@ -36,14 +36,16 @@ export async function checkSpending(
     } else {
       for (const entry of tracker.rollingSpends) {
         lines.push(
-          `- **${entry.tokenMint.toBase58()}**: ${formatBN(entry.amountSpent)} ` +
-            `(at ${formatTimestamp(entry.timestamp)})`
+          `- **${entry.tokenMint.toBase58()}**: ${formatBN(entry.usdAmount)} ` +
+            `(at ${formatTimestamp(entry.timestamp)})`,
         );
       }
     }
 
     lines.push("");
-    lines.push(`### Recent Transactions (${tracker.recentTransactions.length})`);
+    lines.push(
+      `### Recent Transactions (${tracker.recentTransactions.length})`,
+    );
 
     if (tracker.recentTransactions.length === 0) {
       lines.push("No recent transactions.");
@@ -53,13 +55,11 @@ export async function checkSpending(
         lines.push(
           `- [${status}] ${formatActionType(tx.actionType)} — ` +
             `${formatBN(tx.amount)} at ${formatTimestamp(tx.timestamp)} ` +
-            `(slot ${formatBN(tx.slot)})`
+            `(slot ${formatBN(tx.slot)})`,
         );
       }
       if (tracker.recentTransactions.length > 10) {
-        lines.push(
-          `... and ${tracker.recentTransactions.length - 10} more`
-        );
+        lines.push(`... and ${tracker.recentTransactions.length - 10} more`);
       }
     }
 

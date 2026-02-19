@@ -12,12 +12,12 @@ export type RegisterAgentInput = z.infer<typeof registerAgentSchema>;
 
 export async function registerAgent(
   client: AgentShieldClient,
-  input: RegisterAgentInput
+  input: RegisterAgentInput,
 ): Promise<string> {
   try {
     const sig = await client.registerAgent(
       toPublicKey(input.vault),
-      toPublicKey(input.agent)
+      toPublicKey(input.agent),
     );
 
     return [

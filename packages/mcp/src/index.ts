@@ -37,7 +37,9 @@ function registerTool(
   name: string,
   description: string,
   schema: Record<string, any>,
-  handler: (input: any) => Promise<{ content: { type: "text"; text: string }[] }>
+  handler: (
+    input: any,
+  ) => Promise<{ content: { type: "text"; text: string }[] }>,
 ) {
   (server as any).tool(name, description, schema, handler);
 }
@@ -64,7 +66,7 @@ async function main() {
 
   console.error(
     `[agent-shield-mcp] Connected to ${config.rpcUrl}, ` +
-      `wallet: ${client.provider.wallet.publicKey.toBase58()}`
+      `wallet: ${client.provider.wallet.publicKey.toBase58()}`,
   );
 
   const server = new McpServer({
@@ -79,13 +81,21 @@ async function main() {
     "shield_check_vault",
     "Check the status and policy configuration of an AgentShield vault",
     {
-      vault: z.string().describe("Vault PDA address (base58). Provide this OR owner+vaultId."),
-      owner: z.string().optional().describe("Owner public key (base58). Used with vaultId."),
-      vaultId: z.string().optional().describe("Vault ID number. Used with owner."),
+      vault: z
+        .string()
+        .describe("Vault PDA address (base58). Provide this OR owner+vaultId."),
+      owner: z
+        .string()
+        .optional()
+        .describe("Owner public key (base58). Used with vaultId."),
+      vaultId: z
+        .string()
+        .optional()
+        .describe("Vault ID number. Used with owner."),
     },
     async (input) => ({
       content: [{ type: "text", text: await checkVault(client, input) }],
-    })
+    }),
   );
 
   registerTool(
@@ -97,7 +107,7 @@ async function main() {
     },
     async (input) => ({
       content: [{ type: "text", text: await checkSpending(client, input) }],
-    })
+    }),
   );
 
   // ── Owner-Signed Write Tools ────────────────────────────────
@@ -108,18 +118,36 @@ async function main() {
     "Create a new AgentShield vault with policy configuration",
     {
       vaultId: z.string().describe("Unique vault ID number"),
-      dailySpendingCap: z.string().describe("Max daily spending in token base units"),
-      maxTransactionSize: z.string().describe("Max single transaction size in token base units"),
-      allowedTokens: z.array(z.string()).describe("Allowed token mint addresses (base58). Max 10."),
-      allowedProtocols: z.array(z.string()).describe("Allowed protocol program IDs (base58). Max 10."),
-      maxLeverageBps: z.number().describe("Max leverage in basis points (e.g. 30000 = 3x)"),
-      maxConcurrentPositions: z.number().describe("Max concurrent open positions"),
-      feeDestination: z.string().describe("Fee destination wallet address (base58). Immutable."),
-      developerFeeRate: z.number().optional().default(0).describe("Developer fee rate (max 50 = 0.5 BPS)"),
+      dailySpendingCapUsd: z
+        .string()
+        .describe("Max daily spending in USD base units"),
+      maxTransactionSizeUsd: z
+        .string()
+        .describe("Max single transaction size in USD base units"),
+      allowedTokens: z
+        .array(z.string())
+        .describe("Allowed token mint addresses (base58). Max 10."),
+      allowedProtocols: z
+        .array(z.string())
+        .describe("Allowed protocol program IDs (base58). Max 10."),
+      maxLeverageBps: z
+        .number()
+        .describe("Max leverage in basis points (e.g. 30000 = 3x)"),
+      maxConcurrentPositions: z
+        .number()
+        .describe("Max concurrent open positions"),
+      feeDestination: z
+        .string()
+        .describe("Fee destination wallet address (base58). Immutable."),
+      developerFeeRate: z
+        .number()
+        .optional()
+        .default(0)
+        .describe("Developer fee rate (max 50 = 0.5 BPS)"),
     },
     async (input) => ({
       content: [{ type: "text", text: await createVault(client, input) }],
-    })
+    }),
   );
 
   registerTool(
@@ -133,7 +161,7 @@ async function main() {
     },
     async (input) => ({
       content: [{ type: "text", text: await deposit(client, input) }],
-    })
+    }),
   );
 
   registerTool(
@@ -147,7 +175,7 @@ async function main() {
     },
     async (input) => ({
       content: [{ type: "text", text: await withdraw(client, input) }],
-    })
+    }),
   );
 
   registerTool(
@@ -160,7 +188,7 @@ async function main() {
     },
     async (input) => ({
       content: [{ type: "text", text: await registerAgent(client, input) }],
-    })
+    }),
   );
 
   registerTool(
@@ -169,18 +197,39 @@ async function main() {
     "Update the policy configuration for a vault (owner-only)",
     {
       vault: z.string().describe("Vault PDA address (base58)"),
-      dailySpendingCap: z.string().optional().describe("New daily spending cap"),
-      maxTransactionSize: z.string().optional().describe("New max transaction size"),
-      allowedTokens: z.array(z.string()).optional().describe("New allowed token mints (base58)"),
-      allowedProtocols: z.array(z.string()).optional().describe("New allowed protocols (base58)"),
+      dailySpendingCapUsd: z
+        .string()
+        .optional()
+        .describe("New daily spending cap in USD"),
+      maxTransactionSizeUsd: z
+        .string()
+        .optional()
+        .describe("New max transaction size in USD"),
+      allowedTokens: z
+        .array(z.string())
+        .optional()
+        .describe("New allowed token mints (base58)"),
+      allowedProtocols: z
+        .array(z.string())
+        .optional()
+        .describe("New allowed protocols (base58)"),
       maxLeverageBps: z.number().optional().describe("New max leverage in BPS"),
-      canOpenPositions: z.boolean().optional().describe("Whether agent can open positions"),
-      maxConcurrentPositions: z.number().optional().describe("New max concurrent positions"),
-      developerFeeRate: z.number().optional().describe("New developer fee rate (max 50)"),
+      canOpenPositions: z
+        .boolean()
+        .optional()
+        .describe("Whether agent can open positions"),
+      maxConcurrentPositions: z
+        .number()
+        .optional()
+        .describe("New max concurrent positions"),
+      developerFeeRate: z
+        .number()
+        .optional()
+        .describe("New developer fee rate (max 50)"),
     },
     async (input) => ({
       content: [{ type: "text", text: await updatePolicy(client, input) }],
-    })
+    }),
   );
 
   registerTool(
@@ -192,7 +241,7 @@ async function main() {
     },
     async (input) => ({
       content: [{ type: "text", text: await revokeAgent(client, input) }],
-    })
+    }),
   );
 
   registerTool(
@@ -201,11 +250,14 @@ async function main() {
     "Reactivate a frozen vault, optionally with a new agent",
     {
       vault: z.string().describe("Vault PDA address (base58)"),
-      newAgent: z.string().optional().describe("Optional new agent public key (base58)"),
+      newAgent: z
+        .string()
+        .optional()
+        .describe("Optional new agent public key (base58)"),
     },
     async (input) => ({
       content: [{ type: "text", text: await reactivateVault(client, input) }],
-    })
+    }),
   );
 
   // ── Agent-Signed Tools ──────────────────────────────────────
@@ -219,11 +271,17 @@ async function main() {
       inputMint: z.string().describe("Input token mint address (base58)"),
       outputMint: z.string().describe("Output token mint address (base58)"),
       amount: z.string().describe("Input amount in token base units"),
-      slippageBps: z.number().optional().default(50).describe("Slippage tolerance in BPS (default: 50)"),
+      slippageBps: z
+        .number()
+        .optional()
+        .default(50)
+        .describe("Slippage tolerance in BPS (default: 50)"),
     },
     async (input) => ({
-      content: [{ type: "text", text: await executeSwap(client, config, input) }],
-    })
+      content: [
+        { type: "text", text: await executeSwap(client, config, input) },
+      ],
+    }),
   );
 
   registerTool(
@@ -233,15 +291,23 @@ async function main() {
     {
       vault: z.string().describe("Vault PDA address (base58)"),
       market: z.string().describe("Market/pool name (e.g. 'SOL', 'ETH')"),
-      collateralMint: z.string().describe("Collateral token mint address (base58)"),
-      collateralAmount: z.string().describe("Collateral amount in token base units"),
+      collateralMint: z
+        .string()
+        .describe("Collateral token mint address (base58)"),
+      collateralAmount: z
+        .string()
+        .describe("Collateral amount in token base units"),
       sizeUsd: z.string().describe("Position size in USD base units"),
       side: z.enum(["long", "short"]).describe("Position side"),
-      leverageBps: z.number().describe("Leverage in basis points (e.g. 20000 = 2x)"),
+      leverageBps: z
+        .number()
+        .describe("Leverage in basis points (e.g. 20000 = 2x)"),
     },
     async (input) => ({
-      content: [{ type: "text", text: await openPosition(client, config, input) }],
-    })
+      content: [
+        { type: "text", text: await openPosition(client, config, input) },
+      ],
+    }),
   );
 
   registerTool(
@@ -253,11 +319,17 @@ async function main() {
       market: z.string().describe("Market/pool name (e.g. 'SOL', 'ETH')"),
       side: z.enum(["long", "short"]).describe("Position side"),
       priceWithSlippage: z.string().describe("Exit price in base units"),
-      priceExponent: z.number().optional().default(0).describe("Price exponent (default: 0)"),
+      priceExponent: z
+        .number()
+        .optional()
+        .default(0)
+        .describe("Price exponent (default: 0)"),
     },
     async (input) => ({
-      content: [{ type: "text", text: await closePosition(client, config, input) }],
-    })
+      content: [
+        { type: "text", text: await closePosition(client, config, input) },
+      ],
+    }),
   );
 
   // ── Platform Tools ─────────────────────────────────────────
@@ -267,13 +339,24 @@ async function main() {
     "shield_provision",
     "Generate a Solana Action URL for one-click vault provisioning with a TEE-backed agent wallet. The user clicks the link to approve — no agent signing needed.",
     {
-      platformUrl: z.string().optional().default("https://app.agentshield.dev").describe("AgentShield platform URL"),
-      template: z.enum(["conservative", "moderate", "aggressive"]).optional().default("conservative").describe("Policy template"),
-      dailyCap: z.number().optional().describe("Custom daily spending cap in USDC"),
+      platformUrl: z
+        .string()
+        .optional()
+        .default("https://app.agentshield.dev")
+        .describe("AgentShield platform URL"),
+      template: z
+        .enum(["conservative", "moderate", "aggressive"])
+        .optional()
+        .default("conservative")
+        .describe("Policy template"),
+      dailyCap: z
+        .number()
+        .optional()
+        .describe("Custom daily spending cap in USDC"),
     },
     async (input) => ({
       content: [{ type: "text", text: await provision(client, input) }],
-    })
+    }),
   );
 
   // ── MCP Resources ───────────────────────────────────────────
@@ -293,7 +376,7 @@ async function main() {
           },
         ],
       };
-    }
+    },
   );
 
   (server as any).resource(
@@ -311,7 +394,7 @@ async function main() {
           },
         ],
       };
-    }
+    },
   );
 
   (server as any).resource(
@@ -329,7 +412,7 @@ async function main() {
           },
         ],
       };
-    }
+    },
   );
 
   // ── Start Server ────────────────────────────────────────────

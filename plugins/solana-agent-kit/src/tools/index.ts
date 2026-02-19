@@ -14,8 +14,4 @@ export {
   transactionHistorySchema,
   type TransactionHistoryInput,
 } from "./transactionHistory";
-export {
-  provision,
-  provisionSchema,
-  type ProvisionInput,
-} from "./provision";
+export { provision, provisionSchema, type ProvisionInput } from "./provision";

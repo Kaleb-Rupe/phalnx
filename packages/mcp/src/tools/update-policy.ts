@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { BN } from "@coral-xyz/anchor";
+import { PublicKey } from "@solana/web3.js";
 import type { AgentShieldClient } from "@agent-shield/sdk";
 import type { UpdatePolicyParams } from "@agent-shield/sdk";
 import { toPublicKey, toBN } from "../utils";
@@ -6,22 +8,26 @@ import { formatError } from "../errors";
 
 export const updatePolicySchema = z.object({
   vault: z.string().describe("Vault PDA address (base58)"),
-  dailySpendingCap: z
+  dailySpendingCapUsd: z
     .string()
     .optional()
-    .describe("New daily spending cap in token base units"),
-  maxTransactionSize: z
+    .describe("New daily spending cap in USD base units"),
+  maxTransactionSizeUsd: z
     .string()
     .optional()
-    .describe("New max transaction size in token base units"),
+    .describe("New max transaction size in USD base units"),
   allowedTokens: z
     .array(z.string())
     .optional()
-    .describe("New allowed token mints (base58). Max 10. Replaces existing list."),
+    .describe(
+      "New allowed token mints (base58). Max 10. Replaces existing list.",
+    ),
   allowedProtocols: z
     .array(z.string())
     .optional()
-    .describe("New allowed protocol IDs (base58). Max 10. Replaces existing list."),
+    .describe(
+      "New allowed protocol IDs (base58). Max 10. Replaces existing list.",
+    ),
   maxLeverageBps: z
     .number()
     .optional()
@@ -44,19 +50,25 @@ export type UpdatePolicyInput = z.infer<typeof updatePolicySchema>;
 
 export async function updatePolicy(
   client: AgentShieldClient,
-  input: UpdatePolicyInput
+  input: UpdatePolicyInput,
 ): Promise<string> {
   try {
     const params: UpdatePolicyParams = {};
 
-    if (input.dailySpendingCap !== undefined) {
-      params.dailySpendingCap = toBN(input.dailySpendingCap);
+    if (input.dailySpendingCapUsd !== undefined) {
+      params.dailySpendingCapUsd = toBN(input.dailySpendingCapUsd);
     }
-    if (input.maxTransactionSize !== undefined) {
-      params.maxTransactionSize = toBN(input.maxTransactionSize);
+    if (input.maxTransactionSizeUsd !== undefined) {
+      params.maxTransactionSizeUsd = toBN(input.maxTransactionSizeUsd);
     }
     if (input.allowedTokens !== undefined) {
-      params.allowedTokens = input.allowedTokens.map(toPublicKey);
+      params.allowedTokens = input.allowedTokens.map((addr) => ({
+        mint: toPublicKey(addr),
+        oracleFeed: PublicKey.default,
+        decimals: 6,
+        dailyCapBase: new BN(0),
+        maxTxBase: new BN(0),
+      }));
     }
     if (input.allowedProtocols !== undefined) {
       params.allowedProtocols = input.allowedProtocols.map(toPublicKey);
@@ -74,10 +86,7 @@ export async function updatePolicy(
       params.developerFeeRate = input.developerFeeRate;
     }
 
-    const sig = await client.updatePolicy(
-      toPublicKey(input.vault),
-      params
-    );
+    const sig = await client.updatePolicy(toPublicKey(input.vault), params);
 
     const updated = Object.keys(params).join(", ") || "none";
 

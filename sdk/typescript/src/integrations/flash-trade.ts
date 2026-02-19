@@ -7,6 +7,7 @@ import {
   Signer,
 } from "@solana/web3.js";
 import { AnchorProvider, BN, Program } from "@coral-xyz/anchor";
+import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { PerpetualsClient, PoolConfig, Side, Privilege } from "flash-sdk";
 import type { AgentShield, ComposeActionParams, ActionType } from "../types";
 import { getVaultPDA } from "../accounts";
@@ -17,19 +18,19 @@ import { composePermittedAction } from "../composer";
 // ---------------------------------------------------------------------------
 
 export const FLASH_TRADE_PROGRAM_ID = new PublicKey(
-  "PERPHjGBqRHArX4DySjwM6UJHiR3sWAatqfdBS2qQJu"
+  "PERPHjGBqRHArX4DySjwM6UJHiR3sWAatqfdBS2qQJu",
 );
 
 export const FLASH_COMPOSABILITY_PROGRAM_ID = new PublicKey(
-  "FLCPaG22cpZBSdbmk6kBhHsGDfkJGHsSRhgSt9kPV7sG"
+  "FLCPaG22cpZBSdbmk6kBhHsGDfkJGHsSRhgSt9kPV7sG",
 );
 
 export const FLASH_FB_NFT_REWARD_PROGRAM_ID = new PublicKey(
-  "FBnftwLhsQJPHkGEjVVgPXnxFjTsePDqQnmzixiJbsAV"
+  "FBnftwLhsQJPHkGEjVVgPXnxFjTsePDqQnmzixiJbsAV",
 );
 
 export const FLASH_REWARD_DISTRIBUTION_PROGRAM_ID = new PublicKey(
-  "FLRDaTyVhUFJwdwtBjCKMDGNbMFrHm5GVXE1aVjMCaH1"
+  "FLRDaTyVhUFJwdwtBjCKMDGNbMFrHm5GVXE1aVjMCaH1",
 );
 
 // Re-export flash-sdk types for consumers
@@ -127,7 +128,7 @@ export interface FlashTradeResult {
  */
 export function createFlashTradeClient(
   provider: AnchorProvider,
-  config?: Partial<FlashTradeConfig>
+  config?: Partial<FlashTradeConfig>,
 ): PerpetualsClient {
   return new PerpetualsClient(
     provider,
@@ -136,7 +137,7 @@ export function createFlashTradeClient(
     FLASH_FB_NFT_REWARD_PROGRAM_ID,
     FLASH_REWARD_DISTRIBUTION_PROGRAM_ID,
     {},
-    false
+    false,
   );
 }
 
@@ -145,7 +146,7 @@ export function createFlashTradeClient(
  */
 export function getPoolConfig(
   poolName: string,
-  cluster: "mainnet-beta" | "devnet" = "mainnet-beta"
+  cluster: "mainnet-beta" | "devnet" = "mainnet-beta",
 ): PoolConfig {
   return PoolConfig.fromIdsByName(poolName, cluster);
 }
@@ -163,7 +164,7 @@ export async function composeFlashTradeOpen(
   program: Program<AgentShield>,
   perpClient: PerpetualsClient,
   poolConfig: PoolConfig,
-  params: FlashOpenPositionParams
+  params: FlashOpenPositionParams,
 ): Promise<FlashTradeResult> {
   const [vault] = getVaultPDA(params.owner, params.vaultId, program.programId);
 
@@ -180,12 +181,18 @@ export async function composeFlashTradeOpen(
       Privilege.None,
       undefined, // tokenStakeAccount
       undefined, // userReferralAccount
-      true // skipBalanceChecks
+      true, // skipBalanceChecks
     );
 
   // Get collateral token mint from pool config
-  const collateralToken = poolConfig.getTokenFromSymbol(params.collateralSymbol);
+  const collateralToken = poolConfig.getTokenFromSymbol(
+    params.collateralSymbol,
+  );
   const tokenMint = collateralToken.mintKey;
+
+  const vaultTokenAccount =
+    params.vaultTokenAccount ??
+    getAssociatedTokenAddressSync(tokenMint, vault, true);
 
   const composeParams: ComposeActionParams = {
     vault,
@@ -199,7 +206,7 @@ export async function composeFlashTradeOpen(
     leverageBps: params.leverageBps,
     defiInstructions: flashIxs,
     success: true,
-    vaultTokenAccount: params.vaultTokenAccount,
+    vaultTokenAccount,
     feeDestinationTokenAccount: params.feeDestinationTokenAccount,
   };
 
@@ -214,7 +221,7 @@ export async function composeFlashTradeClose(
   program: Program<AgentShield>,
   perpClient: PerpetualsClient,
   poolConfig: PoolConfig,
-  params: FlashClosePositionParams
+  params: FlashClosePositionParams,
 ): Promise<FlashTradeResult> {
   const [vault] = getVaultPDA(params.owner, params.vaultId, program.programId);
 
@@ -225,11 +232,17 @@ export async function composeFlashTradeClose(
       params.priceWithSlippage,
       params.side as any,
       poolConfig,
-      Privilege.None
+      Privilege.None,
     );
 
-  const collateralToken = poolConfig.getTokenFromSymbol(params.collateralSymbol);
+  const collateralToken = poolConfig.getTokenFromSymbol(
+    params.collateralSymbol,
+  );
   const tokenMint = collateralToken.mintKey;
+
+  const vaultTokenAccount =
+    params.vaultTokenAccount ??
+    getAssociatedTokenAddressSync(tokenMint, vault, true);
 
   const composeParams: ComposeActionParams = {
     vault,
@@ -242,7 +255,7 @@ export async function composeFlashTradeClose(
     targetProtocol: FLASH_TRADE_PROGRAM_ID,
     defiInstructions: flashIxs,
     success: true,
-    vaultTokenAccount: params.vaultTokenAccount,
+    vaultTokenAccount,
     feeDestinationTokenAccount: params.feeDestinationTokenAccount,
   };
 
@@ -257,7 +270,7 @@ export async function composeFlashTradeIncrease(
   program: Program<AgentShield>,
   perpClient: PerpetualsClient,
   poolConfig: PoolConfig,
-  params: FlashIncreasePositionParams
+  params: FlashIncreasePositionParams,
 ): Promise<FlashTradeResult> {
   const [vault] = getVaultPDA(params.owner, params.vaultId, program.programId);
 
@@ -270,11 +283,17 @@ export async function composeFlashTradeIncrease(
       poolConfig,
       params.priceWithSlippage,
       params.sizeDelta,
-      Privilege.None
+      Privilege.None,
     );
 
-  const collateralToken = poolConfig.getTokenFromSymbol(params.collateralSymbol);
+  const collateralToken = poolConfig.getTokenFromSymbol(
+    params.collateralSymbol,
+  );
   const tokenMint = collateralToken.mintKey;
+
+  const vaultTokenAccount =
+    params.vaultTokenAccount ??
+    getAssociatedTokenAddressSync(tokenMint, vault, true);
 
   const composeParams: ComposeActionParams = {
     vault,
@@ -288,7 +307,7 @@ export async function composeFlashTradeIncrease(
     leverageBps: params.leverageBps,
     defiInstructions: flashIxs,
     success: true,
-    vaultTokenAccount: params.vaultTokenAccount,
+    vaultTokenAccount,
     feeDestinationTokenAccount: params.feeDestinationTokenAccount,
   };
 
@@ -303,7 +322,7 @@ export async function composeFlashTradeDecrease(
   program: Program<AgentShield>,
   perpClient: PerpetualsClient,
   poolConfig: PoolConfig,
-  params: FlashDecreasePositionParams
+  params: FlashDecreasePositionParams,
 ): Promise<FlashTradeResult> {
   const [vault] = getVaultPDA(params.owner, params.vaultId, program.programId);
 
@@ -316,11 +335,17 @@ export async function composeFlashTradeDecrease(
       poolConfig,
       params.priceWithSlippage,
       params.sizeDelta,
-      Privilege.None
+      Privilege.None,
     );
 
-  const collateralToken = poolConfig.getTokenFromSymbol(params.collateralSymbol);
+  const collateralToken = poolConfig.getTokenFromSymbol(
+    params.collateralSymbol,
+  );
   const tokenMint = collateralToken.mintKey;
+
+  const vaultTokenAccount =
+    params.vaultTokenAccount ??
+    getAssociatedTokenAddressSync(tokenMint, vault, true);
 
   const composeParams: ComposeActionParams = {
     vault,
@@ -333,7 +358,7 @@ export async function composeFlashTradeDecrease(
     targetProtocol: FLASH_TRADE_PROGRAM_ID,
     defiInstructions: flashIxs,
     success: true,
-    vaultTokenAccount: params.vaultTokenAccount,
+    vaultTokenAccount,
     feeDestinationTokenAccount: params.feeDestinationTokenAccount,
   };
 
@@ -349,7 +374,7 @@ export async function composeFlashTradeDecrease(
 export async function composeFlashTradeTransaction(
   connection: Connection,
   payer: PublicKey,
-  result: FlashTradeResult
+  result: FlashTradeResult,
 ): Promise<VersionedTransaction> {
   const { blockhash } = await connection.getLatestBlockhash();
 

@@ -20,8 +20,7 @@ export interface McpConfig {
 }
 
 export function loadConfig(): McpConfig {
-  const rpcUrl =
-    process.env.AGENTSHIELD_RPC_URL || clusterApiUrl("devnet");
+  const rpcUrl = process.env.AGENTSHIELD_RPC_URL || clusterApiUrl("devnet");
 
   const agentKeypairPath =
     process.env.AGENTSHIELD_AGENT_KEYPAIR_PATH || undefined;
@@ -47,7 +46,7 @@ export function loadConfig(): McpConfig {
     throw new Error(
       "AGENTSHIELD_WALLET_PATH is required (or set AGENTSHIELD_CUSTODY " +
         "to a custody provider: crossmint, turnkey, privy). " +
-        "Set AGENTSHIELD_WALLET_PATH to the path of your Solana keypair JSON file."
+        "Set AGENTSHIELD_WALLET_PATH to the path of your Solana keypair JSON file.",
     );
   }
 
@@ -67,7 +66,7 @@ export function createClient(config: McpConfig): AgentShieldClient {
   if (!config.walletPath) {
     throw new Error(
       "createClient requires walletPath. " +
-        "For custody-based wallets, use createCustodyClient() instead."
+        "For custody-based wallets, use createCustodyClient() instead.",
     );
   }
   const keypair = loadKeypair(config.walletPath);
@@ -80,14 +79,15 @@ export function createClient(config: McpConfig): AgentShieldClient {
  * Create a WalletLike from a TEE custody provider.
  * Dynamically imports the provider adapter to avoid hard dependencies.
  */
-export async function createCustodyWallet(
-  config: McpConfig,
-): Promise<{ publicKey: import("@solana/web3.js").PublicKey; signTransaction: Function }> {
+export async function createCustodyWallet(config: McpConfig): Promise<{
+  publicKey: import("@solana/web3.js").PublicKey;
+  signTransaction: Function;
+}> {
   switch (config.custodyProvider) {
     case "crossmint": {
       if (!config.crossmintApiKey) {
         throw new Error(
-          "CROSSMINT_API_KEY is required when AGENTSHIELD_CUSTODY=crossmint."
+          "CROSSMINT_API_KEY is required when AGENTSHIELD_CUSTODY=crossmint.",
         );
       }
       // Dynamic require to avoid hard dependency on custody adapter.
@@ -97,7 +97,7 @@ export async function createCustodyWallet(
       } catch {
         throw new Error(
           "@agent-shield/custody-crossmint is not installed. " +
-            "Run: npm install @agent-shield/custody-crossmint"
+            "Run: npm install @agent-shield/custody-crossmint",
         );
       }
       return mod.crossmint({
@@ -108,17 +108,17 @@ export async function createCustodyWallet(
     case "turnkey":
       throw new Error(
         "Turnkey custody adapter is not yet available. " +
-          "Install @agent-shield/custody-turnkey when released."
+          "Install @agent-shield/custody-turnkey when released.",
       );
     case "privy":
       throw new Error(
         "Privy custody adapter is not yet available. " +
-          "Install @agent-shield/custody-privy when released."
+          "Install @agent-shield/custody-privy when released.",
       );
     default:
       throw new Error(
         `Unknown custody provider '${config.custodyProvider}'. ` +
-          "Supported: crossmint, turnkey, privy."
+          "Supported: crossmint, turnkey, privy.",
       );
   }
 }
@@ -127,7 +127,7 @@ export function loadAgentKeypair(config: McpConfig): Keypair {
   if (!config.agentKeypairPath) {
     throw new Error(
       "AGENTSHIELD_AGENT_KEYPAIR_PATH is required for agent-signed operations. " +
-        "Set it to the path of the agent's Solana keypair JSON file."
+        "Set it to the path of the agent's Solana keypair JSON file.",
     );
   }
   return loadKeypair(config.agentKeypairPath);

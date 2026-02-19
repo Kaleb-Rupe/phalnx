@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Token, TokenAccount, Transfer};
+use anchor_spl::token::{self, Revoke, Token, TokenAccount, Transfer};
 
 use crate::errors::AgentShieldError;
-use crate::events::{FeesCollected, SessionFinalized};
+use crate::events::{DelegationRevoked, FeesCollected, SessionFinalized};
 use crate::state::*;
 
 #[derive(Accounts)]
@@ -34,10 +34,16 @@ pub struct FinalizeSession<'info> {
 
     /// Session rent is returned to the session's agent (who paid for it),
     /// not the arbitrary payer, to prevent rent theft.
+    /// Seeds include token_mint for per-token concurrent sessions.
     #[account(
         mut,
         has_one = vault @ AgentShieldError::InvalidSession,
-        seeds = [b"session", vault.key().as_ref(), session.agent.as_ref()],
+        seeds = [
+            b"session",
+            vault.key().as_ref(),
+            session.agent.as_ref(),
+            session.authorized_token.as_ref(),
+        ],
         bump = session.bump,
         close = session_rent_recipient,
     )]
@@ -48,7 +54,7 @@ pub struct FinalizeSession<'info> {
     #[account(mut)]
     pub session_rent_recipient: UncheckedAccount<'info>,
 
-    /// Vault's PDA token account for the session's token (fee source)
+    /// Vault's PDA token account for the session's token (fee source + delegation revocation)
     #[account(mut)]
     pub vault_token_account: Option<Account<'info, TokenAccount>>,
 
@@ -95,6 +101,7 @@ pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
     let session_token = session.authorized_token;
     let session_protocol = session.authorized_protocol;
     let session_action_type = session.action_type;
+    let session_delegated = session.delegated;
 
     let vault = &mut ctx.accounts.vault;
     let developer_fee_rate = ctx.accounts.policy.developer_fee_rate;
@@ -105,17 +112,48 @@ pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
     let vault_bump = vault.bump;
     let vault_fee_destination = vault.fee_destination;
 
+    let bump_slice = [vault_bump];
+    let signer_seeds = [
+        b"vault" as &[u8],
+        owner_key.as_ref(),
+        vault_id_bytes.as_ref(),
+        bump_slice.as_ref(),
+    ];
+    let binding = [signer_seeds.as_slice()];
+
+    // Revoke delegation FIRST (before any fee transfers)
+    if session_delegated {
+        if let Some(vault_token) = ctx.accounts.vault_token_account.as_ref() {
+            let revoke_accounts = Revoke {
+                source: vault_token.to_account_info(),
+                authority: vault.to_account_info(),
+            };
+            let revoke_ctx = CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                revoke_accounts,
+                &binding,
+            );
+            token::revoke(revoke_ctx)?;
+
+            emit!(DelegationRevoked {
+                vault: vault.key(),
+                token_account: vault_token.key(),
+                timestamp: clock.unix_timestamp,
+            });
+        }
+    }
+
     // Collect fees if success and not expired
     if success && !is_expired {
         // Calculate protocol fee (always applied)
-        let protocol_fee = (session_amount as u64)
+        let protocol_fee = session_amount
             .checked_mul(PROTOCOL_FEE_RATE as u64)
             .ok_or(AgentShieldError::Overflow)?
             .checked_div(FEE_RATE_DENOMINATOR)
             .ok_or(AgentShieldError::Overflow)?;
 
         // Calculate developer fee
-        let developer_fee = (session_amount as u64)
+        let developer_fee = session_amount
             .checked_mul(developer_fee_rate as u64)
             .ok_or(AgentShieldError::Overflow)?
             .checked_div(FEE_RATE_DENOMINATOR)
@@ -139,15 +177,6 @@ pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
                 vault_token.mint == session_token,
                 AgentShieldError::InvalidFeeDestination
             );
-
-            let bump_slice = [vault_bump];
-            let signer_seeds = [
-                b"vault" as &[u8],
-                owner_key.as_ref(),
-                vault_id_bytes.as_ref(),
-                bump_slice.as_ref(),
-            ];
-            let binding = [signer_seeds.as_slice()];
 
             // Transfer protocol fee
             if protocol_fee > 0 {

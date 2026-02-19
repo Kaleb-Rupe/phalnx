@@ -1,10 +1,14 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::{self, Approve, Mint, Token, TokenAccount};
 
 use crate::errors::AgentShieldError;
 use crate::events::ActionAuthorized;
 use crate::state::*;
 
+use super::utils::convert_to_usd;
+
 #[derive(Accounts)]
+#[instruction(action_type: ActionType, token_mint: Pubkey)]
 pub struct ValidateAndAuthorize<'info> {
     #[account(mut)]
     pub agent: Signer<'info>,
@@ -32,17 +36,39 @@ pub struct ValidateAndAuthorize<'info> {
     )]
     pub tracker: Account<'info, SpendTracker>,
 
-    /// Ephemeral session PDA — `init` ensures no double-authorization
+    /// Ephemeral session PDA — `init` ensures no double-authorization.
+    /// Seeds include token_mint for per-token concurrent sessions.
     #[account(
         init,
         payer = agent,
         space = SessionAuthority::SIZE,
-        seeds = [b"session", vault.key().as_ref(), agent.key().as_ref()],
+        seeds = [
+            b"session",
+            vault.key().as_ref(),
+            agent.key().as_ref(),
+            token_mint.as_ref(),
+        ],
         bump,
     )]
     pub session: Account<'info, SessionAuthority>,
 
+    /// Vault's PDA-owned token account for the spend token (delegation source)
+    #[account(
+        mut,
+        constraint = vault_token_account.owner == vault.key()
+            @ AgentShieldError::InvalidTokenAccount,
+        constraint = vault_token_account.mint == token_mint_account.key()
+            @ AgentShieldError::InvalidTokenAccount,
+    )]
+    pub vault_token_account: Account<'info, TokenAccount>,
+
+    /// The token mint being spent
+    pub token_mint_account: Account<'info, Mint>,
+
+    pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
+    // Oracle feed (Pyth PriceUpdateV2 or Switchboard PullFeed) passed via remaining_accounts[0]
+    // for oracle-priced tokens
 }
 
 pub fn handler(
@@ -63,36 +89,66 @@ pub fn handler(
     // 1b. Amount must be positive
     require!(amount > 0, AgentShieldError::TransactionTooLarge);
 
-    // 2. Token must be whitelisted
+    // 2. Token must be whitelisted — find the AllowedToken entry
+    let allowed_token = policy
+        .find_token(&token_mint)
+        .ok_or(error!(AgentShieldError::TokenNotAllowed))?
+        .clone();
+
+    // 3. Unpriced tokens are receive-only — cannot be spent
     require!(
-        policy.is_token_allowed(&token_mint),
-        AgentShieldError::TokenNotAllowed
+        !allowed_token.is_unpriced(),
+        AgentShieldError::TokenSpendBlocked
     );
 
-    // 3. Protocol must be whitelisted
+    // 4. Protocol must be whitelisted
     require!(
         policy.is_protocol_allowed(&target_protocol),
         AgentShieldError::ProtocolNotAllowed
     );
 
-    // 4. Single transaction size check
+    // 5. USD CONVERSION
+    let (usd_amount, oracle_price, oracle_source) =
+        convert_to_usd(&allowed_token, amount, ctx.remaining_accounts, &clock)?;
+
+    // 6. Single tx USD check
     require!(
-        amount <= policy.max_transaction_size,
+        usd_amount <= policy.max_transaction_size_usd,
         AgentShieldError::TransactionTooLarge
     );
 
-    // 5. Rolling 24h spend check
+    // 7. Rolling 24h USD check (aggregate across all tokens)
     let tracker = &mut ctx.accounts.tracker;
-    let rolling_spend = tracker.get_rolling_spend(&token_mint, clock.unix_timestamp)?;
-    let new_total = rolling_spend
-        .checked_add(amount)
+    let rolling_usd = tracker.get_rolling_spend_usd(clock.unix_timestamp)?;
+    let new_total_usd = rolling_usd
+        .checked_add(usd_amount)
         .ok_or(AgentShieldError::Overflow)?;
     require!(
-        new_total <= policy.daily_spending_cap,
+        new_total_usd <= policy.daily_spending_cap_usd,
         AgentShieldError::DailyCapExceeded
     );
 
-    // 6. Leverage check (for perp actions)
+    // 8. Per-token base cap check (if configured)
+    if allowed_token.daily_cap_base > 0 {
+        let rolling_base = tracker.get_rolling_spend_by_token(&token_mint, clock.unix_timestamp)?;
+        let new_total_base = rolling_base
+            .checked_add(amount)
+            .ok_or(AgentShieldError::Overflow)?;
+        require!(
+            new_total_base <= allowed_token.daily_cap_base,
+            AgentShieldError::PerTokenCapExceeded
+        );
+    }
+
+    // 9. Per-token single tx check (if configured)
+    if allowed_token.max_tx_base > 0 {
+        require!(
+            amount <= allowed_token.max_tx_base,
+            AgentShieldError::PerTokenTxLimitExceeded
+        );
+    }
+
+    // 10. Leverage check (for perp actions)
     if let Some(lev) = leverage_bps {
         require!(
             policy.is_leverage_within_limit(lev),
@@ -100,7 +156,7 @@ pub fn handler(
         );
     }
 
-    // 7. Position opening checks
+    // 11. Position opening checks
     if action_type == ActionType::OpenPosition {
         require!(
             policy.can_open_positions,
@@ -112,9 +168,10 @@ pub fn handler(
         );
     }
 
-    // All checks passed — record spend and create session
-    tracker.record_spend(token_mint, amount, clock.unix_timestamp)?;
+    // All checks passed — record spend with both USD and base amounts
+    tracker.record_spend(token_mint, usd_amount, amount, clock.unix_timestamp)?;
 
+    // Create session PDA with delegation fields
     let session = &mut ctx.accounts.session;
     session.vault = vault.key();
     session.agent = ctx.accounts.agent.key();
@@ -124,7 +181,34 @@ pub fn handler(
     session.authorized_protocol = target_protocol;
     session.action_type = action_type;
     session.expires_at_slot = SessionAuthority::calculate_expiry(clock.slot);
+    session.delegation_token_account = ctx.accounts.vault_token_account.key();
     session.bump = ctx.bumps.session;
+
+    // CPI: approve agent as delegate on vault's token account
+    let owner_key = vault.owner;
+    let vault_id_bytes = vault.vault_id.to_le_bytes();
+    let vault_bump = vault.bump;
+    let bump_slice = [vault_bump];
+    let signer_seeds = [
+        b"vault" as &[u8],
+        owner_key.as_ref(),
+        vault_id_bytes.as_ref(),
+        bump_slice.as_ref(),
+    ];
+    let binding = [signer_seeds.as_slice()];
+
+    let cpi_accounts = Approve {
+        to: ctx.accounts.vault_token_account.to_account_info(),
+        delegate: ctx.accounts.agent.to_account_info(),
+        authority: ctx.accounts.vault.to_account_info(),
+    };
+    let cpi_ctx = CpiContext::new_with_signer(
+        ctx.accounts.token_program.to_account_info(),
+        cpi_accounts,
+        &binding,
+    );
+    token::approve(cpi_ctx, amount)?;
+    session.delegated = true;
 
     emit!(ActionAuthorized {
         vault: vault.key(),
@@ -132,9 +216,13 @@ pub fn handler(
         action_type,
         token_mint,
         amount,
+        usd_amount,
         protocol: target_protocol,
-        rolling_spend_after: new_total,
-        daily_cap: policy.daily_spending_cap,
+        rolling_spend_usd_after: new_total_usd,
+        daily_cap_usd: policy.daily_spending_cap_usd,
+        delegated: true,
+        oracle_price,
+        oracle_source,
         timestamp: clock.unix_timestamp,
     });
 

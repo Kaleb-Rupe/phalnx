@@ -105,7 +105,7 @@ pnpm install
 # Build
 pnpm build
 
-# Run tests (78 tests)
+# Run tests (82 tests)
 pnpm test
 
 # Smoke test
@@ -117,7 +117,7 @@ AGENTSHIELD_WALLET_PATH=~/.config/solana/id.json node dist/index.js
 - **Transport**: stdio only (local subprocess of the AI tool)
 - **Credentials**: Environment variables (keypair file paths)
 - **SDK**: Wraps `AgentShieldClient` from `@agent-shield/sdk` — every tool delegates to a client method
-- **Error handling**: All 28 Anchor error codes mapped to human-readable messages with actionable suggestions
+- **Error handling**: All 37 Anchor error codes mapped to human-readable messages with actionable suggestions
 
 ## License
 

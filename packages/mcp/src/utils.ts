@@ -1,9 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
-import type {
-  VaultStatus,
-  ActionType,
-} from "@agent-shield/sdk";
+import type { VaultStatus, ActionType } from "@agent-shield/sdk";
 
 export function toPublicKey(value: string): PublicKey {
   try {
@@ -18,7 +15,7 @@ export function toBN(value: string): BN {
     return new BN(value);
   } catch {
     throw new Error(
-      `Invalid numeric value: "${value}". Provide a decimal integer string.`
+      `Invalid numeric value: "${value}". Provide a decimal integer string.`,
     );
   }
 }

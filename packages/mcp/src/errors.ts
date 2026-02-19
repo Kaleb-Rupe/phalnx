@@ -6,7 +6,7 @@ export interface ErrorInfo {
 }
 
 /**
- * Maps all 28 AgentShield Anchor error codes (6000–6027) to
+ * Maps all 40 AgentShield Anchor error codes (6000–6039) to
  * human-readable messages with actionable suggestions for AI tools.
  */
 const ERROR_MAP: Record<number, ErrorInfo> = {
@@ -50,14 +50,14 @@ const ERROR_MAP: Record<number, ErrorInfo> = {
     name: "TransactionTooLarge",
     message: "Transaction exceeds maximum single transaction size",
     suggestion:
-      "Reduce the amount or use shield_update_policy to increase maxTransactionSize.",
+      "Reduce the amount or use shield_update_policy to increase maxTransactionSizeUsd.",
   },
   6006: {
     code: 6006,
     name: "DailyCapExceeded",
     message: "Daily spending cap would be exceeded",
     suggestion:
-      "Wait for the 24h rolling window to reset, or use shield_update_policy to increase dailySpendingCap.",
+      "Wait for the 24h rolling window to reset, or use shield_update_policy to increase dailySpendingCapUsd.",
   },
   6007: {
     code: 6007,
@@ -77,8 +77,7 @@ const ERROR_MAP: Record<number, ErrorInfo> = {
     code: 6009,
     name: "PositionOpeningDisallowed",
     message: "Cannot open new positions (policy disallows)",
-    suggestion:
-      "Use shield_update_policy to set canOpenPositions to true.",
+    suggestion: "Use shield_update_policy to set canOpenPositions to true.",
   },
   6010: {
     code: 6010,
@@ -105,15 +104,13 @@ const ERROR_MAP: Record<number, ErrorInfo> = {
     code: 6013,
     name: "OpenPositionsExist",
     message: "Vault has open positions, cannot close",
-    suggestion:
-      "Close all open positions before closing the vault.",
+    suggestion: "Close all open positions before closing the vault.",
   },
   6014: {
     code: 6014,
     name: "TooManyAllowedTokens",
     message: "Policy configuration invalid: too many allowed tokens",
-    suggestion:
-      "Maximum 10 allowed tokens. Remove tokens you no longer need.",
+    suggestion: "Maximum 10 allowed tokens. Remove tokens you no longer need.",
   },
   6015: {
     code: 6015,
@@ -126,8 +123,7 @@ const ERROR_MAP: Record<number, ErrorInfo> = {
     code: 6016,
     name: "AgentAlreadyRegistered",
     message: "Agent already registered for this vault",
-    suggestion:
-      "Use shield_revoke_agent first, then register the new agent.",
+    suggestion: "Use shield_revoke_agent first, then register the new agent.",
   },
   6017: {
     code: 6017,
@@ -160,17 +156,14 @@ const ERROR_MAP: Record<number, ErrorInfo> = {
   6021: {
     code: 6021,
     name: "DeveloperFeeTooHigh",
-    message:
-      "Developer fee rate exceeds maximum (50 / 1,000,000 = 0.5 BPS)",
-    suggestion:
-      "Set developerFeeRate to 50 or less (maximum 0.005%).",
+    message: "Developer fee rate exceeds maximum (50 / 1,000,000 = 0.5 BPS)",
+    suggestion: "Set developerFeeRate to 50 or less (maximum 0.005%).",
   },
   6022: {
     code: 6022,
     name: "InvalidFeeDestination",
     message: "Fee destination account invalid",
-    suggestion:
-      "Provide a valid Solana public key for the fee destination.",
+    suggestion: "Provide a valid Solana public key for the fee destination.",
   },
   6023: {
     code: 6023,
@@ -184,8 +177,7 @@ const ERROR_MAP: Record<number, ErrorInfo> = {
     name: "TooManySpendEntries",
     message:
       "Spend entry limit reached (too many active entries in rolling window)",
-    suggestion:
-      "Wait for older entries to expire from the 24h rolling window.",
+    suggestion: "Wait for older entries to expire from the 24h rolling window.",
   },
   6025: {
     code: 6025,
@@ -204,8 +196,91 @@ const ERROR_MAP: Record<number, ErrorInfo> = {
     code: 6027,
     name: "Overflow",
     message: "Arithmetic overflow",
+    suggestion: "The amount is too large. Reduce the value and try again.",
+  },
+  6028: {
+    code: 6028,
+    name: "DelegationFailed",
+    message: "Token delegation approval failed",
     suggestion:
-      "The amount is too large. Reduce the value and try again.",
+      "The vault may not have sufficient token balance. Check vault balance and try again.",
+  },
+  6029: {
+    code: 6029,
+    name: "RevocationFailed",
+    message: "Token delegation revocation failed",
+    suggestion:
+      "The session may have already been finalized. Check session status.",
+  },
+  6030: {
+    code: 6030,
+    name: "OracleFeedStale",
+    message: "Oracle feed value is too stale",
+    suggestion:
+      "The oracle price data is outdated. Wait for a fresh price update and retry.",
+  },
+  6031: {
+    code: 6031,
+    name: "OracleFeedInvalid",
+    message: "Cannot parse oracle feed data",
+    suggestion:
+      "The oracle feed account data is malformed or the account key doesn't match the policy. Verify the oracle configuration.",
+  },
+  6032: {
+    code: 6032,
+    name: "TokenSpendBlocked",
+    message: "Unpriced token cannot be spent (receive-only)",
+    suggestion:
+      "This token is configured as receive-only and cannot be used for spending.",
+  },
+  6033: {
+    code: 6033,
+    name: "InvalidTokenAccount",
+    message: "Token account does not belong to vault or has wrong mint",
+    suggestion:
+      "Ensure the token account is owned by the vault PDA and matches the token mint.",
+  },
+  6034: {
+    code: 6034,
+    name: "OracleAccountMissing",
+    message: "Oracle-priced token requires feed account in remaining_accounts",
+    suggestion:
+      "Pass the oracle feed account when transacting with oracle-priced tokens. The SDK resolves this automatically.",
+  },
+  6035: {
+    code: 6035,
+    name: "PerTokenCapExceeded",
+    message: "Per-token daily spending cap would be exceeded",
+    suggestion:
+      "Wait for the 24h rolling window to reset, or use shield_update_policy to increase the per-token cap.",
+  },
+  6036: {
+    code: 6036,
+    name: "PerTokenTxLimitExceeded",
+    message: "Per-token single transaction limit exceeded",
+    suggestion:
+      "Reduce the amount or use shield_update_policy to increase the per-token transaction limit.",
+  },
+  6037: {
+    code: 6037,
+    name: "OracleConfidenceTooWide",
+    message: "Oracle price confidence interval too wide",
+    suggestion:
+      "The oracle price has high uncertainty (>10% confidence interval). Wait for more stable market conditions and retry.",
+  },
+  6038: {
+    code: 6038,
+    name: "OracleUnsupportedType",
+    message: "Oracle account owner is not a recognized oracle program",
+    suggestion:
+      "The oracle feed account must be owned by either Pyth Receiver or Switchboard On-Demand program. Check the policy configuration.",
+  },
+  6039: {
+    code: 6039,
+    name: "OracleNotVerified",
+    message: "Pyth price update not fully verified by Wormhole",
+    suggestion:
+      "The Pyth price update has not been verified by Wormhole guardians. Use a fully verified price feed.",
   },
 };
 

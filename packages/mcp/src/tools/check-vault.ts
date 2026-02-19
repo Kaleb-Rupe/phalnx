@@ -1,6 +1,11 @@
 import { z } from "zod";
 import type { AgentShieldClient } from "@agent-shield/sdk";
-import { toPublicKey, formatVaultStatus, formatBN, formatTimestamp } from "../utils";
+import {
+  toPublicKey,
+  formatVaultStatus,
+  formatBN,
+  formatTimestamp,
+} from "../utils";
 import { formatError } from "../errors";
 
 export const checkVaultSchema = z.object({
@@ -10,7 +15,9 @@ export const checkVaultSchema = z.object({
   owner: z
     .string()
     .optional()
-    .describe("Owner public key (base58). Used with vaultId to derive the vault PDA."),
+    .describe(
+      "Owner public key (base58). Used with vaultId to derive the vault PDA.",
+    ),
   vaultId: z
     .string()
     .optional()
@@ -21,7 +28,7 @@ export type CheckVaultInput = z.infer<typeof checkVaultSchema>;
 
 export async function checkVault(
   client: AgentShieldClient,
-  input: CheckVaultInput
+  input: CheckVaultInput,
 ): Promise<string> {
   try {
     let vaultAddress;
@@ -32,7 +39,7 @@ export async function checkVault(
       const { BN } = await import("@coral-xyz/anchor");
       const [pda] = client.getVaultPDA(
         toPublicKey(input.owner),
-        new BN(input.vaultId)
+        new BN(input.vaultId),
       );
       vaultAddress = pda;
     } else {
@@ -42,12 +49,10 @@ export async function checkVault(
     const vault = await client.fetchVaultByAddress(vaultAddress);
     const policy = await client.fetchPolicy(vaultAddress);
 
-    const allowedTokens = policy.allowedTokens
-      .map((t) => t.toBase58())
-      .join(", ") || "Any";
-    const allowedProtocols = policy.allowedProtocols
-      .map((p) => p.toBase58())
-      .join(", ") || "Any";
+    const allowedTokens =
+      policy.allowedTokens.map((t) => t.mint.toBase58()).join(", ") || "Any";
+    const allowedProtocols =
+      policy.allowedProtocols.map((p) => p.toBase58()).join(", ") || "Any";
 
     return [
       `## Vault: ${vaultAddress.toBase58()}`,
@@ -62,8 +67,8 @@ export async function checkVault(
       `- **Total Fees Collected:** ${formatBN(vault.totalFeesCollected)}`,
       "",
       "### Policy",
-      `- **Daily Spending Cap:** ${formatBN(policy.dailySpendingCap)}`,
-      `- **Max Transaction Size:** ${formatBN(policy.maxTransactionSize)}`,
+      `- **Daily Spending Cap:** ${formatBN(policy.dailySpendingCapUsd)}`,
+      `- **Max Transaction Size:** ${formatBN(policy.maxTransactionSizeUsd)}`,
       `- **Allowed Tokens:** ${allowedTokens}`,
       `- **Allowed Protocols:** ${allowedProtocols}`,
       `- **Max Leverage:** ${policy.maxLeverageBps} BPS`,

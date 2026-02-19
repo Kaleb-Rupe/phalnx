@@ -28,9 +28,11 @@ const client = new AgentShieldClient(connection, wallet);
 // 1. Create a vault with policy
 await client.createVault({
   vaultId: new BN(1),
-  dailySpendingCap: new BN(500_000_000),   // 500 USDC (6 decimals)
-  maxTransactionSize: new BN(100_000_000),  // 100 USDC per tx
-  allowedTokens: [USDC_MINT, SOL_MINT],
+  dailySpendingCapUsd: new BN(500_000_000),   // $500 USD (6 decimals)
+  maxTransactionSizeUsd: new BN(100_000_000),  // $100 per tx
+  allowedTokens: [
+    { mint: USDC_MINT, oracleFeed: PublicKey.default, decimals: 6, dailyCapBase: new BN(0), maxTxBase: new BN(0) },
+  ],
   allowedProtocols: [JUPITER_PROGRAM_ID],
   maxLeverageBps: 0,
   maxConcurrentPositions: 0,
@@ -66,7 +68,7 @@ AgentShield uses 4 PDA account types:
 | **AgentVault** | `[b"vault", owner, vault_id]` | Holds owner/agent pubkeys, vault status, fee destination |
 | **PolicyConfig** | `[b"policy", vault]` | Spending caps, token/protocol whitelists, leverage limits |
 | **SpendTracker** | `[b"tracker", vault]` | Rolling 24h spend entries + bounded audit log (max 50 txs) |
-| **SessionAuthority** | `[b"session", vault, agent]` | Ephemeral PDA for atomic transaction validation (expires after 20 slots) |
+| **SessionAuthority** | `[b"session", vault, agent, token_mint]` | Ephemeral PDA for atomic transaction validation (expires after 20 slots) |
 
 ## Instruction Composition Pattern
 
@@ -142,7 +144,7 @@ These methods build atomic transactions in the pattern `[ValidateAndAuthorize, D
 const [vaultPDA, bump] = client.getVaultPDA(owner, vaultId);
 const [policyPDA] = client.getPolicyPDA(vaultPDA);
 const [trackerPDA] = client.getTrackerPDA(vaultPDA);
-const [sessionPDA] = client.getSessionPDA(vaultPDA, agent);
+const [sessionPDA] = client.getSessionPDA(vaultPDA, agent, tokenMint);
 ```
 
 ### Account Fetchers
@@ -163,7 +165,7 @@ const tracker = await client.fetchTrackerByAddress(trackerPDA);
 
 ### Instruction Parameters
 
-- **`InitializeVaultParams`** — `vaultId`, `dailySpendingCap`, `maxTransactionSize`, `allowedTokens`, `allowedProtocols`, `maxLeverageBps`, `maxConcurrentPositions`, `feeDestination`
+- **`InitializeVaultParams`** — `vaultId`, `dailySpendingCapUsd`, `maxTransactionSizeUsd`, `allowedTokens` (`AllowedToken[]`), `allowedProtocols`, `maxLeverageBps`, `maxConcurrentPositions`, `feeDestination`
 - **`UpdatePolicyParams`** — All policy fields as optionals (only set fields are updated)
 - **`AuthorizeParams`** — `actionType`, `tokenMint`, `amount`, `targetProtocol`, `leverageBps?`
 - **`ComposeActionParams`** — Full params for composed transactions including `defiInstructions`, `success?`, token accounts
@@ -171,9 +173,9 @@ const tracker = await client.fetchTrackerByAddress(trackerPDA);
 ### Account Types
 
 - **`AgentVaultAccount`** — owner, agent, feeDestination, vaultId, status, stats (totalTransactions, totalVolume)
-- **`PolicyConfigAccount`** — dailySpendingCap, maxTransactionSize, allowedTokens, allowedProtocols, maxLeverageBps, maxConcurrentPositions, developerFeeRate
-- **`SpendTrackerAccount`** — spendEntries (rolling), recentTransactions (audit log, max 50)
-- **`SessionAuthorityAccount`** — vault, agent, actionType, expiresAt
+- **`PolicyConfigAccount`** — dailySpendingCapUsd, maxTransactionSizeUsd, allowedTokens (`AllowedToken[]`), allowedProtocols, maxLeverageBps, maxConcurrentPositions, developerFeeRate
+- **`SpendTrackerAccount`** — rollingSpends (`SpendEntry[]` with tokenMint, usdAmount, baseAmount, timestamp), recentTransactions (audit log, max 50)
+- **`SessionAuthorityAccount`** — vault, agent, actionType, expiresAt, delegated, delegationTokenAccount
 
 ### Enums
 
@@ -243,9 +245,9 @@ Owner creates vault with policy → Agent operates within policy constraints
 
 | Field | Range | Description |
 |-------|-------|-------------|
-| `dailySpendingCap` | `u64` | Max total spend in rolling 24h window |
-| `maxTransactionSize` | `u64` | Max single transaction value |
-| `allowedTokens` | max 10 | Token mint whitelist |
+| `dailySpendingCapUsd` | `u64` | Max aggregate USD spend in rolling 24h window (6 decimals) |
+| `maxTransactionSizeUsd` | `u64` | Max single transaction USD value (6 decimals) |
+| `allowedTokens` | max 10 | `AllowedToken[]` — mint, oracleFeed, decimals, dailyCapBase, maxTxBase |
 | `allowedProtocols` | max 10 | Program ID whitelist |
 | `maxLeverageBps` | `u16` | Max leverage in basis points |
 | `maxConcurrentPositions` | `u8` | Max open positions |

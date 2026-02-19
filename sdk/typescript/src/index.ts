@@ -9,6 +9,7 @@ export {
   getPolicyPDA,
   getTrackerPDA,
   getSessionPDA,
+  getPendingPolicyPDA,
   fetchVault,
   fetchPolicy,
   fetchTracker,
@@ -16,6 +17,7 @@ export {
   fetchVaultByAddress,
   fetchPolicyByAddress,
   fetchTrackerByAddress,
+  fetchPendingPolicy,
 } from "./accounts";
 
 export {
@@ -29,6 +31,10 @@ export {
   buildReactivateVault,
   buildWithdrawFunds,
   buildCloseVault,
+  buildQueuePolicyUpdate,
+  buildApplyPendingPolicy,
+  buildCancelPendingPolicy,
+  buildAgentTransfer,
 } from "./instructions";
 
 export {
@@ -37,20 +43,47 @@ export {
   composePermittedSwap,
 } from "./composer";
 
+export { rewriteVaultAuthority, validateRewrite } from "./rewriter";
+
+export {
+  wrapTransaction,
+  wrapInstructions,
+  classifyToken,
+  findAllowedToken,
+  type WrapTransactionParams,
+} from "./wrap";
+
+export {
+  PYTH_RECEIVER_PROGRAM,
+  SWITCHBOARD_ON_DEMAND_PROGRAM,
+  PYTH_FEEDS,
+  SWITCHBOARD_FEEDS,
+  resolveOracleFeed,
+  detectOracleSource,
+} from "./oracle";
+
 export {
   AGENT_SHIELD_PROGRAM_ID,
+  UNPRICED_SENTINEL,
+  USD_DECIMALS,
   type AgentShield,
   type AgentVaultAccount,
   type PolicyConfigAccount,
   type SpendTrackerAccount,
   type SessionAuthorityAccount,
+  type AllowedToken,
+  type TokenClassification,
   type SpendEntry,
   type TransactionRecord,
   type VaultStatus,
   type ActionType,
+  type PendingPolicyUpdateAccount,
   type InitializeVaultParams,
   type UpdatePolicyParams,
+  type QueuePolicyUpdateParams,
+  type AgentTransferParams,
   type AuthorizeParams,
+  type OracleSource,
   type ComposeActionParams,
 } from "./types";
 

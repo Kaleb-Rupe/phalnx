@@ -13,13 +13,13 @@ export type WithdrawInput = z.infer<typeof withdrawSchema>;
 
 export async function withdraw(
   client: AgentShieldClient,
-  input: WithdrawInput
+  input: WithdrawInput,
 ): Promise<string> {
   try {
     const sig = await client.withdraw(
       toPublicKey(input.vault),
       toPublicKey(input.mint),
-      toBN(input.amount)
+      toBN(input.amount),
     );
 
     return [

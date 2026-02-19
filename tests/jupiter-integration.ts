@@ -37,6 +37,17 @@ import {
   FailedTransactionMetadata,
 } from "./helpers/litesvm-setup";
 
+// Helper to build AllowedToken objects for the IDL
+function makeAllowedToken(
+  mint: PublicKey,
+  oracleFeed: PublicKey = PublicKey.default, // default = stablecoin
+  decimals: number = 6,
+  dailyCapBase: BN = new BN(0),
+  maxTxBase: BN = new BN(0),
+) {
+  return { mint, oracleFeed, decimals, dailyCapBase, maxTxBase };
+}
+
 /**
  * Jupiter Integration Tests
  *
@@ -111,8 +122,15 @@ describe("jupiter-integration", () => {
     success: boolean = true,
     overrideVaultTokenAta?: PublicKey
   ): Promise<string> {
+    const effectiveVaultAta = overrideVaultTokenAta ?? vaultUsdcAta;
+
     const [session] = PublicKey.findProgramAddressSync(
-      [Buffer.from("session"), vault.toBuffer(), agentKp.publicKey.toBuffer()],
+      [
+        Buffer.from("session"),
+        vault.toBuffer(),
+        agentKp.publicKey.toBuffer(),
+        tokenMint.toBuffer(),
+      ],
       program.programId
     );
 
@@ -130,6 +148,9 @@ describe("jupiter-integration", () => {
         policy,
         tracker,
         session,
+        vaultTokenAccount: effectiveVaultAta,
+        tokenMintAccount: tokenMint,
+        tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
       })
       .instruction();
@@ -147,7 +168,7 @@ describe("jupiter-integration", () => {
         tracker,
         session,
         sessionRentRecipient: agentKp.publicKey,
-        vaultTokenAccount: overrideVaultTokenAta ?? vaultUsdcAta,
+        vaultTokenAccount: effectiveVaultAta,
         feeDestinationTokenAccount: null,
         protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
         tokenProgram: TOKEN_PROGRAM_ID,
@@ -169,7 +190,8 @@ describe("jupiter-integration", () => {
     program = env.program;
     owner = env.provider.wallet;
 
-    // Airdrop to test accounts
+    // Airdrop to test accounts — extra SOL for owner (larger PolicyConfig accounts)
+    airdropSol(svm, owner.publicKey, 100 * LAMPORTS_PER_SOL);
     airdropSol(svm, agent.publicKey, 10 * LAMPORTS_PER_SOL);
     airdropSol(svm, feeDestination.publicKey, 2 * LAMPORTS_PER_SOL);
 
@@ -222,11 +244,13 @@ describe("jupiter-integration", () => {
         vaultId,
         new BN(500_000_000), // daily cap
         new BN(200_000_000), // max tx size
-        [usdcMint],          // allowed tokens
+        [makeAllowedToken(usdcMint)], // allowed tokens
         [jupiterProtocol],   // allowed protocols
         0,                   // max leverage (0 = disabled)
         1,                   // max concurrent positions
-        0                    // developer fee rate (0 = none)
+        0,                   // developer fee rate (0 = none)
+        new BN(0),           // timelockDuration
+        []                   // allowedDestinations
       )
       .accountsPartial({
         owner: owner.publicKey,
@@ -353,7 +377,12 @@ describe("jupiter-integration", () => {
 
       // Now at 480 spent. Try 50 USDC — total would be 530 > 500 cap
       const [session] = PublicKey.findProgramAddressSync(
-        [Buffer.from("session"), vaultPda.toBuffer(), agent.publicKey.toBuffer()],
+        [
+          Buffer.from("session"),
+          vaultPda.toBuffer(),
+          agent.publicKey.toBuffer(),
+          usdcMint.toBuffer(),
+        ],
         program.programId
       );
 
@@ -373,6 +402,8 @@ describe("jupiter-integration", () => {
         await program.account.sessionAuthority.fetch(session);
         expect.fail("Session should not exist after revert");
       } catch (err: any) {
+        // LiteSVM proxy returns "Account does not exist"; Anchor provider
+        // returns "Could not find". Both confirm the session PDA was closed.
         expect(err.toString()).to.satisfy(
           (s: string) => s.includes("Account does not exist") || s.includes("Could not find")
         );
@@ -385,6 +416,15 @@ describe("jupiter-integration", () => {
   // =========================================================================
   describe("disallowed token", () => {
     it("reverts when token is not in policy allowlist", async () => {
+      // Create vault ATA for solMint so Anchor account validation passes,
+      // allowing the handler's TokenNotAllowed check to fire.
+      const vaultSolAta = createAtaIdempotentHelper(
+        svm,
+        (owner as any).payer,
+        solMint,
+        vaultPda,
+        true, // allowOwnerOffCurve — vault is a PDA
+      );
       try {
         await sendComposedSwap(
           vaultPda,
@@ -393,7 +433,9 @@ describe("jupiter-integration", () => {
           agent,
           solMint, // not in allowed_tokens
           new BN(1_000_000),
-          jupiterProtocol
+          jupiterProtocol,
+          true,
+          vaultSolAta
         );
         expect.fail("Should have thrown");
       } catch (err: any) {
@@ -461,11 +503,13 @@ describe("jupiter-integration", () => {
           frozenVaultId,
           new BN(500_000_000),
           new BN(200_000_000),
-          [usdcMint],
+          [makeAllowedToken(usdcMint)],
           [jupiterProtocol],
           0,
           1,
-          0 // developer fee rate
+          0, // developer fee rate
+          new BN(0),
+          []
         )
         .accountsPartial({
           owner: owner.publicKey,
@@ -490,7 +534,7 @@ describe("jupiter-integration", () => {
 
       // Verify frozen immediately
       const checkVault = await program.account.agentVault.fetch(frozenVault);
-      if (!JSON.stringify(checkVault.status).includes("frozen")) {
+      if (!checkVault.status.hasOwnProperty("frozen")) {
         throw new Error(`Vault 101 should be frozen but is: ${JSON.stringify(checkVault.status)}`);
       }
     });
@@ -498,7 +542,16 @@ describe("jupiter-integration", () => {
     it("reverts entire TX when vault is frozen", async () => {
       // Verify vault is actually frozen before testing
       const vaultState = await program.account.agentVault.fetch(frozenVault);
-      expect(JSON.stringify(vaultState.status)).to.include("frozen");
+      expect(vaultState.status).to.have.property("frozen");
+
+      // Create vault ATA so Anchor account validation passes
+      const frozenVaultAta = createAtaIdempotentHelper(
+        svm,
+        (owner as any).payer,
+        usdcMint,
+        frozenVault,
+        true, // allowOwnerOffCurve — vault is a PDA
+      );
 
       try {
         await sendComposedSwap(
@@ -508,17 +561,21 @@ describe("jupiter-integration", () => {
           agent,
           usdcMint,
           new BN(1_000_000),
-          jupiterProtocol
+          jupiterProtocol,
+          true,
+          frozenVaultAta
         );
         expect.fail("Should have thrown");
       } catch (err: any) {
         if (err.message === "Should have thrown") throw err;
-        // revokeAgent clears the agent key, so the constraint check fails
-        // with UnauthorizedAgent before the handler's VaultNotActive check
+        // revoke_agent clears the agent key, so is_agent() constraint fails
+        // before the handler's VaultNotActive check can run.
         const msg = err.message || err.toString();
         expect(msg).to.satisfy(
-          (s: string) => s.includes("VaultNotActive") || s.includes("UnauthorizedAgent"),
-          "Expected VaultNotActive or UnauthorizedAgent"
+          (s: string) =>
+            s.includes("UnauthorizedAgent") ||
+            s.includes("ConstraintRaw"),
+          `Expected an unauthorized-agent error but got: ${msg}`
         );
       }
     });
@@ -558,11 +615,13 @@ describe("jupiter-integration", () => {
           rollingVaultId,
           new BN(100_000_000), // 100 USDC daily cap
           new BN(60_000_000),  // 60 USDC max tx
-          [usdcMint],
+          [makeAllowedToken(usdcMint)],
           [jupiterProtocol],
           0,
           1,
-          0 // developer fee rate
+          0, // developer fee rate
+          new BN(0),
+          []
         )
         .accountsPartial({
           owner: owner.publicKey,

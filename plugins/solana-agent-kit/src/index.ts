@@ -90,8 +90,7 @@ export function createAgentShieldPlugin(config: AgentShieldPluginConfig) {
           "Generate a Solana Action URL for one-click vault provisioning " +
           "with a TEE-backed agent wallet. User clicks to approve.",
         schema: provisionSchema,
-        handler: (agent: any, input: any) =>
-          provision(agent, resolved, input),
+        handler: (agent: any, input: any) => provision(agent, resolved, input),
       },
     },
   };

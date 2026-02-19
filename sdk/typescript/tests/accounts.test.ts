@@ -69,28 +69,31 @@ describe("Accounts — PDA Derivation", () => {
   });
 
   describe("getSessionPDA", () => {
+    const tokenMint = PublicKey.unique();
+
     it("returns deterministic PDA", () => {
       const [vault] = getVaultPDA(owner, vaultId);
-      const [pda1] = getSessionPDA(vault, agent);
-      const [pda2] = getSessionPDA(vault, agent);
+      const [pda1] = getSessionPDA(vault, agent, tokenMint);
+      const [pda2] = getSessionPDA(vault, agent, tokenMint);
       expect(pda1.equals(pda2)).to.be.true;
     });
 
     it("different agent produces different PDA", () => {
       const [vault] = getVaultPDA(owner, vaultId);
-      const [pda1] = getSessionPDA(vault, agent);
-      const [pda2] = getSessionPDA(vault, agent2);
+      const [pda1] = getSessionPDA(vault, agent, tokenMint);
+      const [pda2] = getSessionPDA(vault, agent2, tokenMint);
       expect(pda1.equals(pda2)).to.be.false;
     });
   });
 
   describe("bump range", () => {
     it("all bumps are 0-255", () => {
+      const tokenMint = PublicKey.unique();
       const [, vaultBump] = getVaultPDA(owner, vaultId);
       const [vault] = getVaultPDA(owner, vaultId);
       const [, policyBump] = getPolicyPDA(vault);
       const [, trackerBump] = getTrackerPDA(vault);
-      const [, sessionBump] = getSessionPDA(vault, agent);
+      const [, sessionBump] = getSessionPDA(vault, agent, tokenMint);
 
       for (const bump of [vaultBump, policyBump, trackerBump, sessionBump]) {
         expect(bump).to.be.at.least(0);

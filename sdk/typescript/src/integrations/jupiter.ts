@@ -7,6 +7,7 @@ import {
   AddressLookupTableAccount,
 } from "@solana/web3.js";
 import { BN, Program } from "@coral-xyz/anchor";
+import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import type { AgentShield, ComposeActionParams } from "../types";
 import { getVaultPDA } from "../accounts";
 import { composePermittedAction } from "../composer";
@@ -17,7 +18,7 @@ import { composePermittedAction } from "../composer";
 
 export const JUPITER_V6_API = "https://quote-api.jup.ag/v6";
 export const JUPITER_PROGRAM_ID = new PublicKey(
-  "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"
+  "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",
 );
 
 // ---------------------------------------------------------------------------
@@ -27,7 +28,7 @@ export const JUPITER_PROGRAM_ID = new PublicKey(
 export class JupiterApiError extends Error {
   constructor(
     public readonly statusCode: number,
-    public readonly body: string
+    public readonly body: string,
   ) {
     super(`Jupiter API error (${statusCode}): ${body}`);
     this.name = "JupiterApiError";
@@ -124,7 +125,7 @@ export interface JupiterSwapParams {
  * Deserialize a Jupiter serialized instruction into a Solana TransactionInstruction.
  */
 export function deserializeInstruction(
-  ix: JupiterSerializedInstruction
+  ix: JupiterSerializedInstruction,
 ): TransactionInstruction {
   return new TransactionInstruction({
     programId: new PublicKey(ix.programId),
@@ -145,7 +146,7 @@ export function deserializeInstruction(
  * Fetch a swap quote from the Jupiter V6 API.
  */
 export async function fetchJupiterQuote(
-  params: JupiterQuoteParams
+  params: JupiterQuoteParams,
 ): Promise<JupiterQuoteResponse> {
   const slippage = params.slippageBps ?? 50;
   const qs = new URLSearchParams({
@@ -176,7 +177,7 @@ export async function fetchJupiterQuote(
  */
 export async function fetchJupiterSwapInstructions(
   quote: JupiterQuoteResponse,
-  userPublicKey: PublicKey
+  userPublicKey: PublicKey,
 ): Promise<JupiterSwapInstructionsResponse> {
   const url = `${JUPITER_V6_API}/swap-instructions`;
   const res = await fetch(url, {
@@ -202,14 +203,14 @@ export async function fetchJupiterSwapInstructions(
  */
 export async function fetchAddressLookupTables(
   connection: Connection,
-  tableAddresses: string[]
+  tableAddresses: string[],
 ): Promise<AddressLookupTableAccount[]> {
   if (tableAddresses.length === 0) return [];
 
   const results = await Promise.all(
     tableAddresses.map((addr) =>
-      connection.getAddressLookupTable(new PublicKey(addr))
-    )
+      connection.getAddressLookupTable(new PublicKey(addr)),
+    ),
   );
 
   return results
@@ -238,7 +239,7 @@ export async function fetchAddressLookupTables(
 export async function composeJupiterSwap(
   program: Program<AgentShield>,
   connection: Connection,
-  params: JupiterSwapParams
+  params: JupiterSwapParams,
 ): Promise<{
   instructions: TransactionInstruction[];
   addressLookupTables: AddressLookupTableAccount[];
@@ -269,17 +270,21 @@ export async function composeJupiterSwap(
 
   if (swapResponse.cleanupInstruction) {
     defiInstructions.push(
-      deserializeInstruction(swapResponse.cleanupInstruction)
+      deserializeInstruction(swapResponse.cleanupInstruction),
     );
   }
 
   // 4. Fetch address lookup tables
   const addressLookupTables = await fetchAddressLookupTables(
     connection,
-    swapResponse.addressLookupTableAddresses
+    swapResponse.addressLookupTableAddresses,
   );
 
   // 5. Compose with AgentShield validate/finalize sandwich
+  const vaultTokenAccount =
+    params.vaultTokenAccount ??
+    getAssociatedTokenAddressSync(params.inputMint, vault, true);
+
   const composeParams: ComposeActionParams = {
     vault,
     owner: params.owner,
@@ -291,7 +296,7 @@ export async function composeJupiterSwap(
     targetProtocol: JUPITER_PROGRAM_ID,
     defiInstructions,
     success: true,
-    vaultTokenAccount: params.vaultTokenAccount,
+    vaultTokenAccount,
     feeDestinationTokenAccount: params.feeDestinationTokenAccount,
   };
 
@@ -308,12 +313,12 @@ export async function composeJupiterSwap(
 export async function composeJupiterSwapTransaction(
   program: Program<AgentShield>,
   connection: Connection,
-  params: JupiterSwapParams
+  params: JupiterSwapParams,
 ): Promise<VersionedTransaction> {
   const { instructions, addressLookupTables } = await composeJupiterSwap(
     program,
     connection,
-    params
+    params,
   );
 
   const { blockhash } = await connection.getLatestBlockhash();

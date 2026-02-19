@@ -7,9 +7,7 @@ import { loadAgentKeypair, type McpConfig } from "../config";
 export const closePositionSchema = z.object({
   vault: z.string().describe("Vault PDA address (base58)"),
   market: z.string().describe("Market/pool name (e.g. 'SOL', 'ETH')"),
-  side: z
-    .enum(["long", "short"])
-    .describe("Position side: 'long' or 'short'"),
+  side: z.enum(["long", "short"]).describe("Position side: 'long' or 'short'"),
   priceWithSlippage: z
     .string()
     .describe("Exit price in base units (for slippage protection)"),
@@ -23,7 +21,7 @@ export const closePositionSchema = z.object({
 export type ClosePositionInput = z.infer<typeof closePositionSchema>;
 
 function parseSide(
-  side: "long" | "short"
+  side: "long" | "short",
 ): { long: Record<string, never> } | { short: Record<string, never> } {
   return side === "long" ? { long: {} } : { short: {} };
 }
@@ -31,7 +29,7 @@ function parseSide(
 export async function closePosition(
   client: AgentShieldClient,
   config: McpConfig,
-  input: ClosePositionInput
+  input: ClosePositionInput,
 ): Promise<string> {
   try {
     const agentKeypair = loadAgentKeypair(config);
@@ -52,11 +50,9 @@ export async function closePosition(
       },
     });
 
-    const sig = await client.executeFlashTrade(
-      result,
-      agentKeypair.publicKey,
-      [agentKeypair]
-    );
+    const sig = await client.executeFlashTrade(result, agentKeypair.publicKey, [
+      agentKeypair,
+    ]);
 
     return [
       "## Position Closed",

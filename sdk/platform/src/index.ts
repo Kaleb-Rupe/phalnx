@@ -92,10 +92,9 @@ export class AgentShieldPlatform {
    * Fetch the Action metadata (GET endpoint).
    */
   async getActionMetadata(): Promise<ActionMetadata> {
-    const res = await fetch(
-      `${this.baseUrl}/api/actions/provision`,
-      { method: "GET" }
-    );
+    const res = await fetch(`${this.baseUrl}/api/actions/provision`, {
+      method: "GET",
+    });
 
     if (!res.ok) {
       throw new Error(`Failed to fetch action metadata: ${res.status}`);
@@ -110,7 +109,7 @@ export class AgentShieldPlatform {
    */
   async requestProvision(
     account: string,
-    options: ProvisionOptions = {}
+    options: ProvisionOptions = {},
   ): Promise<{ transaction: string; message?: string }> {
     const actionUrl = this.getProvisionActionUrl(options);
 
@@ -123,7 +122,7 @@ export class AgentShieldPlatform {
     if (!res.ok) {
       const error = await res.json().catch(() => ({ error: res.statusText }));
       throw new Error(
-        (error as any).error || `Provision request failed: ${res.status}`
+        (error as any).error || `Provision request failed: ${res.status}`,
       );
     }
 
@@ -136,7 +135,7 @@ export class AgentShieldPlatform {
   async checkStatus(txSignature: string): Promise<ProvisionResult> {
     const res = await fetch(
       `${this.baseUrl}/api/actions/status/${txSignature}`,
-      { method: "GET" }
+      { method: "GET" },
     );
 
     if (!res.ok) {
@@ -156,7 +155,7 @@ export class AgentShieldPlatform {
   async waitForProvision(
     txSignature: string,
     timeoutMs: number = 60_000,
-    intervalMs: number = 2_000
+    intervalMs: number = 2_000,
   ): Promise<ProvisionResult> {
     const deadline = Date.now() + timeoutMs;
 
@@ -175,7 +174,7 @@ export class AgentShieldPlatform {
     }
 
     throw new Error(
-      `Provision timed out after ${timeoutMs}ms. TX: ${txSignature}`
+      `Provision timed out after ${timeoutMs}ms. TX: ${txSignature}`,
     );
   }
 

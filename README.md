@@ -31,7 +31,7 @@ All instructions succeed or all revert atomically. The agent's signing key is va
 | **AgentVault** | `[b"vault", owner, vault_id]` | Holds owner/agent pubkeys, status, fee destination |
 | **PolicyConfig** | `[b"policy", vault]` | Spending caps, token/protocol whitelists, leverage limits |
 | **SpendTracker** | `[b"tracker", vault]` | Rolling 24h spend entries, bounded audit log (max 50 txs) |
-| **SessionAuthority** | `[b"session", vault, agent]` | Ephemeral PDA created per action, expires after 20 slots |
+| **SessionAuthority** | `[b"session", vault, agent, token_mint]` | Ephemeral PDA created per action, expires after 20 slots |
 
 ## Packages
 
@@ -79,9 +79,11 @@ const client = new AgentShieldClient(connection, wallet);
 // Create a vault with policy
 const sig = await client.createVault({
   vaultId: new BN(1),
-  dailySpendingCap: new BN(500_000_000), // 500 USDC
-  maxTransactionSize: new BN(100_000_000), // 100 USDC per tx
-  allowedTokens: [USDC_MINT, SOL_MINT],
+  dailySpendingCapUsd: new BN(500_000_000), // $500 (6 decimals)
+  maxTransactionSizeUsd: new BN(100_000_000), // $100 per tx
+  allowedTokens: [
+    { mint: USDC_MINT, oracleFeed: PublicKey.default, decimals: 6, dailyCapBase: new BN(0), maxTxBase: new BN(0) },
+  ],
   allowedProtocols: [JUPITER_PROGRAM_ID],
   maxLeverageBps: 0,
   maxConcurrentPositions: 0,
@@ -124,12 +126,8 @@ RUSTUP_TOOLCHAIN=nightly anchor idl build -o target/idl/agent_shield.json
 npx ts-mocha -p ./tsconfig.json -t 300000 \
   tests/agent-shield.ts tests/jupiter-integration.ts tests/flash-trade-integration.ts
 
-# Run wrapper tests (73 tests)
-cd sdk/wrapper && pnpm test
-
-# Run plugin tests (57 tests)
-cd plugins/solana-agent-kit && pnpm test
-cd plugins/elizaos && pnpm test
+# Run all TypeScript tests (371 tests across 7 suites)
+pnpm -r run test
 
 # Lint
 npm run lint
@@ -142,12 +140,16 @@ cargo fmt --check --manifest-path programs/agent-shield/Cargo.toml
 |-------|-------|
 | Core vault management & permission engine | 51 |
 | Jupiter integration (composed swaps) | 9 |
-| Flash Trade integration (leveraged perps) | 9 |
-| Wrapper SDK (`@agent-shield/solana`) | 73 |
+| Flash Trade integration (leveraged perps) | 8 |
+| Core policy engine (`@agent-shield/core`) | 66 |
+| SDK type & account tests (`@agent-shield/sdk`) | 24 |
+| Platform client tests (`@agent-shield/platform`) | 17 |
+| Crossmint custody adapter | 29 |
+| Wrapper SDK (`@agent-shield/solana`) | 96 |
 | SAK plugin (`@agent-shield/plugin-solana-agent-kit`) | 25 |
 | ElizaOS plugin (`@agent-shield/plugin-elizaos`) | 32 |
 | MCP server (`@agent-shield/mcp`) | 82 |
-| **Total** | **280** |
+| **Total** | **439** |
 
 ## License
 

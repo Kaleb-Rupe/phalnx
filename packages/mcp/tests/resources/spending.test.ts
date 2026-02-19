@@ -11,9 +11,9 @@ describe("resource: shield://vault/{address}/spending", () => {
     );
     const data = JSON.parse(json);
     expect(data.vault).to.equal(TEST_VAULT_PDA.toBase58());
-    expect(data.dailySpendingCap).to.equal("10000000000");
+    expect(data.dailySpendingCapUsd).to.equal("10000000000");
     expect(data.rollingSpends).to.be.an("array").with.length(1);
-    expect(data.rollingSpends[0].amountSpent).to.equal("500000000");
+    expect(data.rollingSpends[0].usdAmount).to.equal("500000000");
     expect(data.totalRecentTransactions).to.equal(1);
   });
 

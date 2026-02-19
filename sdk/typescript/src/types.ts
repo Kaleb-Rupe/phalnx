@@ -5,7 +5,7 @@ import type { AgentShield } from "./idl";
 export type { AgentShield };
 
 export const AGENT_SHIELD_PROGRAM_ID = new PublicKey(
-  "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL"
+  "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL",
 );
 
 // Fee constants matching on-chain values
@@ -13,8 +13,36 @@ export const FEE_RATE_DENOMINATOR = 1_000_000;
 export const PROTOCOL_FEE_RATE = 20; // 0.2 BPS
 export const MAX_DEVELOPER_FEE_RATE = 50; // 0.5 BPS
 export const PROTOCOL_TREASURY = new PublicKey(
-  "ASHie1dFTnDSnrHMPGmniJhMgfJVGPm3rAaEPnrtWDiT"
+  "ASHie1dFTnDSnrHMPGmniJhMgfJVGPm3rAaEPnrtWDiT",
 );
+
+// USD decimals (6) — $500 = 500_000_000
+export const USD_DECIMALS = 6;
+
+// Sentinel for unpriced (receive-only) tokens — all 0xFF bytes
+export const UNPRICED_SENTINEL = new PublicKey(new Uint8Array(32).fill(0xff));
+
+/** Oracle source types */
+export type OracleSource = "pyth" | "switchboard";
+
+/** Per-token configuration stored in PolicyConfig */
+export interface AllowedToken {
+  /** Token mint address */
+  mint: PublicKey;
+  /** Oracle feed account (Pyth PriceUpdateV2 or Switchboard PullFeed).
+   *  Pubkey.default = stablecoin (1:1 USD).
+   *  UNPRICED_SENTINEL = unpriced (receive-only). */
+  oracleFeed: PublicKey;
+  /** Token decimals (e.g., 6 for USDC, 9 for SOL) */
+  decimals: number;
+  /** Per-token daily cap in base units (0 = no per-token limit) */
+  dailyCapBase: BN;
+  /** Per-token max single tx in base units (0 = no per-token limit) */
+  maxTxBase: BN;
+}
+
+/** Token classification for oracle routing */
+export type TokenClassification = "stablecoin" | "oracle-priced" | "unpriced";
 
 // Re-export IDL types for convenience
 export type AgentVaultAccount = {
@@ -33,14 +61,33 @@ export type AgentVaultAccount = {
 
 export type PolicyConfigAccount = {
   vault: PublicKey;
-  dailySpendingCap: BN;
-  maxTransactionSize: BN;
-  allowedTokens: PublicKey[];
+  dailySpendingCapUsd: BN;
+  maxTransactionSizeUsd: BN;
+  allowedTokens: AllowedToken[];
   allowedProtocols: PublicKey[];
   maxLeverageBps: number;
   canOpenPositions: boolean;
   maxConcurrentPositions: number;
   developerFeeRate: number;
+  timelockDuration: BN;
+  allowedDestinations: PublicKey[];
+  bump: number;
+};
+
+export type PendingPolicyUpdateAccount = {
+  vault: PublicKey;
+  queuedAt: BN;
+  executesAt: BN;
+  dailySpendingCapUsd: BN | null;
+  maxTransactionAmountUsd: BN | null;
+  allowedTokens: AllowedToken[] | null;
+  allowedProtocols: PublicKey[] | null;
+  maxLeverageBps: number | null;
+  canOpenPositions: boolean | null;
+  maxConcurrentPositions: number | null;
+  developerFeeRate: number | null;
+  timelockDuration: BN | null;
+  allowedDestinations: PublicKey[] | null;
   bump: number;
 };
 
@@ -53,7 +100,8 @@ export type SpendTrackerAccount = {
 
 export type SpendEntry = {
   tokenMint: PublicKey;
-  amountSpent: BN;
+  usdAmount: BN;
+  baseAmount: BN;
   timestamp: BN;
 };
 
@@ -76,6 +124,8 @@ export type SessionAuthorityAccount = {
   authorizedProtocol: PublicKey;
   actionType: ActionType;
   expiresAtSlot: BN;
+  delegated: boolean;
+  delegationTokenAccount: PublicKey;
   bump: number;
 };
 
@@ -92,30 +142,57 @@ export type ActionType =
   | { increasePosition: Record<string, never> }
   | { decreasePosition: Record<string, never> }
   | { deposit: Record<string, never> }
-  | { withdraw: Record<string, never> };
+  | { withdraw: Record<string, never> }
+  | { transfer: Record<string, never> };
 
 // SDK param types for instruction builders
 export interface InitializeVaultParams {
   vaultId: BN;
-  dailySpendingCap: BN;
-  maxTransactionSize: BN;
-  allowedTokens: PublicKey[];
+  dailySpendingCapUsd: BN;
+  maxTransactionSizeUsd: BN;
+  allowedTokens: AllowedToken[];
   allowedProtocols: PublicKey[];
   maxLeverageBps: number;
   maxConcurrentPositions: number;
   feeDestination: PublicKey;
   developerFeeRate?: number;
+  timelockDuration?: BN;
+  allowedDestinations?: PublicKey[];
 }
 
 export interface UpdatePolicyParams {
-  dailySpendingCap?: BN | null;
-  maxTransactionSize?: BN | null;
-  allowedTokens?: PublicKey[] | null;
+  dailySpendingCapUsd?: BN | null;
+  maxTransactionSizeUsd?: BN | null;
+  allowedTokens?: AllowedToken[] | null;
   allowedProtocols?: PublicKey[] | null;
   maxLeverageBps?: number | null;
   canOpenPositions?: boolean | null;
   maxConcurrentPositions?: number | null;
   developerFeeRate?: number | null;
+  timelockDuration?: BN | null;
+  allowedDestinations?: PublicKey[] | null;
+}
+
+export interface QueuePolicyUpdateParams {
+  dailySpendingCapUsd?: BN | null;
+  maxTransactionAmountUsd?: BN | null;
+  allowedTokens?: AllowedToken[] | null;
+  allowedProtocols?: PublicKey[] | null;
+  maxLeverageBps?: number | null;
+  canOpenPositions?: boolean | null;
+  maxConcurrentPositions?: number | null;
+  developerFeeRate?: number | null;
+  timelockDuration?: BN | null;
+  allowedDestinations?: PublicKey[] | null;
+}
+
+export interface AgentTransferParams {
+  amount: BN;
+  vaultTokenAccount: PublicKey;
+  destinationTokenAccount: PublicKey;
+  feeDestinationTokenAccount?: PublicKey | null;
+  protocolTreasuryTokenAccount?: PublicKey | null;
+  oracleFeedAccount?: PublicKey;
 }
 
 export interface AuthorizeParams {
@@ -140,10 +217,12 @@ export interface ComposeActionParams {
   defiInstructions: import("@solana/web3.js").TransactionInstruction[];
   /** Whether the finalize step should report success (default: true) */
   success?: boolean;
-  /** Optional: vault token account for fee deduction */
-  vaultTokenAccount?: PublicKey | null;
+  /** Vault's PDA-owned token account for the spend token (required for delegation) */
+  vaultTokenAccount: PublicKey;
   /** Optional: fee destination token account */
   feeDestinationTokenAccount?: PublicKey | null;
   /** Optional: protocol treasury token account for protocol fee */
   protocolTreasuryTokenAccount?: PublicKey | null;
+  /** Oracle feed account for oracle-priced tokens (Pyth or Switchboard) */
+  oracleFeedAccount?: PublicKey;
 }

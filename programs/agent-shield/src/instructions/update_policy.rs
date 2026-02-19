@@ -24,16 +24,19 @@ pub struct UpdatePolicy<'info> {
     pub policy: Account<'info, PolicyConfig>,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn handler(
     ctx: Context<UpdatePolicy>,
-    daily_spending_cap: Option<u64>,
-    max_transaction_size: Option<u64>,
-    allowed_tokens: Option<Vec<Pubkey>>,
+    daily_spending_cap_usd: Option<u64>,
+    max_transaction_size_usd: Option<u64>,
+    allowed_tokens: Option<Vec<AllowedToken>>,
     allowed_protocols: Option<Vec<Pubkey>>,
     max_leverage_bps: Option<u16>,
     can_open_positions: Option<bool>,
     max_concurrent_positions: Option<u8>,
     developer_fee_rate: Option<u16>,
+    timelock_duration: Option<u64>,
+    allowed_destinations: Option<Vec<Pubkey>>,
 ) -> Result<()> {
     let vault = &ctx.accounts.vault;
     require!(
@@ -43,11 +46,17 @@ pub fn handler(
 
     let policy = &mut ctx.accounts.policy;
 
-    if let Some(cap) = daily_spending_cap {
-        policy.daily_spending_cap = cap;
+    // When timelock > 0, immediate updates are blocked
+    require!(
+        policy.timelock_duration == 0,
+        AgentShieldError::TimelockActive
+    );
+
+    if let Some(cap) = daily_spending_cap_usd {
+        policy.daily_spending_cap_usd = cap;
     }
-    if let Some(max_tx) = max_transaction_size {
-        policy.max_transaction_size = max_tx;
+    if let Some(max_tx) = max_transaction_size_usd {
+        policy.max_transaction_size_usd = max_tx;
     }
     if let Some(tokens) = allowed_tokens {
         require!(
@@ -79,12 +88,22 @@ pub fn handler(
         );
         policy.developer_fee_rate = fee_rate;
     }
+    if let Some(tl) = timelock_duration {
+        policy.timelock_duration = tl;
+    }
+    if let Some(destinations) = allowed_destinations {
+        require!(
+            destinations.len() <= MAX_ALLOWED_DESTINATIONS,
+            AgentShieldError::TooManyDestinations
+        );
+        policy.allowed_destinations = destinations;
+    }
 
     let clock = Clock::get()?;
     emit!(PolicyUpdated {
         vault: vault.key(),
-        daily_cap: policy.daily_spending_cap,
-        max_transaction_size: policy.max_transaction_size,
+        daily_cap_usd: policy.daily_spending_cap_usd,
+        max_transaction_size_usd: policy.max_transaction_size_usd,
         allowed_tokens_count: policy.allowed_tokens.len() as u8,
         allowed_protocols_count: policy.allowed_protocols.len() as u8,
         max_leverage_bps: policy.max_leverage_bps,
