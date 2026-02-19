@@ -22,9 +22,6 @@ pub const MAX_ALLOWED_DESTINATIONS: usize = 10;
 /// Maximum number of recent transactions stored on-chain
 pub const MAX_RECENT_TRANSACTIONS: usize = 50;
 
-/// Maximum number of rolling spend entries
-pub const MAX_SPEND_ENTRIES: usize = 100;
-
 /// Rolling window duration in seconds (24 hours)
 pub const ROLLING_WINDOW_SECONDS: i64 = 86_400;
 
@@ -70,9 +67,6 @@ pub const MAX_ORACLE_STALE_SLOTS: u32 = 100;
 /// Minimum number of oracle samples required for a valid price.
 pub const MIN_ORACLE_SAMPLES: u32 = 3;
 
-/// Maximum age for Pyth price updates (seconds). 60s is conservative.
-pub const MAX_PYTH_AGE_SECONDS: i64 = 60;
-
 /// Maximum confidence/price ratio in BPS. 1000 = 10%.
 pub const MAX_CONFIDENCE_BPS: u64 = 1000;
 
@@ -117,3 +111,35 @@ pub enum ActionType {
 }
 
 use anchor_lang::prelude::*;
+
+/// Tracker capacity tiers — chosen at vault creation, determines
+/// max rolling spend entries and SpendTracker account size.
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Default, PartialEq, Eq)]
+pub enum TrackerTier {
+    /// 200 entries (~16 KB)
+    #[default]
+    Standard,
+    /// 500 entries (~33 KB)
+    Pro,
+    /// 1000 entries (~61 KB)
+    Max,
+}
+
+impl TrackerTier {
+    pub fn max_spend_entries(&self) -> usize {
+        match self {
+            TrackerTier::Standard => 200,
+            TrackerTier::Pro => 500,
+            TrackerTier::Max => 1000,
+        }
+    }
+
+    pub fn from_u8(val: u8) -> Option<TrackerTier> {
+        match val {
+            0 => Some(TrackerTier::Standard),
+            1 => Some(TrackerTier::Pro),
+            2 => Some(TrackerTier::Max),
+            _ => None,
+        }
+    }
+}

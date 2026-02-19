@@ -43,6 +43,7 @@ export function buildInitializeVault(
       params.developerFeeRate ?? 0,
       params.timelockDuration ?? new BN(0),
       params.allowedDestinations ?? [],
+      params.trackerTier ?? 0,
     )
     .accounts({
       owner,
@@ -95,6 +96,7 @@ export function buildUpdatePolicy(
   params: UpdatePolicyParams,
 ) {
   const [policy] = getPolicyPDA(vault, program.programId);
+  const [tracker] = getTrackerPDA(vault, program.programId);
 
   return program.methods
     .updatePolicy(
@@ -113,6 +115,7 @@ export function buildUpdatePolicy(
       owner,
       vault,
       policy,
+      tracker,
     } as any);
 }
 
@@ -289,12 +292,14 @@ export function buildApplyPendingPolicy(
   vault: PublicKey,
 ) {
   const [policy] = getPolicyPDA(vault, program.programId);
+  const [tracker] = getTrackerPDA(vault, program.programId);
   const [pendingPolicy] = getPendingPolicyPDA(vault, program.programId);
 
   return program.methods.applyPendingPolicy().accounts({
     owner,
     vault,
     policy,
+    tracker,
     pendingPolicy,
   } as any);
 }

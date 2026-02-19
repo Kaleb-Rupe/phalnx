@@ -27,6 +27,14 @@ pub struct ApplyPendingPolicy<'info> {
     #[account(
         mut,
         has_one = vault,
+        seeds = [b"tracker", vault.key().as_ref()],
+        bump = tracker.bump,
+    )]
+    pub tracker: Account<'info, SpendTracker>,
+
+    #[account(
+        mut,
+        has_one = vault,
         seeds = [b"pending_policy", vault.key().as_ref()],
         bump = pending_policy.bump,
         close = owner,
@@ -55,6 +63,8 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
     }
     if let Some(ref tokens) = pending.allowed_tokens {
         policy.allowed_tokens = tokens.clone();
+        // Token list changed — clear rolling_spends to prevent stale indices
+        ctx.accounts.tracker.rolling_spends.clear();
     }
     if let Some(ref protocols) = pending.allowed_protocols {
         policy.allowed_protocols = protocols.clone();

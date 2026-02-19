@@ -89,11 +89,11 @@ pub fn handler(
     // 1b. Amount must be positive
     require!(amount > 0, AgentShieldError::TransactionTooLarge);
 
-    // 2. Token must be whitelisted — find the AllowedToken entry
-    let allowed_token = policy
-        .find_token(&token_mint)
-        .ok_or(error!(AgentShieldError::TokenNotAllowed))?
-        .clone();
+    // 2. Token must be whitelisted — find the AllowedToken entry + index
+    let (token_index, allowed_token_ref) = policy
+        .find_token_with_index(&token_mint)
+        .ok_or(error!(AgentShieldError::TokenNotAllowed))?;
+    let allowed_token = allowed_token_ref.clone();
 
     // 3. Unpriced tokens are receive-only — cannot be spent
     require!(
@@ -130,7 +130,7 @@ pub fn handler(
 
     // 8. Per-token base cap check (if configured)
     if allowed_token.daily_cap_base > 0 {
-        let rolling_base = tracker.get_rolling_spend_by_token(&token_mint, clock.unix_timestamp)?;
+        let rolling_base = tracker.get_rolling_spend_by_token(token_index, clock.unix_timestamp)?;
         let new_total_base = rolling_base
             .checked_add(amount)
             .ok_or(AgentShieldError::Overflow)?;
@@ -169,7 +169,7 @@ pub fn handler(
     }
 
     // All checks passed — record spend with both USD and base amounts
-    tracker.record_spend(token_mint, usd_amount, amount, clock.unix_timestamp)?;
+    tracker.record_spend(token_index, usd_amount, amount, clock.unix_timestamp)?;
 
     // Create session PDA with delegation fields
     let session = &mut ctx.accounts.session;

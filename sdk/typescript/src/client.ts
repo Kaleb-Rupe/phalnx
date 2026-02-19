@@ -84,20 +84,46 @@ import {
 import { PerpetualsClient, PoolConfig } from "flash-sdk";
 import { IDL as AgentShieldIDL } from "./idl-json";
 
+export interface AgentShieldClientOptions {
+  programId?: PublicKey;
+  idl?: any;
+  /** When true, createVault() throws if allowedDestinations is empty */
+  requireDestinations?: boolean;
+}
+
 export class AgentShieldClient {
   readonly program: Program<AgentShield>;
   readonly provider: AnchorProvider;
+  private readonly requireDestinations: boolean;
 
   constructor(
     connection: Connection,
     wallet: Wallet,
-    programId?: PublicKey,
+    programIdOrOptions?: PublicKey | AgentShieldClientOptions,
     idl?: any,
   ) {
     this.provider = new AnchorProvider(connection, wallet, {
       commitment: "confirmed",
     });
-    const resolvedIdl = idl ?? AgentShieldIDL;
+
+    let programId: PublicKey | undefined;
+    let resolvedIdl: any;
+
+    if (
+      programIdOrOptions &&
+      !(programIdOrOptions instanceof PublicKey) &&
+      typeof programIdOrOptions === "object"
+    ) {
+      const opts = programIdOrOptions as AgentShieldClientOptions;
+      programId = opts.programId;
+      resolvedIdl = opts.idl ?? AgentShieldIDL;
+      this.requireDestinations = opts.requireDestinations ?? false;
+    } else {
+      programId = programIdOrOptions as PublicKey | undefined;
+      resolvedIdl = idl ?? AgentShieldIDL;
+      this.requireDestinations = false;
+    }
+
     if (programId) {
       resolvedIdl.address = programId.toBase58();
     }
@@ -167,6 +193,22 @@ export class AgentShieldClient {
   // --- Instruction Execution (sends + confirms) ---
 
   async createVault(params: InitializeVaultParams): Promise<string> {
+    const hasDestinations =
+      params.allowedDestinations && params.allowedDestinations.length > 0;
+
+    if (!hasDestinations) {
+      if (this.requireDestinations) {
+        throw new Error(
+          "AgentShield: allowedDestinations is empty but requireDestinations is enabled. " +
+            "Pass allowedDestinations to restrict agent transfer targets.",
+        );
+      }
+      console.warn(
+        "\u26A0 AgentShield: Vault created with empty allowedDestinations \u2014 " +
+          "agent can transfer to ANY address. Pass allowedDestinations to restrict.",
+      );
+    }
+
     const owner = this.provider.wallet.publicKey;
     return buildInitializeVault(this.program, owner, params).rpc();
   }

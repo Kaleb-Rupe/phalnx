@@ -1,7 +1,7 @@
 // @agentshield/sdk — TypeScript SDK for AgentShield
 // AI Agent Financial Middleware on Solana
 
-export { AgentShieldClient } from "./client";
+export { AgentShieldClient, type AgentShieldClientOptions } from "./client";
 export { IDL } from "./idl-json";
 
 export {
@@ -66,6 +66,7 @@ export {
   AGENT_SHIELD_PROGRAM_ID,
   UNPRICED_SENTINEL,
   USD_DECIMALS,
+  TrackerTier,
   type AgentShield,
   type AgentVaultAccount,
   type PolicyConfigAccount,

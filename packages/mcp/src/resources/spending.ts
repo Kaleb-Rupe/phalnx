@@ -12,7 +12,7 @@ export async function getSpendingResource(
 
     const cap = policy.dailySpendingCapUsd;
     const spends = tracker.rollingSpends.map((entry) => ({
-      tokenMint: entry.tokenMint.toBase58(),
+      tokenIndex: entry.tokenIndex,
       usdAmount: formatBN(entry.usdAmount),
       timestamp: formatTimestamp(entry.timestamp),
       percentOfCap: cap.isZero()

@@ -22,6 +22,14 @@ pub struct UpdatePolicy<'info> {
         bump = policy.bump,
     )]
     pub policy: Account<'info, PolicyConfig>,
+
+    #[account(
+        mut,
+        has_one = vault,
+        seeds = [b"tracker", vault.key().as_ref()],
+        bump = tracker.bump,
+    )]
+    pub tracker: Account<'info, SpendTracker>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -64,6 +72,10 @@ pub fn handler(
             AgentShieldError::TooManyAllowedTokens
         );
         policy.allowed_tokens = tokens;
+        // Token list changed — spend entries use token_index so clear
+        // rolling_spends to prevent stale indices. USD cap resets to 0
+        // for the remainder of the current 24h window.
+        ctx.accounts.tracker.rolling_spends.clear();
     }
     if let Some(protocols) = allowed_protocols {
         require!(

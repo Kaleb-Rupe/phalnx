@@ -173,7 +173,8 @@ describe("agent-shield", () => {
           3, // max_concurrent_positions
           0, // developer_fee_rate
           new BN(0), // timelockDuration
-          [] // allowedDestinations
+          [], // allowedDestinations
+          0, // tracker_tier: Standard
         )
         .accounts({
           owner: owner.publicKey,
@@ -229,7 +230,8 @@ describe("agent-shield", () => {
             1,
             0,
             new BN(0),
-            []
+            [],
+            0, // tracker_tier: Standard
           )
           .accounts({
             owner: owner.publicKey,
@@ -266,7 +268,7 @@ describe("agent-shield", () => {
       const tooManyTokens = Array.from({ length: 11 }, () => makeAllowedToken(Keypair.generate().publicKey));
       try {
         await program.methods
-          .initializeVault(vaultId2, new BN(100), new BN(100), tooManyTokens, [], new BN(0) as any, 1, 0, new BN(0), [])
+          .initializeVault(vaultId2, new BN(100), new BN(100), tooManyTokens, [], new BN(0) as any, 1, 0, new BN(0), [], 0)
           .accounts({
             owner: owner.publicKey,
             vault: vault2,
@@ -404,7 +406,7 @@ describe("agent-shield", () => {
 
       // First create the vault
       await program.methods
-        .initializeVault(vid, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 0, new BN(0), [])
+        .initializeVault(vid, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 0, new BN(0), [], 0)
         .accounts({
           owner: owner.publicKey,
           vault: v,
@@ -456,6 +458,7 @@ describe("agent-shield", () => {
           owner: owner.publicKey,
           vault: vaultPda,
           policy: policyPda,
+          tracker: trackerPda,
         } as any)
         .rpc();
 
@@ -474,6 +477,7 @@ describe("agent-shield", () => {
             owner: unauthorizedUser.publicKey,
             vault: vaultPda,
             policy: policyPda,
+            tracker: trackerPda,
           } as any)
           .signers([unauthorizedUser])
           .rpc();
@@ -494,6 +498,7 @@ describe("agent-shield", () => {
             owner: owner.publicKey,
             vault: vaultPda,
             policy: policyPda,
+            tracker: trackerPda,
           } as any)
           .rpc();
         expect.fail("Should have thrown");
@@ -526,7 +531,7 @@ describe("agent-shield", () => {
       );
 
       await program.methods
-        .initializeVault(revokeVaultId, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 0, new BN(0), [])
+        .initializeVault(revokeVaultId, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 0, new BN(0), [], 0)
         .accounts({
           owner: owner.publicKey,
           vault: revokeVaultPda,
@@ -602,7 +607,7 @@ describe("agent-shield", () => {
       );
 
       await program.methods
-        .initializeVault(reactVaultId, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 0, new BN(0), [])
+        .initializeVault(reactVaultId, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 0, new BN(0), [], 0)
         .accounts({
           owner: owner.publicKey,
           vault: reactVaultPda,
@@ -1194,7 +1199,7 @@ describe("agent-shield", () => {
       );
 
       await program.methods
-        .initializeVault(closeVaultId, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 0, new BN(0), [])
+        .initializeVault(closeVaultId, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 0, new BN(0), [], 0)
         .accounts({
           owner: owner.publicKey,
           vault: closeVaultPda,
@@ -1247,7 +1252,7 @@ describe("agent-shield", () => {
       );
 
       await program.methods
-        .initializeVault(vid, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 0, new BN(0), [])
+        .initializeVault(vid, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 0, new BN(0), [], 0)
         .accounts({
           owner: owner.publicKey,
           vault: v,
@@ -1315,7 +1320,8 @@ describe("agent-shield", () => {
           3,
           30, // developer_fee_rate = 30 (0.3 BPS)
           new BN(0),
-          []
+          [],
+          0, // tracker_tier: Standard
         )
         .accounts({
           owner: owner.publicKey,
@@ -1348,7 +1354,7 @@ describe("agent-shield", () => {
 
       try {
         await program.methods
-          .initializeVault(badVaultId, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 51, new BN(0), [])
+          .initializeVault(badVaultId, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 51, new BN(0), [], 0)
           .accounts({
             owner: owner.publicKey,
             vault: bv,
@@ -1372,6 +1378,7 @@ describe("agent-shield", () => {
           owner: owner.publicKey,
           vault: feeVaultPda,
           policy: feePolicyPda,
+          tracker: feeTrackerPda,
         } as any)
         .rpc();
 
@@ -1385,6 +1392,7 @@ describe("agent-shield", () => {
           owner: owner.publicKey,
           vault: feeVaultPda,
           policy: feePolicyPda,
+          tracker: feeTrackerPda,
         } as any)
         .rpc();
 
@@ -1400,6 +1408,7 @@ describe("agent-shield", () => {
             owner: owner.publicKey,
             vault: feeVaultPda,
             policy: feePolicyPda,
+            tracker: feeTrackerPda,
           } as any)
           .rpc();
         expect.fail("Should have thrown");
@@ -1416,6 +1425,7 @@ describe("agent-shield", () => {
           owner: owner.publicKey,
           vault: feeVaultPda,
           policy: feePolicyPda,
+          tracker: feeTrackerPda,
         } as any)
         .rpc();
 
@@ -1507,6 +1517,7 @@ describe("agent-shield", () => {
           owner: owner.publicKey,
           vault: feeVaultPda,
           policy: feePolicyPda,
+          tracker: feeTrackerPda,
         } as any)
         .rpc();
 
@@ -1650,7 +1661,7 @@ describe("agent-shield", () => {
       );
 
       await program.methods
-        .initializeVault(maxFeeVaultId, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 50, new BN(0), [])
+        .initializeVault(maxFeeVaultId, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 50, new BN(0), [], 0)
         .accounts({
           owner: owner.publicKey,
           vault: mv,
@@ -1711,7 +1722,8 @@ describe("agent-shield", () => {
           3,
           0,
           new BN(0),
-          []
+          [],
+          0, // tracker_tier: Standard
         )
         .accounts({
           owner: owner.publicKey,
@@ -2042,7 +2054,7 @@ describe("agent-shield", () => {
       );
 
       await program.methods
-        .initializeVault(vid, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 0, new BN(0), [])
+        .initializeVault(vid, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 0, new BN(0), [], 0)
         .accounts({
           owner: owner.publicKey,
           vault: v,
@@ -2158,7 +2170,7 @@ describe("agent-shield", () => {
       );
 
       await program.methods
-        .initializeVault(frozenVaultId, new BN(1000), new BN(1000), [makeAllowedToken(usdcMint)], [], new BN(0) as any, 1, 0, new BN(0), [])
+        .initializeVault(frozenVaultId, new BN(1000), new BN(1000), [makeAllowedToken(usdcMint)], [], new BN(0) as any, 1, 0, new BN(0), [], 0)
         .accounts({
           owner: owner.publicKey,
           vault: fv,
@@ -2215,7 +2227,7 @@ describe("agent-shield", () => {
       );
 
       await program.methods
-        .initializeVault(closedVaultId, new BN(1000), new BN(1000), [makeAllowedToken(usdcMint)], [], new BN(0) as any, 1, 0, new BN(0), [])
+        .initializeVault(closedVaultId, new BN(1000), new BN(1000), [makeAllowedToken(usdcMint)], [], new BN(0) as any, 1, 0, new BN(0), [], 0)
         .accounts({
           owner: owner.publicKey,
           vault: cv,
@@ -2290,7 +2302,7 @@ describe("agent-shield", () => {
       );
 
       await program.methods
-        .initializeVault(closedVaultId, new BN(1000), new BN(1000), [makeAllowedToken(usdcMint)], [jupiterProgramId], new BN(0) as any, 1, 0, new BN(0), [])
+        .initializeVault(closedVaultId, new BN(1000), new BN(1000), [makeAllowedToken(usdcMint)], [jupiterProgramId], new BN(0) as any, 1, 0, new BN(0), [], 0)
         .accounts({
           owner: owner.publicKey,
           vault: cv,
@@ -2391,7 +2403,8 @@ describe("agent-shield", () => {
           3,
           0,
           new BN(0),
-          []
+          [],
+          0, // tracker_tier: Standard
         )
         .accounts({
           owner: owner.publicKey,
@@ -2532,7 +2545,8 @@ describe("agent-shield", () => {
           3,
           0, // developer_fee_rate = 0
           new BN(0),
-          []
+          [],
+          0, // tracker_tier: Standard
         )
         .accounts({
           owner: owner.publicKey,
@@ -2772,6 +2786,7 @@ describe("agent-shield", () => {
       exponent: number,    // i32, typically -8
       publishTime: bigint, // i64, unix timestamp in seconds
       verificationLevel: number = 1, // 1 = Full (Wormhole verified)
+      postedSlot?: bigint, // u64, slot when price was posted (offset 125)
     ): void {
       const data = Buffer.alloc(133);
       // discriminator [0..8] — zeros
@@ -2787,7 +2802,10 @@ describe("agent-shield", () => {
       data.writeInt32LE(exponent, 89);
       // publish_time [93..101]
       data.writeBigInt64LE(publishTime, 93);
-      // remaining fields are zero
+      // posted_slot [125..133] — used for slot-based staleness check
+      if (postedSlot !== undefined) {
+        data.writeBigUInt64LE(postedSlot, 125);
+      }
 
       svm.setAccount(feedAddress, {
         lamports: 1_000_000,
@@ -2902,7 +2920,8 @@ describe("agent-shield", () => {
           3,
           0,
           new BN(0),
-          []
+          [],
+          0, // tracker_tier: Standard
         )
         .accounts({
           owner: owner.publicKey,
@@ -2956,7 +2975,9 @@ describe("agent-shield", () => {
         15_000_000_000n,  // price i64 ($150 with 8 decimal places)
         50_000_000n,       // conf (low: ~0.33% of price)
         -8,                // exponent
-        clock.unixTimestamp // fresh publish_time
+        clock.unixTimestamp, // fresh publish_time
+        1,                   // Full verification
+        clock.slot           // fresh posted_slot
       );
 
       const [sessionPda] = PublicKey.findProgramAddressSync(
@@ -3040,6 +3061,7 @@ describe("agent-shield", () => {
           owner: owner.publicKey,
           vault: oracleVaultPda,
           policy: oraclePolicyPda,
+          tracker: oracleTrackerPda,
         } as any)
         .rpc();
 
@@ -3116,19 +3138,24 @@ describe("agent-shield", () => {
           owner: owner.publicKey,
           vault: oracleVaultPda,
           policy: oraclePolicyPda,
+          tracker: oracleTrackerPda,
         } as any)
         .rpc();
     });
 
     it("stale Pyth feed — rejects with OracleFeedStale", async () => {
+      // Advance slot past 200 so staleness check is meaningful
+      advancePastSlot(svm, 300);
       const clock = svm.getClock();
-      // Set publish_time to >60s ago
+      // Set posted_slot to 0 (stale: current_slot ~301 > 100 + 0)
       createMockPythAccount(
         pythFeedKeypair.publicKey,
         15_000_000_000n,
         50_000_000n,
         -8,
-        clock.unixTimestamp - 120n // 120 seconds ago — stale
+        clock.unixTimestamp,
+        1,  // Full verification
+        0n  // slot 0 — stale
       );
 
       const [sessionPda] = PublicKey.findProgramAddressSync(
@@ -3175,7 +3202,9 @@ describe("agent-shield", () => {
         15_000_000_000n,
         3_000_000_000n, // 20% of price → way over 10%
         -8,
-        clock.unixTimestamp
+        clock.unixTimestamp,
+        1,              // Full verification
+        clock.slot      // fresh posted_slot
       );
 
       const [sessionPda] = PublicKey.findProgramAddressSync(
@@ -3223,7 +3252,8 @@ describe("agent-shield", () => {
         50_000_000n,
         -8,
         clock.unixTimestamp,
-        0 // Partial — not verified
+        0,          // Partial — not verified
+        clock.slot  // fresh posted_slot
       );
 
       const [sessionPda] = PublicKey.findProgramAddressSync(
@@ -3287,6 +3317,7 @@ describe("agent-shield", () => {
           owner: owner.publicKey,
           vault: oracleVaultPda,
           policy: oraclePolicyPda,
+          tracker: oracleTrackerPda,
         } as any)
         .rpc();
 
@@ -3339,6 +3370,7 @@ describe("agent-shield", () => {
           owner: owner.publicKey,
           vault: oracleVaultPda,
           policy: oraclePolicyPda,
+          tracker: oracleTrackerPda,
         } as any)
         .rpc();
     });
@@ -3422,7 +3454,8 @@ describe("agent-shield", () => {
           3,
           0,
           new BN(60), // 60 second timelock
-          []
+          [],
+          0, // tracker_tier: Standard
         )
         .accounts({
           owner: owner.publicKey,
@@ -3450,6 +3483,7 @@ describe("agent-shield", () => {
             owner: owner.publicKey,
             vault: tlVaultPda,
             policy: tlPolicyPda,
+            tracker: tlTrackerPda,
           } as any)
           .rpc();
         expect.fail("Should have thrown");
@@ -3487,6 +3521,7 @@ describe("agent-shield", () => {
             owner: owner.publicKey,
             vault: tlVaultPda,
             policy: tlPolicyPda,
+            tracker: tlTrackerPda,
             pendingPolicy: tlPendingPda,
           } as any)
           .rpc();
@@ -3506,6 +3541,7 @@ describe("agent-shield", () => {
           owner: owner.publicKey,
           vault: tlVaultPda,
           policy: tlPolicyPda,
+          tracker: tlTrackerPda,
           pendingPolicy: tlPendingPda,
         } as any)
         .rpc();
@@ -3629,7 +3665,8 @@ describe("agent-shield", () => {
       await program.methods
         .initializeVault(
           noTlVaultId, new BN(1000), new BN(1000), [] as any[], [],
-          new BN(0) as any, 1, 0, new BN(0), []
+          new BN(0) as any, 1, 0, new BN(0), [],
+          0, // tracker_tier: Standard
         )
         .accounts({
           owner: owner.publicKey,
@@ -3685,6 +3722,7 @@ describe("agent-shield", () => {
           owner: owner.publicKey,
           vault: tlVaultPda,
           policy: tlPolicyPda,
+          tracker: tlTrackerPda,
           pendingPolicy: tlPendingPda,
         } as any)
         .rpc();
@@ -3718,6 +3756,7 @@ describe("agent-shield", () => {
           owner: owner.publicKey,
           vault: tlVaultPda,
           policy: tlPolicyPda,
+          tracker: tlTrackerPda,
           pendingPolicy: tlPendingPda,
         } as any)
         .rpc();
@@ -3734,6 +3773,7 @@ describe("agent-shield", () => {
           owner: owner.publicKey,
           vault: tlVaultPda,
           policy: tlPolicyPda,
+          tracker: tlTrackerPda,
         } as any)
         .rpc();
 
@@ -3751,6 +3791,7 @@ describe("agent-shield", () => {
           owner: owner.publicKey,
           vault: tlVaultPda,
           policy: tlPolicyPda,
+          tracker: tlTrackerPda,
         } as any)
         .rpc();
 
@@ -3810,7 +3851,8 @@ describe("agent-shield", () => {
           3,
           0,
           new BN(0), // no timelock
-          [allowedDest.publicKey] // only allow transfers to this address
+          [allowedDest.publicKey], // only allow transfers to this address
+          0, // tracker_tier: Standard
         )
         .accounts({
           owner: owner.publicKey,
@@ -3920,7 +3962,8 @@ describe("agent-shield", () => {
         .initializeVault(
           anyDestVaultId, new BN(500_000_000), new BN(100_000_000),
           [makeAllowedToken(usdcMint)], [jupiterProgramId],
-          new BN(0) as any, 3, 0, new BN(0), [] // empty allowlist
+          new BN(0) as any, 3, 0, new BN(0), [], // empty allowlist
+          0, // tracker_tier: Standard
         )
         .accounts({
           owner: owner.publicKey,
@@ -3992,7 +4035,8 @@ describe("agent-shield", () => {
         await program.methods
           .initializeVault(
             badVid, new BN(1000), new BN(1000), [] as any[], [],
-            new BN(0) as any, 1, 0, new BN(0), tooMany
+            new BN(0) as any, 1, 0, new BN(0), tooMany,
+            0, // tracker_tier: Standard
           )
           .accounts({
             owner: owner.publicKey,
@@ -4109,7 +4153,8 @@ describe("agent-shield", () => {
           feeDestVaultId, new BN(500_000_000), new BN(100_000_000),
           [makeAllowedToken(usdcMint)], [jupiterProgramId],
           new BN(0) as any, 3, 50, // developer_fee_rate = 50 (0.5 BPS)
-          new BN(0), []
+          new BN(0), [],
+          0, // tracker_tier: Standard
         )
         .accounts({
           owner: owner.publicKey,

@@ -302,6 +302,7 @@ pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
         vault: vault.key(),
         agent: session_agent,
         success,
+        is_expired,
         timestamp: clock.unix_timestamp,
     });
 

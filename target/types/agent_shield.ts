@@ -208,6 +208,7 @@ export type AgentShield = {
           },
           "relations": [
             "policy",
+            "tracker",
             "pendingPolicy"
           ]
         },
@@ -225,6 +226,30 @@ export type AgentShield = {
                   105,
                   99,
                   121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "tracker",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  99,
+                  107,
+                  101,
+                  114
                 ]
               },
               {
@@ -919,7 +944,8 @@ export type AgentShield = {
       "name": "initializeVault",
       "docs": [
         "Initialize a new agent vault with policy configuration.",
-        "Only the owner can call this. Creates vault PDA, policy PDA, and spend tracker PDA."
+        "Only the owner can call this. Creates vault PDA, policy PDA, and spend tracker PDA.",
+        "`tracker_tier`: 0 = Standard (200 entries), 1 = Pro (500), 2 = Max (1000)."
       ],
       "discriminator": [
         48,
@@ -1071,6 +1097,10 @@ export type AgentShield = {
           "type": {
             "vec": "pubkey"
           }
+        },
+        {
+          "name": "trackerTier",
+          "type": "u8"
         }
       ]
     },
@@ -1485,7 +1515,8 @@ export type AgentShield = {
             ]
           },
           "relations": [
-            "policy"
+            "policy",
+            "tracker"
           ]
         },
         {
@@ -1502,6 +1533,30 @@ export type AgentShield = {
                   105,
                   99,
                   121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "tracker",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  99,
+                  107,
+                  101,
+                  114
                 ]
               },
               {
@@ -2543,6 +2598,11 @@ export type AgentShield = {
       "code": 6044,
       "name": "tooManyDestinations",
       "msg": "Too many destinations (max 10)"
+    },
+    {
+      "code": 6045,
+      "name": "invalidTrackerTier",
+      "msg": "Invalid tracker tier (must be 0, 1, or 2)"
     }
   ],
   "types": [
@@ -2760,8 +2820,9 @@ export type AgentShield = {
             "name": "feeDestination",
             "docs": [
               "Developer fee destination — the wallet that receives developer fees",
-              "on every finalized transaction. Set at vault creation, immutable after",
-              "initialization. Protocol fees go to PROTOCOL_TREASURY separately."
+              "on every finalized transaction. IMMUTABLE after initialization — only",
+              "`initialize_vault` writes this field. This prevents a compromised owner",
+              "key from redirecting fees. Protocol fees go to PROTOCOL_TREASURY separately."
             ],
             "type": "pubkey"
           },
@@ -2825,6 +2886,17 @@ export type AgentShield = {
               "Protocol fees are tracked separately via events."
             ],
             "type": "u64"
+          },
+          {
+            "name": "trackerTier",
+            "docs": [
+              "Tracker capacity tier chosen at vault creation"
+            ],
+            "type": {
+              "defined": {
+                "name": "trackerTier"
+              }
+            }
           }
         ]
       }
@@ -3421,6 +3493,10 @@ export type AgentShield = {
             "type": "bool"
           },
           {
+            "name": "isExpired",
+            "type": "bool"
+          },
+          {
             "name": "timestamp",
             "type": "i64"
           }
@@ -3433,11 +3509,13 @@ export type AgentShield = {
         "kind": "struct",
         "fields": [
           {
-            "name": "tokenMint",
+            "name": "tokenIndex",
             "docs": [
-              "Token mint for audit trail"
+              "Index into PolicyConfig.allowed_tokens[] (0-9).",
+              "Compact representation — avoids storing full 32-byte Pubkey per entry.",
+              "Invalidated when token list changes (rolling_spends is cleared)."
             ],
-            "type": "pubkey"
+            "type": "u8"
           },
           {
             "name": "usdAmount",
@@ -3473,6 +3551,24 @@ export type AgentShield = {
             "type": "pubkey"
           },
           {
+            "name": "trackerTier",
+            "docs": [
+              "Tracker capacity tier (Standard/Pro/Max)"
+            ],
+            "type": {
+              "defined": {
+                "name": "trackerTier"
+              }
+            }
+          },
+          {
+            "name": "maxSpendEntries",
+            "docs": [
+              "Maximum spend entries for this tracker (derived from tier at init)"
+            ],
+            "type": "u32"
+          },
+          {
             "name": "rollingSpends",
             "docs": [
               "Rolling spend entries: (token_mint, usd_amount, base_amount, timestamp)",
@@ -3506,6 +3602,27 @@ export type AgentShield = {
               "Bump seed for PDA"
             ],
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "trackerTier",
+      "docs": [
+        "Tracker capacity tiers — chosen at vault creation, determines",
+        "max rolling spend entries and SpendTracker account size."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "standard"
+          },
+          {
+            "name": "pro"
+          },
+          {
+            "name": "max"
           }
         ]
       }

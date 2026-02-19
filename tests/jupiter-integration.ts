@@ -250,7 +250,8 @@ describe("jupiter-integration", () => {
         1,                   // max concurrent positions
         0,                   // developer fee rate (0 = none)
         new BN(0),           // timelockDuration
-        []                   // allowedDestinations
+        [],                  // allowedDestinations
+        0, // tracker_tier: Standard
       )
       .accountsPartial({
         owner: owner.publicKey,
@@ -509,7 +510,8 @@ describe("jupiter-integration", () => {
           1,
           0, // developer fee rate
           new BN(0),
-          []
+          [],
+          0, // tracker_tier: Standard
         )
         .accountsPartial({
           owner: owner.publicKey,
@@ -621,7 +623,8 @@ describe("jupiter-integration", () => {
           1,
           0, // developer fee rate
           new BN(0),
-          []
+          [],
+          0, // tracker_tier: Standard
         )
         .accountsPartial({
           owner: owner.publicKey,

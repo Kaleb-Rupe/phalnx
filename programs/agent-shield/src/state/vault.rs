@@ -1,4 +1,4 @@
-use super::VaultStatus;
+use super::{TrackerTier, VaultStatus};
 use anchor_lang::prelude::*;
 
 #[account]
@@ -10,8 +10,9 @@ pub struct AgentVault {
     pub agent: Pubkey,
 
     /// Developer fee destination — the wallet that receives developer fees
-    /// on every finalized transaction. Set at vault creation, immutable after
-    /// initialization. Protocol fees go to PROTOCOL_TREASURY separately.
+    /// on every finalized transaction. IMMUTABLE after initialization — only
+    /// `initialize_vault` writes this field. This prevents a compromised owner
+    /// key from redirecting fees. Protocol fees go to PROTOCOL_TREASURY separately.
     pub fee_destination: Pubkey,
 
     /// Unique vault identifier (allows one owner to have multiple vaults)
@@ -38,13 +39,16 @@ pub struct AgentVault {
     /// Cumulative developer fees collected from this vault (token base units).
     /// Protocol fees are tracked separately via events.
     pub total_fees_collected: u64,
+
+    /// Tracker capacity tier chosen at vault creation
+    pub tracker_tier: TrackerTier,
 }
 
 impl AgentVault {
     /// Account discriminator (8) + owner (32) + agent (32) + fee_destination (32) +
     /// vault_id (8) + status (1) + bump (1) + created_at (8) + total_transactions (8) +
-    /// total_volume (8) + open_positions (1) + total_fees_collected (8)
-    pub const SIZE: usize = 8 + 32 + 32 + 32 + 8 + 1 + 1 + 8 + 8 + 8 + 1 + 8;
+    /// total_volume (8) + open_positions (1) + total_fees_collected (8) + tracker_tier (1)
+    pub const SIZE: usize = 8 + 32 + 32 + 32 + 8 + 1 + 1 + 8 + 8 + 8 + 1 + 8 + 1;
 
     pub fn is_active(&self) -> bool {
         self.status == VaultStatus::Active

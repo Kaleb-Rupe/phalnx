@@ -138,4 +138,7 @@ pub enum AgentShieldError {
 
     #[msg("Too many destinations (max 10)")]
     TooManyDestinations,
+
+    #[msg("Invalid tracker tier (must be 0, 1, or 2)")]
+    InvalidTrackerTier,
 }

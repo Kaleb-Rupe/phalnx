@@ -66,6 +66,7 @@ pub struct SessionFinalized {
     pub vault: Pubkey,
     pub agent: Pubkey,
     pub success: bool,
+    pub is_expired: bool,
     pub timestamp: i64,
 }
 

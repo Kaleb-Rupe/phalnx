@@ -22,6 +22,16 @@ export const USD_DECIMALS = 6;
 // Sentinel for unpriced (receive-only) tokens — all 0xFF bytes
 export const UNPRICED_SENTINEL = new PublicKey(new Uint8Array(32).fill(0xff));
 
+/** Tracker capacity tier — determines max rolling spend entries */
+export enum TrackerTier {
+  /** 200 entries (~16 KB, ~0.11 SOL rent) */
+  Standard = 0,
+  /** 500 entries (~33 KB, ~0.23 SOL rent) */
+  Pro = 1,
+  /** 1000 entries (~61 KB, ~0.42 SOL rent) */
+  Max = 2,
+}
+
 /** Oracle source types */
 export type OracleSource = "pyth" | "switchboard";
 
@@ -57,6 +67,7 @@ export type AgentVaultAccount = {
   totalVolume: BN;
   openPositions: number;
   totalFeesCollected: BN;
+  trackerTier: { standard: Record<string, never> } | { pro: Record<string, never> } | { max: Record<string, never> };
 };
 
 export type PolicyConfigAccount = {
@@ -93,13 +104,15 @@ export type PendingPolicyUpdateAccount = {
 
 export type SpendTrackerAccount = {
   vault: PublicKey;
+  trackerTier: { standard: Record<string, never> } | { pro: Record<string, never> } | { max: Record<string, never> };
+  maxSpendEntries: number;
   rollingSpends: SpendEntry[];
   recentTransactions: TransactionRecord[];
   bump: number;
 };
 
 export type SpendEntry = {
-  tokenMint: PublicKey;
+  tokenIndex: number;
   usdAmount: BN;
   baseAmount: BN;
   timestamp: BN;
@@ -158,6 +171,8 @@ export interface InitializeVaultParams {
   developerFeeRate?: number;
   timelockDuration?: BN;
   allowedDestinations?: PublicKey[];
+  /** Tracker capacity tier (default: Standard = 0) */
+  trackerTier?: TrackerTier;
 }
 
 export interface UpdatePolicyParams {

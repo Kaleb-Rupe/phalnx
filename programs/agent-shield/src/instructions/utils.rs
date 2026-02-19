@@ -30,12 +30,8 @@ pub(crate) fn convert_to_usd(
         let feed_account_info = &remaining_accounts[0];
 
         // Dispatcher: checks account owner → Pyth or Switchboard
-        let (mantissa, source) = oracle::parse_oracle_price(
-            feed_account_info,
-            &allowed_token.oracle_feed,
-            clock.slot,
-            clock.unix_timestamp,
-        )?;
+        let (mantissa, source) =
+            oracle::parse_oracle_price(feed_account_info, &allowed_token.oracle_feed, clock.slot)?;
 
         let usd = oracle_price_to_usd(amount, mantissa, allowed_token.decimals)?;
 

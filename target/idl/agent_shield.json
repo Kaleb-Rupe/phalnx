@@ -202,6 +202,7 @@
           },
           "relations": [
             "policy",
+            "tracker",
             "pending_policy"
           ]
         },
@@ -219,6 +220,30 @@
                   105,
                   99,
                   121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "tracker",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  99,
+                  107,
+                  101,
+                  114
                 ]
               },
               {
@@ -913,7 +938,8 @@
       "name": "initialize_vault",
       "docs": [
         "Initialize a new agent vault with policy configuration.",
-        "Only the owner can call this. Creates vault PDA, policy PDA, and spend tracker PDA."
+        "Only the owner can call this. Creates vault PDA, policy PDA, and spend tracker PDA.",
+        "`tracker_tier`: 0 = Standard (200 entries), 1 = Pro (500), 2 = Max (1000)."
       ],
       "discriminator": [
         48,
@@ -1065,6 +1091,10 @@
           "type": {
             "vec": "pubkey"
           }
+        },
+        {
+          "name": "tracker_tier",
+          "type": "u8"
         }
       ]
     },
@@ -1479,7 +1509,8 @@
             ]
           },
           "relations": [
-            "policy"
+            "policy",
+            "tracker"
           ]
         },
         {
@@ -1496,6 +1527,30 @@
                   105,
                   99,
                   121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "tracker",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  99,
+                  107,
+                  101,
+                  114
                 ]
               },
               {
@@ -2537,6 +2592,11 @@
       "code": 6044,
       "name": "TooManyDestinations",
       "msg": "Too many destinations (max 10)"
+    },
+    {
+      "code": 6045,
+      "name": "InvalidTrackerTier",
+      "msg": "Invalid tracker tier (must be 0, 1, or 2)"
     }
   ],
   "types": [
@@ -2754,8 +2814,9 @@
             "name": "fee_destination",
             "docs": [
               "Developer fee destination — the wallet that receives developer fees",
-              "on every finalized transaction. Set at vault creation, immutable after",
-              "initialization. Protocol fees go to PROTOCOL_TREASURY separately."
+              "on every finalized transaction. IMMUTABLE after initialization — only",
+              "`initialize_vault` writes this field. This prevents a compromised owner",
+              "key from redirecting fees. Protocol fees go to PROTOCOL_TREASURY separately."
             ],
             "type": "pubkey"
           },
@@ -2819,6 +2880,17 @@
               "Protocol fees are tracked separately via events."
             ],
             "type": "u64"
+          },
+          {
+            "name": "tracker_tier",
+            "docs": [
+              "Tracker capacity tier chosen at vault creation"
+            ],
+            "type": {
+              "defined": {
+                "name": "TrackerTier"
+              }
+            }
           }
         ]
       }
@@ -3415,6 +3487,10 @@
             "type": "bool"
           },
           {
+            "name": "is_expired",
+            "type": "bool"
+          },
+          {
             "name": "timestamp",
             "type": "i64"
           }
@@ -3427,11 +3503,13 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "token_mint",
+            "name": "token_index",
             "docs": [
-              "Token mint for audit trail"
+              "Index into PolicyConfig.allowed_tokens[] (0-9).",
+              "Compact representation — avoids storing full 32-byte Pubkey per entry.",
+              "Invalidated when token list changes (rolling_spends is cleared)."
             ],
-            "type": "pubkey"
+            "type": "u8"
           },
           {
             "name": "usd_amount",
@@ -3467,6 +3545,24 @@
             "type": "pubkey"
           },
           {
+            "name": "tracker_tier",
+            "docs": [
+              "Tracker capacity tier (Standard/Pro/Max)"
+            ],
+            "type": {
+              "defined": {
+                "name": "TrackerTier"
+              }
+            }
+          },
+          {
+            "name": "max_spend_entries",
+            "docs": [
+              "Maximum spend entries for this tracker (derived from tier at init)"
+            ],
+            "type": "u32"
+          },
+          {
             "name": "rolling_spends",
             "docs": [
               "Rolling spend entries: (token_mint, usd_amount, base_amount, timestamp)",
@@ -3500,6 +3596,27 @@
               "Bump seed for PDA"
             ],
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TrackerTier",
+      "docs": [
+        "Tracker capacity tiers — chosen at vault creation, determines",
+        "max rolling spend entries and SpendTracker account size."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Standard"
+          },
+          {
+            "name": "Pro"
+          },
+          {
+            "name": "Max"
           }
         ]
       }

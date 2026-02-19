@@ -19,6 +19,7 @@ pub mod agent_shield {
 
     /// Initialize a new agent vault with policy configuration.
     /// Only the owner can call this. Creates vault PDA, policy PDA, and spend tracker PDA.
+    /// `tracker_tier`: 0 = Standard (200 entries), 1 = Pro (500), 2 = Max (1000).
     pub fn initialize_vault(
         ctx: Context<InitializeVault>,
         vault_id: u64,
@@ -31,6 +32,7 @@ pub mod agent_shield {
         developer_fee_rate: u16,
         timelock_duration: u64,
         allowed_destinations: Vec<Pubkey>,
+        tracker_tier: u8,
     ) -> Result<()> {
         instructions::initialize_vault::handler(
             ctx,
@@ -44,6 +46,7 @@ pub mod agent_shield {
             developer_fee_rate,
             timelock_duration,
             allowed_destinations,
+            tracker_tier,
         )
     }
 

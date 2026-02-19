@@ -15,7 +15,8 @@ use anchor_lang::prelude::*;
 
 use crate::errors::AgentShieldError;
 use crate::state::{
-    MAX_CONFIDENCE_BPS, MAX_PYTH_AGE_SECONDS, PYTH_RECEIVER_PROGRAM, SWITCHBOARD_ON_DEMAND_PROGRAM,
+    MAX_CONFIDENCE_BPS, MAX_ORACLE_STALE_SLOTS, MIN_ORACLE_SAMPLES, PYTH_RECEIVER_PROGRAM,
+    SWITCHBOARD_ON_DEMAND_PROGRAM,
 };
 
 // ─── Oracle source enum ─────────────────────────────────────────────────────
@@ -38,10 +39,9 @@ pub fn parse_oracle_price(
     account_info: &AccountInfo,
     expected_feed: &Pubkey,
     current_slot: u64,
-    clock_timestamp: i64,
 ) -> Result<(i128, OracleSource)> {
     if *account_info.owner == PYTH_RECEIVER_PROGRAM {
-        let price = parse_pyth_price(account_info, expected_feed, clock_timestamp)?;
+        let price = parse_pyth_price(account_info, expected_feed, current_slot)?;
         Ok((price, OracleSource::Pyth))
     } else if *account_info.owner == SWITCHBOARD_ON_DEMAND_PROGRAM {
         let price = parse_switchboard_price(
@@ -80,7 +80,7 @@ const PYTH_VERIFICATION_OFFSET: usize = 40;
 const PYTH_PRICE_OFFSET: usize = 73;
 const PYTH_CONF_OFFSET: usize = 81;
 const PYTH_EXPONENT_OFFSET: usize = 89;
-const PYTH_PUBLISH_TIME_OFFSET: usize = 93;
+const PYTH_POSTED_SLOT_OFFSET: usize = 125;
 
 /// Parse a Pyth PriceUpdateV2 account and return the price as an i128
 /// mantissa with 18 implicit decimals.
@@ -89,13 +89,13 @@ const PYTH_PUBLISH_TIME_OFFSET: usize = 93;
 /// - Account key must match `expected_feed`
 /// - Account owner must be PYTH_RECEIVER_PROGRAM (checked by dispatcher)
 /// - Verification level must be Full (1) — Wormhole-verified
-/// - Staleness: `publish_time` must be within `MAX_PYTH_AGE_SECONDS`
+/// - Staleness: `posted_slot` must be within `MAX_ORACLE_STALE_SLOTS` of current slot
 /// - Confidence: `conf / |price|` must be ≤ `MAX_CONFIDENCE_BPS` (10%)
 /// - Price must be positive
 fn parse_pyth_price(
     account_info: &AccountInfo,
     expected_feed: &Pubkey,
-    clock_timestamp: i64,
+    current_slot: u64,
 ) -> Result<i128> {
     // 1. Key must match expected feed
     require!(
@@ -131,18 +131,15 @@ fn parse_pyth_price(
             .try_into()
             .map_err(|_| error!(AgentShieldError::OracleFeedInvalid))?,
     );
-    let publish_time = i64::from_le_bytes(
-        data[PYTH_PUBLISH_TIME_OFFSET..PYTH_PUBLISH_TIME_OFFSET + 8]
+    let posted_slot = u64::from_le_bytes(
+        data[PYTH_POSTED_SLOT_OFFSET..PYTH_POSTED_SLOT_OFFSET + 8]
             .try_into()
             .map_err(|_| error!(AgentShieldError::OracleFeedInvalid))?,
     );
 
-    // 5. Staleness check
-    let age = clock_timestamp.saturating_sub(publish_time);
-    require!(
-        age <= MAX_PYTH_AGE_SECONDS,
-        AgentShieldError::OracleFeedStale
-    );
+    // 5. Staleness check (slot-based, same as Switchboard)
+    let min_slot = current_slot.saturating_sub(MAX_ORACLE_STALE_SLOTS as u64);
+    require!(posted_slot >= min_slot, AgentShieldError::OracleFeedStale);
 
     // 6. Price must be positive
     require!(price > 0, AgentShieldError::OracleFeedInvalid);
@@ -210,12 +207,6 @@ const DISCRIMINATOR_SIZE: usize = 8;
 
 /// Minimum account data size: discriminator + 32 submissions
 const MIN_PULL_FEED_SIZE: usize = DISCRIMINATOR_SIZE + SUBMISSION_COUNT * SUBMISSION_STRIDE;
-
-/// Maximum staleness for Switchboard (in slots)
-const MAX_ORACLE_STALE_SLOTS: u32 = 100;
-
-/// Minimum required oracle samples
-const MIN_ORACLE_SAMPLES: u32 = 3;
 
 /// Parse a Switchboard PullFeed account and return the median price
 /// as an i128 mantissa with 18 implicit decimals.

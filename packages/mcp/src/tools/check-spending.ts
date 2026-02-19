@@ -36,7 +36,7 @@ export async function checkSpending(
     } else {
       for (const entry of tracker.rollingSpends) {
         lines.push(
-          `- **${entry.tokenMint.toBase58()}**: ${formatBN(entry.usdAmount)} ` +
+          `- **Token #${entry.tokenIndex}**: ${formatBN(entry.usdAmount)} ` +
             `(at ${formatTimestamp(entry.timestamp)})`,
         );
       }

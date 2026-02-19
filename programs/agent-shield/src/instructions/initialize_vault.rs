@@ -5,7 +5,7 @@ use crate::events::VaultCreated;
 use crate::state::*;
 
 #[derive(Accounts)]
-#[instruction(vault_id: u64)]
+#[instruction(vault_id: u64, _daily_spending_cap_usd: u64, _max_transaction_size_usd: u64, _allowed_tokens: Vec<AllowedToken>, _allowed_protocols: Vec<Pubkey>, _max_leverage_bps: u16, _max_concurrent_positions: u8, _developer_fee_rate: u16, _timelock_duration: u64, _allowed_destinations: Vec<Pubkey>, tracker_tier: u8)]
 pub struct InitializeVault<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
@@ -31,7 +31,7 @@ pub struct InitializeVault<'info> {
     #[account(
         init,
         payer = owner,
-        space = SpendTracker::SIZE,
+        space = SpendTracker::size_for_tier(tracker_tier),
         seeds = [b"tracker", vault.key().as_ref()],
         bump,
     )]
@@ -57,7 +57,9 @@ pub fn handler(
     developer_fee_rate: u16,
     timelock_duration: u64,
     allowed_destinations: Vec<Pubkey>,
+    tracker_tier: u8,
 ) -> Result<()> {
+    let tier = TrackerTier::from_u8(tracker_tier).ok_or(AgentShieldError::InvalidTrackerTier)?;
     require!(
         allowed_tokens.len() <= MAX_ALLOWED_TOKENS,
         AgentShieldError::TooManyAllowedTokens
@@ -94,6 +96,7 @@ pub fn handler(
     vault.total_volume = 0;
     vault.open_positions = 0;
     vault.total_fees_collected = 0;
+    vault.tracker_tier = tier;
 
     // Initialize policy
     let policy = &mut ctx.accounts.policy;
@@ -113,6 +116,8 @@ pub fn handler(
     // Initialize tracker
     let tracker = &mut ctx.accounts.tracker;
     tracker.vault = vault.key();
+    tracker.tracker_tier = tier;
+    tracker.max_spend_entries = tier.max_spend_entries() as u32;
     tracker.rolling_spends = Vec::new();
     tracker.recent_transactions = Vec::new();
     tracker.bump = ctx.bumps.tracker;

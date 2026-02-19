@@ -131,6 +131,15 @@ impl PolicyConfig {
         self.allowed_tokens.iter().find(|t| t.mint == *mint)
     }
 
+    /// Find an allowed token by mint address and return (index, &AllowedToken)
+    pub fn find_token_with_index(&self, mint: &Pubkey) -> Option<(u8, &AllowedToken)> {
+        self.allowed_tokens
+            .iter()
+            .enumerate()
+            .find(|(_, t)| t.mint == *mint)
+            .map(|(i, t)| (i as u8, t))
+    }
+
     /// Check if a token mint is in the allowed list
     pub fn is_token_allowed(&self, mint: &Pubkey) -> bool {
         self.find_token(mint).is_some()

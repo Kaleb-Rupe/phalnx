@@ -241,7 +241,8 @@ describe("flash-trade-integration", () => {
         3,     // max concurrent positions
         0,     // developer fee rate
         new BN(0), // timelockDuration
-        []     // allowedDestinations
+        [],    // allowedDestinations
+        0, // tracker_tier: Standard
       )
       .accountsPartial({
         owner: owner.publicKey,
@@ -522,7 +523,8 @@ describe("flash-trade-integration", () => {
           3,
           0, // developer fee rate
           new BN(0),
-          []
+          [],
+          0, // tracker_tier: Standard
         )
         .accountsPartial({
           owner: owner.publicKey,
@@ -625,7 +627,8 @@ describe("flash-trade-integration", () => {
           3,
           0, // developer fee rate
           new BN(0),
-          []
+          [],
+          0, // tracker_tier: Standard
         )
         .accountsPartial({
           owner: owner.publicKey,
@@ -678,6 +681,7 @@ describe("flash-trade-integration", () => {
           owner: owner.publicKey,
           vault: disabledVault,
           policy: disabledPolicy,
+          tracker: disabledTracker,
         })
         .rpc();
 
