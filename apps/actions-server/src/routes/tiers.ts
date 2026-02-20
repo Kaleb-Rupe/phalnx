@@ -1,5 +1,9 @@
 import { Hono } from "hono";
-import { TEMPLATES, type TemplateName, type TemplateConfig } from "../lib/templates";
+import {
+  TEMPLATES,
+  type TemplateName,
+  type TemplateConfig,
+} from "../lib/templates";
 
 const tiers = new Hono();
 

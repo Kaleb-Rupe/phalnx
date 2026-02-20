@@ -18,9 +18,7 @@ describe("shield_configure_from_file", () => {
         shield: {
           enabled: true,
           dailyCapUsd: 500,
-          allowedProtocols: [
-            "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",
-          ],
+          allowedProtocols: ["JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"],
           maxLeverageBps: 0,
           rateLimit: 60,
         },

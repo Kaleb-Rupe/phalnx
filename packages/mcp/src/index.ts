@@ -196,9 +196,7 @@ async function main() {
         ),
     },
     async (input) => ({
-      content: [
-        { type: "text", text: await configureFromFile(null, input) },
-      ],
+      content: [{ type: "text", text: await configureFromFile(null, input) }],
     }),
   );
 
