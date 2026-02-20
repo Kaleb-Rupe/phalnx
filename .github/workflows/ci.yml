@@ -146,8 +146,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git diff --quiet README.md .github/workflows/ci.yml CLAUDE.md || \
-            (git add README.md .github/workflows/ci.yml CLAUDE.md && \
+          git diff --quiet README.md .github/workflows/ci.yml || \
+            (git add README.md .github/workflows/ci.yml && \
              git commit -m "chore: update test counts [skip ci]" && \
              git push)
 
@@ -299,10 +299,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Install Rust stable
+      - name: Install Rust 1.89.0 (matches rust-toolchain.toml, needed for lockfile v4)
         uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9 # stable
         with:
-          toolchain: stable
+          toolchain: "1.89.0"
 
       - name: Cache Cargo registry + binaries
         uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
