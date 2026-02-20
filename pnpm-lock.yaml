@@ -18,8 +18,8 @@ importers:
         specifier: ^1.95.0
         version: 1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       flash-sdk:
-        specifier: ^14.0.0
-        version: 14.0.1(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10)
+        specifier: ^14.1.1
+        version: 14.1.1(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10)
     devDependencies:
       '@types/bn.js':
         specifier: ^5.1.5
@@ -331,8 +331,8 @@ importers:
         version: 5.9.3
     optionalDependencies:
       flash-sdk:
-        specifier: ^14.0.0
-        version: 14.0.1(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10)
+        specifier: ^14.1.1
+        version: 14.1.1(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10)
 
   sdk/wrapper:
     dependencies:
@@ -2308,8 +2308,8 @@ packages:
     resolution: {integrity: sha512-78/PXT1wlLLDgTzDs7sjq9hzz0vXD+zn+7wypEe4fXQxCmdmqfGsEPQxmiCSQI3ajFV91bVSsvNtrJRiW6nGng==}
     engines: {node: '>=10'}
 
-  flash-sdk@14.0.1:
-    resolution: {integrity: sha512-jpteFoZqyZtJO8rQqW5J0h1UbKsY14cUouSxtisN2lCPeT4OOMyOJ6bYkncNGBfeEszzBwpekXgcrBcpg6qF6w==}
+  flash-sdk@14.1.1:
+    resolution: {integrity: sha512-J5uO8FLW1J7+EDU7Ws7EQvtglGZOZ01ns01IKAGFQlfTnY4ulwDe1ChtYg3ipO+wiDnEYQK2nj7Y8OI//Ok8yA==}
 
   flat@5.0.2:
     resolution: {integrity: sha512-b6suED+5/3rTpUBdG1gupIl8MPFCAMA0QXwmljLhvCUKcUvdE4gWky9zpuGCcXHOsz4J9wPGNWq6OKpmIzz3hQ==}
@@ -6671,7 +6671,7 @@ snapshots:
       locate-path: 6.0.0
       path-exists: 4.0.0
 
-  flash-sdk@14.0.1(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10):
+  flash-sdk@14.1.1(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10):
     dependencies:
       '@coral-xyz/anchor': 0.32.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@pythnetwork/price-service-client': 1.11.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
