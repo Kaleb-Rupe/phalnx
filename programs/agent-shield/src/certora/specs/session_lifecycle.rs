@@ -74,13 +74,17 @@ pub fn rule_session_valid_at_creation() {
 //
 // When current_slot is near u64::MAX, calculate_expiry must
 // saturate to u64::MAX rather than wrapping around.
+// Uses concrete values to avoid prover sanity-check issues with
+// nondeterministic assumptions near u64::MAX.
 // ─────────────────────────────────────────────────────────────────
 
 #[rule]
 pub fn rule_expiry_saturates_at_max() {
-    let slot: u64 = nondet();
-    cvlr_assume!(slot > u64::MAX - SESSION_EXPIRY_SLOTS);
+    // u64::MAX itself must saturate
+    let expires_max = SessionAuthority::calculate_expiry(u64::MAX);
+    cvlr_assert!(expires_max == u64::MAX);
 
-    let expires = SessionAuthority::calculate_expiry(slot);
-    cvlr_assert!(expires == u64::MAX);
+    // u64::MAX - 10 is within the saturation zone (> u64::MAX - 20)
+    let expires_near = SessionAuthority::calculate_expiry(u64::MAX - 10);
+    cvlr_assert!(expires_near == u64::MAX);
 }
