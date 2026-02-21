@@ -7,7 +7,7 @@
     "url": "https://github.com/Kaleb-Rupe/agentshield/issues",
     "email": "https://t.me/MightyMags"
   },
-  "description": "AgentShield plugin for ElizaOS — shield() wrapper actions, providers, and policy evaluators",
+  "description": "AgentShield plugin for ElizaOS — shieldWallet() wrapper actions, providers, and policy evaluators",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -25,7 +25,7 @@
   },
   "peerDependencies": {
     "@elizaos/core": ">=0.1.0",
-    "@agent-shield/solana": ">=0.1.1",
+    "@agent-shield/sdk": ">=0.1.1",
     "@agent-shield/custody-crossmint": ">=0.1.0",
     "@solana/web3.js": ">=1.90.0"
   },
@@ -37,7 +37,7 @@
   "devDependencies": {
     "typescript": "^5.3.3",
     "@elizaos/core": "^0.1.0",
-    "@agent-shield/solana": "workspace:*",
+    "@agent-shield/sdk": "workspace:*",
     "@agent-shield/custody-crossmint": "workspace:*",
     "@solana/web3.js": "^1.95.0",
     "@types/chai": "^4.3.11",

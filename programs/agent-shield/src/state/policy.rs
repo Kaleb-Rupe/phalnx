@@ -87,7 +87,7 @@ pub struct PolicyConfig {
 
     /// Developer fee rate (rate / 1,000,000). Applied to every finalized
     /// transaction. Fee deducted from vault, transferred to vault's
-    /// fee_destination. Max MAX_DEVELOPER_FEE_RATE (50 = 0.5 BPS).
+    /// fee_destination. Max MAX_DEVELOPER_FEE_RATE (500 = 5 BPS).
     /// Set to 0 for no developer fee. Protocol fee is always applied
     /// separately at PROTOCOL_FEE_RATE.
     pub developer_fee_rate: u16,

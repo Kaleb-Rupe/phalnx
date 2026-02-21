@@ -25,10 +25,10 @@ export * from "./tools";
  *
  * Usage with pre-created wallet:
  * ```ts
- * import { shield } from '@agent-shield/solana';
+ * import { shieldWallet } from '@agent-shield/sdk';
  * import { createAgentShieldPlugin } from '@agent-shield/plugin-solana-agent-kit';
  *
- * const protectedWallet = shield(wallet, { maxSpend: '500 USDC/day' });
+ * const protectedWallet = shieldWallet(wallet, { maxSpend: '500 USDC/day' });
  * const plugin = createAgentShieldPlugin({ wallet: protectedWallet });
  * const agent = new SolanaAgentKit(protectedWallet, RPC_URL, { plugins: [plugin] });
  * ```
@@ -48,10 +48,10 @@ export function createAgentShieldPlugin(config: AgentShieldPluginConfig) {
   return {
     name: "agent-shield",
     description:
-      "AgentShield — Client-side spending controls for AI agents on Solana. " +
+      "AgentShield — On-chain guardrails for AI agents on Solana. " +
       "Provides monitoring tools to check spending status, update policies, " +
       "pause/resume enforcement, and view transaction history. " +
-      "Shield wraps signing transparently.",
+      "Wraps signing transparently with policy enforcement.",
 
     methods: {
       shield_status: {

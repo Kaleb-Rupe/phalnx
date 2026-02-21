@@ -156,8 +156,8 @@ const ERROR_MAP: Record<number, ErrorInfo> = {
   6021: {
     code: 6021,
     name: "DeveloperFeeTooHigh",
-    message: "Developer fee rate exceeds maximum (50 / 1,000,000 = 0.5 BPS)",
-    suggestion: "Set developerFeeRate to 50 or less (maximum 0.005%).",
+    message: "Developer fee rate exceeds maximum (500 / 1,000,000 = 5 BPS)",
+    suggestion: "Set developerFeeRate to 500 or less (maximum 0.05%).",
   },
   6022: {
     code: 6022,

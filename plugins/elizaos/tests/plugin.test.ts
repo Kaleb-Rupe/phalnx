@@ -55,7 +55,7 @@ describe("ElizaOS Plugin", () => {
   describe("plugin definition", () => {
     it("has correct name and description", () => {
       expect(agentShieldPlugin.name).to.equal("agent-shield");
-      expect(agentShieldPlugin.description).to.include("spending controls");
+      expect(agentShieldPlugin.description).to.include("guardrails");
     });
 
     it("has 5 actions", () => {

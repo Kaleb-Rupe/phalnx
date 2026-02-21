@@ -452,9 +452,9 @@ describe("@agent-shield/custody-crossmint", () => {
     });
   });
 
-  // ---- shield() Compatibility ---------------------------------------------
+  // ---- shieldWallet() Compatibility ----------------------------------------
 
-  describe("shield() compatibility", () => {
+  describe("shieldWallet() compatibility", () => {
     it("CrossmintWallet satisfies WalletLike interface shape", async () => {
       const client = createMockClient();
       const wallet = await CrossmintWallet.create({ apiKey: "sk_test" }, client);

@@ -4,7 +4,7 @@
 ![Tests](https://img.shields.io/badge/tests-591-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-Financial guardrails for AI agents on Solana — spending caps, protocol whitelists, oracle-priced limits, timelocked policy changes, and kill switches.
+On-chain guardrails for AI agents on Solana. Your policies are enforced by Solana validators, not software promises.
 
 ## The Problem
 
@@ -12,7 +12,24 @@ Every AI agent on Solana today operates with unrestricted wallet access. Framewo
 
 ## The Solution
 
-AgentShield is a Solana program that holds agent funds in PDA vaults and validates every transaction against configurable policies before it reaches DeFi protocols. Owners set the rules, agents operate within them, and a complete audit trail is maintained on-chain.
+AgentShield wraps your agent's wallet with on-chain policy enforcement. One call gives you client-side fast deny, TEE key custody, and on-chain vault enforcement — bundled as one product.
+
+```typescript
+import { withVault } from "@agent-shield/sdk";
+
+const result = await withVault(teeWallet, { maxSpend: "500 USDC/day" }, {
+  connection,
+});
+// result.wallet is ready — policies enforced by Solana validators
+```
+
+### Security Model
+
+AgentShield provides three layers of protection in a single integration:
+
+1. **Client-side policy checks** — fast deny before transactions hit the network
+2. **TEE key custody** — agent private keys stored in hardware enclaves (Crossmint, Turnkey, Privy)
+3. **On-chain vault enforcement** — PDA vaults with cryptographic policy guarantees enforced by Solana validators
 
 ### Key Features
 
@@ -24,7 +41,7 @@ AgentShield is a Solana program that holds agent funds in PDA vaults and validat
 - **Agent transfers** — destination-allowlisted token transfers initiated by agents
 - **Kill switch** — owner can freeze any vault instantly, revoking all agent permissions
 - **On-chain audit trail** — every action emits Anchor events; last 50 txs stored on-chain
-- **MCP server** — 23 tools + 3 resources for Claude Desktop, Cursor, and any MCP client
+- **MCP server** — 22 tools + 3 resources for Claude Desktop, Cursor, and any MCP client
 - **OpenClaw skill** — AI agent skill for autonomous vault management
 - **Solana Actions/Blinks** — provision vaults via shareable action URLs
 
@@ -48,7 +65,7 @@ All instructions succeed or all revert atomically. The agent's signing key is va
 | ----------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | **AgentVault**          | `[b"vault", owner, vault_id]`            | Holds owner/agent pubkeys, status, fee destination                                                 |
 | **PolicyConfig**        | `[b"policy", vault]`                     | Spending caps, token/protocol whitelists, leverage limits, timelock duration, allowed destinations |
-| **SpendTracker**        | `[b"tracker", vault]`                    | Tiered rolling 24h spend entries (Standard/Pro/Max: 200/500/1000), bounded audit log (max 50 txs)  |
+| **SpendTracker**        | `[b"tracker", vault]`                    | Configurable-capacity rolling 24h spend entries (Standard/Pro/Max: 200/500/1000), bounded audit log (max 50 txs)  |
 | **SessionAuthority**    | `[b"session", vault, agent, token_mint]` | Ephemeral PDA created per action, expires after 20 slots                                           |
 | **PendingPolicyUpdate** | `[b"pending_policy", vault]`             | Queued policy change with timelock, applied after delay                                            |
 
@@ -76,77 +93,43 @@ All instructions succeed or all revert atomically. The agent's signing key is va
 | Package                                                               | Description                                                          | npm                                                                                                                                               |
 | --------------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`@agent-shield/core`](./sdk/core)                                    | Pure TypeScript policy engine — zero blockchain dependencies         | [![npm](https://img.shields.io/npm/v/@agent-shield/core)](https://www.npmjs.com/package/@agent-shield/core)                                       |
-| [`@agent-shield/solana`](./sdk/wrapper)                               | Client-side wallet wrapper — 3 lines to protect any Solana agent     | [![npm](https://img.shields.io/npm/v/@agent-shield/solana)](https://www.npmjs.com/package/@agent-shield/solana)                                   |
-| [`@agent-shield/sdk`](./sdk/typescript)                               | On-chain vault SDK — Anchor-based, Jupiter & Flash Trade composition | [![npm](https://img.shields.io/npm/v/@agent-shield/sdk)](https://www.npmjs.com/package/@agent-shield/sdk)                                         |
+| [`@agent-shield/sdk`](./sdk/typescript)                               | On-chain guardrails — `withVault()` primary API                      | [![npm](https://img.shields.io/npm/v/@agent-shield/sdk)](https://www.npmjs.com/package/@agent-shield/sdk)                                         |
+| [`@agent-shield/solana`](./sdk/wrapper)                               | Deprecated shim — re-exports from `@agent-shield/sdk`                | [![npm](https://img.shields.io/npm/v/@agent-shield/solana)](https://www.npmjs.com/package/@agent-shield/solana)                                   |
 | [`@agent-shield/platform`](./sdk/platform)                            | Platform client — request TEE wallet provisioning via Solana Actions | [![npm](https://img.shields.io/npm/v/@agent-shield/platform)](https://www.npmjs.com/package/@agent-shield/platform)                               |
 | [`@agent-shield/custody-crossmint`](./sdk/custody/crossmint)          | Crossmint TEE custody adapter — hardware-enclave signing             | [![npm](https://img.shields.io/npm/v/@agent-shield/custody-crossmint)](https://www.npmjs.com/package/@agent-shield/custody-crossmint)             |
-| [`@agent-shield/mcp`](./packages/mcp)                                 | MCP server — 23 tools, 3 resources for AI tool management            | [![npm](https://img.shields.io/npm/v/@agent-shield/mcp)](https://www.npmjs.com/package/@agent-shield/mcp)                                         |
+| [`@agent-shield/mcp`](./packages/mcp)                                 | MCP server — 22 tools, 3 resources for AI tool management            | [![npm](https://img.shields.io/npm/v/@agent-shield/mcp)](https://www.npmjs.com/package/@agent-shield/mcp)                                         |
 | [`@agent-shield/plugin-solana-agent-kit`](./plugins/solana-agent-kit) | Solana Agent Kit plugin — 5 monitoring/management tools              | [![npm](https://img.shields.io/npm/v/@agent-shield/plugin-solana-agent-kit)](https://www.npmjs.com/package/@agent-shield/plugin-solana-agent-kit) |
 | [`@agent-shield/plugin-elizaos`](./plugins/elizaos)                   | ElizaOS plugin — 5 actions, 2 providers, 1 evaluator                 | [![npm](https://img.shields.io/npm/v/@agent-shield/plugin-elizaos)](https://www.npmjs.com/package/@agent-shield/plugin-elizaos)                   |
 
 ## Quick Start
 
-### Level 1: Client-Side Wrapper (Zero Friction)
+### SDK Integration
 
 ```bash
-npm install @agent-shield/solana
+npm install @agent-shield/sdk
 ```
 
 ```typescript
-import { shield } from "@agent-shield/solana";
+import { withVault } from "@agent-shield/sdk";
 
-// Wrap any wallet in 1 line — secure defaults applied automatically
-const protectedWallet = shield(wallet, { maxSpend: "500 USDC/day" });
+// One call = full protection (client-side + TEE + on-chain vault)
+const result = await withVault(teeWallet, { maxSpend: "500 USDC/day" }, {
+  connection,
+});
 
-// Use it like a normal wallet — shield enforces policies transparently
-const agent = new SolanaAgentKit(protectedWallet, RPC_URL, config);
+// Use it like a normal wallet — policies enforced transparently
+const agent = new SolanaAgentKit(result.wallet, RPC_URL, config);
 ```
 
-### Level 2: On-Chain Vault (Cryptographic Guarantees)
-
-```bash
-npm install @agent-shield/sdk @coral-xyz/anchor @solana/web3.js
-```
-
+For devnet testing without TEE:
 ```typescript
-import { AgentShieldClient } from "@agent-shield/sdk";
-import { Connection, Keypair, PublicKey } from "@solana/web3.js";
-import { Wallet, BN } from "@coral-xyz/anchor";
-
-const connection = new Connection("https://api.devnet.solana.com");
-const wallet = new Wallet(ownerKeypair);
-const client = new AgentShieldClient(connection, wallet);
-
-// Create a vault with oracle-priced token limits
-const sig = await client.createVault({
-  vaultId: new BN(1),
-  dailySpendingCapUsd: new BN(500_000_000), // $500 (6 decimals)
-  maxTransactionSizeUsd: new BN(100_000_000), // $100 per tx
-  allowedTokens: [
-    {
-      mint: USDC_MINT,
-      oracleFeed: PublicKey.default, // stablecoin — 1:1 USD
-      decimals: 6,
-      dailyCapBase: new BN(0),
-      maxTxBase: new BN(0),
-    },
-    {
-      mint: SOL_MINT,
-      oracleFeed: PYTH_SOL_USD_FEED, // oracle-priced via Pyth
-      decimals: 9,
-      dailyCapBase: new BN(0),
-      maxTxBase: new BN(0),
-    },
-  ],
-  allowedProtocols: [JUPITER_PROGRAM_ID],
-  maxLeverageBps: 0,
-  maxConcurrentPositions: 0,
-  feeDestination: feeWallet.publicKey,
-  trackerTier: 0, // 0=Standard (200 entries), 1=Pro (500), 2=Max (1000)
+const result = await withVault(wallet, { maxSpend: "500 USDC/day" }, {
+  connection,
+  unsafeSkipTeeCheck: true,
 });
 ```
 
-### Level 3: MCP Server (Claude Desktop / Cursor)
+### MCP Server (Claude Desktop / Cursor)
 
 Add to your Claude Desktop config (`claude_desktop_config.json`):
 
@@ -165,7 +148,7 @@ Add to your Claude Desktop config (`claude_desktop_config.json`):
 }
 ```
 
-Then ask Claude: _"Create an AgentShield vault with a $500/day USDC spending cap"_
+Then ask Claude: _"Set up AgentShield"_
 
 ## Program
 
@@ -192,7 +175,7 @@ RUSTUP_TOOLCHAIN=nightly anchor idl build -o target/idl/agent_shield.json
 npx ts-mocha -p ./tsconfig.json -t 300000 \
   tests/agent-shield.ts tests/jupiter-integration.ts tests/flash-trade-integration.ts
 
-# Run all TypeScript tests (470 tests across 9 suites)
+# Run all TypeScript tests (470 tests across 8 suites)
 pnpm -r run test
 
 # Lint
@@ -210,14 +193,13 @@ cargo fmt --check --manifest-path programs/agent-shield/Cargo.toml
 | Oracle + delegation + timelock + transfers           |      25 |
 | Security exploit scenarios                           |      28 |
 | Core policy engine (`@agent-shield/core`)            |      66 |
-| SDK type & account tests (`@agent-shield/sdk`)       |      31 |
+| SDK tests (`@agent-shield/sdk`)                      |     135 |
 | Platform client tests (`@agent-shield/platform`)     |      17 |
 | Crossmint custody adapter                            |      29 |
-| Wrapper SDK (`@agent-shield/solana`)                 |      96 |
 | SAK plugin (`@agent-shield/plugin-solana-agent-kit`) |      25 |
 | ElizaOS plugin (`@agent-shield/plugin-elizaos`)      |      32 |
-| MCP server (`@agent-shield/mcp`)                     |     124 |
-| Actions server (`@agent-shield/actions-server`)      |      50 |
+| MCP server (`@agent-shield/mcp`)                     |     118 |
+| Actions server (`@agent-shield/actions-server`)      |      48 |
 | **Total**                                            | **591** |
 
 ## Security

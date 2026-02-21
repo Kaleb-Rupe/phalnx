@@ -43,7 +43,7 @@ describe("shield_setup_status", () => {
     expect(result).to.include("Set up AgentShield");
   });
 
-  it("reports Tier 1 when only shield is enabled", async () => {
+  it("reports partially configured when only shield is enabled", async () => {
     const config = {
       version: 1,
       layers: {
@@ -72,13 +72,13 @@ describe("shield_setup_status", () => {
     );
 
     const result = await setupStatus(null, {});
-    expect(result).to.include("Current Tier:** 1");
-    expect(result).to.include("Shield Layer");
+    expect(result).to.include("Partially configured");
+    expect(result).to.include("Policy Configuration");
     expect(result).to.include("$500");
     expect(result).to.include("devnet");
   });
 
-  it("reports Tier 2 when TEE is enabled", async () => {
+  it("reports TEE custody details when TEE is enabled", async () => {
     const config = {
       version: 1,
       layers: {
@@ -111,12 +111,11 @@ describe("shield_setup_status", () => {
     );
 
     const result = await setupStatus(null, {});
-    expect(result).to.include("Current Tier:** 2");
-    expect(result).to.include("TEE Layer");
+    expect(result).to.include("TEE Custody");
     expect(result).to.include("test-locator");
   });
 
-  it("reports Tier 3 when vault is enabled", async () => {
+  it("reports fully configured when all layers enabled", async () => {
     const config = {
       version: 1,
       layers: {
@@ -154,13 +153,13 @@ describe("shield_setup_status", () => {
     );
 
     const result = await setupStatus(null, {});
-    expect(result).to.include("Current Tier:** 3");
-    expect(result).to.include("Vault Layer");
+    expect(result).to.include("Fully configured");
+    expect(result).to.include("On-Chain Vault");
     expect(result).to.include("vault-address-123");
     expect(result).to.include("mainnet-beta");
   });
 
-  it("suggests upgrade when not at max tier", async () => {
+  it("suggests running shield_configure when not fully configured", async () => {
     const config = {
       version: 1,
       layers: {
@@ -189,7 +188,7 @@ describe("shield_setup_status", () => {
     );
 
     const result = await setupStatus(null, {});
-    expect(result).to.include("Recommended Upgrade");
-    expect(result).to.include("TEE custody");
+    expect(result).to.include("Setup Incomplete");
+    expect(result).to.include("shield_configure");
   });
 });

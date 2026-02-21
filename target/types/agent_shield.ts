@@ -10,7 +10,7 @@ export type AgentShield = {
     "name": "agentShield",
     "version": "0.1.0",
     "spec": "0.1.0",
-    "description": "AI Agent Financial Middleware for Solana - Permission controls, spending limits, and audit infrastructure for autonomous agents"
+    "description": "On-chain guardrails for AI agents on Solana - Permission controls, spending limits, and audit infrastructure for autonomous agents"
   },
   "instructions": [
     {

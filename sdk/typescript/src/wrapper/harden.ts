@@ -7,6 +7,7 @@ import {
   AddressLookupTableAccount,
 } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
+import { BN, AnchorProvider, Program } from "@coral-xyz/anchor";
 import { ShieldedWallet, WalletLike, isTeeWallet } from "./shield";
 import { ResolvedPolicies, TransactionAnalysis } from "./policies";
 import { ShieldDeniedError, TeeRequiredError } from "./errors";
@@ -19,10 +20,13 @@ import { evaluatePolicy, recordTransaction } from "./engine";
 import { ShieldState } from "./state";
 import { shield } from "./shield";
 import type { ShieldPolicies, SpendingSummary } from "./policies";
+import { AgentShieldClient } from "../client";
+import { getVaultPDA, getPolicyPDA } from "../accounts";
+import { composePermittedTransaction } from "../composer";
+import { IDL } from "../idl-json";
 
 /**
  * Configuration for hardening a shielded wallet to on-chain enforcement.
- * Requires @agent-shield/sdk as a peer dependency.
  */
 export interface HardenOptions {
   /** Solana RPC connection */
@@ -61,22 +65,6 @@ export interface HardenResult {
   vaultId: number;
   /** The policy PDA address */
   policyAddress: PublicKey;
-}
-
-// Lazy-loaded SDK module reference
-type VaultSDK = typeof import("@agent-shield/sdk");
-
-/**
- * Load the vault SDK dynamically. Throws a clear error if not installed.
- */
-async function loadVaultSDK(): Promise<VaultSDK> {
-  try {
-    return await import("@agent-shield/sdk");
-  } catch {
-    throw new Error(
-      "harden() requires @agent-shield/sdk. Install it with: npm install @agent-shield/sdk",
-    );
-  }
 }
 
 /**
@@ -160,14 +148,12 @@ export function mapPoliciesToVaultParams(
  * Returns 0 for a new owner, or the first unused ID.
  */
 export async function findNextVaultId(
-  sdk: VaultSDK,
   connection: Connection,
   ownerPubkey: PublicKey,
   programId?: PublicKey,
 ): Promise<number> {
   for (let id = 0; id <= 255; id++) {
-    const BN = (await import("@coral-xyz/anchor")).BN;
-    const [vaultPda] = sdk.getVaultPDA(ownerPubkey, new BN(id), programId);
+    const [vaultPda] = getVaultPDA(ownerPubkey, new BN(id), programId);
     const account = await connection.getAccountInfo(vaultPda);
     if (!account) {
       return id;
@@ -222,7 +208,6 @@ function inferTargetProtocol(analysis: TransactionAnalysis): PublicKey {
  */
 function createHardenedWallet(
   original: ShieldedWallet,
-  sdk: VaultSDK,
   vaultAddress: PublicKey,
   ownerPubkey: PublicKey,
   vaultId: number,
@@ -291,19 +276,16 @@ function createHardenedWallet(
       const amount = inferAmount(analysis);
       const targetProtocol = inferTargetProtocol(analysis);
 
-      const { BN } = await import("@coral-xyz/anchor");
-
       const vaultTokenAccount = getAssociatedTokenAddressSync(
         tokenMint,
         vaultAddress,
         true,
       );
 
-      const composedTx = await sdk.composePermittedTransaction(
-        // We need a Program instance — create a minimal client
-        // The SDK's composePermittedTransaction needs program + connection
-        // We'll use the lower-level compose function
-        await createProgram(sdk, connection, innerWallet, programId),
+      const program = createProgram(connection, innerWallet, programId);
+
+      const composedTx = await composePermittedTransaction(
+        program,
         connection,
         {
           vault: vaultAddress,
@@ -363,20 +345,18 @@ function createHardenedWallet(
 }
 
 /**
- * Create a Program instance for the vault SDK.
+ * Create a Program instance for vault operations.
  * Uses the inner wallet as the signer.
  */
-async function createProgram(
-  sdk: VaultSDK,
+function createProgram(
   connection: Connection,
   wallet: WalletLike,
   programId?: PublicKey,
-): Promise<any> {
-  const { AnchorProvider, Program } = await import("@coral-xyz/anchor");
+): any {
   const provider = new AnchorProvider(connection, wallet as any, {
     commitment: "confirmed",
   });
-  const idl = { ...sdk.IDL } as any;
+  const idl = { ...IDL } as any;
   if (programId) {
     idl.address = programId.toBase58();
   }
@@ -406,14 +386,9 @@ function toAnchorWallet(wallet: WalletLike): any {
  * and configures policies matching the wrapper config. Requires a TEE-backed
  * wallet unless unsafeSkipTeeCheck is set (devnet only).
  *
- * Requires @agent-shield/sdk to be installed:
- * ```
- * npm install @agent-shield/sdk
- * ```
- *
  * @example
  * ```typescript
- * import { withVault } from '@agent-shield/solana';
+ * import { withVault } from '@agent-shield/sdk';
  *
  * const result = await withVault(teeWallet, { maxSpend: '500 USDC/day' }, {
  *   connection,
@@ -425,8 +400,6 @@ export async function harden(
   shieldedWallet: ShieldedWallet,
   options: HardenOptions,
 ): Promise<HardenResult> {
-  const sdk = await loadVaultSDK();
-
   // Resolve owner: use provided wallet or auto-generate a keypair
   let ownerKeypair: Keypair | undefined;
   let ownerWallet: WalletLike;
@@ -467,7 +440,7 @@ export async function harden(
   }
 
   // Create client with owner wallet (owner signs vault creation + agent registration)
-  const client = new sdk.AgentShieldClient(
+  const client = new AgentShieldClient(
     options.connection,
     toAnchorWallet(ownerWallet),
     options.programId,
@@ -477,7 +450,6 @@ export async function harden(
   const vaultId =
     options.vaultId ??
     (await findNextVaultId(
-      sdk,
       options.connection,
       ownerPubkey,
       options.programId,
@@ -497,7 +469,6 @@ export async function harden(
   );
 
   // Convert bigints to BN and wrap tokens as AllowedToken for the SDK
-  const { BN } = await import("@coral-xyz/anchor");
   const vaultParams = {
     vaultId: new BN(mapped.vaultId),
     dailySpendingCapUsd: new BN(mapped.dailySpendingCap.toString()),
@@ -544,7 +515,6 @@ export async function harden(
   // Build hardened wallet with dual enforcement
   const wallet = createHardenedWallet(
     shieldedWallet,
-    sdk,
     vaultAddress,
     ownerPubkey,
     vaultId,
@@ -569,7 +539,7 @@ export async function harden(
  *
  * @example
  * ```typescript
- * import { withVault } from '@agent-shield/solana';
+ * import { withVault } from '@agent-shield/sdk';
  *
  * // Simplest path: bring your TEE wallet
  * const result = await withVault(teeWallet, { maxSpend: '500 USDC/day' }, {
@@ -590,4 +560,16 @@ export async function withVault(
 ): Promise<HardenResult> {
   const shielded = shield(wallet, policies);
   return harden(shielded, options);
+}
+
+/**
+ * Public API for client-side-only shielding (no on-chain vault).
+ * For most users, prefer withVault() for full enforcement.
+ */
+export function shieldWallet(
+  wallet: WalletLike,
+  policies?: ShieldPolicies,
+  options?: import("./shield").ShieldOptions,
+): ShieldedWallet {
+  return shield(wallet, policies, options);
 }

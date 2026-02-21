@@ -1,13 +1,13 @@
 import {
-  shield,
+  shieldWallet,
   type ShieldedWallet,
   type WalletLike,
   type ShieldPolicies,
   type ShieldOptions,
-} from "@agent-shield/solana";
+} from "@agent-shield/sdk";
 
 export interface FactoryConfig {
-  /** Raw wallet to wrap with shield(). */
+  /** Raw wallet to wrap with shieldWallet(). */
   wallet: WalletLike;
   /** Shield policies (string shorthand or full config). */
   policies?: ShieldPolicies;
@@ -62,5 +62,5 @@ export function createShieldedWallet(config: FactoryConfig): ShieldedWallet {
     },
   };
 
-  return shield(config.wallet, config.policies, options);
+  return shieldWallet(config.wallet, config.policies, options);
 }

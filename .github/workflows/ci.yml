@@ -2,7 +2,7 @@
 #
 # Runs on every push to main and on pull requests.
 # Six parallel jobs:
-#   1. build-lint-test        — TypeScript builds, Prettier (10 packages), 470 TS tests across 9 suites
+#   1. build-lint-test        — TypeScript builds, Prettier (10 packages), 470 TS tests across 8 suites
 #   2. rust-checks            — cargo fmt + cargo clippy
 #   3. on-chain-tests         — Anchor build + LiteSVM in-process + 121 on-chain tests (93 + 28 security exploits)
 #   4. security-scan          — Sec3 X-Ray static analysis
@@ -35,7 +35,7 @@ env:
 
 jobs:
   # ──────────────────────────────────────────────────────────────
-  # Job 1: TypeScript build, lint, and tests (9 suites, 470 tests)
+  # Job 1: TypeScript build, lint, and tests (8 suites, 470 tests)
   # ──────────────────────────────────────────────────────────────
   build-lint-test:
     name: Build, Lint & TS Tests
@@ -87,7 +87,7 @@ jobs:
         working-directory: sdk/core
         run: pnpm test
 
-      - name: SDK type & account tests (31 tests)
+      - name: SDK tests (135 tests)
         working-directory: sdk/typescript
         run: pnpm test
 
@@ -99,10 +99,6 @@ jobs:
         working-directory: sdk/custody/crossmint
         run: pnpm test
 
-      - name: Wrapper tests (96 tests)
-        working-directory: sdk/wrapper
-        run: pnpm test
-
       - name: SAK plugin tests (25 tests)
         working-directory: plugins/solana-agent-kit
         run: pnpm test
@@ -111,11 +107,11 @@ jobs:
         working-directory: plugins/elizaos
         run: pnpm test
 
-      - name: MCP server tests (124 tests)
+      - name: MCP server tests (118 tests)
         working-directory: packages/mcp
         run: pnpm test
 
-      - name: Actions server tests (50 tests)
+      - name: Actions server tests (48 tests)
         working-directory: apps/actions-server
         run: pnpm test
 
@@ -126,7 +122,7 @@ jobs:
           echo "Branch: ${{ github.ref_name }}" >> test-summary.txt
           echo "Commit: ${{ github.sha }}" >> test-summary.txt
           echo "---" >> test-summary.txt
-          echo "All 9 TypeScript test suites executed." >> test-summary.txt
+          echo "All 8 TypeScript test suites executed." >> test-summary.txt
           echo "See individual step logs for detailed output." >> test-summary.txt
 
       - name: Upload test summary

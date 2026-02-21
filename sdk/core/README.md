@@ -2,7 +2,7 @@
 
 Pure TypeScript policy engine for AI agent spending controls. Zero blockchain dependencies.
 
-`@agent-shield/core` is the foundational policy engine that powers all AgentShield packages. It provides spending caps, rate limiting, protocol allowlists, and transaction analysis in a framework-agnostic, chain-agnostic core. Use it directly if you're building a custom integration, or let higher-level packages like `@agent-shield/solana` consume it automatically.
+`@agent-shield/core` is the foundational policy engine that powers all AgentShield packages. It provides spending caps, rate limiting, protocol allowlists, and transaction analysis in a framework-agnostic, chain-agnostic core. Use it directly if you're building a custom integration, or let higher-level packages like `@agent-shield/sdk` consume it automatically.
 
 ## Installation
 
@@ -282,8 +282,7 @@ interface TokenTransfer {
 └── errors.ts      — ShieldDeniedError, ShieldConfigError
 
 Used by:
-├── @agent-shield/solana   — Solana wallet wrapper
-├── @agent-shield/sdk      — On-chain vault SDK
+├── @agent-shield/sdk      — On-chain guardrails (primary package)
 └── (your custom integration)
 ```
 
@@ -294,7 +293,7 @@ Used by:
 - Testing policy logic in isolation
 - Building framework integrations beyond Solana Agent Kit and ElizaOS
 
-For Solana-specific integrations, use `@agent-shield/solana` which wraps this package with Solana transaction analysis and wallet signing.
+For Solana-specific integrations, use `@agent-shield/sdk` which wraps this package with Solana transaction analysis and wallet signing.
 
 ## Support
 

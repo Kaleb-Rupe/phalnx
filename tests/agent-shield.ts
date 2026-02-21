@@ -837,7 +837,7 @@ describe("agent-shield", () => {
     });
 
     it("finalizes a session and records audit log", async () => {
-      // Protocol fee = 50_000_000 * 20 / 1_000_000 = 1000 (> 0), so we need token accounts
+      // Protocol fee = 50_000_000 * 200 / 1_000_000 = 10_000 (> 0), so we need token accounts
       await program.methods
         .finalizeSession(true)
         .accounts({
@@ -1337,7 +1337,7 @@ describe("agent-shield", () => {
       expect(policy.developerFeeRate).to.equal(30);
     });
 
-    it("init vault with developer_fee_rate 51 → rejects DeveloperFeeTooHigh", async () => {
+    it("init vault with developer_fee_rate 501 → rejects DeveloperFeeTooHigh", async () => {
       const badVaultId = new BN(31);
       const [bv] = PublicKey.findProgramAddressSync(
         [Buffer.from("vault"), owner.publicKey.toBuffer(), badVaultId.toArrayLike(Buffer, "le", 8)],
@@ -1354,7 +1354,7 @@ describe("agent-shield", () => {
 
       try {
         await program.methods
-          .initializeVault(badVaultId, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 51, new BN(0), [], 0)
+          .initializeVault(badVaultId, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 501, new BN(0), [], 0)
           .accounts({
             owner: owner.publicKey,
             vault: bv,
@@ -1400,10 +1400,10 @@ describe("agent-shield", () => {
       expect(policy.developerFeeRate).to.equal(30);
     });
 
-    it("update_policy with developer_fee_rate 51 → rejects", async () => {
+    it("update_policy with developer_fee_rate 501 → rejects", async () => {
       try {
         await program.methods
-          .updatePolicy(null, null, null, null, null, null, null, 51, null, null)
+          .updatePolicy(null, null, null, null, null, null, null, 501, null, null)
           .accounts({
             owner: owner.publicKey,
             vault: feeVaultPda,
@@ -1483,7 +1483,7 @@ describe("agent-shield", () => {
         .signers([agent])
         .rpc();
 
-      // protocol_fee = 10_000_000 * 20 / 1_000_000 = 200 (> 0), needs token accounts
+      // protocol_fee = 10_000_000 * 200 / 1_000_000 = 2_000 (> 0), needs token accounts
       await program.methods
         .finalizeSession(true)
         .accounts({
@@ -1509,10 +1509,10 @@ describe("agent-shield", () => {
       expect(vault.totalFeesCollected.toNumber()).to.equal(0);
     });
 
-    it("finalize with developer_fee=50 → both fees transferred", async () => {
-      // Set developer fee to 50 (max, 0.5 BPS)
+    it("finalize with developer_fee=500 → both fees transferred", async () => {
+      // Set developer fee to 500 (max, 5 BPS)
       await program.methods
-        .updatePolicy(null, null, null, null, null, null, null, 50, null, null)
+        .updatePolicy(null, null, null, null, null, null, null, 500, null, null)
         .accounts({
           owner: owner.publicKey,
           vault: feeVaultPda,
@@ -1584,9 +1584,9 @@ describe("agent-shield", () => {
         .signers([agent])
         .rpc();
 
-      // developer fee = 10_000_000 * 50 / 1_000_000 = 500
+      // developer fee = 10_000_000 * 500 / 1_000_000 = 5000
       const vault = await program.account.agentVault.fetch(feeVaultPda);
-      expect(vault.totalFeesCollected.toNumber()).to.equal(500);
+      expect(vault.totalFeesCollected.toNumber()).to.equal(5000);
     });
 
     it("finalize with success=false → no fees", async () => {
@@ -1645,7 +1645,7 @@ describe("agent-shield", () => {
       expect(vault.totalFeesCollected.toNumber()).to.equal(feesBefore);
     });
 
-    it("init vault with developer_fee_rate at max (50) succeeds", async () => {
+    it("init vault with developer_fee_rate at max (500) succeeds", async () => {
       const maxFeeVaultId = new BN(32);
       const [mv] = PublicKey.findProgramAddressSync(
         [Buffer.from("vault"), owner.publicKey.toBuffer(), maxFeeVaultId.toArrayLike(Buffer, "le", 8)],
@@ -1661,7 +1661,7 @@ describe("agent-shield", () => {
       );
 
       await program.methods
-        .initializeVault(maxFeeVaultId, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 50, new BN(0), [], 0)
+        .initializeVault(maxFeeVaultId, new BN(1000), new BN(1000), [] as any[], [], new BN(0) as any, 1, 500, new BN(0), [], 0)
         .accounts({
           owner: owner.publicKey,
           vault: mv,
@@ -1673,7 +1673,7 @@ describe("agent-shield", () => {
         .rpc();
 
       const policy = await program.account.policyConfig.fetch(mp);
-      expect(policy.developerFeeRate).to.equal(50);
+      expect(policy.developerFeeRate).to.equal(500);
     });
   });
 
@@ -2589,7 +2589,7 @@ describe("agent-shield", () => {
         program.programId
       );
 
-      // protocol_fee = 1 * 20 / 1_000_000 = 0
+      // protocol_fee = 1 * 200 / 1_000_000 = 0
       await program.methods
         .validateAndAuthorize(
           { swap: {} },
@@ -2638,18 +2638,18 @@ describe("agent-shield", () => {
       expect(Number(vaultBalAfter)).to.equal(Number(vaultBalBefore));
     });
 
-    it("amount = 49999 → fee = 0; amount = 50000 → fee = 1", async () => {
+    it("amount = 4999 → fee = 0; amount = 5000 → fee = 1", async () => {
       const [sessionPda] = PublicKey.findProgramAddressSync(
         [Buffer.from("session"), feeEdgeVaultPda.toBuffer(), feeEdgeAgent.publicKey.toBuffer(), usdcMint.toBuffer()],
         program.programId
       );
 
-      // Test amount = 49999: protocol_fee = 49999 * 20 / 1_000_000 = 0 (integer division)
+      // Test amount = 4999: protocol_fee = 4999 * 200 / 1_000_000 = 0 (integer division)
       await program.methods
         .validateAndAuthorize(
           { swap: {} },
           usdcMint,
-          new BN(49_999),
+          new BN(4_999),
           jupiterProgramId,
           null
         )
@@ -2686,12 +2686,12 @@ describe("agent-shield", () => {
         .signers([feeEdgeAgent])
         .rpc();
 
-      // Test amount = 50000: protocol_fee = 50000 * 20 / 1_000_000 = 1
+      // Test amount = 5000: protocol_fee = 5000 * 200 / 1_000_000 = 1
       await program.methods
         .validateAndAuthorize(
           { swap: {} },
           usdcMint,
-          new BN(50_000),
+          new BN(5_000),
           jupiterProgramId,
           null
         )
@@ -3913,10 +3913,10 @@ describe("agent-shield", () => {
         .signers([destAgent])
         .rpc();
 
-      // Transfer is net of fees — protocol fee = 10_000_000 * 20 / 1_000_000 = 200
-      // developer fee = 0 (rate is 0), so net = 10_000_000 - 200 = 9_999_800
+      // Transfer is net of fees — protocol fee = 10_000_000 * 200 / 1_000_000 = 2_000
+      // developer fee = 0 (rate is 0), so net = 10_000_000 - 2_000 = 9_998_000
       const balAfter = getTokenBalance(svm, allowedDestAta);
-      expect(Number(balAfter) - Number(balBefore)).to.equal(9_999_800);
+      expect(Number(balAfter) - Number(balBefore)).to.equal(9_998_000);
     });
 
     it("agent_transfer to non-allowed destination fails", async () => {
@@ -4152,7 +4152,7 @@ describe("agent-shield", () => {
         .initializeVault(
           feeDestVaultId, new BN(500_000_000), new BN(100_000_000),
           [makeAllowedToken(usdcMint)], [jupiterProgramId],
-          new BN(0) as any, 3, 50, // developer_fee_rate = 50 (0.5 BPS)
+          new BN(0) as any, 3, 500, // developer_fee_rate = 500 (5 BPS)
           new BN(0), [],
           0, // tracker_tier: Standard
         )
@@ -4196,9 +4196,9 @@ describe("agent-shield", () => {
       const destBalBefore = getTokenBalance(svm, allowedDestAta);
 
       // Transfer 10 USDC with fees
-      // protocol_fee = 10_000_000 * 20 / 1_000_000 = 200
-      // developer_fee = 10_000_000 * 50 / 1_000_000 = 500
-      // net = 10_000_000 - 200 - 500 = 9_999_300
+      // protocol_fee = 10_000_000 * 200 / 1_000_000 = 2_000
+      // developer_fee = 10_000_000 * 500 / 1_000_000 = 5_000
+      // net = 10_000_000 - 2_000 - 5_000 = 9_993_000
       await program.methods
         .agentTransfer(new BN(10_000_000))
         .accounts({
@@ -4216,11 +4216,11 @@ describe("agent-shield", () => {
         .rpc();
 
       const destBalAfter = getTokenBalance(svm, allowedDestAta);
-      expect(Number(destBalAfter) - Number(destBalBefore)).to.equal(9_999_300);
+      expect(Number(destBalAfter) - Number(destBalBefore)).to.equal(9_993_000);
 
-      // Check vault fees
+      // Check vault fees (developer fee only)
       const vault = await program.account.agentVault.fetch(fv);
-      expect(vault.totalFeesCollected.toNumber()).to.equal(500);
+      expect(vault.totalFeesCollected.toNumber()).to.equal(5_000);
     });
   });
 });

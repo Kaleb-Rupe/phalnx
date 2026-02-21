@@ -8,12 +8,12 @@ describe("Client — calculateFees", () => {
       new BN(1_000_000),
       10
     );
-    // protocolFee = 1_000_000 * 20 / 1_000_000 = 20
-    expect(result.protocolFee.toNumber()).to.equal(20);
+    // protocolFee = 1_000_000 * 200 / 1_000_000 = 200
+    expect(result.protocolFee.toNumber()).to.equal(200);
     // developerFee = 1_000_000 * 10 / 1_000_000 = 10
     expect(result.developerFee.toNumber()).to.equal(10);
-    // totalFee = 30
-    expect(result.totalFee.toNumber()).to.equal(30);
+    // totalFee = 210
+    expect(result.totalFee.toNumber()).to.equal(210);
   });
 
   it("returns all zeros for zero amount", () => {
@@ -23,16 +23,16 @@ describe("Client — calculateFees", () => {
     expect(result.totalFee.toNumber()).to.equal(0);
   });
 
-  it("calculates correct fee with MAX_DEVELOPER_FEE_RATE (50)", () => {
+  it("calculates correct fee with MAX_DEVELOPER_FEE_RATE (500)", () => {
     const result = AgentShieldClient.calculateFees(
       new BN(1_000_000),
-      50
+      500
     );
-    // protocolFee = 20
-    expect(result.protocolFee.toNumber()).to.equal(20);
-    // developerFee = 1_000_000 * 50 / 1_000_000 = 50
-    expect(result.developerFee.toNumber()).to.equal(50);
-    expect(result.totalFee.toNumber()).to.equal(70);
+    // protocolFee = 200
+    expect(result.protocolFee.toNumber()).to.equal(200);
+    // developerFee = 1_000_000 * 500 / 1_000_000 = 500
+    expect(result.developerFee.toNumber()).to.equal(500);
+    expect(result.totalFee.toNumber()).to.equal(700);
   });
 
   it("returns zero dev fee with devRate=0", () => {
@@ -40,19 +40,19 @@ describe("Client — calculateFees", () => {
       new BN(1_000_000),
       0
     );
-    expect(result.protocolFee.toNumber()).to.equal(20);
+    expect(result.protocolFee.toNumber()).to.equal(200);
     expect(result.developerFee.toNumber()).to.equal(0);
-    expect(result.totalFee.toNumber()).to.equal(20);
+    expect(result.totalFee.toNumber()).to.equal(200);
   });
 
   it("handles large amount (10^12) without overflow", () => {
     const largeAmount = new BN("1000000000000"); // 10^12
     const result = AgentShieldClient.calculateFees(largeAmount, 10);
-    // protocolFee = 10^12 * 20 / 10^6 = 20_000_000
-    expect(result.protocolFee.toNumber()).to.equal(20_000_000);
+    // protocolFee = 10^12 * 200 / 10^6 = 200_000_000
+    expect(result.protocolFee.toNumber()).to.equal(200_000_000);
     // developerFee = 10^12 * 10 / 10^6 = 10_000_000
     expect(result.developerFee.toNumber()).to.equal(10_000_000);
-    expect(result.totalFee.toNumber()).to.equal(30_000_000);
+    expect(result.totalFee.toNumber()).to.equal(210_000_000);
   });
 
   it("calculates fees proportionally for different amounts", () => {
@@ -77,11 +77,11 @@ describe("Client — calculateFees", () => {
   });
 
   it("fee rates are applied as BPS (basis points of basis points)", () => {
-    // 20/1_000_000 = 0.002% = 0.2 BPS
+    // 200/1_000_000 = 0.02% = 2 BPS
     const amount = new BN(1_000_000_000); // 1B
     const result = AgentShieldClient.calculateFees(amount, 20);
-    // protocolFee = 1B * 20 / 1M = 20_000
-    expect(result.protocolFee.toNumber()).to.equal(20_000);
+    // protocolFee = 1B * 200 / 1M = 200_000
+    expect(result.protocolFee.toNumber()).to.equal(200_000);
     // developerFee = 1B * 20 / 1M = 20_000
     expect(result.developerFee.toNumber()).to.equal(20_000);
   });

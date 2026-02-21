@@ -5,6 +5,7 @@ import * as os from "os";
 import {
   saveShieldConfig,
   loadShieldConfig,
+  isFullyConfigured,
   type ShieldLocalConfig,
   type ShieldLayerConfig,
 } from "../config";
@@ -95,34 +96,24 @@ export async function configureFromFile(
     // Save config
     saveShieldConfig(config);
 
-    const tierLabels: Record<number, string> = {
-      1: "Shield (software controls only — development use)",
-      2: "Shield + TEE (hardware enclave key protection)",
-      3: "Shield + TEE + Vault (on-chain enforcement — recommended for production)",
-    };
-
-    const tier = config.layers.vault.enabled
-      ? 3
-      : config.layers.tee.enabled
-        ? 2
-        : 1;
+    const fullyConfigured = isFullyConfigured(config);
 
     const lines: string[] = [
       `## AgentShield Configured from File${isOverwrite ? " (overwritten)" : ""}`,
       "",
       `**Source:** ${resolved}`,
-      `**Tier:** ${tier} — ${tierLabels[tier]}`,
+      `**Status:** ${fullyConfigured ? "Fully configured" : "Partially configured"}`,
       `**Network:** ${config.network}`,
       `**Template:** ${config.template}`,
       `**Wallet:** ${config.wallet.publicKey}`,
       `**Daily Cap:** $${config.layers.shield.dailyCapUsd}`,
     ];
 
-    if (tier < 3) {
+    if (!fullyConfigured) {
       lines.push("");
       lines.push(
-        "**Note:** For production use with real funds, upgrade to Tier 3 " +
-          "(Shield + TEE + Vault) for blockchain-enforced policy limits that " +
+        "**Note:** For production use with real funds, ensure all layers are enabled " +
+          "(Shield + TEE + Vault) for on-chain policy enforcement that " +
           "cannot be bypassed even by compromised agent software.",
       );
     }

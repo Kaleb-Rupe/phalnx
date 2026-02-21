@@ -7,7 +7,8 @@
 | @agent-shield/sdk >= 0.4.0 | Yes |
 | @agent-shield/mcp >= 0.4.0 | Yes |
 | @agent-shield/core >= 0.1.0 | Yes |
-| @agent-shield/solana >= 0.3.0 | Yes |
+| @agent-shield/sdk >= 0.5.0 | Yes |
+| @agent-shield/solana >= 0.3.0 (deprecated — use @agent-shield/sdk) | Yes |
 | On-chain program (agent_shield) | Yes |
 
 ## Reporting a Vulnerability

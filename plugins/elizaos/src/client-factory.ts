@@ -4,8 +4,8 @@ import {
   Transaction,
   VersionedTransaction,
 } from "@solana/web3.js";
-import { shield } from "@agent-shield/solana";
-import type { ShieldedWallet, WalletLike } from "@agent-shield/solana";
+import { shieldWallet } from "@agent-shield/sdk";
+import type { ShieldedWallet, WalletLike } from "@agent-shield/sdk";
 import { ENV_KEYS, AgentShieldElizaConfig, CustodyProvider } from "./types";
 
 /** Minimal wallet wrapper around a Keypair (no Anchor dependency). */
@@ -161,7 +161,7 @@ export async function getOrCreateShieldedWallet(runtime: any): Promise<{
   let innerWallet: WalletLike;
 
   if (config.custodyProvider) {
-    // Level 2: TEE custody — private key never leaves the enclave
+    // TEE custody — private key never leaves the enclave
     (logger.info ?? console.info)(
       `[AgentShield] Using TEE custody provider: ${config.custodyProvider}`,
     );
@@ -172,7 +172,7 @@ export async function getOrCreateShieldedWallet(runtime: any): Promise<{
     innerWallet = new KeypairWallet(keypair);
   }
 
-  const shielded = shield(
+  const shielded = shieldWallet(
     innerWallet,
     {
       maxSpend: config.maxSpend,

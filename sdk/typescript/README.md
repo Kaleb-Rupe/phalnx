@@ -1,8 +1,8 @@
 # @agent-shield/sdk
 
-TypeScript SDK for AgentShield — permission-guarded DeFi access for AI agents on Solana. This is the **Level 3 (on-chain vault)** tier of AgentShield's security model, providing cryptographic guarantees via PDA vaults, on-chain policy enforcement, and atomic transaction composition.
+TypeScript SDK for AgentShield — permission-guarded DeFi access for AI agents on Solana. Provides cryptographic guarantees via PDA vaults, on-chain policy enforcement, and atomic transaction composition.
 
-For most use cases, start with [`@agent-shield/solana`](https://www.npmjs.com/package/@agent-shield/solana) (Level 1 — client-side wrapper). Upgrade to this SDK when you need on-chain enforcement that cannot be bypassed even by compromised agent software.
+This is the primary package for AgentShield. Use `withVault()` for full protection (client-side + TEE + on-chain vault) or `AgentShieldClient` for direct vault management.
 
 ## Installation
 
@@ -256,22 +256,13 @@ Owner creates vault with policy → Agent operates within policy constraints
 
 ## Security Model
 
-This is **Level 3** in AgentShield's three-tier architecture:
+AgentShield provides three layers of protection in a single integration:
 
-```
-Level 1: Client-Side Wrapper (@agent-shield/solana)
-  → Intercepted signTransaction, client-side policy checks
-  → Can be bypassed by determined attacker with key access
+1. **Client-side policy checks** — fast deny before transactions hit the network
+2. **TEE key custody** — agent private keys stored in hardware enclaves (Crossmint, Turnkey, Privy)
+3. **On-chain vault enforcement** (this package) — PDA vaults with cryptographic policy guarantees enforced by Solana validators
 
-Level 2: TEE-Backed Signing (coming soon)
-  → Private keys in Trusted Execution Environment
-  → Agent code never touches keys
-
-Level 3: On-Chain Vault (this package)
-  → PDA vault with on-chain PolicyConfig
-  → Cannot be bypassed — policy enforced by Solana validators
-  → Cryptographic guarantees via atomic transactions
-```
+All three layers are bundled into `withVault()` from `@agent-shield/sdk`.
 
 **On-chain enforcement means:**
 - Agent cannot exceed spending caps even if the agent software is compromised
@@ -290,7 +281,7 @@ IDL account: `Ev3gSzxLw6RwExAMpTHUKvn2o9YVULxiWehrHee7aepP`
 
 | Package | Description |
 |---------|-------------|
-| [`@agent-shield/solana`](https://www.npmjs.com/package/@agent-shield/solana) | Client-side wallet wrapper (Level 1) |
+| [`@agent-shield/solana`](https://www.npmjs.com/package/@agent-shield/solana) | Deprecated shim — re-exports from this package |
 | [`@agent-shield/core`](https://www.npmjs.com/package/@agent-shield/core) | Pure TypeScript policy engine |
 | [`@agent-shield/plugin-solana-agent-kit`](https://www.npmjs.com/package/@agent-shield/plugin-solana-agent-kit) | Solana Agent Kit integration |
 | [`@agent-shield/plugin-elizaos`](https://www.npmjs.com/package/@agent-shield/plugin-elizaos) | ElizaOS integration |

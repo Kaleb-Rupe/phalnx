@@ -3,7 +3,7 @@ import type {
   WalletLike,
   ShieldPolicies,
   ShieldOptions,
-} from "@agent-shield/solana";
+} from "@agent-shield/sdk";
 import { createShieldedWallet } from "./factory";
 
 /**
@@ -11,9 +11,9 @@ import { createShieldedWallet } from "./factory";
  * or a raw wallet + policies for auto-creation via the factory.
  */
 export interface AgentShieldPluginConfig {
-  /** A pre-created ShieldedWallet (from shield()). Mutually exclusive with rawWallet. */
+  /** A pre-created ShieldedWallet (from shieldWallet()). Mutually exclusive with rawWallet. */
   wallet?: ShieldedWallet;
-  /** A raw WalletLike to wrap with shield(). Mutually exclusive with wallet. */
+  /** A raw WalletLike to wrap with shieldWallet(). Mutually exclusive with wallet. */
   rawWallet?: WalletLike;
   /** Shield policies (used when rawWallet is provided). */
   policies?: ShieldPolicies;

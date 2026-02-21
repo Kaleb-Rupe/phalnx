@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { Keypair, Transaction, VersionedTransaction } from "@solana/web3.js";
-import type { WalletLike, ShieldedWallet } from "@agent-shield/solana";
-import { shield } from "@agent-shield/solana";
+import type { WalletLike, ShieldedWallet } from "@agent-shield/sdk";
+import { shieldWallet } from "@agent-shield/sdk";
 import {
   createAgentShieldPlugin,
   createShieldedWallet,
@@ -33,7 +33,7 @@ function createMockWallet(): WalletLike {
 describe("SAK Plugin", () => {
   describe("createAgentShieldPlugin", () => {
     it("creates plugin with pre-created ShieldedWallet", () => {
-      const wallet = shield(createMockWallet(), { maxSpend: "100 USDC/day" });
+      const wallet = shieldWallet(createMockWallet(), { maxSpend: "100 USDC/day" });
       const plugin = createAgentShieldPlugin({ wallet });
 
       expect(plugin.name).to.equal("agent-shield");
@@ -61,7 +61,7 @@ describe("SAK Plugin", () => {
     });
 
     it("has 5 methods", () => {
-      const wallet = shield(createMockWallet());
+      const wallet = shieldWallet(createMockWallet());
       const plugin = createAgentShieldPlugin({ wallet });
       expect(Object.keys(plugin.methods)).to.have.length(5);
     });
@@ -69,7 +69,7 @@ describe("SAK Plugin", () => {
 
   describe("resolveWallet", () => {
     it("returns wallet directly if provided", () => {
-      const wallet = shield(createMockWallet());
+      const wallet = shieldWallet(createMockWallet());
       const resolved = resolveWallet({ wallet });
       expect(resolved.wallet).to.equal(wallet);
     });
@@ -134,7 +134,7 @@ describe("SAK Plugin", () => {
 
   describe("shield_status tool", () => {
     it("returns formatted status string", async () => {
-      const wallet = shield(createMockWallet(), {
+      const wallet = shieldWallet(createMockWallet(), {
         maxSpend: "100 USDC/day",
       });
       const config = { wallet };
@@ -146,7 +146,7 @@ describe("SAK Plugin", () => {
     });
 
     it("shows paused state", async () => {
-      const wallet = shield(createMockWallet());
+      const wallet = shieldWallet(createMockWallet());
       wallet.pause();
       const result = await status(null, { wallet }, {});
       expect(result).to.include("Paused: true");
@@ -160,7 +160,7 @@ describe("SAK Plugin", () => {
 
   describe("shield_update_policy tool", () => {
     it("updates maxSpend", async () => {
-      const wallet = shield(createMockWallet(), {
+      const wallet = shieldWallet(createMockWallet(), {
         maxSpend: "100 USDC/day",
       });
       const result = await updatePolicy(null, { wallet }, {
@@ -171,7 +171,7 @@ describe("SAK Plugin", () => {
     });
 
     it("updates blockUnknownPrograms", async () => {
-      const wallet = shield(createMockWallet());
+      const wallet = shieldWallet(createMockWallet());
       const result = await updatePolicy(null, { wallet }, {
         blockUnknownPrograms: false,
       });
@@ -188,7 +188,7 @@ describe("SAK Plugin", () => {
 
   describe("shield_pause_resume tool", () => {
     it("pauses enforcement", async () => {
-      const wallet = shield(createMockWallet());
+      const wallet = shieldWallet(createMockWallet());
       const result = await pauseResume(null, { wallet }, {
         action: "pause",
       });
@@ -197,7 +197,7 @@ describe("SAK Plugin", () => {
     });
 
     it("resumes enforcement", async () => {
-      const wallet = shield(createMockWallet());
+      const wallet = shieldWallet(createMockWallet());
       wallet.pause();
       const result = await pauseResume(null, { wallet }, {
         action: "resume",
@@ -217,7 +217,7 @@ describe("SAK Plugin", () => {
 
   describe("shield_transaction_history tool", () => {
     it("returns formatted transaction history", async () => {
-      const wallet = shield(createMockWallet(), {
+      const wallet = shieldWallet(createMockWallet(), {
         maxSpend: "100 USDC/day",
       });
       const result = await transactionHistory(null, { wallet }, {});
@@ -227,13 +227,13 @@ describe("SAK Plugin", () => {
     });
 
     it("shows enforcement state", async () => {
-      const wallet = shield(createMockWallet());
+      const wallet = shieldWallet(createMockWallet());
       const result = await transactionHistory(null, { wallet }, {});
       expect(result).to.include("Enforcement: ACTIVE");
     });
 
     it("handles no spending limits", async () => {
-      const wallet = shield(createMockWallet(), {
+      const wallet = shieldWallet(createMockWallet(), {
         maxSpend: [],
         blockUnknownPrograms: false,
       });
@@ -254,7 +254,7 @@ describe("SAK Plugin", () => {
     });
 
     it("double-pause → idempotent (still paused)", async () => {
-      const wallet = shield(createMockWallet());
+      const wallet = shieldWallet(createMockWallet());
       await pauseResume(null, { wallet }, { action: "pause" });
       expect(wallet.isPaused).to.be.true;
 

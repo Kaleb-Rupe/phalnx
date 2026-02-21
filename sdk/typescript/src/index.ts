@@ -1,5 +1,5 @@
 // @agentshield/sdk — TypeScript SDK for AgentShield
-// AI Agent Financial Middleware on Solana
+// On-chain guardrails for AI agents on Solana
 
 export { AgentShieldClient, type AgentShieldClientOptions } from "./client";
 export { IDL } from "./idl-json";
@@ -128,3 +128,58 @@ export {
   type FlashDecreasePositionParams,
   type FlashTradeResult,
 } from "./integrations/flash-trade";
+
+// --- Wrapper (client-side policy enforcement + on-chain hardening) ---
+
+export {
+  harden,
+  withVault,
+  shieldWallet,
+  mapPoliciesToVaultParams,
+  findNextVaultId,
+} from "./wrapper";
+export type { HardenOptions, HardenResult } from "./wrapper";
+
+export type {
+  ShieldedWallet,
+  WalletLike,
+  ShieldOptions,
+  TeeWallet,
+  ShieldPolicies,
+  SpendLimit,
+  SpendingSummary,
+  RateLimitConfig,
+  PolicyCheckResult,
+  TransactionAnalysis,
+  TokenTransfer,
+  ResolvedPolicies,
+  PolicyViolation,
+  ShieldStorage,
+  ClientSpendEntry,
+  TxEntry,
+} from "./wrapper";
+
+export {
+  isTeeWallet,
+  parseSpendLimit,
+  resolvePolicies,
+  DEFAULT_POLICIES,
+  ShieldDeniedError,
+  ShieldConfigError,
+  TeeRequiredError,
+  analyzeTransaction,
+  getNonSystemProgramIds,
+  resolveTransactionAddressLookupTables,
+  extractInstructions,
+  KNOWN_PROTOCOLS,
+  KNOWN_TOKENS,
+  SYSTEM_PROGRAMS,
+  getTokenInfo,
+  getProtocolName,
+  isSystemProgram,
+  isKnownProtocol,
+  ShieldState,
+  evaluatePolicy,
+  enforcePolicy,
+  recordTransaction,
+} from "./wrapper";

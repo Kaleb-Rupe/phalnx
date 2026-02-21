@@ -1,8 +1,8 @@
 # @agent-shield/solana
 
-Client-side spending controls for Solana AI agents. Three lines of code.
+On-chain guardrails for AI agents on Solana. One call to protect your agent.
 
-`@agent-shield/solana` wraps any Solana wallet with transparent policy enforcement. Every `signTransaction` call passes through a policy engine that checks spending caps, rate limits, and protocol allowlists before signing. If a policy is violated, the transaction is rejected with an actionable error. No on-chain setup, no PDA vaults, no program deployment.
+`@agent-shield/solana` wraps any Solana wallet with transparent policy enforcement — client-side fast deny, TEE key custody, and on-chain vault enforcement bundled as one product. Every `signTransaction` call passes through a policy engine that checks spending caps, rate limits, and protocol allowlists before signing. If a policy is violated, the transaction is rejected with an actionable error.
 
 ## Installation
 
@@ -12,18 +12,28 @@ npm install @agent-shield/solana @solana/web3.js
 
 Peer dependencies: `@solana/web3.js >=1.90.0`
 
-Optional: `@agent-shield/sdk ^0.1.0` (only needed for `harden()` — on-chain vault upgrade)
+Optional: `@agent-shield/sdk ^0.1.0` (needed for on-chain vault enforcement via `harden()` / `withVault()`)
 
 ## Quick Start
 
 ```typescript
-import { shield } from "@agent-shield/solana";
+import { withVault } from "@agent-shield/solana";
 
-// Wrap any wallet in 1 line — secure defaults applied automatically
-const protectedWallet = shield(wallet, { maxSpend: "500 USDC/day" });
+// One call = full protection (client-side + TEE + on-chain vault)
+const result = await withVault(teeWallet, { maxSpend: "500 USDC/day" }, {
+  connection,
+});
 
-// Use it like a normal wallet — shield enforces policies transparently
-const agent = new SolanaAgentKit(protectedWallet, RPC_URL, config);
+// Use it like a normal wallet — policies enforced by Solana validators
+const agent = new SolanaAgentKit(result.wallet, RPC_URL, config);
+```
+
+For devnet testing without TEE:
+```typescript
+const result = await withVault(wallet, { maxSpend: "500 USDC/day" }, {
+  connection,
+  unsafeSkipTeeCheck: true,
+});
 ```
 
 With no config, secure defaults are applied:
@@ -40,33 +50,38 @@ With no config, secure defaults are applied:
 └──────────────┬────────────────────────────────────┘
                ↓
 ┌──────────────────────────────────────────────────┐
-│  shield() wrapper                                 │
-│  1. Analyze transaction (programs, transfers)     │
-│  2. Check spending caps (rolling 24h window)      │
-│  3. Check rate limit                              │
-│  4. Check protocol/token allowlists               │
-│  5. If all pass → sign with inner wallet          │
-│     If any fail → throw ShieldDeniedError         │
+│  withVault() — three layers, one call             │
+│  1. Client-side fast deny (spending caps, rates)  │
+│  2. TEE key custody (hardware enclave signing)    │
+│  3. On-chain vault enforcement (PDA + policy)     │
+│  If all pass → sign with inner wallet             │
+│  If any fail → throw ShieldDeniedError            │
 └──────────────┬────────────────────────────────────┘
                ↓
 ┌──────────────────────────────────────────────────┐
-│  Inner Wallet (Keypair, adapter, Turnkey, etc.)   │
-│  tx.sign(keypair)                                 │
+│  Solana Validators                                │
+│  Policy enforced cryptographically on-chain       │
 └──────────────────────────────────────────────────┘
 ```
 
 ## API Reference
 
-### `shield(wallet, policies?, options?): ShieldedWallet`
+### `withVault(wallet, policies?, options): HardenResult`
 
-Wrap a wallet with policy enforcement.
+The primary developer-facing function. One call = full protection.
 
 ```typescript
-import { shield } from "@agent-shield/solana";
+import { withVault } from "@agent-shield/solana";
 
-const protectedWallet = shield(wallet, {
-  maxSpend: "500 USDC/day",
-  blockUnknownPrograms: true,
+// Simplest path: bring your TEE wallet
+const result = await withVault(teeWallet, { maxSpend: "500 USDC/day" }, {
+  connection,
+});
+
+// Devnet testing path
+const result = await withVault(wallet, { maxSpend: "500 USDC/day" }, {
+  connection,
+  unsafeSkipTeeCheck: true,
 });
 ```
 
@@ -76,9 +91,22 @@ const protectedWallet = shield(wallet, {
 |-----------|------|-------------|
 | `wallet` | `WalletLike` | Any wallet with `publicKey` and `signTransaction` |
 | `policies` | `ShieldPolicies` | Policy configuration (optional — defaults applied) |
-| `options` | `ShieldOptions` | Event callbacks and storage config (optional) |
+| `options` | `HardenOptions` | Connection, owner wallet, TEE config |
 
-**Returns:** `ShieldedWallet` — same interface as the input wallet, with policy enforcement added.
+**Returns:** `HardenResult` — contains `wallet` (ShieldedWallet with on-chain enforcement), `vaultAddress`, `policyAddress`.
+
+### `harden(shieldedWallet, options): HardenResult`
+
+For power users who need intermediate control. Adds on-chain vault enforcement to an existing shielded wallet.
+
+```typescript
+import { harden } from "@agent-shield/solana";
+
+const result = await harden(shieldedWallet, {
+  connection,
+  unsafeSkipTeeCheck: true,
+});
+```
 
 ### `ShieldedWallet`
 
@@ -99,10 +127,25 @@ The shielded wallet extends `WalletLike` with management methods:
 | `resume()` | Re-enable enforcement |
 | `getSpendingSummary()` | Get current spending relative to limits |
 
+### `TeeWallet`
+
+TEE-backed wallets are required for production use. Any wallet with a `provider` field is recognized:
+
+```typescript
+import { isTeeWallet, type TeeWallet } from "@agent-shield/solana";
+
+// Check if a wallet is TEE-backed
+if (isTeeWallet(wallet)) {
+  console.log(`TEE provider: ${wallet.provider}`);
+}
+```
+
+Compatible TEE providers: Crossmint, Turnkey, Privy.
+
 ### Policy Configuration (`ShieldPolicies`)
 
 ```typescript
-const protectedWallet = shield(wallet, {
+const result = await withVault(wallet, {
   // Spending caps — human-readable strings or SpendLimit objects
   maxSpend: "500 USDC/day",                          // single limit
   maxSpend: ["500 USDC/day", "10 SOL/hour"],         // multiple limits
@@ -125,7 +168,7 @@ const protectedWallet = shield(wallet, {
 
   // Custom policy check (runs after built-in checks)
   customCheck: (analysis) => ({ allowed: true }),
-});
+}, { connection, unsafeSkipTeeCheck: true });
 ```
 
 **Supported spend limit formats:**
@@ -145,19 +188,18 @@ const protectedWallet = shield(wallet, {
 ### Event Callbacks (`ShieldOptions`)
 
 ```typescript
-const protectedWallet = shield(wallet, policies, {
-  onDenied: (error) => {
-    console.error("Denied:", error.violations);
-  },
-  onApproved: (txHash) => {
-    console.log("Approved:", txHash);
-  },
-  onPause: () => console.log("Enforcement paused"),
-  onResume: () => console.log("Enforcement resumed"),
-  onPolicyUpdate: (newPolicies) => console.log("Policies updated"),
+import { withVault } from "@agent-shield/solana";
 
-  // Custom storage for state persistence
-  storage: localStorage, // or any { getItem, setItem } interface
+const result = await withVault(wallet, policies, {
+  connection,
+  unsafeSkipTeeCheck: true,
+  shieldOptions: {
+    onDenied: (error) => console.error("Denied:", error.violations),
+    onApproved: (txHash) => console.log("Approved:", txHash),
+    onPause: () => console.log("Enforcement paused"),
+    onResume: () => console.log("Enforcement resumed"),
+    onPolicyUpdate: (newPolicies) => console.log("Policies updated"),
+  },
 });
 ```
 
@@ -172,7 +214,7 @@ const protectedWallet = shield(wallet, policies, {
 ### Spending Summary
 
 ```typescript
-const summary = protectedWallet.getSpendingSummary();
+const summary = result.wallet.getSpendingSummary();
 
 // summary.tokens — per-token spending vs limits
 for (const token of summary.tokens) {
@@ -212,28 +254,36 @@ interface SpendingSummary {
 
 ```typescript
 // Pause enforcement (transactions pass through without checks)
-protectedWallet.pause();
+result.wallet.pause();
 
 // Resume enforcement
-protectedWallet.resume();
+result.wallet.resume();
 
 // Update policies at runtime
-protectedWallet.updatePolicies({
+result.wallet.updatePolicies({
   maxSpend: "1000 USDC/day",
   blockUnknownPrograms: false,
 });
 
 // Clear all spending history
-protectedWallet.resetState();
+result.wallet.resetState();
 ```
 
 ### Error Handling
 
 ```typescript
-import { ShieldDeniedError } from "@agent-shield/solana";
+import { ShieldDeniedError, TeeRequiredError } from "@agent-shield/solana";
 
 try {
-  await protectedWallet.signTransaction(tx);
+  const result = await withVault(wallet, policies, { connection });
+} catch (error) {
+  if (error instanceof TeeRequiredError) {
+    console.log("TEE wallet required for production use");
+  }
+}
+
+try {
+  await result.wallet.signTransaction(tx);
 } catch (error) {
   if (error instanceof ShieldDeniedError) {
     for (const violation of error.violations) {
@@ -258,7 +308,7 @@ try {
 
 ### Wallet Compatibility (`WalletLike`)
 
-`shield()` works with any wallet that implements this minimal interface:
+`withVault()` works with any wallet that implements this minimal interface:
 
 ```typescript
 interface WalletLike {
@@ -271,6 +321,7 @@ interface WalletLike {
 Compatible with:
 - `@solana/web3.js` Keypair wallets
 - `@solana/wallet-adapter` browser wallets (Phantom, Solflare, etc.)
+- Crossmint TEE-backed wallets
 - Turnkey TEE-backed wallets
 - Privy embedded wallets
 - Coinbase agentic wallets
@@ -283,11 +334,11 @@ import { analyzeTransaction, getNonSystemProgramIds } from "@agent-shield/solana
 
 // Analyze a transaction for policy evaluation
 const analysis = analyzeTransaction(transaction, walletPublicKey);
-// → { programIds: [...], transfers: [...], estimatedValueLamports: 0n }
+// -> { programIds: [...], transfers: [...], estimatedValueLamports: 0n }
 
 // Get non-system program IDs from a transaction
 const programIds = getNonSystemProgramIds(transaction);
-// → ["JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"]
+// -> ["JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"]
 ```
 
 ### Protocol Registry
@@ -313,13 +364,15 @@ getTokenInfo("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");   // { symbol: "US
 ### Solana Agent Kit
 
 ```typescript
-import { shield } from "@agent-shield/solana";
+import { withVault } from "@agent-shield/solana";
 import { createAgentShieldPlugin } from "@agent-shield/plugin-solana-agent-kit";
 import { SolanaAgentKit } from "solana-agent-kit";
 
-const protectedWallet = shield(wallet, { maxSpend: "500 USDC/day" });
-const plugin = createAgentShieldPlugin({ wallet: protectedWallet });
-const agent = new SolanaAgentKit(protectedWallet, RPC_URL, { plugins: [plugin] });
+const result = await withVault(teeWallet, { maxSpend: "500 USDC/day" }, {
+  connection,
+});
+const plugin = createAgentShieldPlugin({ wallet: result.wallet });
+const agent = new SolanaAgentKit(result.wallet, RPC_URL, { plugins: [plugin] });
 ```
 
 ### ElizaOS
@@ -337,18 +390,18 @@ const character = {
 ### Custom Agent
 
 ```typescript
-import { shield, ShieldDeniedError } from "@agent-shield/solana";
+import { withVault, ShieldDeniedError } from "@agent-shield/solana";
 
-const protectedWallet = shield(wallet, {
+const result = await withVault(teeWallet, {
   maxSpend: ["500 USDC/day", "10 SOL/day"],
   blockUnknownPrograms: true,
   rateLimit: { maxTransactions: 30, windowMs: 3_600_000 },
-});
+}, { connection });
 
 async function agentLoop() {
   try {
     const tx = buildSwapTransaction();
-    const signed = await protectedWallet.signTransaction(tx);
+    const signed = await result.wallet.signTransaction(tx);
     await connection.sendRawTransaction(signed.serialize());
   } catch (error) {
     if (error instanceof ShieldDeniedError) {
@@ -358,34 +411,22 @@ async function agentLoop() {
 }
 ```
 
-## Three-Tier Security Model
+## Security Model
 
-`@agent-shield/solana` is **Level 1** in AgentShield's three-tier architecture:
+AgentShield provides three layers of protection in a single integration:
 
-```
-Level 1: Client-Side Wrapper (this package)
-  shield(wallet, { maxSpend: '500 USDC/day' })
-  → Zero friction, 3 lines of code
-  → Client-side enforcement, works with ANY wallet
+1. **Client-side policy checks** — fast deny before transactions hit the network
+2. **TEE key custody** — agent private keys stored in hardware enclaves (Crossmint, Turnkey, Privy)
+3. **On-chain vault enforcement** — PDA vaults with cryptographic policy guarantees enforced by Solana validators
 
-Level 2: TEE-Backed Signing (coming soon)
-  shield(wallet, { custody: 'turnkey' })
-  → Keys held in TEE, agent code never touches private keys
-
-Level 3: On-Chain Vault (@agent-shield/sdk)
-  shield.harden(wallet, { onChain: true })
-  → PDA vault with cryptographic guarantees
-  → Cannot be bypassed even by compromised software
-```
-
-Start at Level 1. Upgrade to Level 3 when you need cryptographic guarantees.
+All three layers are bundled into `withVault()`. TEE wallets are required for production use — pass `unsafeSkipTeeCheck: true` only for devnet testing.
 
 ## Related Packages
 
 | Package | Description |
 |---------|-------------|
 | [`@agent-shield/core`](https://www.npmjs.com/package/@agent-shield/core) | Pure TypeScript policy engine (used internally) |
-| [`@agent-shield/sdk`](https://www.npmjs.com/package/@agent-shield/sdk) | On-chain vault SDK for Level 3 enforcement |
+| [`@agent-shield/sdk`](https://www.npmjs.com/package/@agent-shield/sdk) | On-chain vault SDK (used internally by `harden()`) |
 | [`@agent-shield/plugin-solana-agent-kit`](https://www.npmjs.com/package/@agent-shield/plugin-solana-agent-kit) | Solana Agent Kit integration |
 | [`@agent-shield/plugin-elizaos`](https://www.npmjs.com/package/@agent-shield/plugin-elizaos) | ElizaOS integration |
 

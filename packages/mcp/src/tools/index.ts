@@ -80,7 +80,7 @@ export {
 export { configureTool, configure, configureSchema } from "./configure";
 export { fundWalletTool, fundWallet, fundWalletSchema } from "./fund-wallet";
 export {
-  upgradeTierTool,
-  upgradeTier,
-  upgradeTierSchema,
-} from "./upgrade-tier";
+  configureFromFileTool,
+  configureFromFile,
+  configureFromFileSchema,
+} from "./configure-from-file";

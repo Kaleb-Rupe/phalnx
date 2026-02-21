@@ -2,7 +2,7 @@
 
 Crossmint TEE custody adapter for AgentShield — hardware-enclave signing for AI agents. The private key never leaves the Trusted Execution Environment.
 
-`@agent-shield/custody-crossmint` wraps Crossmint's Intel TDX-backed wallets into a standard `WalletLike` interface that works with `shield()` and the rest of the AgentShield ecosystem. Your agent gets a signing interface; the private key stays in hardware.
+`@agent-shield/custody-crossmint` wraps Crossmint's Intel TDX-backed wallets into a standard `WalletLike` interface that works with `shieldWallet()` and the rest of the AgentShield ecosystem. Your agent gets a signing interface; the private key stays in hardware.
 
 ## Installation
 
@@ -10,16 +10,16 @@ Crossmint TEE custody adapter for AgentShield — hardware-enclave signing for A
 npm install @agent-shield/custody-crossmint @solana/web3.js
 ```
 
-Optional peer dependency: `@agent-shield/solana` (for `shield()` integration)
+Optional peer dependency: `@agent-shield/sdk` (for `shieldWallet()` integration)
 
 ## Quick Start
 
 ```typescript
-import { shield } from "@agent-shield/solana";
+import { shieldWallet } from "@agent-shield/sdk";
 import { crossmint } from "@agent-shield/custody-crossmint";
 
 // Create a TEE-backed wallet and wrap it with spending controls
-const wallet = shield(
+const wallet = shieldWallet(
   await crossmint({ apiKey: "sk_production_..." }),
   { maxSpend: "500 USDC/day" }
 );
@@ -31,11 +31,11 @@ await wallet.signTransaction(tx);
 ### Zero-Config from Environment
 
 ```typescript
-import { shield } from "@agent-shield/solana";
+import { shieldWallet } from "@agent-shield/sdk";
 import { crossmintFromEnv } from "@agent-shield/custody-crossmint";
 
 // Reads CROSSMINT_API_KEY from environment
-const wallet = shield(await crossmintFromEnv(), { maxSpend: "500 USDC/day" });
+const wallet = shieldWallet(await crossmintFromEnv(), { maxSpend: "500 USDC/day" });
 ```
 
 ## API Reference
@@ -55,7 +55,7 @@ Create a `CrossmintWallet` from environment variables. Throws if `CROSSMINT_API_
 
 ### `CrossmintWallet`
 
-Implements `WalletLike` — compatible with `shield()`, Solana Agent Kit, and any code expecting a standard wallet interface.
+Implements `WalletLike` — compatible with `shieldWallet()`, Solana Agent Kit, and any code expecting a standard wallet interface.
 
 | Property/Method | Description |
 |-----------------|-------------|
@@ -109,14 +109,14 @@ interface CrossmintWalletConfig {
 | `CROSSMINT_BASE_URL` | No | `https://www.crossmint.com` | API base URL override |
 | `CROSSMINT_LINKED_USER` | No | — | Linked user for wallet association |
 
-## Integration with shield()
+## Integration with shieldWallet()
 
 ```typescript
-import { shield, ShieldDeniedError } from "@agent-shield/solana";
+import { shieldWallet, ShieldDeniedError } from "@agent-shield/sdk";
 import { crossmint } from "@agent-shield/custody-crossmint";
 
 const teeWallet = await crossmint({ apiKey: "sk_..." });
-const protectedWallet = shield(teeWallet, {
+const protectedWallet = shieldWallet(teeWallet, {
   maxSpend: ["500 USDC/day", "10 SOL/day"],
   blockUnknownPrograms: true,
   rateLimit: { maxTransactions: 60, windowMs: 3_600_000 },
@@ -124,7 +124,7 @@ const protectedWallet = shield(teeWallet, {
 
 // Two layers of protection:
 // 1. Private key in TEE — agent code never sees it
-// 2. shield() enforces spending caps before signing
+// 2. shieldWallet() enforces spending caps before signing
 try {
   await protectedWallet.signTransaction(tx);
 } catch (error) {
@@ -138,8 +138,7 @@ try {
 
 | Package | Description |
 |---------|-------------|
-| [`@agent-shield/solana`](https://www.npmjs.com/package/@agent-shield/solana) | Client-side wallet wrapper (`shield()`) |
-| [`@agent-shield/sdk`](https://www.npmjs.com/package/@agent-shield/sdk) | On-chain vault SDK (Level 3 enforcement) |
+| [`@agent-shield/sdk`](https://www.npmjs.com/package/@agent-shield/sdk) | On-chain guardrails — `withVault()` primary API |
 | [`@agent-shield/core`](https://www.npmjs.com/package/@agent-shield/core) | Pure TypeScript policy engine |
 | [`@agent-shield/mcp`](https://www.npmjs.com/package/@agent-shield/mcp) | MCP server for AI tools |
 | [`@agent-shield/plugin-elizaos`](https://www.npmjs.com/package/@agent-shield/plugin-elizaos) | ElizaOS integration (supports Crossmint custody) |

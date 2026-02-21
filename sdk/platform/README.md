@@ -142,8 +142,7 @@ interface ActionMetadata {
 
 | Package | Description |
 |---------|-------------|
-| [`@agent-shield/sdk`](https://www.npmjs.com/package/@agent-shield/sdk) | On-chain vault SDK (Level 3 enforcement) |
-| [`@agent-shield/solana`](https://www.npmjs.com/package/@agent-shield/solana) | Client-side wallet wrapper (Level 1) |
+| [`@agent-shield/sdk`](https://www.npmjs.com/package/@agent-shield/sdk) | On-chain guardrails — `withVault()` primary API |
 | [`@agent-shield/core`](https://www.npmjs.com/package/@agent-shield/core) | Pure TypeScript policy engine |
 | [`@agent-shield/mcp`](https://www.npmjs.com/package/@agent-shield/mcp) | MCP server for AI tools |
 

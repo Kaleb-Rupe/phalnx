@@ -1,7 +1,7 @@
 {
   "name": "agent-shield",
   "version": "0.1.1",
-  "description": "AI Agent Financial Middleware for Solana",
+  "description": "On-chain guardrails for AI agents on Solana",
   "private": true,
   "engines": {
     "node": ">=18.0.0"

@@ -26,9 +26,9 @@ import { policyCheckEvaluator } from "./evaluators";
 export const agentShieldPlugin = {
   name: "agent-shield",
   description:
-    "AgentShield — Client-side spending controls for AI agents. " +
+    "AgentShield — On-chain guardrails for AI agents. " +
     "Wraps wallet signing with policy enforcement, spending caps, " +
-    "and rate limiting. Zero on-chain setup required.",
+    "and rate limiting.",
 
   actions: [
     statusAction,

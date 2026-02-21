@@ -12,11 +12,11 @@ import {
 } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import {
-  shield,
   ShieldDeniedError,
   ShieldState,
   parseSpendLimit,
   ShieldConfigError,
+  TeeRequiredError,
   analyzeTransaction,
   evaluatePolicy,
   resolvePolicies,
@@ -28,10 +28,13 @@ import {
   getTokenInfo,
   getProtocolName,
   mapPoliciesToVaultParams,
+  isTeeWallet,
 } from "../src";
-import type { WalletLike, ShieldStorage, ResolvedPolicies } from "../src";
-import { harden, withVault } from "../src/harden";
-import type { HardenOptions, HardenResult } from "../src/harden";
+import type { WalletLike, ShieldStorage, ResolvedPolicies, TeeWallet } from "../src";
+import { harden, withVault } from "../src/wrapper/harden";
+import type { HardenOptions, HardenResult } from "../src/wrapper/harden";
+// shield() is internal — import from source for testing
+import { shield } from "../src/wrapper/shield";
 
 // --- Test Helpers ---
 
@@ -1630,16 +1633,10 @@ describe("@agent-shield/solana", () => {
   });
 
   describe("harden() — vault creation", () => {
-    it("throws when @agent-shield/sdk is not installed", async () => {
-      // This test verifies the error path when the SDK import fails.
-      // We cannot fully test this without mocking the import, but we can
-      // verify the harden function exists and has the right signature.
+    it("shielded wallet is not hardened before harden()", async () => {
       const wallet = createMockWallet();
       const shielded = shield(wallet, { maxSpend: "500 USDC/day" });
       expect(shielded.isHardened).to.be.false;
-      // harden() will attempt dynamic import of @agent-shield/sdk
-      // In test environment, the SDK IS available, so this won't fail.
-      // The error path is implicitly tested by the stub's existing test.
     });
 
     it("throws when owner === agent", async () => {
@@ -1674,6 +1671,7 @@ describe("@agent-shield/solana", () => {
       try {
         await harden(shielded, {
           connection: mockConnection,
+          unsafeSkipTeeCheck: true,
         });
         expect.fail("Should have thrown (no real RPC)");
       } catch (e: any) {
@@ -1695,6 +1693,7 @@ describe("@agent-shield/solana", () => {
         await harden(shielded, {
           connection: mockConnection,
           ownerWallet,
+          unsafeSkipTeeCheck: true,
         });
         expect.fail("Should have thrown (no real RPC)");
       } catch (e: any) {
@@ -1762,6 +1761,7 @@ describe("@agent-shield/solana", () => {
         await withVault(wallet, { maxSpend: "500 USDC/day" }, {
           connection: mockConnection,
           ownerWallet: wallet, // same as agent — triggers owner===agent check
+          unsafeSkipTeeCheck: true,
         });
         expect.fail("Should have thrown");
       } catch (e: any) {
@@ -1781,12 +1781,142 @@ describe("@agent-shield/solana", () => {
         await withVault(agentWallet, { maxSpend: "500 USDC/day" }, {
           connection: mockConnection,
           ownerWallet,
+          unsafeSkipTeeCheck: true,
         });
         expect.fail("Should have thrown (no real RPC)");
       } catch (e: any) {
         // Should get past validation to the RPC stage
         expect(e.message).to.not.include("Owner and agent must be different");
       }
+    });
+  });
+
+  describe("TeeWallet detection", () => {
+    it("isTeeWallet returns true for wallet with provider field", () => {
+      const kp = Keypair.generate();
+      const teeWallet: TeeWallet = {
+        publicKey: kp.publicKey,
+        provider: "crossmint",
+        async signTransaction<T extends Transaction | VersionedTransaction>(tx: T): Promise<T> {
+          return tx;
+        },
+      };
+      expect(isTeeWallet(teeWallet)).to.be.true;
+    });
+
+    it("isTeeWallet returns false for plain wallet", () => {
+      const wallet = createMockWallet();
+      expect(isTeeWallet(wallet)).to.be.false;
+    });
+
+    it("isTeeWallet returns false for wallet with non-string provider", () => {
+      const kp = Keypair.generate();
+      const wallet = {
+        publicKey: kp.publicKey,
+        provider: 42, // not a string
+        async signTransaction<T extends Transaction | VersionedTransaction>(tx: T): Promise<T> {
+          return tx;
+        },
+      };
+      expect(isTeeWallet(wallet as any)).to.be.false;
+    });
+  });
+
+  describe("TEE enforcement", () => {
+    it("harden() throws TeeRequiredError for non-TEE wallet without opt-out", async () => {
+      const wallet = createMockWallet();
+      const ownerWallet = createMockWallet();
+      const shielded = shield(wallet, { maxSpend: "500 USDC/day" });
+
+      const mockConnection = {
+        getAccountInfo: async () => null,
+      } as unknown as Connection;
+
+      try {
+        await harden(shielded, {
+          connection: mockConnection,
+          ownerWallet,
+        });
+        expect.fail("Should have thrown TeeRequiredError");
+      } catch (e: any) {
+        expect(e).to.be.instanceOf(TeeRequiredError);
+        expect(e.name).to.equal("TeeRequiredError");
+        expect(e.message).to.include("TEE wallet required");
+      }
+    });
+
+    it("harden() skips TEE check with unsafeSkipTeeCheck: true", async () => {
+      const wallet = createMockWallet();
+      const ownerWallet = createMockWallet();
+      const shielded = shield(wallet, { maxSpend: "500 USDC/day" });
+
+      const mockConnection = {
+        getAccountInfo: async () => null,
+      } as unknown as Connection;
+
+      try {
+        await harden(shielded, {
+          connection: mockConnection,
+          ownerWallet,
+          unsafeSkipTeeCheck: true,
+        });
+        expect.fail("Should have thrown (no real RPC)");
+      } catch (e: any) {
+        // Should NOT be TeeRequiredError — should get past TEE check to RPC
+        expect(e).to.not.be.instanceOf(TeeRequiredError);
+      }
+    });
+
+    it("harden() accepts TEE wallet without opt-out", async () => {
+      const kp = Keypair.generate();
+      const teeWallet: TeeWallet = {
+        publicKey: kp.publicKey,
+        provider: "crossmint",
+        async signTransaction<T extends Transaction | VersionedTransaction>(tx: T): Promise<T> {
+          return tx;
+        },
+      };
+      const ownerWallet = createMockWallet();
+      const shielded = shield(teeWallet, { maxSpend: "500 USDC/day" });
+
+      const mockConnection = {
+        getAccountInfo: async () => null,
+      } as unknown as Connection;
+
+      try {
+        await harden(shielded, {
+          connection: mockConnection,
+          ownerWallet,
+        });
+        expect.fail("Should have thrown (no real RPC)");
+      } catch (e: any) {
+        // Should NOT be TeeRequiredError — TEE wallet passes the check
+        expect(e).to.not.be.instanceOf(TeeRequiredError);
+      }
+    });
+
+    it("withVault() enforces TEE requirement", async () => {
+      const wallet = createMockWallet();
+      const ownerWallet = createMockWallet();
+      const mockConnection = {} as Connection;
+
+      try {
+        await withVault(wallet, { maxSpend: "500 USDC/day" }, {
+          connection: mockConnection,
+          ownerWallet,
+        });
+        expect.fail("Should have thrown TeeRequiredError");
+      } catch (e: any) {
+        expect(e).to.be.instanceOf(TeeRequiredError);
+      }
+    });
+
+    it("TeeRequiredError has correct name and message", () => {
+      const err = new TeeRequiredError();
+      expect(err.name).to.equal("TeeRequiredError");
+      expect(err.message).to.include("TEE wallet required");
+      expect(err.message).to.include("Crossmint");
+      expect(err.message).to.include("unsafeSkipTeeCheck");
     });
   });
 });

@@ -34,7 +34,7 @@ export const createVaultSchema = z.object({
     .number()
     .optional()
     .default(0)
-    .describe("Developer fee rate (max 50 = 0.5 BPS)"),
+    .describe("Developer fee rate (max 500 = 5 BPS)"),
   allowedDestinations: z
     .array(z.string())
     .optional()

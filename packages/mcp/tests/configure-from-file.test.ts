@@ -133,27 +133,26 @@ describe("shield_configure_from_file", () => {
     expect(result).to.include("template");
   });
 
-  it("shows tier 3 for vault-enabled config", async () => {
+  it("shows fully configured for all-layers-enabled config", async () => {
     const config = makeValidConfig();
     config.layers.tee.enabled = true;
     config.layers.tee.publicKey = "22222222222222222222222222222222";
     config.layers.tee.locator = "test-locator";
     config.layers.vault.enabled = true;
     config.layers.vault.address = "33333333333333333333333333333333";
-    const filePath = writeConfigFile("tier3.json", config);
+    const filePath = writeConfigFile("full.json", config);
     const result = await configureFromFile(null, { configFile: filePath });
-    expect(result).to.include("**Tier:** 3");
-    expect(result).to.include("on-chain enforcement");
-    // Tier 3 should NOT show the upgrade note
-    expect(result).to.not.include("upgrade to Tier 3");
+    expect(result).to.include("Fully configured");
+    // Fully configured should NOT show the upgrade note
+    expect(result).to.not.include("ensure all layers");
   });
 
-  it("shows upgrade note for tier 1 config", async () => {
+  it("shows note for partially configured", async () => {
     const config = makeValidConfig();
-    const filePath = writeConfigFile("tier1.json", config);
+    const filePath = writeConfigFile("partial.json", config);
     const result = await configureFromFile(null, { configFile: filePath });
-    expect(result).to.include("**Tier:** 1");
-    expect(result).to.include("upgrade to Tier 3");
+    expect(result).to.include("Partially configured");
+    expect(result).to.include("ensure all layers");
   });
 
   it("shows overwritten when config already exists", async () => {

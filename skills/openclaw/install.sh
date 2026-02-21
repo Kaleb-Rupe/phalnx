@@ -5,7 +5,7 @@ set -euo pipefail
 # Idempotent — safe to run multiple times.
 # Does NOT execute remote code. Only copies files and merges JSON config.
 
-MCP_VERSION="0.4.0"
+MCP_VERSION="0.4.2"
 SKILL_DIR="${HOME}/.openclaw/workspace/skills/agent-shield"
 CONFIG_FILE="${HOME}/.openclaw/openclaw.json"
 SHIELD_DIR="${HOME}/.agentshield"
@@ -68,7 +68,7 @@ echo ""
 echo "==> Done! AgentShield skill installed."
 echo ""
 echo "    Start OpenClaw and say: \"Set up AgentShield\""
-echo "    The agent will guide you through three-tier security setup."
+echo "    The agent will guide you through security setup."
 echo ""
 echo "    MCP server: @agent-shield/mcp@${MCP_VERSION}"
 echo "    No wallet needed at install time — the agent creates one during setup."

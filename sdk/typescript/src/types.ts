@@ -10,8 +10,8 @@ export const AGENT_SHIELD_PROGRAM_ID = new PublicKey(
 
 // Fee constants matching on-chain values
 export const FEE_RATE_DENOMINATOR = 1_000_000;
-export const PROTOCOL_FEE_RATE = 20; // 0.2 BPS
-export const MAX_DEVELOPER_FEE_RATE = 50; // 0.5 BPS
+export const PROTOCOL_FEE_RATE = 200; // 2 BPS
+export const MAX_DEVELOPER_FEE_RATE = 500; // 5 BPS
 export const PROTOCOL_TREASURY = new PublicKey(
   "ASHie1dFTnDSnrHMPGmniJhMgfJVGPm3rAaEPnrtWDiT",
 );

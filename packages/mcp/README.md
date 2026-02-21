@@ -10,23 +10,23 @@ npm install -g @agent-shield/mcp
 npx @agent-shield/mcp
 ```
 
-## Security Tiers
+## Security Model
 
-AgentShield uses a three-tier security model. The MCP server supports all three and guides you through setup.
+AgentShield bundles three layers of protection in a single integration:
 
-| Tier | Name                 | Enforcement                                              | Use Case                                                                                                             |
-| ---- | -------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| 1    | Shield               | Client-side only                                         | Development and testing only — not suitable for real funds                                                           |
-| 2    | Shield + TEE         | Client-side + hardware enclave key custody               | Improved key security, but policies still enforced off-chain                                                         |
-| 3    | Shield + TEE + Vault | On-chain PDA vault with cryptographic policy enforcement | **Recommended for production** — owner kill-switch, immutable audit trail, policies enforced at the blockchain level |
+| Layer | What It Does |
+| ----- | ------------ |
+| **Client-side policy checks** | Fast deny before transactions hit the network |
+| **TEE key custody** | Agent private keys stored in hardware enclaves (Crossmint, Turnkey, Privy) |
+| **On-chain vault enforcement** | PDA vaults with cryptographic policy guarantees enforced by Solana validators |
 
-Only Tier 3 enforces spending limits and protocol allowlists on-chain where they cannot be bypassed by a compromised agent. For any deployment handling real funds, use Tier 3.
+All three layers are set up with a single `shield_configure` call. TEE is required for production use.
 
 ## Quickstart
 
 1. Install and add to your MCP client (see Configuration below)
 2. Ask your AI assistant: _"What's my AgentShield setup status?"_ — it will call `shield_setup_status`
-3. Follow the guided flow: _"Set up AgentShield"_ — the assistant walks you through tier selection, wallet creation, and policy configuration
+3. Follow the guided flow: _"Set up AgentShield"_ — the assistant walks you through wallet creation and policy configuration
 4. For programmatic/CI deployments, use `shield_configure_from_file` with a pre-written JSON config
 
 ## Configuration
@@ -76,17 +76,16 @@ Add to `.cursor/mcp.json` in your project:
 }
 ```
 
-## Tools (23)
+## Tools (22)
 
 ### Setup & Onboarding (always available — no wallet required)
 
 | Tool                         | Description                                                                   |
 | ---------------------------- | ----------------------------------------------------------------------------- |
-| `shield_setup_status`        | Check current setup status — which security tiers are active                  |
-| `shield_configure`           | Set up AgentShield with any tier (1=Shield, 2=TEE, 3=Vault)                   |
+| `shield_setup_status`        | Check current setup status — which layers are active                          |
+| `shield_configure`           | Set up AgentShield with full protection (Shield + TEE + Vault)                |
 | `shield_configure_from_file` | Apply a pre-written JSON config file (for CI/CD and programmatic deployments) |
 | `shield_fund_wallet`         | Generate funding links (Blink URL, Solana Pay, raw address)                   |
-| `shield_upgrade_tier`        | Upgrade from current tier to a higher one                                     |
 
 ### Read-Only
 
@@ -140,7 +139,7 @@ pnpm install
 # Build
 pnpm build
 
-# Run tests (124 tests)
+# Run tests (118 tests)
 pnpm test
 
 # Smoke test
@@ -154,8 +153,8 @@ AGENTSHIELD_WALLET_PATH=~/.config/solana/id.json node dist/index.js
 - **SDK**: Wraps `AgentShieldClient` from `@agent-shield/sdk` — every tool delegates to a client method
 - **Setup mode**: Starts without a wallet — only setup/onboarding tools available until configured
 - **Programmatic config**: `shield_configure_from_file` reads a JSON config matching the `ShieldLocalConfig` schema — for CI/CD pipelines and orchestrator platforms where interactive setup is not practical
-- **Local config**: `~/.agentshield/config.json` stores tier, wallet, and policy state across sessions
-- **Error handling**: All 40 Anchor error codes (6000–6039) mapped to human-readable messages with actionable suggestions
+- **Local config**: `~/.agentshield/config.json` stores wallet, layer status, and policy state across sessions
+- **Error handling**: All 40 Anchor error codes (6000-6039) mapped to human-readable messages with actionable suggestions
 
 ## Support
 

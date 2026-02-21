@@ -5,22 +5,22 @@ AgentShield plugin for [Solana Agent Kit](https://github.com/sendaifun/solana-ag
 ## Installation
 
 ```bash
-npm install @agent-shield/plugin-solana-agent-kit @agent-shield/solana
+npm install @agent-shield/plugin-solana-agent-kit @agent-shield/sdk
 ```
 
-Peer dependencies: `solana-agent-kit >=2.0.0`, `@agent-shield/solana >=0.1.0`, `@solana/web3.js >=1.90.0`
+Peer dependencies: `solana-agent-kit >=2.0.0`, `@agent-shield/sdk >=0.1.0`, `@solana/web3.js >=1.90.0`
 
 ## Quick Start
 
 ### Option A: Pre-created ShieldedWallet
 
 ```typescript
-import { shield } from "@agent-shield/solana";
+import { shieldWallet } from "@agent-shield/sdk";
 import { createAgentShieldPlugin } from "@agent-shield/plugin-solana-agent-kit";
 import { SolanaAgentKit } from "solana-agent-kit";
 
 // 1. Wrap your wallet with spending controls
-const protectedWallet = shield(wallet, { maxSpend: "500 USDC/day" });
+const protectedWallet = shieldWallet(wallet, { maxSpend: "500 USDC/day" });
 
 // 2. Create the plugin (provides monitoring tools)
 const plugin = createAgentShieldPlugin({ wallet: protectedWallet });
@@ -182,12 +182,12 @@ All Zod schemas are also exported: `statusSchema`, `updatePolicySchema`, `pauseR
 
 ## How It Works
 
-The `shield()` wrapper intercepts `signTransaction` and `signAllTransactions` on the wallet. When the agent calls any SAK tool (swap, transfer, open position, etc.), the transaction passes through the shield's policy engine before signing. If a policy is violated (spending cap, rate limit, unknown program, etc.), the transaction is rejected with a descriptive `ShieldDeniedError`.
+The `shieldWallet()` wrapper intercepts `signTransaction` and `signAllTransactions` on the wallet. When the agent calls any SAK tool (swap, transfer, open position, etc.), the transaction passes through the shield's policy engine before signing. If a policy is violated (spending cap, rate limit, unknown program, etc.), the transaction is rejected with a descriptive `ShieldDeniedError`.
 
 The plugin's tools give the agent visibility into spending state and the ability to manage enforcement — no DeFi execution tools are needed since the shield guards signing transparently.
 
 ```
-Agent calls swap() → SAK builds transaction → shield() intercepts signTransaction
+Agent calls swap() → SAK builds transaction → shieldWallet() intercepts signTransaction
                                                   ↓
                                         Policy engine evaluates:
                                         • Spending cap check
@@ -210,10 +210,9 @@ npm test
 
 | Package | Description |
 |---------|-------------|
-| [`@agent-shield/solana`](https://www.npmjs.com/package/@agent-shield/solana) | Core wallet wrapper (required) |
+| [`@agent-shield/sdk`](https://www.npmjs.com/package/@agent-shield/sdk) | On-chain guardrails — `withVault()` primary API |
 | [`@agent-shield/core`](https://www.npmjs.com/package/@agent-shield/core) | Pure TypeScript policy engine |
 | [`@agent-shield/plugin-elizaos`](https://www.npmjs.com/package/@agent-shield/plugin-elizaos) | ElizaOS integration |
-| [`@agent-shield/sdk`](https://www.npmjs.com/package/@agent-shield/sdk) | On-chain vault SDK |
 
 ## Support
 

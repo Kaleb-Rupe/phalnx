@@ -1,14 +1,14 @@
 # @agent-shield/plugin-elizaos
 
-AgentShield plugin for [ElizaOS](https://github.com/elizaOS/eliza) — provides shield status actions, pause/resume controls, transaction history, spending providers, and policy evaluators for AI agents with client-side spending controls. Zero on-chain setup required.
+AgentShield plugin for [ElizaOS](https://github.com/elizaOS/eliza) — provides shield status actions, pause/resume controls, transaction history, spending providers, and policy evaluators for AI agents with on-chain guardrails for spending, protocol allowlists, and rate limiting.
 
 ## Installation
 
 ```bash
-npm install @agent-shield/plugin-elizaos @agent-shield/solana
+npm install @agent-shield/plugin-elizaos @agent-shield/sdk
 ```
 
-Peer dependencies: `@elizaos/core >=0.1.0`, `@agent-shield/solana >=0.1.0`, `@solana/web3.js >=1.90.0`
+Peer dependencies: `@elizaos/core >=0.1.0`, `@agent-shield/sdk >=0.1.0`, `@solana/web3.js >=1.90.0`
 
 ## Quick Start
 
@@ -253,10 +253,9 @@ npm test
 
 | Package | Description |
 |---------|-------------|
-| [`@agent-shield/solana`](https://www.npmjs.com/package/@agent-shield/solana) | Core wallet wrapper (required) |
+| [`@agent-shield/sdk`](https://www.npmjs.com/package/@agent-shield/sdk) | On-chain guardrails — `withVault()` primary API |
 | [`@agent-shield/core`](https://www.npmjs.com/package/@agent-shield/core) | Pure TypeScript policy engine |
 | [`@agent-shield/plugin-solana-agent-kit`](https://www.npmjs.com/package/@agent-shield/plugin-solana-agent-kit) | Solana Agent Kit integration |
-| [`@agent-shield/sdk`](https://www.npmjs.com/package/@agent-shield/sdk) | On-chain vault SDK |
 
 ## Support
 

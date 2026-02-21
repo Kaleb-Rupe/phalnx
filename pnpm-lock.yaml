@@ -152,9 +152,9 @@ importers:
       '@agent-shield/custody-crossmint':
         specifier: workspace:*
         version: link:../../sdk/custody/crossmint
-      '@agent-shield/solana':
+      '@agent-shield/sdk':
         specifier: workspace:*
-        version: link:../../sdk/wrapper
+        version: link:../../sdk/typescript
       '@elizaos/core':
         specifier: ^0.1.0
         version: 0.1.9(@google-cloud/vertexai@1.10.0)(@langchain/core@0.3.80(@opentelemetry/api@1.9.0)(openai@4.73.0(zod@3.23.8)))(axios@1.13.5)(react@19.2.4)(sswr@2.2.0(svelte@5.51.2))(svelte@5.51.2)(vue@3.5.28(typescript@5.9.3))(ws@8.19.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))
@@ -186,9 +186,9 @@ importers:
         specifier: ^3.22.0 || ^4.0.0
         version: 4.3.6
     devDependencies:
-      '@agent-shield/solana':
+      '@agent-shield/sdk':
         specifier: workspace:*
-        version: link:../../sdk/wrapper
+        version: link:../../sdk/typescript
       '@solana/web3.js':
         specifier: ^1.95.0
         version: 1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
@@ -244,9 +244,9 @@ importers:
         specifier: ^1.95.0
         version: 1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
     devDependencies:
-      '@agent-shield/solana':
+      '@agent-shield/sdk':
         specifier: workspace:*
-        version: link:../../wrapper
+        version: link:../../typescript
       '@types/chai':
         specifier: ^4.3.11
         version: 4.3.20
@@ -298,6 +298,9 @@ importers:
 
   sdk/typescript:
     dependencies:
+      '@agent-shield/core':
+        specifier: workspace:*
+        version: link:../core
       '@coral-xyz/anchor':
         specifier: ^0.32.1
         version: 0.32.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
@@ -336,37 +339,19 @@ importers:
 
   sdk/wrapper:
     dependencies:
-      '@agent-shield/core':
+      '@agent-shield/sdk':
         specifier: workspace:*
-        version: link:../core
-      '@solana/spl-token':
-        specifier: ^0.4.0
-        version: 0.4.14(@solana/web3.js@1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10)
+        version: link:../typescript
+      '@coral-xyz/anchor':
+        specifier: ^0.32.1
+        version: 0.32.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@solana/web3.js':
         specifier: ^1.95.0
         version: 1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
     devDependencies:
-      '@agent-shield/sdk':
-        specifier: workspace:*
-        version: link:../typescript
-      '@types/chai':
-        specifier: ^4.3.11
-        version: 4.3.20
-      '@types/mocha':
-        specifier: ^10.0.6
-        version: 10.0.10
       '@types/node':
         specifier: ^20.11.0
         version: 20.19.33
-      chai:
-        specifier: ^4.4.1
-        version: 4.5.0
-      mocha:
-        specifier: ^10.3.0
-        version: 10.8.2
-      ts-node:
-        specifier: ^10.9.2
-        version: 10.9.2(@types/node@20.19.33)(typescript@5.9.3)
       typescript:
         specifier: ^5.3.3
         version: 5.9.3

@@ -6,13 +6,12 @@
     { "name": "Oracle + delegation + timelock + transfers", "count": 25 },
     { "name": "Security exploit scenarios", "count": 28 },
     { "name": "Core policy engine (`@agent-shield/core`)", "count": 66 },
-    { "name": "SDK type & account tests (`@agent-shield/sdk`)", "count": 31 },
+    { "name": "SDK tests (`@agent-shield/sdk`)", "count": 135 },
     { "name": "Platform client tests (`@agent-shield/platform`)", "count": 17 },
     { "name": "Crossmint custody adapter", "count": 29 },
-    { "name": "Wrapper SDK (`@agent-shield/solana`)", "count": 96 },
     { "name": "SAK plugin (`@agent-shield/plugin-solana-agent-kit`)", "count": 25 },
     { "name": "ElizaOS plugin (`@agent-shield/plugin-elizaos`)", "count": 32 },
-    { "name": "MCP server (`@agent-shield/mcp`)", "count": 124 },
-    { "name": "Actions server (`@agent-shield/actions-server`)", "count": 50 }
+    { "name": "MCP server (`@agent-shield/mcp`)", "count": 118 },
+    { "name": "Actions server (`@agent-shield/actions-server`)", "count": 48 }
   ]
 }

@@ -20,12 +20,12 @@ describe("Types — Constants", () => {
     expect(FEE_RATE_DENOMINATOR).to.equal(1_000_000);
   });
 
-  it("PROTOCOL_FEE_RATE === 20", () => {
-    expect(PROTOCOL_FEE_RATE).to.equal(20);
+  it("PROTOCOL_FEE_RATE === 200", () => {
+    expect(PROTOCOL_FEE_RATE).to.equal(200);
   });
 
-  it("MAX_DEVELOPER_FEE_RATE === 50", () => {
-    expect(MAX_DEVELOPER_FEE_RATE).to.equal(50);
+  it("MAX_DEVELOPER_FEE_RATE === 500", () => {
+    expect(MAX_DEVELOPER_FEE_RATE).to.equal(500);
   });
 
   it("PROTOCOL_TREASURY is a valid PublicKey", () => {

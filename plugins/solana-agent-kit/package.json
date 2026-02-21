@@ -7,7 +7,7 @@
     "url": "https://github.com/Kaleb-Rupe/agentshield/issues",
     "email": "https://t.me/MightyMags"
   },
-  "description": "AgentShield plugin for Solana Agent Kit — shield() wrapper monitoring and management tools",
+  "description": "AgentShield plugin for Solana Agent Kit — shieldWallet() wrapper monitoring and management tools",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -25,11 +25,11 @@
   },
   "peerDependencies": {
     "solana-agent-kit": ">=2.0.0",
-    "@agent-shield/solana": ">=0.1.1",
+    "@agent-shield/sdk": ">=0.1.1",
     "@solana/web3.js": ">=1.90.0"
   },
   "devDependencies": {
-    "@agent-shield/solana": "workspace:*",
+    "@agent-shield/sdk": "workspace:*",
     "solana-agent-kit": "^2.0.0",
     "@solana/web3.js": "^1.95.0",
     "typescript": "^5.3.3",

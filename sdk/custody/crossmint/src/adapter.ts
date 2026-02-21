@@ -4,15 +4,15 @@
  * The private key lives in Crossmint's hardware enclave (Intel TDX).
  * The agent only gets a signing interface — it never sees or touches the key.
  *
- * Works with shield() out of the box:
- *   const wallet = shield(await crossmint({ apiKey }), { maxSpend: '500 USDC/day' });
+ * Works with shieldWallet() out of the box:
+ *   const wallet = shieldWallet(await crossmint({ apiKey }), { maxSpend: '500 USDC/day' });
  */
 
 import { PublicKey, Transaction, VersionedTransaction } from "@solana/web3.js";
 import { CrossmintWalletConfig, validateConfig } from "./config";
 
 /**
- * Minimal wallet interface — identical to the one in @agent-shield/solana.
+ * Minimal wallet interface — identical to the one in @agent-shield/sdk.
  * Duplicated here to avoid a hard dependency on the wrapper package.
  */
 export interface WalletLike {
@@ -184,7 +184,7 @@ export class CrossmintRESTClient implements CrossmintSDKClient {
  *
  * Use the static `create()` method to instantiate:
  *   const wallet = await CrossmintWallet.create({ apiKey: '...' });
- *   const shielded = shield(wallet, { maxSpend: '500 USDC/day' });
+ *   const shielded = shieldWallet(wallet, { maxSpend: '500 USDC/day' });
  */
 export class CrossmintWallet implements WalletLike {
   readonly publicKey: PublicKey;

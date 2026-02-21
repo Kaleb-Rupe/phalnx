@@ -57,14 +57,13 @@ describe("shield_configure", () => {
     fs.rmSync(tmpHome, { recursive: true, force: true });
   });
 
-  it("configures Tier 1 with conservative template", async () => {
+  it("configures with conservative template", async () => {
     const result = await configure(null, {
-      tier: 1,
       template: "conservative",
       network: "devnet",
     });
 
-    expect(result).to.include("Tier 1 (Shield)");
+    expect(result).to.include("AgentShield Configured");
     expect(result).to.include("$500");
     expect(result).to.include("devnet");
 
@@ -76,16 +75,14 @@ describe("shield_configure", () => {
     expect(config.version).to.equal(1);
     expect(config.layers.shield.enabled).to.be.true;
     expect(config.layers.shield.dailyCapUsd).to.equal(500);
-    expect(config.layers.tee.enabled).to.be.false;
-    expect(config.layers.vault.enabled).to.be.false;
-
-    // Tier 1 should NOT call fetch
-    expect(fetchStub.callCount).to.equal(0);
+    // Full setup provisions TEE and vault
+    expect(config.layers.tee.enabled).to.be.true;
+    expect(config.layers.vault.enabled).to.be.true;
+    expect(fetchStub.calledOnce).to.be.true;
   });
 
   it("generates a new keypair when walletPath not provided", async () => {
     await configure(null, {
-      tier: 1,
       template: "conservative",
       network: "devnet",
     });
@@ -114,7 +111,6 @@ describe("shield_configure", () => {
     fs.writeFileSync(existingPath, JSON.stringify(Array.from(kp.secretKey)));
 
     const result = await configure(null, {
-      tier: 1,
       template: "moderate",
       network: "devnet",
       walletPath: existingPath,
@@ -125,7 +121,6 @@ describe("shield_configure", () => {
 
   it("applies custom dailyCapUsd override", async () => {
     await configure(null, {
-      tier: 1,
       template: "conservative",
       dailyCapUsd: 1000,
       network: "devnet",
@@ -138,7 +133,6 @@ describe("shield_configure", () => {
 
   it("applies moderate template defaults", async () => {
     await configure(null, {
-      tier: 1,
       template: "moderate",
       network: "devnet",
     });
@@ -152,7 +146,6 @@ describe("shield_configure", () => {
 
   it("applies aggressive template defaults", async () => {
     await configure(null, {
-      tier: 1,
       template: "aggressive",
       network: "devnet",
     });
@@ -166,7 +159,6 @@ describe("shield_configure", () => {
 
   it("sets network to mainnet-beta when specified", async () => {
     await configure(null, {
-      tier: 1,
       template: "conservative",
       network: "mainnet-beta",
     });
@@ -178,7 +170,6 @@ describe("shield_configure", () => {
 
   it("returns error on invalid wallet path", async () => {
     const result = await configure(null, {
-      tier: 1,
       template: "conservative",
       network: "devnet",
       walletPath: "/nonexistent/path/wallet.json",
@@ -187,9 +178,8 @@ describe("shield_configure", () => {
     expect(result).to.include("Error");
   });
 
-  it("Tier 3 provisions TEE and generates vault Blink URL", async () => {
+  it("provisions TEE and generates vault Blink URL", async () => {
     const result = await configure(null, {
-      tier: 3,
       template: "conservative",
       network: "devnet",
     });
@@ -198,8 +188,6 @@ describe("shield_configure", () => {
     expect(fetchStub.calledOnce).to.be.true;
     expect(fetchStub.firstCall.args[0]).to.include("provision-tee");
 
-    // Result uses mock TEE pubkey
-    expect(result).to.include("Tier 3");
     expect(result).to.include("Configured");
     expect(result).to.include(MOCK_TEE_RESPONSE.publicKey);
     expect(result).to.include(MOCK_TEE_RESPONSE.locator);
@@ -221,7 +209,6 @@ describe("shield_configure", () => {
     );
 
     const result = await configure(null, {
-      tier: 2,
       template: "conservative",
       network: "devnet",
     });
@@ -231,14 +218,13 @@ describe("shield_configure", () => {
     expect(result).to.include("502");
   });
 
-  it("Tier 1 next steps suggest upgrading to TEE", async () => {
+  it("next steps include signing vault creation", async () => {
     const result = await configure(null, {
-      tier: 1,
       template: "conservative",
       network: "devnet",
     });
 
-    // Tier 1 should suggest upgrading to TEE
-    expect(result).to.include("Tier 2 (TEE)");
+    expect(result).to.include("Sign the vault creation transaction");
+    expect(result).to.include("full on-chain protection");
   });
 });

@@ -29,15 +29,15 @@
     "@solana/web3.js": "^1.95.0"
   },
   "peerDependencies": {
-    "@agent-shield/solana": ">=0.1.0"
+    "@agent-shield/sdk": ">=0.1.0"
   },
   "peerDependenciesMeta": {
-    "@agent-shield/solana": {
+    "@agent-shield/sdk": {
       "optional": true
     }
   },
   "devDependencies": {
-    "@agent-shield/solana": "workspace:*",
+    "@agent-shield/sdk": "workspace:*",
     "@types/chai": "^4.3.11",
     "@types/mocha": "^10.0.6",
     "@types/node": "^20.11.0",

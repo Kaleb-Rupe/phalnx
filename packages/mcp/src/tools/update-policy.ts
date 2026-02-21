@@ -43,7 +43,7 @@ export const updatePolicySchema = z.object({
   developerFeeRate: z
     .number()
     .optional()
-    .describe("New developer fee rate (max 50 = 0.5 BPS)"),
+    .describe("New developer fee rate (max 500 = 5 BPS)"),
   allowedDestinations: z
     .array(z.string())
     .optional()

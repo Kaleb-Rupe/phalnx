@@ -65,7 +65,7 @@ pub enum AgentShieldError {
     #[msg("Insufficient vault balance for withdrawal")]
     InsufficientBalance,
 
-    #[msg("Developer fee rate exceeds maximum (50 / 1,000,000 = 0.5 BPS)")]
+    #[msg("Developer fee rate exceeds maximum (500 / 1,000,000 = 5 BPS)")]
     DeveloperFeeTooHigh,
 
     #[msg("Fee destination account invalid")]

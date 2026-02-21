@@ -4,7 +4,7 @@ import { provision } from "./routes/provision";
 import { provisionTee } from "./routes/provision-tee";
 import { fund } from "./routes/fund";
 import { status } from "./routes/status";
-import { tiers } from "./routes/tiers";
+import { protection } from "./routes/protection";
 
 const app = new Hono();
 
@@ -14,7 +14,7 @@ app.route("/", provision);
 app.route("/", provisionTee);
 app.route("/", fund);
 app.route("/", status);
-app.route("/", tiers);
+app.route("/", protection);
 
 // Health check
 app.get("/health", (c) => c.json({ status: "ok" }));

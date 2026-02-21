@@ -1,4 +1,4 @@
-import type { ShieldPolicies } from "@agent-shield/solana";
+import type { ShieldPolicies } from "@agent-shield/sdk";
 import { getOrCreateShieldedWallet } from "../client-factory";
 
 export const updatePolicyAction = {

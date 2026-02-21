@@ -8,7 +8,7 @@ import * as os from "os";
 /** Supported custody providers for MCP server. */
 export type McpCustodyProvider = "crossmint" | "turnkey" | "privy";
 
-// ── Local Config (Three-Tier Onboarding) ────────────────────────
+// ── Local Config ────────────────────────────────────────────────
 
 export interface ShieldLayerConfig {
   shield: {
@@ -132,12 +132,14 @@ export function isConfigured(): boolean {
 }
 
 /**
- * Returns the current tier number based on enabled layers.
+ * Returns true if AgentShield is fully configured (all three layers enabled).
  */
-export function getCurrentTier(config: ShieldLocalConfig): 1 | 2 | 3 {
-  if (config.layers.vault.enabled) return 3;
-  if (config.layers.tee.enabled) return 2;
-  return 1;
+export function isFullyConfigured(config: ShieldLocalConfig): boolean {
+  return (
+    config.layers.shield.enabled &&
+    config.layers.tee.enabled &&
+    config.layers.vault.enabled
+  );
 }
 
 export interface McpConfig {

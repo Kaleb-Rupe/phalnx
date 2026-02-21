@@ -97,9 +97,9 @@ export interface ShieldOptions {
  *
  * @example
  * ```typescript
- * import { shield } from '@agent-shield/solana';
+ * import { shieldWallet } from '@agent-shield/sdk';
  *
- * const protectedWallet = shield(wallet, { maxSpend: '500 USDC/day' });
+ * const protectedWallet = shieldWallet(wallet, { maxSpend: '500 USDC/day' });
  * const agent = new SolanaAgentKit(protectedWallet, RPC_URL, config);
  * ```
  *

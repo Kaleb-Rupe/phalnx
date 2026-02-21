@@ -27,7 +27,7 @@ use agent_shield::state::{
 use anchor_lang::prelude::Pubkey;
 use anchor_lang::{AccountDeserialize, InstructionData, ToAccountMetas};
 
-const MAX_DEVELOPER_FEE_RATE: u16 = 50;
+const MAX_DEVELOPER_FEE_RATE: u16 = 500;
 const SESSION_EXPIRY_SLOTS: u64 = 20;
 const TOKEN_DECIMALS: u8 = 6;
 const MINT_AMOUNT: u64 = 10_000_000_000; // 10B base units (10k USDC)

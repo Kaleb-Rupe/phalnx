@@ -31,11 +31,11 @@ pub const SESSION_EXPIRY_SLOTS: u64 = 20;
 /// Fee rate denominator — fee_rate / 1,000,000 = fractional fee
 pub const FEE_RATE_DENOMINATOR: u64 = 1_000_000;
 
-/// Protocol fee rate: 20 / 1,000,000 = 0.002% = 0.2 BPS (hardcoded)
-pub const PROTOCOL_FEE_RATE: u16 = 20;
+/// Protocol fee rate: 200 / 1,000,000 = 0.02% = 2 BPS (hardcoded)
+pub const PROTOCOL_FEE_RATE: u16 = 200;
 
-/// Maximum developer fee rate: 50 / 1,000,000 = 0.005% = 0.5 BPS
-pub const MAX_DEVELOPER_FEE_RATE: u16 = 50;
+/// Maximum developer fee rate: 500 / 1,000,000 = 0.05% = 5 BPS
+pub const MAX_DEVELOPER_FEE_RATE: u16 = 500;
 
 /// Protocol treasury address (devnet placeholder — replace before mainnet)
 /// Base58: ASHie1dFTnDSnrHMPGmniJhMgfJVGPm3rAaEPnrtWDiT

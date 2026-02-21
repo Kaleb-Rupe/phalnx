@@ -1,13 +1,14 @@
 {
   "name": "@agent-shield/solana",
-  "version": "0.3.2",
+  "version": "0.4.0",
+  "deprecated": "Use @agent-shield/sdk instead. This package is a compatibility shim.",
   "author": "Kaleb Rupe (https://x.com/MightieMags)",
   "homepage": "https://github.com/Kaleb-Rupe/agentshield#readme",
   "bugs": {
     "url": "https://github.com/Kaleb-Rupe/agentshield/issues",
     "email": "https://t.me/MightyMags"
   },
-  "description": "Client-side spending controls for Solana AI agents. Three lines of code.",
+  "description": "DEPRECATED — Use @agent-shield/sdk instead. Re-exports from @agent-shield/sdk for backward compatibility.",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -22,30 +23,17 @@
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",
-    "prepublishOnly": "pnpm run clean && pnpm run build",
-    "test": "mocha --require ts-node/register tests/**/*.test.ts --timeout 30000"
+    "prepublishOnly": "pnpm run clean && pnpm run build"
   },
   "dependencies": {
-    "@agent-shield/core": "workspace:*",
-    "@solana/web3.js": "^1.95.0",
-    "@solana/spl-token": "^0.4.0"
+    "@agent-shield/sdk": "workspace:*"
   },
   "peerDependencies": {
-    "@agent-shield/sdk": "^0.1.0"
-  },
-  "peerDependenciesMeta": {
-    "@agent-shield/sdk": {
-      "optional": true
-    }
+    "@coral-xyz/anchor": "^0.32.1",
+    "@solana/web3.js": "^1.95.0"
   },
   "devDependencies": {
-    "@agent-shield/sdk": "workspace:*",
-    "@types/chai": "^4.3.11",
-    "@types/mocha": "^10.0.6",
     "@types/node": "^20.11.0",
-    "chai": "^4.4.1",
-    "mocha": "^10.3.0",
-    "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   },
   "keywords": [

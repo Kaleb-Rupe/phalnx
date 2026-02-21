@@ -49,7 +49,7 @@ export const queuePolicyUpdateSchema = z.object({
   developerFeeRate: z
     .number()
     .optional()
-    .describe("New developer fee rate (max 50 = 0.5 BPS)"),
+    .describe("New developer fee rate (max 500 = 5 BPS)"),
 });
 
 export type QueuePolicyUpdateInput = z.infer<typeof queuePolicyUpdateSchema>;

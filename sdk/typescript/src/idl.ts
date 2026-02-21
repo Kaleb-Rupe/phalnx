@@ -10,7 +10,7 @@ export type AgentShield = {
     name: "agentShield";
     version: "0.1.0";
     spec: "0.1.0";
-    description: "AI Agent Financial Middleware for Solana - Permission controls, spending limits, and audit infrastructure for autonomous agents";
+    description: "On-chain guardrails for AI agents on Solana - Permission controls, spending limits, and audit infrastructure for autonomous agents";
   };
   instructions: [
     {
@@ -1884,7 +1884,7 @@ export type AgentShield = {
     {
       code: 6021;
       name: "developerFeeTooHigh";
-      msg: "Developer fee rate exceeds maximum (50 / 1,000,000 = 0.5 BPS)";
+      msg: "Developer fee rate exceeds maximum (500 / 1,000,000 = 5 BPS)";
     },
     {
       code: 6022;
@@ -2684,7 +2684,7 @@ export type AgentShield = {
             docs: [
               "Developer fee rate (rate / 1,000,000). Applied to every finalized",
               "transaction. Fee deducted from vault, transferred to vault's",
-              "fee_destination. Max MAX_DEVELOPER_FEE_RATE (50 = 0.5 BPS).",
+              "fee_destination. Max MAX_DEVELOPER_FEE_RATE (500 = 5 BPS).",
               "Set to 0 for no developer fee. Protocol fee is always applied",
               "separately at PROTOCOL_FEE_RATE.",
             ];

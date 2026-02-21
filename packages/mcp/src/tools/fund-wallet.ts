@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { loadShieldConfig, getCurrentTier } from "../config";
+import { loadShieldConfig } from "../config";
 
 const ACTIONS_SERVER_URL = "https://agent-middleware.vercel.app";
 
@@ -37,18 +37,12 @@ export async function fundWallet(
   }
 
   const destination = config.wallet.publicKey;
-  const tier = getCurrentTier(config);
-  const tierLabels: Record<number, string> = {
-    1: "Shield wallet (keypair)",
-    2: "TEE wallet (hardware enclave)",
-    3: "Vault wallet (on-chain enforced)",
-  };
 
   const lines: string[] = [
     "## Fund Your AgentShield Wallet",
     "",
     `**Sending to:** ${destination}`,
-    `**Wallet Type:** ${tierLabels[tier]}`,
+    `**Wallet Type:** AgentShield wallet (TEE + on-chain enforced)`,
     `**Network:** ${config.network}`,
     "",
   ];
@@ -102,8 +96,7 @@ export const fundWalletTool = {
   name: "shield_fund_wallet",
   description:
     "Generate funding links for the configured AgentShield wallet. " +
-    "Returns a Blink URL (desktop), Solana Pay URL (mobile QR), and raw address. " +
-    "Works for any tier — sends to whatever wallet is configured.",
+    "Returns a Blink URL (desktop), Solana Pay URL (mobile QR), and raw address.",
   schema: fundWalletSchema,
   handler: fundWallet,
 };

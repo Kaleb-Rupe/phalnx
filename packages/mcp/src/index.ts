@@ -36,7 +36,6 @@ import { setupStatus } from "./tools/setup-status";
 import { configure } from "./tools/configure";
 import { configureFromFile } from "./tools/configure-from-file";
 import { fundWallet } from "./tools/fund-wallet";
-import { upgradeTier } from "./tools/upgrade-tier";
 
 // Resources
 import { getPolicyResource } from "./resources/policy";
@@ -123,7 +122,7 @@ async function main() {
   registerTool(
     server,
     "shield_setup_status",
-    "Check the current AgentShield setup status — shows which security tiers are active, wallet, policy, and network. Works even when not configured.",
+    "Check the current AgentShield setup status — shows wallet, guardrails, and network configuration. Works even when not configured.",
     {},
     async (input) => ({
       content: [{ type: "text", text: await setupStatus(null, input) }],
@@ -133,11 +132,13 @@ async function main() {
   registerTool(
     server,
     "shield_configure",
-    "Set up AgentShield with any security tier (1=Shield, 2=Shield+TEE, 3=Shield+TEE+Vault). Generates keypair, provisions TEE, and/or creates vault.",
+    "Set up AgentShield with full on-chain protection. Generates keypair, provisions TEE wallet, and creates vault Blink URL.",
     {
-      tier: z
-        .union([z.literal(1), z.literal(2), z.literal(3)])
-        .describe("Security tier: 1=Shield, 2=Shield+TEE, 3=Shield+TEE+Vault"),
+      teeProvider: z
+        .enum(["crossmint", "turnkey", "privy"])
+        .optional()
+        .default("crossmint")
+        .describe("TEE custody provider (default: crossmint)"),
       template: z
         .enum(["conservative", "moderate", "aggressive"])
         .optional()
@@ -197,20 +198,6 @@ async function main() {
     },
     async (input) => ({
       content: [{ type: "text", text: await configureFromFile(null, input) }],
-    }),
-  );
-
-  registerTool(
-    server,
-    "shield_upgrade_tier",
-    "Upgrade AgentShield from current tier to a higher one (2=add TEE, 3=add Vault). Preserves existing policy.",
-    {
-      targetTier: z
-        .union([z.literal(2), z.literal(3)])
-        .describe("Target tier: 2=add TEE, 3=add Vault"),
-    },
-    async (input) => ({
-      content: [{ type: "text", text: await upgradeTier(null, input) }],
     }),
   );
 
@@ -289,7 +276,7 @@ async function main() {
         .number()
         .optional()
         .default(0)
-        .describe("Developer fee rate (max 50 = 0.5 BPS)"),
+        .describe("Developer fee rate (max 500 = 5 BPS)"),
       allowedDestinations: z
         .array(z.string())
         .optional()
@@ -376,7 +363,7 @@ async function main() {
       developerFeeRate: z
         .number()
         .optional()
-        .describe("New developer fee rate (max 50)"),
+        .describe("New developer fee rate (max 500)"),
       allowedDestinations: z
         .array(z.string())
         .optional()
@@ -431,7 +418,7 @@ async function main() {
       developerFeeRate: z
         .number()
         .optional()
-        .describe("New developer fee rate (max 50)"),
+        .describe("New developer fee rate (max 500)"),
     },
     requireClient((input) => queuePolicyUpdate(client!, input)),
   );

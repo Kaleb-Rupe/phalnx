@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ShieldPolicies } from "@agent-shield/solana";
+import type { ShieldPolicies } from "@agent-shield/sdk";
 import type { ResolvedConfig } from "../types";
 
 export const updatePolicySchema = z.object({

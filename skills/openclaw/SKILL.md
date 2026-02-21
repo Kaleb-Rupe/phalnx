@@ -1,6 +1,6 @@
 ---
 name: agent-shield
-description: Financial guardrails for AI agents — three-tier security with spending caps, TEE custody, and on-chain vaults
+description: On-chain guardrails for AI agents — spending caps, TEE custody, and vault enforcement bundled as one product
 homepage: https://agentshield.xyz
 user-invocable: true
 command-dispatch: tool
@@ -14,30 +14,29 @@ metadata:
 
 # AgentShield Skill
 
-You have access to AgentShield tools that enforce financial guardrails on your Solana trading activity. AgentShield uses three compounding security layers — each adds protection on top of the previous.
+You have access to AgentShield tools that enforce on-chain guardrails on your Solana trading activity. AgentShield bundles three protection layers into a single integration — client-side fast deny, TEE key custody, and on-chain vault enforcement.
 
-## Three-Tier Security Model
+## Security Model
 
-| Tier | Layer | What It Adds | Cost | Setup Time |
-|------|-------|-------------|------|------------|
-| 1 | **Shield** | Software spending controls, protocol whitelists, rate limits | Free | Instant |
-| 2 | **TEE** | Hardware enclave key protection — key can't be extracted | Free | ~30s |
-| 3 | **Vault** | Blockchain-enforced policy — even a compromised agent can't bypass | ~0.003 SOL | ~2min |
+AgentShield provides three layers of protection in one integration:
 
-**Recommended combinations:**
-- Shield only — getting started, testing
-- Shield + TEE — production use with real money
-- Shield + TEE + Vault — maximum security (recommended for >$5k/day)
+| Layer | What It Does | Details |
+|-------|-------------|---------|
+| **Client-side policy checks** | Fast deny before transactions hit the network | Spending caps, protocol allowlists, rate limits |
+| **TEE key custody** | Hardware enclave key protection — key can't be extracted | Crossmint, Turnkey, or Privy |
+| **On-chain vault enforcement** | Blockchain-enforced policy — even a compromised agent can't bypass | PDA vaults, ~0.003 SOL, ~2min setup |
+
+All protection is set up together with `shield_configure`.
 
 ## Available Tools
 
 ### Setup & Onboarding (always available)
 | Tool | Purpose |
 |------|---------|
-| `shield_setup_status` | Check current setup — which tiers are active, wallet, policy |
-| `shield_configure` | Set up AgentShield with any tier (1/2/3) |
+| `shield_setup_status` | Check current setup — which layers are active, wallet, policy |
+| `shield_configure` | Set up AgentShield with full protection |
+| `shield_configure_from_file` | Apply a pre-written JSON config (CI/CD) |
 | `shield_fund_wallet` | Generate funding links (Blink URL, Solana Pay, raw address) |
-| `shield_upgrade_tier` | Upgrade from current tier to a higher one |
 
 ### Vault Operations (require configured wallet)
 | Tool | Purpose |
@@ -68,18 +67,18 @@ When a user mentions trading, security, wallet setup, or protecting their agent:
 ### Step 1: Check Current Status
 Call `shield_setup_status`. If not configured, start the onboarding conversation.
 
-### Step 2: Explain the Tiers
-Present the three tiers in plain language:
+### Step 2: Explain What AgentShield Does
+Present the protection model in plain language:
 
-> "I can set up three layers of protection for your wallet:
+> "I can set up on-chain guardrails for your wallet. AgentShield bundles three layers of protection:
 >
-> **Shield (Tier 1)** — Software spending controls. I'll enforce daily spending caps, protocol whitelists, and rate limits. It's free and instant. Great for getting started.
+> **Client-side checks** — I'll enforce daily spending caps, protocol whitelists, and rate limits before any transaction leaves your machine.
 >
-> **TEE (Tier 2)** — Hardware enclave protection. Your agent's private key is stored in a Trusted Execution Environment — no one can extract it, not even the server operator. Also free, takes about 30 seconds.
+> **TEE custody** — Your agent's private key is stored in a hardware enclave (Trusted Execution Environment). No one can extract it, not even the server operator.
 >
-> **Vault (Tier 3)** — On-chain enforcement. Your spending limits are enforced by a Solana smart contract. Even if I'm compromised, I physically cannot exceed the limits. Costs about 0.003 SOL, takes about 2 minutes.
+> **On-chain vault** — Your spending limits are enforced by a Solana smart contract. Even if I'm compromised, I physically cannot exceed the limits. Costs about 0.003 SOL, takes about 2 minutes.
 >
-> **I recommend combining all three layers** for the best protection. For production use with real money, at minimum use Shield + TEE."
+> All three layers are set up together — one integration, full protection."
 
 ### Step 3: Choose Setup Mode
 Offer two modes:
@@ -94,33 +93,22 @@ Offer two modes:
 4. "Which network — devnet (testing) or mainnet-beta (real money)?"
 
 ### Step 4: Configure
-Call `shield_configure` with the chosen tier and settings.
+Call `shield_configure` with the chosen settings.
 
 ### Step 5: Funding
 After configuration, call `shield_fund_wallet` to generate funding links.
 
 Say: "Your wallet is set up! Here's how to fund it:" then present the Blink URL, Solana Pay URL, and raw address.
 
-### Step 6: Tier Upgrade (if needed)
-If the user later asks for more security, call `shield_upgrade_tier`.
-
 ## Important Warnings
 
-### Vault Without TEE
-If a user picks Tier 3 (Vault) without Tier 2 (TEE), warn them:
-> "Your agent's private key is stored locally without hardware protection. While the on-chain vault limits what I can do, someone with access to this machine could steal the agent key. I recommend adding TEE custody."
-
-### Keypair Backup (Tier 1)
-After Tier 1 setup, always remind:
+### Keypair Backup
+After setup, always remind:
 > "Important: Back up your keypair file. If you lose it, you lose access to your wallet."
 
 ### TEE Custody Disclosure
-After Tier 2 setup, disclose:
+After setup, disclose:
 > "Your TEE wallet is custodied by AgentShield's platform. You can export or migrate later."
-
-### Production Recommendation
-For any amount over $100, recommend at least Tier 2:
-> "For real money, I strongly recommend adding TEE custody to protect your agent's private key."
 
 ## Core Trading Rules
 
