@@ -1,5 +1,8 @@
 # @agent-shield/solana
 
+> **Deprecated:** This package is a compatibility shim. Use `@agent-shield/sdk` instead.
+> All imports below work identically with `@agent-shield/sdk`.
+
 On-chain guardrails for AI agents on Solana. One call to protect your agent.
 
 `@agent-shield/solana` wraps any Solana wallet with transparent policy enforcement — client-side fast deny, TEE key custody, and on-chain vault enforcement bundled as one product. Every `signTransaction` call passes through a policy engine that checks spending caps, rate limits, and protocol allowlists before signing. If a policy is violated, the transaction is rejected with an actionable error.

@@ -97,9 +97,9 @@ export interface ShieldOptions {
  *
  * @example
  * ```typescript
- * import { shield } from '@agent-shield/solana';
+ * import { shieldWallet } from '@agent-shield/sdk';
  *
- * const protectedWallet = shield(wallet, { maxSpend: '500 USDC/day' });
+ * const protectedWallet = shieldWallet(wallet, { maxSpend: '500 USDC/day' });
  * const agent = new SolanaAgentKit(protectedWallet, RPC_URL, config);
  * ```
  *
@@ -107,6 +107,7 @@ export interface ShieldOptions {
  * - 1000 USDC/day, 1000 USDT/day, 10 SOL/day spending caps
  * - Unknown programs blocked
  * - 60 transactions/hour rate limit
+ * @internal Use shieldWallet() instead
  */
 export function shield(
   wallet: WalletLike,

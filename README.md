@@ -1,7 +1,7 @@
 # AgentShield
 
 [![CI](https://github.com/Kaleb-Rupe/agentshield/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Kaleb-Rupe/agentshield/actions/workflows/ci.yml)
-![Tests](https://img.shields.io/badge/tests-591-brightgreen)
+![Tests](https://img.shields.io/badge/tests-640-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 On-chain guardrails for AI agents on Solana. Your policies are enforced by Solana validators, not software promises.
@@ -171,11 +171,12 @@ anchor build --no-idl
 # Generate IDL separately (requires nightly Rust — anchor-syn 0.32.1 bug)
 RUSTUP_TOOLCHAIN=nightly anchor idl build -o target/idl/agent_shield.json
 
-# Run on-chain tests (93 tests, LiteSVM — no validator needed)
+# Run on-chain tests (174 tests, LiteSVM — no validator needed)
 npx ts-mocha -p ./tsconfig.json -t 300000 \
-  tests/agent-shield.ts tests/jupiter-integration.ts tests/flash-trade-integration.ts
+  tests/agent-shield.ts tests/jupiter-integration.ts \
+  tests/flash-trade-integration.ts tests/security-exploits.ts
 
-# Run all TypeScript tests (470 tests across 8 suites)
+# Run all TypeScript tests (466 tests across 8 suites)
 pnpm -r run test
 
 # Lint
@@ -188,10 +189,10 @@ cargo fmt --check --manifest-path programs/agent-shield/Cargo.toml
 | Suite                                                | Tests   |
 | ---------------------------------------------------- | ------- |
 | Core vault management & permission engine            |      51 |
-| Jupiter integration (composed swaps)                 |       9 |
-| Flash Trade integration (leveraged perps)            |       8 |
+| Jupiter integration (composed swaps)                 |       8 |
+| Flash Trade integration (leveraged perps)            |       9 |
 | Oracle + delegation + timelock + transfers           |      25 |
-| Security exploit scenarios                           |      28 |
+| Security exploit scenarios                           |      81 |
 | Core policy engine (`@agent-shield/core`)            |      66 |
 | SDK tests (`@agent-shield/sdk`)                      |     135 |
 | Platform client tests (`@agent-shield/platform`)     |      17 |
@@ -199,8 +200,8 @@ cargo fmt --check --manifest-path programs/agent-shield/Cargo.toml
 | SAK plugin (`@agent-shield/plugin-solana-agent-kit`) |      25 |
 | ElizaOS plugin (`@agent-shield/plugin-elizaos`)      |      32 |
 | MCP server (`@agent-shield/mcp`)                     |     118 |
-| Actions server (`@agent-shield/actions-server`)      |      48 |
-| **Total**                                            | **591** |
+| Actions server (`@agent-shield/actions-server`)      |      44 |
+| **Total**                                            | **640** |
 
 ## Security
 

@@ -107,6 +107,7 @@ export interface ShieldOptions {
  * - 1000 USDC/day, 1000 USDT/day, 10 SOL/day spending caps
  * - Unknown programs blocked
  * - 60 transactions/hour rate limit
+ * @internal Use shieldWallet() instead
  */
 export function shield(
   wallet: WalletLike,

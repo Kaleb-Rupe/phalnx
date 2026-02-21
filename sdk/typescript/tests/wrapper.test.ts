@@ -164,7 +164,7 @@ function buildProgramTx(payer: PublicKey, programId: PublicKey): Transaction {
 
 // --- Tests ---
 
-describe("@agent-shield/solana", () => {
+describe("wrapper — shieldWallet() & harden()", () => {
   describe("parseSpendLimit", () => {
     it("parses '500 USDC/day'", () => {
       const limit = parseSpendLimit("500 USDC/day");

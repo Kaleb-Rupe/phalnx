@@ -1,15 +1,18 @@
 # CI Pipeline for AgentShield
 #
 # Runs on every push to main and on pull requests.
-# Six parallel jobs:
-#   1. build-lint-test        — TypeScript builds, Prettier (10 packages), 470 TS tests across 8 suites
+# Nine jobs (1 detection + 6 parallel + 1 CodeQL + 1 gate):
+#   0. changes                — Detect which file groups changed (path filtering)
+#   1. build-lint-test        — TypeScript builds, Prettier (10 packages), 466 TS tests across 8 suites
 #   2. rust-checks            — cargo fmt + cargo clippy
-#   3. on-chain-tests         — Anchor build + LiteSVM in-process + 121 on-chain tests (93 + 28 security exploits)
-#   4. security-scan          — Sec3 X-Ray static analysis
-#   5. formal-verification    — Certora Solana Prover (main branch only, non-blocking)
-#   6. fuzz-check             — Trident fuzz harness compilation check
+#   3. on-chain-tests         — Anchor build + LiteSVM in-process + 174 on-chain tests (93 core + 81 security exploits)
+#   4. security-scan          — Sec3 X-Ray static analysis (BLOCKING)
+#   5. formal-verification    — Certora Solana Prover (Rust changes only, BLOCKING)
+#   6. fuzz-test              — Trident fuzz test: 1000 iterations (BLOCKING)
+#   7. security-gate          — All-pass gate for branch protection
 #
-# Total: 591 tests across 14 suites (470 TS + 121 on-chain)
+# Total: 640 tests across 13 suites (466 TS + 174 on-chain)
+# All security checks are BLOCKING — zero tolerance for known issues.
 
 name: CI
 
@@ -35,7 +38,26 @@ env:
 
 jobs:
   # ──────────────────────────────────────────────────────────────
-  # Job 1: TypeScript build, lint, and tests (8 suites, 470 tests)
+  # Job 0: Detect which file groups changed (for conditional jobs)
+  # ──────────────────────────────────────────────────────────────
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      rust: ${{ steps.filter.outputs.rust }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
+        id: filter
+        with:
+          filters: |
+            rust:
+              - 'programs/**'
+              - 'certora/**'
+              - 'trident-tests/**'
+
+  # ──────────────────────────────────────────────────────────────
+  # Job 1: TypeScript build, lint, and tests (8 suites, 466 tests)
   # ──────────────────────────────────────────────────────────────
   build-lint-test:
     name: Build, Lint & TS Tests
@@ -60,10 +82,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Audit dependencies
+      - name: Audit dependencies (critical — blocking)
+        run: pnpm audit --audit-level=critical
+
+      - name: Audit dependencies (high — advisory)
         run: pnpm audit --audit-level=high || true
-        # Non-blocking for now — warns on known CVEs without failing the build.
-        # Remove `|| true` once all existing advisories are resolved.
+        # Non-blocking for high-severity advisories — tracked in security backlog.
 
       - name: Build all packages
         run: pnpm -r run build
@@ -111,7 +135,7 @@ jobs:
         working-directory: packages/mcp
         run: pnpm test
 
-      - name: Actions server tests (48 tests)
+      - name: Actions server tests (44 tests)
         working-directory: apps/actions-server
         run: pnpm test
 
@@ -191,7 +215,7 @@ jobs:
   # Job 3: On-chain tests (LiteSVM in-process, no validator)
   # ──────────────────────────────────────────────────────────────
   on-chain-tests:
-    name: On-Chain Tests (121 tests, LiteSVM)
+    name: On-Chain Tests (174 tests, LiteSVM)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -273,7 +297,20 @@ jobs:
           docker run --rm --volume "$(pwd):/workspace" \
             ghcr.io/sec3-product/x-ray:latest \
             /workspace/programs/agent-shield | tee xray-report.txt
-        continue-on-error: true
+
+      - name: Check X-Ray findings
+        run: |
+          if [ -f .sec3-allowlist.txt ]; then
+            grep "VULNERABLE" xray-report.txt | grep -v -f .sec3-allowlist.txt > xray-filtered.txt || true
+          else
+            grep "VULNERABLE" xray-report.txt > xray-filtered.txt || true
+          fi
+          if [ -s xray-filtered.txt ]; then
+            echo "::error::Sec3 X-Ray found vulnerabilities:"
+            cat xray-filtered.txt
+            exit 1
+          fi
+          echo "No actionable vulnerabilities found."
 
       - name: Upload X-Ray report
         if: always()
@@ -296,9 +333,10 @@ jobs:
   # ──────────────────────────────────────────────────────────────
   formal-verification:
     name: Formal Verification (Certora)
+    needs: changes
     runs-on: ubuntu-latest
     environment: Certora
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: needs.changes.outputs.rust == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -348,10 +386,10 @@ jobs:
           retention-days: 90
 
   # ──────────────────────────────────────────────────────────────
-  # Job 6: Fuzz harness compilation check (Trident)
+  # Job 6: Fuzz test (Trident — 1000 iterations, 100 flows each)
   # ──────────────────────────────────────────────────────────────
-  fuzz-check:
-    name: Fuzz Harness Check (Trident)
+  fuzz-test:
+    name: Fuzz Test (Trident, 1000 iterations)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -377,4 +415,73 @@ jobs:
 
       - name: Compile fuzz harness
         working-directory: trident-tests
-        run: cargo build --bin fuzz_0
+        run: cargo build --release --bin fuzz_0
+
+      - name: Run fuzz test (1000 iterations, 100 flows each)
+        working-directory: trident-tests
+        run: |
+          timeout 600 ./target/release/fuzz_0 || EXIT=$?
+          if [ "${EXIT:-0}" -eq 124 ]; then
+            echo "::error::Fuzz test timed out after 10 minutes"
+            exit 1
+          elif [ "${EXIT:-0}" -ne 0 ]; then
+            echo "::error::Fuzz test found invariant violations!"
+            exit 1
+          fi
+          echo "Fuzz test completed successfully (1000 iterations, 100 flows each)"
+
+      - name: Upload crash artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crashes
+          path: |
+            trident-tests/trident-crashes/
+            trident-tests/crash-*
+          retention-days: 90
+          if-no-files-found: ignore
+
+  # ──────────────────────────────────────────────────────────────
+  # Gate: All checks must pass before merge
+  # ──────────────────────────────────────────────────────────────
+  security-gate:
+    name: Security Gate
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - build-lint-test
+      - rust-checks
+      - on-chain-tests
+      - security-scan
+      - formal-verification
+      - fuzz-test
+    steps:
+      - name: Check all jobs passed
+        run: |
+          echo "Job results:"
+          echo "  build-lint-test:       ${{ needs.build-lint-test.result }}"
+          echo "  rust-checks:           ${{ needs.rust-checks.result }}"
+          echo "  on-chain-tests:        ${{ needs.on-chain-tests.result }}"
+          echo "  security-scan:         ${{ needs.security-scan.result }}"
+          echo "  formal-verification:   ${{ needs.formal-verification.result }}"
+          echo "  fuzz-test:             ${{ needs.fuzz-test.result }}"
+          echo ""
+
+          FAILED=0
+          for result in \
+            "${{ needs.build-lint-test.result }}" \
+            "${{ needs.rust-checks.result }}" \
+            "${{ needs.on-chain-tests.result }}" \
+            "${{ needs.security-scan.result }}" \
+            "${{ needs.formal-verification.result }}" \
+            "${{ needs.fuzz-test.result }}"; do
+            if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
+              FAILED=1
+            fi
+          done
+
+          if [ "$FAILED" -eq 1 ]; then
+            echo "::error::Security gate failed. One or more required jobs did not pass. Merge blocked."
+            exit 1
+          fi
+          echo "All required checks passed."

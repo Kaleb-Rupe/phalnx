@@ -1,10 +1,10 @@
 {
   "suites": [
     { "name": "Core vault management & permission engine", "count": 51 },
-    { "name": "Jupiter integration (composed swaps)", "count": 9 },
-    { "name": "Flash Trade integration (leveraged perps)", "count": 8 },
+    { "name": "Jupiter integration (composed swaps)", "count": 8 },
+    { "name": "Flash Trade integration (leveraged perps)", "count": 9 },
     { "name": "Oracle + delegation + timelock + transfers", "count": 25 },
-    { "name": "Security exploit scenarios", "count": 28 },
+    { "name": "Security exploit scenarios", "count": 81 },
     { "name": "Core policy engine (`@agent-shield/core`)", "count": 66 },
     { "name": "SDK tests (`@agent-shield/sdk`)", "count": 135 },
     { "name": "Platform client tests (`@agent-shield/platform`)", "count": 17 },
@@ -12,6 +12,6 @@
     { "name": "SAK plugin (`@agent-shield/plugin-solana-agent-kit`)", "count": 25 },
     { "name": "ElizaOS plugin (`@agent-shield/plugin-elizaos`)", "count": 32 },
     { "name": "MCP server (`@agent-shield/mcp`)", "count": 118 },
-    { "name": "Actions server (`@agent-shield/actions-server`)", "count": 48 }
+    { "name": "Actions server (`@agent-shield/actions-server`)", "count": 44 }
   ]
 }

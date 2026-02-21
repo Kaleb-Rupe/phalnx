@@ -413,7 +413,7 @@ function toAnchorWallet(wallet: WalletLike): any {
  *
  * @example
  * ```typescript
- * import { withVault } from '@agent-shield/solana';
+ * import { withVault } from '@agent-shield/sdk';
  *
  * const result = await withVault(teeWallet, { maxSpend: '500 USDC/day' }, {
  *   connection,
@@ -569,7 +569,7 @@ export async function harden(
  *
  * @example
  * ```typescript
- * import { withVault } from '@agent-shield/solana';
+ * import { withVault } from '@agent-shield/sdk';
  *
  * // Simplest path: bring your TEE wallet
  * const result = await withVault(teeWallet, { maxSpend: '500 USDC/day' }, {

@@ -1,0 +1,8 @@
+# Sec3 X-Ray Allowlist
+#
+# Add patterns (one per line) to suppress known false positives.
+# Lines matching these patterns will be excluded from the VULNERABLE check.
+# Empty lines and lines starting with # are ignored.
+#
+# Example:
+#   IntegerAddOverflow:my_function

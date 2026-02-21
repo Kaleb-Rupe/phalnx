@@ -9,7 +9,9 @@
   },
   "description": "Platform client for AgentShield — request TEE wallet provisioning via Solana Actions",
   "main": "dist/index.js",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "sideEffects": false,
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",

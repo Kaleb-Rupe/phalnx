@@ -9,7 +9,9 @@
   },
   "description": "AgentShield plugin for Solana Agent Kit — shieldWallet() wrapper monitoring and management tools",
   "main": "dist/index.js",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "sideEffects": false,
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",

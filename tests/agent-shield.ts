@@ -1678,7 +1678,7 @@ describe("agent-shield", () => {
   });
 
   // =========================================================================
-  // Tier 1a: Session expiry & permissionless crank
+  // Session expiry & permissionless crank
   // =========================================================================
   describe("session expiry & permissionless crank", () => {
     const expiryVaultId = new BN(40);
@@ -2035,7 +2035,7 @@ describe("agent-shield", () => {
   });
 
   // =========================================================================
-  // Tier 1c: Agent registration security
+  // Agent registration security
   // =========================================================================
   describe("agent registration security", () => {
     it("rejects owner as agent → AgentIsOwner", async () => {
@@ -2151,7 +2151,7 @@ describe("agent-shield", () => {
   });
 
   // =========================================================================
-  // Tier 1d: Vault status transitions
+  // Vault status transitions
   // =========================================================================
   describe("vault status transitions", () => {
     it("deposit to frozen vault → should succeed (only checks VaultAlreadyClosed)", async () => {
@@ -2365,7 +2365,7 @@ describe("agent-shield", () => {
   });
 
   // =========================================================================
-  // Tier 2a: Audit log ring buffer (MAX_RECENT_TRANSACTIONS = 50)
+  // Audit log ring buffer (MAX_RECENT_TRANSACTIONS = 50)
   // =========================================================================
   describe("audit log ring buffer", () => {
     const ringVaultId = new BN(70);
@@ -2507,7 +2507,7 @@ describe("agent-shield", () => {
   });
 
   // =========================================================================
-  // Tier 2b: Fee precision edge cases
+  // Fee precision edge cases
   // =========================================================================
   describe("fee precision edge cases", () => {
     const feeEdgeVaultId = new BN(80);

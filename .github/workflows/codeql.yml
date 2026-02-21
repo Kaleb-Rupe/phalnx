@@ -1,0 +1,42 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1' # Weekly Monday 6am UTC
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: CodeQL Analysis (TypeScript)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@c4a7bc332abaec03596ff2803dd7f3ca3a238975 # v3
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+
+      - name: Build (for CodeQL tracing)
+        run: |
+          npm install -g pnpm@10
+          pnpm install --frozen-lockfile
+          pnpm -r run build
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@c4a7bc332abaec03596ff2803dd7f3ca3a238975 # v3
+        with:
+          category: "/language:javascript-typescript"

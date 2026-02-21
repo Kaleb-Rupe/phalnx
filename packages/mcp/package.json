@@ -9,7 +9,9 @@
   },
   "description": "MCP server for AgentShield — manage on-chain vaults and enforce policies via AI tools",
   "main": "dist/index.js",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "sideEffects": false,
   "bin": {
     "agent-shield-mcp": "dist/index.js"
   },
