@@ -596,7 +596,7 @@ async function main() {
         .default("GET")
         .describe("HTTP method (default: GET)"),
       headers: z
-        .record(z.string())
+        .record(z.string(), z.string())
         .optional()
         .describe("Additional HTTP headers"),
       body: z.string().optional().describe("Request body (for POST/PUT)"),
