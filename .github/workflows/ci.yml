@@ -7,7 +7,7 @@
 #   2. rust-checks            — cargo fmt + cargo clippy
 #   3. on-chain-tests         — Anchor build + LiteSVM in-process + 174 on-chain tests (93 core + 81 security exploits)
 #   4. security-scan          — Sec3 X-Ray static analysis (BLOCKING)
-#   5. formal-verification    — Certora Solana Prover (Rust changes only, BLOCKING)
+#   5. formal-verification    — Certora Solana Prover (programs/ or certora/ changes only, BLOCKING)
 #   6. fuzz-test              — Trident fuzz test: 1000 iterations (BLOCKING)
 #   7. security-gate          — All-pass gate for branch protection
 #
@@ -45,6 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       rust: ${{ steps.filter.outputs.rust }}
+      certora: ${{ steps.filter.outputs.certora }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
@@ -55,6 +56,9 @@ jobs:
               - 'programs/**'
               - 'certora/**'
               - 'trident-tests/**'
+            certora:
+              - 'programs/**'
+              - 'certora/**'
 
   # ──────────────────────────────────────────────────────────────
   # Job 1: TypeScript build, lint, and tests (8 suites, 512 tests)
@@ -373,7 +377,7 @@ jobs:
     needs: changes
     runs-on: ubuntu-latest
     environment: Certora
-    if: needs.changes.outputs.rust == 'true'
+    if: needs.changes.outputs.certora == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
