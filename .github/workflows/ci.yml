@@ -18,7 +18,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, changeset-release/main]
   pull_request:
     branches: [main]
 
