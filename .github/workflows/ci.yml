@@ -114,8 +114,18 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Generate CI bot token
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        id: app-token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        with:
+          app-id: ${{ vars.CI_APP_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          token: ${{ steps.app-token.outputs.token || github.token }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
@@ -236,19 +246,6 @@ jobs:
           name: test-summary
           path: test-summary.txt
           retention-days: 90
-
-      - name: Generate CI bot token
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        id: app-token
-        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
-        with:
-          app-id: ${{ vars.CI_APP_ID }}
-          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
-
-      - name: Configure push credentials
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          git remote set-url origin https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}
 
       - name: Update README test counts
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
