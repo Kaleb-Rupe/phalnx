@@ -26,11 +26,17 @@ export const provisionSchema = z.object({
       "Agent public key (base58) to register in the vault. " +
         "If not provided, uses the MCP server's agent keypair.",
     ),
-  allowedProtocols: z
+  protocolMode: z
+    .number()
+    .optional()
+    .describe(
+      "Protocol access mode: 0 = all allowed, 1 = allowlist, 2 = denylist. Overrides template.",
+    ),
+  protocols: z
     .array(z.string())
     .optional()
     .describe(
-      "Custom allowed protocol program IDs (base58). Overrides template.",
+      "Custom protocol program IDs (base58). Overrides template.",
     ),
   maxLeverageBps: z
     .number()
