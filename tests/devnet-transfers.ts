@@ -9,10 +9,9 @@
  *     Removed per-token max_tx_base test (V1 concept not in V2).
  */
 import * as anchor from "@coral-xyz/anchor";
-import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
+import { Keypair, PublicKey } from "@solana/web3.js";
 import {
   TOKEN_PROGRAM_ID,
-  ASSOCIATED_TOKEN_PROGRAM_ID,
   getOrCreateAssociatedTokenAccount,
 } from "@solana/spl-token";
 import { expect } from "chai";
@@ -20,9 +19,7 @@ import BN from "bn.js";
 import {
   getDevnetProvider,
   nextVaultId,
-  deriveOracleRegistryPda,
   initializeOracleRegistry,
-  updateOracleRegistry,
   makeOracleEntry,
   createFullVault,
   fundKeypair,
