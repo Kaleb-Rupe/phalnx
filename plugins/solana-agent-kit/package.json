@@ -25,20 +25,20 @@
     "node": ">=18.0.0"
   },
   "peerDependencies": {
-    "solana-agent-kit": ">=2.0.0",
     "@agent-shield/sdk": ">=0.5.2",
-    "@solana/web3.js": ">=1.90.0"
+    "@solana/web3.js": ">=1.90.0",
+    "solana-agent-kit": ">=2.0.0"
   },
   "devDependencies": {
     "@agent-shield/sdk": "workspace:*",
-    "solana-agent-kit": "^2.0.0",
     "@solana/web3.js": "^1.95.0",
-    "typescript": "^5.3.3",
     "@types/chai": "^4.3.11",
     "@types/mocha": "^10.0.6",
-    "chai": "^4.4.1",
-    "mocha": "^10.3.0",
-    "ts-node": "^10.9.2"
+    "chai": "^6.2.2",
+    "mocha": "^11.7.5",
+    "solana-agent-kit": "^2.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
   },
   "dependencies": {
     "zod": "^3.22.0 || ^4.0.0"

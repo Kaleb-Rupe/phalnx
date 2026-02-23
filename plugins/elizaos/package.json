@@ -25,9 +25,9 @@
     "node": ">=18.0.0"
   },
   "peerDependencies": {
-    "@elizaos/core": ">=0.1.0",
-    "@agent-shield/sdk": ">=0.5.2",
     "@agent-shield/custody-crossmint": ">=0.1.4",
+    "@agent-shield/sdk": ">=0.5.2",
+    "@elizaos/core": ">=0.1.0",
     "@solana/web3.js": ">=1.90.0"
   },
   "peerDependenciesMeta": {
@@ -36,16 +36,16 @@
     }
   },
   "devDependencies": {
-    "typescript": "^5.3.3",
-    "@elizaos/core": "^0.1.0",
-    "@agent-shield/sdk": "workspace:*",
     "@agent-shield/custody-crossmint": "workspace:*",
+    "@agent-shield/sdk": "workspace:*",
+    "@elizaos/core": "^1.7.2",
     "@solana/web3.js": "^1.95.0",
     "@types/chai": "^4.3.11",
     "@types/mocha": "^10.0.6",
-    "chai": "^4.4.1",
-    "mocha": "^10.3.0",
-    "ts-node": "^10.9.2"
+    "chai": "^6.2.2",
+    "mocha": "^11.7.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
   },
   "keywords": [
     "solana",

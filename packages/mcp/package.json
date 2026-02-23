@@ -31,8 +31,8 @@
     "@modelcontextprotocol/sdk": "^1.12.1"
   },
   "peerDependencies": {
-    "@agent-shield/sdk": ">=0.5.2",
     "@agent-shield/custody-crossmint": ">=0.1.4",
+    "@agent-shield/sdk": ">=0.5.2",
     "@coral-xyz/anchor": ">=0.32.1",
     "@solana/spl-token": ">=0.4.0",
     "@solana/web3.js": ">=1.95.0",
@@ -44,20 +44,20 @@
     }
   },
   "devDependencies": {
-    "@agent-shield/sdk": "workspace:*",
     "@agent-shield/custody-crossmint": "workspace:*",
+    "@agent-shield/sdk": "workspace:*",
     "@coral-xyz/anchor": "^0.32.1",
     "@solana/spl-token": "^0.4.0",
     "@solana/web3.js": "^1.95.0",
     "@types/chai": "^4.3.11",
     "@types/mocha": "^10.0.6",
-    "@types/sinon": "^17.0.3",
-    "zod": "^4.3.6",
-    "chai": "^4.4.1",
-    "mocha": "^10.3.0",
-    "sinon": "^17.0.1",
+    "@types/sinon": "^21.0.0",
+    "chai": "^6.2.2",
+    "mocha": "^11.7.5",
+    "sinon": "^21.0.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "zod": "^4.3.6"
   },
   "keywords": [
     "mcp",

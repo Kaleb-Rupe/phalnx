@@ -14,22 +14,22 @@
     "deploy:preview": "vercel"
   },
   "dependencies": {
-    "hono": "^4.12.2",
+    "@agent-shield/sdk": "workspace:*",
+    "@coral-xyz/anchor": "^0.32.1",
     "@hono/node-server": "^1.13.0",
     "@solana/actions": "^1.6.0",
     "@solana/spl-token": "^0.4.0",
     "@solana/web3.js": "^1.95.0",
-    "@agent-shield/sdk": "workspace:*",
-    "@coral-xyz/anchor": "^0.32.1"
+    "hono": "^4.12.2"
   },
   "devDependencies": {
     "@types/chai": "^4.3.11",
     "@types/mocha": "^10.0.6",
-    "chai": "^4.4.1",
-    "mocha": "^10.3.0",
+    "chai": "^6.2.2",
+    "mocha": "^11.7.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
-    "vercel": "^39.0.0"
+    "vercel": "^50.22.1"
   },
   "license": "Apache-2.0"
 }
