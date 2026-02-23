@@ -211,22 +211,14 @@ export class AgentShieldClient {
     params: InitializeOracleRegistryParams,
   ): Promise<string> {
     const authority = this.provider.wallet.publicKey;
-    return buildInitializeOracleRegistry(
-      this.program,
-      authority,
-      params,
-    ).rpc();
+    return buildInitializeOracleRegistry(this.program, authority, params).rpc();
   }
 
   async updateOracleRegistry(
     params: UpdateOracleRegistryParams,
   ): Promise<string> {
     const authority = this.provider.wallet.publicKey;
-    return buildUpdateOracleRegistry(
-      this.program,
-      authority,
-      params,
-    ).rpc();
+    return buildUpdateOracleRegistry(this.program, authority, params).rpc();
   }
 
   // --- Instruction Execution (sends + confirms) ---

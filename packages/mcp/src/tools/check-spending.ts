@@ -27,9 +27,7 @@ export async function checkSpending(
     ];
 
     // Filter to non-zero buckets only
-    const activeBuckets = tracker.buckets.filter(
-      (b) => !b.usdAmount.isZero(),
-    );
+    const activeBuckets = tracker.buckets.filter((b) => !b.usdAmount.isZero());
 
     if (activeBuckets.length === 0) {
       lines.push("No spending activity in the last 24 hours.");

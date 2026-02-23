@@ -52,9 +52,7 @@ export async function checkPendingPolicy(
       );
     }
     if (pending.protocols !== null) {
-      const protocols = pending.protocols
-        .map((p) => p.toBase58())
-        .join(", ");
+      const protocols = pending.protocols.map((p) => p.toBase58()).join(", ");
       changes.push(`  - Protocols: → [${protocols}]`);
     }
     if (pending.allowedDestinations !== null) {

@@ -117,9 +117,7 @@ export function mapPoliciesToVaultParams(
   const protocolArr = resolved.allowedProtocols
     ? Array.from(resolved.allowedProtocols)
     : [];
-  const protocols = protocolArr
-    .slice(0, 10)
-    .map((s) => new PublicKey(s));
+  const protocols = protocolArr.slice(0, 10).map((s) => new PublicKey(s));
 
   // Protocol mode: if protocols specified, use allowlist (1); else allow all (0)
   const protocolMode = protocols.length > 0 ? 1 : 0;
@@ -582,4 +580,3 @@ export async function withVault(
   const shielded = shield(wallet, policies);
   return harden(shielded, options);
 }
-

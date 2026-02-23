@@ -69,9 +69,7 @@ export async function createVault(
       dailySpendingCapUsd: toBN(input.dailySpendingCapUsd),
       maxTransactionSizeUsd: toBN(input.maxTransactionSizeUsd),
       protocolMode: input.protocolMode ?? 0,
-      protocols: input.protocols
-        ? input.protocols.map(toPublicKey)
-        : [],
+      protocols: input.protocols ? input.protocols.map(toPublicKey) : [],
       maxLeverageBps: input.maxLeverageBps,
       maxConcurrentPositions: input.maxConcurrentPositions,
       feeDestination: toPublicKey(input.feeDestination),

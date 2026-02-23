@@ -198,11 +198,17 @@ export function buildValidateAndAuthorize(
     } as any);
 
   if (oracleFeedAccount) {
-    const remaining: { pubkey: PublicKey; isWritable: boolean; isSigner: boolean }[] = [
-      { pubkey: oracleFeedAccount, isWritable: false, isSigner: false },
-    ];
+    const remaining: {
+      pubkey: PublicKey;
+      isWritable: boolean;
+      isSigner: boolean;
+    }[] = [{ pubkey: oracleFeedAccount, isWritable: false, isSigner: false }];
     if (fallbackOracleFeedAccount) {
-      remaining.push({ pubkey: fallbackOracleFeedAccount, isWritable: false, isSigner: false });
+      remaining.push({
+        pubkey: fallbackOracleFeedAccount,
+        isWritable: false,
+        isSigner: false,
+      });
     }
     builder = builder.remainingAccounts(remaining);
   }
@@ -394,11 +400,17 @@ export function buildAgentTransfer(
   } as any);
 
   if (oracleFeedAccount) {
-    const remaining: { pubkey: PublicKey; isWritable: boolean; isSigner: boolean }[] = [
-      { pubkey: oracleFeedAccount, isWritable: false, isSigner: false },
-    ];
+    const remaining: {
+      pubkey: PublicKey;
+      isWritable: boolean;
+      isSigner: boolean;
+    }[] = [{ pubkey: oracleFeedAccount, isWritable: false, isSigner: false }];
     if (fallbackOracleFeedAccount) {
-      remaining.push({ pubkey: fallbackOracleFeedAccount, isWritable: false, isSigner: false });
+      remaining.push({
+        pubkey: fallbackOracleFeedAccount,
+        isWritable: false,
+        isSigner: false,
+      });
     }
     builder = builder.remainingAccounts(remaining);
   }

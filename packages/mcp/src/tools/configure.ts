@@ -116,9 +116,7 @@ export async function configure(
     const dailySpendingCapUsd =
       input.dailySpendingCapUsd ?? template.dailySpendingCapUsd;
     const protocolMode = input.protocolMode ?? template.protocolMode;
-    const protocols = input.protocols ?? [
-      ...template.protocols,
-    ];
+    const protocols = input.protocols ?? [...template.protocols];
     const maxLeverageBps = input.maxLeverageBps ?? template.maxLeverageBps;
     const rateLimit = input.rateLimit ?? template.rateLimit;
 

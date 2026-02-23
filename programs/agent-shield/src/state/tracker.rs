@@ -34,6 +34,7 @@ pub struct SpendTracker {
 
 /// A single epoch bucket tracking aggregate USD spend.
 /// 16 bytes per bucket. USD-only — rate limiting stays client-side.
+#[derive(Default)]
 #[zero_copy]
 pub struct EpochBucket {
     /// Epoch identifier: unix_timestamp / EPOCH_DURATION
@@ -41,15 +42,6 @@ pub struct EpochBucket {
 
     /// Aggregate USD spent in this epoch (6 decimals)
     pub usd_amount: u64, // 8 bytes
-}
-
-impl Default for EpochBucket {
-    fn default() -> Self {
-        Self {
-            epoch_id: 0,
-            usd_amount: 0,
-        }
-    }
 }
 
 impl SpendTracker {
@@ -107,8 +99,7 @@ impl SpendTracker {
                 // Boundary bucket — proportional scaling
                 let overlap = (bucket_end - window_start_ts) as u128;
                 let scaled = (bucket.usd_amount as u128)
-                    .checked_mul(overlap)
-                    .unwrap_or(u128::MAX)
+                    .saturating_mul(overlap)
                     / EPOCH_DURATION as u128;
                 total = total.saturating_add(scaled);
             }

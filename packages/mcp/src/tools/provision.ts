@@ -35,9 +35,7 @@ export const provisionSchema = z.object({
   protocols: z
     .array(z.string())
     .optional()
-    .describe(
-      "Custom protocol program IDs (base58). Overrides template.",
-    ),
+    .describe("Custom protocol program IDs (base58). Overrides template."),
   maxLeverageBps: z
     .number()
     .optional()

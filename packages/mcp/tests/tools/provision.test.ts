@@ -10,7 +10,9 @@ describe("shield_provision", () => {
       platformUrl: "https://agent-middleware.vercel.app",
       template: "conservative",
     });
-    expect(result).to.include("agent-middleware.vercel.app/api/actions/provision");
+    expect(result).to.include(
+      "agent-middleware.vercel.app/api/actions/provision",
+    );
     expect(result).to.include("conservative");
     expect(result).to.include("500 USDC");
   });

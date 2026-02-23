@@ -13,9 +13,7 @@ export async function getSpendingResource(
     const cap = policy.dailySpendingCapUsd;
 
     // Filter to non-zero buckets
-    const activeBuckets = tracker.buckets.filter(
-      (b) => !b.usdAmount.isZero(),
-    );
+    const activeBuckets = tracker.buckets.filter((b) => !b.usdAmount.isZero());
 
     // Compute rolling 24h total
     let totalUsd = activeBuckets.reduce(

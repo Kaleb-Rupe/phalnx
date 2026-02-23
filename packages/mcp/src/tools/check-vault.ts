@@ -51,7 +51,8 @@ export async function checkVault(
 
     const protocolModeLabels = ["All Allowed", "Allowlist", "Denylist"];
     const protocolModeLabel =
-      protocolModeLabels[policy.protocolMode] ?? `Unknown (${policy.protocolMode})`;
+      protocolModeLabels[policy.protocolMode] ??
+      `Unknown (${policy.protocolMode})`;
     const protocols =
       policy.protocols.map((p) => p.toBase58()).join(", ") || "None";
     const allowedDestinations =

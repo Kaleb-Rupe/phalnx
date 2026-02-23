@@ -30,8 +30,7 @@ export async function getActivityResource(
         error: "Activity data not found — vault may not exist",
         totalTransactions: "0",
         totalVolume: "0",
-        note:
-          "Detailed transaction history is available via Anchor events.",
+        note: "Detailed transaction history is available via Anchor events.",
       },
       null,
       2,

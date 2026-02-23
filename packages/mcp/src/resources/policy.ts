@@ -15,7 +15,9 @@ export async function getPolicyResource(
         vault: vaultAddress,
         dailySpendingCapUsd: formatBN(policy.dailySpendingCapUsd),
         maxTransactionSizeUsd: formatBN(policy.maxTransactionSizeUsd),
-        protocolMode: protocolModeLabels[policy.protocolMode] ?? `unknown(${policy.protocolMode})`,
+        protocolMode:
+          protocolModeLabels[policy.protocolMode] ??
+          `unknown(${policy.protocolMode})`,
         protocols: policy.protocols.map((p) => p.toBase58()),
         maxLeverageBps: policy.maxLeverageBps,
         canOpenPositions: policy.canOpenPositions,

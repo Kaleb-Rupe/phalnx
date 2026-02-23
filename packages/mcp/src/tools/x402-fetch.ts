@@ -48,11 +48,8 @@ export async function x402Fetch(
     // dist output since the MCP server runs in the same monorepo.
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const wrapperMod = require("@agent-shield/sdk/dist/wrapper/index");
-    const shieldWallet: (
-      w: any,
-      p?: any,
-      o?: any,
-    ) => ShieldedWallet = wrapperMod.shieldWallet;
+    const shieldWallet: (w: any, p?: any, o?: any) => ShieldedWallet =
+      wrapperMod.shieldWallet;
     const { Connection, Keypair } = await import("@solana/web3.js");
 
     const configKey = getConfigKey(config);
