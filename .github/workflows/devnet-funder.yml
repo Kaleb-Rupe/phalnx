@@ -19,7 +19,7 @@ jobs:
         run: |
           mkdir -p "$HOME/.config/solana"
           echo '${{ secrets.DEVNET_WALLET_KEYPAIR }}' > "$HOME/.config/solana/id.json"
-          solana config set --url "${{ secrets.DEVNET_RPC_URL }}" --keypair "$HOME/.config/solana/id.json"
+          solana config set --url "${{ secrets.DEVNET_RPC_URL }}" --keypair "$HOME/.config/solana/id.json" > /dev/null 2>&1
 
       - name: Airdrop with backoff
         run: |
