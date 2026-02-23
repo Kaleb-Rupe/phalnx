@@ -22,7 +22,7 @@
 #   apps/ → Actions server tests
 #   sdk/typescript → all downstream suites (everything depends on SDK)
 #
-# Total: 686 tests across 13 suites (512 TS + 174 on-chain)
+# Total: 747 tests across 14 suites (512 TS + 174 on-chain + 61 devnet)
 # All security checks are BLOCKING — zero tolerance for known issues.
 
 name: CI

@@ -5,6 +5,7 @@
     { "name": "Flash Trade integration (leveraged perps)", "count": 9, "onChain": true },
     { "name": "Oracle + delegation + timelock + transfers", "count": 25, "onChain": true },
     { "name": "Security exploit scenarios", "count": 81, "onChain": true },
+    { "name": "Devnet integration tests (real network)", "count": 61, "devnet": true },
     { "name": "Core policy engine (`@agent-shield/core`)", "count": 66, "ciStepName": "Core policy engine tests" },
     { "name": "SDK tests (`@agent-shield/sdk`)", "count": 165, "ciStepName": "SDK tests" },
     { "name": "Platform client tests (`@agent-shield/platform`)", "count": 17, "ciStepName": "Platform client tests" },

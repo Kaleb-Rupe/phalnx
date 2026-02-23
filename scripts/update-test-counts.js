@@ -20,10 +20,12 @@ const data = JSON.parse(
 
 const total = data.suites.reduce((sum, s) => sum + s.count, 0);
 
-// Use onChain flag instead of hardcoded .slice(0, 5)
+// Use onChain/devnet flags to categorize suites
 const onChainSuites = data.suites.filter((s) => s.onChain);
-const tsSuites = data.suites.filter((s) => !s.onChain);
+const devnetSuites = data.suites.filter((s) => s.devnet);
+const tsSuites = data.suites.filter((s) => !s.onChain && !s.devnet);
 const onChainCount = onChainSuites.reduce((sum, s) => sum + s.count, 0);
+const devnetCount = devnetSuites.reduce((sum, s) => sum + s.count, 0);
 const tsCount = tsSuites.reduce((sum, s) => sum + s.count, 0);
 const tsSuiteCount = tsSuites.length;
 
@@ -103,10 +105,10 @@ ci = ci.replace(
   `${onChainCount} on-chain tests`,
 );
 
-// Header: total
+// Header: total (with breakdown in parentheses)
 ci = ci.replace(
-  /Total: \d+ tests across \d+ suites/,
-  `Total: ${total} tests across ${data.suites.length} suites`,
+  /Total: \d+ tests across \d+ suites \([^)]*\)/,
+  `Total: ${total} tests across ${data.suites.length} suites (${tsCount} TS + ${onChainCount} on-chain + ${devnetCount} devnet)`,
 );
 
 // Job 1 comment
@@ -158,5 +160,5 @@ try {
 }
 
 console.log(
-  `Updated test counts: ${total} total (${onChainCount} on-chain + ${tsCount} TS across ${tsSuiteCount} suites)`,
+  `Updated test counts: ${total} total (${onChainCount} on-chain + ${devnetCount} devnet + ${tsCount} TS across ${tsSuiteCount} suites)`,
 );
