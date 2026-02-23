@@ -1,8 +1,9 @@
 /**
- * Devnet Transfer Tests — 6 tests (V2)
+ * Devnet Transfer Tests — 10 tests (V2)
  *
  * Exercises agent_transfer: destination allowlist enforcement,
- * fee correctness, access control, and spending cap interaction.
+ * fee correctness, access control, spending cap interaction,
+ * dynamic destination updates, and frozen vault behavior.
  *
  * V2: No makeAllowedToken. Tokens via OracleRegistry.
  *     agentTransfer requires oracleRegistry + tokenMintAccount accounts.
@@ -22,6 +23,7 @@ import {
   nextVaultId,
   deriveOracleRegistryPda,
   initializeOracleRegistry,
+  updateOracleRegistry,
   makeOracleEntry,
   createFullVault,
   fundKeypair,
@@ -343,5 +345,270 @@ describe("devnet-transfers", () => {
       expectError(err, "DailyCapExceeded", "cap");
     }
     console.log("    agent_transfer respects daily cap");
+  });
+
+  // ─── Tests 7-10: Added for devnet edge coverage ─────────────────────────
+
+  it("7. updatePolicy adds new destination, transfer to new dest succeeds", async () => {
+    // Vault with allowedDestinations=[destA]
+    const destVault = await createFullVault({
+      program,
+      connection,
+      owner,
+      agent,
+      feeDestination: feeDestination.publicKey,
+      mint,
+      vaultId: nextVaultId(6),
+      dailyCap: new BN(500_000_000),
+      maxTx: new BN(200_000_000),
+      allowedProtocols: [jupiterProgramId],
+      allowedDestinations: [destA.publicKey],
+      depositAmount: new BN(500_000_000),
+    });
+
+    // Confirm destB is blocked before update
+    try {
+      await program.methods
+        .agentTransfer(new BN(1_000_000))
+        .accounts({
+          agent: agent.publicKey,
+          vault: destVault.vaultPda,
+          policy: destVault.policyPda,
+          tracker: destVault.trackerPda,
+          oracleRegistry: destVault.oracleRegistryPda,
+          vaultTokenAccount: destVault.vaultTokenAta,
+          tokenMintAccount: mint,
+          destinationTokenAccount: destBAta,
+          feeDestinationTokenAccount: null,
+          protocolTreasuryTokenAccount: destVault.protocolTreasuryAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        } as any)
+        .signers([agent])
+        .rpc();
+      expect.fail("destB should be blocked before update");
+    } catch (err: any) {
+      expectError(err, "DestinationNotAllowed", "not in allowed");
+    }
+
+    // Update policy to add destB
+    await program.methods
+      .updatePolicy(
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        [destA.publicKey, destB.publicKey],
+      )
+      .accounts({
+        owner: owner.publicKey,
+        vault: destVault.vaultPda,
+        policy: destVault.policyPda,
+      } as any)
+      .rpc();
+
+    // Now transfer to destB should succeed
+    const destBBefore = await getTokenBalance(connection, destBAta);
+    await program.methods
+      .agentTransfer(new BN(5_000_000))
+      .accounts({
+        agent: agent.publicKey,
+        vault: destVault.vaultPda,
+        policy: destVault.policyPda,
+        tracker: destVault.trackerPda,
+        oracleRegistry: destVault.oracleRegistryPda,
+        vaultTokenAccount: destVault.vaultTokenAta,
+        tokenMintAccount: mint,
+        destinationTokenAccount: destBAta,
+        feeDestinationTokenAccount: null,
+        protocolTreasuryTokenAccount: destVault.protocolTreasuryAta,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      } as any)
+      .signers([agent])
+      .rpc();
+
+    const destBAfter = await getTokenBalance(connection, destBAta);
+    expect(destBAfter).to.be.greaterThan(destBBefore);
+    console.log("    updatePolicy added destB, transfer succeeded");
+  });
+
+  it("8. updatePolicy to empty destinations allows any dest", async () => {
+    // Vault with allowedDestinations=[destA]
+    const restrictedVault = await createFullVault({
+      program,
+      connection,
+      owner,
+      agent,
+      feeDestination: feeDestination.publicKey,
+      mint,
+      vaultId: nextVaultId(6),
+      dailyCap: new BN(500_000_000),
+      maxTx: new BN(200_000_000),
+      allowedProtocols: [jupiterProgramId],
+      allowedDestinations: [destA.publicKey],
+      depositAmount: new BN(500_000_000),
+    });
+
+    // Update to empty destinations (any dest allowed)
+    await program.methods
+      .updatePolicy(
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        [],
+      )
+      .accounts({
+        owner: owner.publicKey,
+        vault: restrictedVault.vaultPda,
+        policy: restrictedVault.policyPda,
+      } as any)
+      .rpc();
+
+    // Transfer to random dest should now work
+    const randomDest = Keypair.generate();
+    const randomDestAta = await getOrCreateAssociatedTokenAccount(
+      connection,
+      payer,
+      mint,
+      randomDest.publicKey,
+    );
+
+    await program.methods
+      .agentTransfer(new BN(5_000_000))
+      .accounts({
+        agent: agent.publicKey,
+        vault: restrictedVault.vaultPda,
+        policy: restrictedVault.policyPda,
+        tracker: restrictedVault.trackerPda,
+        oracleRegistry: restrictedVault.oracleRegistryPda,
+        vaultTokenAccount: restrictedVault.vaultTokenAta,
+        tokenMintAccount: mint,
+        destinationTokenAccount: randomDestAta.address,
+        feeDestinationTokenAccount: null,
+        protocolTreasuryTokenAccount: restrictedVault.protocolTreasuryAta,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      } as any)
+      .signers([agent])
+      .rpc();
+
+    const balance = await getTokenBalance(connection, randomDestAta.address);
+    expect(balance).to.be.greaterThan(0);
+    console.log("    Empty destinations allows any dest");
+  });
+
+  it("9. updatePolicy with 11 destinations → TooManyDestinations", async () => {
+    const vault11 = await createFullVault({
+      program,
+      connection,
+      owner,
+      agent,
+      feeDestination: feeDestination.publicKey,
+      mint,
+      vaultId: nextVaultId(6),
+      dailyCap: new BN(500_000_000),
+      maxTx: new BN(200_000_000),
+      allowedProtocols: [jupiterProgramId],
+      allowedDestinations: [],
+      depositAmount: new BN(100_000_000),
+    });
+
+    const destinations = Array.from({ length: 11 }, () =>
+      Keypair.generate().publicKey,
+    );
+
+    try {
+      await program.methods
+        .updatePolicy(
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          destinations,
+        )
+        .accounts({
+          owner: owner.publicKey,
+          vault: vault11.vaultPda,
+          policy: vault11.policyPda,
+        } as any)
+        .rpc();
+      expect.fail("Should have thrown TooManyDestinations");
+    } catch (err: any) {
+      expectError(err, "TooManyDestinations", "too many");
+    }
+    console.log("    updatePolicy with 11 destinations rejected");
+  });
+
+  it("10. agent_transfer on frozen vault fails", async () => {
+    const frozenAgent = Keypair.generate();
+    await fundKeypair(provider, frozenAgent.publicKey);
+
+    const frozenVault = await createFullVault({
+      program,
+      connection,
+      owner,
+      agent: frozenAgent,
+      feeDestination: feeDestination.publicKey,
+      mint,
+      vaultId: nextVaultId(6),
+      dailyCap: new BN(500_000_000),
+      maxTx: new BN(200_000_000),
+      allowedProtocols: [jupiterProgramId],
+      allowedDestinations: [],
+      depositAmount: new BN(500_000_000),
+    });
+
+    // Freeze vault (revokeAgent sets status=Frozen and clears agent)
+    await program.methods
+      .revokeAgent()
+      .accounts({
+        owner: owner.publicKey,
+        vault: frozenVault.vaultPda,
+      } as any)
+      .rpc();
+
+    try {
+      await program.methods
+        .agentTransfer(new BN(10_000_000))
+        .accounts({
+          agent: frozenAgent.publicKey,
+          vault: frozenVault.vaultPda,
+          policy: frozenVault.policyPda,
+          tracker: frozenVault.trackerPda,
+          oracleRegistry: frozenVault.oracleRegistryPda,
+          vaultTokenAccount: frozenVault.vaultTokenAta,
+          tokenMintAccount: mint,
+          destinationTokenAccount: destAAta,
+          feeDestinationTokenAccount: null,
+          protocolTreasuryTokenAccount: frozenVault.protocolTreasuryAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        } as any)
+        .signers([frozenAgent])
+        .rpc();
+      expect.fail("Should have thrown");
+    } catch (err: any) {
+      // revokeAgent clears agent, so constraint hit is UnauthorizedAgent
+      expectError(
+        err,
+        "UnauthorizedAgent",
+        "VaultNotActive",
+        "unauthorized",
+      );
+    }
+    console.log("    agent_transfer on frozen vault rejected");
   });
 });
