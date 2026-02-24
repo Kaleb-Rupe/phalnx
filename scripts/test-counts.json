@@ -11,7 +11,7 @@
     { "name": "Crossmint custody adapter", "count": 29, "ciStepName": "Crossmint custody adapter tests" },
     { "name": "SAK plugin (`@agent-shield/plugin-solana-agent-kit`)", "count": 29, "ciStepName": "SAK plugin tests" },
     { "name": "ElizaOS plugin (`@agent-shield/plugin-elizaos`)", "count": 35, "ciStepName": "ElizaOS plugin tests" },
-    { "name": "MCP server (`@agent-shield/mcp`)", "count": 161, "ciStepName": "MCP server tests" },
-    { "name": "Actions server (`@agent-shield/actions-server`)", "count": 48, "ciStepName": "Actions server tests" }
+    { "name": "MCP server (`@agent-shield/mcp`)", "count": 175, "ciStepName": "MCP server tests" },
+    { "name": "Actions server (`@agent-shield/actions-server`)", "count": 53, "ciStepName": "Actions server tests" }
   ]
 }

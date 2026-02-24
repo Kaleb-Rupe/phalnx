@@ -140,11 +140,11 @@ jobs:
         working-directory: plugins/elizaos
         run: pnpm test
 
-      - name: Run MCP server tests (161 tests)
+      - name: Run MCP server tests (175 tests)
         working-directory: packages/mcp
         run: pnpm test
 
-      - name: Run actions server tests (48 tests)
+      - name: Run actions server tests (53 tests)
         working-directory: apps/actions-server
         run: pnpm test
 
