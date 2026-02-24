@@ -27,7 +27,7 @@ import { shield } from "./shield";
 import { isSystemProgram } from "./registry";
 import type { ShieldPolicies, SpendingSummary } from "./policies";
 import { AgentShieldClient } from "../client";
-import { getVaultPDA, getPolicyPDA } from "../accounts";
+import { getVaultPDA, getPolicyPDA, getPendingPolicyPDA } from "../accounts";
 import { composePermittedTransaction } from "../composer";
 import { IDL } from "../idl-json";
 
@@ -55,6 +55,11 @@ export interface HardenOptions {
   unsafeSkipTeeCheck?: boolean;
   /** Auto-provision a TEE wallet from a custody provider */
   teeProvider?: "crossmint" | "turnkey" | "privy";
+  /** Timelock duration in seconds. 0 = disabled (default). Policy updates require
+   *  queue → wait timelockDuration → apply. Protects against compromised owner keys. */
+  timelockDuration?: number;
+  /** Allowed destination addresses for agent transfers. Empty = any address (default). */
+  allowedDestinations?: PublicKey[];
 }
 
 /**
@@ -71,6 +76,8 @@ export interface HardenResult {
   vaultId: number;
   /** The policy PDA address */
   policyAddress: PublicKey;
+  /** The pending policy PDA address (for timelock queue/apply/cancel) */
+  pendingPolicyAddress: PublicKey;
 }
 
 /**
@@ -92,6 +99,8 @@ export function mapPoliciesToVaultParams(
     developerFeeRate?: number;
     maxLeverageBps?: number;
     maxConcurrentPositions?: number;
+    timelockDuration?: number;
+    allowedDestinations?: PublicKey[];
   },
 ): {
   vaultId: any; // BN — constructed at call site
@@ -103,6 +112,8 @@ export function mapPoliciesToVaultParams(
   maxConcurrentPositions: number;
   feeDestination: PublicKey;
   developerFeeRate: number;
+  timelockDuration: number;
+  allowedDestinations: PublicKey[];
 } {
   // Collapse multiple spend limits to the largest (ceiling cap)
   let maxCap = BigInt(0);
@@ -135,6 +146,8 @@ export function mapPoliciesToVaultParams(
     maxConcurrentPositions: opts?.maxConcurrentPositions ?? 5,
     feeDestination,
     developerFeeRate: opts?.developerFeeRate ?? 0,
+    timelockDuration: opts?.timelockDuration ?? 0,
+    allowedDestinations: opts?.allowedDestinations ?? [],
   };
 }
 
@@ -463,6 +476,26 @@ export async function harden(
     );
   }
 
+  // Validate timelockDuration
+  const timelockDuration = options.timelockDuration ?? 0;
+  if (timelockDuration < 0 || !Number.isFinite(timelockDuration)) {
+    throw new Error(
+      "timelockDuration must be a non-negative finite number (seconds).",
+    );
+  }
+  if (timelockDuration > 0 && timelockDuration < 300) {
+    console.warn(
+      "AgentShield: timelockDuration < 300s (5 min) provides minimal protection. " +
+        "Consider a longer duration for meaningful governance delay.",
+    );
+  }
+  if (timelockDuration > 0 && !options.ownerWallet) {
+    console.warn(
+      "AgentShield: timelockDuration is set but no ownerWallet provided. " +
+        "Save result.ownerKeypair — you'll need it for queue/apply/cancel.",
+    );
+  }
+
   // Enforce TEE requirement — production agents must use TEE custody
   if (!options.unsafeSkipTeeCheck && !isTeeWallet(shieldedWallet.innerWallet)) {
     throw new TeeRequiredError();
@@ -490,6 +523,8 @@ export async function harden(
       developerFeeRate: options.developerFeeRate,
       maxLeverageBps: options.maxLeverageBps,
       maxConcurrentPositions: options.maxConcurrentPositions,
+      timelockDuration,
+      allowedDestinations: options.allowedDestinations,
     },
   );
 
@@ -504,6 +539,8 @@ export async function harden(
     maxConcurrentPositions: mapped.maxConcurrentPositions,
     feeDestination: mapped.feeDestination,
     developerFeeRate: mapped.developerFeeRate,
+    timelockDuration: new BN(mapped.timelockDuration),
+    allowedDestinations: mapped.allowedDestinations,
   };
 
   // Create vault (signed by owner)
@@ -519,6 +556,10 @@ export async function harden(
   // Derive vault PDA address
   const [vaultAddress] = client.getVaultPDA(ownerPubkey, new BN(vaultId));
   const [policyAddress] = client.getPolicyPDA(vaultAddress);
+  const [pendingPolicyAddress] = getPendingPolicyPDA(
+    vaultAddress,
+    options.programId,
+  );
 
   // Register agent (signed by owner)
   try {
@@ -547,6 +588,7 @@ export async function harden(
     vaultAddress,
     vaultId,
     policyAddress,
+    pendingPolicyAddress,
   };
 }
 

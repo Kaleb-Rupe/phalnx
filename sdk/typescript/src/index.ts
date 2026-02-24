@@ -143,8 +143,20 @@ export {
   mapPoliciesToVaultParams,
   findNextVaultId,
   shieldWallet,
+  queuePolicyUpdate,
+  applyPendingPolicy,
+  cancelPendingPolicy,
+  fetchPendingPolicyStatus,
+  createVaultManager,
+  timelockContextFromResult,
 } from "./wrapper";
-export type { HardenOptions, HardenResult } from "./wrapper";
+export type {
+  HardenOptions,
+  HardenResult,
+  TimelockPolicyParams,
+  TimelockContext,
+  VaultManager,
+} from "./wrapper";
 
 export type {
   ShieldedWallet,

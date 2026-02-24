@@ -35,11 +35,21 @@ import type {
   ShieldStorage,
   ResolvedPolicies,
   TeeWallet,
+  TimelockContext,
+  VaultManager,
 } from "../src";
 import { harden, withVault } from "../src/wrapper/harden";
 import type { HardenOptions, HardenResult } from "../src/wrapper/harden";
 // shield() is internal — import from source for testing
 import { shield } from "../src/wrapper/shield";
+import {
+  queuePolicyUpdate,
+  applyPendingPolicy,
+  cancelPendingPolicy,
+  fetchPendingPolicyStatus,
+  createVaultManager,
+  timelockContextFromResult,
+} from "../src/wrapper/timelock";
 
 // --- Test Helpers ---
 
@@ -1930,6 +1940,179 @@ describe("wrapper — shieldWallet() & harden()", () => {
       expect(err.message).to.include("TEE wallet required");
       expect(err.message).to.include("Crossmint");
       expect(err.message).to.include("unsafeSkipTeeCheck");
+    });
+  });
+
+  // --- Timelock Wrapper Functions ---
+
+  describe("timelock wrapper functions", () => {
+    const FEE_DEST = Keypair.generate().publicKey;
+
+    describe("mapPoliciesToVaultParams — timelock fields", () => {
+      it("includes timelockDuration when provided", () => {
+        const resolved = resolvePolicies({ maxSpend: "500 USDC/day" });
+        const params = mapPoliciesToVaultParams(resolved, 0, FEE_DEST, {
+          timelockDuration: 3600,
+        });
+        expect(params.timelockDuration).to.equal(3600);
+      });
+
+      it("defaults timelockDuration to 0", () => {
+        const resolved = resolvePolicies({ maxSpend: "500 USDC/day" });
+        const params = mapPoliciesToVaultParams(resolved, 0, FEE_DEST);
+        expect(params.timelockDuration).to.equal(0);
+      });
+
+      it("includes allowedDestinations when provided", () => {
+        const dest1 = Keypair.generate().publicKey;
+        const dest2 = Keypair.generate().publicKey;
+        const resolved = resolvePolicies({ maxSpend: "500 USDC/day" });
+        const params = mapPoliciesToVaultParams(resolved, 0, FEE_DEST, {
+          allowedDestinations: [dest1, dest2],
+        });
+        expect(params.allowedDestinations.length).to.equal(2);
+        expect(params.allowedDestinations[0].equals(dest1)).to.be.true;
+        expect(params.allowedDestinations[1].equals(dest2)).to.be.true;
+      });
+
+      it("defaults allowedDestinations to empty array", () => {
+        const resolved = resolvePolicies({ maxSpend: "500 USDC/day" });
+        const params = mapPoliciesToVaultParams(resolved, 0, FEE_DEST);
+        expect(params.allowedDestinations).to.deep.equal([]);
+      });
+    });
+
+    describe("harden() — timelockDuration validation", () => {
+      it("errors if timelockDuration is negative", async () => {
+        const wallet = createMockWallet();
+        const ownerWallet = createMockWallet();
+        const shielded = shield(wallet, { maxSpend: "500 USDC/day" });
+
+        const mockConnection = {
+          getAccountInfo: async () => null,
+        } as unknown as Connection;
+
+        try {
+          await harden(shielded, {
+            connection: mockConnection,
+            ownerWallet,
+            unsafeSkipTeeCheck: true,
+            timelockDuration: -100,
+          });
+          expect.fail("Should have thrown");
+        } catch (e: any) {
+          expect(e.message).to.include("non-negative finite number");
+        }
+      });
+    });
+
+    describe("timelockContextFromResult", () => {
+      it("extracts vaultAddress, ownerWallet, and connection correctly", () => {
+        const vaultAddress = Keypair.generate().publicKey;
+        const policyAddress = Keypair.generate().publicKey;
+        const pendingPolicyAddress = Keypair.generate().publicKey;
+        const ownerWallet = createMockWallet();
+        const mockConnection = {} as Connection;
+
+        const mockResult: HardenResult = {
+          wallet: {} as any,
+          vaultAddress,
+          vaultId: 0,
+          policyAddress,
+          pendingPolicyAddress,
+        };
+
+        const ctx = timelockContextFromResult(
+          mockResult,
+          ownerWallet,
+          mockConnection,
+        );
+
+        expect(ctx.vaultAddress.equals(vaultAddress)).to.be.true;
+        expect(ctx.ownerWallet).to.equal(ownerWallet);
+        expect(ctx.connection).to.equal(mockConnection);
+      });
+    });
+
+    describe("createVaultManager", () => {
+      it("returns object with all 4 methods and vaultAddress", () => {
+        const vaultAddress = Keypair.generate().publicKey;
+        const policyAddress = Keypair.generate().publicKey;
+        const pendingPolicyAddress = Keypair.generate().publicKey;
+        const ownerWallet = createMockWallet();
+        const mockConnection = {} as Connection;
+
+        const mockResult: HardenResult = {
+          wallet: {} as any,
+          vaultAddress,
+          vaultId: 0,
+          policyAddress,
+          pendingPolicyAddress,
+        };
+
+        const manager = createVaultManager(
+          mockResult,
+          ownerWallet,
+          mockConnection,
+        );
+
+        expect(manager.vaultAddress.equals(vaultAddress)).to.be.true;
+        expect(typeof manager.queuePolicyUpdate).to.equal("function");
+        expect(typeof manager.applyPendingPolicy).to.equal("function");
+        expect(typeof manager.cancelPendingPolicy).to.equal("function");
+        expect(typeof manager.fetchPendingPolicy).to.equal("function");
+      });
+    });
+
+    describe("standalone function error paths", () => {
+      const makeCtx = (): TimelockContext => ({
+        vaultAddress: Keypair.generate().publicKey,
+        connection: {} as Connection,
+        ownerWallet: createMockWallet(),
+      });
+
+      it("queuePolicyUpdate throws with no real connection", async () => {
+        try {
+          await queuePolicyUpdate(makeCtx(), {
+            dailySpendingCapUsd: 1_000_000_000,
+          });
+          expect.fail("Should have thrown");
+        } catch (e: any) {
+          expect(e).to.be.an("error");
+        }
+      });
+
+      it("applyPendingPolicy throws with no real connection", async () => {
+        try {
+          await applyPendingPolicy(makeCtx());
+          expect.fail("Should have thrown");
+        } catch (e: any) {
+          expect(e).to.be.an("error");
+        }
+      });
+
+      it("cancelPendingPolicy throws with no real connection", async () => {
+        try {
+          await cancelPendingPolicy(makeCtx());
+          expect.fail("Should have thrown");
+        } catch (e: any) {
+          expect(e).to.be.an("error");
+        }
+      });
+    });
+
+    describe("fetchPendingPolicyStatus", () => {
+      it("handles error gracefully when no connection", async () => {
+        try {
+          await fetchPendingPolicyStatus({
+            vaultAddress: Keypair.generate().publicKey,
+            connection: {} as Connection,
+          });
+          expect.fail("Should have thrown");
+        } catch (e: any) {
+          expect(e).to.be.an("error");
+        }
+      });
     });
   });
 });

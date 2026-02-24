@@ -9,6 +9,21 @@ export {
 } from "./harden";
 export type { HardenOptions, HardenResult } from "./harden";
 
+// Timelock — owner-signed queue/apply/cancel for timelocked policy updates
+export {
+  queuePolicyUpdate,
+  applyPendingPolicy,
+  cancelPendingPolicy,
+  fetchPendingPolicyStatus,
+  createVaultManager,
+  timelockContextFromResult,
+} from "./timelock";
+export type {
+  TimelockPolicyParams,
+  TimelockContext,
+  VaultManager,
+} from "./timelock";
+
 // Types (kept for advanced users and framework integrators)
 export type { ShieldedWallet, WalletLike, ShieldOptions } from "./shield";
 export { isTeeWallet } from "./shield";

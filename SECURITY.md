@@ -8,7 +8,6 @@
 | @agent-shield/mcp >= 0.4.0 | Yes |
 | @agent-shield/core >= 0.1.0 | Yes |
 | @agent-shield/sdk >= 0.5.0 | Yes |
-| @agent-shield/solana >= 0.3.0 (deprecated — use @agent-shield/sdk) | Yes |
 | On-chain program (agent_shield) | Yes |
 
 ## Reporting a Vulnerability
@@ -38,7 +37,7 @@ Include as much detail as possible:
 The following are in scope for security reports:
 
 - On-chain Anchor program (`programs/agent-shield/`)
-- SDK transaction construction (`sdk/typescript/`, `sdk/wrapper/`)
+- SDK transaction construction (`sdk/typescript/`)
 - MCP server tool handlers (`packages/mcp/`)
 - Serverless API endpoints (`api/`)
 - Oracle price parsing logic

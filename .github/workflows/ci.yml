@@ -151,11 +151,10 @@ jobs:
       - name: Build all packages
         run: pnpm -r run build
 
-      - name: Lint (Prettier — 10 packages)
+      - name: Lint (Prettier — 9 packages)
         run: |
           npx prettier --check \
             "sdk/core/src/**/*.ts" \
-            "sdk/wrapper/src/**/*.ts" \
             "sdk/typescript/src/**/*.ts" \
             "sdk/platform/src/**/*.ts" \
             "sdk/custody/crossmint/src/**/*.ts" \

@@ -283,7 +283,6 @@ IDL account: `Ev3gSzxLw6RwExAMpTHUKvn2o9YVULxiWehrHee7aepP`
 
 | Package | Description |
 |---------|-------------|
-| [`@agent-shield/solana`](https://www.npmjs.com/package/@agent-shield/solana) | Deprecated shim — re-exports from this package |
 | [`@agent-shield/core`](https://www.npmjs.com/package/@agent-shield/core) | Pure TypeScript policy engine |
 | [`@agent-shield/plugin-solana-agent-kit`](https://www.npmjs.com/package/@agent-shield/plugin-solana-agent-kit) | Solana Agent Kit integration |
 | [`@agent-shield/plugin-elizaos`](https://www.npmjs.com/package/@agent-shield/plugin-elizaos) | ElizaOS integration |
