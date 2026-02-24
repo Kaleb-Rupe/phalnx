@@ -14,719 +14,6 @@ export type AgentShield = {
   };
   instructions: [
     {
-      name: "agentTransfer";
-      docs: [
-        "Transfer tokens from the vault to an allowed destination.",
-        "Only the agent can call this.",
-      ];
-      discriminator: [199, 111, 151, 49, 124, 13, 150, 44];
-      accounts: [
-        {
-          name: "agent";
-          writable: true;
-          signer: true;
-        },
-        {
-          name: "vault";
-          writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [118, 97, 117, 108, 116];
-              },
-              {
-                kind: "account";
-                path: "vault.owner";
-                account: "agentVault";
-              },
-              {
-                kind: "account";
-                path: "vault.vault_id";
-                account: "agentVault";
-              },
-            ];
-          };
-          relations: ["policy"];
-        },
-        {
-          name: "policy";
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [112, 111, 108, 105, 99, 121];
-              },
-              {
-                kind: "account";
-                path: "vault";
-              },
-            ];
-          };
-        },
-        {
-          name: "tracker";
-          docs: ["Zero-copy SpendTracker"];
-          writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [116, 114, 97, 99, 107, 101, 114];
-              },
-              {
-                kind: "account";
-                path: "vault";
-              },
-            ];
-          };
-        },
-        {
-          name: "oracleRegistry";
-          docs: ["Protocol-level oracle registry"];
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [
-                  111,
-                  114,
-                  97,
-                  99,
-                  108,
-                  101,
-                  95,
-                  114,
-                  101,
-                  103,
-                  105,
-                  115,
-                  116,
-                  114,
-                  121,
-                ];
-              },
-            ];
-          };
-        },
-        {
-          name: "vaultTokenAccount";
-          docs: ["Vault's PDA-owned token account (source)"];
-          writable: true;
-        },
-        {
-          name: "tokenMintAccount";
-          docs: ["Token mint account for decimals validation"];
-        },
-        {
-          name: "destinationTokenAccount";
-          docs: ["Destination token account (must be in allowed destinations)"];
-          writable: true;
-        },
-        {
-          name: "feeDestinationTokenAccount";
-          docs: ["Developer fee destination token account"];
-          writable: true;
-          optional: true;
-        },
-        {
-          name: "protocolTreasuryTokenAccount";
-          docs: ["Protocol treasury token account"];
-          writable: true;
-          optional: true;
-        },
-        {
-          name: "tokenProgram";
-          address: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
-        },
-      ];
-      args: [
-        {
-          name: "amount";
-          type: "u64";
-        },
-      ];
-    },
-    {
-      name: "applyPendingPolicy";
-      docs: ["Apply a queued policy update after the timelock expires."];
-      discriminator: [114, 212, 19, 227, 89, 199, 74, 62];
-      accounts: [
-        {
-          name: "owner";
-          writable: true;
-          signer: true;
-          relations: ["vault"];
-        },
-        {
-          name: "vault";
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [118, 97, 117, 108, 116];
-              },
-              {
-                kind: "account";
-                path: "owner";
-              },
-              {
-                kind: "account";
-                path: "vault.vault_id";
-                account: "agentVault";
-              },
-            ];
-          };
-          relations: ["policy", "pendingPolicy"];
-        },
-        {
-          name: "policy";
-          writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [112, 111, 108, 105, 99, 121];
-              },
-              {
-                kind: "account";
-                path: "vault";
-              },
-            ];
-          };
-        },
-        {
-          name: "pendingPolicy";
-          writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [
-                  112,
-                  101,
-                  110,
-                  100,
-                  105,
-                  110,
-                  103,
-                  95,
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121,
-                ];
-              },
-              {
-                kind: "account";
-                path: "vault";
-              },
-            ];
-          };
-        },
-      ];
-      args: [];
-    },
-    {
-      name: "cancelPendingPolicy";
-      docs: ["Cancel a queued policy update."];
-      discriminator: [153, 36, 104, 200, 50, 94, 207, 33];
-      accounts: [
-        {
-          name: "owner";
-          writable: true;
-          signer: true;
-          relations: ["vault"];
-        },
-        {
-          name: "vault";
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [118, 97, 117, 108, 116];
-              },
-              {
-                kind: "account";
-                path: "owner";
-              },
-              {
-                kind: "account";
-                path: "vault.vault_id";
-                account: "agentVault";
-              },
-            ];
-          };
-          relations: ["pendingPolicy"];
-        },
-        {
-          name: "pendingPolicy";
-          writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [
-                  112,
-                  101,
-                  110,
-                  100,
-                  105,
-                  110,
-                  103,
-                  95,
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121,
-                ];
-              },
-              {
-                kind: "account";
-                path: "vault";
-              },
-            ];
-          };
-        },
-      ];
-      args: [];
-    },
-    {
-      name: "closeVault";
-      docs: ["Close the vault entirely. Reclaims rent from all PDAs."];
-      discriminator: [141, 103, 17, 126, 72, 75, 29, 29];
-      accounts: [
-        {
-          name: "owner";
-          writable: true;
-          signer: true;
-          relations: ["vault"];
-        },
-        {
-          name: "vault";
-          writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [118, 97, 117, 108, 116];
-              },
-              {
-                kind: "account";
-                path: "owner";
-              },
-              {
-                kind: "account";
-                path: "vault.vault_id";
-                account: "agentVault";
-              },
-            ];
-          };
-          relations: ["policy"];
-        },
-        {
-          name: "policy";
-          writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [112, 111, 108, 105, 99, 121];
-              },
-              {
-                kind: "account";
-                path: "vault";
-              },
-            ];
-          };
-        },
-        {
-          name: "tracker";
-          docs: ["Zero-copy SpendTracker — close returns rent to owner"];
-          writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [116, 114, 97, 99, 107, 101, 114];
-              },
-              {
-                kind: "account";
-                path: "vault";
-              },
-            ];
-          };
-        },
-        {
-          name: "systemProgram";
-          address: "11111111111111111111111111111111";
-        },
-      ];
-      args: [];
-    },
-    {
-      name: "depositFunds";
-      docs: [
-        "Deposit SPL tokens into the vault's PDA-controlled token account.",
-        "Only the owner can call this.",
-      ];
-      discriminator: [202, 39, 52, 211, 53, 20, 250, 88];
-      accounts: [
-        {
-          name: "owner";
-          writable: true;
-          signer: true;
-          relations: ["vault"];
-        },
-        {
-          name: "vault";
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [118, 97, 117, 108, 116];
-              },
-              {
-                kind: "account";
-                path: "owner";
-              },
-              {
-                kind: "account";
-                path: "vault.vault_id";
-                account: "agentVault";
-              },
-            ];
-          };
-        },
-        {
-          name: "mint";
-        },
-        {
-          name: "ownerTokenAccount";
-          docs: ["Owner's token account to transfer from"];
-          writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "account";
-                path: "owner";
-              },
-              {
-                kind: "const";
-                value: [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169,
-                ];
-              },
-              {
-                kind: "account";
-                path: "mint";
-              },
-            ];
-            program: {
-              kind: "const";
-              value: [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89,
-              ];
-            };
-          };
-        },
-        {
-          name: "vaultTokenAccount";
-          docs: ["Vault's PDA-controlled token account"];
-          writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "account";
-                path: "vault";
-              },
-              {
-                kind: "const";
-                value: [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169,
-                ];
-              },
-              {
-                kind: "account";
-                path: "mint";
-              },
-            ];
-            program: {
-              kind: "const";
-              value: [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89,
-              ];
-            };
-          };
-        },
-        {
-          name: "tokenProgram";
-          address: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
-        },
-        {
-          name: "associatedTokenProgram";
-          address: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
-        },
-        {
-          name: "systemProgram";
-          address: "11111111111111111111111111111111";
-        },
-      ];
-      args: [
-        {
-          name: "amount";
-          type: "u64";
-        },
-      ];
-    },
-    {
-      name: "finalizeSession";
-      docs: [
-        "Finalize a session after the DeFi action completes.",
-        "Revokes delegation, collects fees, closes the SessionAuthority PDA.",
-      ];
-      discriminator: [34, 148, 144, 47, 37, 130, 206, 161];
-      accounts: [
-        {
-          name: "payer";
-          writable: true;
-          signer: true;
-        },
-        {
-          name: "vault";
-          writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [118, 97, 117, 108, 116];
-              },
-              {
-                kind: "account";
-                path: "vault.owner";
-                account: "agentVault";
-              },
-              {
-                kind: "account";
-                path: "vault.vault_id";
-                account: "agentVault";
-              },
-            ];
-          };
-          relations: ["policy", "session"];
-        },
-        {
-          name: "policy";
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [112, 111, 108, 105, 99, 121];
-              },
-              {
-                kind: "account";
-                path: "vault";
-              },
-            ];
-          };
-        },
-        {
-          name: "session";
-          docs: [
-            "Session rent is returned to the session's agent (who paid for it).",
-            "Seeds include token_mint for per-token concurrent sessions.",
-          ];
-          writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [115, 101, 115, 115, 105, 111, 110];
-              },
-              {
-                kind: "account";
-                path: "vault";
-              },
-              {
-                kind: "account";
-                path: "session.agent";
-                account: "sessionAuthority";
-              },
-              {
-                kind: "account";
-                path: "session.authorized_token";
-                account: "sessionAuthority";
-              },
-            ];
-          };
-        },
-        {
-          name: "sessionRentRecipient";
-          writable: true;
-        },
-        {
-          name: "vaultTokenAccount";
-          docs: ["Vault's PDA token account for the session's token"];
-          writable: true;
-          optional: true;
-        },
-        {
-          name: "feeDestinationTokenAccount";
-          docs: ["Developer fee destination token account"];
-          writable: true;
-          optional: true;
-        },
-        {
-          name: "protocolTreasuryTokenAccount";
-          docs: ["Protocol treasury token account"];
-          writable: true;
-          optional: true;
-        },
-        {
-          name: "tokenProgram";
-          address: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
-        },
-        {
-          name: "systemProgram";
-          address: "11111111111111111111111111111111";
-        },
-      ];
-      args: [
-        {
-          name: "success";
-          type: "bool";
-        },
-      ];
-    },
-    {
       name: "initializeOracleRegistry";
       docs: [
         "Initialize the protocol-level oracle registry.",
@@ -742,34 +29,9 @@ export type AgentShield = {
         {
           name: "oracleRegistry";
           writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [
-                  111,
-                  114,
-                  97,
-                  99,
-                  108,
-                  101,
-                  95,
-                  114,
-                  101,
-                  103,
-                  105,
-                  115,
-                  116,
-                  114,
-                  121,
-                ];
-              },
-            ];
-          };
         },
         {
           name: "systemProgram";
-          address: "11111111111111111111111111111111";
         },
       ];
       args: [
@@ -781,6 +43,85 @@ export type AgentShield = {
                 name: "oracleEntry";
               };
             };
+          };
+        },
+      ];
+    },
+    {
+      name: "proposeOracleAuthority";
+      docs: [
+        "Propose a new authority for the oracle registry (step 1 of 2).",
+        "Only the current authority can call this.",
+      ];
+      discriminator: [146, 109, 205, 24, 129, 202, 217, 36];
+      accounts: [
+        {
+          name: "authority";
+          signer: true;
+        },
+        {
+          name: "oracleRegistry";
+          writable: true;
+        },
+      ];
+      args: [
+        {
+          name: "newAuthority";
+          type: "pubkey";
+        },
+      ];
+    },
+    {
+      name: "acceptOracleAuthority";
+      docs: [
+        "Accept an oracle registry authority transfer (step 2 of 2).",
+        "Only the proposed new authority can call this.",
+      ];
+      discriminator: [15, 166, 225, 171, 229, 140, 199, 227];
+      accounts: [
+        {
+          name: "newAuthority";
+          signer: true;
+        },
+        {
+          name: "oracleRegistry";
+          writable: true;
+        },
+      ];
+      args: [];
+    },
+    {
+      name: "updateOracleRegistry";
+      docs: [
+        "Add or remove entries from the oracle registry.",
+        "Only the registry authority can call this.",
+      ];
+      discriminator: [184, 234, 19, 21, 41, 240, 100, 14];
+      accounts: [
+        {
+          name: "authority";
+          signer: true;
+        },
+        {
+          name: "oracleRegistry";
+          writable: true;
+        },
+      ];
+      args: [
+        {
+          name: "entriesToAdd";
+          type: {
+            vec: {
+              defined: {
+                name: "oracleEntry";
+              };
+            };
+          };
+        },
+        {
+          name: "mintsToRemove";
+          type: {
+            vec: "pubkey";
           };
         },
       ];
@@ -802,62 +143,21 @@ export type AgentShield = {
         {
           name: "vault";
           writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [118, 97, 117, 108, 116];
-              },
-              {
-                kind: "account";
-                path: "owner";
-              },
-              {
-                kind: "arg";
-                path: "vaultId";
-              },
-            ];
-          };
         },
         {
           name: "policy";
           writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [112, 111, 108, 105, 99, 121];
-              },
-              {
-                kind: "account";
-                path: "vault";
-              },
-            ];
-          };
         },
         {
           name: "tracker";
           docs: ["Zero-copy SpendTracker — 2,352 bytes fixed size"];
           writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [116, 114, 97, 99, 107, 101, 114];
-              },
-              {
-                kind: "account";
-                path: "vault";
-              },
-            ];
-          };
         },
         {
           name: "feeDestination";
         },
         {
           name: "systemProgram";
-          address: "11111111111111111111111111111111";
         },
       ];
       args: [
@@ -908,193 +208,48 @@ export type AgentShield = {
       ];
     },
     {
-      name: "queuePolicyUpdate";
-      docs: ["Queue a policy update when timelock is active."];
-      discriminator: [149, 18, 76, 197, 179, 193, 91, 77];
+      name: "depositFunds";
+      docs: [
+        "Deposit SPL tokens into the vault's PDA-controlled token account.",
+        "Only the owner can call this.",
+      ];
+      discriminator: [202, 39, 52, 211, 53, 20, 250, 88];
       accounts: [
         {
           name: "owner";
           writable: true;
           signer: true;
-          relations: ["vault"];
         },
         {
           name: "vault";
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [118, 97, 117, 108, 116];
-              },
-              {
-                kind: "account";
-                path: "owner";
-              },
-              {
-                kind: "account";
-                path: "vault.vault_id";
-                account: "agentVault";
-              },
-            ];
-          };
-          relations: ["policy"];
         },
         {
-          name: "policy";
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [112, 111, 108, 105, 99, 121];
-              },
-              {
-                kind: "account";
-                path: "vault";
-              },
-            ];
-          };
+          name: "mint";
         },
         {
-          name: "pendingPolicy";
+          name: "ownerTokenAccount";
+          docs: ["Owner's token account to transfer from"];
           writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [
-                  112,
-                  101,
-                  110,
-                  100,
-                  105,
-                  110,
-                  103,
-                  95,
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121,
-                ];
-              },
-              {
-                kind: "account";
-                path: "vault";
-              },
-            ];
-          };
+        },
+        {
+          name: "vaultTokenAccount";
+          docs: ["Vault's PDA-controlled token account"];
+          writable: true;
+        },
+        {
+          name: "tokenProgram";
+        },
+        {
+          name: "associatedTokenProgram";
         },
         {
           name: "systemProgram";
-          address: "11111111111111111111111111111111";
         },
       ];
       args: [
         {
-          name: "dailySpendingCapUsd";
-          type: {
-            option: "u64";
-          };
-        },
-        {
-          name: "maxTransactionAmountUsd";
-          type: {
-            option: "u64";
-          };
-        },
-        {
-          name: "protocolMode";
-          type: {
-            option: "u8";
-          };
-        },
-        {
-          name: "protocols";
-          type: {
-            option: {
-              vec: "pubkey";
-            };
-          };
-        },
-        {
-          name: "maxLeverageBps";
-          type: {
-            option: "u16";
-          };
-        },
-        {
-          name: "canOpenPositions";
-          type: {
-            option: "bool";
-          };
-        },
-        {
-          name: "maxConcurrentPositions";
-          type: {
-            option: "u8";
-          };
-        },
-        {
-          name: "developerFeeRate";
-          type: {
-            option: "u16";
-          };
-        },
-        {
-          name: "timelockDuration";
-          type: {
-            option: "u64";
-          };
-        },
-        {
-          name: "allowedDestinations";
-          type: {
-            option: {
-              vec: "pubkey";
-            };
-          };
-        },
-      ];
-    },
-    {
-      name: "reactivateVault";
-      docs: ["Reactivate a frozen vault. Optionally rotate the agent key."];
-      discriminator: [245, 50, 143, 70, 114, 220, 25, 251];
-      accounts: [
-        {
-          name: "owner";
-          signer: true;
-          relations: ["vault"];
-        },
-        {
-          name: "vault";
-          writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [118, 97, 117, 108, 116];
-              },
-              {
-                kind: "account";
-                path: "owner";
-              },
-              {
-                kind: "account";
-                path: "vault.vault_id";
-                account: "agentVault";
-              },
-            ];
-          };
-        },
-      ];
-      args: [
-        {
-          name: "newAgent";
-          type: {
-            option: "pubkey";
-          };
+          name: "amount";
+          type: "u64";
         },
       ];
     },
@@ -1109,131 +264,16 @@ export type AgentShield = {
         {
           name: "owner";
           signer: true;
-          relations: ["vault"];
         },
         {
           name: "vault";
           writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [118, 97, 117, 108, 116];
-              },
-              {
-                kind: "account";
-                path: "owner";
-              },
-              {
-                kind: "account";
-                path: "vault.vault_id";
-                account: "agentVault";
-              },
-            ];
-          };
         },
       ];
       args: [
         {
           name: "agent";
           type: "pubkey";
-        },
-      ];
-    },
-    {
-      name: "revokeAgent";
-      docs: [
-        "Kill switch. Immediately freezes the vault.",
-        "Only the owner can call this.",
-      ];
-      discriminator: [227, 60, 209, 125, 240, 117, 163, 73];
-      accounts: [
-        {
-          name: "owner";
-          signer: true;
-          relations: ["vault"];
-        },
-        {
-          name: "vault";
-          writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [118, 97, 117, 108, 116];
-              },
-              {
-                kind: "account";
-                path: "owner";
-              },
-              {
-                kind: "account";
-                path: "vault.vault_id";
-                account: "agentVault";
-              },
-            ];
-          };
-        },
-      ];
-      args: [];
-    },
-    {
-      name: "updateOracleRegistry";
-      docs: [
-        "Add or remove entries from the oracle registry.",
-        "Only the registry authority can call this.",
-      ];
-      discriminator: [184, 234, 19, 21, 41, 240, 100, 14];
-      accounts: [
-        {
-          name: "authority";
-          signer: true;
-        },
-        {
-          name: "oracleRegistry";
-          writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [
-                  111,
-                  114,
-                  97,
-                  99,
-                  108,
-                  101,
-                  95,
-                  114,
-                  101,
-                  103,
-                  105,
-                  115,
-                  116,
-                  114,
-                  121,
-                ];
-              },
-            ];
-          };
-        },
-      ];
-      args: [
-        {
-          name: "entriesToAdd";
-          type: {
-            vec: {
-              defined: {
-                name: "oracleEntry";
-              };
-            };
-          };
-        },
-        {
-          name: "mintsToRemove";
-          type: {
-            vec: "pubkey";
-          };
         },
       ];
     },
@@ -1248,44 +288,13 @@ export type AgentShield = {
         {
           name: "owner";
           signer: true;
-          relations: ["vault"];
         },
         {
           name: "vault";
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [118, 97, 117, 108, 116];
-              },
-              {
-                kind: "account";
-                path: "owner";
-              },
-              {
-                kind: "account";
-                path: "vault.vault_id";
-                account: "agentVault";
-              },
-            ];
-          };
-          relations: ["policy"];
         },
         {
           name: "policy";
           writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [112, 111, 108, 105, 99, 121];
-              },
-              {
-                kind: "account";
-                path: "vault";
-              },
-            ];
-          };
         },
       ];
       args: [
@@ -1372,85 +381,20 @@ export type AgentShield = {
         {
           name: "vault";
           writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [118, 97, 117, 108, 116];
-              },
-              {
-                kind: "account";
-                path: "vault.owner";
-                account: "agentVault";
-              },
-              {
-                kind: "account";
-                path: "vault.vault_id";
-                account: "agentVault";
-              },
-            ];
-          };
-          relations: ["policy"];
         },
         {
           name: "policy";
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [112, 111, 108, 105, 99, 121];
-              },
-              {
-                kind: "account";
-                path: "vault";
-              },
-            ];
-          };
         },
         {
           name: "tracker";
           docs: ["Zero-copy SpendTracker"];
           writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [116, 114, 97, 99, 107, 101, 114];
-              },
-              {
-                kind: "account";
-                path: "vault";
-              },
-            ];
-          };
         },
         {
           name: "oracleRegistry";
-          docs: ["Protocol-level oracle registry (shared across all vaults)"];
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [
-                  111,
-                  114,
-                  97,
-                  99,
-                  108,
-                  101,
-                  95,
-                  114,
-                  101,
-                  103,
-                  105,
-                  115,
-                  116,
-                  114,
-                  121,
-                ];
-              },
-            ];
-          };
+          docs: [
+            "Protocol-level oracle registry (shared across all vaults, zero-copy)",
+          ];
         },
         {
           name: "session";
@@ -1459,26 +403,6 @@ export type AgentShield = {
             "Seeds include token_mint for per-token concurrent sessions.",
           ];
           writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [115, 101, 115, 115, 105, 111, 110];
-              },
-              {
-                kind: "account";
-                path: "vault";
-              },
-              {
-                kind: "account";
-                path: "agent";
-              },
-              {
-                kind: "arg";
-                path: "tokenMint";
-              },
-            ];
-          };
         },
         {
           name: "vaultTokenAccount";
@@ -1490,12 +414,26 @@ export type AgentShield = {
           docs: ["The token mint being spent"];
         },
         {
+          name: "protocolTreasuryTokenAccount";
+          docs: [
+            "Protocol treasury token account (needed when protocol_fee > 0)",
+          ];
+          writable: true;
+          optional: true;
+        },
+        {
+          name: "feeDestinationTokenAccount";
+          docs: [
+            "Developer fee destination token account (needed when developer_fee > 0)",
+          ];
+          writable: true;
+          optional: true;
+        },
+        {
           name: "tokenProgram";
-          address: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
         },
         {
           name: "systemProgram";
-          address: "11111111111111111111111111111111";
         },
       ];
       args: [
@@ -1528,6 +466,97 @@ export type AgentShield = {
       ];
     },
     {
+      name: "finalizeSession";
+      docs: [
+        "Finalize a session after the DeFi action completes.",
+        "Revokes delegation, collects fees, closes the SessionAuthority PDA.",
+      ];
+      discriminator: [34, 148, 144, 47, 37, 130, 206, 161];
+      accounts: [
+        {
+          name: "payer";
+          writable: true;
+          signer: true;
+        },
+        {
+          name: "vault";
+          writable: true;
+        },
+        {
+          name: "session";
+          docs: [
+            "Session rent is returned to the session's agent (who paid for it).",
+            "Seeds include token_mint for per-token concurrent sessions.",
+          ];
+          writable: true;
+        },
+        {
+          name: "sessionRentRecipient";
+          writable: true;
+        },
+        {
+          name: "vaultTokenAccount";
+          docs: ["Vault's PDA token account for the session's token"];
+          writable: true;
+          optional: true;
+        },
+        {
+          name: "tokenProgram";
+        },
+        {
+          name: "systemProgram";
+        },
+      ];
+      args: [
+        {
+          name: "success";
+          type: "bool";
+        },
+      ];
+    },
+    {
+      name: "revokeAgent";
+      docs: [
+        "Kill switch. Immediately freezes the vault.",
+        "Only the owner can call this.",
+      ];
+      discriminator: [227, 60, 209, 125, 240, 117, 163, 73];
+      accounts: [
+        {
+          name: "owner";
+          signer: true;
+        },
+        {
+          name: "vault";
+          writable: true;
+        },
+      ];
+      args: [];
+    },
+    {
+      name: "reactivateVault";
+      docs: ["Reactivate a frozen vault. Optionally rotate the agent key."];
+      discriminator: [245, 50, 143, 70, 114, 220, 25, 251];
+      accounts: [
+        {
+          name: "owner";
+          signer: true;
+        },
+        {
+          name: "vault";
+          writable: true;
+        },
+      ];
+      args: [
+        {
+          name: "newAgent";
+          type: {
+            option: "pubkey";
+          };
+        },
+      ];
+    },
+    {
       name: "withdrawFunds";
       docs: ["Withdraw tokens from the vault back to the owner."];
       discriminator: [241, 36, 29, 111, 208, 31, 104, 217];
@@ -1536,27 +565,9 @@ export type AgentShield = {
           name: "owner";
           writable: true;
           signer: true;
-          relations: ["vault"];
         },
         {
           name: "vault";
-          pda: {
-            seeds: [
-              {
-                kind: "const";
-                value: [118, 97, 117, 108, 116];
-              },
-              {
-                kind: "account";
-                path: "owner";
-              },
-              {
-                kind: "account";
-                path: "vault.vault_id";
-                account: "agentVault";
-              },
-            ];
-          };
         },
         {
           name: "mint";
@@ -1565,187 +576,244 @@ export type AgentShield = {
           name: "vaultTokenAccount";
           docs: ["Vault's PDA-controlled token account"];
           writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "account";
-                path: "vault";
-              },
-              {
-                kind: "const";
-                value: [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169,
-                ];
-              },
-              {
-                kind: "account";
-                path: "mint";
-              },
-            ];
-            program: {
-              kind: "const";
-              value: [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89,
-              ];
-            };
-          };
         },
         {
           name: "ownerTokenAccount";
           docs: ["Owner's token account to receive funds"];
           writable: true;
-          pda: {
-            seeds: [
-              {
-                kind: "account";
-                path: "owner";
-              },
-              {
-                kind: "const";
-                value: [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169,
-                ];
-              },
-              {
-                kind: "account";
-                path: "mint";
-              },
-            ];
-            program: {
-              kind: "const";
-              value: [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89,
-              ];
+        },
+        {
+          name: "tokenProgram";
+        },
+      ];
+      args: [
+        {
+          name: "amount";
+          type: "u64";
+        },
+      ];
+    },
+    {
+      name: "closeVault";
+      docs: ["Close the vault entirely. Reclaims rent from all PDAs."];
+      discriminator: [141, 103, 17, 126, 72, 75, 29, 29];
+      accounts: [
+        {
+          name: "owner";
+          writable: true;
+          signer: true;
+        },
+        {
+          name: "vault";
+          writable: true;
+        },
+        {
+          name: "policy";
+          writable: true;
+        },
+        {
+          name: "tracker";
+          docs: ["Zero-copy SpendTracker — close returns rent to owner"];
+          writable: true;
+        },
+        {
+          name: "systemProgram";
+        },
+      ];
+      args: [];
+    },
+    {
+      name: "queuePolicyUpdate";
+      docs: ["Queue a policy update when timelock is active."];
+      discriminator: [149, 18, 76, 197, 179, 193, 91, 77];
+      accounts: [
+        {
+          name: "owner";
+          writable: true;
+          signer: true;
+        },
+        {
+          name: "vault";
+        },
+        {
+          name: "policy";
+        },
+        {
+          name: "pendingPolicy";
+          writable: true;
+        },
+        {
+          name: "systemProgram";
+        },
+      ];
+      args: [
+        {
+          name: "dailySpendingCapUsd";
+          type: {
+            option: "u64";
+          };
+        },
+        {
+          name: "maxTransactionAmountUsd";
+          type: {
+            option: "u64";
+          };
+        },
+        {
+          name: "protocolMode";
+          type: {
+            option: "u8";
+          };
+        },
+        {
+          name: "protocols";
+          type: {
+            option: {
+              vec: "pubkey";
             };
           };
         },
         {
+          name: "maxLeverageBps";
+          type: {
+            option: "u16";
+          };
+        },
+        {
+          name: "canOpenPositions";
+          type: {
+            option: "bool";
+          };
+        },
+        {
+          name: "maxConcurrentPositions";
+          type: {
+            option: "u8";
+          };
+        },
+        {
+          name: "developerFeeRate";
+          type: {
+            option: "u16";
+          };
+        },
+        {
+          name: "timelockDuration";
+          type: {
+            option: "u64";
+          };
+        },
+        {
+          name: "allowedDestinations";
+          type: {
+            option: {
+              vec: "pubkey";
+            };
+          };
+        },
+      ];
+    },
+    {
+      name: "applyPendingPolicy";
+      docs: ["Apply a queued policy update after the timelock expires."];
+      discriminator: [114, 212, 19, 227, 89, 199, 74, 62];
+      accounts: [
+        {
+          name: "owner";
+          writable: true;
+          signer: true;
+        },
+        {
+          name: "vault";
+        },
+        {
+          name: "policy";
+          writable: true;
+        },
+        {
+          name: "pendingPolicy";
+          writable: true;
+        },
+      ];
+      args: [];
+    },
+    {
+      name: "cancelPendingPolicy";
+      docs: ["Cancel a queued policy update."];
+      discriminator: [153, 36, 104, 200, 50, 94, 207, 33];
+      accounts: [
+        {
+          name: "owner";
+          writable: true;
+          signer: true;
+        },
+        {
+          name: "vault";
+        },
+        {
+          name: "pendingPolicy";
+          writable: true;
+        },
+      ];
+      args: [];
+    },
+    {
+      name: "agentTransfer";
+      docs: [
+        "Transfer tokens from the vault to an allowed destination.",
+        "Only the agent can call this.",
+      ];
+      discriminator: [199, 111, 151, 49, 124, 13, 150, 44];
+      accounts: [
+        {
+          name: "agent";
+          writable: true;
+          signer: true;
+        },
+        {
+          name: "vault";
+          writable: true;
+        },
+        {
+          name: "policy";
+        },
+        {
+          name: "tracker";
+          docs: ["Zero-copy SpendTracker"];
+          writable: true;
+        },
+        {
+          name: "oracleRegistry";
+          docs: ["Protocol-level oracle registry (zero-copy)"];
+        },
+        {
+          name: "vaultTokenAccount";
+          docs: ["Vault's PDA-owned token account (source)"];
+          writable: true;
+        },
+        {
+          name: "tokenMintAccount";
+          docs: ["Token mint account for decimals validation"];
+        },
+        {
+          name: "destinationTokenAccount";
+          docs: ["Destination token account (must be in allowed destinations)"];
+          writable: true;
+        },
+        {
+          name: "feeDestinationTokenAccount";
+          docs: ["Developer fee destination token account"];
+          writable: true;
+          optional: true;
+        },
+        {
+          name: "protocolTreasuryTokenAccount";
+          docs: ["Protocol treasury token account"];
+          writable: true;
+          optional: true;
+        },
+        {
           name: "tokenProgram";
-          address: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
         },
       ];
       args: [
@@ -1758,20 +826,16 @@ export type AgentShield = {
   ];
   accounts: [
     {
-      name: "agentVault";
-      discriminator: [232, 220, 237, 164, 157, 9, 215, 194];
-    },
-    {
-      name: "oracleRegistry";
-      discriminator: [94, 153, 19, 250, 94, 0, 12, 172];
-    },
-    {
       name: "pendingPolicyUpdate";
       discriminator: [77, 255, 2, 51, 79, 237, 183, 239];
     },
     {
       name: "policyConfig";
       discriminator: [219, 7, 79, 84, 175, 51, 148, 146];
+    },
+    {
+      name: "oracleRegistry";
+      discriminator: [94, 153, 19, 250, 94, 0, 12, 172];
     },
     {
       name: "sessionAuthority";
@@ -1781,11 +845,15 @@ export type AgentShield = {
       name: "spendTracker";
       discriminator: [180, 17, 195, 180, 162, 207, 239, 205];
     },
+    {
+      name: "agentVault";
+      discriminator: [232, 220, 237, 164, 157, 9, 215, 194];
+    },
   ];
   events: [
     {
-      name: "actionAuthorized";
-      discriminator: [85, 90, 59, 218, 126, 8, 179, 63];
+      name: "fundsDeposited";
+      discriminator: [157, 209, 100, 95, 59, 100, 3, 68];
     },
     {
       name: "agentRegistered";
@@ -1804,16 +872,24 @@ export type AgentShield = {
       discriminator: [59, 158, 142, 49, 164, 116, 220, 8];
     },
     {
+      name: "oracleAuthorityProposed";
+      discriminator: [72, 88, 217, 127, 125, 208, 157, 34];
+    },
+    {
       name: "feesCollected";
       discriminator: [233, 23, 117, 225, 107, 178, 254, 8];
     },
     {
-      name: "fundsDeposited";
-      discriminator: [157, 209, 100, 95, 59, 100, 3, 68];
+      name: "oracleAuthorityTransferred";
+      discriminator: [120, 195, 241, 123, 203, 81, 155, 61];
     },
     {
       name: "fundsWithdrawn";
       discriminator: [56, 130, 230, 154, 35, 92, 11, 118];
+    },
+    {
+      name: "actionAuthorized";
+      discriminator: [85, 90, 59, 218, 126, 8, 179, 63];
     },
     {
       name: "oracleRegistryInitialized";
@@ -1828,12 +904,12 @@ export type AgentShield = {
       discriminator: [104, 89, 5, 100, 180, 202, 52, 73];
     },
     {
-      name: "policyChangeCancelled";
-      discriminator: [200, 158, 226, 255, 25, 211, 30, 151];
-    },
-    {
       name: "policyChangeQueued";
       discriminator: [73, 231, 182, 136, 141, 120, 32, 79];
+    },
+    {
+      name: "policyChangeCancelled";
+      discriminator: [200, 158, 226, 255, 25, 211, 30, 151];
     },
     {
       name: "policyUpdated";
@@ -2025,7 +1101,7 @@ export type AgentShield = {
     {
       code: 6033;
       name: "oracleConfidenceTooWide";
-      msg: "Oracle price confidence interval too wide";
+      msg: "Oracle spot confidence exceeds 20% safety valve (feed likely broken)";
     },
     {
       code: 6034;
@@ -2087,76 +1163,23 @@ export type AgentShield = {
       name: "oracleBothFeedsFailed";
       msg: "Both primary and fallback oracle feeds failed";
     },
+    {
+      code: 6046;
+      name: "oracleConfidenceSpike";
+      msg: "Oracle confidence spike: spot_conf exceeds 5x ema_conf";
+    },
+    {
+      code: 6047;
+      name: "invalidAuthorityKey";
+      msg: "Invalid authority key: cannot be the zero address";
+    },
+    {
+      code: 6048;
+      name: "noPendingAuthority";
+      msg: "No pending authority transfer to accept";
+    },
   ];
   types: [
-    {
-      name: "actionAuthorized";
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "vault";
-            type: "pubkey";
-          },
-          {
-            name: "agent";
-            type: "pubkey";
-          },
-          {
-            name: "actionType";
-            type: {
-              defined: {
-                name: "actionType";
-              };
-            };
-          },
-          {
-            name: "tokenMint";
-            type: "pubkey";
-          },
-          {
-            name: "amount";
-            type: "u64";
-          },
-          {
-            name: "usdAmount";
-            type: "u64";
-          },
-          {
-            name: "protocol";
-            type: "pubkey";
-          },
-          {
-            name: "rollingSpendUsdAfter";
-            type: "u64";
-          },
-          {
-            name: "dailyCapUsd";
-            type: "u64";
-          },
-          {
-            name: "delegated";
-            type: "bool";
-          },
-          {
-            name: "oraclePrice";
-            type: {
-              option: "i128";
-            };
-          },
-          {
-            name: "oracleSource";
-            type: {
-              option: "u8";
-            };
-          },
-          {
-            name: "timestamp";
-            type: "i64";
-          },
-        ];
-      };
-    },
     {
       name: "actionType";
       docs: ["Action types that agents can request"];
@@ -2191,403 +1214,19 @@ export type AgentShield = {
       };
     },
     {
-      name: "agentRegistered";
+      name: "vaultStatus";
+      docs: ["Vault status enum"];
       type: {
-        kind: "struct";
-        fields: [
+        kind: "enum";
+        variants: [
           {
-            name: "vault";
-            type: "pubkey";
+            name: "active";
           },
           {
-            name: "agent";
-            type: "pubkey";
+            name: "frozen";
           },
           {
-            name: "timestamp";
-            type: "i64";
-          },
-        ];
-      };
-    },
-    {
-      name: "agentRevoked";
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "vault";
-            type: "pubkey";
-          },
-          {
-            name: "agent";
-            type: "pubkey";
-          },
-          {
-            name: "timestamp";
-            type: "i64";
-          },
-        ];
-      };
-    },
-    {
-      name: "agentTransferExecuted";
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "vault";
-            type: "pubkey";
-          },
-          {
-            name: "destination";
-            type: "pubkey";
-          },
-          {
-            name: "amount";
-            type: "u64";
-          },
-          {
-            name: "mint";
-            type: "pubkey";
-          },
-        ];
-      };
-    },
-    {
-      name: "agentVault";
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "owner";
-            docs: ["The owner who created this vault (has full authority)"];
-            type: "pubkey";
-          },
-          {
-            name: "agent";
-            docs: [
-              "The registered agent's signing key (Pubkey::default() if not yet registered)",
-            ];
-            type: "pubkey";
-          },
-          {
-            name: "feeDestination";
-            docs: [
-              "Developer fee destination — IMMUTABLE after initialization.",
-              "Prevents a compromised owner from redirecting fees.",
-            ];
-            type: "pubkey";
-          },
-          {
-            name: "vaultId";
-            docs: [
-              "Unique vault identifier (allows one owner to have multiple vaults)",
-            ];
-            type: "u64";
-          },
-          {
-            name: "status";
-            docs: ["Vault status: Active, Frozen, or Closed"];
-            type: {
-              defined: {
-                name: "vaultStatus";
-              };
-            };
-          },
-          {
-            name: "bump";
-            docs: ["Bump seed for PDA derivation"];
-            type: "u8";
-          },
-          {
-            name: "createdAt";
-            docs: ["Unix timestamp of vault creation"];
-            type: "i64";
-          },
-          {
-            name: "totalTransactions";
-            docs: [
-              "Total number of agent transactions executed through this vault",
-            ];
-            type: "u64";
-          },
-          {
-            name: "totalVolume";
-            docs: ["Total volume processed in token base units"];
-            type: "u64";
-          },
-          {
-            name: "openPositions";
-            docs: ["Number of currently open positions (for perps tracking)"];
-            type: "u8";
-          },
-          {
-            name: "totalFeesCollected";
-            docs: [
-              "Cumulative developer fees collected from this vault (token base units)",
-            ];
-            type: "u64";
-          },
-        ];
-      };
-    },
-    {
-      name: "delegationRevoked";
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "vault";
-            type: "pubkey";
-          },
-          {
-            name: "tokenAccount";
-            type: "pubkey";
-          },
-          {
-            name: "timestamp";
-            type: "i64";
-          },
-        ];
-      };
-    },
-    {
-      name: "epochBucket";
-      docs: [
-        "A single epoch bucket tracking aggregate USD spend.",
-        "16 bytes per bucket. USD-only — rate limiting stays client-side.",
-      ];
-      serialization: "bytemuck";
-      repr: {
-        kind: "c";
-      };
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "epochId";
-            docs: ["Epoch identifier: unix_timestamp / EPOCH_DURATION"];
-            type: "i64";
-          },
-          {
-            name: "usdAmount";
-            docs: ["Aggregate USD spent in this epoch (6 decimals)"];
-            type: "u64";
-          },
-        ];
-      };
-    },
-    {
-      name: "feesCollected";
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "vault";
-            type: "pubkey";
-          },
-          {
-            name: "tokenMint";
-            type: "pubkey";
-          },
-          {
-            name: "protocolFeeAmount";
-            type: "u64";
-          },
-          {
-            name: "developerFeeAmount";
-            type: "u64";
-          },
-          {
-            name: "protocolFeeRate";
-            type: "u16";
-          },
-          {
-            name: "developerFeeRate";
-            type: "u16";
-          },
-          {
-            name: "transactionAmount";
-            type: "u64";
-          },
-          {
-            name: "protocolTreasury";
-            type: "pubkey";
-          },
-          {
-            name: "developerFeeDestination";
-            type: "pubkey";
-          },
-          {
-            name: "cumulativeDeveloperFees";
-            type: "u64";
-          },
-          {
-            name: "timestamp";
-            type: "i64";
-          },
-        ];
-      };
-    },
-    {
-      name: "fundsDeposited";
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "vault";
-            type: "pubkey";
-          },
-          {
-            name: "tokenMint";
-            type: "pubkey";
-          },
-          {
-            name: "amount";
-            type: "u64";
-          },
-          {
-            name: "timestamp";
-            type: "i64";
-          },
-        ];
-      };
-    },
-    {
-      name: "fundsWithdrawn";
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "vault";
-            type: "pubkey";
-          },
-          {
-            name: "tokenMint";
-            type: "pubkey";
-          },
-          {
-            name: "amount";
-            type: "u64";
-          },
-          {
-            name: "destination";
-            type: "pubkey";
-          },
-          {
-            name: "timestamp";
-            type: "i64";
-          },
-        ];
-      };
-    },
-    {
-      name: "oracleEntry";
-      docs: ["Individual entry mapping a token mint to its oracle feed."];
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "mint";
-            docs: ["SPL token mint address"];
-            type: "pubkey";
-          },
-          {
-            name: "oracleFeed";
-            docs: [
-              "Pyth or Switchboard oracle feed account.",
-              "Ignored when is_stablecoin is true.",
-            ];
-            type: "pubkey";
-          },
-          {
-            name: "isStablecoin";
-            docs: ["If true, token is 1:1 USD (no oracle read needed)"];
-            type: "bool";
-          },
-          {
-            name: "fallbackFeed";
-            docs: [
-              "Optional fallback oracle feed. Pubkey::default() = no fallback.",
-              "Used when primary is stale/invalid. Cross-checked for divergence",
-              "when both are available.",
-            ];
-            type: "pubkey";
-          },
-        ];
-      };
-    },
-    {
-      name: "oracleRegistry";
-      docs: [
-        "Protocol-level oracle registry — maps token mints to oracle feeds.",
-        "Maintained by protocol admin. Shared across ALL vaults.",
-        "Any vault can use any registered token without per-vault configuration.",
-        "",
-        'Seeds: `[b"oracle_registry"]`',
-      ];
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "authority";
-            docs: [
-              "Authority who can add/remove entries (upgradeable to multisig/DAO)",
-            ];
-            type: "pubkey";
-          },
-          {
-            name: "entries";
-            docs: ["Token mint → oracle feed mappings"];
-            type: {
-              vec: {
-                defined: {
-                  name: "oracleEntry";
-                };
-              };
-            };
-          },
-          {
-            name: "bump";
-            docs: ["Bump seed for PDA"];
-            type: "u8";
-          },
-        ];
-      };
-    },
-    {
-      name: "oracleRegistryInitialized";
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "authority";
-            type: "pubkey";
-          },
-          {
-            name: "entryCount";
-            type: "u16";
-          },
-        ];
-      };
-    },
-    {
-      name: "oracleRegistryUpdated";
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "addedCount";
-            type: "u16";
-          },
-          {
-            name: "removedCount";
-            type: "u16";
-          },
-          {
-            name: "totalEntries";
-            type: "u16";
+            name: "closed";
           },
         ];
       };
@@ -2692,50 +1331,6 @@ export type AgentShield = {
       };
     },
     {
-      name: "policyChangeApplied";
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "vault";
-            type: "pubkey";
-          },
-          {
-            name: "appliedAt";
-            type: "i64";
-          },
-        ];
-      };
-    },
-    {
-      name: "policyChangeCancelled";
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "vault";
-            type: "pubkey";
-          },
-        ];
-      };
-    },
-    {
-      name: "policyChangeQueued";
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "vault";
-            type: "pubkey";
-          },
-          {
-            name: "executesAt";
-            type: "i64";
-          },
-        ];
-      };
-    },
-    {
       name: "policyConfig";
       type: {
         kind: "struct";
@@ -2832,41 +1427,152 @@ export type AgentShield = {
       };
     },
     {
-      name: "policyUpdated";
+      name: "oracleEntry";
+      docs: [
+        "Borsh-serializable entry used as instruction argument.",
+        "Converted to/from OracleEntryZC for on-chain storage.",
+      ];
       type: {
         kind: "struct";
         fields: [
           {
-            name: "vault";
+            name: "mint";
+            docs: ["SPL token mint address"];
             type: "pubkey";
           },
           {
-            name: "dailyCapUsd";
-            type: "u64";
+            name: "oracleFeed";
+            docs: [
+              "Pyth or Switchboard oracle feed account.",
+              "Ignored when is_stablecoin is true.",
+            ];
+            type: "pubkey";
           },
           {
-            name: "maxTransactionSizeUsd";
-            type: "u64";
+            name: "isStablecoin";
+            docs: ["If true, token is 1:1 USD (no oracle read needed)"];
+            type: "bool";
           },
           {
-            name: "protocolMode";
+            name: "fallbackFeed";
+            docs: [
+              "Optional fallback oracle feed. Pubkey::default() = no fallback.",
+            ];
+            type: "pubkey";
+          },
+        ];
+      };
+    },
+    {
+      name: "oracleEntryZc";
+      docs: [
+        "Zero-copy individual entry mapping a token mint to its oracle feed.",
+        "97 bytes per entry, no padding needed (32+32+1+32 = 97).",
+      ];
+      serialization: "bytemuck";
+      repr: {
+        kind: "c";
+      };
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "mint";
+            docs: ["SPL token mint address"];
+            type: "pubkey";
+          },
+          {
+            name: "oracleFeed";
+            docs: [
+              "Pyth or Switchboard oracle feed account.",
+              "Ignored when is_stablecoin is 1.",
+            ];
+            type: "pubkey";
+          },
+          {
+            name: "isStablecoin";
+            docs: [
+              "1 = stablecoin (1:1 USD, no oracle read needed), 0 = oracle-priced",
+            ];
             type: "u8";
           },
           {
-            name: "protocolsCount";
+            name: "fallbackFeed";
+            docs: [
+              "Optional fallback oracle feed. Pubkey::default() = no fallback.",
+              "Used when primary is stale/invalid. Cross-checked for divergence",
+              "when both are available.",
+            ];
+            type: "pubkey";
+          },
+        ];
+      };
+    },
+    {
+      name: "oracleRegistry";
+      docs: [
+        "Zero-copy protocol-level oracle registry — maps token mints to oracle",
+        "feeds. Maintained by protocol admin. Shared across ALL vaults.",
+        "Any vault can use any registered token without per-vault configuration.",
+        "",
+        'Seeds: `[b"oracle_registry"]`',
+        "",
+        "Layout: disc(8) + authority(32) + pending_authority(32) + count(2) +",
+        "bump(1) + padding(5) + entries(97*104=10,088) = 10,168 bytes",
+        "(under 10,240 CPI limit)",
+      ];
+      serialization: "bytemuck";
+      repr: {
+        kind: "c";
+      };
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "authority";
+            docs: [
+              "Authority who can add/remove entries (upgradeable to multisig/DAO",
+              "via 2-step transfer)",
+            ];
+            type: "pubkey";
+          },
+          {
+            name: "pendingAuthority";
+            docs: [
+              "Pending authority for 2-step transfer. Pubkey::default() = none.",
+            ];
+            type: "pubkey";
+          },
+          {
+            name: "count";
+            docs: ["Number of active entries in the `entries` array"];
+            type: "u16";
+          },
+          {
+            name: "bump";
+            docs: ["Bump seed for PDA"];
             type: "u8";
           },
           {
-            name: "maxLeverageBps";
-            type: "u16";
+            name: "padding";
+            docs: ["Padding for 8-byte alignment"];
+            type: {
+              array: ["u8", 5];
+            };
           },
           {
-            name: "developerFeeRate";
-            type: "u16";
-          },
-          {
-            name: "timestamp";
-            type: "i64";
+            name: "entries";
+            docs: ["Fixed-size entry array (only entries[..count] are active)"];
+            type: {
+              array: [
+                {
+                  defined: {
+                    name: "oracleEntryZc";
+                  };
+                },
+                104,
+              ];
+            };
           },
         ];
       };
@@ -2936,6 +1642,20 @@ export type AgentShield = {
             type: "pubkey";
           },
           {
+            name: "protocolFee";
+            docs: [
+              "Protocol fee collected during validate (for event logging in finalize)",
+            ];
+            type: "u64";
+          },
+          {
+            name: "developerFee";
+            docs: [
+              "Developer fee collected during validate (for event logging in finalize)",
+            ];
+            type: "u64";
+          },
+          {
             name: "bump";
             docs: ["Bump seed for PDA"];
             type: "u8";
@@ -2944,29 +1664,27 @@ export type AgentShield = {
       };
     },
     {
-      name: "sessionFinalized";
+      name: "epochBucket";
+      docs: [
+        "A single epoch bucket tracking aggregate USD spend.",
+        "16 bytes per bucket. USD-only — rate limiting stays client-side.",
+      ];
+      serialization: "bytemuck";
+      repr: {
+        kind: "c";
+      };
       type: {
         kind: "struct";
         fields: [
           {
-            name: "vault";
-            type: "pubkey";
-          },
-          {
-            name: "agent";
-            type: "pubkey";
-          },
-          {
-            name: "success";
-            type: "bool";
-          },
-          {
-            name: "isExpired";
-            type: "bool";
-          },
-          {
-            name: "timestamp";
+            name: "epochId";
+            docs: ["Epoch identifier: unix_timestamp / EPOCH_DURATION"];
             type: "i64";
+          },
+          {
+            name: "usdAmount";
+            docs: ["Aggregate USD spent in this epoch (6 decimals)"];
+            type: "u64";
           },
         ];
       };
@@ -3018,6 +1736,553 @@ export type AgentShield = {
             type: {
               array: ["u8", 7];
             };
+          },
+        ];
+      };
+    },
+    {
+      name: "agentVault";
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "owner";
+            docs: ["The owner who created this vault (has full authority)"];
+            type: "pubkey";
+          },
+          {
+            name: "agent";
+            docs: [
+              "The registered agent's signing key (Pubkey::default() if not yet registered)",
+            ];
+            type: "pubkey";
+          },
+          {
+            name: "feeDestination";
+            docs: [
+              "Developer fee destination — IMMUTABLE after initialization.",
+              "Prevents a compromised owner from redirecting fees.",
+            ];
+            type: "pubkey";
+          },
+          {
+            name: "vaultId";
+            docs: [
+              "Unique vault identifier (allows one owner to have multiple vaults)",
+            ];
+            type: "u64";
+          },
+          {
+            name: "status";
+            docs: ["Vault status: Active, Frozen, or Closed"];
+            type: {
+              defined: {
+                name: "vaultStatus";
+              };
+            };
+          },
+          {
+            name: "bump";
+            docs: ["Bump seed for PDA derivation"];
+            type: "u8";
+          },
+          {
+            name: "createdAt";
+            docs: ["Unix timestamp of vault creation"];
+            type: "i64";
+          },
+          {
+            name: "totalTransactions";
+            docs: [
+              "Total number of agent transactions executed through this vault",
+            ];
+            type: "u64";
+          },
+          {
+            name: "totalVolume";
+            docs: ["Total volume processed in token base units"];
+            type: "u64";
+          },
+          {
+            name: "openPositions";
+            docs: ["Number of currently open positions (for perps tracking)"];
+            type: "u8";
+          },
+          {
+            name: "totalFeesCollected";
+            docs: [
+              "Cumulative developer fees collected from this vault (token base units)",
+            ];
+            type: "u64";
+          },
+        ];
+      };
+    },
+    {
+      name: "fundsDeposited";
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "vault";
+            type: "pubkey";
+          },
+          {
+            name: "tokenMint";
+            type: "pubkey";
+          },
+          {
+            name: "amount";
+            type: "u64";
+          },
+          {
+            name: "timestamp";
+            type: "i64";
+          },
+        ];
+      };
+    },
+    {
+      name: "agentRegistered";
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "vault";
+            type: "pubkey";
+          },
+          {
+            name: "agent";
+            type: "pubkey";
+          },
+          {
+            name: "timestamp";
+            type: "i64";
+          },
+        ];
+      };
+    },
+    {
+      name: "agentRevoked";
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "vault";
+            type: "pubkey";
+          },
+          {
+            name: "agent";
+            type: "pubkey";
+          },
+          {
+            name: "timestamp";
+            type: "i64";
+          },
+        ];
+      };
+    },
+    {
+      name: "agentTransferExecuted";
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "vault";
+            type: "pubkey";
+          },
+          {
+            name: "destination";
+            type: "pubkey";
+          },
+          {
+            name: "amount";
+            type: "u64";
+          },
+          {
+            name: "mint";
+            type: "pubkey";
+          },
+        ];
+      };
+    },
+    {
+      name: "delegationRevoked";
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "vault";
+            type: "pubkey";
+          },
+          {
+            name: "tokenAccount";
+            type: "pubkey";
+          },
+          {
+            name: "timestamp";
+            type: "i64";
+          },
+        ];
+      };
+    },
+    {
+      name: "oracleAuthorityProposed";
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "currentAuthority";
+            type: "pubkey";
+          },
+          {
+            name: "proposedAuthority";
+            type: "pubkey";
+          },
+        ];
+      };
+    },
+    {
+      name: "feesCollected";
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "vault";
+            type: "pubkey";
+          },
+          {
+            name: "tokenMint";
+            type: "pubkey";
+          },
+          {
+            name: "protocolFeeAmount";
+            type: "u64";
+          },
+          {
+            name: "developerFeeAmount";
+            type: "u64";
+          },
+          {
+            name: "protocolFeeRate";
+            type: "u16";
+          },
+          {
+            name: "developerFeeRate";
+            type: "u16";
+          },
+          {
+            name: "transactionAmount";
+            type: "u64";
+          },
+          {
+            name: "protocolTreasury";
+            type: "pubkey";
+          },
+          {
+            name: "developerFeeDestination";
+            type: "pubkey";
+          },
+          {
+            name: "cumulativeDeveloperFees";
+            type: "u64";
+          },
+          {
+            name: "timestamp";
+            type: "i64";
+          },
+        ];
+      };
+    },
+    {
+      name: "oracleAuthorityTransferred";
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "previousAuthority";
+            type: "pubkey";
+          },
+          {
+            name: "newAuthority";
+            type: "pubkey";
+          },
+        ];
+      };
+    },
+    {
+      name: "fundsWithdrawn";
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "vault";
+            type: "pubkey";
+          },
+          {
+            name: "tokenMint";
+            type: "pubkey";
+          },
+          {
+            name: "amount";
+            type: "u64";
+          },
+          {
+            name: "destination";
+            type: "pubkey";
+          },
+          {
+            name: "timestamp";
+            type: "i64";
+          },
+        ];
+      };
+    },
+    {
+      name: "actionAuthorized";
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "vault";
+            type: "pubkey";
+          },
+          {
+            name: "agent";
+            type: "pubkey";
+          },
+          {
+            name: "actionType";
+            type: {
+              defined: {
+                name: "actionType";
+              };
+            };
+          },
+          {
+            name: "tokenMint";
+            type: "pubkey";
+          },
+          {
+            name: "amount";
+            type: "u64";
+          },
+          {
+            name: "usdAmount";
+            type: "u64";
+          },
+          {
+            name: "protocol";
+            type: "pubkey";
+          },
+          {
+            name: "rollingSpendUsdAfter";
+            type: "u64";
+          },
+          {
+            name: "dailyCapUsd";
+            type: "u64";
+          },
+          {
+            name: "delegated";
+            type: "bool";
+          },
+          {
+            name: "oraclePrice";
+            type: {
+              option: "i128";
+            };
+          },
+          {
+            name: "oracleSource";
+            type: {
+              option: "u8";
+            };
+          },
+          {
+            name: "timestamp";
+            type: "i64";
+          },
+        ];
+      };
+    },
+    {
+      name: "actionType";
+      docs: ["Action types that agents can request"];
+      type: {
+        kind: "enum";
+        variants: [
+          {
+            name: "swap";
+          },
+          {
+            name: "openPosition";
+          },
+          {
+            name: "closePosition";
+          },
+          {
+            name: "increasePosition";
+          },
+          {
+            name: "decreasePosition";
+          },
+          {
+            name: "deposit";
+          },
+          {
+            name: "withdraw";
+          },
+          {
+            name: "transfer";
+          },
+        ];
+      };
+    },
+    {
+      name: "oracleRegistryInitialized";
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "authority";
+            type: "pubkey";
+          },
+          {
+            name: "entryCount";
+            type: "u16";
+          },
+        ];
+      };
+    },
+    {
+      name: "oracleRegistryUpdated";
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "addedCount";
+            type: "u16";
+          },
+          {
+            name: "removedCount";
+            type: "u16";
+          },
+          {
+            name: "totalEntries";
+            type: "u16";
+          },
+        ];
+      };
+    },
+    {
+      name: "policyChangeApplied";
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "vault";
+            type: "pubkey";
+          },
+          {
+            name: "appliedAt";
+            type: "i64";
+          },
+        ];
+      };
+    },
+    {
+      name: "policyChangeQueued";
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "vault";
+            type: "pubkey";
+          },
+          {
+            name: "executesAt";
+            type: "i64";
+          },
+        ];
+      };
+    },
+    {
+      name: "policyChangeCancelled";
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "vault";
+            type: "pubkey";
+          },
+        ];
+      };
+    },
+    {
+      name: "policyUpdated";
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "vault";
+            type: "pubkey";
+          },
+          {
+            name: "dailyCapUsd";
+            type: "u64";
+          },
+          {
+            name: "maxTransactionSizeUsd";
+            type: "u64";
+          },
+          {
+            name: "protocolMode";
+            type: "u8";
+          },
+          {
+            name: "protocolsCount";
+            type: "u8";
+          },
+          {
+            name: "maxLeverageBps";
+            type: "u16";
+          },
+          {
+            name: "developerFeeRate";
+            type: "u16";
+          },
+          {
+            name: "timestamp";
+            type: "i64";
+          },
+        ];
+      };
+    },
+    {
+      name: "sessionFinalized";
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "vault";
+            type: "pubkey";
+          },
+          {
+            name: "agent";
+            type: "pubkey";
+          },
+          {
+            name: "success";
+            type: "bool";
+          },
+          {
+            name: "isExpired";
+            type: "bool";
+          },
+          {
+            name: "timestamp";
+            type: "i64";
           },
         ];
       };
@@ -3084,24 +2349,6 @@ export type AgentShield = {
           {
             name: "timestamp";
             type: "i64";
-          },
-        ];
-      };
-    },
-    {
-      name: "vaultStatus";
-      docs: ["Vault status enum"];
-      type: {
-        kind: "enum";
-        variants: [
-          {
-            name: "active";
-          },
-          {
-            name: "frozen";
-          },
-          {
-            name: "closed";
           },
         ];
       };

@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Revoke, Token, TokenAccount, Transfer};
+use anchor_spl::token::{self, Revoke, Token, TokenAccount};
 
 use crate::errors::AgentShieldError;
-use crate::events::{DelegationRevoked, FeesCollected, SessionFinalized};
+use crate::events::{DelegationRevoked, SessionFinalized};
 use crate::state::*;
 
 #[derive(Accounts)]
@@ -16,13 +16,6 @@ pub struct FinalizeSession<'info> {
         bump = vault.bump,
     )]
     pub vault: Account<'info, AgentVault>,
-
-    #[account(
-        has_one = vault,
-        seeds = [b"policy", vault.key().as_ref()],
-        bump = policy.bump,
-    )]
-    pub policy: Account<'info, PolicyConfig>,
 
     /// Session rent is returned to the session's agent (who paid for it).
     /// Seeds include token_mint for per-token concurrent sessions.
@@ -47,14 +40,6 @@ pub struct FinalizeSession<'info> {
     /// Vault's PDA token account for the session's token
     #[account(mut)]
     pub vault_token_account: Option<Account<'info, TokenAccount>>,
-
-    /// Developer fee destination token account
-    #[account(mut)]
-    pub fee_destination_token_account: Option<Account<'info, TokenAccount>>,
-
-    /// Protocol treasury token account
-    #[account(mut)]
-    pub protocol_treasury_token_account: Option<Account<'info, TokenAccount>>,
 
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
@@ -88,18 +73,16 @@ pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
     // Extract session data before we lose access
     let session_agent = session.agent;
     let session_amount = session.authorized_amount;
-    let session_token = session.authorized_token;
     let session_action_type = session.action_type;
     let session_delegated = session.delegated;
+    let session_developer_fee = session.developer_fee;
 
     let vault = &mut ctx.accounts.vault;
-    let developer_fee_rate = ctx.accounts.policy.developer_fee_rate;
 
     // Extract vault PDA seeds data upfront
     let owner_key = vault.owner;
     let vault_id_bytes = vault.vault_id.to_le_bytes();
     let vault_bump = vault.bump;
-    let vault_fee_destination = vault.fee_destination;
 
     let bump_slice = [vault_bump];
     let signer_seeds = [
@@ -110,7 +93,7 @@ pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
     ];
     let binding = [signer_seeds.as_slice()];
 
-    // Revoke delegation FIRST (before any fee transfers)
+    // Revoke delegation
     if session_delegated {
         if let Some(vault_token) = ctx.accounts.vault_token_account.as_ref() {
             let revoke_accounts = Revoke {
@@ -132,121 +115,7 @@ pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
         }
     }
 
-    // Collect fees if success and not expired
-    if success && !is_expired {
-        // Calculate protocol fee (always applied)
-        let protocol_fee = session_amount
-            .checked_mul(PROTOCOL_FEE_RATE as u64)
-            .ok_or(AgentShieldError::Overflow)?
-            .checked_div(FEE_RATE_DENOMINATOR)
-            .ok_or(AgentShieldError::Overflow)?;
-
-        // Calculate developer fee
-        let developer_fee = session_amount
-            .checked_mul(developer_fee_rate as u64)
-            .ok_or(AgentShieldError::Overflow)?
-            .checked_div(FEE_RATE_DENOMINATOR)
-            .ok_or(AgentShieldError::Overflow)?;
-
-        let has_any_fee = protocol_fee > 0 || developer_fee > 0;
-
-        if has_any_fee {
-            let vault_token = ctx
-                .accounts
-                .vault_token_account
-                .as_ref()
-                .ok_or(error!(AgentShieldError::InvalidFeeDestination))?;
-
-            // Validate vault token account
-            require!(
-                vault_token.owner == vault.key(),
-                AgentShieldError::InvalidFeeDestination
-            );
-            require!(
-                vault_token.mint == session_token,
-                AgentShieldError::InvalidFeeDestination
-            );
-
-            // Transfer protocol fee
-            if protocol_fee > 0 {
-                let treasury_token = ctx
-                    .accounts
-                    .protocol_treasury_token_account
-                    .as_ref()
-                    .ok_or(error!(AgentShieldError::InvalidProtocolTreasury))?;
-                require!(
-                    treasury_token.owner == PROTOCOL_TREASURY,
-                    AgentShieldError::InvalidProtocolTreasury
-                );
-                require!(
-                    treasury_token.mint == session_token,
-                    AgentShieldError::InvalidProtocolTreasury
-                );
-
-                let cpi_accounts = Transfer {
-                    from: vault_token.to_account_info(),
-                    to: treasury_token.to_account_info(),
-                    authority: vault.to_account_info(),
-                };
-                let cpi_ctx = CpiContext::new_with_signer(
-                    ctx.accounts.token_program.to_account_info(),
-                    cpi_accounts,
-                    &binding,
-                );
-                token::transfer(cpi_ctx, protocol_fee)?;
-            }
-
-            // Transfer developer fee
-            if developer_fee > 0 {
-                let fee_dest = ctx
-                    .accounts
-                    .fee_destination_token_account
-                    .as_ref()
-                    .ok_or(error!(AgentShieldError::InvalidFeeDestination))?;
-                require!(
-                    fee_dest.owner == vault_fee_destination,
-                    AgentShieldError::InvalidFeeDestination
-                );
-                require!(
-                    fee_dest.mint == session_token,
-                    AgentShieldError::InvalidFeeDestination
-                );
-
-                let cpi_accounts = Transfer {
-                    from: vault_token.to_account_info(),
-                    to: fee_dest.to_account_info(),
-                    authority: vault.to_account_info(),
-                };
-                let cpi_ctx = CpiContext::new_with_signer(
-                    ctx.accounts.token_program.to_account_info(),
-                    cpi_accounts,
-                    &binding,
-                );
-                token::transfer(cpi_ctx, developer_fee)?;
-
-                vault.total_fees_collected = vault
-                    .total_fees_collected
-                    .checked_add(developer_fee)
-                    .ok_or(AgentShieldError::Overflow)?;
-            }
-
-            emit!(FeesCollected {
-                vault: vault.key(),
-                token_mint: session_token,
-                protocol_fee_amount: protocol_fee,
-                developer_fee_amount: developer_fee,
-                protocol_fee_rate: PROTOCOL_FEE_RATE,
-                developer_fee_rate,
-                transaction_amount: session_amount,
-                protocol_treasury: PROTOCOL_TREASURY,
-                developer_fee_destination: vault_fee_destination,
-                cumulative_developer_fees: vault.total_fees_collected,
-                timestamp: clock.unix_timestamp,
-            });
-        }
-    }
-
-    // Update vault stats on success
+    // Update vault stats on success (fees already collected in validate)
     if success && !is_expired {
         vault.total_transactions = vault
             .total_transactions
@@ -256,6 +125,13 @@ pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
             .total_volume
             .checked_add(session_amount)
             .ok_or(AgentShieldError::Overflow)?;
+
+        if session_developer_fee > 0 {
+            vault.total_fees_collected = vault
+                .total_fees_collected
+                .checked_add(session_developer_fee)
+                .ok_or(AgentShieldError::Overflow)?;
+        }
 
         // Update position count for perpetual actions
         match session_action_type {

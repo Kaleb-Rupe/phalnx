@@ -1,3 +1,4 @@
+pub mod accept_oracle_authority;
 pub mod agent_transfer;
 pub mod apply_pending_policy;
 pub mod cancel_pending_policy;
@@ -6,6 +7,7 @@ pub mod deposit_funds;
 pub mod finalize_session;
 pub mod initialize_oracle_registry;
 pub mod initialize_vault;
+pub mod propose_oracle_authority;
 pub mod queue_policy_update;
 pub mod reactivate_vault;
 pub mod register_agent;
@@ -17,6 +19,7 @@ pub mod validate_and_authorize;
 pub mod withdraw_funds;
 
 #[allow(ambiguous_glob_reexports)]
+pub use accept_oracle_authority::*;
 pub use agent_transfer::*;
 pub use apply_pending_policy::*;
 pub use cancel_pending_policy::*;
@@ -25,6 +28,7 @@ pub use deposit_funds::*;
 pub use finalize_session::*;
 pub use initialize_oracle_registry::*;
 pub use initialize_vault::*;
+pub use propose_oracle_authority::*;
 pub use queue_policy_update::*;
 pub use reactivate_vault::*;
 pub use register_agent::*;

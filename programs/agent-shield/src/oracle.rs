@@ -89,6 +89,11 @@ pub fn parse_oracle_price(
 //   Total: 133 bytes minimum
 
 const PYTH_MIN_SIZE: usize = 133;
+
+/// Anchor discriminator for PriceUpdateV2: sha256("account:PriceUpdateV2")[..8]
+/// Verified against mainnet Pyth accounts.
+const PYTH_PRICE_UPDATE_V2_DISCRIMINATOR: [u8; 8] = [34, 241, 35, 99, 157, 126, 244, 205];
+
 const PYTH_VERIFICATION_OFFSET: usize = 40;
 const PYTH_PRICE_OFFSET: usize = 73;
 const PYTH_CONF_OFFSET: usize = 81;
@@ -129,9 +134,13 @@ fn parse_pyth_price(
 
     let data = account_info.try_borrow_data()?;
 
-    // 2. Minimum size
+    // 2. Discriminator + size validation
     require!(
         data.len() >= PYTH_MIN_SIZE,
+        AgentShieldError::OracleFeedInvalid
+    );
+    require!(
+        data[..8] == PYTH_PRICE_UPDATE_V2_DISCRIMINATOR,
         AgentShieldError::OracleFeedInvalid
     );
 
@@ -204,10 +213,13 @@ fn parse_pyth_price(
     //     Auto-calibrates per-token: SOL (ema_conf ~0.1%) blocks at
     //     0.5%, BONK (ema_conf ~3%) blocks at 15%. The floor prevents
     //     ema_conf=0 (very stable or new feeds) from blocking all trades.
+    let price_u64 =
+        u64::try_from(price).map_err(|_| error!(AgentShieldError::OracleFeedInvalid))?;
+
     let adaptive_from_ema = ema_conf
         .checked_mul(ADAPTIVE_CONF_MULTIPLIER)
         .ok_or(AgentShieldError::Overflow)?;
-    let min_adaptive = (price as u64)
+    let min_adaptive = price_u64
         .checked_mul(MIN_ADAPTIVE_CONF_BPS)
         .ok_or(AgentShieldError::Overflow)?
         .checked_div(10_000)
@@ -224,12 +236,14 @@ fn parse_pyth_price(
     //    max(spot, ema) ≥ spot ALWAYS — the spending cap is never breached
     //    in real USD terms in any market direction.
     let base_price = if price >= ema_price { price } else { ema_price };
+    let base_price_u64 =
+        u64::try_from(base_price).map_err(|_| error!(AgentShieldError::OracleFeedInvalid))?;
 
     // 10. Cap spot confidence at MAX_CONF_CAP_BPS (2%) of base price.
     //     Uses spot_conf (real-time uncertainty), not ema_conf (lagged).
     //     Bounds overcount: BONK with 6% conf → capped to 2%, trade
     //     proceeds. SOL with 0.1% conf → actual 0.1%, no waste.
-    let max_conf = (base_price as u64)
+    let max_conf = base_price_u64
         .checked_mul(MAX_CONF_CAP_BPS)
         .ok_or(AgentShieldError::Overflow)?
         .checked_div(10_000)

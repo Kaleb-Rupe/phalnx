@@ -22,7 +22,7 @@
 #   apps/ → Actions server tests
 #   sdk/typescript → all downstream suites (everything depends on SDK)
 #
-# Total: 874 tests across 13 suites (569 TS + 228 on-chain + 77 devnet)
+# Total: 878 tests across 13 suites (580 TS + 228 on-chain + 70 devnet)
 # All security checks are BLOCKING — zero tolerance for known issues.
 
 name: CI
@@ -104,7 +104,7 @@ jobs:
               - 'tsconfig*.json'
 
   # ──────────────────────────────────────────────────────────────
-  # Job 1: TypeScript build, lint, and tests (8 suites, 569 tests)
+  # Job 1: TypeScript build, lint, and tests (8 suites, 580 tests)
   # ──────────────────────────────────────────────────────────────
   build-lint-test:
     name: Build, Lint & TS Tests
@@ -173,7 +173,7 @@ jobs:
         working-directory: sdk/core
         run: pnpm test
 
-      - name: SDK tests (165 tests)
+      - name: SDK tests (176 tests)
         if: >-
           needs.changes.outputs.sdk-typescript == 'true' ||
           github.event_name == 'push'
@@ -374,6 +374,105 @@ jobs:
             tests/security-exploits.ts
 
   # ──────────────────────────────────────────────────────────────
+  # Job 3b: Build verification (feature flag safety net)
+  #
+  # Three read-only checks:
+  #   1. Mainnet build compiles
+  #   2. No devnet addresses leak outside cfg(feature = "devnet")
+  #   3. Mainnet and devnet builds produce different binaries
+  # ──────────────────────────────────────────────────────────────
+  build-verification:
+    name: Build Verification (Feature Flags)
+    needs: changes
+    if: needs.changes.outputs.rust == 'true' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9 # stable
+        with:
+          toolchain: stable
+
+      - name: Cache Cargo registry + build
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+            target
+          key: build-verify-${{ runner.os }}-${{ hashFiles('programs/agent-shield/Cargo.lock') }}
+          restore-keys: build-verify-${{ runner.os }}-
+
+      - name: Install Solana CLI
+        run: |
+          sh -c "$(curl -sSfL https://release.anza.xyz/${{ env.SOLANA_VERSION }}/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libudev-dev
+
+      - name: Install Anchor CLI
+        run: |
+          if ! command -v anchor &> /dev/null; then
+            cargo install --git https://github.com/coral-xyz/anchor --tag v${{ env.ANCHOR_VERSION }} anchor-cli --locked --force
+          fi
+
+      - name: Build with mainnet feature
+        run: anchor build --no-idl -- --no-default-features --features mainnet
+
+      - name: Save mainnet binary hash
+        run: sha256sum target/deploy/agent_shield.so > /tmp/mainnet-hash.txt
+
+      - name: Build with devnet feature (default)
+        run: anchor build --no-idl
+
+      - name: Save devnet binary hash
+        run: sha256sum target/deploy/agent_shield.so > /tmp/devnet-hash.txt
+
+      - name: Verify binaries differ
+        run: |
+          MAINNET_HASH=$(cut -d' ' -f1 /tmp/mainnet-hash.txt)
+          DEVNET_HASH=$(cut -d' ' -f1 /tmp/devnet-hash.txt)
+          echo "Mainnet: $MAINNET_HASH"
+          echo "Devnet:  $DEVNET_HASH"
+          if [ "$MAINNET_HASH" = "$DEVNET_HASH" ]; then
+            echo "::error::Mainnet and devnet builds have identical hashes — feature flags are not differentiating the binary"
+            exit 1
+          fi
+          echo "Binaries differ as expected."
+
+      - name: Scan for devnet addresses outside cfg(devnet)
+        run: |
+          # Known devnet-only addresses
+          DEVNET_TREASURY="ASHie1dFTnDSnrHMPGmniJhMgfJVGPm3rAaEPnrtWDiT"
+
+          # Search Rust source files for devnet addresses
+          FOUND=0
+          while IFS= read -r file; do
+            # Check if the file contains the devnet address
+            if grep -q "$DEVNET_TREASURY" "$file"; then
+              # Verify it's inside a cfg(feature = "devnet") block
+              # Simple heuristic: check if the line or nearby lines have #[cfg(feature = "devnet")]
+              LINE_NUM=$(grep -n "$DEVNET_TREASURY" "$file" | head -1 | cut -d: -f1)
+              # Look at the 5 lines before the match for cfg(feature = "devnet")
+              START=$((LINE_NUM > 5 ? LINE_NUM - 5 : 1))
+              CONTEXT=$(sed -n "${START},${LINE_NUM}p" "$file")
+              if ! echo "$CONTEXT" | grep -q 'cfg(feature = "devnet")'; then
+                echo "::error::Devnet address found without cfg(feature = \"devnet\") guard in $file:$LINE_NUM"
+                FOUND=1
+              fi
+            fi
+          done < <(find programs/agent-shield/src -name "*.rs" -type f)
+
+          if [ "$FOUND" -eq 1 ]; then
+            exit 1
+          fi
+          echo "No unguarded devnet addresses found."
+
+  # ──────────────────────────────────────────────────────────────
   # Job 4: Static security analysis (Sec3 X-Ray)
   # ──────────────────────────────────────────────────────────────
   security-scan:
@@ -572,6 +671,7 @@ jobs:
       - build-lint-test
       - rust-checks
       - on-chain-tests
+      - build-verification
       - security-scan
       - formal-verification
       - fuzz-test
@@ -583,6 +683,7 @@ jobs:
           echo "  build-lint-test:       ${{ needs.build-lint-test.result }}"
           echo "  rust-checks:           ${{ needs.rust-checks.result }}"
           echo "  on-chain-tests:        ${{ needs.on-chain-tests.result }}"
+          echo "  build-verification:    ${{ needs.build-verification.result }}"
           echo "  security-scan:         ${{ needs.security-scan.result }}"
           echo "  formal-verification:   ${{ needs.formal-verification.result }}"
           echo "  fuzz-test:             ${{ needs.fuzz-test.result }}"
@@ -622,13 +723,14 @@ jobs:
             fi
           fi
 
-          # rust-checks, on-chain-tests, fuzz-test: required when Rust files changed
+          # rust-checks, on-chain-tests, build-verification, fuzz-test: required when Rust files changed
           RUST_CHANGED="${{ needs.changes.outputs.rust }}"
-          for job_name in rust-checks on-chain-tests fuzz-test; do
+          for job_name in rust-checks on-chain-tests build-verification fuzz-test; do
             case "$job_name" in
-              rust-checks)    result="${{ needs.rust-checks.result }}" ;;
-              on-chain-tests) result="${{ needs.on-chain-tests.result }}" ;;
-              fuzz-test)      result="${{ needs.fuzz-test.result }}" ;;
+              rust-checks)        result="${{ needs.rust-checks.result }}" ;;
+              on-chain-tests)     result="${{ needs.on-chain-tests.result }}" ;;
+              build-verification) result="${{ needs.build-verification.result }}" ;;
+              fuzz-test)          result="${{ needs.fuzz-test.result }}" ;;
             esac
 
             if [ "$RUST_CHANGED" = "true" ] || [ "${{ github.event_name }}" = "push" ]; then

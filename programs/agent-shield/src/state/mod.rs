@@ -30,12 +30,26 @@ pub const PROTOCOL_FEE_RATE: u16 = 200;
 /// Maximum developer fee rate: 500 / 1,000,000 = 0.05% = 5 BPS
 pub const MAX_DEVELOPER_FEE_RATE: u16 = 500;
 
-/// Protocol treasury address (devnet placeholder — replace before mainnet)
+// Build requires exactly one of: --features mainnet OR --features devnet
+#[cfg(not(any(feature = "mainnet", feature = "devnet")))]
+compile_error!("Build requires --features mainnet OR --features devnet");
+
+#[cfg(all(feature = "mainnet", feature = "devnet"))]
+compile_error!("Cannot enable both mainnet and devnet simultaneously");
+
+#[cfg(feature = "devnet")]
+/// Protocol treasury address (devnet)
 /// Base58: ASHie1dFTnDSnrHMPGmniJhMgfJVGPm3rAaEPnrtWDiT
 pub const PROTOCOL_TREASURY: Pubkey = Pubkey::new_from_array([
     140, 51, 155, 5, 120, 99, 25, 69, 20, 4, 163, 87, 229, 124, 111, 239, 107, 28, 230, 192, 254,
     239, 33, 251, 37, 93, 179, 29, 45, 226, 14, 172,
 ]);
+
+/// Protocol treasury address (mainnet — all-zeros placeholder).
+/// Deliberately invalid: treasury_token.owner check will fail at
+/// runtime until replaced with the real mainnet treasury address.
+#[cfg(feature = "mainnet")]
+pub const PROTOCOL_TREASURY: Pubkey = Pubkey::new_from_array([0u8; 32]);
 
 // --- Oracle constants ---
 

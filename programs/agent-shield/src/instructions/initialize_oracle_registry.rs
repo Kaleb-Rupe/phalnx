@@ -16,7 +16,7 @@ pub struct InitializeOracleRegistry<'info> {
         seeds = [b"oracle_registry"],
         bump,
     )]
-    pub oracle_registry: Account<'info, OracleRegistry>,
+    pub oracle_registry: AccountLoader<'info, OracleRegistry>,
 
     pub system_program: Program<'info, System>,
 }
@@ -27,14 +27,19 @@ pub fn handler(ctx: Context<InitializeOracleRegistry>, entries: Vec<OracleEntry>
         AgentShieldError::OracleRegistryFull
     );
 
-    let registry = &mut ctx.accounts.oracle_registry;
+    let mut registry = ctx.accounts.oracle_registry.load_init()?;
     registry.authority = ctx.accounts.authority.key();
-    registry.entries = entries;
+    registry.pending_authority = Pubkey::default();
     registry.bump = ctx.bumps.oracle_registry;
+    registry.count = entries.len() as u16;
+
+    for (i, entry) in entries.iter().enumerate() {
+        registry.entries[i] = OracleEntryZC::from(entry);
+    }
 
     emit!(OracleRegistryInitialized {
         authority: registry.authority,
-        entry_count: registry.entries.len() as u16,
+        entry_count: registry.count,
     });
 
     Ok(())

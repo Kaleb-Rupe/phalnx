@@ -51,6 +51,10 @@ impl SpendTracker {
     /// Record a spend in the current epoch bucket.
     /// If the bucket is from a different epoch, reset it first.
     pub fn record_spend(&mut self, clock: &Clock, usd_amount: u64) -> Result<()> {
+        require!(
+            clock.unix_timestamp > 0,
+            AgentShieldError::OracleFeedInvalid
+        );
         let current_epoch = clock.unix_timestamp / EPOCH_DURATION;
         let idx = (current_epoch % NUM_EPOCHS as i64) as usize;
 
@@ -76,6 +80,9 @@ impl SpendTracker {
     /// proportionally scaled for functionally exact accuracy.
     /// Worst-case rounding error: $0.000001 (1 unit at 6 decimals).
     pub fn get_rolling_24h_usd(&self, clock: &Clock) -> u64 {
+        if clock.unix_timestamp <= 0 {
+            return 0;
+        }
         let current_epoch = clock.unix_timestamp / EPOCH_DURATION;
         let window_start_ts = clock.unix_timestamp.saturating_sub(ROLLING_WINDOW_SECONDS);
         let mut total: u128 = 0;

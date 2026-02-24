@@ -146,4 +146,10 @@ pub enum AgentShieldError {
 
     #[msg("Oracle confidence spike: spot_conf exceeds 5x ema_conf")]
     OracleConfidenceSpike,
+
+    #[msg("Invalid authority key: cannot be the zero address")]
+    InvalidAuthorityKey,
+
+    #[msg("No pending authority transfer to accept")]
+    NoPendingAuthority,
 }

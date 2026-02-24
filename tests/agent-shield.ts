@@ -882,6 +882,8 @@ describe("agent-shield", () => {
           session: sessionPda,
           vaultTokenAccount: vaultUsdcAta,
           tokenMintAccount: usdcMint,
+          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+          feeDestinationTokenAccount: null,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -923,6 +925,8 @@ describe("agent-shield", () => {
             session: sessionPda,
             vaultTokenAccount: vaultUsdcAta,
             tokenMintAccount: usdcMint,
+            protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -961,12 +965,9 @@ describe("agent-shield", () => {
         .accounts({
           payer: agent.publicKey,
           vault: vaultPda,
-          policy: policyPda,
           session: sessionPda,
           sessionRentRecipient: agent.publicKey,
           vaultTokenAccount: vaultUsdcAta,
-          feeDestinationTokenAccount: null,
-          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -1050,6 +1051,8 @@ describe("agent-shield", () => {
             session: solSession,
             vaultTokenAccount: vaultSolAta,
             tokenMintAccount: solMint,
+            protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -1081,6 +1084,8 @@ describe("agent-shield", () => {
             session: sessionPda,
             vaultTokenAccount: vaultUsdcAta,
             tokenMintAccount: usdcMint,
+            protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -1111,6 +1116,8 @@ describe("agent-shield", () => {
             session: sessionPda,
             vaultTokenAccount: vaultUsdcAta,
             tokenMintAccount: usdcMint,
+            protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -1163,6 +1170,8 @@ describe("agent-shield", () => {
             session: sessionPda,
             vaultTokenAccount: vaultUsdcAta,
             tokenMintAccount: usdcMint,
+            protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -1176,12 +1185,9 @@ describe("agent-shield", () => {
           .accounts({
             payer: agent.publicKey,
             vault: vaultPda,
-            policy: policyPda,
             session: sessionPda,
             sessionRentRecipient: agent.publicKey,
             vaultTokenAccount: vaultUsdcAta,
-            feeDestinationTokenAccount: null,
-            protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -1206,6 +1212,8 @@ describe("agent-shield", () => {
             session: sessionPda,
             vaultTokenAccount: vaultUsdcAta,
             tokenMintAccount: usdcMint,
+            protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -1270,6 +1278,8 @@ describe("agent-shield", () => {
             session: fakeSession,
             vaultTokenAccount: vaultUsdcAta,
             tokenMintAccount: usdcMint,
+            protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -1341,6 +1351,8 @@ describe("agent-shield", () => {
             session: frozenSession,
             vaultTokenAccount: frozenVaultUsdcAta,
             tokenMintAccount: usdcMint,
+            protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -1721,6 +1733,8 @@ describe("agent-shield", () => {
           session: feeSessionPda,
           vaultTokenAccount: feeVaultUsdcAta,
           tokenMintAccount: usdcMint,
+          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+          feeDestinationTokenAccount: null,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -1733,12 +1747,9 @@ describe("agent-shield", () => {
         .accounts({
           payer: agent.publicKey,
           vault: feeVaultPda,
-          policy: feePolicyPda,
           session: feeSessionPda,
           sessionRentRecipient: agent.publicKey,
           vaultTokenAccount: feeVaultUsdcAta,
-          feeDestinationTokenAccount: null,
-          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -1807,6 +1818,8 @@ describe("agent-shield", () => {
           session: feeSessionPda,
           vaultTokenAccount: feeVaultUsdcAta,
           tokenMintAccount: usdcMint,
+          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+          feeDestinationTokenAccount: feeDestUsdcAta,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -1819,12 +1832,9 @@ describe("agent-shield", () => {
         .accounts({
           payer: agent.publicKey,
           vault: feeVaultPda,
-          policy: feePolicyPda,
           session: feeSessionPda,
           sessionRentRecipient: agent.publicKey,
           vaultTokenAccount: feeVaultUsdcAta,
-          feeDestinationTokenAccount: feeDestUsdcAta,
-          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -1865,6 +1875,8 @@ describe("agent-shield", () => {
           session: feeSessionPda,
           vaultTokenAccount: feeVaultUsdcAta,
           tokenMintAccount: usdcMint,
+          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+          feeDestinationTokenAccount: feeDestUsdcAta,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -1880,12 +1892,9 @@ describe("agent-shield", () => {
         .accounts({
           payer: agent.publicKey,
           vault: feeVaultPda,
-          policy: feePolicyPda,
           session: feeSessionPda,
           sessionRentRecipient: agent.publicKey,
           vaultTokenAccount: null,
-          feeDestinationTokenAccount: null,
-          protocolTreasuryTokenAccount: null,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -2056,6 +2065,8 @@ describe("agent-shield", () => {
           session: expirySessionPda,
           vaultTokenAccount: expiryVaultUsdcAta,
           tokenMintAccount: usdcMint,
+          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+          feeDestinationTokenAccount: null,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -2078,12 +2089,9 @@ describe("agent-shield", () => {
         .accounts({
           payer: expiryAgent.publicKey,
           vault: expiryVaultPda,
-          policy: expiryPolicyPda,
           session: expirySessionPda,
           sessionRentRecipient: expiryAgent.publicKey,
           vaultTokenAccount: null,
-          feeDestinationTokenAccount: null,
-          protocolTreasuryTokenAccount: null,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -2132,6 +2140,8 @@ describe("agent-shield", () => {
           session: expirySessionPda,
           vaultTokenAccount: expiryVaultUsdcAta,
           tokenMintAccount: usdcMint,
+          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+          feeDestinationTokenAccount: null,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -2150,12 +2160,9 @@ describe("agent-shield", () => {
         .accounts({
           payer: unauthorizedUser.publicKey,
           vault: expiryVaultPda,
-          policy: expiryPolicyPda,
           session: expirySessionPda,
           sessionRentRecipient: expiryAgent.publicKey, // rent still goes to agent
           vaultTokenAccount: null,
-          feeDestinationTokenAccount: null,
-          protocolTreasuryTokenAccount: null,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -2196,6 +2203,8 @@ describe("agent-shield", () => {
           session: expirySessionPda,
           vaultTokenAccount: expiryVaultUsdcAta,
           tokenMintAccount: usdcMint,
+          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+          feeDestinationTokenAccount: null,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -2209,12 +2218,9 @@ describe("agent-shield", () => {
           .accounts({
             payer: unauthorizedUser.publicKey,
             vault: expiryVaultPda,
-            policy: expiryPolicyPda,
             session: expirySessionPda,
             sessionRentRecipient: expiryAgent.publicKey,
             vaultTokenAccount: null,
-            feeDestinationTokenAccount: null,
-            protocolTreasuryTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -2231,12 +2237,9 @@ describe("agent-shield", () => {
         .accounts({
           payer: expiryAgent.publicKey,
           vault: expiryVaultPda,
-          policy: expiryPolicyPda,
           session: expirySessionPda,
           sessionRentRecipient: expiryAgent.publicKey,
           vaultTokenAccount: expiryVaultUsdcAta,
-          feeDestinationTokenAccount: null,
-          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -2263,6 +2266,8 @@ describe("agent-shield", () => {
           session: expirySessionPda,
           vaultTokenAccount: expiryVaultUsdcAta,
           tokenMintAccount: usdcMint,
+          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+          feeDestinationTokenAccount: null,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -2276,12 +2281,9 @@ describe("agent-shield", () => {
           .accounts({
             payer: expiryAgent.publicKey,
             vault: expiryVaultPda,
-            policy: expiryPolicyPda,
             session: expirySessionPda,
             sessionRentRecipient: unauthorizedUser.publicKey, // wrong recipient
             vaultTokenAccount: null,
-            feeDestinationTokenAccount: null,
-            protocolTreasuryTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -2298,12 +2300,9 @@ describe("agent-shield", () => {
         .accounts({
           payer: expiryAgent.publicKey,
           vault: expiryVaultPda,
-          policy: expiryPolicyPda,
           session: expirySessionPda,
           sessionRentRecipient: expiryAgent.publicKey,
           vaultTokenAccount: expiryVaultUsdcAta,
-          feeDestinationTokenAccount: null,
-          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -2438,6 +2437,8 @@ describe("agent-shield", () => {
             session: oldSession,
             vaultTokenAccount: vaultUsdcAta,
             tokenMintAccount: usdcMint,
+            protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -2708,6 +2709,8 @@ describe("agent-shield", () => {
               owner: cv,
             }),
             tokenMintAccount: usdcMint,
+            protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -2839,6 +2842,8 @@ describe("agent-shield", () => {
             session: sessionPda,
             vaultTokenAccount: ringVaultUsdcAta,
             tokenMintAccount: usdcMint,
+            protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -2850,12 +2855,9 @@ describe("agent-shield", () => {
           .accounts({
             payer: ringAgent.publicKey,
             vault: ringVaultPda,
-            policy: ringPolicyPda,
             session: sessionPda,
             sessionRentRecipient: ringAgent.publicKey,
             vaultTokenAccount: ringVaultUsdcAta,
-            feeDestinationTokenAccount: null,
-            protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -2985,6 +2987,8 @@ describe("agent-shield", () => {
           session: sessionPda,
           vaultTokenAccount: feeEdgeVaultUsdcAta,
           tokenMintAccount: usdcMint,
+          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+          feeDestinationTokenAccount: null,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -2999,12 +3003,9 @@ describe("agent-shield", () => {
         .accounts({
           payer: feeEdgeAgent.publicKey,
           vault: feeEdgeVaultPda,
-          policy: feeEdgePolicyPda,
           session: sessionPda,
           sessionRentRecipient: feeEdgeAgent.publicKey,
           vaultTokenAccount: null,
-          feeDestinationTokenAccount: null,
-          protocolTreasuryTokenAccount: null,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -3045,6 +3046,8 @@ describe("agent-shield", () => {
           session: sessionPda,
           vaultTokenAccount: feeEdgeVaultUsdcAta,
           tokenMintAccount: usdcMint,
+          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+          feeDestinationTokenAccount: null,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -3057,12 +3060,9 @@ describe("agent-shield", () => {
         .accounts({
           payer: feeEdgeAgent.publicKey,
           vault: feeEdgeVaultPda,
-          policy: feeEdgePolicyPda,
           session: sessionPda,
           sessionRentRecipient: feeEdgeAgent.publicKey,
           vaultTokenAccount: null,
-          feeDestinationTokenAccount: null,
-          protocolTreasuryTokenAccount: null,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -3070,6 +3070,9 @@ describe("agent-shield", () => {
         .rpc();
 
       // Test amount = 5000: protocol_fee = 5000 * 200 / 1_000_000 = 1
+      // Capture vault balance BEFORE validate (fee collected during validate)
+      const vaultBalBefore = getTokenBalance(svm, feeEdgeVaultUsdcAta);
+
       await program.methods
         .validateAndAuthorize(
           { swap: {} },
@@ -3087,33 +3090,30 @@ describe("agent-shield", () => {
           session: sessionPda,
           vaultTokenAccount: feeEdgeVaultUsdcAta,
           tokenMintAccount: usdcMint,
+          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+          feeDestinationTokenAccount: null,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
         .signers([feeEdgeAgent])
         .rpc();
 
-      const vaultBalBefore = getTokenBalance(svm, feeEdgeVaultUsdcAta);
-
-      // Finalize — needs token accounts since fee = 1
+      // Finalize session (fees already collected during validate)
       await program.methods
         .finalizeSession(true)
         .accounts({
           payer: feeEdgeAgent.publicKey,
           vault: feeEdgeVaultPda,
-          policy: feeEdgePolicyPda,
           session: sessionPda,
           sessionRentRecipient: feeEdgeAgent.publicKey,
-          vaultTokenAccount: feeEdgeVaultUsdcAta,
-          feeDestinationTokenAccount: null,
-          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+          vaultTokenAccount: null,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
         .signers([feeEdgeAgent])
         .rpc();
 
-      // Vault balance should decrease by exactly 1 (protocol fee)
+      // Vault balance should decrease by exactly 1 (protocol fee deducted during validate)
       const vaultBalAfter = getTokenBalance(svm, feeEdgeVaultUsdcAta);
       expect(Number(vaultBalBefore) - Number(vaultBalAfter)).to.equal(1);
     });
@@ -3177,7 +3177,8 @@ describe("agent-shield", () => {
       emaConf?: bigint, // u64, EMA confidence (defaults to conf)
     ): void {
       const data = Buffer.alloc(133);
-      // discriminator [0..8] — zeros
+      // PriceUpdateV2 discriminator: sha256("account:PriceUpdateV2")[..8]
+      Buffer.from([34, 241, 35, 99, 157, 126, 244, 205]).copy(data, 0);
       // write_authority [8..40] — zeros
       // verification_level [40]
       data.writeUInt8(verificationLevel, 40);
@@ -3418,6 +3419,8 @@ describe("agent-shield", () => {
           session: sessionPda,
           vaultTokenAccount: vaultOracleAta,
           tokenMintAccount: oracleMint,
+          protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+          feeDestinationTokenAccount: null,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -3457,12 +3460,9 @@ describe("agent-shield", () => {
         .accounts({
           payer: oracleAgent.publicKey,
           vault: oracleVaultPda,
-          policy: oraclePolicyPda,
           session: sessionPda,
           sessionRentRecipient: oracleAgent.publicKey,
           vaultTokenAccount: vaultOracleAta,
-          feeDestinationTokenAccount: null,
-          protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -3528,6 +3528,8 @@ describe("agent-shield", () => {
           session: sessionPda,
           vaultTokenAccount: vaultOracleAta,
           tokenMintAccount: oracleMint,
+          protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+          feeDestinationTokenAccount: null,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -3562,12 +3564,9 @@ describe("agent-shield", () => {
         .accounts({
           payer: oracleAgent.publicKey,
           vault: oracleVaultPda,
-          policy: oraclePolicyPda,
           session: sessionPda,
           sessionRentRecipient: oracleAgent.publicKey,
           vaultTokenAccount: vaultOracleAta,
-          feeDestinationTokenAccount: null,
-          protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -3637,6 +3636,8 @@ describe("agent-shield", () => {
             session: sessionPda,
             vaultTokenAccount: vaultOracleAta,
             tokenMintAccount: oracleMint,
+            protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -3696,6 +3697,8 @@ describe("agent-shield", () => {
             session: sessionPda,
             vaultTokenAccount: vaultOracleAta,
             tokenMintAccount: oracleMint,
+            protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -3755,6 +3758,8 @@ describe("agent-shield", () => {
             session: sessionPda,
             vaultTokenAccount: vaultOracleAta,
             tokenMintAccount: oracleMint,
+            protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -3831,6 +3836,8 @@ describe("agent-shield", () => {
             session: sessionPda,
             vaultTokenAccount: vaultOracleAta,
             tokenMintAccount: oracleMint,
+            protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -3898,6 +3905,8 @@ describe("agent-shield", () => {
             session: sessionPda,
             vaultTokenAccount: vaultOracleAta,
             tokenMintAccount: oracleMint,
+            protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -4041,6 +4050,8 @@ describe("agent-shield", () => {
           session: sessionPda,
           vaultTokenAccount: vaultAta,
           tokenMintAccount: oracleMint,
+          protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+          feeDestinationTokenAccount: null,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -4074,12 +4085,9 @@ describe("agent-shield", () => {
         .accounts({
           payer: confAgent.publicKey,
           vault: confVault,
-          policy: confPolicy,
           session: sessionPda,
           sessionRentRecipient: confAgent.publicKey,
           vaultTokenAccount: vaultAta,
-          feeDestinationTokenAccount: null,
-          protocolTreasuryTokenAccount: protocolAta,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -4196,6 +4204,8 @@ describe("agent-shield", () => {
           session: sessionPda,
           vaultTokenAccount: zcAta,
           tokenMintAccount: oracleMint,
+          protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+          feeDestinationTokenAccount: null,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -4228,12 +4238,9 @@ describe("agent-shield", () => {
         .accounts({
           payer: zcAgent.publicKey,
           vault: zcVault,
-          policy: zcPolicy,
           session: sessionPda,
           sessionRentRecipient: zcAgent.publicKey,
           vaultTokenAccount: zcAta,
-          feeDestinationTokenAccount: null,
-          protocolTreasuryTokenAccount: protocolAta,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -4352,6 +4359,8 @@ describe("agent-shield", () => {
           session: sessionPda,
           vaultTokenAccount: vaultAta,
           tokenMintAccount: oracleMint,
+          protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+          feeDestinationTokenAccount: null,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -4384,12 +4393,9 @@ describe("agent-shield", () => {
         .accounts({
           payer: capAgent.publicKey,
           vault: capVault,
-          policy: capPolicy,
           session: sessionPda,
           sessionRentRecipient: capAgent.publicKey,
           vaultTokenAccount: vaultAta,
-          feeDestinationTokenAccount: null,
-          protocolTreasuryTokenAccount: protocolAta,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
@@ -4514,6 +4520,8 @@ describe("agent-shield", () => {
             session: sessionPda,
             vaultTokenAccount: vaultAta,
             tokenMintAccount: oracleMint,
+            protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -4547,12 +4555,9 @@ describe("agent-shield", () => {
           .accounts({
             payer: pumpAgent.publicKey,
             vault: pumpVault,
-            policy: pumpPolicy,
             session: sessionPda,
             sessionRentRecipient: pumpAgent.publicKey,
             vaultTokenAccount: vaultAta,
-            feeDestinationTokenAccount: null,
-            protocolTreasuryTokenAccount: protocolAta,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -4675,6 +4680,8 @@ describe("agent-shield", () => {
             session: sessionPda,
             vaultTokenAccount: vaultAta,
             tokenMintAccount: oracleMint,
+            protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -4708,12 +4715,9 @@ describe("agent-shield", () => {
           .accounts({
             payer: crashAgent.publicKey,
             vault: crashVault,
-            policy: crashPolicy,
             session: sessionPda,
             sessionRentRecipient: crashAgent.publicKey,
             vaultTokenAccount: vaultAta,
-            feeDestinationTokenAccount: null,
-            protocolTreasuryTokenAccount: protocolAta,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -4833,6 +4837,8 @@ describe("agent-shield", () => {
             session: sessionPda,
             vaultTokenAccount: vaultAta,
             tokenMintAccount: oracleMint,
+            protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -4865,12 +4871,9 @@ describe("agent-shield", () => {
           .accounts({
             payer: stableAgent.publicKey,
             vault: stableVault,
-            policy: stablePolicy,
             session: sessionPda,
             sessionRentRecipient: stableAgent.publicKey,
             vaultTokenAccount: vaultAta,
-            feeDestinationTokenAccount: null,
-            protocolTreasuryTokenAccount: protocolAta,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -4990,6 +4993,8 @@ describe("agent-shield", () => {
             session: sessionPda,
             vaultTokenAccount: vaultAta,
             tokenMintAccount: oracleMint,
+            protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -5022,12 +5027,9 @@ describe("agent-shield", () => {
           .accounts({
             payer: capAgent.publicKey,
             vault: capVault,
-            policy: capPolicy,
             session: sessionPda,
             sessionRentRecipient: capAgent.publicKey,
             vaultTokenAccount: vaultAta,
-            feeDestinationTokenAccount: null,
-            protocolTreasuryTokenAccount: protocolAta,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -5147,6 +5149,8 @@ describe("agent-shield", () => {
             session: sessionPda,
             vaultTokenAccount: vaultAta,
             tokenMintAccount: oracleMint,
+            protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -5180,12 +5184,9 @@ describe("agent-shield", () => {
           .accounts({
             payer: lowAgent.publicKey,
             vault: lowVault,
-            policy: lowPolicy,
             session: sessionPda,
             sessionRentRecipient: lowAgent.publicKey,
             vaultTokenAccount: vaultAta,
-            feeDestinationTokenAccount: null,
-            protocolTreasuryTokenAccount: protocolAta,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -5234,6 +5235,8 @@ describe("agent-shield", () => {
               session: sessionPda,
               vaultTokenAccount: vaultOracleAta,
               tokenMintAccount: oracleMint,
+              protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+              feeDestinationTokenAccount: null,
               tokenProgram: TOKEN_PROGRAM_ID,
               systemProgram: SystemProgram.programId,
             } as any)
@@ -5362,6 +5365,8 @@ describe("agent-shield", () => {
             session: sessionPda,
             vaultTokenAccount: vaultAta,
             tokenMintAccount: oracleMint,
+            protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -5395,12 +5400,9 @@ describe("agent-shield", () => {
           .accounts({
             payer: bndAgent.publicKey,
             vault: bndVault,
-            policy: bndPolicy,
             session: sessionPda,
             sessionRentRecipient: bndAgent.publicKey,
             vaultTokenAccount: vaultAta,
-            feeDestinationTokenAccount: null,
-            protocolTreasuryTokenAccount: protocolAta,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -5451,6 +5453,8 @@ describe("agent-shield", () => {
               session: sessionPda,
               vaultTokenAccount: vaultOracleAta,
               tokenMintAccount: oracleMint,
+              protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+              feeDestinationTokenAccount: null,
               tokenProgram: TOKEN_PROGRAM_ID,
               systemProgram: SystemProgram.programId,
             } as any)
@@ -5595,6 +5599,8 @@ describe("agent-shield", () => {
             session: sessionPda,
             vaultTokenAccount: vaultAta,
             tokenMintAccount: oracleMint,
+            protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -5646,12 +5652,9 @@ describe("agent-shield", () => {
           .accounts({
             payer: sbAgent.publicKey,
             vault: sbVault,
-            policy: sbPolicy,
             session: sessionPda,
             sessionRentRecipient: sbAgent.publicKey,
             vaultTokenAccount: vaultAta,
-            feeDestinationTokenAccount: null,
-            protocolTreasuryTokenAccount: protocolAta,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -5706,6 +5709,8 @@ describe("agent-shield", () => {
               session: sessionPda,
               vaultTokenAccount: vaultOracleAta,
               tokenMintAccount: oracleMint,
+              protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+              feeDestinationTokenAccount: null,
               tokenProgram: TOKEN_PROGRAM_ID,
               systemProgram: SystemProgram.programId,
             } as any)
@@ -5838,6 +5843,8 @@ describe("agent-shield", () => {
             session: sessionPda,
             vaultTokenAccount: vaultAta,
             tokenMintAccount: oracleMint,
+            protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -5871,12 +5878,9 @@ describe("agent-shield", () => {
           .accounts({
             payer: adpAgent.publicKey,
             vault: adpVault,
-            policy: adpPolicy,
             session: sessionPda,
             sessionRentRecipient: adpAgent.publicKey,
             vaultTokenAccount: vaultAta,
-            feeDestinationTokenAccount: null,
-            protocolTreasuryTokenAccount: protocolAta,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -5999,6 +6003,8 @@ describe("agent-shield", () => {
             session: sessionPda,
             vaultTokenAccount: vaultAta,
             tokenMintAccount: oracleMint,
+            protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+            feeDestinationTokenAccount: null,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -6032,12 +6038,9 @@ describe("agent-shield", () => {
           .accounts({
             payer: flAgent.publicKey,
             vault: flVault,
-            policy: flPolicy,
             session: sessionPda,
             sessionRentRecipient: flAgent.publicKey,
             vaultTokenAccount: vaultAta,
-            feeDestinationTokenAccount: null,
-            protocolTreasuryTokenAccount: protocolAta,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
@@ -6090,6 +6093,8 @@ describe("agent-shield", () => {
               session: sessionPda,
               vaultTokenAccount: vaultOracleAta,
               tokenMintAccount: oracleMint,
+              protocolTreasuryTokenAccount: protocolTreasuryOracleAta,
+              feeDestinationTokenAccount: null,
               tokenProgram: TOKEN_PROGRAM_ID,
               systemProgram: SystemProgram.programId,
             } as any)

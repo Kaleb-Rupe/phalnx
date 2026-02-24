@@ -11,11 +11,9 @@ pub struct UpdateOracleRegistry<'info> {
     #[account(
         mut,
         seeds = [b"oracle_registry"],
-        bump = oracle_registry.bump,
-        constraint = oracle_registry.authority == authority.key()
-            @ AgentShieldError::UnauthorizedRegistryAdmin,
+        bump,
     )]
-    pub oracle_registry: Account<'info, OracleRegistry>,
+    pub oracle_registry: AccountLoader<'info, OracleRegistry>,
 }
 
 pub fn handler(
@@ -23,38 +21,66 @@ pub fn handler(
     entries_to_add: Vec<OracleEntry>,
     mints_to_remove: Vec<Pubkey>,
 ) -> Result<()> {
-    let registry = &mut ctx.accounts.oracle_registry;
+    let mut registry = ctx.accounts.oracle_registry.load_mut()?;
 
-    // Remove entries by mint
-    let removed_count = mints_to_remove.len();
-    registry
-        .entries
-        .retain(|e| !mints_to_remove.contains(&e.mint));
+    // Authority check
+    require!(
+        registry.authority == ctx.accounts.authority.key(),
+        AgentShieldError::UnauthorizedRegistryAdmin
+    );
 
-    // Add new entries (skip duplicates)
-    let mut added_count: u16 = 0;
-    for entry in entries_to_add {
-        if registry.entries.iter().any(|e| e.mint == entry.mint) {
-            // Update existing entry instead of adding duplicate
-            if let Some(existing) = registry.entries.iter_mut().find(|e| e.mint == entry.mint) {
-                existing.oracle_feed = entry.oracle_feed;
-                existing.is_stablecoin = entry.is_stablecoin;
-                existing.fallback_feed = entry.fallback_feed;
+    let mut count = registry.count as usize;
+
+    // Remove entries by mint (swap-remove for O(1) per removal)
+    let mut removed_count: u16 = 0;
+    for mint in &mints_to_remove {
+        let mut i = 0;
+        while i < count {
+            if registry.entries[i].mint == *mint {
+                // Swap with last active entry and shrink
+                count -= 1;
+                if i < count {
+                    registry.entries[i] = registry.entries[count];
+                }
+                // Zero out the removed slot
+                registry.entries[count] = OracleEntryZC::default();
+                removed_count = removed_count.saturating_add(1);
+                // Don't increment i — check the swapped entry
+            } else {
+                i += 1;
             }
-        } else {
+        }
+    }
+
+    // Add new entries (update existing duplicates)
+    let mut added_count: u16 = 0;
+    for entry in &entries_to_add {
+        // Check if mint already exists (update in-place)
+        let mut found = false;
+        for i in 0..count {
+            if registry.entries[i].mint == entry.mint {
+                registry.entries[i] = OracleEntryZC::from(entry);
+                found = true;
+                break;
+            }
+        }
+        if !found {
             require!(
-                registry.entries.len() < MAX_ORACLE_ENTRIES,
+                count < MAX_ORACLE_ENTRIES,
                 AgentShieldError::OracleRegistryFull
             );
-            registry.entries.push(entry);
+            registry.entries[count] = OracleEntryZC::from(entry);
+            count += 1;
             added_count = added_count.saturating_add(1);
         }
     }
 
+    registry.count = count as u16;
+
     emit!(OracleRegistryUpdated {
         added_count,
-        removed_count: removed_count as u16,
-        total_entries: registry.entries.len() as u16,
+        removed_count,
+        total_entries: registry.count,
     });
 
     Ok(())

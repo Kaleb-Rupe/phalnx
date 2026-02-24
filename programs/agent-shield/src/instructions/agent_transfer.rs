@@ -35,12 +35,12 @@ pub struct AgentTransfer<'info> {
     )]
     pub tracker: AccountLoader<'info, SpendTracker>,
 
-    /// Protocol-level oracle registry
+    /// Protocol-level oracle registry (zero-copy)
     #[account(
         seeds = [b"oracle_registry"],
-        bump = oracle_registry.bump,
+        bump,
     )]
-    pub oracle_registry: Account<'info, OracleRegistry>,
+    pub oracle_registry: AccountLoader<'info, OracleRegistry>,
 
     /// Vault's PDA-owned token account (source)
     #[account(
@@ -77,7 +77,6 @@ pub struct AgentTransfer<'info> {
 pub fn handler(ctx: Context<AgentTransfer>, amount: u64) -> Result<()> {
     let vault = &ctx.accounts.vault;
     let policy = &ctx.accounts.policy;
-    let registry = &ctx.accounts.oracle_registry;
     let clock = Clock::get()?;
 
     // 1. Vault must be active
@@ -88,10 +87,17 @@ pub fn handler(ctx: Context<AgentTransfer>, amount: u64) -> Result<()> {
 
     let token_mint = ctx.accounts.vault_token_account.mint;
 
-    // 3. Token must be in the oracle registry
+    // 3. Token must be in the oracle registry (zero-copy load)
+    let registry = ctx.accounts.oracle_registry.load()?;
     let oracle_entry = registry
         .find_entry(&token_mint)
         .ok_or(error!(AgentShieldError::TokenNotRegistered))?;
+
+    // Extract entry fields before dropping borrow
+    let is_stablecoin = oracle_entry.is_stablecoin != 0;
+    let oracle_feed = oracle_entry.oracle_feed;
+    let fallback_feed = oracle_entry.fallback_feed;
+    drop(registry);
 
     // 4. Destination must be allowed
     require!(
@@ -110,9 +116,9 @@ pub fn handler(ctx: Context<AgentTransfer>, amount: u64) -> Result<()> {
 
     // 7. Convert to USD
     let (usd_amount, _oracle_price, _oracle_source) = convert_to_usd(
-        oracle_entry.is_stablecoin,
-        &oracle_entry.oracle_feed,
-        &oracle_entry.fallback_feed,
+        is_stablecoin,
+        &oracle_feed,
+        &fallback_feed,
         token_decimals,
         amount,
         ctx.remaining_accounts,
