@@ -1,7 +1,7 @@
 # AgentShield
 
 [![CI](https://github.com/Kaleb-Rupe/agentshield/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Kaleb-Rupe/agentshield/actions/workflows/ci.yml)
-![Tests](https://img.shields.io/badge/tests-878-brightgreen)
+![Tests](https://img.shields.io/badge/tests-888-brightgreen)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 
 On-chain guardrails for AI agents on Solana. Your policies are enforced by Solana validators, not software promises.
