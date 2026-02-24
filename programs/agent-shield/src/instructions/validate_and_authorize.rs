@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Approve, Mint, Token, TokenAccount};
+use anchor_spl::token::{self, Approve, Mint, Token, TokenAccount, Transfer};
 
 use crate::errors::AgentShieldError;
-use crate::events::ActionAuthorized;
+use crate::events::{ActionAuthorized, FeesCollected};
 use crate::state::*;
 
 use super::utils::convert_to_usd;
@@ -36,12 +36,12 @@ pub struct ValidateAndAuthorize<'info> {
     )]
     pub tracker: AccountLoader<'info, SpendTracker>,
 
-    /// Protocol-level oracle registry (shared across all vaults)
+    /// Protocol-level oracle registry (shared across all vaults, zero-copy)
     #[account(
         seeds = [b"oracle_registry"],
-        bump = oracle_registry.bump,
+        bump,
     )]
-    pub oracle_registry: Account<'info, OracleRegistry>,
+    pub oracle_registry: AccountLoader<'info, OracleRegistry>,
 
     /// Ephemeral session PDA — `init` ensures no double-authorization.
     /// Seeds include token_mint for per-token concurrent sessions.
@@ -72,6 +72,14 @@ pub struct ValidateAndAuthorize<'info> {
     /// The token mint being spent
     pub token_mint_account: Account<'info, Mint>,
 
+    /// Protocol treasury token account (needed when protocol_fee > 0)
+    #[account(mut)]
+    pub protocol_treasury_token_account: Option<Account<'info, TokenAccount>>,
+
+    /// Developer fee destination token account (needed when developer_fee > 0)
+    #[account(mut)]
+    pub fee_destination_token_account: Option<Account<'info, TokenAccount>>,
+
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
     // Oracle feed (Pyth/Switchboard) passed via remaining_accounts[0]
@@ -88,7 +96,6 @@ pub fn handler(
 ) -> Result<()> {
     let vault = &ctx.accounts.vault;
     let policy = &ctx.accounts.policy;
-    let registry = &ctx.accounts.oracle_registry;
     let clock = Clock::get()?;
 
     // 1. Vault must be active
@@ -97,10 +104,17 @@ pub fn handler(
     // 1b. Amount must be positive
     require!(amount > 0, AgentShieldError::TransactionTooLarge);
 
-    // 2. Token must be in the oracle registry
+    // 2. Token must be in the oracle registry (zero-copy load)
+    let registry = ctx.accounts.oracle_registry.load()?;
     let oracle_entry = registry
         .find_entry(&token_mint)
         .ok_or(error!(AgentShieldError::TokenNotRegistered))?;
+
+    // Extract entry fields before dropping borrow
+    let is_stablecoin = oracle_entry.is_stablecoin != 0;
+    let oracle_feed = oracle_entry.oracle_feed;
+    let fallback_feed = oracle_entry.fallback_feed;
+    drop(registry);
 
     // 3. Protocol must be allowed (mode-based check)
     require!(
@@ -111,9 +125,9 @@ pub fn handler(
     // 4. USD CONVERSION — using registry entry + mint decimals
     let token_decimals = ctx.accounts.token_mint_account.decimals;
     let (usd_amount, oracle_price, oracle_source) = convert_to_usd(
-        oracle_entry.is_stablecoin,
-        &oracle_entry.oracle_feed,
-        &oracle_entry.fallback_feed,
+        is_stablecoin,
+        &oracle_feed,
+        &fallback_feed,
         token_decimals,
         amount,
         ctx.remaining_accounts,
@@ -162,6 +176,115 @@ pub fn handler(
     // Drop the mutable borrow before using ctx.accounts
     drop(tracker);
 
+    // Extract vault PDA seeds data upfront
+    let owner_key = vault.owner;
+    let vault_id_bytes = vault.vault_id.to_le_bytes();
+    let vault_bump = vault.bump;
+    let vault_fee_destination = vault.fee_destination;
+    let developer_fee_rate = policy.developer_fee_rate;
+
+    let bump_slice = [vault_bump];
+    let signer_seeds = [
+        b"vault" as &[u8],
+        owner_key.as_ref(),
+        vault_id_bytes.as_ref(),
+        bump_slice.as_ref(),
+    ];
+    let binding = [signer_seeds.as_slice()];
+
+    // 9. Calculate and collect fees upfront (non-bypassable)
+    let protocol_fee = amount
+        .checked_mul(PROTOCOL_FEE_RATE as u64)
+        .ok_or(AgentShieldError::Overflow)?
+        .checked_div(FEE_RATE_DENOMINATOR)
+        .ok_or(AgentShieldError::Overflow)?;
+
+    let developer_fee = amount
+        .checked_mul(developer_fee_rate as u64)
+        .ok_or(AgentShieldError::Overflow)?
+        .checked_div(FEE_RATE_DENOMINATOR)
+        .ok_or(AgentShieldError::Overflow)?;
+
+    let delegation_amount = amount
+        .checked_sub(protocol_fee)
+        .ok_or(AgentShieldError::Overflow)?
+        .checked_sub(developer_fee)
+        .ok_or(AgentShieldError::Overflow)?;
+
+    // Transfer protocol fee
+    if protocol_fee > 0 {
+        let treasury_token = ctx
+            .accounts
+            .protocol_treasury_token_account
+            .as_ref()
+            .ok_or(error!(AgentShieldError::InvalidProtocolTreasury))?;
+        require!(
+            treasury_token.owner == PROTOCOL_TREASURY,
+            AgentShieldError::InvalidProtocolTreasury
+        );
+        require!(
+            treasury_token.mint == token_mint,
+            AgentShieldError::InvalidProtocolTreasury
+        );
+
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.vault_token_account.to_account_info(),
+            to: treasury_token.to_account_info(),
+            authority: ctx.accounts.vault.to_account_info(),
+        };
+        let cpi_ctx = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            cpi_accounts,
+            &binding,
+        );
+        token::transfer(cpi_ctx, protocol_fee)?;
+    }
+
+    // Transfer developer fee
+    if developer_fee > 0 {
+        let fee_dest = ctx
+            .accounts
+            .fee_destination_token_account
+            .as_ref()
+            .ok_or(error!(AgentShieldError::InvalidFeeDestination))?;
+        require!(
+            fee_dest.owner == vault_fee_destination,
+            AgentShieldError::InvalidFeeDestination
+        );
+        require!(
+            fee_dest.mint == token_mint,
+            AgentShieldError::InvalidFeeDestination
+        );
+
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.vault_token_account.to_account_info(),
+            to: fee_dest.to_account_info(),
+            authority: ctx.accounts.vault.to_account_info(),
+        };
+        let cpi_ctx = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            cpi_accounts,
+            &binding,
+        );
+        token::transfer(cpi_ctx, developer_fee)?;
+    }
+
+    if protocol_fee > 0 || developer_fee > 0 {
+        emit!(FeesCollected {
+            vault: vault.key(),
+            token_mint,
+            protocol_fee_amount: protocol_fee,
+            developer_fee_amount: developer_fee,
+            protocol_fee_rate: PROTOCOL_FEE_RATE,
+            developer_fee_rate,
+            transaction_amount: amount,
+            protocol_treasury: PROTOCOL_TREASURY,
+            developer_fee_destination: vault_fee_destination,
+            cumulative_developer_fees: vault.total_fees_collected.saturating_add(developer_fee),
+            timestamp: clock.unix_timestamp,
+        });
+    }
+
     // Create session PDA
     let session = &mut ctx.accounts.session;
     session.vault = vault.key();
@@ -173,21 +296,12 @@ pub fn handler(
     session.action_type = action_type;
     session.expires_at_slot = SessionAuthority::calculate_expiry(clock.slot);
     session.delegation_token_account = ctx.accounts.vault_token_account.key();
+    session.protocol_fee = protocol_fee;
+    session.developer_fee = developer_fee;
     session.bump = ctx.bumps.session;
 
     // CPI: approve agent as delegate on vault's token account
-    let owner_key = vault.owner;
-    let vault_id_bytes = vault.vault_id.to_le_bytes();
-    let vault_bump = vault.bump;
-    let bump_slice = [vault_bump];
-    let signer_seeds = [
-        b"vault" as &[u8],
-        owner_key.as_ref(),
-        vault_id_bytes.as_ref(),
-        bump_slice.as_ref(),
-    ];
-    let binding = [signer_seeds.as_slice()];
-
+    // Only delegate the net amount (after fees)
     let cpi_accounts = Approve {
         to: ctx.accounts.vault_token_account.to_account_info(),
         delegate: ctx.accounts.agent.to_account_info(),
@@ -198,7 +312,7 @@ pub fn handler(
         cpi_accounts,
         &binding,
     );
-    token::approve(cpi_ctx, amount)?;
+    token::approve(cpi_ctx, delegation_amount)?;
     session.delegated = true;
 
     emit!(ActionAuthorized {

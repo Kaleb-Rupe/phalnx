@@ -30,6 +30,12 @@ pub struct SessionAuthority {
     /// (only meaningful when delegated == true)
     pub delegation_token_account: Pubkey,
 
+    /// Protocol fee collected during validate (for event logging in finalize)
+    pub protocol_fee: u64,
+
+    /// Developer fee collected during validate (for event logging in finalize)
+    pub developer_fee: u64,
+
     /// Bump seed for PDA
     pub bump: u8,
 }
@@ -37,8 +43,9 @@ pub struct SessionAuthority {
 impl SessionAuthority {
     /// discriminator (8) + vault (32) + agent (32) + authorized (1) +
     /// amount (8) + token (32) + protocol (32) + action_type (1) + expires (8) +
-    /// delegated (1) + delegation_token_account (32) + bump (1)
-    pub const SIZE: usize = 8 + 32 + 32 + 1 + 8 + 32 + 32 + 1 + 8 + 1 + 32 + 1;
+    /// delegated (1) + delegation_token_account (32) +
+    /// protocol_fee (8) + developer_fee (8) + bump (1)
+    pub const SIZE: usize = 8 + 32 + 32 + 1 + 8 + 32 + 32 + 1 + 8 + 1 + 32 + 8 + 8 + 1;
 
     pub fn is_expired(&self, current_slot: u64) -> bool {
         current_slot > self.expires_at_slot

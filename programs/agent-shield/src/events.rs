@@ -151,3 +151,15 @@ pub struct OracleRegistryUpdated {
     pub removed_count: u16,
     pub total_entries: u16,
 }
+
+#[event]
+pub struct OracleAuthorityProposed {
+    pub current_authority: Pubkey,
+    pub proposed_authority: Pubkey,
+}
+
+#[event]
+pub struct OracleAuthorityTransferred {
+    pub previous_authority: Pubkey,
+    pub new_authority: Pubkey,
+}

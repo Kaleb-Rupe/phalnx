@@ -190,9 +190,8 @@ pub(crate) fn oracle_price_to_usd(amount: u64, mantissa: i128, token_decimals: u
         .checked_div(divisor)
         .ok_or(AgentShieldError::Overflow)?;
 
-    // Ensure result fits in u64
-    require!(usd_i128 >= 0, AgentShieldError::OracleFeedInvalid);
-    require!(usd_i128 <= u64::MAX as i128, AgentShieldError::Overflow);
+    // Ensure result fits in u64 (negative or overflow → error)
+    let usd_u64 = u64::try_from(usd_i128).map_err(|_| error!(AgentShieldError::Overflow))?;
 
-    Ok(usd_i128 as u64)
+    Ok(usd_u64)
 }

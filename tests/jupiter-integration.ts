@@ -149,6 +149,8 @@ describe("jupiter-integration", () => {
         session,
         vaultTokenAccount: effectiveVaultAta,
         tokenMintAccount: tokenMint,
+        protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+        feeDestinationTokenAccount: null,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
       })
@@ -163,12 +165,9 @@ describe("jupiter-integration", () => {
       .accountsPartial({
         payer: agentKp.publicKey,
         vault,
-        policy,
         session,
         sessionRentRecipient: agentKp.publicKey,
         vaultTokenAccount: effectiveVaultAta,
-        feeDestinationTokenAccount: null,
-        protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
       })

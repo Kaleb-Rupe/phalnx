@@ -29,6 +29,21 @@ pub mod agent_shield {
         instructions::initialize_oracle_registry::handler(ctx, entries)
     }
 
+    /// Propose a new authority for the oracle registry (step 1 of 2).
+    /// Only the current authority can call this.
+    pub fn propose_oracle_authority(
+        ctx: Context<ProposeOracleAuthority>,
+        new_authority: Pubkey,
+    ) -> Result<()> {
+        instructions::propose_oracle_authority::handler(ctx, new_authority)
+    }
+
+    /// Accept an oracle registry authority transfer (step 2 of 2).
+    /// Only the proposed new authority can call this.
+    pub fn accept_oracle_authority(ctx: Context<AcceptOracleAuthority>) -> Result<()> {
+        instructions::accept_oracle_authority::handler(ctx)
+    }
+
     /// Add or remove entries from the oracle registry.
     /// Only the registry authority can call this.
     pub fn update_oracle_registry(

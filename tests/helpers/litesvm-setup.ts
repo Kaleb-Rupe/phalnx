@@ -281,6 +281,20 @@ export function createTestEnv(): TestEnv {
     .withDefaultPrograms()
     .withTransactionHistory(0n);
 
+  // Set a positive unix_timestamp — the on-chain SpendTracker requires
+  // clock.unix_timestamp > 0 (negative timestamp guard).
+  // Default LiteSVM clock starts at 0 which would trip the guard.
+  const c = svm.getClock();
+  svm.setClock(
+    new Clock(
+      c.slot,
+      c.epochStartTimestamp,
+      c.epoch,
+      c.leaderScheduleEpoch,
+      BigInt(1_700_000_000), // ~Nov 2023
+    ),
+  );
+
   svm.addProgramFromFile(PROGRAM_ID, PROGRAM_SO_PATH);
 
   const provider = new LiteSVMProvider(svm);
