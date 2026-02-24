@@ -44,6 +44,9 @@ export async function composePermittedAction(
       leverageBps: params.leverageBps,
     },
     params.oracleFeedAccount,
+    params.fallbackOracleFeedAccount,
+    params.protocolTreasuryTokenAccount,
+    params.feeDestinationTokenAccount,
   ).instruction();
 
   const finalizeIx = await buildFinalizeSession(
@@ -54,8 +57,6 @@ export async function composePermittedAction(
     params.tokenMint,
     params.success ?? true,
     params.vaultTokenAccount,
-    params.feeDestinationTokenAccount,
-    params.protocolTreasuryTokenAccount,
   ).instruction();
 
   return [computeBudgetIx, validateIx, ...params.defiInstructions, finalizeIx];

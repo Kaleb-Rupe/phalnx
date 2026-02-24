@@ -55,6 +55,31 @@ export function buildUpdateOracleRegistry(
     } as any);
 }
 
+export function buildProposeOracleAuthority(
+  program: Program<AgentShield>,
+  authority: PublicKey,
+  newAuthority: PublicKey,
+) {
+  const [oracleRegistry] = getOracleRegistryPDA(program.programId);
+
+  return program.methods.proposeOracleAuthority(newAuthority).accounts({
+    authority,
+    oracleRegistry,
+  } as any);
+}
+
+export function buildAcceptOracleAuthority(
+  program: Program<AgentShield>,
+  newAuthority: PublicKey,
+) {
+  const [oracleRegistry] = getOracleRegistryPDA(program.programId);
+
+  return program.methods.acceptOracleAuthority().accounts({
+    newAuthority,
+    oracleRegistry,
+  } as any);
+}
+
 export function buildInitializeVault(
   program: Program<AgentShield>,
   owner: PublicKey,
@@ -165,6 +190,8 @@ export function buildValidateAndAuthorize(
   params: AuthorizeParams,
   oracleFeedAccount?: PublicKey,
   fallbackOracleFeedAccount?: PublicKey,
+  protocolTreasuryTokenAccount?: PublicKey | null,
+  feeDestinationTokenAccount?: PublicKey | null,
 ) {
   const [policy] = getPolicyPDA(vault, program.programId);
   const [tracker] = getTrackerPDA(vault, program.programId);
@@ -193,6 +220,8 @@ export function buildValidateAndAuthorize(
       session,
       vaultTokenAccount,
       tokenMintAccount: params.tokenMint,
+      protocolTreasuryTokenAccount: protocolTreasuryTokenAccount ?? null,
+      feeDestinationTokenAccount: feeDestinationTokenAccount ?? null,
       tokenProgram: TOKEN_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
     } as any);
@@ -224,21 +253,15 @@ export function buildFinalizeSession(
   tokenMint: PublicKey,
   success: boolean,
   vaultTokenAccount: PublicKey,
-  feeDestinationTokenAccount?: PublicKey | null,
-  protocolTreasuryTokenAccount?: PublicKey | null,
 ) {
-  const [policy] = getPolicyPDA(vault, program.programId);
   const [session] = getSessionPDA(vault, agent, tokenMint, program.programId);
 
   return program.methods.finalizeSession(success).accounts({
     payer,
     vault,
-    policy,
     session,
     sessionRentRecipient: agent,
     vaultTokenAccount,
-    feeDestinationTokenAccount: feeDestinationTokenAccount ?? null,
-    protocolTreasuryTokenAccount: protocolTreasuryTokenAccount ?? null,
     tokenProgram: TOKEN_PROGRAM_ID,
     systemProgram: SystemProgram.programId,
   } as any);

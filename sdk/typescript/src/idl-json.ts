@@ -9,6 +9,36 @@ export const IDL = {
   },
   instructions: [
     {
+      name: "accept_oracle_authority",
+      docs: [
+        "Accept an oracle registry authority transfer (step 2 of 2).",
+        "Only the proposed new authority can call this.",
+      ],
+      discriminator: [15, 166, 225, 171, 229, 140, 199, 227],
+      accounts: [
+        {
+          name: "new_authority",
+          signer: true,
+        },
+        {
+          name: "oracle_registry",
+          writable: true,
+          pda: {
+            seeds: [
+              {
+                kind: "const",
+                value: [
+                  111, 114, 97, 99, 108, 101, 95, 114, 101, 103, 105, 115, 116,
+                  114, 121,
+                ],
+              },
+            ],
+          },
+        },
+      ],
+      args: [],
+    },
+    {
       name: "agent_transfer",
       docs: [
         "Transfer tokens from the vault to an allowed destination.",
@@ -78,7 +108,7 @@ export const IDL = {
         },
         {
           name: "oracle_registry",
-          docs: ["Protocol-level oracle registry"],
+          docs: ["Protocol-level oracle registry (zero-copy)"],
           pda: {
             seeds: [
               {
@@ -304,7 +334,7 @@ export const IDL = {
         },
         {
           name: "tracker",
-          docs: ["Zero-copy SpendTracker \u2014 close returns rent to owner"],
+          docs: ["Zero-copy SpendTracker — close returns rent to owner"],
           writable: true,
           pda: {
             seeds: [
@@ -453,7 +483,7 @@ export const IDL = {
       name: "finalize_session",
       docs: [
         "Finalize a session after the DeFi action completes.",
-        "Revokes delegation, collects fees, closes the SessionAuthority PDA.",
+        "Revokes delegation and closes the SessionAuthority PDA.",
       ],
       discriminator: [34, 148, 144, 47, 37, 130, 206, 161],
       accounts: [
@@ -483,22 +513,7 @@ export const IDL = {
               },
             ],
           },
-          relations: ["policy", "session"],
-        },
-        {
-          name: "policy",
-          pda: {
-            seeds: [
-              {
-                kind: "const",
-                value: [112, 111, 108, 105, 99, 121],
-              },
-              {
-                kind: "account",
-                path: "vault",
-              },
-            ],
-          },
+          relations: ["session"],
         },
         {
           name: "session",
@@ -537,18 +552,6 @@ export const IDL = {
         {
           name: "vault_token_account",
           docs: ["Vault's PDA token account for the session's token"],
-          writable: true,
-          optional: true,
-        },
-        {
-          name: "fee_destination_token_account",
-          docs: ["Developer fee destination token account"],
-          writable: true,
-          optional: true,
-        },
-        {
-          name: "protocol_treasury_token_account",
-          docs: ["Protocol treasury token account"],
           writable: true,
           optional: true,
         },
@@ -666,7 +669,7 @@ export const IDL = {
         },
         {
           name: "tracker",
-          docs: ["Zero-copy SpendTracker \u2014 2,352 bytes fixed size"],
+          docs: ["Zero-copy SpendTracker — 2,352 bytes fixed size"],
           writable: true,
           pda: {
             seeds: [
@@ -733,6 +736,41 @@ export const IDL = {
           type: {
             vec: "pubkey",
           },
+        },
+      ],
+    },
+    {
+      name: "propose_oracle_authority",
+      docs: [
+        "Propose a new authority for the oracle registry (step 1 of 2).",
+        "Only the current authority can call this.",
+      ],
+      discriminator: [146, 109, 205, 24, 129, 202, 217, 36],
+      accounts: [
+        {
+          name: "authority",
+          signer: true,
+        },
+        {
+          name: "oracle_registry",
+          writable: true,
+          pda: {
+            seeds: [
+              {
+                kind: "const",
+                value: [
+                  111, 114, 97, 99, 108, 101, 95, 114, 101, 103, 105, 115, 116,
+                  114, 121,
+                ],
+              },
+            ],
+          },
+        },
+      ],
+      args: [
+        {
+          name: "new_authority",
+          type: "pubkey",
         },
       ],
     },
@@ -1230,7 +1268,9 @@ export const IDL = {
         },
         {
           name: "oracle_registry",
-          docs: ["Protocol-level oracle registry (shared across all vaults)"],
+          docs: [
+            "Protocol-level oracle registry (shared across all vaults, zero-copy)",
+          ],
           pda: {
             seeds: [
               {
@@ -1246,7 +1286,7 @@ export const IDL = {
         {
           name: "session",
           docs: [
-            "Ephemeral session PDA \u2014 `init` ensures no double-authorization.",
+            "Ephemeral session PDA — `init` ensures no double-authorization.",
             "Seeds include token_mint for per-token concurrent sessions.",
           ],
           writable: true,
@@ -1279,6 +1319,22 @@ export const IDL = {
         {
           name: "token_mint_account",
           docs: ["The token mint being spent"],
+        },
+        {
+          name: "protocol_treasury_token_account",
+          docs: [
+            "Protocol treasury token account (needed when protocol_fee > 0)",
+          ],
+          writable: true,
+          optional: true,
+        },
+        {
+          name: "fee_destination_token_account",
+          docs: [
+            "Developer fee destination token account (needed when developer_fee > 0)",
+          ],
+          writable: true,
+          optional: true,
         },
         {
           name: "token_program",
@@ -1491,6 +1547,14 @@ export const IDL = {
       discriminator: [56, 130, 230, 154, 35, 92, 11, 118],
     },
     {
+      name: "OracleAuthorityProposed",
+      discriminator: [72, 88, 217, 127, 125, 208, 157, 34],
+    },
+    {
+      name: "OracleAuthorityTransferred",
+      discriminator: [120, 195, 241, 123, 203, 81, 155, 61],
+    },
+    {
       name: "OracleRegistryInitialized",
       discriminator: [88, 111, 7, 92, 74, 14, 114, 205],
     },
@@ -1700,7 +1764,7 @@ export const IDL = {
     {
       code: 6033,
       name: "OracleConfidenceTooWide",
-      msg: "Oracle price confidence interval too wide",
+      msg: "Oracle spot confidence exceeds 20% safety valve (feed likely broken)",
     },
     {
       code: 6034,
@@ -1720,7 +1784,7 @@ export const IDL = {
     {
       code: 6037,
       name: "TimelockActive",
-      msg: "Vault has timelock active \u2014 use queue_policy_update instead",
+      msg: "Vault has timelock active — use queue_policy_update instead",
     },
     {
       code: 6038,
@@ -1745,7 +1809,7 @@ export const IDL = {
     {
       code: 6042,
       name: "OracleRegistryFull",
-      msg: "Oracle registry is full (max 105 entries)",
+      msg: "Oracle registry is full (max 104 entries)",
     },
     {
       code: 6043,
@@ -1761,6 +1825,21 @@ export const IDL = {
       code: 6045,
       name: "OracleBothFeedsFailed",
       msg: "Both primary and fallback oracle feeds failed",
+    },
+    {
+      code: 6046,
+      name: "OracleConfidenceSpike",
+      msg: "Oracle confidence spike: spot_conf exceeds 5x ema_conf",
+    },
+    {
+      code: 6047,
+      name: "InvalidAuthorityKey",
+      msg: "Invalid authority key: cannot be the zero address",
+    },
+    {
+      code: 6048,
+      name: "NoPendingAuthority",
+      msg: "No pending authority transfer to accept",
     },
   ],
   types: [
@@ -1949,7 +2028,7 @@ export const IDL = {
           {
             name: "fee_destination",
             docs: [
-              "Developer fee destination \u2014 IMMUTABLE after initialization.",
+              "Developer fee destination — IMMUTABLE after initialization.",
               "Prevents a compromised owner from redirecting fees.",
             ],
             type: "pubkey",
@@ -2031,7 +2110,7 @@ export const IDL = {
       name: "EpochBucket",
       docs: [
         "A single epoch bucket tracking aggregate USD spend.",
-        "16 bytes per bucket. USD-only \u2014 rate limiting stays client-side.",
+        "16 bytes per bucket. USD-only — rate limiting stays client-side.",
       ],
       serialization: "bytemuck",
       repr: {
@@ -2158,8 +2237,43 @@ export const IDL = {
       },
     },
     {
+      name: "OracleAuthorityProposed",
+      type: {
+        kind: "struct",
+        fields: [
+          {
+            name: "current_authority",
+            type: "pubkey",
+          },
+          {
+            name: "proposed_authority",
+            type: "pubkey",
+          },
+        ],
+      },
+    },
+    {
+      name: "OracleAuthorityTransferred",
+      type: {
+        kind: "struct",
+        fields: [
+          {
+            name: "previous_authority",
+            type: "pubkey",
+          },
+          {
+            name: "new_authority",
+            type: "pubkey",
+          },
+        ],
+      },
+    },
+    {
       name: "OracleEntry",
-      docs: ["Individual entry mapping a token mint to its oracle feed."],
+      docs: [
+        "Borsh-serializable entry used as instruction argument.",
+        "Converted to/from OracleEntryZC for on-chain storage.",
+      ],
       type: {
         kind: "struct",
         fields: [
@@ -2185,6 +2299,49 @@ export const IDL = {
             name: "fallback_feed",
             docs: [
               "Optional fallback oracle feed. Pubkey::default() = no fallback.",
+            ],
+            type: "pubkey",
+          },
+        ],
+      },
+    },
+    {
+      name: "OracleEntryZC",
+      docs: [
+        "Zero-copy individual entry mapping a token mint to its oracle feed.",
+        "97 bytes per entry, no padding needed (32+32+1+32 = 97).",
+      ],
+      serialization: "bytemuck",
+      repr: {
+        kind: "c",
+      },
+      type: {
+        kind: "struct",
+        fields: [
+          {
+            name: "mint",
+            docs: ["SPL token mint address"],
+            type: "pubkey",
+          },
+          {
+            name: "oracle_feed",
+            docs: [
+              "Pyth or Switchboard oracle feed account.",
+              "Ignored when is_stablecoin is 1.",
+            ],
+            type: "pubkey",
+          },
+          {
+            name: "is_stablecoin",
+            docs: [
+              "1 = stablecoin (1:1 USD, no oracle read needed), 0 = oracle-priced",
+            ],
+            type: "u8",
+          },
+          {
+            name: "fallback_feed",
+            docs: [
+              "Optional fallback oracle feed. Pubkey::default() = no fallback.",
               "Used when primary is stale/invalid. Cross-checked for divergence",
               "when both are available.",
             ],
@@ -2196,37 +2353,68 @@ export const IDL = {
     {
       name: "OracleRegistry",
       docs: [
-        "Protocol-level oracle registry \u2014 maps token mints to oracle feeds.",
-        "Maintained by protocol admin. Shared across ALL vaults.",
+        "Zero-copy protocol-level oracle registry — maps token mints to oracle",
+        "feeds. Maintained by protocol admin. Shared across ALL vaults.",
         "Any vault can use any registered token without per-vault configuration.",
         "",
         'Seeds: `[b"oracle_registry"]`',
+        "",
+        "Layout: disc(8) + authority(32) + pending_authority(32) + count(2) +",
+        "bump(1) + padding(5) + entries(97*104=10,088) = 10,168 bytes",
+        "(under 10,240 CPI limit)",
       ],
+      serialization: "bytemuck",
+      repr: {
+        kind: "c",
+      },
       type: {
         kind: "struct",
         fields: [
           {
             name: "authority",
             docs: [
-              "Authority who can add/remove entries (upgradeable to multisig/DAO)",
+              "Authority who can add/remove entries (upgradeable to multisig/DAO",
+              "via 2-step transfer)",
             ],
             type: "pubkey",
           },
           {
-            name: "entries",
-            docs: ["Token mint \u2192 oracle feed mappings"],
-            type: {
-              vec: {
-                defined: {
-                  name: "OracleEntry",
-                },
-              },
-            },
+            name: "pending_authority",
+            docs: [
+              "Pending authority for 2-step transfer. Pubkey::default() = none.",
+            ],
+            type: "pubkey",
+          },
+          {
+            name: "count",
+            docs: ["Number of active entries in the `entries` array"],
+            type: "u16",
           },
           {
             name: "bump",
             docs: ["Bump seed for PDA"],
             type: "u8",
+          },
+          {
+            name: "_padding",
+            docs: ["Padding for 8-byte alignment"],
+            type: {
+              array: ["u8", 5],
+            },
+          },
+          {
+            name: "entries",
+            docs: ["Fixed-size entry array (only entries[..count] are active)"],
+            type: {
+              array: [
+                {
+                  defined: {
+                    name: "OracleEntryZC",
+                  },
+                },
+                104,
+              ],
+            },
           },
         ],
       },
@@ -2611,6 +2799,20 @@ export const IDL = {
             type: "pubkey",
           },
           {
+            name: "protocol_fee",
+            docs: [
+              "Protocol fee collected during validate (for event logging in finalize)",
+            ],
+            type: "u64",
+          },
+          {
+            name: "developer_fee",
+            docs: [
+              "Developer fee collected during validate (for event logging in finalize)",
+            ],
+            type: "u64",
+          },
+          {
             name: "bump",
             docs: ["Bump seed for PDA"],
             type: "u8",
@@ -2782,4 +2984,4 @@ export const IDL = {
       },
     },
   ],
-};
+} as const;

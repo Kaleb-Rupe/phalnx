@@ -1668,7 +1668,7 @@ describe("agent-shield", () => {
       }
     });
 
-    it("finalize with developer_fee=0 → only protocol fee transferred", async () => {
+    it("validate stores protocol_fee and developer_fee=0 on session PDA", async () => {
       // Set developer fee to 0
       await program.methods
         .updatePolicy(null, null, null, null, null, null, null, 0, null, null)
@@ -1741,7 +1741,13 @@ describe("agent-shield", () => {
         .signers([agent])
         .rpc();
 
-      // protocol_fee = 10_000_000 * 200 / 1_000_000 = 2_000 (> 0), needs token accounts
+      // Assert session PDA stores fee amounts computed during validate
+      const session = await program.account.sessionAuthority.fetch(feeSessionPda);
+      // protocol_fee = 10_000_000 * 200 / 1_000_000 = 2_000
+      expect(session.protocolFee.toNumber()).to.equal(2_000);
+      // developer_fee = 10_000_000 * 0 / 1_000_000 = 0
+      expect(session.developerFee.toNumber()).to.equal(0);
+
       await program.methods
         .finalizeSession(true)
         .accounts({
@@ -1763,7 +1769,7 @@ describe("agent-shield", () => {
       expect(vault.totalFeesCollected.toNumber()).to.equal(0);
     });
 
-    it("finalize with developer_fee=500 → both fees transferred", async () => {
+    it("validate with developer_fee=500 → both fees stored on session PDA", async () => {
       // Set developer fee to 500 (max, 5 BPS)
       await program.methods
         .updatePolicy(null, null, null, null, null, null, null, 500, null, null)
@@ -1826,7 +1832,14 @@ describe("agent-shield", () => {
         .signers([agent])
         .rpc();
 
-      // Finalize with both fee accounts
+      // Assert session PDA stores both fee amounts
+      const session = await program.account.sessionAuthority.fetch(feeSessionPda);
+      // protocol_fee = 10_000_000 * 200 / 1_000_000 = 2_000
+      expect(session.protocolFee.toNumber()).to.equal(2_000);
+      // developer_fee = 10_000_000 * 500 / 1_000_000 = 5_000
+      expect(session.developerFee.toNumber()).to.equal(5_000);
+
+      // Finalize closes session PDA
       await program.methods
         .finalizeSession(true)
         .accounts({
@@ -1846,7 +1859,7 @@ describe("agent-shield", () => {
       expect(vault.totalFeesCollected.toNumber()).to.equal(5000);
     });
 
-    it("finalize with success=false → no fees", async () => {
+    it("validate with success=false finalize → no fees credited to vault", async () => {
       // Authorize
       [feeSessionPda] = PublicKey.findProgramAddressSync(
         [

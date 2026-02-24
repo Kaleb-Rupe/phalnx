@@ -562,7 +562,7 @@ export type AgentShield = {
       "name": "finalizeSession",
       "docs": [
         "Finalize a session after the DeFi action completes.",
-        "Revokes delegation, collects fees, closes the SessionAuthority PDA."
+        "Revokes delegation and closes the SessionAuthority PDA."
       ],
       "discriminator": [
         34,
@@ -1588,7 +1588,7 @@ export type AgentShield = {
     {
       "code": 6042,
       "name": "oracleRegistryFull",
-      "msg": "Oracle registry is full (max 105 entries)"
+      "msg": "Oracle registry is full (max 104 entries)"
     },
     {
       "code": 6043,

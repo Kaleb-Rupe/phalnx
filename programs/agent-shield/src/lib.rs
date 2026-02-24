@@ -149,7 +149,7 @@ pub mod agent_shield {
     }
 
     /// Finalize a session after the DeFi action completes.
-    /// Revokes delegation, collects fees, closes the SessionAuthority PDA.
+    /// Revokes delegation and closes the SessionAuthority PDA.
     pub fn finalize_session(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
         instructions::finalize_session::handler(ctx, success)
     }

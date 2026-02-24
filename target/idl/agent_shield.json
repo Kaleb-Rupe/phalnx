@@ -556,7 +556,7 @@
       "name": "finalize_session",
       "docs": [
         "Finalize a session after the DeFi action completes.",
-        "Revokes delegation, collects fees, closes the SessionAuthority PDA."
+        "Revokes delegation and closes the SessionAuthority PDA."
       ],
       "discriminator": [
         34,
@@ -3217,7 +3217,7 @@
     {
       "code": 6042,
       "name": "OracleRegistryFull",
-      "msg": "Oracle registry is full (max 105 entries)"
+      "msg": "Oracle registry is full (max 104 entries)"
     },
     {
       "code": 6043,

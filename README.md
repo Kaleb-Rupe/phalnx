@@ -188,7 +188,7 @@ cargo fmt --check --manifest-path programs/agent-shield/Cargo.toml
 | Core vault management & permission engine            |      93 |
 | Jupiter integration (composed swaps)                 |       8 |
 | Flash Trade integration (leveraged perps)            |       9 |
-| Security exploit scenarios                           |     118 |
+| Security exploit scenarios                           |     128 |
 | Devnet integration tests (real network)              |      70 |
 | Core policy engine (`@agent-shield/core`)            |      66 |
 | SDK tests (`@agent-shield/sdk`)                      |     176 |
@@ -198,7 +198,7 @@ cargo fmt --check --manifest-path programs/agent-shield/Cargo.toml
 | ElizaOS plugin (`@agent-shield/plugin-elizaos`)      |      35 |
 | MCP server (`@agent-shield/mcp`)                     |     175 |
 | Actions server (`@agent-shield/actions-server`)      |      53 |
-| **Total**                                            | **878** |
+| **Total**                                            | **888** |
 
 ## Security
 

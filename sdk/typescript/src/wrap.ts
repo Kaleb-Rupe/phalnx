@@ -45,12 +45,14 @@ export interface WrapTransactionParams {
   addressLookupTables?: AddressLookupTableAccount[];
   /** Compute unit budget override */
   computeUnits?: number;
-  /** Fee destination token account (optional) */
-  feeDestinationTokenAccount?: PublicKey | null;
   /** Protocol treasury token account (optional) */
   protocolTreasuryTokenAccount?: PublicKey | null;
+  /** Fee destination token account (optional) */
+  feeDestinationTokenAccount?: PublicKey | null;
   /** Oracle feed account for oracle-priced tokens (Pyth or Switchboard) */
   oracleFeedAccount?: PublicKey;
+  /** Fallback oracle feed account (optional, for cross-validation) */
+  fallbackOracleFeedAccount?: PublicKey;
 }
 
 /**
@@ -109,7 +111,7 @@ export async function wrapInstructions(
     units: computeUnits,
   });
 
-  // Validate and authorize (includes token delegation CPI)
+  // Validate and authorize (includes token delegation CPI + fee collection)
   const validateIx = await buildValidateAndAuthorize(
     program,
     params.agent,
@@ -123,9 +125,12 @@ export async function wrapInstructions(
       leverageBps: params.leverageBps,
     },
     params.oracleFeedAccount,
+    params.fallbackOracleFeedAccount,
+    params.protocolTreasuryTokenAccount,
+    params.feeDestinationTokenAccount,
   ).instruction();
 
-  // Finalize session (revokes delegation, collects fees)
+  // Finalize session (revokes delegation, closes session PDA)
   const finalizeIx = await buildFinalizeSession(
     program,
     params.agent,
@@ -134,8 +139,6 @@ export async function wrapInstructions(
     params.tokenMint,
     true,
     vaultTokenAccount,
-    params.feeDestinationTokenAccount,
-    params.protocolTreasuryTokenAccount,
   ).instruction();
 
   return [computeIx, validateIx, ...rewrittenDefi, finalizeIx];

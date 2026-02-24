@@ -25,6 +25,8 @@ export {
 export {
   buildInitializeOracleRegistry,
   buildUpdateOracleRegistry,
+  buildProposeOracleAuthority,
+  buildAcceptOracleAuthority,
   buildInitializeVault,
   buildDepositFunds,
   buildRegisterAgent,

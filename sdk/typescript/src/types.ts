@@ -100,6 +100,8 @@ export type PendingPolicyUpdateAccount = {
 
 export type OracleRegistryAccount = {
   authority: PublicKey;
+  pendingAuthority: PublicKey;
+  count: number;
   entries: OracleEntry[];
   bump: number;
 };
@@ -121,6 +123,8 @@ export type SessionAuthorityAccount = {
   expiresAtSlot: BN;
   delegated: boolean;
   delegationTokenAccount: PublicKey;
+  protocolFee: BN;
+  developerFee: BN;
   bump: number;
 };
 

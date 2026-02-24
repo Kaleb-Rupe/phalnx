@@ -132,7 +132,7 @@ pub enum AgentShieldError {
     #[msg("Invalid protocol mode (must be 0, 1, or 2)")]
     InvalidProtocolMode,
 
-    #[msg("Oracle registry is full (max 105 entries)")]
+    #[msg("Oracle registry is full (max 104 entries)")]
     OracleRegistryFull,
 
     #[msg("Unauthorized: not the oracle registry authority")]

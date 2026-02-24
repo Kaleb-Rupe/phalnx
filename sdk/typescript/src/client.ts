@@ -44,6 +44,8 @@ import {
 import {
   buildInitializeOracleRegistry,
   buildUpdateOracleRegistry,
+  buildProposeOracleAuthority,
+  buildAcceptOracleAuthority,
   buildInitializeVault,
   buildDepositFunds,
   buildRegisterAgent,
@@ -221,6 +223,20 @@ export class AgentShieldClient {
     return buildUpdateOracleRegistry(this.program, authority, params).rpc();
   }
 
+  async proposeOracleAuthority(newAuthority: PublicKey): Promise<string> {
+    const authority = this.provider.wallet.publicKey;
+    return buildProposeOracleAuthority(
+      this.program,
+      authority,
+      newAuthority,
+    ).rpc();
+  }
+
+  async acceptOracleAuthority(): Promise<string> {
+    const newAuthority = this.provider.wallet.publicKey;
+    return buildAcceptOracleAuthority(this.program, newAuthority).rpc();
+  }
+
   // --- Instruction Execution (sends + confirms) ---
 
   async createVault(params: InitializeVaultParams): Promise<string> {
@@ -270,6 +286,10 @@ export class AgentShieldClient {
     vault: PublicKey,
     vaultTokenAccount: PublicKey,
     params: AuthorizeParams,
+    oracleFeedAccount?: PublicKey,
+    fallbackOracleFeedAccount?: PublicKey,
+    protocolTreasuryTokenAccount?: PublicKey | null,
+    feeDestinationTokenAccount?: PublicKey | null,
   ): Promise<string> {
     const agent = this.provider.wallet.publicKey;
     return buildValidateAndAuthorize(
@@ -278,6 +298,10 @@ export class AgentShieldClient {
       vault,
       vaultTokenAccount,
       params,
+      oracleFeedAccount,
+      fallbackOracleFeedAccount,
+      protocolTreasuryTokenAccount,
+      feeDestinationTokenAccount,
     ).rpc();
   }
 
@@ -287,8 +311,6 @@ export class AgentShieldClient {
     tokenMint: PublicKey,
     success: boolean,
     vaultTokenAccount: PublicKey,
-    feeDestinationTokenAccount?: PublicKey | null,
-    protocolTreasuryTokenAccount?: PublicKey | null,
   ): Promise<string> {
     const payer = this.provider.wallet.publicKey;
     return buildFinalizeSession(
@@ -299,8 +321,6 @@ export class AgentShieldClient {
       tokenMint,
       success,
       vaultTokenAccount,
-      feeDestinationTokenAccount,
-      protocolTreasuryTokenAccount,
     ).rpc();
   }
 
