@@ -22,6 +22,7 @@ name: Release
 on:
   push:
     branches: [main]
+  workflow_dispatch: # Manual trigger for retrying failed publishes
 
 concurrency:
   group: release-${{ github.ref }}
@@ -51,13 +52,24 @@ jobs:
         run: |
           # Check for changeset files (excluding README.md)
           CHANGESET_FILES=$(find .changeset -name '*.md' ! -name 'README.md' 2>/dev/null | wc -l)
-          # Check if this is a version packages commit (needs publish).
-          # Merge commits have "Merge pull request #N from .../changeset-release/main"
-          # so also check inner commits (git log -2 covers merge + first parent).
-          RECENT_MSGS=$(git log -2 --pretty=%s)
-          if [ "$CHANGESET_FILES" -gt 0 ] || echo "$RECENT_MSGS" | grep -q "chore: version packages"; then
+
+          # Check if any local package version is ahead of npm (unpublished).
+          # This catches version packages merges regardless of commit depth.
+          UNPUBLISHED=false
+          for pkg_json in packages/*/package.json sdk/*/package.json sdk/custody/*/package.json plugins/*/package.json; do
+            [ -f "$pkg_json" ] || continue
+            PKG_NAME=$(node -p "require('./$pkg_json').name" 2>/dev/null) || continue
+            LOCAL_VER=$(node -p "require('./$pkg_json').version" 2>/dev/null) || continue
+            NPM_VER=$(npm view "$PKG_NAME" version 2>/dev/null) || continue
+            if [ "$LOCAL_VER" != "$NPM_VER" ]; then
+              echo "Unpublished: $PKG_NAME $NPM_VER -> $LOCAL_VER"
+              UNPUBLISHED=true
+            fi
+          done
+
+          if [ "$CHANGESET_FILES" -gt 0 ] || [ "$UNPUBLISHED" = "true" ]; then
             echo "needed=true" >> $GITHUB_OUTPUT
-            echo "Release needed: changeset_files=$CHANGESET_FILES"
+            echo "Release needed: changeset_files=$CHANGESET_FILES, unpublished=$UNPUBLISHED"
           else
             echo "needed=false" >> $GITHUB_OUTPUT
             echo "No release needed — skipping."
