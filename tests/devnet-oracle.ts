@@ -268,9 +268,13 @@ describe("devnet-oracle", () => {
         primaryOracleFeed: PYTH_SOL_USD_FEED,
       });
     } catch (err: any) {
-      if (err.message?.includes("OracleFeedStale")) {
+      if (
+        err.message?.includes("OracleFeedStale") ||
+        err.message?.includes("OracleConfidenceSpike") ||
+        err.message?.includes("OracleFeedInvalid")
+      ) {
         console.log(
-          "    SKIPPED: Pyth devnet feed is stale (pull oracle not recently posted)",
+          "    SKIPPED: Pyth devnet feed unusable (stale, confidence spike, or invalid EMA)",
         );
         return this.skip();
       }
@@ -325,9 +329,13 @@ describe("devnet-oracle", () => {
         primaryOracleFeed: PYTH_SOL_USD_FEED,
       });
     } catch (err: any) {
-      if (err.message?.includes("OracleFeedStale")) {
+      if (
+        err.message?.includes("OracleFeedStale") ||
+        err.message?.includes("OracleConfidenceSpike") ||
+        err.message?.includes("OracleFeedInvalid")
+      ) {
         console.log(
-          "    SKIPPED: Pyth devnet feed is stale (pull oracle not recently posted)",
+          "    SKIPPED: Pyth devnet feed unusable (stale, confidence spike, or invalid EMA)",
         );
         return this.skip();
       }
@@ -532,9 +540,13 @@ describe("devnet-oracle", () => {
         .signers([agent])
         .rpc();
     } catch (err: any) {
-      if (err.message?.includes("OracleFeedStale")) {
+      if (
+        err.message?.includes("OracleFeedStale") ||
+        err.message?.includes("OracleConfidenceSpike") ||
+        err.message?.includes("OracleFeedInvalid")
+      ) {
         console.log(
-          "    SKIPPED: Pyth devnet feed is stale (pull oracle not recently posted)",
+          "    SKIPPED: Pyth devnet feed unusable (stale, confidence spike, or invalid EMA)",
         );
         return this.skip();
       }
@@ -755,9 +767,13 @@ describe("devnet-oracle", () => {
       });
       expect.fail("Should have thrown");
     } catch (err: any) {
-      if (err.message?.includes("OracleFeedStale")) {
+      if (
+        err.message?.includes("OracleFeedStale") ||
+        err.message?.includes("OracleConfidenceSpike") ||
+        err.message?.includes("OracleFeedInvalid")
+      ) {
         console.log(
-          "    SKIPPED: Pyth devnet feed is stale (pull oracle not recently posted)",
+          "    SKIPPED: Pyth devnet feed unusable (stale, confidence spike, or invalid EMA)",
         );
         return this.skip();
       }
@@ -901,9 +917,13 @@ describe("devnet-oracle", () => {
         .rpc();
       expect.fail("Should have thrown");
     } catch (err: any) {
-      if (err.message?.includes("OracleFeedStale")) {
+      if (
+        err.message?.includes("OracleFeedStale") ||
+        err.message?.includes("OracleConfidenceSpike") ||
+        err.message?.includes("OracleFeedInvalid")
+      ) {
         console.log(
-          "    SKIPPED: Pyth devnet feed is stale (pull oracle not recently posted)",
+          "    SKIPPED: Pyth devnet feed unusable (stale, confidence spike, or invalid EMA)",
         );
         return this.skip();
       }
@@ -957,9 +977,13 @@ describe("devnet-oracle", () => {
         primaryOracleFeed: PYTH_SOL_USD_FEED,
       });
     } catch (err: any) {
-      if (err.message?.includes("OracleFeedStale")) {
+      if (
+        err.message?.includes("OracleFeedStale") ||
+        err.message?.includes("OracleConfidenceSpike") ||
+        err.message?.includes("OracleFeedInvalid")
+      ) {
         console.log(
-          "    SKIPPED: Pyth devnet feed is stale (pull oracle not recently posted)",
+          "    SKIPPED: Pyth devnet feed unusable (stale, confidence spike, or invalid EMA)",
         );
         return this.skip();
       }

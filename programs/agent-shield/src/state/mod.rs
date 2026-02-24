@@ -68,10 +68,28 @@ pub const MAX_ORACLE_STALE_SLOTS: u32 = 50;
 /// robustness.
 pub const MIN_ORACLE_SAMPLES: u32 = 5;
 
-/// Maximum confidence/price ratio in BPS. 500 = 5%.
-/// Marginfi default is 10% (configurable per-bank); we use a tighter 5%
-/// as a fixed threshold appropriate for spending cap enforcement.
-pub const MAX_CONFIDENCE_BPS: u64 = 500;
+/// Maximum confidence cap for adjusted pricing (BPS).
+/// 200 = 2%. Spot confidence is CAPPED at this level, bounding the
+/// maximum spending cap overcount for any token regardless of volatility.
+/// A $500 cap loses at most $10 to overcount; a $5M cap loses at most $100K.
+pub const MAX_CONF_CAP_BPS: u64 = 200;
+
+/// Safety valve: reject if spot confidence exceeds this (BPS).
+/// 2000 = 20%. Only fires for genuinely broken oracle feeds, not
+/// normal market volatility. Replaces the old 5% gate that blocked
+/// meme coin trading during routine confidence spikes.
+pub const ORACLE_SAFETY_VALVE_BPS: u64 = 2000;
+
+/// Adaptive confidence multiplier. If spot_conf > MULTIPLIER × ema_conf,
+/// the oracle is showing unusual uncertainty for this specific token.
+/// 5× means SOL (ema_conf ~0.1%) blocks at 0.5%, BONK (ema_conf ~3%)
+/// blocks at 15%. Auto-calibrated per-token, no configuration needed.
+pub const ADAPTIVE_CONF_MULTIPLIER: u64 = 5;
+
+/// Minimum adaptive confidence threshold in BPS of spot price.
+/// Prevents ema_conf=0 (new/stable feeds) from blocking all trades.
+/// 50 BPS = 0.5%.
+pub const MIN_ADAPTIVE_CONF_BPS: u64 = 50;
 
 /// Max divergence between primary and fallback oracle (BPS).
 /// 500 = 5%. Rejects if both return valid but divergent prices.

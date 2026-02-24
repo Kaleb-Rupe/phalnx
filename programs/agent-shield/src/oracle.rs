@@ -15,7 +15,8 @@ use anchor_lang::prelude::*;
 
 use crate::errors::AgentShieldError;
 use crate::state::{
-    MAX_CONFIDENCE_BPS, MAX_ORACLE_STALE_SLOTS, MIN_ORACLE_SAMPLES, PYTH_RECEIVER_PROGRAM,
+    ADAPTIVE_CONF_MULTIPLIER, MAX_CONF_CAP_BPS, MAX_ORACLE_STALE_SLOTS, MIN_ADAPTIVE_CONF_BPS,
+    MIN_ORACLE_SAMPLES, ORACLE_SAFETY_VALVE_BPS, PYTH_RECEIVER_PROGRAM,
     SWITCHBOARD_ON_DEMAND_PROGRAM,
 };
 
@@ -92,14 +93,17 @@ const PYTH_VERIFICATION_OFFSET: usize = 40;
 const PYTH_PRICE_OFFSET: usize = 73;
 const PYTH_CONF_OFFSET: usize = 81;
 const PYTH_EXPONENT_OFFSET: usize = 89;
+const PYTH_EMA_PRICE_OFFSET: usize = 109;
+const PYTH_EMA_CONF_OFFSET: usize = 117;
 const PYTH_POSTED_SLOT_OFFSET: usize = 125;
 
 /// Parse a Pyth PriceUpdateV2 account and return `(adjusted, midpoint)`
 /// as i128 mantissas with 18 implicit decimals.
 ///
-/// - `adjusted`: `(price + conf) * 10^(18+exp)` — conservative upper bound
-///   for USD conversion (spending caps should overcount, not undercount).
-/// - `midpoint`: `price * 10^(18+exp)` — raw midpoint for cross-oracle
+/// - `adjusted`: `(max(spot, ema) + capped_conf) * 10^(18+exp)` —
+///   conservative upper bound for USD conversion. Uses hybrid base price
+///   (max of spot and EMA) with confidence capped at 2% of base.
+/// - `midpoint`: `spot_price * 10^(18+exp)` — raw midpoint for cross-oracle
 ///   divergence checks (comparing midpoint-to-midpoint avoids asymmetric
 ///   confidence artifacts between Pyth and Switchboard).
 ///
@@ -107,9 +111,11 @@ const PYTH_POSTED_SLOT_OFFSET: usize = 125;
 /// - Account key must match `expected_feed`
 /// - Account owner must be PYTH_RECEIVER_PROGRAM (checked by dispatcher)
 /// - Verification level must be Full (1) — Wormhole-verified
-/// - Staleness: `posted_slot` must be within `MAX_ORACLE_STALE_SLOTS` of current slot
-/// - Confidence: `conf / |price|` must be ≤ `MAX_CONFIDENCE_BPS` (5%)
-/// - Price must be positive
+/// - Staleness: `posted_slot` must be within `MAX_ORACLE_STALE_SLOTS`
+/// - Safety valve: spot conf/price > 20% rejects (broken feed)
+/// - Confidence capped at 2% of base price (bounds overcount)
+/// - EMA provides price floor during crashes (safe direction)
+/// - Price and EMA must be positive
 fn parse_pyth_price(
     account_info: &AccountInfo,
     expected_feed: &Pubkey,
@@ -162,35 +168,85 @@ fn parse_pyth_price(
     // 6. Price must be positive
     require!(price > 0, AgentShieldError::OracleFeedInvalid);
 
-    // 7. Confidence check: conf * 10000 / price <= MAX_CONFIDENCE_BPS
+    // 7. Safety valve: reject if spot confidence is extremely wide (broken
+    //    feed). 20% threshold catches genuinely broken feeds without
+    //    blocking meme coins during normal volatility (BONK routinely
+    //    spikes to 6%+ conf).
     let conf_ratio = (conf as u128)
         .checked_mul(10_000)
         .ok_or(AgentShieldError::Overflow)?
         .checked_div(price as u128)
         .ok_or(AgentShieldError::Overflow)?;
     require!(
-        conf_ratio <= MAX_CONFIDENCE_BPS as u128,
+        conf_ratio <= ORACLE_SAFETY_VALVE_BPS as u128,
         AgentShieldError::OracleConfidenceTooWide
     );
 
-    // 8. Conservative directional pricing: price + conf (upper bound).
-    //    1x confidence per Pyth Best Practices for outgoing asset valuation.
-    //    Under Pyth's Laplace distribution model, P(X ≤ μ+conf) ≈ 82%
-    //    one-sided coverage (1 - e^(-1)/2 ≈ 0.816). Pyth recommends 2.12x
-    //    for 95% coverage, but that's designed for lending/liquidation
-    //    protocols where a single mispricing causes loss. For spending caps,
-    //    per-tx undercount risk averages across many transactions. 1x conf
-    //    is the deliberate tradeoff: agents won't hit caps ~2x sooner than
-    //    their actual spending warrants.
-    //    Both price (positive i64) and conf (u64) are in Pyth exponent units.
-    let adjusted_price = (price as i128)
-        .checked_add(conf as i128)
+    // 8. Read EMA fields for hybrid pricing.
+    //    EMA is a 1-hour inverse-confidence-weighted moving average
+    //    computed by the Pyth oracle program. We use it as a conservative
+    //    price floor, NOT as the primary price (EMA lags during pumps).
+    let ema_price = i64::from_le_bytes(
+        data[PYTH_EMA_PRICE_OFFSET..PYTH_EMA_PRICE_OFFSET + 8]
+            .try_into()
+            .map_err(|_| error!(AgentShieldError::OracleFeedInvalid))?,
+    );
+    let ema_conf = u64::from_le_bytes(
+        data[PYTH_EMA_CONF_OFFSET..PYTH_EMA_CONF_OFFSET + 8]
+            .try_into()
+            .map_err(|_| error!(AgentShieldError::OracleFeedInvalid))?,
+    );
+
+    // EMA must be positive (zero on brand-new feeds before first cycle)
+    require!(ema_price > 0, AgentShieldError::OracleFeedInvalid);
+
+    // 8a. Adaptive confidence gate: spot_conf must be ≤ 5 × ema_conf.
+    //     Auto-calibrates per-token: SOL (ema_conf ~0.1%) blocks at
+    //     0.5%, BONK (ema_conf ~3%) blocks at 15%. The floor prevents
+    //     ema_conf=0 (very stable or new feeds) from blocking all trades.
+    let adaptive_from_ema = ema_conf
+        .checked_mul(ADAPTIVE_CONF_MULTIPLIER)
+        .ok_or(AgentShieldError::Overflow)?;
+    let min_adaptive = (price as u64)
+        .checked_mul(MIN_ADAPTIVE_CONF_BPS)
+        .ok_or(AgentShieldError::Overflow)?
+        .checked_div(10_000)
+        .ok_or(AgentShieldError::Overflow)?;
+    let adaptive_threshold = adaptive_from_ema.max(min_adaptive);
+    require!(
+        conf <= adaptive_threshold,
+        AgentShieldError::OracleConfidenceSpike
+    );
+
+    // 9. Hybrid base price: max(spot, ema).
+    //    Pump: spot > ema → uses spot (accurate, no EMA lag attack).
+    //    Crash: ema > spot → uses ema (overcounts — safe for spending caps).
+    //    max(spot, ema) ≥ spot ALWAYS — the spending cap is never breached
+    //    in real USD terms in any market direction.
+    let base_price = if price >= ema_price { price } else { ema_price };
+
+    // 10. Cap spot confidence at MAX_CONF_CAP_BPS (2%) of base price.
+    //     Uses spot_conf (real-time uncertainty), not ema_conf (lagged).
+    //     Bounds overcount: BONK with 6% conf → capped to 2%, trade
+    //     proceeds. SOL with 0.1% conf → actual 0.1%, no waste.
+    let max_conf = (base_price as u64)
+        .checked_mul(MAX_CONF_CAP_BPS)
+        .ok_or(AgentShieldError::Overflow)?
+        .checked_div(10_000)
+        .ok_or(AgentShieldError::Overflow)?;
+    let capped_conf = conf.min(max_conf);
+
+    // 11. Adjusted price = base + capped confidence (conservative upper
+    //     bound). Under Pyth's Laplace model, 1x conf ≈ 82% one-sided
+    //     coverage — deliberate tradeoff for spending caps.
+    let adjusted_price = (base_price as i128)
+        .checked_add(capped_conf as i128)
         .ok_or(AgentShieldError::Overflow)?;
 
-    // 9. Normalize to i128 with 18 implicit decimals.
-    //    Pyth: price_value * 10^exponent = USD price.
-    //    Normalized: price_value * 10^(18 + exponent).
-    //    exponent is typically -8, so 10^(18 + (-8)) = 10^10.
+    // 12. Normalize to i128 with 18 implicit decimals.
+    //     Pyth: price_value * 10^exponent = USD price.
+    //     Normalized: price_value * 10^(18 + exponent).
+    //     exponent is typically -8, so 10^(18 + (-8)) = 10^10.
     let norm_exp = 18i32
         .checked_add(exponent)
         .ok_or(AgentShieldError::Overflow)?;

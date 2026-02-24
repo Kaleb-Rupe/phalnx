@@ -2801,7 +2801,10 @@ describe("agent-shield", () => {
      *   [81..89]  conf (u64 LE)
      *   [89..93]  exponent (i32 LE)
      *   [93..101] publish_time (i64 LE)
-     *   [101..133] remaining fields (prev_publish_time, ema_price, ema_conf, posted_slot)
+     *   [101..109] prev_publish_time (i64 LE)
+     *   [109..117] ema_price (i64 LE)
+     *   [117..125] ema_conf (u64 LE)
+     *   [125..133] posted_slot (u64 LE)
      */
     function createMockPythAccount(
       feedAddress: PublicKey,
@@ -2811,6 +2814,8 @@ describe("agent-shield", () => {
       publishTime: bigint, // i64, unix timestamp in seconds
       verificationLevel: number = 1, // 1 = Full (Wormhole verified)
       postedSlot?: bigint, // u64, slot when price was posted (offset 125)
+      emaPrice?: bigint,   // i64, EMA price (defaults to price)
+      emaConf?: bigint,    // u64, EMA confidence (defaults to conf)
     ): void {
       const data = Buffer.alloc(133);
       // discriminator [0..8] — zeros
@@ -2826,6 +2831,10 @@ describe("agent-shield", () => {
       data.writeInt32LE(exponent, 89);
       // publish_time [93..101]
       data.writeBigInt64LE(publishTime, 93);
+      // ema_price [109..117] — defaults to spot price (stable market)
+      data.writeBigInt64LE(emaPrice ?? price, 109);
+      // ema_conf [117..125] — defaults to spot conf
+      data.writeBigUInt64LE(emaConf ?? conf, 117);
       // posted_slot [125..133] — used for slot-based staleness check
       if (postedSlot !== undefined) {
         data.writeBigUInt64LE(postedSlot, 125);
@@ -2903,7 +2912,7 @@ describe("agent-shield", () => {
         oracleMint,
         ownerOracleAta,
         owner.publicKey,
-        20_000_000_000n // 20 tokens (9 decimals)
+        100_000_000_000n // 100 tokens (9 decimals)
       );
 
       // Create protocol treasury ATA for oracle mint (needed for fee transfers)
@@ -3225,11 +3234,11 @@ describe("agent-shield", () => {
 
     it("wide confidence Pyth feed — rejects with OracleConfidenceTooWide", async () => {
       const clock = svm.getClock();
-      // conf = 20% of price (2000 BPS > MAX_CONFIDENCE_BPS of 500)
+      // conf = 25% of price (2500 BPS > ORACLE_SAFETY_VALVE_BPS of 2000)
       createMockPythAccount(
         pythFeedKeypair.publicKey,
         15_000_000_000n,
-        3_000_000_000n, // 20% of price → way over 10%
+        3_750_000_000n, // 25% of price → over 20% safety valve
         -8,
         clock.unixTimestamp,
         1,              // Full verification
@@ -3431,12 +3440,13 @@ describe("agent-shield", () => {
       }
     });
 
-    it("Pyth directional pricing — conf adjusts USD upward", async () => {
-      // price = $10, conf = 4.9% of price (490 BPS, below 500 max)
-      // adjusted_price = 10 + 0.49 = $10.49
+    it("Pyth directional pricing — conf adjusts USD upward (capped at 2%)", async () => {
+      // price = $10, conf = 4.9% of price (490 BPS, above 200 cap)
+      // max_conf = $10 * 200 / 10000 = $0.20
+      // adjusted_price = 10 + 0.20 = $10.20 (conf capped at 2%)
       const clock = svm.getClock();
       const price = 1_000_000_000n; // $10 with exponent -8
-      const conf = 49_000_000n;     // 4.9% of price
+      const conf = 49_000_000n;     // 4.9% of price → capped to 2%
       createMockPythAccount(
         pythFeedKeypair.publicKey,
         price,
@@ -3521,8 +3531,8 @@ describe("agent-shield", () => {
       const total = tracker.buckets
         .filter((b: any) => b.usdAmount.toNumber() > 0)
         .reduce((sum: number, b: any) => sum + b.usdAmount.toNumber(), 0);
-      // 1 token (1e9 base) * ($10 + $0.49 conf) = $10.49 = 10_490_000 USD-6
-      expect(total).to.equal(10_490_000);
+      // 1 token (1e9 base) * ($10 + $0.20 capped conf) = $10.20 = 10_200_000 USD-6
+      expect(total).to.equal(10_200_000);
 
       // Clean up session
       const protocolAta = createAtaIdempotentHelper(
@@ -3628,42 +3638,1129 @@ describe("agent-shield", () => {
         } as any).signers([zcAgent]).rpc();
     });
 
-    it("Pyth 5.01% confidence — rejects OracleConfidenceTooWide", async () => {
+    it("Pyth 5.01% confidence — passes with 2% cap (below 20% safety valve)", async () => {
+      // price = $100, conf = 5.01% (501 BPS) → capped at 2% = $2
+      // adjusted_price = $100 + $2 = $102
+      // 5.01% is well below the 20% safety valve, so the trade proceeds
       const clock = svm.getClock();
-      // price = $100, conf = 5.01% = 501 BPS of price
-      // price = 10_000_000_000 (i64), conf = 501_000_000 → ratio = 501/10000 = 5.01%
       createMockPythAccount(
         pythFeedKeypair.publicKey,
         10_000_000_000n, // $100 with exponent -8
-        501_000_000n,     // 5.01% of price
+        501_000_000n,     // 5.01% of price → capped at 2%
         -8,
         clock.unixTimestamp,
         1,
         clock.slot,
       );
 
+      const capVaultId = new BN(522);
+      const [capVault] = PublicKey.findProgramAddressSync(
+        [Buffer.from("vault"), owner.publicKey.toBuffer(), capVaultId.toArrayLike(Buffer, "le", 8)],
+        program.programId,
+      );
+      const [capPolicy] = PublicKey.findProgramAddressSync(
+        [Buffer.from("policy"), capVault.toBuffer()], program.programId,
+      );
+      const [capTracker] = PublicKey.findProgramAddressSync(
+        [Buffer.from("tracker"), capVault.toBuffer()], program.programId,
+      );
+
+      await program.methods
+        .initializeVault(
+          capVaultId, new BN(10_000_000_000), new BN(1_000_000_000),
+          0, [], new BN(0) as any, 3, 0, new BN(0), [],
+        )
+        .accounts({
+          owner: owner.publicKey, vault: capVault, policy: capPolicy,
+          tracker: capTracker, feeDestination: feeDestination.publicKey,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+
+      const capAgent = Keypair.generate();
+      airdropSol(svm, capAgent.publicKey, 5 * LAMPORTS_PER_SOL);
+      await program.methods.registerAgent(capAgent.publicKey)
+        .accounts({ owner: owner.publicKey, vault: capVault } as any).rpc();
+
+      const vaultAta = createAtaIdempotentHelper(
+        svm, (owner as any).payer, oracleMint, capVault, true,
+      );
+      await program.methods.depositFunds(new BN(5_000_000_000))
+        .accounts({
+          owner: owner.publicKey, vault: capVault, mint: oracleMint,
+          ownerTokenAccount: ownerOracleAta, vaultTokenAccount: vaultAta,
+          tokenProgram: TOKEN_PROGRAM_ID, associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        } as any).rpc();
+
       const [sessionPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("session"), oracleVaultPda.toBuffer(), oracleAgent.publicKey.toBuffer(), oracleMint.toBuffer()],
+        [Buffer.from("session"), capVault.toBuffer(), capAgent.publicKey.toBuffer(), oracleMint.toBuffer()],
         program.programId,
       );
 
-      try {
+      await program.methods
+        .validateAndAuthorize({ swap: {} }, oracleMint, new BN(1_000_000_000), jupiterProgramId, null)
+        .accounts({
+          agent: capAgent.publicKey, vault: capVault, policy: capPolicy,
+          tracker: capTracker, oracleRegistry: oracleRegistryPda,
+          session: sessionPda, vaultTokenAccount: vaultAta,
+          tokenMintAccount: oracleMint, tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .remainingAccounts([{ pubkey: pythFeedKeypair.publicKey, isWritable: false, isSigner: false }])
+        .signers([capAgent])
+        .rpc();
+
+      const tracker = await program.account.spendTracker.fetch(capTracker);
+      const total = tracker.buckets
+        .filter((b: any) => b.usdAmount.toNumber() > 0)
+        .reduce((sum: number, b: any) => sum + b.usdAmount.toNumber(), 0);
+      // 1 token * ($100 + $2 capped conf) = $102 = 102_000_000 USD-6
+      expect(total).to.equal(102_000_000);
+
+      const protocolAta = createAtaIdempotentHelper(
+        svm, (owner as any).payer, oracleMint, protocolTreasury, true,
+      );
+      await program.methods.finalizeSession(true)
+        .accounts({
+          payer: capAgent.publicKey, vault: capVault, policy: capPolicy,
+          session: sessionPda, sessionRentRecipient: capAgent.publicKey,
+          vaultTokenAccount: vaultAta, feeDestinationTokenAccount: null,
+          protocolTreasuryTokenAccount: protocolAta,
+          tokenProgram: TOKEN_PROGRAM_ID, systemProgram: SystemProgram.programId,
+        } as any).signers([capAgent]).rpc();
+    });
+
+    // ─── Hybrid oracle pricing: max(spot, ema) + confidence capping ──────
+    describe("Hybrid oracle pricing: max(spot, ema) + confidence capping", () => {
+      it("pump scenario: spot > ema → uses spot as base", async () => {
+        // Spot = $150, EMA = $105 (pump, EMA lags behind ~1hr half-life)
+        // base = max(150, 105) = $150
+        // max_conf = 150 * 200 / 10000 = $3.00 → 300_000_000
+        // capped_conf = min(50_000_000, 300_000_000) = 50_000_000
+        // adjusted = 150 + 0.50 = $150.50
+        const clock = svm.getClock();
+        createMockPythAccount(
+          pythFeedKeypair.publicKey,
+          15_000_000_000n,  // spot $150
+          50_000_000n,       // conf ~0.33%
+          -8,
+          clock.unixTimestamp,
+          1,
+          clock.slot,
+          10_500_000_000n,   // ema $105 (lagging behind during pump)
+          50_000_000n,
+        );
+
+        const pumpVaultId = new BN(530);
+        const [pumpVault] = PublicKey.findProgramAddressSync(
+          [Buffer.from("vault"), owner.publicKey.toBuffer(), pumpVaultId.toArrayLike(Buffer, "le", 8)],
+          program.programId,
+        );
+        const [pumpPolicy] = PublicKey.findProgramAddressSync(
+          [Buffer.from("policy"), pumpVault.toBuffer()], program.programId,
+        );
+        const [pumpTracker] = PublicKey.findProgramAddressSync(
+          [Buffer.from("tracker"), pumpVault.toBuffer()], program.programId,
+        );
+
         await program.methods
-          .validateAndAuthorize({ swap: {} }, oracleMint, new BN(100_000_000), jupiterProgramId, null)
+          .initializeVault(
+            pumpVaultId, new BN(10_000_000_000), new BN(1_000_000_000),
+            0, [], new BN(0) as any, 3, 0, new BN(0), [],
+          )
           .accounts({
-            agent: oracleAgent.publicKey, vault: oracleVaultPda, policy: oraclePolicyPda,
-            tracker: oracleTrackerPda, oracleRegistry: oracleRegistryPda,
-            session: sessionPda, vaultTokenAccount: vaultOracleAta,
+            owner: owner.publicKey, vault: pumpVault, policy: pumpPolicy,
+            tracker: pumpTracker, feeDestination: feeDestination.publicKey,
+            systemProgram: SystemProgram.programId,
+          } as any).rpc();
+
+        const pumpAgent = Keypair.generate();
+        airdropSol(svm, pumpAgent.publicKey, 5 * LAMPORTS_PER_SOL);
+        await program.methods.registerAgent(pumpAgent.publicKey)
+          .accounts({ owner: owner.publicKey, vault: pumpVault } as any).rpc();
+
+        const vaultAta = createAtaIdempotentHelper(
+          svm, (owner as any).payer, oracleMint, pumpVault, true,
+        );
+        await program.methods.depositFunds(new BN(5_000_000_000))
+          .accounts({
+            owner: owner.publicKey, vault: pumpVault, mint: oracleMint,
+            ownerTokenAccount: ownerOracleAta, vaultTokenAccount: vaultAta,
+            tokenProgram: TOKEN_PROGRAM_ID, associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          } as any).rpc();
+
+        const [sessionPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("session"), pumpVault.toBuffer(), pumpAgent.publicKey.toBuffer(), oracleMint.toBuffer()],
+          program.programId,
+        );
+
+        await program.methods
+          .validateAndAuthorize({ swap: {} }, oracleMint, new BN(1_000_000_000), jupiterProgramId, null)
+          .accounts({
+            agent: pumpAgent.publicKey, vault: pumpVault, policy: pumpPolicy,
+            tracker: pumpTracker, oracleRegistry: oracleRegistryPda,
+            session: sessionPda, vaultTokenAccount: vaultAta,
             tokenMintAccount: oracleMint, tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           } as any)
           .remainingAccounts([{ pubkey: pythFeedKeypair.publicKey, isWritable: false, isSigner: false }])
-          .signers([oracleAgent])
+          .signers([pumpAgent])
           .rpc();
-        expect.fail("Should have thrown — confidence too wide");
-      } catch (err: any) {
-        expect(err.toString()).to.include("OracleConfidenceTooWide");
-      }
+
+        const tracker = await program.account.spendTracker.fetch(pumpTracker);
+        const total = tracker.buckets
+          .filter((b: any) => b.usdAmount.toNumber() > 0)
+          .reduce((sum: number, b: any) => sum + b.usdAmount.toNumber(), 0);
+        // 1 token * ($150 spot + $0.50 conf) = $150.50 = 150_500_000 USD-6
+        // Spot used as base (spot > ema), no EMA lag undercount
+        expect(total).to.equal(150_500_000);
+
+        const protocolAta = createAtaIdempotentHelper(
+          svm, (owner as any).payer, oracleMint, protocolTreasury, true,
+        );
+        await program.methods.finalizeSession(true)
+          .accounts({
+            payer: pumpAgent.publicKey, vault: pumpVault, policy: pumpPolicy,
+            session: sessionPda, sessionRentRecipient: pumpAgent.publicKey,
+            vaultTokenAccount: vaultAta, feeDestinationTokenAccount: null,
+            protocolTreasuryTokenAccount: protocolAta,
+            tokenProgram: TOKEN_PROGRAM_ID, systemProgram: SystemProgram.programId,
+          } as any).signers([pumpAgent]).rpc();
+      });
+
+      it("crash scenario: ema > spot → uses ema as base (overcounts safely)", async () => {
+        // Spot = $100, EMA = $145 (crash, EMA hasn't caught up ~1hr half-life)
+        // base = max(100, 145) = $145
+        // max_conf = 145 * 200 / 10000 = $2.90 → 290_000_000
+        // capped_conf = min(50_000_000, 290_000_000) = 50_000_000
+        // adjusted = 145 + 0.50 = $145.50
+        const clock = svm.getClock();
+        createMockPythAccount(
+          pythFeedKeypair.publicKey,
+          10_000_000_000n,  // spot $100 (crashed)
+          50_000_000n,       // conf ~0.5% of spot
+          -8,
+          clock.unixTimestamp,
+          1,
+          clock.slot,
+          14_500_000_000n,   // ema $145 (still higher from before crash)
+          50_000_000n,
+        );
+
+        const crashVaultId = new BN(531);
+        const [crashVault] = PublicKey.findProgramAddressSync(
+          [Buffer.from("vault"), owner.publicKey.toBuffer(), crashVaultId.toArrayLike(Buffer, "le", 8)],
+          program.programId,
+        );
+        const [crashPolicy] = PublicKey.findProgramAddressSync(
+          [Buffer.from("policy"), crashVault.toBuffer()], program.programId,
+        );
+        const [crashTracker] = PublicKey.findProgramAddressSync(
+          [Buffer.from("tracker"), crashVault.toBuffer()], program.programId,
+        );
+
+        await program.methods
+          .initializeVault(
+            crashVaultId, new BN(10_000_000_000), new BN(1_000_000_000),
+            0, [], new BN(0) as any, 3, 0, new BN(0), [],
+          )
+          .accounts({
+            owner: owner.publicKey, vault: crashVault, policy: crashPolicy,
+            tracker: crashTracker, feeDestination: feeDestination.publicKey,
+            systemProgram: SystemProgram.programId,
+          } as any).rpc();
+
+        const crashAgent = Keypair.generate();
+        airdropSol(svm, crashAgent.publicKey, 5 * LAMPORTS_PER_SOL);
+        await program.methods.registerAgent(crashAgent.publicKey)
+          .accounts({ owner: owner.publicKey, vault: crashVault } as any).rpc();
+
+        const vaultAta = createAtaIdempotentHelper(
+          svm, (owner as any).payer, oracleMint, crashVault, true,
+        );
+        await program.methods.depositFunds(new BN(5_000_000_000))
+          .accounts({
+            owner: owner.publicKey, vault: crashVault, mint: oracleMint,
+            ownerTokenAccount: ownerOracleAta, vaultTokenAccount: vaultAta,
+            tokenProgram: TOKEN_PROGRAM_ID, associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          } as any).rpc();
+
+        const [sessionPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("session"), crashVault.toBuffer(), crashAgent.publicKey.toBuffer(), oracleMint.toBuffer()],
+          program.programId,
+        );
+
+        await program.methods
+          .validateAndAuthorize({ swap: {} }, oracleMint, new BN(1_000_000_000), jupiterProgramId, null)
+          .accounts({
+            agent: crashAgent.publicKey, vault: crashVault, policy: crashPolicy,
+            tracker: crashTracker, oracleRegistry: oracleRegistryPda,
+            session: sessionPda, vaultTokenAccount: vaultAta,
+            tokenMintAccount: oracleMint, tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          } as any)
+          .remainingAccounts([{ pubkey: pythFeedKeypair.publicKey, isWritable: false, isSigner: false }])
+          .signers([crashAgent])
+          .rpc();
+
+        const tracker = await program.account.spendTracker.fetch(crashTracker);
+        const total = tracker.buckets
+          .filter((b: any) => b.usdAmount.toNumber() > 0)
+          .reduce((sum: number, b: any) => sum + b.usdAmount.toNumber(), 0);
+        // 1 token * ($145 ema base + $0.50 conf) = $145.50 = 145_500_000 USD-6
+        // EMA used as base (ema > spot), overcounts safely during crash
+        expect(total).to.equal(145_500_000);
+
+        const protocolAta = createAtaIdempotentHelper(
+          svm, (owner as any).payer, oracleMint, protocolTreasury, true,
+        );
+        await program.methods.finalizeSession(true)
+          .accounts({
+            payer: crashAgent.publicKey, vault: crashVault, policy: crashPolicy,
+            session: sessionPda, sessionRentRecipient: crashAgent.publicKey,
+            vaultTokenAccount: vaultAta, feeDestinationTokenAccount: null,
+            protocolTreasuryTokenAccount: protocolAta,
+            tokenProgram: TOKEN_PROGRAM_ID, systemProgram: SystemProgram.programId,
+          } as any).signers([crashAgent]).rpc();
+      });
+
+      it("stable market: spot ≈ ema → same as before", async () => {
+        // Spot = $170, EMA = $170 (stable)
+        // base = max(170, 170) = $170, conf 0.33% < 2% cap → uses actual
+        const clock = svm.getClock();
+        createMockPythAccount(
+          pythFeedKeypair.publicKey,
+          17_000_000_000n,  // spot $170
+          50_000_000n,       // conf ~0.29%
+          -8,
+          clock.unixTimestamp,
+          1,
+          clock.slot,
+          17_000_000_000n,   // ema = spot (stable)
+          50_000_000n,
+        );
+
+        const stableVaultId = new BN(532);
+        const [stableVault] = PublicKey.findProgramAddressSync(
+          [Buffer.from("vault"), owner.publicKey.toBuffer(), stableVaultId.toArrayLike(Buffer, "le", 8)],
+          program.programId,
+        );
+        const [stablePolicy] = PublicKey.findProgramAddressSync(
+          [Buffer.from("policy"), stableVault.toBuffer()], program.programId,
+        );
+        const [stableTracker] = PublicKey.findProgramAddressSync(
+          [Buffer.from("tracker"), stableVault.toBuffer()], program.programId,
+        );
+
+        await program.methods
+          .initializeVault(
+            stableVaultId, new BN(10_000_000_000), new BN(1_000_000_000),
+            0, [], new BN(0) as any, 3, 0, new BN(0), [],
+          )
+          .accounts({
+            owner: owner.publicKey, vault: stableVault, policy: stablePolicy,
+            tracker: stableTracker, feeDestination: feeDestination.publicKey,
+            systemProgram: SystemProgram.programId,
+          } as any).rpc();
+
+        const stableAgent = Keypair.generate();
+        airdropSol(svm, stableAgent.publicKey, 5 * LAMPORTS_PER_SOL);
+        await program.methods.registerAgent(stableAgent.publicKey)
+          .accounts({ owner: owner.publicKey, vault: stableVault } as any).rpc();
+
+        const vaultAta = createAtaIdempotentHelper(
+          svm, (owner as any).payer, oracleMint, stableVault, true,
+        );
+        await program.methods.depositFunds(new BN(5_000_000_000))
+          .accounts({
+            owner: owner.publicKey, vault: stableVault, mint: oracleMint,
+            ownerTokenAccount: ownerOracleAta, vaultTokenAccount: vaultAta,
+            tokenProgram: TOKEN_PROGRAM_ID, associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          } as any).rpc();
+
+        const [sessionPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("session"), stableVault.toBuffer(), stableAgent.publicKey.toBuffer(), oracleMint.toBuffer()],
+          program.programId,
+        );
+
+        await program.methods
+          .validateAndAuthorize({ swap: {} }, oracleMint, new BN(1_000_000_000), jupiterProgramId, null)
+          .accounts({
+            agent: stableAgent.publicKey, vault: stableVault, policy: stablePolicy,
+            tracker: stableTracker, oracleRegistry: oracleRegistryPda,
+            session: sessionPda, vaultTokenAccount: vaultAta,
+            tokenMintAccount: oracleMint, tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          } as any)
+          .remainingAccounts([{ pubkey: pythFeedKeypair.publicKey, isWritable: false, isSigner: false }])
+          .signers([stableAgent])
+          .rpc();
+
+        const tracker = await program.account.spendTracker.fetch(stableTracker);
+        const total = tracker.buckets
+          .filter((b: any) => b.usdAmount.toNumber() > 0)
+          .reduce((sum: number, b: any) => sum + b.usdAmount.toNumber(), 0);
+        // 1 token * ($170 + $0.50 conf) = $170.50 = 170_500_000 USD-6
+        expect(total).to.equal(170_500_000);
+
+        const protocolAta = createAtaIdempotentHelper(
+          svm, (owner as any).payer, oracleMint, protocolTreasury, true,
+        );
+        await program.methods.finalizeSession(true)
+          .accounts({
+            payer: stableAgent.publicKey, vault: stableVault, policy: stablePolicy,
+            session: sessionPda, sessionRentRecipient: stableAgent.publicKey,
+            vaultTokenAccount: vaultAta, feeDestinationTokenAccount: null,
+            protocolTreasuryTokenAccount: protocolAta,
+            tokenProgram: TOKEN_PROGRAM_ID, systemProgram: SystemProgram.programId,
+          } as any).signers([stableAgent]).rpc();
+      });
+
+      it("confidence capping: 10% conf → capped at 2%", async () => {
+        // price = $100, conf = 10% (1_000_000_000)
+        // max_conf = 100 * 200 / 10000 = $2.00 = 200_000_000
+        // capped_conf = min(1_000_000_000, 200_000_000) = 200_000_000
+        // adjusted = $100 + $2 = $102
+        const clock = svm.getClock();
+        createMockPythAccount(
+          pythFeedKeypair.publicKey,
+          10_000_000_000n,  // spot $100
+          1_000_000_000n,    // conf 10% of price
+          -8,
+          clock.unixTimestamp,
+          1,
+          clock.slot,
+        );
+
+        const capVaultId = new BN(533);
+        const [capVault] = PublicKey.findProgramAddressSync(
+          [Buffer.from("vault"), owner.publicKey.toBuffer(), capVaultId.toArrayLike(Buffer, "le", 8)],
+          program.programId,
+        );
+        const [capPolicy] = PublicKey.findProgramAddressSync(
+          [Buffer.from("policy"), capVault.toBuffer()], program.programId,
+        );
+        const [capTracker] = PublicKey.findProgramAddressSync(
+          [Buffer.from("tracker"), capVault.toBuffer()], program.programId,
+        );
+
+        await program.methods
+          .initializeVault(
+            capVaultId, new BN(10_000_000_000), new BN(1_000_000_000),
+            0, [], new BN(0) as any, 3, 0, new BN(0), [],
+          )
+          .accounts({
+            owner: owner.publicKey, vault: capVault, policy: capPolicy,
+            tracker: capTracker, feeDestination: feeDestination.publicKey,
+            systemProgram: SystemProgram.programId,
+          } as any).rpc();
+
+        const capAgent = Keypair.generate();
+        airdropSol(svm, capAgent.publicKey, 5 * LAMPORTS_PER_SOL);
+        await program.methods.registerAgent(capAgent.publicKey)
+          .accounts({ owner: owner.publicKey, vault: capVault } as any).rpc();
+
+        const vaultAta = createAtaIdempotentHelper(
+          svm, (owner as any).payer, oracleMint, capVault, true,
+        );
+        await program.methods.depositFunds(new BN(5_000_000_000))
+          .accounts({
+            owner: owner.publicKey, vault: capVault, mint: oracleMint,
+            ownerTokenAccount: ownerOracleAta, vaultTokenAccount: vaultAta,
+            tokenProgram: TOKEN_PROGRAM_ID, associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          } as any).rpc();
+
+        const [sessionPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("session"), capVault.toBuffer(), capAgent.publicKey.toBuffer(), oracleMint.toBuffer()],
+          program.programId,
+        );
+
+        await program.methods
+          .validateAndAuthorize({ swap: {} }, oracleMint, new BN(1_000_000_000), jupiterProgramId, null)
+          .accounts({
+            agent: capAgent.publicKey, vault: capVault, policy: capPolicy,
+            tracker: capTracker, oracleRegistry: oracleRegistryPda,
+            session: sessionPda, vaultTokenAccount: vaultAta,
+            tokenMintAccount: oracleMint, tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          } as any)
+          .remainingAccounts([{ pubkey: pythFeedKeypair.publicKey, isWritable: false, isSigner: false }])
+          .signers([capAgent])
+          .rpc();
+
+        const tracker = await program.account.spendTracker.fetch(capTracker);
+        const total = tracker.buckets
+          .filter((b: any) => b.usdAmount.toNumber() > 0)
+          .reduce((sum: number, b: any) => sum + b.usdAmount.toNumber(), 0);
+        // 1 token * ($100 + $2 capped) = $102 = 102_000_000 USD-6
+        expect(total).to.equal(102_000_000);
+
+        const protocolAta = createAtaIdempotentHelper(
+          svm, (owner as any).payer, oracleMint, protocolTreasury, true,
+        );
+        await program.methods.finalizeSession(true)
+          .accounts({
+            payer: capAgent.publicKey, vault: capVault, policy: capPolicy,
+            session: sessionPda, sessionRentRecipient: capAgent.publicKey,
+            vaultTokenAccount: vaultAta, feeDestinationTokenAccount: null,
+            protocolTreasuryTokenAccount: protocolAta,
+            tokenProgram: TOKEN_PROGRAM_ID, systemProgram: SystemProgram.programId,
+          } as any).signers([capAgent]).rpc();
+      });
+
+      it("low confidence: 0.1% conf → uses actual (cap doesn't interfere)", async () => {
+        // price = $200, conf = 0.1% = 200_000 (way below 2% cap)
+        // max_conf = 200 * 200 / 10000 = $4 = 400_000_000
+        // capped_conf = min(200_000, 400_000_000) = 200_000
+        // adjusted = $200 + $0.000002 ≈ $200.000002
+        const clock = svm.getClock();
+        createMockPythAccount(
+          pythFeedKeypair.publicKey,
+          20_000_000_000n,  // spot $200
+          200_000n,          // conf 0.001% of price (tiny)
+          -8,
+          clock.unixTimestamp,
+          1,
+          clock.slot,
+        );
+
+        const lowVaultId = new BN(534);
+        const [lowVault] = PublicKey.findProgramAddressSync(
+          [Buffer.from("vault"), owner.publicKey.toBuffer(), lowVaultId.toArrayLike(Buffer, "le", 8)],
+          program.programId,
+        );
+        const [lowPolicy] = PublicKey.findProgramAddressSync(
+          [Buffer.from("policy"), lowVault.toBuffer()], program.programId,
+        );
+        const [lowTracker] = PublicKey.findProgramAddressSync(
+          [Buffer.from("tracker"), lowVault.toBuffer()], program.programId,
+        );
+
+        await program.methods
+          .initializeVault(
+            lowVaultId, new BN(10_000_000_000), new BN(1_000_000_000),
+            0, [], new BN(0) as any, 3, 0, new BN(0), [],
+          )
+          .accounts({
+            owner: owner.publicKey, vault: lowVault, policy: lowPolicy,
+            tracker: lowTracker, feeDestination: feeDestination.publicKey,
+            systemProgram: SystemProgram.programId,
+          } as any).rpc();
+
+        const lowAgent = Keypair.generate();
+        airdropSol(svm, lowAgent.publicKey, 5 * LAMPORTS_PER_SOL);
+        await program.methods.registerAgent(lowAgent.publicKey)
+          .accounts({ owner: owner.publicKey, vault: lowVault } as any).rpc();
+
+        const vaultAta = createAtaIdempotentHelper(
+          svm, (owner as any).payer, oracleMint, lowVault, true,
+        );
+        await program.methods.depositFunds(new BN(5_000_000_000))
+          .accounts({
+            owner: owner.publicKey, vault: lowVault, mint: oracleMint,
+            ownerTokenAccount: ownerOracleAta, vaultTokenAccount: vaultAta,
+            tokenProgram: TOKEN_PROGRAM_ID, associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          } as any).rpc();
+
+        const [sessionPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("session"), lowVault.toBuffer(), lowAgent.publicKey.toBuffer(), oracleMint.toBuffer()],
+          program.programId,
+        );
+
+        await program.methods
+          .validateAndAuthorize({ swap: {} }, oracleMint, new BN(1_000_000_000), jupiterProgramId, null)
+          .accounts({
+            agent: lowAgent.publicKey, vault: lowVault, policy: lowPolicy,
+            tracker: lowTracker, oracleRegistry: oracleRegistryPda,
+            session: sessionPda, vaultTokenAccount: vaultAta,
+            tokenMintAccount: oracleMint, tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          } as any)
+          .remainingAccounts([{ pubkey: pythFeedKeypair.publicKey, isWritable: false, isSigner: false }])
+          .signers([lowAgent])
+          .rpc();
+
+        const tracker = await program.account.spendTracker.fetch(lowTracker);
+        const total = tracker.buckets
+          .filter((b: any) => b.usdAmount.toNumber() > 0)
+          .reduce((sum: number, b: any) => sum + b.usdAmount.toNumber(), 0);
+        // 1 token * ($200 + $0.002) = $200.002 = 200_002_000 USD-6
+        // conf = 200_000 * 10^-8 = $0.002. Cap doesn't interfere.
+        expect(total).to.equal(200_002_000);
+
+        const protocolAta = createAtaIdempotentHelper(
+          svm, (owner as any).payer, oracleMint, protocolTreasury, true,
+        );
+        await program.methods.finalizeSession(true)
+          .accounts({
+            payer: lowAgent.publicKey, vault: lowVault, policy: lowPolicy,
+            session: sessionPda, sessionRentRecipient: lowAgent.publicKey,
+            vaultTokenAccount: vaultAta, feeDestinationTokenAccount: null,
+            protocolTreasuryTokenAccount: protocolAta,
+            tokenProgram: TOKEN_PROGRAM_ID, systemProgram: SystemProgram.programId,
+          } as any).signers([lowAgent]).rpc();
+      });
+
+      it("safety valve: 25% conf → OracleConfidenceTooWide", async () => {
+        const clock = svm.getClock();
+        // conf = 25% of price (2500 BPS > 2000 safety valve)
+        createMockPythAccount(
+          pythFeedKeypair.publicKey,
+          10_000_000_000n,  // $100
+          2_500_000_000n,    // 25% of price
+          -8,
+          clock.unixTimestamp,
+          1,
+          clock.slot,
+        );
+
+        const [sessionPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("session"), oracleVaultPda.toBuffer(), oracleAgent.publicKey.toBuffer(), oracleMint.toBuffer()],
+          program.programId,
+        );
+
+        try {
+          await program.methods
+            .validateAndAuthorize({ swap: {} }, oracleMint, new BN(100_000_000), jupiterProgramId, null)
+            .accounts({
+              agent: oracleAgent.publicKey, vault: oracleVaultPda, policy: oraclePolicyPda,
+              tracker: oracleTrackerPda, oracleRegistry: oracleRegistryPda,
+              session: sessionPda, vaultTokenAccount: vaultOracleAta,
+              tokenMintAccount: oracleMint, tokenProgram: TOKEN_PROGRAM_ID,
+              systemProgram: SystemProgram.programId,
+            } as any)
+            .remainingAccounts([{ pubkey: pythFeedKeypair.publicKey, isWritable: false, isSigner: false }])
+            .signers([oracleAgent])
+            .rpc();
+          expect.fail("Should have thrown — 25% conf exceeds 20% safety valve");
+        } catch (err: any) {
+          expect(err.toString()).to.include("OracleConfidenceTooWide");
+        }
+      });
+
+      it("safety valve boundary: 20% conf → passes (≤ not <)", async () => {
+        // conf = exactly 20% (2000 BPS == ORACLE_SAFETY_VALVE_BPS)
+        const clock = svm.getClock();
+        createMockPythAccount(
+          pythFeedKeypair.publicKey,
+          10_000_000_000n,  // $100
+          2_000_000_000n,    // exactly 20% of price
+          -8,
+          clock.unixTimestamp,
+          1,
+          clock.slot,
+        );
+
+        const bndVaultId = new BN(535);
+        const [bndVault] = PublicKey.findProgramAddressSync(
+          [Buffer.from("vault"), owner.publicKey.toBuffer(), bndVaultId.toArrayLike(Buffer, "le", 8)],
+          program.programId,
+        );
+        const [bndPolicy] = PublicKey.findProgramAddressSync(
+          [Buffer.from("policy"), bndVault.toBuffer()], program.programId,
+        );
+        const [bndTracker] = PublicKey.findProgramAddressSync(
+          [Buffer.from("tracker"), bndVault.toBuffer()], program.programId,
+        );
+
+        await program.methods
+          .initializeVault(
+            bndVaultId, new BN(10_000_000_000), new BN(1_000_000_000),
+            0, [], new BN(0) as any, 3, 0, new BN(0), [],
+          )
+          .accounts({
+            owner: owner.publicKey, vault: bndVault, policy: bndPolicy,
+            tracker: bndTracker, feeDestination: feeDestination.publicKey,
+            systemProgram: SystemProgram.programId,
+          } as any).rpc();
+
+        const bndAgent = Keypair.generate();
+        airdropSol(svm, bndAgent.publicKey, 5 * LAMPORTS_PER_SOL);
+        await program.methods.registerAgent(bndAgent.publicKey)
+          .accounts({ owner: owner.publicKey, vault: bndVault } as any).rpc();
+
+        const vaultAta = createAtaIdempotentHelper(
+          svm, (owner as any).payer, oracleMint, bndVault, true,
+        );
+        await program.methods.depositFunds(new BN(5_000_000_000))
+          .accounts({
+            owner: owner.publicKey, vault: bndVault, mint: oracleMint,
+            ownerTokenAccount: ownerOracleAta, vaultTokenAccount: vaultAta,
+            tokenProgram: TOKEN_PROGRAM_ID, associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          } as any).rpc();
+
+        const [sessionPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("session"), bndVault.toBuffer(), bndAgent.publicKey.toBuffer(), oracleMint.toBuffer()],
+          program.programId,
+        );
+
+        // 20% exactly should PASS (≤ check)
+        await program.methods
+          .validateAndAuthorize({ swap: {} }, oracleMint, new BN(1_000_000_000), jupiterProgramId, null)
+          .accounts({
+            agent: bndAgent.publicKey, vault: bndVault, policy: bndPolicy,
+            tracker: bndTracker, oracleRegistry: oracleRegistryPda,
+            session: sessionPda, vaultTokenAccount: vaultAta,
+            tokenMintAccount: oracleMint, tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          } as any)
+          .remainingAccounts([{ pubkey: pythFeedKeypair.publicKey, isWritable: false, isSigner: false }])
+          .signers([bndAgent])
+          .rpc();
+
+        const tracker = await program.account.spendTracker.fetch(bndTracker);
+        const total = tracker.buckets
+          .filter((b: any) => b.usdAmount.toNumber() > 0)
+          .reduce((sum: number, b: any) => sum + b.usdAmount.toNumber(), 0);
+        // 1 token * ($100 + $2 capped conf) = $102 = 102_000_000 USD-6
+        // 20% conf capped to 2%
+        expect(total).to.equal(102_000_000);
+
+        const protocolAta = createAtaIdempotentHelper(
+          svm, (owner as any).payer, oracleMint, protocolTreasury, true,
+        );
+        await program.methods.finalizeSession(true)
+          .accounts({
+            payer: bndAgent.publicKey, vault: bndVault, policy: bndPolicy,
+            session: sessionPda, sessionRentRecipient: bndAgent.publicKey,
+            vaultTokenAccount: vaultAta, feeDestinationTokenAccount: null,
+            protocolTreasuryTokenAccount: protocolAta,
+            tokenProgram: TOKEN_PROGRAM_ID, systemProgram: SystemProgram.programId,
+          } as any).signers([bndAgent]).rpc();
+      });
+
+      it("EMA price = 0 → OracleFeedInvalid", async () => {
+        const clock = svm.getClock();
+        // ema_price = 0 (brand-new feed before first EMA cycle)
+        createMockPythAccount(
+          pythFeedKeypair.publicKey,
+          15_000_000_000n,  // spot $150
+          50_000_000n,
+          -8,
+          clock.unixTimestamp,
+          1,
+          clock.slot,
+          0n,               // EMA = 0 (uninitialized)
+          0n,
+        );
+
+        const [sessionPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("session"), oracleVaultPda.toBuffer(), oracleAgent.publicKey.toBuffer(), oracleMint.toBuffer()],
+          program.programId,
+        );
+
+        try {
+          await program.methods
+            .validateAndAuthorize({ swap: {} }, oracleMint, new BN(100_000_000), jupiterProgramId, null)
+            .accounts({
+              agent: oracleAgent.publicKey, vault: oracleVaultPda, policy: oraclePolicyPda,
+              tracker: oracleTrackerPda, oracleRegistry: oracleRegistryPda,
+              session: sessionPda, vaultTokenAccount: vaultOracleAta,
+              tokenMintAccount: oracleMint, tokenProgram: TOKEN_PROGRAM_ID,
+              systemProgram: SystemProgram.programId,
+            } as any)
+            .remainingAccounts([{ pubkey: pythFeedKeypair.publicKey, isWritable: false, isSigner: false }])
+            .signers([oracleAgent])
+            .rpc();
+          expect.fail("Should have thrown — EMA price is 0");
+        } catch (err: any) {
+          expect(err.toString()).to.include("OracleFeedInvalid");
+        }
+      });
+
+      it("Switchboard unaffected: no EMA dependency", async () => {
+        // Verify Switchboard-only tokens still use bare median
+        const clock = svm.getClock();
+        const sbPrice = 150_000_000_000_000_000_000n; // $150 with 18 decimals
+
+        // Point registry to Switchboard feed
+        await program.methods
+          .updateOracleRegistry(
+            [{ mint: oracleMint, oracleFeed: switchboardFeedKeypair.publicKey, isStablecoin: false, fallbackFeed: PublicKey.default }],
+            [],
+          )
+          .accounts({
+            authority: owner.publicKey,
+            oracleRegistry: oracleRegistryPda,
+          } as any).rpc();
+
+        createMockSwitchboardAccount(
+          switchboardFeedKeypair.publicKey,
+          sbPrice,
+          clock.slot,
+        );
+
+        const sbVaultId = new BN(536);
+        const [sbVault] = PublicKey.findProgramAddressSync(
+          [Buffer.from("vault"), owner.publicKey.toBuffer(), sbVaultId.toArrayLike(Buffer, "le", 8)],
+          program.programId,
+        );
+        const [sbPolicy] = PublicKey.findProgramAddressSync(
+          [Buffer.from("policy"), sbVault.toBuffer()], program.programId,
+        );
+        const [sbTracker] = PublicKey.findProgramAddressSync(
+          [Buffer.from("tracker"), sbVault.toBuffer()], program.programId,
+        );
+
+        await program.methods
+          .initializeVault(
+            sbVaultId, new BN(10_000_000_000), new BN(1_000_000_000),
+            0, [], new BN(0) as any, 3, 0, new BN(0), [],
+          )
+          .accounts({
+            owner: owner.publicKey, vault: sbVault, policy: sbPolicy,
+            tracker: sbTracker, feeDestination: feeDestination.publicKey,
+            systemProgram: SystemProgram.programId,
+          } as any).rpc();
+
+        const sbAgent = Keypair.generate();
+        airdropSol(svm, sbAgent.publicKey, 5 * LAMPORTS_PER_SOL);
+        await program.methods.registerAgent(sbAgent.publicKey)
+          .accounts({ owner: owner.publicKey, vault: sbVault } as any).rpc();
+
+        const vaultAta = createAtaIdempotentHelper(
+          svm, (owner as any).payer, oracleMint, sbVault, true,
+        );
+        await program.methods.depositFunds(new BN(5_000_000_000))
+          .accounts({
+            owner: owner.publicKey, vault: sbVault, mint: oracleMint,
+            ownerTokenAccount: ownerOracleAta, vaultTokenAccount: vaultAta,
+            tokenProgram: TOKEN_PROGRAM_ID, associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          } as any).rpc();
+
+        const [sessionPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("session"), sbVault.toBuffer(), sbAgent.publicKey.toBuffer(), oracleMint.toBuffer()],
+          program.programId,
+        );
+
+        await program.methods
+          .validateAndAuthorize({ swap: {} }, oracleMint, new BN(1_000_000_000), jupiterProgramId, null)
+          .accounts({
+            agent: sbAgent.publicKey, vault: sbVault, policy: sbPolicy,
+            tracker: sbTracker, oracleRegistry: oracleRegistryPda,
+            session: sessionPda, vaultTokenAccount: vaultAta,
+            tokenMintAccount: oracleMint, tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          } as any)
+          .remainingAccounts([{ pubkey: switchboardFeedKeypair.publicKey, isWritable: false, isSigner: false }])
+          .signers([sbAgent])
+          .rpc();
+
+        const tracker = await program.account.spendTracker.fetch(sbTracker);
+        const total = tracker.buckets
+          .filter((b: any) => b.usdAmount.toNumber() > 0)
+          .reduce((sum: number, b: any) => sum + b.usdAmount.toNumber(), 0);
+        // 1 token * $150 = 150_000_000 USD-6 (bare median, no conf adjustment)
+        expect(total).to.equal(150_000_000);
+
+        // Restore registry to Pyth and finalize
+        await program.methods
+          .updateOracleRegistry(
+            [{ mint: oracleMint, oracleFeed: pythFeedKeypair.publicKey, isStablecoin: false, fallbackFeed: PublicKey.default }],
+            [],
+          )
+          .accounts({
+            authority: owner.publicKey,
+            oracleRegistry: oracleRegistryPda,
+          } as any).rpc();
+
+        const protocolAta = createAtaIdempotentHelper(
+          svm, (owner as any).payer, oracleMint, protocolTreasury, true,
+        );
+        await program.methods.finalizeSession(true)
+          .accounts({
+            payer: sbAgent.publicKey, vault: sbVault, policy: sbPolicy,
+            session: sessionPda, sessionRentRecipient: sbAgent.publicKey,
+            vaultTokenAccount: vaultAta, feeDestinationTokenAccount: null,
+            protocolTreasuryTokenAccount: protocolAta,
+            tokenProgram: TOKEN_PROGRAM_ID, systemProgram: SystemProgram.programId,
+          } as any).signers([sbAgent]).rpc();
+      });
+
+      it("adaptive conf spike: spot_conf > 5× ema_conf → OracleConfidenceSpike", async () => {
+        // price=$100, conf=3% (300M), ema_conf=0.5% (50M)
+        // adaptive_from_ema = 50M × 5 = 250M
+        // min_adaptive = 10B × 50/10000 = 50M
+        // threshold = max(250M, 50M) = 250M
+        // conf (300M) > threshold (250M) → REJECT
+        const clock = svm.getClock();
+        createMockPythAccount(
+          pythFeedKeypair.publicKey,
+          10_000_000_000n,  // $100
+          300_000_000n,      // 3% spot conf
+          -8,
+          clock.unixTimestamp,
+          1,
+          clock.slot,
+          10_000_000_000n,   // ema = $100 (same)
+          50_000_000n,       // ema_conf = 0.5% (normal)
+        );
+
+        const [sessionPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("session"), oracleVaultPda.toBuffer(), oracleAgent.publicKey.toBuffer(), oracleMint.toBuffer()],
+          program.programId,
+        );
+
+        try {
+          await program.methods
+            .validateAndAuthorize({ swap: {} }, oracleMint, new BN(100_000_000), jupiterProgramId, null)
+            .accounts({
+              agent: oracleAgent.publicKey, vault: oracleVaultPda, policy: oraclePolicyPda,
+              tracker: oracleTrackerPda, oracleRegistry: oracleRegistryPda,
+              session: sessionPda, vaultTokenAccount: vaultOracleAta,
+              tokenMintAccount: oracleMint, tokenProgram: TOKEN_PROGRAM_ID,
+              systemProgram: SystemProgram.programId,
+            } as any)
+            .remainingAccounts([{ pubkey: pythFeedKeypair.publicKey, isWritable: false, isSigner: false }])
+            .signers([oracleAgent])
+            .rpc();
+          expect.fail("Should have thrown — conf spike exceeds 5× ema_conf");
+        } catch (err: any) {
+          expect(err.toString()).to.include("OracleConfidenceSpike");
+        }
+      });
+
+      it("adaptive conf boundary: spot_conf = 5× ema_conf exactly → passes", async () => {
+        // price=$100, conf=2.5% (250M), ema_conf=0.5% (50M)
+        // threshold = max(50M×5=250M, 50M) = 250M
+        // conf (250M) <= threshold (250M) → PASS
+        const clock = svm.getClock();
+        createMockPythAccount(
+          pythFeedKeypair.publicKey,
+          10_000_000_000n,  // $100
+          250_000_000n,      // 2.5% spot conf (exactly 5× ema_conf)
+          -8,
+          clock.unixTimestamp,
+          1,
+          clock.slot,
+          10_000_000_000n,   // ema = $100
+          50_000_000n,       // ema_conf = 0.5%
+        );
+
+        const adpVaultId = new BN(537);
+        const [adpVault] = PublicKey.findProgramAddressSync(
+          [Buffer.from("vault"), owner.publicKey.toBuffer(), adpVaultId.toArrayLike(Buffer, "le", 8)],
+          program.programId,
+        );
+        const [adpPolicy] = PublicKey.findProgramAddressSync(
+          [Buffer.from("policy"), adpVault.toBuffer()], program.programId,
+        );
+        const [adpTracker] = PublicKey.findProgramAddressSync(
+          [Buffer.from("tracker"), adpVault.toBuffer()], program.programId,
+        );
+
+        await program.methods
+          .initializeVault(
+            adpVaultId, new BN(10_000_000_000), new BN(1_000_000_000),
+            0, [], new BN(0) as any, 3, 0, new BN(0), [],
+          )
+          .accounts({
+            owner: owner.publicKey, vault: adpVault, policy: adpPolicy,
+            tracker: adpTracker, feeDestination: feeDestination.publicKey,
+            systemProgram: SystemProgram.programId,
+          } as any).rpc();
+
+        const adpAgent = Keypair.generate();
+        airdropSol(svm, adpAgent.publicKey, 5 * LAMPORTS_PER_SOL);
+        await program.methods.registerAgent(adpAgent.publicKey)
+          .accounts({ owner: owner.publicKey, vault: adpVault } as any).rpc();
+
+        const vaultAta = createAtaIdempotentHelper(
+          svm, (owner as any).payer, oracleMint, adpVault, true,
+        );
+        await program.methods.depositFunds(new BN(5_000_000_000))
+          .accounts({
+            owner: owner.publicKey, vault: adpVault, mint: oracleMint,
+            ownerTokenAccount: ownerOracleAta, vaultTokenAccount: vaultAta,
+            tokenProgram: TOKEN_PROGRAM_ID, associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          } as any).rpc();
+
+        const [sessionPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("session"), adpVault.toBuffer(), adpAgent.publicKey.toBuffer(), oracleMint.toBuffer()],
+          program.programId,
+        );
+
+        // Should succeed — exactly at boundary
+        await program.methods
+          .validateAndAuthorize({ swap: {} }, oracleMint, new BN(1_000_000_000), jupiterProgramId, null)
+          .accounts({
+            agent: adpAgent.publicKey, vault: adpVault, policy: adpPolicy,
+            tracker: adpTracker, oracleRegistry: oracleRegistryPda,
+            session: sessionPda, vaultTokenAccount: vaultAta,
+            tokenMintAccount: oracleMint, tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          } as any)
+          .remainingAccounts([{ pubkey: pythFeedKeypair.publicKey, isWritable: false, isSigner: false }])
+          .signers([adpAgent])
+          .rpc();
+
+        const tracker = await program.account.spendTracker.fetch(adpTracker);
+        const total = tracker.buckets
+          .filter((b: any) => b.usdAmount.toNumber() > 0)
+          .reduce((sum: number, b: any) => sum + b.usdAmount.toNumber(), 0);
+        // 1 token * ($100 + $2 capped conf) = $102 = 102_000_000 USD-6
+        // 2.5% conf capped to 2%
+        expect(total).to.equal(102_000_000);
+
+        const protocolAta = createAtaIdempotentHelper(
+          svm, (owner as any).payer, oracleMint, protocolTreasury, true,
+        );
+        await program.methods.finalizeSession(true)
+          .accounts({
+            payer: adpAgent.publicKey, vault: adpVault, policy: adpPolicy,
+            session: sessionPda, sessionRentRecipient: adpAgent.publicKey,
+            vaultTokenAccount: vaultAta, feeDestinationTokenAccount: null,
+            protocolTreasuryTokenAccount: protocolAta,
+            tokenProgram: TOKEN_PROGRAM_ID, systemProgram: SystemProgram.programId,
+          } as any).signers([adpAgent]).rpc();
+      });
+
+      it("adaptive conf floor: ema_conf=0 → uses 0.5% of price as threshold", async () => {
+        // price=$100, conf=0.4% (40M), ema_conf=0
+        // adaptive_from_ema = 0 × 5 = 0
+        // min_adaptive = 10B × 50/10000 = 50M (0.5% floor)
+        // threshold = max(0, 50M) = 50M
+        // conf (40M) <= threshold (50M) → PASS
+        const clock = svm.getClock();
+        createMockPythAccount(
+          pythFeedKeypair.publicKey,
+          10_000_000_000n,  // $100
+          40_000_000n,       // 0.4% conf (below 0.5% floor)
+          -8,
+          clock.unixTimestamp,
+          1,
+          clock.slot,
+          10_000_000_000n,   // ema = $100
+          0n,                // ema_conf = 0 (stable/new feed)
+        );
+
+        const flVaultId = new BN(538);
+        const [flVault] = PublicKey.findProgramAddressSync(
+          [Buffer.from("vault"), owner.publicKey.toBuffer(), flVaultId.toArrayLike(Buffer, "le", 8)],
+          program.programId,
+        );
+        const [flPolicy] = PublicKey.findProgramAddressSync(
+          [Buffer.from("policy"), flVault.toBuffer()], program.programId,
+        );
+        const [flTracker] = PublicKey.findProgramAddressSync(
+          [Buffer.from("tracker"), flVault.toBuffer()], program.programId,
+        );
+
+        await program.methods
+          .initializeVault(
+            flVaultId, new BN(10_000_000_000), new BN(1_000_000_000),
+            0, [], new BN(0) as any, 3, 0, new BN(0), [],
+          )
+          .accounts({
+            owner: owner.publicKey, vault: flVault, policy: flPolicy,
+            tracker: flTracker, feeDestination: feeDestination.publicKey,
+            systemProgram: SystemProgram.programId,
+          } as any).rpc();
+
+        const flAgent = Keypair.generate();
+        airdropSol(svm, flAgent.publicKey, 5 * LAMPORTS_PER_SOL);
+        await program.methods.registerAgent(flAgent.publicKey)
+          .accounts({ owner: owner.publicKey, vault: flVault } as any).rpc();
+
+        const vaultAta = createAtaIdempotentHelper(
+          svm, (owner as any).payer, oracleMint, flVault, true,
+        );
+        await program.methods.depositFunds(new BN(5_000_000_000))
+          .accounts({
+            owner: owner.publicKey, vault: flVault, mint: oracleMint,
+            ownerTokenAccount: ownerOracleAta, vaultTokenAccount: vaultAta,
+            tokenProgram: TOKEN_PROGRAM_ID, associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          } as any).rpc();
+
+        const [sessionPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("session"), flVault.toBuffer(), flAgent.publicKey.toBuffer(), oracleMint.toBuffer()],
+          program.programId,
+        );
+
+        await program.methods
+          .validateAndAuthorize({ swap: {} }, oracleMint, new BN(1_000_000_000), jupiterProgramId, null)
+          .accounts({
+            agent: flAgent.publicKey, vault: flVault, policy: flPolicy,
+            tracker: flTracker, oracleRegistry: oracleRegistryPda,
+            session: sessionPda, vaultTokenAccount: vaultAta,
+            tokenMintAccount: oracleMint, tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          } as any)
+          .remainingAccounts([{ pubkey: pythFeedKeypair.publicKey, isWritable: false, isSigner: false }])
+          .signers([flAgent])
+          .rpc();
+
+        const tracker = await program.account.spendTracker.fetch(flTracker);
+        const total = tracker.buckets
+          .filter((b: any) => b.usdAmount.toNumber() > 0)
+          .reduce((sum: number, b: any) => sum + b.usdAmount.toNumber(), 0);
+        // 1 token * ($100 + $0.40 conf) = $100.40 = 100_400_000 USD-6
+        // 0.4% conf < 2% cap → uses actual
+        expect(total).to.equal(100_400_000);
+
+        const protocolAta = createAtaIdempotentHelper(
+          svm, (owner as any).payer, oracleMint, protocolTreasury, true,
+        );
+        await program.methods.finalizeSession(true)
+          .accounts({
+            payer: flAgent.publicKey, vault: flVault, policy: flPolicy,
+            session: sessionPda, sessionRentRecipient: flAgent.publicKey,
+            vaultTokenAccount: vaultAta, feeDestinationTokenAccount: null,
+            protocolTreasuryTokenAccount: protocolAta,
+            tokenProgram: TOKEN_PROGRAM_ID, systemProgram: SystemProgram.programId,
+          } as any).signers([flAgent]).rpc();
+      });
+
+      it("adaptive conf floor rejection: ema_conf=0, conf > 0.5% → OracleConfidenceSpike", async () => {
+        // price=$100, conf=0.6% (60M), ema_conf=0
+        // adaptive_from_ema = 0, min_adaptive = 50M (0.5% floor)
+        // threshold = 50M, conf (60M) > threshold → REJECT
+        const clock = svm.getClock();
+        createMockPythAccount(
+          pythFeedKeypair.publicKey,
+          10_000_000_000n,  // $100
+          60_000_000n,       // 0.6% conf (above 0.5% floor)
+          -8,
+          clock.unixTimestamp,
+          1,
+          clock.slot,
+          10_000_000_000n,   // ema = $100
+          0n,                // ema_conf = 0
+        );
+
+        const [sessionPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("session"), oracleVaultPda.toBuffer(), oracleAgent.publicKey.toBuffer(), oracleMint.toBuffer()],
+          program.programId,
+        );
+
+        try {
+          await program.methods
+            .validateAndAuthorize({ swap: {} }, oracleMint, new BN(100_000_000), jupiterProgramId, null)
+            .accounts({
+              agent: oracleAgent.publicKey, vault: oracleVaultPda, policy: oraclePolicyPda,
+              tracker: oracleTrackerPda, oracleRegistry: oracleRegistryPda,
+              session: sessionPda, vaultTokenAccount: vaultOracleAta,
+              tokenMintAccount: oracleMint, tokenProgram: TOKEN_PROGRAM_ID,
+              systemProgram: SystemProgram.programId,
+            } as any)
+            .remainingAccounts([{ pubkey: pythFeedKeypair.publicKey, isWritable: false, isSigner: false }])
+            .signers([oracleAgent])
+            .rpc();
+          expect.fail("Should have thrown — conf 0.6% exceeds 0.5% floor with ema_conf=0");
+        } catch (err: any) {
+          expect(err.toString()).to.include("OracleConfidenceSpike");
+        }
+      });
     });
   });
 

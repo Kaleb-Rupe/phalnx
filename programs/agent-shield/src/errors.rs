@@ -103,7 +103,7 @@ pub enum AgentShieldError {
     #[msg("Oracle-priced token requires feed account in remaining_accounts")]
     OracleAccountMissing,
 
-    #[msg("Oracle price confidence interval too wide")]
+    #[msg("Oracle spot confidence exceeds 20% safety valve (feed likely broken)")]
     OracleConfidenceTooWide,
 
     #[msg("Oracle account owner is not a recognized oracle program")]
@@ -143,4 +143,7 @@ pub enum AgentShieldError {
 
     #[msg("Both primary and fallback oracle feeds failed")]
     OracleBothFeedsFailed,
+
+    #[msg("Oracle confidence spike: spot_conf exceeds 5x ema_conf")]
+    OracleConfidenceSpike,
 }
