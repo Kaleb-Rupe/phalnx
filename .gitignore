@@ -35,5 +35,11 @@ certora/output/
 # Surfpool
 .surfpool/
 
+# Sec3 X-Ray scan artifacts
+.xray/
+
+# LLVM IR build artifacts
+*.ll
+
 # Claude Code skills (local development tools)
 .claude/skills/

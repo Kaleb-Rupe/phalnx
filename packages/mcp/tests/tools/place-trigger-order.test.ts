@@ -78,8 +78,7 @@ describe("shield_place_trigger_order", () => {
       deltaSizeAmount: "1000000000",
       isStopLoss: true,
     });
-    expect(
-      client.calls.some((c) => c.method === "flashTradePlaceTriggerOrder"),
-    ).to.be.true;
+    expect(client.calls.some((c) => c.method === "flashTradePlaceTriggerOrder"))
+      .to.be.true;
   });
 });

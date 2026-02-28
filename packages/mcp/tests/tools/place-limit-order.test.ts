@@ -67,9 +67,8 @@ describe("shield_place_limit_order", () => {
       sizeAmount: "5000000000",
       leverageBps: 20000,
     });
-    expect(
-      client.calls.some((c) => c.method === "flashTradePlaceLimitOrder"),
-    ).to.be.true;
+    expect(client.calls.some((c) => c.method === "flashTradePlaceLimitOrder"))
+      .to.be.true;
   });
 
   it("returns error on failure", async () => {

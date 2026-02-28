@@ -99,7 +99,6 @@ pub struct ValidateAndAuthorize<'info> {
         address = anchor_lang::solana_program::sysvar::instructions::ID
     )]
     pub instructions_sysvar: UncheckedAccount<'info>,
-
 }
 
 pub fn handler(
@@ -268,10 +267,7 @@ pub fn handler(
 
                     // Slippage verification on ALL DeFi instructions
                     if ix.program_id == JUPITER_PROGRAM {
-                        jupiter::verify_jupiter_slippage(
-                            &ix.data,
-                            policy.max_slippage_bps,
-                        )?;
+                        jupiter::verify_jupiter_slippage(&ix.data, policy.max_slippage_bps)?;
                     } else if ix.program_id == FLASH_TRADE_PROGRAM {
                         flash_trade::verify_flash_trade_instruction(&ix.data)?;
                     } else if ix.program_id == JUPITER_LEND_PROGRAM
@@ -297,9 +293,7 @@ pub fn handler(
                             if ix.accounts.len() > dest_idx
                                 && ix.accounts[dest_idx].pubkey == sc_key
                             {
-                                return Err(error!(
-                                    AgentShieldError::DustDepositDetected
-                                ));
+                                return Err(error!(AgentShieldError::DustDepositDetected));
                             }
                         }
                     }

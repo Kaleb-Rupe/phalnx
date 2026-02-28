@@ -29,6 +29,7 @@ import {
 import BN from "bn.js";
 import * as fs from "fs";
 import * as path from "path";
+import { execSync } from "child_process";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -123,11 +124,14 @@ export async function waitForReady(
 // ─── Local program deployment ────────────────────────────────────────────────
 
 /**
- * Deploy the local agent_shield.so to Surfnet, overriding the devnet-forked
- * program. This ensures tests run against the current codebase, not the
- * (possibly outdated) devnet-deployed version.
+ * Deploy the local agent_shield.so to Surfnet via `solana program deploy`.
  *
- * Uses surfnet_setAccount to write the program data account directly.
+ * surfnet_setAccount alone does NOT update the SVM's compiled program cache.
+ * The standard BPF Loader Deploy instruction is required to properly reload
+ * the executable. Steps:
+ *   1. Create a temporary deployer keypair and fund it
+ *   2. Change the devnet-forked program's upgrade authority to our deployer
+ *   3. Run `solana program deploy` which triggers a proper BPF reload
  */
 async function deployLocalProgram(connection: Connection): Promise<void> {
   const soPath = path.resolve(
@@ -140,34 +144,56 @@ async function deployLocalProgram(connection: Connection): Promise<void> {
     );
   }
 
-  const bytecode = fs.readFileSync(soPath);
+  // 1. Create temp deployer keypair
+  const deployer = Keypair.generate();
+  const deployerPath = path.resolve(__dirname, "../../.surfpool/deployer.json");
+  fs.mkdirSync(path.dirname(deployerPath), { recursive: true });
+  fs.writeFileSync(
+    deployerPath,
+    JSON.stringify(Array.from(deployer.secretKey)),
+  );
 
-  // Get the program data address from the program account
+  // 2. Fund deployer (need ~5 SOL for deploy buffer)
+  await surfnetRpc(connection, "surfnet_setAccount", [
+    deployer.publicKey.toString(),
+    { lamports: 10 * LAMPORTS_PER_SOL },
+  ]);
+
+  // 3. Change program upgrade authority to our deployer
   const programInfo = await connection.getAccountInfo(PROGRAM_ID);
   if (!programInfo) {
     throw new Error("Program account not found on Surfnet");
   }
   const programDataAddress = new PublicKey(programInfo.data.subarray(4, 36));
-
-  // Read current program data to preserve the 45-byte header
   const dataInfo = await connection.getAccountInfo(programDataAddress);
   if (!dataInfo) {
     throw new Error("Program data account not found on Surfnet");
   }
-  const existingHeader = dataInfo.data.subarray(0, 45);
 
-  // Construct new program data: existing header + local bytecode
-  const newData = Buffer.concat([existingHeader, bytecode]);
+  const modifiedData = Buffer.from(dataInfo.data);
+  modifiedData.writeUInt8(1, 12); // has_authority = true
+  deployer.publicKey.toBuffer().copy(modifiedData, 13);
 
-  // Write via surfnet_setAccount (data in hex encoding, no 0x prefix)
   await surfnetRpc(connection, "surfnet_setAccount", [
     programDataAddress.toString(),
     {
-      data: newData.toString("hex"),
-      owner: "BPFLoaderUpgradeab1e11111111111111111111111",
+      data: modifiedData.toString("hex"),
+      owner: dataInfo.owner.toString(),
       lamports: dataInfo.lamports,
     },
   ]);
+
+  // 4. Deploy via solana CLI (properly updates SVM program cache)
+  const rpcUrl =
+    (connection as any)._rpcEndpoint || SURFPOOL_RPC_URL;
+  execSync(
+    `solana program deploy "${soPath}" ` +
+      `--program-id ${PROGRAM_ID.toString()} ` +
+      `--keypair "${deployerPath}" ` +
+      `--url ${rpcUrl} ` +
+      `--upgrade-authority "${deployerPath}"`,
+    { stdio: "pipe", timeout: 30_000 },
+  );
 }
 
 // ─── Test environment ───────────────────────────────────────────────────────
@@ -364,11 +390,10 @@ export async function profileTransaction(
   tag?: string,
 ): Promise<ProfileResult> {
   // Use getTransactionProfile with the signature
-  const result = await surfnetRpc(
-    connection,
-    "surfnet_getTransactionProfile",
-    [{ signature: txSignature }, { depth: 1 }],
-  );
+  const result = await surfnetRpc(connection, "surfnet_getTransactionProfile", [
+    { signature: txSignature },
+    { depth: 1 },
+  ]);
   if (tag) result.tag = tag;
   return result;
 }

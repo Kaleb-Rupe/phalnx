@@ -36,9 +36,7 @@ describe("shield_squads_approve", () => {
   it("calls squadsApproveProposal on client", async () => {
     const client = createMockClient();
     await squadsApprove(client as any, mockConfig as any, validInput);
-    const call = client.calls.find(
-      (c) => c.method === "squadsApproveProposal",
-    );
+    const call = client.calls.find((c) => c.method === "squadsApproveProposal");
     expect(call).to.exist;
     const params = call!.args[0];
     expect(params.multisigPda.toBase58()).to.equal(multisig);
@@ -60,9 +58,7 @@ describe("shield_squads_approve", () => {
       ...validInput,
       memo: "LGTM",
     });
-    const call = client.calls.find(
-      (c) => c.method === "squadsApproveProposal",
-    );
+    const call = client.calls.find((c) => c.method === "squadsApproveProposal");
     expect(call!.args[0].memo).to.equal("LGTM");
   });
 

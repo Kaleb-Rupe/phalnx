@@ -258,14 +258,16 @@ const ERROR_MAP: Record<number, ErrorInfo> = {
   6036: {
     code: 6036,
     name: "NonTrackedSwapMustReturnStablecoin",
-    message: "Non-stablecoin swap must return stablecoin (balance did not increase)",
+    message:
+      "Non-stablecoin swap must return stablecoin (balance did not increase)",
     suggestion:
       "When swapping a non-stablecoin token, the output must be USDC or USDT and the vault's stablecoin balance must increase. Route through a stablecoin pair.",
   },
   6037: {
     code: 6037,
     name: "SlippageTooHigh",
-    message: "Jupiter slippage exceeds policy max_slippage_bps or quoted_out is zero",
+    message:
+      "Jupiter slippage exceeds policy max_slippage_bps or quoted_out is zero",
     suggestion:
       "Reduce the slippage tolerance or use shield_update_policy to increase maxSlippageBps.",
   },
@@ -293,7 +295,8 @@ const ERROR_MAP: Record<number, ErrorInfo> = {
   6041: {
     code: 6041,
     name: "DustDepositDetected",
-    message: "SPL Transfer to vault stablecoin ATA detected (dust deposit attack)",
+    message:
+      "SPL Transfer to vault stablecoin ATA detected (dust deposit attack)",
     suggestion:
       "A top-level SPL Token transfer to the vault's stablecoin account was detected between validate and finalize. Legitimate swaps use CPI through Jupiter/Flash Trade, not top-level transfers.",
   },
@@ -314,8 +317,7 @@ const ERROR_MAP: Record<number, ErrorInfo> = {
   6044: {
     code: 6044,
     name: "ProtocolMismatch",
-    message:
-      "DeFi instruction program does not match declared target_protocol",
+    message: "DeFi instruction program does not match declared target_protocol",
     suggestion:
       "The DeFi instruction targets a different program than declared in target_protocol. Ensure target_protocol matches the actual program ID of the DeFi instruction in the transaction.",
   },

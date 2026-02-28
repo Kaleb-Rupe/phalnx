@@ -638,9 +638,7 @@ async function main() {
         .string()
         .describe("Collateral amount in token base units"),
       side: z.enum(["long", "short"]).describe("Position side"),
-      positionPubKey: z
-        .string()
-        .describe("Position account address (base58)"),
+      positionPubKey: z.string().describe("Position account address (base58)"),
     },
     requireClient((input) =>
       addCollateral(client!, config!, input, custodyWallet),
@@ -654,13 +652,9 @@ async function main() {
     {
       vault: z.string().describe("Vault PDA address (base58)"),
       market: z.string().describe("Market/pool name (e.g. 'SOL', 'ETH')"),
-      collateralDeltaUsd: z
-        .string()
-        .describe("Collateral USD delta to remove"),
+      collateralDeltaUsd: z.string().describe("Collateral USD delta to remove"),
       side: z.enum(["long", "short"]).describe("Position side"),
-      positionPubKey: z
-        .string()
-        .describe("Position account address (base58)"),
+      positionPubKey: z.string().describe("Position account address (base58)"),
     },
     requireClient((input) =>
       removeCollateral(client!, config!, input, custodyWallet),
@@ -725,9 +719,7 @@ async function main() {
       receiveSymbol: z.string().describe("Receive token symbol"),
       side: z.enum(["long", "short"]).describe("Position side"),
       limitPrice: z.string().describe("Limit price in base units"),
-      reserveAmount: z
-        .string()
-        .describe("Reserve amount in token base units"),
+      reserveAmount: z.string().describe("Reserve amount in token base units"),
       sizeAmount: z.string().describe("Position size in base units"),
       leverageBps: z
         .number()
@@ -948,9 +940,7 @@ async function main() {
     "shield_get_recurring_orders",
     "List Jupiter recurring/DCA orders for a wallet. Read-only — no vault required.",
     {
-      user: z
-        .string()
-        .describe("Wallet address to query orders for (base58)"),
+      user: z.string().describe("Wallet address to query orders for (base58)"),
     },
     requireClient((input) => getRecurringOrders(client!, input)),
   );
@@ -960,9 +950,7 @@ async function main() {
     "shield_jupiter_portfolio",
     "Get portfolio positions across Jupiter-supported platforms. Beta API. Read-only — no vault required.",
     {
-      wallet: z
-        .string()
-        .describe("Wallet address to check portfolio (base58)"),
+      wallet: z.string().describe("Wallet address to check portfolio (base58)"),
     },
     requireClient((input) => jupiterPortfolio(client!, input)),
   );
@@ -1004,9 +992,7 @@ async function main() {
     {
       inputMint: z.string().describe("Input token mint address (base58)"),
       outputMint: z.string().describe("Output token mint address (base58)"),
-      makingAmount: z
-        .string()
-        .describe("Input amount in token base units"),
+      makingAmount: z.string().describe("Input amount in token base units"),
       takingAmount: z
         .string()
         .describe("Minimum output amount in token base units"),
@@ -1061,9 +1047,7 @@ async function main() {
     "shield_cancel_recurring_order",
     "Cancel a Jupiter recurring/DCA order. Client-side policy enforcement.",
     {
-      orderId: z
-        .string()
-        .describe("Jupiter recurring order ID to cancel"),
+      orderId: z.string().describe("Jupiter recurring order ID to cancel"),
     },
     requireClient((input) =>
       cancelRecurringOrder(client!, config!, input, custodyWallet),
@@ -1107,9 +1091,7 @@ async function main() {
         .describe("Delay in seconds between approval and execution"),
       memo: z.string().optional().describe("Optional memo"),
     },
-    requireClient((input) =>
-      squadsCreateMultisig(client!, config!, input),
-    ),
+    requireClient((input) => squadsCreateMultisig(client!, config!, input)),
   );
 
   registerTool(
@@ -1144,9 +1126,7 @@ async function main() {
         .describe("JSON string with action-specific params"),
       memo: z.string().optional().describe("Optional proposal memo"),
     },
-    requireClient((input) =>
-      squadsProposeAction(client!, config!, input),
-    ),
+    requireClient((input) => squadsProposeAction(client!, config!, input)),
   );
 
   registerTool(
@@ -1161,9 +1141,7 @@ async function main() {
         .describe("Transaction index to approve (numeric string)"),
       memo: z.string().optional().describe("Optional approval memo"),
     },
-    requireClient((input) =>
-      squadsApprove(client!, config!, input),
-    ),
+    requireClient((input) => squadsApprove(client!, config!, input)),
   );
 
   registerTool(
@@ -1177,9 +1155,7 @@ async function main() {
         .string()
         .describe("Transaction index to reject (numeric string)"),
     },
-    requireClient((input) =>
-      squadsReject(client!, config!, input),
-    ),
+    requireClient((input) => squadsReject(client!, config!, input)),
   );
 
   registerTool(
@@ -1193,9 +1169,7 @@ async function main() {
         .string()
         .describe("Transaction index to execute (numeric string)"),
     },
-    requireClient((input) =>
-      squadsExecute(client!, config!, input),
-    ),
+    requireClient((input) => squadsExecute(client!, config!, input)),
   );
 
   registerTool(
@@ -1210,9 +1184,7 @@ async function main() {
         .optional()
         .describe("Optional transaction index to check proposal status"),
     },
-    requireClient((input) =>
-      squadsStatus(client!, input),
-    ),
+    requireClient((input) => squadsStatus(client!, input)),
   );
 
   // ── MCP Resources ───────────────────────────────────────────

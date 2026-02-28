@@ -137,8 +137,8 @@ pub const JUPITER_EARN_PROGRAM: Pubkey = Pubkey::new_from_array([
 /// Jupiter Borrow/Vaults program
 /// Base58: jupr81YtYssSyPt8jbnGuiWon5f6x9TcDEFxYe3Bdzi
 pub const JUPITER_BORROW_PROGRAM: Pubkey = Pubkey::new_from_array([
-    10, 254, 31, 147, 34, 167, 161, 209, 195, 102, 29, 103, 23, 145, 202, 155, 48, 211, 32, 47,
-    30, 31, 214, 135, 58, 119, 204, 220, 113, 143, 17, 51,
+    10, 254, 31, 147, 34, 167, 161, 209, 195, 102, 29, 103, 23, 145, 202, 155, 48, 211, 32, 47, 30,
+    31, 214, 135, 58, 119, 204, 220, 113, 143, 17, 51,
 ]);
 
 /// USD amounts use 6 decimal places (matching USDC/USDT precision).

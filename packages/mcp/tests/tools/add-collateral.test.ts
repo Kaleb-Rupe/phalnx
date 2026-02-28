@@ -59,9 +59,8 @@ describe("shield_add_collateral", () => {
       side: "long",
       positionPubKey: Keypair.generate().publicKey.toBase58(),
     });
-    expect(
-      client.calls.some((c) => c.method === "flashTradeAddCollateral"),
-    ).to.be.true;
+    expect(client.calls.some((c) => c.method === "flashTradeAddCollateral")).to
+      .be.true;
   });
 
   it("returns error without agent keypair", async () => {

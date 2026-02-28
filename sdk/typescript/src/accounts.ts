@@ -171,5 +171,3 @@ export async function fetchPendingPolicy(
     return null;
   }
 }
-
-

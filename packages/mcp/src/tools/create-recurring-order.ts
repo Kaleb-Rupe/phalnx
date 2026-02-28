@@ -17,9 +17,7 @@ export const createRecurringOrderSchema = z.object({
     .number()
     .min(2)
     .describe("Number of orders to split into (min 2)"),
-  intervalSeconds: z
-    .number()
-    .describe("Interval between orders in seconds"),
+  intervalSeconds: z.number().describe("Interval between orders in seconds"),
 });
 
 export type CreateRecurringOrderInput = z.infer<

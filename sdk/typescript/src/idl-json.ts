@@ -1,3631 +1,2703 @@
-export const IDL =
-{
-  "address": "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL",
-  "metadata": {
-    "name": "agent_shield",
-    "version": "0.1.0",
-    "spec": "0.1.0",
-    "description": "On-chain guardrails for AI agents on Solana - Permission controls, spending limits, and audit infrastructure for autonomous agents"
+export const IDL = {
+  address: "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL",
+  metadata: {
+    name: "agent_shield",
+    version: "0.1.0",
+    spec: "0.1.0",
+    description:
+      "On-chain guardrails for AI agents on Solana - Permission controls, spending limits, and audit infrastructure for autonomous agents",
   },
-  "instructions": [
+  instructions: [
     {
-      "name": "agent_transfer",
-      "docs": [
+      name: "agent_transfer",
+      docs: [
         "Transfer tokens from the vault to an allowed destination.",
-        "Only the agent can call this. Stablecoin-only."
+        "Only the agent can call this. Stablecoin-only.",
       ],
-      "discriminator": [
-        199,
-        111,
-        151,
-        49,
-        124,
-        13,
-        150,
-        44
-      ],
-      "accounts": [
+      discriminator: [199, 111, 151, 49, 124, 13, 150, 44],
+      accounts: [
         {
-          "name": "agent",
-          "writable": true,
-          "signer": true
+          name: "agent",
+          writable: true,
+          signer: true,
         },
         {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
+          name: "vault",
+          writable: true,
+          pda: {
+            seeds: [
               {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                kind: "const",
+                value: [118, 97, 117, 108, 116],
               },
               {
-                "kind": "account",
-                "path": "vault.owner",
-                "account": "AgentVault"
+                kind: "account",
+                path: "vault.owner",
+                account: "AgentVault",
               },
               {
-                "kind": "account",
-                "path": "vault.vault_id",
-                "account": "AgentVault"
-              }
-            ]
+                kind: "account",
+                path: "vault.vault_id",
+                account: "AgentVault",
+              },
+            ],
           },
-          "relations": [
-            "policy"
-          ]
+          relations: ["policy"],
         },
         {
-          "name": "policy",
-          "pda": {
-            "seeds": [
+          name: "policy",
+          pda: {
+            seeds: [
               {
-                "kind": "const",
-                "value": [
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
+                kind: "const",
+                value: [112, 111, 108, 105, 99, 121],
               },
               {
-                "kind": "account",
-                "path": "vault"
-              }
-            ]
-          }
+                kind: "account",
+                path: "vault",
+              },
+            ],
+          },
         },
         {
-          "name": "tracker",
-          "docs": [
-            "Zero-copy SpendTracker"
-          ],
-          "writable": true,
-          "pda": {
-            "seeds": [
+          name: "tracker",
+          docs: ["Zero-copy SpendTracker"],
+          writable: true,
+          pda: {
+            seeds: [
               {
-                "kind": "const",
-                "value": [
-                  116,
-                  114,
-                  97,
-                  99,
-                  107,
-                  101,
-                  114
-                ]
+                kind: "const",
+                value: [116, 114, 97, 99, 107, 101, 114],
               },
               {
-                "kind": "account",
-                "path": "vault"
-              }
-            ]
-          }
+                kind: "account",
+                path: "vault",
+              },
+            ],
+          },
         },
         {
-          "name": "vault_token_account",
-          "docs": [
-            "Vault's PDA-owned token account (source)"
-          ],
-          "writable": true
+          name: "vault_token_account",
+          docs: ["Vault's PDA-owned token account (source)"],
+          writable: true,
         },
         {
-          "name": "token_mint_account",
-          "docs": [
-            "Token mint account for decimals validation"
-          ]
+          name: "token_mint_account",
+          docs: ["Token mint account for decimals validation"],
         },
         {
-          "name": "destination_token_account",
-          "docs": [
-            "Destination token account (must be in allowed destinations)"
-          ],
-          "writable": true
+          name: "destination_token_account",
+          docs: ["Destination token account (must be in allowed destinations)"],
+          writable: true,
         },
         {
-          "name": "fee_destination_token_account",
-          "docs": [
-            "Developer fee destination token account"
-          ],
-          "writable": true,
-          "optional": true
+          name: "fee_destination_token_account",
+          docs: ["Developer fee destination token account"],
+          writable: true,
+          optional: true,
         },
         {
-          "name": "protocol_treasury_token_account",
-          "docs": [
-            "Protocol treasury token account"
-          ],
-          "writable": true,
-          "optional": true
+          name: "protocol_treasury_token_account",
+          docs: ["Protocol treasury token account"],
+          writable: true,
+          optional: true,
         },
         {
-          "name": "token_program",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        }
+          name: "token_program",
+          address: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        },
       ],
-      "args": [
+      args: [
         {
-          "name": "amount",
-          "type": "u64"
-        }
-      ]
+          name: "amount",
+          type: "u64",
+        },
+      ],
     },
     {
-      "name": "apply_pending_policy",
-      "docs": [
-        "Apply a queued policy update after the timelock expires."
-      ],
-      "discriminator": [
-        114,
-        212,
-        19,
-        227,
-        89,
-        199,
-        74,
-        62
-      ],
-      "accounts": [
+      name: "apply_pending_policy",
+      docs: ["Apply a queued policy update after the timelock expires."],
+      discriminator: [114, 212, 19, 227, 89, 199, 74, 62],
+      accounts: [
         {
-          "name": "owner",
-          "writable": true,
-          "signer": true,
-          "relations": [
-            "vault"
-          ]
+          name: "owner",
+          writable: true,
+          signer: true,
+          relations: ["vault"],
         },
         {
-          "name": "vault",
-          "pda": {
-            "seeds": [
+          name: "vault",
+          pda: {
+            seeds: [
               {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                kind: "const",
+                value: [118, 97, 117, 108, 116],
               },
               {
-                "kind": "account",
-                "path": "owner"
+                kind: "account",
+                path: "owner",
               },
               {
-                "kind": "account",
-                "path": "vault.vault_id",
-                "account": "AgentVault"
-              }
-            ]
+                kind: "account",
+                path: "vault.vault_id",
+                account: "AgentVault",
+              },
+            ],
           },
-          "relations": [
-            "policy",
-            "pending_policy"
-          ]
+          relations: ["policy", "pending_policy"],
         },
         {
-          "name": "policy",
-          "writable": true,
-          "pda": {
-            "seeds": [
+          name: "policy",
+          writable: true,
+          pda: {
+            seeds: [
               {
-                "kind": "const",
-                "value": [
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
+                kind: "const",
+                value: [112, 111, 108, 105, 99, 121],
               },
               {
-                "kind": "account",
-                "path": "vault"
-              }
-            ]
-          }
+                kind: "account",
+                path: "vault",
+              },
+            ],
+          },
         },
         {
-          "name": "pending_policy",
-          "writable": true,
-          "pda": {
-            "seeds": [
+          name: "pending_policy",
+          writable: true,
+          pda: {
+            seeds: [
               {
-                "kind": "const",
-                "value": [
-                  112,
-                  101,
-                  110,
-                  100,
-                  105,
-                  110,
-                  103,
-                  95,
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
+                kind: "const",
+                value: [
+                  112, 101, 110, 100, 105, 110, 103, 95, 112, 111, 108, 105, 99,
+                  121,
+                ],
               },
               {
-                "kind": "account",
-                "path": "vault"
-              }
-            ]
-          }
-        }
+                kind: "account",
+                path: "vault",
+              },
+            ],
+          },
+        },
       ],
-      "args": []
+      args: [],
     },
     {
-      "name": "cancel_pending_policy",
-      "docs": [
-        "Cancel a queued policy update."
-      ],
-      "discriminator": [
-        153,
-        36,
-        104,
-        200,
-        50,
-        94,
-        207,
-        33
-      ],
-      "accounts": [
+      name: "cancel_pending_policy",
+      docs: ["Cancel a queued policy update."],
+      discriminator: [153, 36, 104, 200, 50, 94, 207, 33],
+      accounts: [
         {
-          "name": "owner",
-          "writable": true,
-          "signer": true,
-          "relations": [
-            "vault"
-          ]
+          name: "owner",
+          writable: true,
+          signer: true,
+          relations: ["vault"],
         },
         {
-          "name": "vault",
-          "pda": {
-            "seeds": [
+          name: "vault",
+          pda: {
+            seeds: [
               {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                kind: "const",
+                value: [118, 97, 117, 108, 116],
               },
               {
-                "kind": "account",
-                "path": "owner"
+                kind: "account",
+                path: "owner",
               },
               {
-                "kind": "account",
-                "path": "vault.vault_id",
-                "account": "AgentVault"
-              }
-            ]
+                kind: "account",
+                path: "vault.vault_id",
+                account: "AgentVault",
+              },
+            ],
           },
-          "relations": [
-            "pending_policy"
-          ]
+          relations: ["pending_policy"],
         },
         {
-          "name": "pending_policy",
-          "writable": true,
-          "pda": {
-            "seeds": [
+          name: "pending_policy",
+          writable: true,
+          pda: {
+            seeds: [
               {
-                "kind": "const",
-                "value": [
-                  112,
-                  101,
-                  110,
-                  100,
-                  105,
-                  110,
-                  103,
-                  95,
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
+                kind: "const",
+                value: [
+                  112, 101, 110, 100, 105, 110, 103, 95, 112, 111, 108, 105, 99,
+                  121,
+                ],
               },
               {
-                "kind": "account",
-                "path": "vault"
-              }
-            ]
-          }
-        }
+                kind: "account",
+                path: "vault",
+              },
+            ],
+          },
+        },
       ],
-      "args": []
+      args: [],
     },
     {
-      "name": "close_vault",
-      "docs": [
-        "Close the vault entirely. Reclaims rent from all PDAs."
-      ],
-      "discriminator": [
-        141,
-        103,
-        17,
-        126,
-        72,
-        75,
-        29,
-        29
-      ],
-      "accounts": [
+      name: "close_vault",
+      docs: ["Close the vault entirely. Reclaims rent from all PDAs."],
+      discriminator: [141, 103, 17, 126, 72, 75, 29, 29],
+      accounts: [
         {
-          "name": "owner",
-          "writable": true,
-          "signer": true,
-          "relations": [
-            "vault"
-          ]
+          name: "owner",
+          writable: true,
+          signer: true,
+          relations: ["vault"],
         },
         {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
+          name: "vault",
+          writable: true,
+          pda: {
+            seeds: [
               {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                kind: "const",
+                value: [118, 97, 117, 108, 116],
               },
               {
-                "kind": "account",
-                "path": "owner"
+                kind: "account",
+                path: "owner",
               },
               {
-                "kind": "account",
-                "path": "vault.vault_id",
-                "account": "AgentVault"
-              }
-            ]
+                kind: "account",
+                path: "vault.vault_id",
+                account: "AgentVault",
+              },
+            ],
           },
-          "relations": [
-            "policy"
-          ]
+          relations: ["policy"],
         },
         {
-          "name": "policy",
-          "writable": true,
-          "pda": {
-            "seeds": [
+          name: "policy",
+          writable: true,
+          pda: {
+            seeds: [
               {
-                "kind": "const",
-                "value": [
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
+                kind: "const",
+                value: [112, 111, 108, 105, 99, 121],
               },
               {
-                "kind": "account",
-                "path": "vault"
-              }
-            ]
-          }
+                kind: "account",
+                path: "vault",
+              },
+            ],
+          },
         },
         {
-          "name": "tracker",
-          "docs": [
-            "Zero-copy SpendTracker — close returns rent to owner"
-          ],
-          "writable": true,
-          "pda": {
-            "seeds": [
+          name: "tracker",
+          docs: ["Zero-copy SpendTracker — close returns rent to owner"],
+          writable: true,
+          pda: {
+            seeds: [
               {
-                "kind": "const",
-                "value": [
-                  116,
-                  114,
-                  97,
-                  99,
-                  107,
-                  101,
-                  114
-                ]
+                kind: "const",
+                value: [116, 114, 97, 99, 107, 101, 114],
               },
               {
-                "kind": "account",
-                "path": "vault"
-              }
-            ]
-          }
+                kind: "account",
+                path: "vault",
+              },
+            ],
+          },
         },
         {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        }
+          name: "system_program",
+          address: "11111111111111111111111111111111",
+        },
       ],
-      "args": []
+      args: [],
     },
     {
-      "name": "deposit_funds",
-      "docs": [
+      name: "deposit_funds",
+      docs: [
         "Deposit SPL tokens into the vault's PDA-controlled token account.",
-        "Only the owner can call this."
+        "Only the owner can call this.",
       ],
-      "discriminator": [
-        202,
-        39,
-        52,
-        211,
-        53,
-        20,
-        250,
-        88
-      ],
-      "accounts": [
+      discriminator: [202, 39, 52, 211, 53, 20, 250, 88],
+      accounts: [
         {
-          "name": "owner",
-          "writable": true,
-          "signer": true,
-          "relations": [
-            "vault"
-          ]
+          name: "owner",
+          writable: true,
+          signer: true,
+          relations: ["vault"],
         },
         {
-          "name": "vault",
-          "pda": {
-            "seeds": [
+          name: "vault",
+          pda: {
+            seeds: [
               {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                kind: "const",
+                value: [118, 97, 117, 108, 116],
               },
               {
-                "kind": "account",
-                "path": "owner"
+                kind: "account",
+                path: "owner",
               },
               {
-                "kind": "account",
-                "path": "vault.vault_id",
-                "account": "AgentVault"
-              }
-            ]
-          }
-        },
-        {
-          "name": "mint"
-        },
-        {
-          "name": "owner_token_account",
-          "docs": [
-            "Owner's token account to transfer from"
-          ],
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "owner"
+                kind: "account",
+                path: "vault.vault_id",
+                account: "AgentVault",
               },
-              {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "mint"
-              }
             ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
-        },
-        {
-          "name": "vault_token_account",
-          "docs": [
-            "Vault's PDA-controlled token account"
-          ],
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "vault"
-              },
-              {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "mint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
-        },
-        {
-          "name": "token_program",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        },
-        {
-          "name": "associated_token_program",
-          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "amount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "finalize_session",
-      "docs": [
-        "Finalize a session after the DeFi action completes.",
-        "Revokes delegation and closes the SessionAuthority PDA."
-      ],
-      "discriminator": [
-        34,
-        148,
-        144,
-        47,
-        37,
-        130,
-        206,
-        161
-      ],
-      "accounts": [
-        {
-          "name": "payer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "vault.owner",
-                "account": "AgentVault"
-              },
-              {
-                "kind": "account",
-                "path": "vault.vault_id",
-                "account": "AgentVault"
-              }
-            ]
           },
-          "relations": [
-            "session"
-          ]
         },
         {
-          "name": "session",
-          "docs": [
-            "Session rent is returned to the session's agent (who paid for it).",
-            "Seeds include token_mint for per-token concurrent sessions."
-          ],
-          "writable": true,
-          "pda": {
-            "seeds": [
+          name: "mint",
+        },
+        {
+          name: "owner_token_account",
+          docs: ["Owner's token account to transfer from"],
+          writable: true,
+          pda: {
+            seeds: [
               {
-                "kind": "const",
-                "value": [
-                  115,
-                  101,
-                  115,
-                  115,
-                  105,
-                  111,
-                  110
-                ]
+                kind: "account",
+                path: "owner",
               },
               {
-                "kind": "account",
-                "path": "vault"
+                kind: "const",
+                value: [
+                  6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206,
+                  235, 121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140,
+                  245, 133, 126, 255, 0, 169,
+                ],
               },
               {
-                "kind": "account",
-                "path": "session.agent",
-                "account": "SessionAuthority"
+                kind: "account",
+                path: "mint",
+              },
+            ],
+            program: {
+              kind: "const",
+              value: [
+                140, 151, 37, 143, 78, 36, 137, 241, 187, 61, 16, 41, 20, 142,
+                13, 131, 11, 90, 19, 153, 218, 255, 16, 132, 4, 142, 123, 216,
+                219, 233, 248, 89,
+              ],
+            },
+          },
+        },
+        {
+          name: "vault_token_account",
+          docs: ["Vault's PDA-controlled token account"],
+          writable: true,
+          pda: {
+            seeds: [
+              {
+                kind: "account",
+                path: "vault",
               },
               {
-                "kind": "account",
-                "path": "session.authorized_token",
-                "account": "SessionAuthority"
-              }
-            ]
-          }
+                kind: "const",
+                value: [
+                  6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206,
+                  235, 121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140,
+                  245, 133, 126, 255, 0, 169,
+                ],
+              },
+              {
+                kind: "account",
+                path: "mint",
+              },
+            ],
+            program: {
+              kind: "const",
+              value: [
+                140, 151, 37, 143, 78, 36, 137, 241, 187, 61, 16, 41, 20, 142,
+                13, 131, 11, 90, 19, 153, 218, 255, 16, 132, 4, 142, 123, 216,
+                219, 233, 248, 89,
+              ],
+            },
+          },
         },
         {
-          "name": "session_rent_recipient",
-          "writable": true
+          name: "token_program",
+          address: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         },
         {
-          "name": "vault_token_account",
-          "docs": [
-            "Vault's PDA token account for the session's token"
-          ],
-          "writable": true,
-          "optional": true
+          name: "associated_token_program",
+          address: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
         },
         {
-          "name": "output_stablecoin_account",
-          "docs": [
-            "Vault's stablecoin ATA for non-stablecoin→stablecoin swap verification.",
-            "Required when session.output_mint != Pubkey::default()."
-          ],
-          "writable": true,
-          "optional": true
+          name: "system_program",
+          address: "11111111111111111111111111111111",
         },
-        {
-          "name": "token_program",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        }
       ],
-      "args": [
+      args: [
         {
-          "name": "success",
-          "type": "bool"
-        }
-      ]
+          name: "amount",
+          type: "u64",
+        },
+      ],
     },
     {
-      "name": "initialize_vault",
-      "docs": [
+      name: "finalize_session",
+      docs: [
+        "Finalize a session after the DeFi action completes.",
+        "Revokes delegation and closes the SessionAuthority PDA.",
+      ],
+      discriminator: [34, 148, 144, 47, 37, 130, 206, 161],
+      accounts: [
+        {
+          name: "payer",
+          writable: true,
+          signer: true,
+        },
+        {
+          name: "vault",
+          writable: true,
+          pda: {
+            seeds: [
+              {
+                kind: "const",
+                value: [118, 97, 117, 108, 116],
+              },
+              {
+                kind: "account",
+                path: "vault.owner",
+                account: "AgentVault",
+              },
+              {
+                kind: "account",
+                path: "vault.vault_id",
+                account: "AgentVault",
+              },
+            ],
+          },
+          relations: ["session"],
+        },
+        {
+          name: "session",
+          docs: [
+            "Session rent is returned to the session's agent (who paid for it).",
+            "Seeds include token_mint for per-token concurrent sessions.",
+          ],
+          writable: true,
+          pda: {
+            seeds: [
+              {
+                kind: "const",
+                value: [115, 101, 115, 115, 105, 111, 110],
+              },
+              {
+                kind: "account",
+                path: "vault",
+              },
+              {
+                kind: "account",
+                path: "session.agent",
+                account: "SessionAuthority",
+              },
+              {
+                kind: "account",
+                path: "session.authorized_token",
+                account: "SessionAuthority",
+              },
+            ],
+          },
+        },
+        {
+          name: "session_rent_recipient",
+          writable: true,
+        },
+        {
+          name: "vault_token_account",
+          docs: ["Vault's PDA token account for the session's token"],
+          writable: true,
+          optional: true,
+        },
+        {
+          name: "output_stablecoin_account",
+          docs: [
+            "Vault's stablecoin ATA for non-stablecoin→stablecoin swap verification.",
+            "Required when session.output_mint != Pubkey::default().",
+          ],
+          writable: true,
+          optional: true,
+        },
+        {
+          name: "token_program",
+          address: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        },
+        {
+          name: "system_program",
+          address: "11111111111111111111111111111111",
+        },
+      ],
+      args: [
+        {
+          name: "success",
+          type: "bool",
+        },
+      ],
+    },
+    {
+      name: "initialize_vault",
+      docs: [
         "Initialize a new agent vault with policy configuration.",
         "Only the owner can call this. Creates vault PDA, policy PDA,",
-        "and zero-copy spend tracker PDA."
+        "and zero-copy spend tracker PDA.",
       ],
-      "discriminator": [
-        48,
-        191,
-        163,
-        44,
-        71,
-        129,
-        63,
-        164
-      ],
-      "accounts": [
+      discriminator: [48, 191, 163, 44, 71, 129, 63, 164],
+      accounts: [
         {
-          "name": "owner",
-          "writable": true,
-          "signer": true
+          name: "owner",
+          writable: true,
+          signer: true,
         },
         {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
+          name: "vault",
+          writable: true,
+          pda: {
+            seeds: [
               {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                kind: "const",
+                value: [118, 97, 117, 108, 116],
               },
               {
-                "kind": "account",
-                "path": "owner"
+                kind: "account",
+                path: "owner",
               },
               {
-                "kind": "arg",
-                "path": "vault_id"
-              }
-            ]
-          }
-        },
-        {
-          "name": "policy",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
+                kind: "arg",
+                path: "vault_id",
               },
-              {
-                "kind": "account",
-                "path": "vault"
-              }
-            ]
-          }
-        },
-        {
-          "name": "tracker",
-          "docs": [
-            "Zero-copy SpendTracker — 2,352 bytes fixed size"
-          ],
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  116,
-                  114,
-                  97,
-                  99,
-                  107,
-                  101,
-                  114
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "vault"
-              }
-            ]
-          }
-        },
-        {
-          "name": "fee_destination"
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "vault_id",
-          "type": "u64"
-        },
-        {
-          "name": "daily_spending_cap_usd",
-          "type": "u64"
-        },
-        {
-          "name": "max_transaction_size_usd",
-          "type": "u64"
-        },
-        {
-          "name": "protocol_mode",
-          "type": "u8"
-        },
-        {
-          "name": "protocols",
-          "type": {
-            "vec": "pubkey"
-          }
-        },
-        {
-          "name": "max_leverage_bps",
-          "type": "u16"
-        },
-        {
-          "name": "max_concurrent_positions",
-          "type": "u8"
-        },
-        {
-          "name": "developer_fee_rate",
-          "type": "u16"
-        },
-        {
-          "name": "max_slippage_bps",
-          "type": "u16"
-        },
-        {
-          "name": "timelock_duration",
-          "type": "u64"
-        },
-        {
-          "name": "allowed_destinations",
-          "type": {
-            "vec": "pubkey"
-          }
-        }
-      ]
-    },
-    {
-      "name": "queue_policy_update",
-      "docs": [
-        "Queue a policy update when timelock is active."
-      ],
-      "discriminator": [
-        149,
-        18,
-        76,
-        197,
-        179,
-        193,
-        91,
-        77
-      ],
-      "accounts": [
-        {
-          "name": "owner",
-          "writable": true,
-          "signer": true,
-          "relations": [
-            "vault"
-          ]
-        },
-        {
-          "name": "vault",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "owner"
-              },
-              {
-                "kind": "account",
-                "path": "vault.vault_id",
-                "account": "AgentVault"
-              }
-            ]
+            ],
           },
-          "relations": [
-            "policy"
-          ]
         },
         {
-          "name": "policy",
-          "pda": {
-            "seeds": [
+          name: "policy",
+          writable: true,
+          pda: {
+            seeds: [
               {
-                "kind": "const",
-                "value": [
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
+                kind: "const",
+                value: [112, 111, 108, 105, 99, 121],
               },
               {
-                "kind": "account",
-                "path": "vault"
-              }
-            ]
-          }
+                kind: "account",
+                path: "vault",
+              },
+            ],
+          },
         },
         {
-          "name": "pending_policy",
-          "writable": true,
-          "pda": {
-            "seeds": [
+          name: "tracker",
+          docs: ["Zero-copy SpendTracker — 2,352 bytes fixed size"],
+          writable: true,
+          pda: {
+            seeds: [
               {
-                "kind": "const",
-                "value": [
-                  112,
-                  101,
-                  110,
-                  100,
-                  105,
-                  110,
-                  103,
-                  95,
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
+                kind: "const",
+                value: [116, 114, 97, 99, 107, 101, 114],
               },
               {
-                "kind": "account",
-                "path": "vault"
-              }
-            ]
-          }
+                kind: "account",
+                path: "vault",
+              },
+            ],
+          },
         },
         {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        }
+          name: "fee_destination",
+        },
+        {
+          name: "system_program",
+          address: "11111111111111111111111111111111",
+        },
       ],
-      "args": [
+      args: [
         {
-          "name": "daily_spending_cap_usd",
-          "type": {
-            "option": "u64"
-          }
+          name: "vault_id",
+          type: "u64",
         },
         {
-          "name": "max_transaction_amount_usd",
-          "type": {
-            "option": "u64"
-          }
+          name: "daily_spending_cap_usd",
+          type: "u64",
         },
         {
-          "name": "protocol_mode",
-          "type": {
-            "option": "u8"
-          }
+          name: "max_transaction_size_usd",
+          type: "u64",
         },
         {
-          "name": "protocols",
-          "type": {
-            "option": {
-              "vec": "pubkey"
-            }
-          }
+          name: "protocol_mode",
+          type: "u8",
         },
         {
-          "name": "max_leverage_bps",
-          "type": {
-            "option": "u16"
-          }
+          name: "protocols",
+          type: {
+            vec: "pubkey",
+          },
         },
         {
-          "name": "can_open_positions",
-          "type": {
-            "option": "bool"
-          }
+          name: "max_leverage_bps",
+          type: "u16",
         },
         {
-          "name": "max_concurrent_positions",
-          "type": {
-            "option": "u8"
-          }
+          name: "max_concurrent_positions",
+          type: "u8",
         },
         {
-          "name": "developer_fee_rate",
-          "type": {
-            "option": "u16"
-          }
+          name: "developer_fee_rate",
+          type: "u16",
         },
         {
-          "name": "max_slippage_bps",
-          "type": {
-            "option": "u16"
-          }
+          name: "max_slippage_bps",
+          type: "u16",
         },
         {
-          "name": "timelock_duration",
-          "type": {
-            "option": "u64"
-          }
+          name: "timelock_duration",
+          type: "u64",
         },
         {
-          "name": "allowed_destinations",
-          "type": {
-            "option": {
-              "vec": "pubkey"
-            }
-          }
-        }
-      ]
+          name: "allowed_destinations",
+          type: {
+            vec: "pubkey",
+          },
+        },
+      ],
     },
     {
-      "name": "reactivate_vault",
-      "docs": [
-        "Reactivate a frozen vault. Optionally rotate the agent key."
-      ],
-      "discriminator": [
-        245,
-        50,
-        143,
-        70,
-        114,
-        220,
-        25,
-        251
-      ],
-      "accounts": [
+      name: "queue_policy_update",
+      docs: ["Queue a policy update when timelock is active."],
+      discriminator: [149, 18, 76, 197, 179, 193, 91, 77],
+      accounts: [
         {
-          "name": "owner",
-          "signer": true,
-          "relations": [
-            "vault"
-          ]
+          name: "owner",
+          writable: true,
+          signer: true,
+          relations: ["vault"],
         },
         {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
+          name: "vault",
+          pda: {
+            seeds: [
               {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                kind: "const",
+                value: [118, 97, 117, 108, 116],
               },
               {
-                "kind": "account",
-                "path": "owner"
+                kind: "account",
+                path: "owner",
               },
               {
-                "kind": "account",
-                "path": "vault.vault_id",
-                "account": "AgentVault"
-              }
-            ]
-          }
-        }
-      ],
-      "args": [
+                kind: "account",
+                path: "vault.vault_id",
+                account: "AgentVault",
+              },
+            ],
+          },
+          relations: ["policy"],
+        },
         {
-          "name": "new_agent",
-          "type": {
-            "option": "pubkey"
-          }
-        }
-      ]
+          name: "policy",
+          pda: {
+            seeds: [
+              {
+                kind: "const",
+                value: [112, 111, 108, 105, 99, 121],
+              },
+              {
+                kind: "account",
+                path: "vault",
+              },
+            ],
+          },
+        },
+        {
+          name: "pending_policy",
+          writable: true,
+          pda: {
+            seeds: [
+              {
+                kind: "const",
+                value: [
+                  112, 101, 110, 100, 105, 110, 103, 95, 112, 111, 108, 105, 99,
+                  121,
+                ],
+              },
+              {
+                kind: "account",
+                path: "vault",
+              },
+            ],
+          },
+        },
+        {
+          name: "system_program",
+          address: "11111111111111111111111111111111",
+        },
+      ],
+      args: [
+        {
+          name: "daily_spending_cap_usd",
+          type: {
+            option: "u64",
+          },
+        },
+        {
+          name: "max_transaction_amount_usd",
+          type: {
+            option: "u64",
+          },
+        },
+        {
+          name: "protocol_mode",
+          type: {
+            option: "u8",
+          },
+        },
+        {
+          name: "protocols",
+          type: {
+            option: {
+              vec: "pubkey",
+            },
+          },
+        },
+        {
+          name: "max_leverage_bps",
+          type: {
+            option: "u16",
+          },
+        },
+        {
+          name: "can_open_positions",
+          type: {
+            option: "bool",
+          },
+        },
+        {
+          name: "max_concurrent_positions",
+          type: {
+            option: "u8",
+          },
+        },
+        {
+          name: "developer_fee_rate",
+          type: {
+            option: "u16",
+          },
+        },
+        {
+          name: "max_slippage_bps",
+          type: {
+            option: "u16",
+          },
+        },
+        {
+          name: "timelock_duration",
+          type: {
+            option: "u64",
+          },
+        },
+        {
+          name: "allowed_destinations",
+          type: {
+            option: {
+              vec: "pubkey",
+            },
+          },
+        },
+      ],
     },
     {
-      "name": "register_agent",
-      "docs": [
+      name: "reactivate_vault",
+      docs: ["Reactivate a frozen vault. Optionally rotate the agent key."],
+      discriminator: [245, 50, 143, 70, 114, 220, 25, 251],
+      accounts: [
+        {
+          name: "owner",
+          signer: true,
+          relations: ["vault"],
+        },
+        {
+          name: "vault",
+          writable: true,
+          pda: {
+            seeds: [
+              {
+                kind: "const",
+                value: [118, 97, 117, 108, 116],
+              },
+              {
+                kind: "account",
+                path: "owner",
+              },
+              {
+                kind: "account",
+                path: "vault.vault_id",
+                account: "AgentVault",
+              },
+            ],
+          },
+        },
+      ],
+      args: [
+        {
+          name: "new_agent",
+          type: {
+            option: "pubkey",
+          },
+        },
+      ],
+    },
+    {
+      name: "register_agent",
+      docs: [
         "Register an agent's signing key to this vault.",
-        "Only the owner can call this. One agent per vault."
+        "Only the owner can call this. One agent per vault.",
       ],
-      "discriminator": [
-        135,
-        157,
-        66,
-        195,
-        2,
-        113,
-        175,
-        30
-      ],
-      "accounts": [
+      discriminator: [135, 157, 66, 195, 2, 113, 175, 30],
+      accounts: [
         {
-          "name": "owner",
-          "signer": true,
-          "relations": [
-            "vault"
-          ]
+          name: "owner",
+          signer: true,
+          relations: ["vault"],
         },
         {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
+          name: "vault",
+          writable: true,
+          pda: {
+            seeds: [
               {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                kind: "const",
+                value: [118, 97, 117, 108, 116],
               },
               {
-                "kind": "account",
-                "path": "owner"
+                kind: "account",
+                path: "owner",
               },
               {
-                "kind": "account",
-                "path": "vault.vault_id",
-                "account": "AgentVault"
-              }
-            ]
-          }
-        }
-      ],
-      "args": [
-        {
-          "name": "agent",
-          "type": "pubkey"
-        }
-      ]
-    },
-    {
-      "name": "revoke_agent",
-      "docs": [
-        "Kill switch. Immediately freezes the vault.",
-        "Only the owner can call this."
-      ],
-      "discriminator": [
-        227,
-        60,
-        209,
-        125,
-        240,
-        117,
-        163,
-        73
-      ],
-      "accounts": [
-        {
-          "name": "owner",
-          "signer": true,
-          "relations": [
-            "vault"
-          ]
-        },
-        {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                kind: "account",
+                path: "vault.vault_id",
+                account: "AgentVault",
               },
-              {
-                "kind": "account",
-                "path": "owner"
-              },
-              {
-                "kind": "account",
-                "path": "vault.vault_id",
-                "account": "AgentVault"
-              }
-            ]
-          }
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "sync_positions",
-      "docs": [
-        "Sync the vault's open position counter with the actual state."
-      ],
-      "discriminator": [
-        255,
-        102,
-        161,
-        80,
-        185,
-        74,
-        140,
-        60
-      ],
-      "accounts": [
-        {
-          "name": "owner",
-          "signer": true
-        },
-        {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "vault.owner",
-                "account": "AgentVault"
-              },
-              {
-                "kind": "account",
-                "path": "vault.vault_id",
-                "account": "AgentVault"
-              }
-            ]
-          }
-        }
-      ],
-      "args": [
-        {
-          "name": "actual_positions",
-          "type": "u8"
-        }
-      ]
-    },
-    {
-      "name": "update_policy",
-      "docs": [
-        "Update the policy configuration for a vault.",
-        "Only the owner can call this. Blocked when timelock > 0."
-      ],
-      "discriminator": [
-        212,
-        245,
-        246,
-        7,
-        163,
-        151,
-        18,
-        57
-      ],
-      "accounts": [
-        {
-          "name": "owner",
-          "signer": true,
-          "relations": [
-            "vault"
-          ]
-        },
-        {
-          "name": "vault",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "owner"
-              },
-              {
-                "kind": "account",
-                "path": "vault.vault_id",
-                "account": "AgentVault"
-              }
-            ]
+            ],
           },
-          "relations": [
-            "policy"
-          ]
         },
-        {
-          "name": "policy",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "vault"
-              }
-            ]
-          }
-        }
       ],
-      "args": [
+      args: [
         {
-          "name": "daily_spending_cap_usd",
-          "type": {
-            "option": "u64"
-          }
+          name: "agent",
+          type: "pubkey",
         },
-        {
-          "name": "max_transaction_size_usd",
-          "type": {
-            "option": "u64"
-          }
-        },
-        {
-          "name": "protocol_mode",
-          "type": {
-            "option": "u8"
-          }
-        },
-        {
-          "name": "protocols",
-          "type": {
-            "option": {
-              "vec": "pubkey"
-            }
-          }
-        },
-        {
-          "name": "max_leverage_bps",
-          "type": {
-            "option": "u16"
-          }
-        },
-        {
-          "name": "can_open_positions",
-          "type": {
-            "option": "bool"
-          }
-        },
-        {
-          "name": "max_concurrent_positions",
-          "type": {
-            "option": "u8"
-          }
-        },
-        {
-          "name": "developer_fee_rate",
-          "type": {
-            "option": "u16"
-          }
-        },
-        {
-          "name": "max_slippage_bps",
-          "type": {
-            "option": "u16"
-          }
-        },
-        {
-          "name": "timelock_duration",
-          "type": {
-            "option": "u64"
-          }
-        },
-        {
-          "name": "allowed_destinations",
-          "type": {
-            "option": {
-              "vec": "pubkey"
-            }
-          }
-        }
-      ]
+      ],
     },
     {
-      "name": "validate_and_authorize",
-      "docs": [
+      name: "revoke_agent",
+      docs: [
+        "Kill switch. Immediately freezes the vault.",
+        "Only the owner can call this.",
+      ],
+      discriminator: [227, 60, 209, 125, 240, 117, 163, 73],
+      accounts: [
+        {
+          name: "owner",
+          signer: true,
+          relations: ["vault"],
+        },
+        {
+          name: "vault",
+          writable: true,
+          pda: {
+            seeds: [
+              {
+                kind: "const",
+                value: [118, 97, 117, 108, 116],
+              },
+              {
+                kind: "account",
+                path: "owner",
+              },
+              {
+                kind: "account",
+                path: "vault.vault_id",
+                account: "AgentVault",
+              },
+            ],
+          },
+        },
+      ],
+      args: [],
+    },
+    {
+      name: "sync_positions",
+      docs: ["Sync the vault's open position counter with the actual state."],
+      discriminator: [255, 102, 161, 80, 185, 74, 140, 60],
+      accounts: [
+        {
+          name: "owner",
+          signer: true,
+        },
+        {
+          name: "vault",
+          writable: true,
+          pda: {
+            seeds: [
+              {
+                kind: "const",
+                value: [118, 97, 117, 108, 116],
+              },
+              {
+                kind: "account",
+                path: "vault.owner",
+                account: "AgentVault",
+              },
+              {
+                kind: "account",
+                path: "vault.vault_id",
+                account: "AgentVault",
+              },
+            ],
+          },
+        },
+      ],
+      args: [
+        {
+          name: "actual_positions",
+          type: "u8",
+        },
+      ],
+    },
+    {
+      name: "update_policy",
+      docs: [
+        "Update the policy configuration for a vault.",
+        "Only the owner can call this. Blocked when timelock > 0.",
+      ],
+      discriminator: [212, 245, 246, 7, 163, 151, 18, 57],
+      accounts: [
+        {
+          name: "owner",
+          signer: true,
+          relations: ["vault"],
+        },
+        {
+          name: "vault",
+          pda: {
+            seeds: [
+              {
+                kind: "const",
+                value: [118, 97, 117, 108, 116],
+              },
+              {
+                kind: "account",
+                path: "owner",
+              },
+              {
+                kind: "account",
+                path: "vault.vault_id",
+                account: "AgentVault",
+              },
+            ],
+          },
+          relations: ["policy"],
+        },
+        {
+          name: "policy",
+          writable: true,
+          pda: {
+            seeds: [
+              {
+                kind: "const",
+                value: [112, 111, 108, 105, 99, 121],
+              },
+              {
+                kind: "account",
+                path: "vault",
+              },
+            ],
+          },
+        },
+      ],
+      args: [
+        {
+          name: "daily_spending_cap_usd",
+          type: {
+            option: "u64",
+          },
+        },
+        {
+          name: "max_transaction_size_usd",
+          type: {
+            option: "u64",
+          },
+        },
+        {
+          name: "protocol_mode",
+          type: {
+            option: "u8",
+          },
+        },
+        {
+          name: "protocols",
+          type: {
+            option: {
+              vec: "pubkey",
+            },
+          },
+        },
+        {
+          name: "max_leverage_bps",
+          type: {
+            option: "u16",
+          },
+        },
+        {
+          name: "can_open_positions",
+          type: {
+            option: "bool",
+          },
+        },
+        {
+          name: "max_concurrent_positions",
+          type: {
+            option: "u8",
+          },
+        },
+        {
+          name: "developer_fee_rate",
+          type: {
+            option: "u16",
+          },
+        },
+        {
+          name: "max_slippage_bps",
+          type: {
+            option: "u16",
+          },
+        },
+        {
+          name: "timelock_duration",
+          type: {
+            option: "u64",
+          },
+        },
+        {
+          name: "allowed_destinations",
+          type: {
+            option: {
+              vec: "pubkey",
+            },
+          },
+        },
+      ],
+    },
+    {
+      name: "validate_and_authorize",
+      docs: [
         "Core permission check. Called by the agent before a DeFi action.",
         "Validates against policy constraints, stablecoin-only enforcement,",
         "and protocol slippage verification.",
-        "Creates a SessionAuthority PDA, delegates tokens to agent."
+        "Creates a SessionAuthority PDA, delegates tokens to agent.",
       ],
-      "discriminator": [
-        22,
-        183,
-        48,
-        222,
-        218,
-        11,
-        197,
-        152
-      ],
-      "accounts": [
+      discriminator: [22, 183, 48, 222, 218, 11, 197, 152],
+      accounts: [
         {
-          "name": "agent",
-          "writable": true,
-          "signer": true
+          name: "agent",
+          writable: true,
+          signer: true,
         },
         {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
+          name: "vault",
+          writable: true,
+          pda: {
+            seeds: [
               {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                kind: "const",
+                value: [118, 97, 117, 108, 116],
               },
               {
-                "kind": "account",
-                "path": "vault.owner",
-                "account": "AgentVault"
+                kind: "account",
+                path: "vault.owner",
+                account: "AgentVault",
               },
               {
-                "kind": "account",
-                "path": "vault.vault_id",
-                "account": "AgentVault"
-              }
-            ]
+                kind: "account",
+                path: "vault.vault_id",
+                account: "AgentVault",
+              },
+            ],
           },
-          "relations": [
-            "policy"
-          ]
+          relations: ["policy"],
         },
         {
-          "name": "policy",
-          "pda": {
-            "seeds": [
+          name: "policy",
+          pda: {
+            seeds: [
               {
-                "kind": "const",
-                "value": [
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
+                kind: "const",
+                value: [112, 111, 108, 105, 99, 121],
               },
               {
-                "kind": "account",
-                "path": "vault"
-              }
-            ]
-          }
+                kind: "account",
+                path: "vault",
+              },
+            ],
+          },
         },
         {
-          "name": "tracker",
-          "docs": [
-            "Zero-copy SpendTracker"
-          ],
-          "writable": true,
-          "pda": {
-            "seeds": [
+          name: "tracker",
+          docs: ["Zero-copy SpendTracker"],
+          writable: true,
+          pda: {
+            seeds: [
               {
-                "kind": "const",
-                "value": [
-                  116,
-                  114,
-                  97,
-                  99,
-                  107,
-                  101,
-                  114
-                ]
+                kind: "const",
+                value: [116, 114, 97, 99, 107, 101, 114],
               },
               {
-                "kind": "account",
-                "path": "vault"
-              }
-            ]
-          }
+                kind: "account",
+                path: "vault",
+              },
+            ],
+          },
         },
         {
-          "name": "session",
-          "docs": [
+          name: "session",
+          docs: [
             "Ephemeral session PDA — `init` ensures no double-authorization.",
-            "Seeds include token_mint for per-token concurrent sessions."
+            "Seeds include token_mint for per-token concurrent sessions.",
           ],
-          "writable": true,
-          "pda": {
-            "seeds": [
+          writable: true,
+          pda: {
+            seeds: [
               {
-                "kind": "const",
-                "value": [
-                  115,
-                  101,
-                  115,
-                  115,
-                  105,
-                  111,
-                  110
-                ]
+                kind: "const",
+                value: [115, 101, 115, 115, 105, 111, 110],
               },
               {
-                "kind": "account",
-                "path": "vault"
+                kind: "account",
+                path: "vault",
               },
               {
-                "kind": "account",
-                "path": "agent"
+                kind: "account",
+                path: "agent",
               },
               {
-                "kind": "arg",
-                "path": "token_mint"
-              }
-            ]
-          }
+                kind: "arg",
+                path: "token_mint",
+              },
+            ],
+          },
         },
         {
-          "name": "vault_token_account",
-          "docs": [
-            "Vault's PDA-owned token account for the spend token"
+          name: "vault_token_account",
+          docs: ["Vault's PDA-owned token account for the spend token"],
+          writable: true,
+        },
+        {
+          name: "token_mint_account",
+          docs: [
+            "The token mint being spent — constrained to match token_mint arg",
           ],
-          "writable": true
         },
         {
-          "name": "token_mint_account",
-          "docs": [
-            "The token mint being spent — constrained to match token_mint arg"
-          ]
-        },
-        {
-          "name": "protocol_treasury_token_account",
-          "docs": [
-            "Protocol treasury token account (needed when protocol_fee > 0)"
+          name: "protocol_treasury_token_account",
+          docs: [
+            "Protocol treasury token account (needed when protocol_fee > 0)",
           ],
-          "writable": true,
-          "optional": true
+          writable: true,
+          optional: true,
         },
         {
-          "name": "fee_destination_token_account",
-          "docs": [
-            "Developer fee destination token account (needed when developer_fee > 0)"
+          name: "fee_destination_token_account",
+          docs: [
+            "Developer fee destination token account (needed when developer_fee > 0)",
           ],
-          "writable": true,
-          "optional": true
+          writable: true,
+          optional: true,
         },
         {
-          "name": "output_stablecoin_account",
-          "docs": [
+          name: "output_stablecoin_account",
+          docs: [
             "Vault's stablecoin ATA to snapshot (for non-stablecoin input swaps).",
-            "Required when input token is NOT a stablecoin."
+            "Required when input token is NOT a stablecoin.",
           ],
-          "writable": true,
-          "optional": true
+          writable: true,
+          optional: true,
         },
         {
-          "name": "token_program",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+          name: "token_program",
+          address: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         },
         {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
+          name: "system_program",
+          address: "11111111111111111111111111111111",
         },
         {
-          "name": "instructions_sysvar",
-          "docs": [
+          name: "instructions_sysvar",
+          docs: [
             "Instructions sysvar for verifying DeFi instruction program_id",
-            "and protocol slippage enforcement."
+            "and protocol slippage enforcement.",
           ],
-          "address": "Sysvar1nstructions1111111111111111111111111"
-        }
+          address: "Sysvar1nstructions1111111111111111111111111",
+        },
       ],
-      "args": [
+      args: [
         {
-          "name": "action_type",
-          "type": {
-            "defined": {
-              "name": "ActionType"
-            }
-          }
+          name: "action_type",
+          type: {
+            defined: {
+              name: "ActionType",
+            },
+          },
         },
         {
-          "name": "token_mint",
-          "type": "pubkey"
+          name: "token_mint",
+          type: "pubkey",
         },
         {
-          "name": "amount",
-          "type": "u64"
+          name: "amount",
+          type: "u64",
         },
         {
-          "name": "target_protocol",
-          "type": "pubkey"
+          name: "target_protocol",
+          type: "pubkey",
         },
         {
-          "name": "leverage_bps",
-          "type": {
-            "option": "u16"
-          }
-        }
-      ]
+          name: "leverage_bps",
+          type: {
+            option: "u16",
+          },
+        },
+      ],
     },
     {
-      "name": "withdraw_funds",
-      "docs": [
-        "Withdraw tokens from the vault back to the owner."
-      ],
-      "discriminator": [
-        241,
-        36,
-        29,
-        111,
-        208,
-        31,
-        104,
-        217
-      ],
-      "accounts": [
+      name: "withdraw_funds",
+      docs: ["Withdraw tokens from the vault back to the owner."],
+      discriminator: [241, 36, 29, 111, 208, 31, 104, 217],
+      accounts: [
         {
-          "name": "owner",
-          "writable": true,
-          "signer": true,
-          "relations": [
-            "vault"
-          ]
+          name: "owner",
+          writable: true,
+          signer: true,
+          relations: ["vault"],
         },
         {
-          "name": "vault",
-          "pda": {
-            "seeds": [
+          name: "vault",
+          pda: {
+            seeds: [
               {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                kind: "const",
+                value: [118, 97, 117, 108, 116],
               },
               {
-                "kind": "account",
-                "path": "owner"
+                kind: "account",
+                path: "owner",
               },
               {
-                "kind": "account",
-                "path": "vault.vault_id",
-                "account": "AgentVault"
-              }
-            ]
-          }
-        },
-        {
-          "name": "mint"
-        },
-        {
-          "name": "vault_token_account",
-          "docs": [
-            "Vault's PDA-controlled token account"
-          ],
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "vault"
+                kind: "account",
+                path: "vault.vault_id",
+                account: "AgentVault",
               },
-              {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "mint"
-              }
             ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
+          },
         },
         {
-          "name": "owner_token_account",
-          "docs": [
-            "Owner's token account to receive funds"
-          ],
-          "writable": true,
-          "pda": {
-            "seeds": [
+          name: "mint",
+        },
+        {
+          name: "vault_token_account",
+          docs: ["Vault's PDA-controlled token account"],
+          writable: true,
+          pda: {
+            seeds: [
               {
-                "kind": "account",
-                "path": "owner"
+                kind: "account",
+                path: "vault",
               },
               {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
-                ]
+                kind: "const",
+                value: [
+                  6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206,
+                  235, 121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140,
+                  245, 133, 126, 255, 0, 169,
+                ],
               },
               {
-                "kind": "account",
-                "path": "mint"
-              }
+                kind: "account",
+                path: "mint",
+              },
             ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
+            program: {
+              kind: "const",
+              value: [
+                140, 151, 37, 143, 78, 36, 137, 241, 187, 61, 16, 41, 20, 142,
+                13, 131, 11, 90, 19, 153, 218, 255, 16, 132, 4, 142, 123, 216,
+                219, 233, 248, 89,
+              ],
+            },
+          },
         },
         {
-          "name": "token_program",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        }
-      ],
-      "args": [
+          name: "owner_token_account",
+          docs: ["Owner's token account to receive funds"],
+          writable: true,
+          pda: {
+            seeds: [
+              {
+                kind: "account",
+                path: "owner",
+              },
+              {
+                kind: "const",
+                value: [
+                  6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206,
+                  235, 121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140,
+                  245, 133, 126, 255, 0, 169,
+                ],
+              },
+              {
+                kind: "account",
+                path: "mint",
+              },
+            ],
+            program: {
+              kind: "const",
+              value: [
+                140, 151, 37, 143, 78, 36, 137, 241, 187, 61, 16, 41, 20, 142,
+                13, 131, 11, 90, 19, 153, 218, 255, 16, 132, 4, 142, 123, 216,
+                219, 233, 248, 89,
+              ],
+            },
+          },
+        },
         {
-          "name": "amount",
-          "type": "u64"
-        }
-      ]
-    }
+          name: "token_program",
+          address: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        },
+      ],
+      args: [
+        {
+          name: "amount",
+          type: "u64",
+        },
+      ],
+    },
   ],
-  "accounts": [
+  accounts: [
     {
-      "name": "AgentVault",
-      "discriminator": [
-        232,
-        220,
-        237,
-        164,
-        157,
-        9,
-        215,
-        194
-      ]
+      name: "AgentVault",
+      discriminator: [232, 220, 237, 164, 157, 9, 215, 194],
     },
     {
-      "name": "PendingPolicyUpdate",
-      "discriminator": [
-        77,
-        255,
-        2,
-        51,
-        79,
-        237,
-        183,
-        239
-      ]
+      name: "PendingPolicyUpdate",
+      discriminator: [77, 255, 2, 51, 79, 237, 183, 239],
     },
     {
-      "name": "PolicyConfig",
-      "discriminator": [
-        219,
-        7,
-        79,
-        84,
-        175,
-        51,
-        148,
-        146
-      ]
+      name: "PolicyConfig",
+      discriminator: [219, 7, 79, 84, 175, 51, 148, 146],
     },
     {
-      "name": "SessionAuthority",
-      "discriminator": [
-        48,
-        9,
-        30,
-        120,
-        134,
-        35,
-        172,
-        170
-      ]
+      name: "SessionAuthority",
+      discriminator: [48, 9, 30, 120, 134, 35, 172, 170],
     },
     {
-      "name": "SpendTracker",
-      "discriminator": [
-        180,
-        17,
-        195,
-        180,
-        162,
-        207,
-        239,
-        205
-      ]
-    }
+      name: "SpendTracker",
+      discriminator: [180, 17, 195, 180, 162, 207, 239, 205],
+    },
   ],
-  "events": [
+  events: [
     {
-      "name": "ActionAuthorized",
-      "discriminator": [
-        85,
-        90,
-        59,
-        218,
-        126,
-        8,
-        179,
-        63
-      ]
+      name: "ActionAuthorized",
+      discriminator: [85, 90, 59, 218, 126, 8, 179, 63],
     },
     {
-      "name": "AgentRegistered",
-      "discriminator": [
-        191,
-        78,
-        217,
-        54,
-        232,
-        100,
-        189,
-        85
-      ]
+      name: "AgentRegistered",
+      discriminator: [191, 78, 217, 54, 232, 100, 189, 85],
     },
     {
-      "name": "AgentRevoked",
-      "discriminator": [
-        12,
-        251,
-        249,
-        166,
-        122,
-        83,
-        162,
-        116
-      ]
+      name: "AgentRevoked",
+      discriminator: [12, 251, 249, 166, 122, 83, 162, 116],
     },
     {
-      "name": "AgentTransferExecuted",
-      "discriminator": [
-        88,
-        52,
-        117,
-        69,
-        112,
-        152,
-        167,
-        40
-      ]
+      name: "AgentTransferExecuted",
+      discriminator: [88, 52, 117, 69, 112, 152, 167, 40],
     },
     {
-      "name": "DelegationRevoked",
-      "discriminator": [
-        59,
-        158,
-        142,
-        49,
-        164,
-        116,
-        220,
-        8
-      ]
+      name: "DelegationRevoked",
+      discriminator: [59, 158, 142, 49, 164, 116, 220, 8],
     },
     {
-      "name": "FeesCollected",
-      "discriminator": [
-        233,
-        23,
-        117,
-        225,
-        107,
-        178,
-        254,
-        8
-      ]
+      name: "FeesCollected",
+      discriminator: [233, 23, 117, 225, 107, 178, 254, 8],
     },
     {
-      "name": "FundsDeposited",
-      "discriminator": [
-        157,
-        209,
-        100,
-        95,
-        59,
-        100,
-        3,
-        68
-      ]
+      name: "FundsDeposited",
+      discriminator: [157, 209, 100, 95, 59, 100, 3, 68],
     },
     {
-      "name": "FundsWithdrawn",
-      "discriminator": [
-        56,
-        130,
-        230,
-        154,
-        35,
-        92,
-        11,
-        118
-      ]
+      name: "FundsWithdrawn",
+      discriminator: [56, 130, 230, 154, 35, 92, 11, 118],
     },
     {
-      "name": "PolicyChangeApplied",
-      "discriminator": [
-        104,
-        89,
-        5,
-        100,
-        180,
-        202,
-        52,
-        73
-      ]
+      name: "PolicyChangeApplied",
+      discriminator: [104, 89, 5, 100, 180, 202, 52, 73],
     },
     {
-      "name": "PolicyChangeCancelled",
-      "discriminator": [
-        200,
-        158,
-        226,
-        255,
-        25,
-        211,
-        30,
-        151
-      ]
+      name: "PolicyChangeCancelled",
+      discriminator: [200, 158, 226, 255, 25, 211, 30, 151],
     },
     {
-      "name": "PolicyChangeQueued",
-      "discriminator": [
-        73,
-        231,
-        182,
-        136,
-        141,
-        120,
-        32,
-        79
-      ]
+      name: "PolicyChangeQueued",
+      discriminator: [73, 231, 182, 136, 141, 120, 32, 79],
     },
     {
-      "name": "PolicyUpdated",
-      "discriminator": [
-        225,
-        112,
-        112,
-        67,
-        95,
-        236,
-        245,
-        161
-      ]
+      name: "PolicyUpdated",
+      discriminator: [225, 112, 112, 67, 95, 236, 245, 161],
     },
     {
-      "name": "PositionsSynced",
-      "discriminator": [
-        83,
-        33,
-        144,
-        201,
-        168,
-        13,
-        0,
-        95
-      ]
+      name: "PositionsSynced",
+      discriminator: [83, 33, 144, 201, 168, 13, 0, 95],
     },
     {
-      "name": "SessionFinalized",
-      "discriminator": [
-        33,
-        12,
-        242,
-        91,
-        206,
-        42,
-        163,
-        235
-      ]
+      name: "SessionFinalized",
+      discriminator: [33, 12, 242, 91, 206, 42, 163, 235],
     },
     {
-      "name": "VaultClosed",
-      "discriminator": [
-        238,
-        129,
-        38,
-        228,
-        227,
-        118,
-        249,
-        215
-      ]
+      name: "VaultClosed",
+      discriminator: [238, 129, 38, 228, 227, 118, 249, 215],
     },
     {
-      "name": "VaultCreated",
-      "discriminator": [
-        117,
-        25,
-        120,
-        254,
-        75,
-        236,
-        78,
-        115
-      ]
+      name: "VaultCreated",
+      discriminator: [117, 25, 120, 254, 75, 236, 78, 115],
     },
     {
-      "name": "VaultReactivated",
-      "discriminator": [
-        197,
-        52,
-        160,
-        147,
-        159,
-        89,
-        90,
-        28
-      ]
-    }
+      name: "VaultReactivated",
+      discriminator: [197, 52, 160, 147, 159, 89, 90, 28],
+    },
   ],
-  "errors": [
+  errors: [
     {
-      "code": 6000,
-      "name": "VaultNotActive",
-      "msg": "Vault is not active"
+      code: 6000,
+      name: "VaultNotActive",
+      msg: "Vault is not active",
     },
     {
-      "code": 6001,
-      "name": "UnauthorizedAgent",
-      "msg": "Unauthorized: signer is not the registered agent"
+      code: 6001,
+      name: "UnauthorizedAgent",
+      msg: "Unauthorized: signer is not the registered agent",
     },
     {
-      "code": 6002,
-      "name": "UnauthorizedOwner",
-      "msg": "Unauthorized: signer is not the vault owner"
+      code: 6002,
+      name: "UnauthorizedOwner",
+      msg: "Unauthorized: signer is not the vault owner",
     },
     {
-      "code": 6003,
-      "name": "TokenNotRegistered",
-      "msg": "Token is not a recognized stablecoin"
+      code: 6003,
+      name: "TokenNotRegistered",
+      msg: "Token is not a recognized stablecoin",
     },
     {
-      "code": 6004,
-      "name": "ProtocolNotAllowed",
-      "msg": "Protocol not allowed by policy"
+      code: 6004,
+      name: "ProtocolNotAllowed",
+      msg: "Protocol not allowed by policy",
     },
     {
-      "code": 6005,
-      "name": "TransactionTooLarge",
-      "msg": "Transaction exceeds maximum single transaction size"
+      code: 6005,
+      name: "TransactionTooLarge",
+      msg: "Transaction exceeds maximum single transaction size",
     },
     {
-      "code": 6006,
-      "name": "DailyCapExceeded",
-      "msg": "Daily spending cap would be exceeded"
+      code: 6006,
+      name: "DailyCapExceeded",
+      msg: "Daily spending cap would be exceeded",
     },
     {
-      "code": 6007,
-      "name": "LeverageTooHigh",
-      "msg": "Leverage exceeds maximum allowed"
+      code: 6007,
+      name: "LeverageTooHigh",
+      msg: "Leverage exceeds maximum allowed",
     },
     {
-      "code": 6008,
-      "name": "TooManyPositions",
-      "msg": "Maximum concurrent open positions reached"
+      code: 6008,
+      name: "TooManyPositions",
+      msg: "Maximum concurrent open positions reached",
     },
     {
-      "code": 6009,
-      "name": "PositionOpeningDisallowed",
-      "msg": "Cannot open new positions (policy disallows)"
+      code: 6009,
+      name: "PositionOpeningDisallowed",
+      msg: "Cannot open new positions (policy disallows)",
     },
     {
-      "code": 6010,
-      "name": "SessionNotAuthorized",
-      "msg": "Session not authorized"
+      code: 6010,
+      name: "SessionNotAuthorized",
+      msg: "Session not authorized",
     },
     {
-      "code": 6011,
-      "name": "InvalidSession",
-      "msg": "Invalid session: does not belong to this vault"
+      code: 6011,
+      name: "InvalidSession",
+      msg: "Invalid session: does not belong to this vault",
     },
     {
-      "code": 6012,
-      "name": "OpenPositionsExist",
-      "msg": "Vault has open positions, cannot close"
+      code: 6012,
+      name: "OpenPositionsExist",
+      msg: "Vault has open positions, cannot close",
     },
     {
-      "code": 6013,
-      "name": "TooManyAllowedProtocols",
-      "msg": "Policy configuration invalid: too many allowed protocols"
+      code: 6013,
+      name: "TooManyAllowedProtocols",
+      msg: "Policy configuration invalid: too many allowed protocols",
     },
     {
-      "code": 6014,
-      "name": "AgentAlreadyRegistered",
-      "msg": "Agent already registered for this vault"
+      code: 6014,
+      name: "AgentAlreadyRegistered",
+      msg: "Agent already registered for this vault",
     },
     {
-      "code": 6015,
-      "name": "NoAgentRegistered",
-      "msg": "No agent registered for this vault"
+      code: 6015,
+      name: "NoAgentRegistered",
+      msg: "No agent registered for this vault",
     },
     {
-      "code": 6016,
-      "name": "VaultNotFrozen",
-      "msg": "Vault is not frozen (expected frozen for reactivation)"
+      code: 6016,
+      name: "VaultNotFrozen",
+      msg: "Vault is not frozen (expected frozen for reactivation)",
     },
     {
-      "code": 6017,
-      "name": "VaultAlreadyClosed",
-      "msg": "Vault is already closed"
+      code: 6017,
+      name: "VaultAlreadyClosed",
+      msg: "Vault is already closed",
     },
     {
-      "code": 6018,
-      "name": "InsufficientBalance",
-      "msg": "Insufficient vault balance for withdrawal"
+      code: 6018,
+      name: "InsufficientBalance",
+      msg: "Insufficient vault balance for withdrawal",
     },
     {
-      "code": 6019,
-      "name": "DeveloperFeeTooHigh",
-      "msg": "Developer fee rate exceeds maximum (500 / 1,000,000 = 5 BPS)"
+      code: 6019,
+      name: "DeveloperFeeTooHigh",
+      msg: "Developer fee rate exceeds maximum (500 / 1,000,000 = 5 BPS)",
     },
     {
-      "code": 6020,
-      "name": "InvalidFeeDestination",
-      "msg": "Fee destination account invalid"
+      code: 6020,
+      name: "InvalidFeeDestination",
+      msg: "Fee destination account invalid",
     },
     {
-      "code": 6021,
-      "name": "InvalidProtocolTreasury",
-      "msg": "Protocol treasury account does not match expected address"
+      code: 6021,
+      name: "InvalidProtocolTreasury",
+      msg: "Protocol treasury account does not match expected address",
     },
     {
-      "code": 6022,
-      "name": "InvalidAgentKey",
-      "msg": "Invalid agent: cannot be the zero address"
+      code: 6022,
+      name: "InvalidAgentKey",
+      msg: "Invalid agent: cannot be the zero address",
     },
     {
-      "code": 6023,
-      "name": "AgentIsOwner",
-      "msg": "Invalid agent: agent cannot be the vault owner"
+      code: 6023,
+      name: "AgentIsOwner",
+      msg: "Invalid agent: agent cannot be the vault owner",
     },
     {
-      "code": 6024,
-      "name": "Overflow",
-      "msg": "Arithmetic overflow"
+      code: 6024,
+      name: "Overflow",
+      msg: "Arithmetic overflow",
     },
     {
-      "code": 6025,
-      "name": "InvalidTokenAccount",
-      "msg": "Token account does not belong to vault or has wrong mint"
+      code: 6025,
+      name: "InvalidTokenAccount",
+      msg: "Token account does not belong to vault or has wrong mint",
     },
     {
-      "code": 6026,
-      "name": "TimelockNotExpired",
-      "msg": "Timelock period has not expired yet"
+      code: 6026,
+      name: "TimelockNotExpired",
+      msg: "Timelock period has not expired yet",
     },
     {
-      "code": 6027,
-      "name": "TimelockActive",
-      "msg": "Vault has timelock active — use queue_policy_update instead"
+      code: 6027,
+      name: "TimelockActive",
+      msg: "Vault has timelock active — use queue_policy_update instead",
     },
     {
-      "code": 6028,
-      "name": "NoTimelockConfigured",
-      "msg": "No timelock configured on this vault"
+      code: 6028,
+      name: "NoTimelockConfigured",
+      msg: "No timelock configured on this vault",
     },
     {
-      "code": 6029,
-      "name": "DestinationNotAllowed",
-      "msg": "Destination not in allowed list"
+      code: 6029,
+      name: "DestinationNotAllowed",
+      msg: "Destination not in allowed list",
     },
     {
-      "code": 6030,
-      "name": "TooManyDestinations",
-      "msg": "Too many destinations (max 10)"
+      code: 6030,
+      name: "TooManyDestinations",
+      msg: "Too many destinations (max 10)",
     },
     {
-      "code": 6031,
-      "name": "InvalidProtocolMode",
-      "msg": "Invalid protocol mode (must be 0, 1, or 2)"
+      code: 6031,
+      name: "InvalidProtocolMode",
+      msg: "Invalid protocol mode (must be 0, 1, or 2)",
     },
     {
-      "code": 6032,
-      "name": "InvalidNonSpendingAmount",
-      "msg": "Non-spending action must have amount = 0"
+      code: 6032,
+      name: "InvalidNonSpendingAmount",
+      msg: "Non-spending action must have amount = 0",
     },
     {
-      "code": 6033,
-      "name": "NoPositionsToClose",
-      "msg": "No open positions to close or cancel"
+      code: 6033,
+      name: "NoPositionsToClose",
+      msg: "No open positions to close or cancel",
     },
     {
-      "code": 6034,
-      "name": "CpiCallNotAllowed",
-      "msg": "Instruction must be top-level (CPI calls not allowed)"
+      code: 6034,
+      name: "CpiCallNotAllowed",
+      msg: "Instruction must be top-level (CPI calls not allowed)",
     },
     {
-      "code": 6035,
-      "name": "MissingFinalizeInstruction",
-      "msg": "Transaction must include finalize_session after validate"
+      code: 6035,
+      name: "MissingFinalizeInstruction",
+      msg: "Transaction must include finalize_session after validate",
     },
     {
-      "code": 6036,
-      "name": "NonTrackedSwapMustReturnStablecoin",
-      "msg": "Non-stablecoin swap must return stablecoin (balance did not increase)"
+      code: 6036,
+      name: "NonTrackedSwapMustReturnStablecoin",
+      msg: "Non-stablecoin swap must return stablecoin (balance did not increase)",
     },
     {
-      "code": 6037,
-      "name": "SlippageTooHigh",
-      "msg": "Jupiter slippage exceeds policy max_slippage_bps or quoted_out is zero"
+      code: 6037,
+      name: "SlippageTooHigh",
+      msg: "Jupiter slippage exceeds policy max_slippage_bps or quoted_out is zero",
     },
     {
-      "code": 6038,
-      "name": "InvalidJupiterInstruction",
-      "msg": "Cannot parse Jupiter swap instruction data"
+      code: 6038,
+      name: "InvalidJupiterInstruction",
+      msg: "Cannot parse Jupiter swap instruction data",
     },
     {
-      "code": 6039,
-      "name": "InvalidFlashTradeInstruction",
-      "msg": "Cannot parse Flash Trade instruction data"
+      code: 6039,
+      name: "InvalidFlashTradeInstruction",
+      msg: "Cannot parse Flash Trade instruction data",
     },
     {
-      "code": 6040,
-      "name": "FlashTradePriceZero",
-      "msg": "Flash Trade priceWithSlippage is zero"
+      code: 6040,
+      name: "FlashTradePriceZero",
+      msg: "Flash Trade priceWithSlippage is zero",
     },
     {
-      "code": 6041,
-      "name": "DustDepositDetected",
-      "msg": "SPL Transfer to vault stablecoin ATA detected (dust deposit attack)"
+      code: 6041,
+      name: "DustDepositDetected",
+      msg: "SPL Transfer to vault stablecoin ATA detected (dust deposit attack)",
     },
     {
-      "code": 6042,
-      "name": "InvalidJupiterLendInstruction",
-      "msg": "Cannot parse Jupiter Lend instruction data"
+      code: 6042,
+      name: "InvalidJupiterLendInstruction",
+      msg: "Cannot parse Jupiter Lend instruction data",
     },
     {
-      "code": 6043,
-      "name": "SlippageBpsTooHigh",
-      "msg": "Slippage BPS exceeds maximum (5000 = 50%)"
+      code: 6043,
+      name: "SlippageBpsTooHigh",
+      msg: "Slippage BPS exceeds maximum (5000 = 50%)",
     },
     {
-      "code": 6044,
-      "name": "ProtocolMismatch",
-      "msg": "DeFi instruction program does not match declared target_protocol"
-    }
+      code: 6044,
+      name: "ProtocolMismatch",
+      msg: "DeFi instruction program does not match declared target_protocol",
+    },
   ],
-  "types": [
+  types: [
     {
-      "name": "ActionAuthorized",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "ActionAuthorized",
+      type: {
+        kind: "struct",
+        fields: [
           {
-            "name": "vault",
-            "type": "pubkey"
+            name: "vault",
+            type: "pubkey",
           },
           {
-            "name": "agent",
-            "type": "pubkey"
+            name: "agent",
+            type: "pubkey",
           },
           {
-            "name": "action_type",
-            "type": {
-              "defined": {
-                "name": "ActionType"
-              }
-            }
+            name: "action_type",
+            type: {
+              defined: {
+                name: "ActionType",
+              },
+            },
           },
           {
-            "name": "token_mint",
-            "type": "pubkey"
+            name: "token_mint",
+            type: "pubkey",
           },
           {
-            "name": "amount",
-            "type": "u64"
+            name: "amount",
+            type: "u64",
           },
           {
-            "name": "usd_amount",
-            "type": "u64"
+            name: "usd_amount",
+            type: "u64",
           },
           {
-            "name": "protocol",
-            "type": "pubkey"
+            name: "protocol",
+            type: "pubkey",
           },
           {
-            "name": "rolling_spend_usd_after",
-            "type": "u64"
+            name: "rolling_spend_usd_after",
+            type: "u64",
           },
           {
-            "name": "daily_cap_usd",
-            "type": "u64"
+            name: "daily_cap_usd",
+            type: "u64",
           },
           {
-            "name": "delegated",
-            "type": "bool"
+            name: "delegated",
+            type: "bool",
           },
           {
-            "name": "timestamp",
-            "type": "i64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "ActionType",
-      "docs": [
-        "Action types that agents can request"
-      ],
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "Swap"
+            name: "timestamp",
+            type: "i64",
           },
-          {
-            "name": "OpenPosition"
-          },
-          {
-            "name": "ClosePosition"
-          },
-          {
-            "name": "IncreasePosition"
-          },
-          {
-            "name": "DecreasePosition"
-          },
-          {
-            "name": "Deposit"
-          },
-          {
-            "name": "Withdraw"
-          },
-          {
-            "name": "Transfer"
-          },
-          {
-            "name": "AddCollateral"
-          },
-          {
-            "name": "RemoveCollateral"
-          },
-          {
-            "name": "PlaceTriggerOrder"
-          },
-          {
-            "name": "EditTriggerOrder"
-          },
-          {
-            "name": "CancelTriggerOrder"
-          },
-          {
-            "name": "PlaceLimitOrder"
-          },
-          {
-            "name": "EditLimitOrder"
-          },
-          {
-            "name": "CancelLimitOrder"
-          },
-          {
-            "name": "SwapAndOpenPosition"
-          },
-          {
-            "name": "CloseAndSwapPosition"
-          }
-        ]
-      }
-    },
-    {
-      "name": "AgentRegistered",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "vault",
-            "type": "pubkey"
-          },
-          {
-            "name": "agent",
-            "type": "pubkey"
-          },
-          {
-            "name": "timestamp",
-            "type": "i64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "AgentRevoked",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "vault",
-            "type": "pubkey"
-          },
-          {
-            "name": "agent",
-            "type": "pubkey"
-          },
-          {
-            "name": "timestamp",
-            "type": "i64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "AgentTransferExecuted",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "vault",
-            "type": "pubkey"
-          },
-          {
-            "name": "destination",
-            "type": "pubkey"
-          },
-          {
-            "name": "amount",
-            "type": "u64"
-          },
-          {
-            "name": "mint",
-            "type": "pubkey"
-          }
-        ]
-      }
-    },
-    {
-      "name": "AgentVault",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "owner",
-            "docs": [
-              "The owner who created this vault (has full authority)"
-            ],
-            "type": "pubkey"
-          },
-          {
-            "name": "agent",
-            "docs": [
-              "The registered agent's signing key (Pubkey::default() if not yet registered)"
-            ],
-            "type": "pubkey"
-          },
-          {
-            "name": "fee_destination",
-            "docs": [
-              "Developer fee destination — IMMUTABLE after initialization.",
-              "Prevents a compromised owner from redirecting fees."
-            ],
-            "type": "pubkey"
-          },
-          {
-            "name": "vault_id",
-            "docs": [
-              "Unique vault identifier (allows one owner to have multiple vaults)"
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "status",
-            "docs": [
-              "Vault status: Active, Frozen, or Closed"
-            ],
-            "type": {
-              "defined": {
-                "name": "VaultStatus"
-              }
-            }
-          },
-          {
-            "name": "bump",
-            "docs": [
-              "Bump seed for PDA derivation"
-            ],
-            "type": "u8"
-          },
-          {
-            "name": "created_at",
-            "docs": [
-              "Unix timestamp of vault creation"
-            ],
-            "type": "i64"
-          },
-          {
-            "name": "total_transactions",
-            "docs": [
-              "Total number of agent transactions executed through this vault"
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "total_volume",
-            "docs": [
-              "Total volume processed in token base units"
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "open_positions",
-            "docs": [
-              "Number of currently open positions (for perps tracking)"
-            ],
-            "type": "u8"
-          },
-          {
-            "name": "total_fees_collected",
-            "docs": [
-              "Cumulative developer fees collected from this vault (token base units)"
-            ],
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "DelegationRevoked",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "vault",
-            "type": "pubkey"
-          },
-          {
-            "name": "token_account",
-            "type": "pubkey"
-          },
-          {
-            "name": "timestamp",
-            "type": "i64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "EpochBucket",
-      "docs": [
-        "A single epoch bucket tracking aggregate USD spend.",
-        "16 bytes per bucket. USD-only — rate limiting stays client-side."
-      ],
-      "serialization": "bytemuck",
-      "repr": {
-        "kind": "c"
+        ],
       },
-      "type": {
-        "kind": "struct",
-        "fields": [
+    },
+    {
+      name: "ActionType",
+      docs: ["Action types that agents can request"],
+      type: {
+        kind: "enum",
+        variants: [
           {
-            "name": "epoch_id",
-            "docs": [
-              "Epoch identifier: unix_timestamp / EPOCH_DURATION"
+            name: "Swap",
+          },
+          {
+            name: "OpenPosition",
+          },
+          {
+            name: "ClosePosition",
+          },
+          {
+            name: "IncreasePosition",
+          },
+          {
+            name: "DecreasePosition",
+          },
+          {
+            name: "Deposit",
+          },
+          {
+            name: "Withdraw",
+          },
+          {
+            name: "Transfer",
+          },
+          {
+            name: "AddCollateral",
+          },
+          {
+            name: "RemoveCollateral",
+          },
+          {
+            name: "PlaceTriggerOrder",
+          },
+          {
+            name: "EditTriggerOrder",
+          },
+          {
+            name: "CancelTriggerOrder",
+          },
+          {
+            name: "PlaceLimitOrder",
+          },
+          {
+            name: "EditLimitOrder",
+          },
+          {
+            name: "CancelLimitOrder",
+          },
+          {
+            name: "SwapAndOpenPosition",
+          },
+          {
+            name: "CloseAndSwapPosition",
+          },
+        ],
+      },
+    },
+    {
+      name: "AgentRegistered",
+      type: {
+        kind: "struct",
+        fields: [
+          {
+            name: "vault",
+            type: "pubkey",
+          },
+          {
+            name: "agent",
+            type: "pubkey",
+          },
+          {
+            name: "timestamp",
+            type: "i64",
+          },
+        ],
+      },
+    },
+    {
+      name: "AgentRevoked",
+      type: {
+        kind: "struct",
+        fields: [
+          {
+            name: "vault",
+            type: "pubkey",
+          },
+          {
+            name: "agent",
+            type: "pubkey",
+          },
+          {
+            name: "timestamp",
+            type: "i64",
+          },
+        ],
+      },
+    },
+    {
+      name: "AgentTransferExecuted",
+      type: {
+        kind: "struct",
+        fields: [
+          {
+            name: "vault",
+            type: "pubkey",
+          },
+          {
+            name: "destination",
+            type: "pubkey",
+          },
+          {
+            name: "amount",
+            type: "u64",
+          },
+          {
+            name: "mint",
+            type: "pubkey",
+          },
+        ],
+      },
+    },
+    {
+      name: "AgentVault",
+      type: {
+        kind: "struct",
+        fields: [
+          {
+            name: "owner",
+            docs: ["The owner who created this vault (has full authority)"],
+            type: "pubkey",
+          },
+          {
+            name: "agent",
+            docs: [
+              "The registered agent's signing key (Pubkey::default() if not yet registered)",
             ],
-            "type": "i64"
+            type: "pubkey",
           },
           {
-            "name": "usd_amount",
-            "docs": [
-              "Aggregate USD spent in this epoch (6 decimals)"
+            name: "fee_destination",
+            docs: [
+              "Developer fee destination — IMMUTABLE after initialization.",
+              "Prevents a compromised owner from redirecting fees.",
             ],
-            "type": "u64"
-          }
-        ]
-      }
+            type: "pubkey",
+          },
+          {
+            name: "vault_id",
+            docs: [
+              "Unique vault identifier (allows one owner to have multiple vaults)",
+            ],
+            type: "u64",
+          },
+          {
+            name: "status",
+            docs: ["Vault status: Active, Frozen, or Closed"],
+            type: {
+              defined: {
+                name: "VaultStatus",
+              },
+            },
+          },
+          {
+            name: "bump",
+            docs: ["Bump seed for PDA derivation"],
+            type: "u8",
+          },
+          {
+            name: "created_at",
+            docs: ["Unix timestamp of vault creation"],
+            type: "i64",
+          },
+          {
+            name: "total_transactions",
+            docs: [
+              "Total number of agent transactions executed through this vault",
+            ],
+            type: "u64",
+          },
+          {
+            name: "total_volume",
+            docs: ["Total volume processed in token base units"],
+            type: "u64",
+          },
+          {
+            name: "open_positions",
+            docs: ["Number of currently open positions (for perps tracking)"],
+            type: "u8",
+          },
+          {
+            name: "total_fees_collected",
+            docs: [
+              "Cumulative developer fees collected from this vault (token base units)",
+            ],
+            type: "u64",
+          },
+        ],
+      },
     },
     {
-      "name": "FeesCollected",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "DelegationRevoked",
+      type: {
+        kind: "struct",
+        fields: [
           {
-            "name": "vault",
-            "type": "pubkey"
+            name: "vault",
+            type: "pubkey",
           },
           {
-            "name": "token_mint",
-            "type": "pubkey"
+            name: "token_account",
+            type: "pubkey",
           },
           {
-            "name": "protocol_fee_amount",
-            "type": "u64"
+            name: "timestamp",
+            type: "i64",
           },
-          {
-            "name": "developer_fee_amount",
-            "type": "u64"
-          },
-          {
-            "name": "protocol_fee_rate",
-            "type": "u16"
-          },
-          {
-            "name": "developer_fee_rate",
-            "type": "u16"
-          },
-          {
-            "name": "transaction_amount",
-            "type": "u64"
-          },
-          {
-            "name": "protocol_treasury",
-            "type": "pubkey"
-          },
-          {
-            "name": "developer_fee_destination",
-            "type": "pubkey"
-          },
-          {
-            "name": "cumulative_developer_fees",
-            "type": "u64"
-          },
-          {
-            "name": "timestamp",
-            "type": "i64"
-          }
-        ]
-      }
+        ],
+      },
     },
     {
-      "name": "FundsDeposited",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "EpochBucket",
+      docs: [
+        "A single epoch bucket tracking aggregate USD spend.",
+        "16 bytes per bucket. USD-only — rate limiting stays client-side.",
+      ],
+      serialization: "bytemuck",
+      repr: {
+        kind: "c",
+      },
+      type: {
+        kind: "struct",
+        fields: [
           {
-            "name": "vault",
-            "type": "pubkey"
+            name: "epoch_id",
+            docs: ["Epoch identifier: unix_timestamp / EPOCH_DURATION"],
+            type: "i64",
           },
           {
-            "name": "token_mint",
-            "type": "pubkey"
+            name: "usd_amount",
+            docs: ["Aggregate USD spent in this epoch (6 decimals)"],
+            type: "u64",
           },
-          {
-            "name": "amount",
-            "type": "u64"
-          },
-          {
-            "name": "timestamp",
-            "type": "i64"
-          }
-        ]
-      }
+        ],
+      },
     },
     {
-      "name": "FundsWithdrawn",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "FeesCollected",
+      type: {
+        kind: "struct",
+        fields: [
           {
-            "name": "vault",
-            "type": "pubkey"
+            name: "vault",
+            type: "pubkey",
           },
           {
-            "name": "token_mint",
-            "type": "pubkey"
+            name: "token_mint",
+            type: "pubkey",
           },
           {
-            "name": "amount",
-            "type": "u64"
+            name: "protocol_fee_amount",
+            type: "u64",
           },
           {
-            "name": "destination",
-            "type": "pubkey"
+            name: "developer_fee_amount",
+            type: "u64",
           },
           {
-            "name": "timestamp",
-            "type": "i64"
-          }
-        ]
-      }
+            name: "protocol_fee_rate",
+            type: "u16",
+          },
+          {
+            name: "developer_fee_rate",
+            type: "u16",
+          },
+          {
+            name: "transaction_amount",
+            type: "u64",
+          },
+          {
+            name: "protocol_treasury",
+            type: "pubkey",
+          },
+          {
+            name: "developer_fee_destination",
+            type: "pubkey",
+          },
+          {
+            name: "cumulative_developer_fees",
+            type: "u64",
+          },
+          {
+            name: "timestamp",
+            type: "i64",
+          },
+        ],
+      },
     },
     {
-      "name": "PendingPolicyUpdate",
-      "docs": [
+      name: "FundsDeposited",
+      type: {
+        kind: "struct",
+        fields: [
+          {
+            name: "vault",
+            type: "pubkey",
+          },
+          {
+            name: "token_mint",
+            type: "pubkey",
+          },
+          {
+            name: "amount",
+            type: "u64",
+          },
+          {
+            name: "timestamp",
+            type: "i64",
+          },
+        ],
+      },
+    },
+    {
+      name: "FundsWithdrawn",
+      type: {
+        kind: "struct",
+        fields: [
+          {
+            name: "vault",
+            type: "pubkey",
+          },
+          {
+            name: "token_mint",
+            type: "pubkey",
+          },
+          {
+            name: "amount",
+            type: "u64",
+          },
+          {
+            name: "destination",
+            type: "pubkey",
+          },
+          {
+            name: "timestamp",
+            type: "i64",
+          },
+        ],
+      },
+    },
+    {
+      name: "PendingPolicyUpdate",
+      docs: [
         "Queued policy update that becomes executable after a timelock period.",
         "Created by `queue_policy_update`, applied by `apply_pending_policy`,",
         "or cancelled by `cancel_pending_policy`.",
         "",
-        "PDA seeds: `[b\"pending_policy\", vault.key().as_ref()]`"
+        'PDA seeds: `[b"pending_policy", vault.key().as_ref()]`',
       ],
-      "type": {
-        "kind": "struct",
-        "fields": [
+      type: {
+        kind: "struct",
+        fields: [
           {
-            "name": "vault",
-            "docs": [
-              "Associated vault pubkey"
-            ],
-            "type": "pubkey"
+            name: "vault",
+            docs: ["Associated vault pubkey"],
+            type: "pubkey",
           },
           {
-            "name": "queued_at",
-            "docs": [
-              "Unix timestamp when this update was queued"
-            ],
-            "type": "i64"
+            name: "queued_at",
+            docs: ["Unix timestamp when this update was queued"],
+            type: "i64",
           },
           {
-            "name": "executes_at",
-            "docs": [
-              "Unix timestamp when this update becomes executable"
-            ],
-            "type": "i64"
+            name: "executes_at",
+            docs: ["Unix timestamp when this update becomes executable"],
+            type: "i64",
           },
           {
-            "name": "daily_spending_cap_usd",
-            "type": {
-              "option": "u64"
-            }
+            name: "daily_spending_cap_usd",
+            type: {
+              option: "u64",
+            },
           },
           {
-            "name": "max_transaction_amount_usd",
-            "type": {
-              "option": "u64"
-            }
+            name: "max_transaction_amount_usd",
+            type: {
+              option: "u64",
+            },
           },
           {
-            "name": "protocol_mode",
-            "type": {
-              "option": "u8"
-            }
+            name: "protocol_mode",
+            type: {
+              option: "u8",
+            },
           },
           {
-            "name": "protocols",
-            "type": {
-              "option": {
-                "vec": "pubkey"
-              }
-            }
+            name: "protocols",
+            type: {
+              option: {
+                vec: "pubkey",
+              },
+            },
           },
           {
-            "name": "max_leverage_bps",
-            "type": {
-              "option": "u16"
-            }
+            name: "max_leverage_bps",
+            type: {
+              option: "u16",
+            },
           },
           {
-            "name": "can_open_positions",
-            "type": {
-              "option": "bool"
-            }
+            name: "can_open_positions",
+            type: {
+              option: "bool",
+            },
           },
           {
-            "name": "max_concurrent_positions",
-            "type": {
-              "option": "u8"
-            }
+            name: "max_concurrent_positions",
+            type: {
+              option: "u8",
+            },
           },
           {
-            "name": "developer_fee_rate",
-            "type": {
-              "option": "u16"
-            }
+            name: "developer_fee_rate",
+            type: {
+              option: "u16",
+            },
           },
           {
-            "name": "max_slippage_bps",
-            "type": {
-              "option": "u16"
-            }
+            name: "max_slippage_bps",
+            type: {
+              option: "u16",
+            },
           },
           {
-            "name": "timelock_duration",
-            "type": {
-              "option": "u64"
-            }
+            name: "timelock_duration",
+            type: {
+              option: "u64",
+            },
           },
           {
-            "name": "allowed_destinations",
-            "type": {
-              "option": {
-                "vec": "pubkey"
-              }
-            }
+            name: "allowed_destinations",
+            type: {
+              option: {
+                vec: "pubkey",
+              },
+            },
           },
           {
-            "name": "bump",
-            "docs": [
-              "Bump seed for PDA"
-            ],
-            "type": "u8"
-          }
-        ]
-      }
+            name: "bump",
+            docs: ["Bump seed for PDA"],
+            type: "u8",
+          },
+        ],
+      },
     },
     {
-      "name": "PolicyChangeApplied",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "PolicyChangeApplied",
+      type: {
+        kind: "struct",
+        fields: [
           {
-            "name": "vault",
-            "type": "pubkey"
+            name: "vault",
+            type: "pubkey",
           },
           {
-            "name": "applied_at",
-            "type": "i64"
-          }
-        ]
-      }
+            name: "applied_at",
+            type: "i64",
+          },
+        ],
+      },
     },
     {
-      "name": "PolicyChangeCancelled",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "PolicyChangeCancelled",
+      type: {
+        kind: "struct",
+        fields: [
           {
-            "name": "vault",
-            "type": "pubkey"
-          }
-        ]
-      }
+            name: "vault",
+            type: "pubkey",
+          },
+        ],
+      },
     },
     {
-      "name": "PolicyChangeQueued",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "PolicyChangeQueued",
+      type: {
+        kind: "struct",
+        fields: [
           {
-            "name": "vault",
-            "type": "pubkey"
+            name: "vault",
+            type: "pubkey",
           },
           {
-            "name": "executes_at",
-            "type": "i64"
-          }
-        ]
-      }
+            name: "executes_at",
+            type: "i64",
+          },
+        ],
+      },
     },
     {
-      "name": "PolicyConfig",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "PolicyConfig",
+      type: {
+        kind: "struct",
+        fields: [
           {
-            "name": "vault",
-            "docs": [
-              "Associated vault pubkey"
-            ],
-            "type": "pubkey"
+            name: "vault",
+            docs: ["Associated vault pubkey"],
+            type: "pubkey",
           },
           {
-            "name": "daily_spending_cap_usd",
-            "docs": [
+            name: "daily_spending_cap_usd",
+            docs: [
               "Maximum aggregate spend per rolling 24h period in USD (6 decimals).",
-              "$500 = 500_000_000. This is the primary spending cap."
+              "$500 = 500_000_000. This is the primary spending cap.",
             ],
-            "type": "u64"
+            type: "u64",
           },
           {
-            "name": "max_transaction_size_usd",
-            "docs": [
-              "Maximum single transaction size in USD (6 decimals)."
-            ],
-            "type": "u64"
+            name: "max_transaction_size_usd",
+            docs: ["Maximum single transaction size in USD (6 decimals)."],
+            type: "u64",
           },
           {
-            "name": "protocol_mode",
-            "docs": [
+            name: "protocol_mode",
+            docs: [
               "Protocol access control mode:",
               "0 = all allowed (protocols list ignored)",
               "1 = allowlist (only protocols in list)",
-              "2 = denylist (all except protocols in list)"
+              "2 = denylist (all except protocols in list)",
             ],
-            "type": "u8"
+            type: "u8",
           },
           {
-            "name": "protocols",
-            "docs": [
+            name: "protocols",
+            docs: [
               "Protocol pubkeys for allowlist/denylist.",
-              "Bounded to MAX_ALLOWED_PROTOCOLS entries."
+              "Bounded to MAX_ALLOWED_PROTOCOLS entries.",
             ],
-            "type": {
-              "vec": "pubkey"
-            }
+            type: {
+              vec: "pubkey",
+            },
           },
           {
-            "name": "max_leverage_bps",
-            "docs": [
+            name: "max_leverage_bps",
+            docs: [
               "Maximum leverage multiplier in basis points (e.g., 10000 = 100x)",
-              "Set to 0 to disallow leveraged positions entirely"
+              "Set to 0 to disallow leveraged positions entirely",
             ],
-            "type": "u16"
+            type: "u16",
           },
           {
-            "name": "can_open_positions",
-            "docs": [
-              "Whether the agent can open new positions (vs only close existing)"
+            name: "can_open_positions",
+            docs: [
+              "Whether the agent can open new positions (vs only close existing)",
             ],
-            "type": "bool"
+            type: "bool",
           },
           {
-            "name": "max_concurrent_positions",
-            "docs": [
-              "Maximum number of concurrent open positions"
-            ],
-            "type": "u8"
+            name: "max_concurrent_positions",
+            docs: ["Maximum number of concurrent open positions"],
+            type: "u8",
           },
           {
-            "name": "developer_fee_rate",
-            "docs": [
+            name: "developer_fee_rate",
+            docs: [
               "Developer fee rate (rate / 1,000,000). Applied to every finalized",
-              "transaction. Max MAX_DEVELOPER_FEE_RATE (500 = 5 BPS)."
+              "transaction. Max MAX_DEVELOPER_FEE_RATE (500 = 5 BPS).",
             ],
-            "type": "u16"
+            type: "u16",
           },
           {
-            "name": "max_slippage_bps",
-            "docs": [
+            name: "max_slippage_bps",
+            docs: [
               "Maximum slippage tolerance for Jupiter swaps in basis points.",
               "0 = reject all swaps (vault owner must explicitly configure).",
-              "Enforced on-chain via instruction introspection of Jupiter data."
+              "Enforced on-chain via instruction introspection of Jupiter data.",
             ],
-            "type": "u16"
+            type: "u16",
           },
           {
-            "name": "timelock_duration",
-            "docs": [
-              "Timelock duration in seconds for policy changes. 0 = no timelock."
+            name: "timelock_duration",
+            docs: [
+              "Timelock duration in seconds for policy changes. 0 = no timelock.",
             ],
-            "type": "u64"
+            type: "u64",
           },
           {
-            "name": "allowed_destinations",
-            "docs": [
+            name: "allowed_destinations",
+            docs: [
               "Allowed destination addresses for agent transfers.",
-              "Empty = any destination allowed. Bounded to MAX_ALLOWED_DESTINATIONS."
+              "Empty = any destination allowed. Bounded to MAX_ALLOWED_DESTINATIONS.",
             ],
-            "type": {
-              "vec": "pubkey"
-            }
+            type: {
+              vec: "pubkey",
+            },
           },
           {
-            "name": "bump",
-            "docs": [
-              "Bump seed for PDA"
-            ],
-            "type": "u8"
-          }
-        ]
-      }
+            name: "bump",
+            docs: ["Bump seed for PDA"],
+            type: "u8",
+          },
+        ],
+      },
     },
     {
-      "name": "PolicyUpdated",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "PolicyUpdated",
+      type: {
+        kind: "struct",
+        fields: [
           {
-            "name": "vault",
-            "type": "pubkey"
+            name: "vault",
+            type: "pubkey",
           },
           {
-            "name": "daily_cap_usd",
-            "type": "u64"
+            name: "daily_cap_usd",
+            type: "u64",
           },
           {
-            "name": "max_transaction_size_usd",
-            "type": "u64"
+            name: "max_transaction_size_usd",
+            type: "u64",
           },
           {
-            "name": "protocol_mode",
-            "type": "u8"
+            name: "protocol_mode",
+            type: "u8",
           },
           {
-            "name": "protocols_count",
-            "type": "u8"
+            name: "protocols_count",
+            type: "u8",
           },
           {
-            "name": "max_leverage_bps",
-            "type": "u16"
+            name: "max_leverage_bps",
+            type: "u16",
           },
           {
-            "name": "developer_fee_rate",
-            "type": "u16"
+            name: "developer_fee_rate",
+            type: "u16",
           },
           {
-            "name": "max_slippage_bps",
-            "type": "u16"
+            name: "max_slippage_bps",
+            type: "u16",
           },
           {
-            "name": "timestamp",
-            "type": "i64"
-          }
-        ]
-      }
+            name: "timestamp",
+            type: "i64",
+          },
+        ],
+      },
     },
     {
-      "name": "PositionsSynced",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "PositionsSynced",
+      type: {
+        kind: "struct",
+        fields: [
           {
-            "name": "vault",
-            "type": "pubkey"
+            name: "vault",
+            type: "pubkey",
           },
           {
-            "name": "old_count",
-            "type": "u8"
+            name: "old_count",
+            type: "u8",
           },
           {
-            "name": "new_count",
-            "type": "u8"
+            name: "new_count",
+            type: "u8",
           },
           {
-            "name": "timestamp",
-            "type": "i64"
-          }
-        ]
-      }
+            name: "timestamp",
+            type: "i64",
+          },
+        ],
+      },
     },
     {
-      "name": "SessionAuthority",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "SessionAuthority",
+      type: {
+        kind: "struct",
+        fields: [
           {
-            "name": "vault",
-            "docs": [
-              "Associated vault"
+            name: "vault",
+            docs: ["Associated vault"],
+            type: "pubkey",
+          },
+          {
+            name: "agent",
+            docs: ["The agent who initiated this session"],
+            type: "pubkey",
+          },
+          {
+            name: "authorized",
+            docs: [
+              "Whether this session has been authorized by the permission check",
             ],
-            "type": "pubkey"
+            type: "bool",
           },
           {
-            "name": "agent",
-            "docs": [
-              "The agent who initiated this session"
+            name: "authorized_amount",
+            docs: ["Authorized action details (for verification in finalize)"],
+            type: "u64",
+          },
+          {
+            name: "authorized_token",
+            type: "pubkey",
+          },
+          {
+            name: "authorized_protocol",
+            type: "pubkey",
+          },
+          {
+            name: "action_type",
+            docs: [
+              "The action type that was authorized (stored so finalize can record it)",
             ],
-            "type": "pubkey"
+            type: {
+              defined: {
+                name: "ActionType",
+              },
+            },
           },
           {
-            "name": "authorized",
-            "docs": [
-              "Whether this session has been authorized by the permission check"
-            ],
-            "type": "bool"
+            name: "expires_at_slot",
+            docs: ["Slot-based expiry: session is valid until this slot"],
+            type: "u64",
           },
           {
-            "name": "authorized_amount",
-            "docs": [
-              "Authorized action details (for verification in finalize)"
-            ],
-            "type": "u64"
+            name: "delegated",
+            docs: ["Whether token delegation was set up (approve CPI)"],
+            type: "bool",
           },
           {
-            "name": "authorized_token",
-            "type": "pubkey"
-          },
-          {
-            "name": "authorized_protocol",
-            "type": "pubkey"
-          },
-          {
-            "name": "action_type",
-            "docs": [
-              "The action type that was authorized (stored so finalize can record it)"
-            ],
-            "type": {
-              "defined": {
-                "name": "ActionType"
-              }
-            }
-          },
-          {
-            "name": "expires_at_slot",
-            "docs": [
-              "Slot-based expiry: session is valid until this slot"
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "delegated",
-            "docs": [
-              "Whether token delegation was set up (approve CPI)"
-            ],
-            "type": "bool"
-          },
-          {
-            "name": "delegation_token_account",
-            "docs": [
+            name: "delegation_token_account",
+            docs: [
               "The vault's token account that was delegated to the agent",
-              "(only meaningful when delegated == true)"
+              "(only meaningful when delegated == true)",
             ],
-            "type": "pubkey"
+            type: "pubkey",
           },
           {
-            "name": "protocol_fee",
-            "docs": [
-              "Protocol fee collected during validate (for event logging in finalize)"
+            name: "protocol_fee",
+            docs: [
+              "Protocol fee collected during validate (for event logging in finalize)",
             ],
-            "type": "u64"
+            type: "u64",
           },
           {
-            "name": "developer_fee",
-            "docs": [
-              "Developer fee collected during validate (for event logging in finalize)"
+            name: "developer_fee",
+            docs: [
+              "Developer fee collected during validate (for event logging in finalize)",
             ],
-            "type": "u64"
+            type: "u64",
           },
           {
-            "name": "output_mint",
-            "docs": [
+            name: "output_mint",
+            docs: [
               "Expected output stablecoin mint for non-stablecoin→stablecoin swaps.",
-              "Pubkey::default() when input is already a stablecoin (no snapshot needed)."
+              "Pubkey::default() when input is already a stablecoin (no snapshot needed).",
             ],
-            "type": "pubkey"
+            type: "pubkey",
           },
           {
-            "name": "stablecoin_balance_before",
-            "docs": [
+            name: "stablecoin_balance_before",
+            docs: [
               "Snapshot of vault's stablecoin ATA balance before swap.",
-              "0 when input is already a stablecoin."
+              "0 when input is already a stablecoin.",
             ],
-            "type": "u64"
+            type: "u64",
           },
           {
-            "name": "bump",
-            "docs": [
-              "Bump seed for PDA"
-            ],
-            "type": "u8"
-          }
-        ]
-      }
+            name: "bump",
+            docs: ["Bump seed for PDA"],
+            type: "u8",
+          },
+        ],
+      },
     },
     {
-      "name": "SessionFinalized",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "SessionFinalized",
+      type: {
+        kind: "struct",
+        fields: [
           {
-            "name": "vault",
-            "type": "pubkey"
+            name: "vault",
+            type: "pubkey",
           },
           {
-            "name": "agent",
-            "type": "pubkey"
+            name: "agent",
+            type: "pubkey",
           },
           {
-            "name": "success",
-            "type": "bool"
+            name: "success",
+            type: "bool",
           },
           {
-            "name": "is_expired",
-            "type": "bool"
+            name: "is_expired",
+            type: "bool",
           },
           {
-            "name": "timestamp",
-            "type": "i64"
-          }
-        ]
-      }
+            name: "timestamp",
+            type: "i64",
+          },
+        ],
+      },
     },
     {
-      "name": "SpendTracker",
-      "docs": [
+      name: "SpendTracker",
+      docs: [
         "Zero-copy 144-epoch circular buffer for rolling 24h USD spend tracking.",
         "Each bucket covers a 10-minute epoch. Boundary correction ensures",
         "functionally exact accuracy (~$0.000001 worst-case rounding).",
         "Rounding direction: slightly permissive (under-counts by at most $0.000001).",
         "",
-        "Seeds: `[b\"tracker\", vault.key().as_ref()]`"
+        'Seeds: `[b"tracker", vault.key().as_ref()]`',
       ],
-      "serialization": "bytemuck",
-      "repr": {
-        "kind": "c"
+      serialization: "bytemuck",
+      repr: {
+        kind: "c",
       },
-      "type": {
-        "kind": "struct",
-        "fields": [
+      type: {
+        kind: "struct",
+        fields: [
           {
-            "name": "vault",
-            "docs": [
-              "Associated vault pubkey"
-            ],
-            "type": "pubkey"
+            name: "vault",
+            docs: ["Associated vault pubkey"],
+            type: "pubkey",
           },
           {
-            "name": "buckets",
-            "docs": [
-              "144 epoch buckets for rolling 24h spend tracking"
-            ],
-            "type": {
-              "array": [
+            name: "buckets",
+            docs: ["144 epoch buckets for rolling 24h spend tracking"],
+            type: {
+              array: [
                 {
-                  "defined": {
-                    "name": "EpochBucket"
-                  }
+                  defined: {
+                    name: "EpochBucket",
+                  },
                 },
-                144
-              ]
-            }
+                144,
+              ],
+            },
           },
           {
-            "name": "bump",
-            "docs": [
-              "Bump seed for PDA"
-            ],
-            "type": "u8"
+            name: "bump",
+            docs: ["Bump seed for PDA"],
+            type: "u8",
           },
           {
-            "name": "_padding",
-            "docs": [
-              "Padding for 8-byte alignment"
-            ],
-            "type": {
-              "array": [
-                "u8",
-                7
-              ]
-            }
-          }
-        ]
-      }
+            name: "_padding",
+            docs: ["Padding for 8-byte alignment"],
+            type: {
+              array: ["u8", 7],
+            },
+          },
+        ],
+      },
     },
     {
-      "name": "VaultClosed",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "VaultClosed",
+      type: {
+        kind: "struct",
+        fields: [
           {
-            "name": "vault",
-            "type": "pubkey"
+            name: "vault",
+            type: "pubkey",
           },
           {
-            "name": "owner",
-            "type": "pubkey"
+            name: "owner",
+            type: "pubkey",
           },
           {
-            "name": "timestamp",
-            "type": "i64"
-          }
-        ]
-      }
+            name: "timestamp",
+            type: "i64",
+          },
+        ],
+      },
     },
     {
-      "name": "VaultCreated",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "VaultCreated",
+      type: {
+        kind: "struct",
+        fields: [
           {
-            "name": "vault",
-            "type": "pubkey"
+            name: "vault",
+            type: "pubkey",
           },
           {
-            "name": "owner",
-            "type": "pubkey"
+            name: "owner",
+            type: "pubkey",
           },
           {
-            "name": "vault_id",
-            "type": "u64"
+            name: "vault_id",
+            type: "u64",
           },
           {
-            "name": "timestamp",
-            "type": "i64"
-          }
-        ]
-      }
+            name: "timestamp",
+            type: "i64",
+          },
+        ],
+      },
     },
     {
-      "name": "VaultReactivated",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "VaultReactivated",
+      type: {
+        kind: "struct",
+        fields: [
           {
-            "name": "vault",
-            "type": "pubkey"
+            name: "vault",
+            type: "pubkey",
           },
           {
-            "name": "new_agent",
-            "type": {
-              "option": "pubkey"
-            }
+            name: "new_agent",
+            type: {
+              option: "pubkey",
+            },
           },
           {
-            "name": "timestamp",
-            "type": "i64"
-          }
-        ]
-      }
+            name: "timestamp",
+            type: "i64",
+          },
+        ],
+      },
     },
     {
-      "name": "VaultStatus",
-      "docs": [
-        "Vault status enum"
-      ],
-      "type": {
-        "kind": "enum",
-        "variants": [
+      name: "VaultStatus",
+      docs: ["Vault status enum"],
+      type: {
+        kind: "enum",
+        variants: [
           {
-            "name": "Active"
+            name: "Active",
           },
           {
-            "name": "Frozen"
+            name: "Frozen",
           },
           {
-            "name": "Closed"
-          }
-        ]
-      }
-    }
-  ]
+            name: "Closed",
+          },
+        ],
+      },
+    },
+  ],
 };

@@ -191,12 +191,12 @@ export function getSquadsProposalPda(
 // ---------------------------------------------------------------------------
 
 function toSquadsMember(m: SquadsMember): { key: PublicKey; permissions: any } {
-  const perms: Array<(typeof multisig.types.Permission)[keyof typeof multisig.types.Permission]> = [];
-  if (m.permissions.initiate)
-    perms.push(multisig.types.Permission.Initiate);
+  const perms: Array<
+    (typeof multisig.types.Permission)[keyof typeof multisig.types.Permission]
+  > = [];
+  if (m.permissions.initiate) perms.push(multisig.types.Permission.Initiate);
   if (m.permissions.vote) perms.push(multisig.types.Permission.Vote);
-  if (m.permissions.execute)
-    perms.push(multisig.types.Permission.Execute);
+  if (m.permissions.execute) perms.push(multisig.types.Permission.Execute);
   return {
     key: m.key,
     permissions: multisig.types.Permissions.fromPermissions(perms as any),
@@ -214,9 +214,7 @@ function fromSquadsMask(mask: number): SquadsMember["permissions"] {
 function resolveStatus(status: any): { name: string; timestamp?: bigint } {
   const kind: string = status?.__kind ?? "Unknown";
   const ts =
-    status?.timestamp != null
-      ? BigInt(status.timestamp.toString())
-      : undefined;
+    status?.timestamp != null ? BigInt(status.timestamp.toString()) : undefined;
   switch (kind) {
     case "Draft":
     case "Active":
@@ -289,8 +287,7 @@ export async function proposeVaultAction(
     connection,
     params.multisigPda,
   );
-  const transactionIndex =
-    BigInt(msAccount.transactionIndex.toString()) + 1n;
+  const transactionIndex = BigInt(msAccount.transactionIndex.toString()) + 1n;
 
   const vaultIndex = params.vaultIndex ?? 0;
   const [vaultPda] = getSquadsVaultPda(params.multisigPda, vaultIndex);
@@ -436,10 +433,7 @@ export async function fetchProposalInfo(
   multisigPda: PublicKey,
   transactionIndex: bigint,
 ): Promise<ProposalInfo> {
-  const [proposalPda] = getSquadsProposalPda(
-    multisigPda,
-    transactionIndex,
-  );
+  const [proposalPda] = getSquadsProposalPda(multisigPda, transactionIndex);
   const acct = await multisig.accounts.Proposal.fromAccountAddress(
     connection,
     proposalPda,

@@ -1,9 +1,6 @@
 import { expect } from "chai";
 import { trendingTokens } from "../../src/tools/trending-tokens";
-import {
-  configureJupiterApi,
-  resetJupiterApiConfig,
-} from "@agent-shield/sdk";
+import { configureJupiterApi, resetJupiterApiConfig } from "@agent-shield/sdk";
 
 describe("shield_trending_tokens", () => {
   const originalFetch = globalThis.fetch;

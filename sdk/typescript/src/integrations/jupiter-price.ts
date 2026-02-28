@@ -60,7 +60,9 @@ export async function getJupiterPrices(params: {
   }
 
   if (params.ids.length > 50) {
-    throw new Error("Jupiter Price API supports a maximum of 50 mints per request");
+    throw new Error(
+      "Jupiter Price API supports a maximum of 50 mints per request",
+    );
   }
 
   const qs = new URLSearchParams({
@@ -78,9 +80,7 @@ export async function getJupiterPrices(params: {
  * Get the USD price for a single token mint.
  * Returns null if the token is not found or has no price.
  */
-export async function getTokenPriceUsd(
-  mint: string,
-): Promise<number | null> {
+export async function getTokenPriceUsd(mint: string): Promise<number | null> {
   const response = await getJupiterPrices({ ids: [mint] });
   const data = response.data[mint];
   if (!data || !data.price) return null;

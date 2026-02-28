@@ -187,8 +187,7 @@ pub fn verify_jupiter_slippage(ix_data: &[u8], max_slippage_bps: u16) -> Result<
 
     // 1. Parse discriminator — determine instruction variant
     let disc = &ix_data[..8];
-    let has_id = disc == SHARED_ACCOUNTS_ROUTE_DISC
-        || disc == SHARED_ACCOUNTS_EXACT_OUT_ROUTE_DISC;
+    let has_id = disc == SHARED_ACCOUNTS_ROUTE_DISC || disc == SHARED_ACCOUNTS_EXACT_OUT_ROUTE_DISC;
     let is_known = has_id || disc == ROUTE_DISC || disc == EXACT_OUT_ROUTE_DISC;
     require!(is_known, AgentShieldError::InvalidJupiterInstruction);
 
@@ -270,8 +269,7 @@ pub fn verify_jupiter_slippage(ix_data: &[u8], max_slippage_bps: u16) -> Result<
         .map_err(|_| error!(AgentShieldError::InvalidJupiterInstruction))?;
     let quoted_out = u64::from_le_bytes(quoted_out_bytes);
 
-    let slippage_bps =
-        u16::from_le_bytes([ix_data[cursor + 16], ix_data[cursor + 17]]);
+    let slippage_bps = u16::from_le_bytes([ix_data[cursor + 16], ix_data[cursor + 17]]);
 
     // 7. Verify slippage within policy
     require!(quoted_out > 0, AgentShieldError::SlippageTooHigh);
@@ -391,8 +389,8 @@ mod tests {
             data.push(*swap_disc);
             data.extend_from_slice(fields);
             data.push(100); // percent
-            data.push(0);   // input_index
-            data.push(1);   // output_index
+            data.push(0); // input_index
+            data.push(1); // output_index
         }
         // suffix
         data.extend_from_slice(&in_amount.to_le_bytes());
@@ -622,15 +620,7 @@ mod tests {
     // --- Test 13: Zero-step with 1 trailing byte → rejected ---
     #[test]
     fn zero_step_trailing_byte_rejected() {
-        let mut data = build_v1_data(
-            ROUTE_DISC,
-            false,
-            &[],
-            1_000_000,
-            1_000_000,
-            50,
-            0,
-        );
+        let mut data = build_v1_data(ROUTE_DISC, false, &[], 1_000_000, 1_000_000, 50, 0);
         data.push(0xFF); // 1 trailing byte
         let result = verify_jupiter_slippage(&data, 100);
         assert!(result.is_err());
@@ -703,7 +693,7 @@ mod tests {
         let mut data = Vec::new();
         data.extend_from_slice(&ROUTE_DISC);
         data.extend_from_slice(&11u32.to_le_bytes()); // vec_len = 11
-        // Pad enough for the check to reach the vec_len validation
+                                                      // Pad enough for the check to reach the vec_len validation
         data.extend(vec![0u8; 200]);
         let result = verify_jupiter_slippage(&data, 100);
         assert!(result.is_err());
@@ -755,9 +745,9 @@ mod tests {
             ROUTE_DISC,
             false,
             &[
-                (0, vec![]),          // Saber (0 fields)
-                (17, vec![1]),        // Whirlpool { a_to_b: true }
-                (29, vec![0u8; 16]),  // Symmetry { from_token_id, to_token_id }
+                (0, vec![]),         // Saber (0 fields)
+                (17, vec![1]),       // Whirlpool { a_to_b: true }
+                (29, vec![0u8; 16]), // Symmetry { from_token_id, to_token_id }
             ],
             5_000_000,
             4_900_000,

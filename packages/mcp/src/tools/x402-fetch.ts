@@ -81,9 +81,7 @@ function validateUrl(url: string): void {
         (mp[0] === 192 && mp[1] === 168) ||
         mp[0] === 0
       ) {
-        throw new Error(
-          "Requests to private IP addresses are not allowed",
-        );
+        throw new Error("Requests to private IP addresses are not allowed");
       }
     }
     // Reject unique local (fc00::/7 → fc or fd prefix)

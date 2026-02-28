@@ -1,9 +1,6 @@
 import { expect } from "chai";
 import { lendTokens } from "../../src/tools/lend-tokens";
-import {
-  configureJupiterApi,
-  resetJupiterApiConfig,
-} from "@agent-shield/sdk";
+import { configureJupiterApi, resetJupiterApiConfig } from "@agent-shield/sdk";
 
 describe("shield_lend_tokens", () => {
   const originalFetch = globalThis.fetch;

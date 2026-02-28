@@ -22,9 +22,7 @@ export const squadsProposeActionSchema = z.object({
     .optional()
     .default(0)
     .describe("Squads vault authority index (default 0)"),
-  action: z
-    .enum(ACTION_TYPES)
-    .describe("AgentShield admin action to propose"),
+  action: z.enum(ACTION_TYPES).describe("AgentShield admin action to propose"),
   agentShieldVault: z
     .string()
     .describe("AgentShield vault PDA address (base58)"),

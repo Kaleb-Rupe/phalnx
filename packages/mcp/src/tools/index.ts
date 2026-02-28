@@ -133,11 +133,7 @@ export {
   trendingTokens,
   trendingTokensSchema,
 } from "./trending-tokens";
-export {
-  lendTokensTool,
-  lendTokens,
-  lendTokensSchema,
-} from "./lend-tokens";
+export { lendTokensTool, lendTokens, lendTokensSchema } from "./lend-tokens";
 export {
   lendDepositTool,
   lendDeposit,

@@ -109,7 +109,9 @@ describe("jupiter-api", () => {
         return jsonResponse({ price: 42 });
       });
 
-      const result = await jupiterFetch<{ price: number }>("/v6/quote?inputMint=SOL");
+      const result = await jupiterFetch<{ price: number }>(
+        "/v6/quote?inputMint=SOL",
+      );
 
       expect(capturedUrl).to.equal("https://api.jup.ag/v6/quote?inputMint=SOL");
       expect(capturedInit.method).to.equal("GET");

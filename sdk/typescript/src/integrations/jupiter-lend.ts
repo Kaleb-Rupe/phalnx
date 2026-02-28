@@ -9,18 +9,17 @@
 // Withdraw = non-spending (amount = 0)
 // ---------------------------------------------------------------------------
 
-import {
-  PublicKey,
-  TransactionInstruction,
-  Connection,
-} from "@solana/web3.js";
+import { PublicKey, TransactionInstruction, Connection } from "@solana/web3.js";
 import { BN, Program } from "@coral-xyz/anchor";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import type { AgentShield, ComposeActionParams } from "../types";
 import { getVaultPDA } from "../accounts";
 import { composePermittedAction } from "../composer";
 import { jupiterFetch } from "./jupiter-api";
-import { deserializeInstruction, type JupiterSerializedInstruction } from "./jupiter";
+import {
+  deserializeInstruction,
+  type JupiterSerializedInstruction,
+} from "./jupiter";
 
 // ---------------------------------------------------------------------------
 // Constants

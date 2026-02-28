@@ -29,19 +29,33 @@ export const PROTOCOL_MODE_ALLOWLIST = 1;
 export const PROTOCOL_MODE_DENYLIST = 2;
 
 // Devnet USDC: 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU
-export const USDC_MINT_DEVNET = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
+export const USDC_MINT_DEVNET = new PublicKey(
+  "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+);
 // Mainnet USDC: EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
-export const USDC_MINT_MAINNET = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+export const USDC_MINT_MAINNET = new PublicKey(
+  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+);
 // Devnet USDT: EJwZgeZrdC8TXTQbQBoL6bfuAnFUQS5S4iC5A2ciQtCK
-export const USDT_MINT_DEVNET = new PublicKey('EJwZgeZrdC8TXTQbQBoL6bfuAnFUQS5S4iC5A2ciQtCK');
+export const USDT_MINT_DEVNET = new PublicKey(
+  "EJwZgeZrdC8TXTQbQBoL6bfuAnFUQS5S4iC5A2ciQtCK",
+);
 // Mainnet USDT: Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB
-export const USDT_MINT_MAINNET = new PublicKey('Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB');
+export const USDT_MINT_MAINNET = new PublicKey(
+  "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+);
 
-export const JUPITER_PROGRAM_ID = new PublicKey('JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4');
+export const JUPITER_PROGRAM_ID = new PublicKey(
+  "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",
+);
 
 export function isStablecoinMint(mint: PublicKey): boolean {
-  return mint.equals(USDC_MINT_DEVNET) || mint.equals(USDC_MINT_MAINNET)
-    || mint.equals(USDT_MINT_DEVNET) || mint.equals(USDT_MINT_MAINNET);
+  return (
+    mint.equals(USDC_MINT_DEVNET) ||
+    mint.equals(USDC_MINT_MAINNET) ||
+    mint.equals(USDT_MINT_DEVNET) ||
+    mint.equals(USDT_MINT_MAINNET)
+  );
 }
 
 /** Epoch bucket in the zero-copy circular spend tracker */
@@ -273,5 +287,3 @@ export interface ComposeActionParams {
   /** Output stablecoin token account (for post-swap balance verification) */
   outputStablecoinAccount?: PublicKey;
 }
-
-

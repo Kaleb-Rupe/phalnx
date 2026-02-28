@@ -46,9 +46,8 @@ emergencyCloseAuth.get("/api/actions/emergency-close-auth", (c) => {
 emergencyCloseAuth.post("/api/actions/emergency-close-auth", async (c) => {
   try {
     const { PublicKey } = await import("@solana/web3.js");
-    const { buildEmergencyCloseAuthTransaction } = await import(
-      "../lib/build-emergency-close-auth-tx"
-    );
+    const { buildEmergencyCloseAuthTransaction } =
+      await import("../lib/build-emergency-close-auth-tx");
 
     const body = await c.req.json<{ account: string }>();
 
@@ -106,7 +105,10 @@ emergencyCloseAuth.post("/api/actions/emergency-close-auth", async (c) => {
       ACTIONS_CORS_HEADERS,
     );
   } catch (error) {
-    console.error("[AgentShield] emergency-freeze error:", error instanceof Error ? error.message : String(error));
+    console.error(
+      "[AgentShield] emergency-freeze error:",
+      error instanceof Error ? error.message : String(error),
+    );
     return c.json(
       { error: "Internal server error" },
       500,

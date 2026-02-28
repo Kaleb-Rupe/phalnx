@@ -1,10 +1,7 @@
 import { expect } from "chai";
 import { Keypair } from "@solana/web3.js";
 import { getPrices } from "../../src/tools/get-prices";
-import {
-  configureJupiterApi,
-  resetJupiterApiConfig,
-} from "@agent-shield/sdk";
+import { configureJupiterApi, resetJupiterApiConfig } from "@agent-shield/sdk";
 
 describe("shield_get_prices", () => {
   const mint1 = Keypair.generate().publicKey.toBase58();
@@ -45,10 +42,7 @@ describe("shield_get_prices", () => {
 
   it("returns no data message for empty response", async () => {
     (globalThis as any).fetch = async () =>
-      new Response(
-        JSON.stringify({ data: {}, timeTaken: 5 }),
-        { status: 200 },
-      );
+      new Response(JSON.stringify({ data: {}, timeTaken: 5 }), { status: 200 });
 
     const result = await getPrices({ mints: [mint1] });
     expect(result).to.include("No price data found");

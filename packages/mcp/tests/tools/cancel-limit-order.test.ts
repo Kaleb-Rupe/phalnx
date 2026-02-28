@@ -17,9 +17,7 @@ describe("shield_cancel_limit_order", () => {
   let config: McpConfig;
 
   before(() => {
-    tmpDir = fs.mkdtempSync(
-      path.join(os.tmpdir(), "mcp-cancel-limit-test-"),
-    );
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "mcp-cancel-limit-test-"));
     const kp = Keypair.generate();
     agentKeypairPath = path.join(tmpDir, "agent.json");
     fs.writeFileSync(
@@ -63,8 +61,7 @@ describe("shield_cancel_limit_order", () => {
       side: "long",
       orderId: "99",
     });
-    expect(
-      client.calls.some((c) => c.method === "flashTradeCancelLimitOrder"),
-    ).to.be.true;
+    expect(client.calls.some((c) => c.method === "flashTradeCancelLimitOrder"))
+      .to.be.true;
   });
 });

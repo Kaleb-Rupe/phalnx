@@ -63,9 +63,7 @@ export async function searchJupiterTokens(params: {
 export async function getTrendingTokens(
   interval: TrendingInterval = "24h",
 ): Promise<JupiterTokenInfo[]> {
-  return jupiterFetch<JupiterTokenInfo[]>(
-    `/tokens/v2/trending/${interval}`,
-  );
+  return jupiterFetch<JupiterTokenInfo[]>(`/tokens/v2/trending/${interval}`);
 }
 
 /**

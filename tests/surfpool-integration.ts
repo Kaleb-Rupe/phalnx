@@ -629,11 +629,7 @@ describe("surfpool-integration", function () {
         })
         .instruction();
 
-      await sendVersionedTx(
-        env.connection,
-        [validateIx, finalizeIx],
-        agent,
-      );
+      await sendVersionedTx(env.connection, [validateIx, finalizeIx], agent);
 
       const vault = await program.account.agentVault.fetch(vaultPda);
       expect(vault.totalTransactions.toNumber()).to.equal(1);
@@ -693,11 +689,7 @@ describe("surfpool-integration", function () {
         .instruction();
 
       try {
-        await sendVersionedTx(
-          env.connection,
-          [validateIx, finalizeIx],
-          agent,
-        );
+        await sendVersionedTx(env.connection, [validateIx, finalizeIx], agent);
         expect.fail("Should have failed — amount exceeds max tx size");
       } catch (err: any) {
         expect(err.toString()).to.include("TransactionTooLarge");
@@ -757,11 +749,7 @@ describe("surfpool-integration", function () {
         })
         .instruction();
 
-      await sendVersionedTx(
-        env.connection,
-        [validateIx, finalizeIx],
-        agent,
-      );
+      await sendVersionedTx(env.connection, [validateIx, finalizeIx], agent);
 
       const vault = await program.account.agentVault.fetch(vaultPda);
       expect(vault.totalTransactions.toNumber()).to.equal(2);
@@ -842,9 +830,8 @@ describe("surfpool-integration", function () {
       );
 
       // Verify the balance by fetching the token account
-      const accountInfo = await env.connection.getTokenAccountBalance(
-        vaultUsdcAta,
-      );
+      const accountInfo =
+        await env.connection.getTokenAccountBalance(vaultUsdcAta);
       expect(Number(accountInfo.value.amount)).to.equal(500_000_000);
     });
 
@@ -856,9 +843,8 @@ describe("surfpool-integration", function () {
         300_000_000, // 300 USDT
       );
 
-      const accountInfo = await env.connection.getTokenAccountBalance(
-        vaultUsdtAta,
-      );
+      const accountInfo =
+        await env.connection.getTokenAccountBalance(vaultUsdtAta);
       expect(Number(accountInfo.value.amount)).to.equal(300_000_000);
     });
 
@@ -927,16 +913,11 @@ describe("surfpool-integration", function () {
         })
         .instruction();
 
-      await sendVersionedTx(
-        env.connection,
-        [validateIx, finalizeIx],
-        agent,
-      );
+      await sendVersionedTx(env.connection, [validateIx, finalizeIx], agent);
 
       // Check protocol treasury balance increased
-      const treasuryBalance = await env.connection.getTokenAccountBalance(
-        protocolTreasuryAta,
-      );
+      const treasuryBalance =
+        await env.connection.getTokenAccountBalance(protocolTreasuryAta);
       expect(Number(treasuryBalance.value.amount)).to.be.greaterThanOrEqual(
         expectedProtocolFee,
       );
@@ -1093,9 +1074,7 @@ describe("surfpool-integration", function () {
         );
         // CU should be in a reasonable range (LiteSVM measured 53-56K)
         expect(profile.computeUnits).to.be.greaterThan(0);
-        console.log(
-          `    CU: validate+finalize = ${profile.computeUnits}`,
-        );
+        console.log(`    CU: validate+finalize = ${profile.computeUnits}`);
       } catch {
         // Profiling may not be available in --ci mode; verify TX succeeded
         expect(result.signature).to.be.a("string");
@@ -1141,9 +1120,7 @@ describe("surfpool-integration", function () {
           "initializeVault",
         );
         expect(profile.computeUnits).to.be.greaterThan(0);
-        console.log(
-          `    CU: initializeVault = ${profile.computeUnits}`,
-        );
+        console.log(`    CU: initializeVault = ${profile.computeUnits}`);
       } catch {
         // Profiling best-effort
         expect(tx).to.be.a("string");
@@ -1461,5 +1438,4 @@ describe("surfpool-integration", function () {
       }
     });
   });
-
 });

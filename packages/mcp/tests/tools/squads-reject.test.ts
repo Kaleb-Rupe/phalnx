@@ -36,9 +36,7 @@ describe("shield_squads_reject", () => {
   it("calls squadsRejectProposal on client", async () => {
     const client = createMockClient();
     await squadsReject(client as any, mockConfig as any, validInput);
-    const call = client.calls.find(
-      (c) => c.method === "squadsRejectProposal",
-    );
+    const call = client.calls.find((c) => c.method === "squadsRejectProposal");
     expect(call).to.exist;
     const params = call!.args[0];
     expect(params.multisigPda.toBase58()).to.equal(multisig);

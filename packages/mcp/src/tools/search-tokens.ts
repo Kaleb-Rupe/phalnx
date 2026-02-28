@@ -3,7 +3,10 @@ import { searchJupiterTokens, isTokenSuspicious } from "@agent-shield/sdk";
 import { formatError } from "../errors";
 
 export const searchTokensSchema = z.object({
-  query: z.string().min(1).describe("Search query (name, symbol, or mint address)"),
+  query: z
+    .string()
+    .min(1)
+    .describe("Search query (name, symbol, or mint address)"),
   limit: z
     .number()
     .optional()
@@ -32,7 +35,9 @@ export async function searchTokens(input: SearchTokensInput): Promise<string> {
       lines.push(`- **Address:** ${token.address}`);
       lines.push(`- **Decimals:** ${token.decimals}`);
       if (token.dailyVolume !== undefined) {
-        lines.push(`- **Daily Volume:** $${token.dailyVolume.toLocaleString()}`);
+        lines.push(
+          `- **Daily Volume:** $${token.dailyVolume.toLocaleString()}`,
+        );
       }
       if (token.organicScore !== undefined) {
         lines.push(`- **Organic Score:** ${token.organicScore}`);

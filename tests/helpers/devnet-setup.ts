@@ -534,4 +534,3 @@ export async function getTokenBalance(
   const account = await getAccount(connection, ata);
   return Number(account.amount);
 }
-

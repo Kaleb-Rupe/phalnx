@@ -14,9 +14,7 @@ export const cancelTriggerOrderSchema = z.object({
   collateralMint: z.string().describe("Collateral token mint address (base58)"),
   side: z.enum(["long", "short"]).describe("Position side"),
   orderId: z.string().describe("Trigger order ID to cancel"),
-  isStopLoss: z
-    .boolean()
-    .describe("True for stop-loss, false for take-profit"),
+  isStopLoss: z.boolean().describe("True for stop-loss, false for take-profit"),
 });
 
 export type CancelTriggerOrderInput = z.infer<typeof cancelTriggerOrderSchema>;

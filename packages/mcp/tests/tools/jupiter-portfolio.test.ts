@@ -21,9 +21,7 @@ describe("shield_jupiter_portfolio", () => {
   it("passes wallet to client method", async () => {
     const client = createMockClient();
     await jupiterPortfolio(client as any, { wallet });
-    const call = client.calls.find(
-      (c) => c.method === "getJupiterPortfolio",
-    );
+    const call = client.calls.find((c) => c.method === "getJupiterPortfolio");
     expect(call).to.exist;
     expect(call!.args[0]).to.equal(wallet);
   });

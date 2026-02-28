@@ -1558,7 +1558,19 @@ describe("agent-shield", () => {
     it("update_policy changes developer_fee_rate 0→30 → stored", async () => {
       // Use the fee vault created above, first set to 0
       await program.methods
-        .updatePolicy(null, null, null, null, null, null, null, 0, null, null, null)
+        .updatePolicy(
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          0,
+          null,
+          null,
+          null,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: feeVaultPda,
@@ -1571,7 +1583,19 @@ describe("agent-shield", () => {
 
       // Now update to 30
       await program.methods
-        .updatePolicy(null, null, null, null, null, null, null, 30, null, null, null)
+        .updatePolicy(
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          30,
+          null,
+          null,
+          null,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: feeVaultPda,
@@ -1614,7 +1638,19 @@ describe("agent-shield", () => {
     it("validate with developer_fee=0 → no developer fees collected", async () => {
       // Set developer fee to 0
       await program.methods
-        .updatePolicy(null, null, null, null, null, null, null, 0, null, null, null)
+        .updatePolicy(
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          0,
+          null,
+          null,
+          null,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: feeVaultPda,
@@ -1713,7 +1749,19 @@ describe("agent-shield", () => {
     it("validate with developer_fee=500 → developer fees collected on vault", async () => {
       // Set developer fee to 500 (max, 5 BPS)
       await program.methods
-        .updatePolicy(null, null, null, null, null, null, null, 500, null, null, null)
+        .updatePolicy(
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          500,
+          null,
+          null,
+          null,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: feeVaultPda,
@@ -2990,7 +3038,6 @@ describe("agent-shield", () => {
     });
   });
 
-
   // =========================================================================
   // Timelock policy changes
   // =========================================================================
@@ -3985,5 +4032,4 @@ describe("agent-shield", () => {
       expect(vault.totalFeesCollected.toNumber()).to.equal(5_000);
     });
   });
-
 });

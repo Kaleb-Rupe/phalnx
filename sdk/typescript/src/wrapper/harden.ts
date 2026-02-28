@@ -220,9 +220,7 @@ function inferTargetProtocol(analysis: TransactionAnalysis): PublicKey {
  * falling back to the SPL-only heuristic. Previously only returned
  * swap|transfer which misclassified Flash Trade position transactions.
  */
-function inferActionType(
-  instructions: TransactionInstruction[],
-): ActionType {
+function inferActionType(instructions: TransactionInstruction[]): ActionType {
   // Detect Jupiter → always swap
   if (instructions.some((ix) => ix.programId.equals(JUPITER_PROGRAM_ID))) {
     return { swap: {} };
@@ -293,11 +291,15 @@ function createHardenedWallet(
       // H2: Paused wallets MUST NOT sign. Previously this passed through to
       // innerWallet.signTransaction, bypassing on-chain vault composition entirely.
       if (original.isPaused) {
-        throw new ShieldDeniedError([{
-          rule: "rate_limit",
-          message: "Wallet is paused — signing is blocked. Call resume() to re-enable.",
-          suggestion: "Call resume() on the shielded wallet to re-enable signing.",
-        }]);
+        throw new ShieldDeniedError([
+          {
+            rule: "rate_limit",
+            message:
+              "Wallet is paused — signing is blocked. Call resume() to re-enable.",
+            suggestion:
+              "Call resume() on the shielded wallet to re-enable signing.",
+          },
+        ]);
       }
 
       // Step 1: Client-side policy check (fast deny)

@@ -524,7 +524,7 @@ jobs:
       - name: Install Surfpool CLI
         run: |
           if ! command -v surfpool &> /dev/null; then
-            cargo install surfpool --locked
+            cargo install surfpool-cli --locked
           fi
 
       - name: Install pnpm

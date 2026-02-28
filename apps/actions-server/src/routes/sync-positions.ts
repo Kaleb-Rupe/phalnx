@@ -46,9 +46,8 @@ syncPositions.get("/api/actions/sync-positions", (c) => {
 syncPositions.post("/api/actions/sync-positions", async (c) => {
   try {
     const { PublicKey } = await import("@solana/web3.js");
-    const { buildSyncPositionsTransaction } = await import(
-      "../lib/build-sync-positions-tx"
-    );
+    const { buildSyncPositionsTransaction } =
+      await import("../lib/build-sync-positions-tx");
 
     const body = await c.req.json<{ account: string }>();
 
@@ -90,11 +89,7 @@ syncPositions.post("/api/actions/sync-positions", async (c) => {
     }
 
     const actualStr = c.req.query("actualPositions");
-    if (
-      actualStr === undefined ||
-      actualStr === null ||
-      actualStr === ""
-    ) {
+    if (actualStr === undefined || actualStr === null || actualStr === "") {
       return c.json(
         { error: "Missing 'actualPositions' query parameter" },
         400,
@@ -103,7 +98,11 @@ syncPositions.post("/api/actions/sync-positions", async (c) => {
     }
 
     const actualPositions = parseInt(actualStr, 10);
-    if (isNaN(actualPositions) || actualPositions < 0 || actualPositions > 255) {
+    if (
+      isNaN(actualPositions) ||
+      actualPositions < 0 ||
+      actualPositions > 255
+    ) {
       return c.json(
         { error: "Invalid 'actualPositions': must be 0-255" },
         400,
@@ -111,12 +110,11 @@ syncPositions.post("/api/actions/sync-positions", async (c) => {
       );
     }
 
-    const { transaction, vaultAddress } =
-      await buildSyncPositionsTransaction({
-        owner,
-        vaultId,
-        actualPositions,
-      });
+    const { transaction, vaultAddress } = await buildSyncPositionsTransaction({
+      owner,
+      vaultId,
+      actualPositions,
+    });
 
     const serialized = Buffer.from(transaction.serialize()).toString("base64");
 
@@ -129,7 +127,10 @@ syncPositions.post("/api/actions/sync-positions", async (c) => {
       ACTIONS_CORS_HEADERS,
     );
   } catch (error) {
-    console.error("[AgentShield] sync-positions error:", error instanceof Error ? error.message : String(error));
+    console.error(
+      "[AgentShield] sync-positions error:",
+      error instanceof Error ? error.message : String(error),
+    );
     return c.json(
       { error: "Internal server error" },
       500,

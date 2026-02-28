@@ -450,7 +450,9 @@ describe("jupiter-integration", () => {
         if (err.message === "Should have thrown") throw err;
         // Non-stablecoin token without output_stablecoin_account → InvalidTokenAccount
         expect(err.message || err.toString()).to.satisfy(
-          (s: string) => s.includes("InvalidTokenAccount") || s.includes("TokenNotRegistered"),
+          (s: string) =>
+            s.includes("InvalidTokenAccount") ||
+            s.includes("TokenNotRegistered"),
         );
       }
     });

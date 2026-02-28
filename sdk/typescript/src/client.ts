@@ -450,12 +450,7 @@ export class AgentShieldClient {
     params: AgentTransferParams,
   ): Promise<string> {
     const agent = this.provider.wallet.publicKey;
-    return buildAgentTransfer(
-      this.program,
-      agent,
-      vault,
-      params,
-    ).rpc();
+    return buildAgentTransfer(this.program, agent, vault, params).rpc();
   }
 
   // --- Composition ---
@@ -690,9 +685,7 @@ export class AgentShieldClient {
     return getJupiterEarnPositions(user, positions);
   }
 
-  async jupiterLendDeposit(
-    params: JupiterLendDepositParams,
-  ): Promise<string> {
+  async jupiterLendDeposit(params: JupiterLendDepositParams): Promise<string> {
     const { instructions } = await composeJupiterLendDeposit(
       this.program,
       this.provider.connection,
@@ -889,7 +882,10 @@ export class AgentShieldClient {
     const perpClient = this.createFlashTradeClient();
     const config = poolConfig ?? this.getFlashPoolConfig();
     return composeFlashTradeAddCollateral(
-      this.program, perpClient, config, params,
+      this.program,
+      perpClient,
+      config,
+      params,
     );
   }
 
@@ -903,7 +899,10 @@ export class AgentShieldClient {
     const perpClient = this.createFlashTradeClient();
     const config = poolConfig ?? this.getFlashPoolConfig();
     return composeFlashTradeRemoveCollateral(
-      this.program, perpClient, config, params,
+      this.program,
+      perpClient,
+      config,
+      params,
     );
   }
 
@@ -917,7 +916,10 @@ export class AgentShieldClient {
     const perpClient = this.createFlashTradeClient();
     const config = poolConfig ?? this.getFlashPoolConfig();
     return composeFlashTradePlaceTriggerOrder(
-      this.program, perpClient, config, params,
+      this.program,
+      perpClient,
+      config,
+      params,
     );
   }
 
@@ -931,7 +933,10 @@ export class AgentShieldClient {
     const perpClient = this.createFlashTradeClient();
     const config = poolConfig ?? this.getFlashPoolConfig();
     return composeFlashTradeEditTriggerOrder(
-      this.program, perpClient, config, params,
+      this.program,
+      perpClient,
+      config,
+      params,
     );
   }
 
@@ -945,7 +950,10 @@ export class AgentShieldClient {
     const perpClient = this.createFlashTradeClient();
     const config = poolConfig ?? this.getFlashPoolConfig();
     return composeFlashTradeCancelTriggerOrder(
-      this.program, perpClient, config, params,
+      this.program,
+      perpClient,
+      config,
+      params,
     );
   }
 
@@ -959,7 +967,10 @@ export class AgentShieldClient {
     const perpClient = this.createFlashTradeClient();
     const config = poolConfig ?? this.getFlashPoolConfig();
     return composeFlashTradePlaceLimitOrder(
-      this.program, perpClient, config, params,
+      this.program,
+      perpClient,
+      config,
+      params,
     );
   }
 
@@ -973,7 +984,10 @@ export class AgentShieldClient {
     const perpClient = this.createFlashTradeClient();
     const config = poolConfig ?? this.getFlashPoolConfig();
     return composeFlashTradeEditLimitOrder(
-      this.program, perpClient, config, params,
+      this.program,
+      perpClient,
+      config,
+      params,
     );
   }
 
@@ -987,7 +1001,10 @@ export class AgentShieldClient {
     const perpClient = this.createFlashTradeClient();
     const config = poolConfig ?? this.getFlashPoolConfig();
     return composeFlashTradeCancelLimitOrder(
-      this.program, perpClient, config, params,
+      this.program,
+      perpClient,
+      config,
+      params,
     );
   }
 
@@ -1001,7 +1018,10 @@ export class AgentShieldClient {
     const perpClient = this.createFlashTradeClient();
     const config = poolConfig ?? this.getFlashPoolConfig();
     return composeFlashTradeSwapAndOpen(
-      this.program, perpClient, config, params,
+      this.program,
+      perpClient,
+      config,
+      params,
     );
   }
 
@@ -1015,7 +1035,10 @@ export class AgentShieldClient {
     const perpClient = this.createFlashTradeClient();
     const config = poolConfig ?? this.getFlashPoolConfig();
     return composeFlashTradeCloseAndSwap(
-      this.program, perpClient, config, params,
+      this.program,
+      perpClient,
+      config,
+      params,
     );
   }
 
@@ -1039,8 +1062,7 @@ export class AgentShieldClient {
     );
     if (!ix) return null;
 
-    const { blockhash } =
-      await this.provider.connection.getLatestBlockhash();
+    const { blockhash } = await this.provider.connection.getLatestBlockhash();
     const msg = new TransactionMessage({
       payerKey: this.provider.wallet.publicKey,
       recentBlockhash: blockhash,
@@ -1052,8 +1074,7 @@ export class AgentShieldClient {
     const sig = await this.provider.connection.sendRawTransaction(
       signed.serialize(),
     );
-    const result =
-      await this.provider.connection.getLatestBlockhash();
+    const result = await this.provider.connection.getLatestBlockhash();
     await this.provider.connection.confirmTransaction(
       {
         signature: sig,
@@ -1115,11 +1136,7 @@ export class AgentShieldClient {
     multisigPda: PublicKey;
     vaultPda: PublicKey;
   }> {
-    return createSquadsMultisig(
-      this.provider.connection,
-      member,
-      params,
-    );
+    return createSquadsMultisig(this.provider.connection, member, params);
   }
 
   /**
@@ -1130,11 +1147,7 @@ export class AgentShieldClient {
     member: Keypair,
     params: ProposeVaultActionParams,
   ): Promise<{ signature: string; transactionIndex: bigint }> {
-    return proposeVaultAction(
-      this.provider.connection,
-      member,
-      params,
-    );
+    return proposeVaultAction(this.provider.connection, member, params);
   }
 
   /**
@@ -1144,11 +1157,7 @@ export class AgentShieldClient {
     member: Keypair,
     params: ApproveProposalParams,
   ): Promise<string> {
-    return approveProposal(
-      this.provider.connection,
-      member,
-      params,
-    );
+    return approveProposal(this.provider.connection, member, params);
   }
 
   /**
@@ -1158,11 +1167,7 @@ export class AgentShieldClient {
     member: Keypair,
     params: RejectProposalParams,
   ): Promise<string> {
-    return rejectProposal(
-      this.provider.connection,
-      member,
-      params,
-    );
+    return rejectProposal(this.provider.connection, member, params);
   }
 
   /**
@@ -1173,19 +1178,13 @@ export class AgentShieldClient {
     member: Keypair,
     params: ExecuteVaultTransactionParams,
   ): Promise<string> {
-    return executeVaultTransaction(
-      this.provider.connection,
-      member,
-      params,
-    );
+    return executeVaultTransaction(this.provider.connection, member, params);
   }
 
   /**
    * Fetch and normalize a Squads multisig account.
    */
-  async squadsFetchMultisigInfo(
-    multisigPda: PublicKey,
-  ): Promise<MultisigInfo> {
+  async squadsFetchMultisigInfo(multisigPda: PublicKey): Promise<MultisigInfo> {
     return fetchMultisigInfo(this.provider.connection, multisigPda);
   }
 

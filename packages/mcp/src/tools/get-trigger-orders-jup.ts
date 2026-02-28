@@ -28,10 +28,7 @@ export async function getTriggerOrdersJup(
       return `No ${input.state ?? ""} trigger orders found for ${input.authority}.`;
     }
 
-    const lines = [
-      `## Jupiter Trigger Orders (${orders.length})`,
-      "",
-    ];
+    const lines = [`## Jupiter Trigger Orders (${orders.length})`, ""];
 
     for (const order of orders) {
       lines.push(`### Order ${order.orderId}`);

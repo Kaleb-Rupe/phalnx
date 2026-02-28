@@ -53,8 +53,7 @@ describe("shield_remove_collateral", () => {
       side: "long",
       positionPubKey: Keypair.generate().publicKey.toBase58(),
     });
-    expect(
-      client.calls.some((c) => c.method === "flashTradeRemoveCollateral"),
-    ).to.be.true;
+    expect(client.calls.some((c) => c.method === "flashTradeRemoveCollateral"))
+      .to.be.true;
   });
 });

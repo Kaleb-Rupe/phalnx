@@ -65,7 +65,12 @@ export async function reconcilePositions(
 ): Promise<TransactionInstruction | null> {
   const [vaultAccount, actualCount] = await Promise.all([
     fetchVaultByAddress(program, vault),
-    countFlashTradePositions(connection, poolCustodyPairs, vault, flashProgramId),
+    countFlashTradePositions(
+      connection,
+      poolCustodyPairs,
+      vault,
+      flashProgramId,
+    ),
   ]);
 
   if (!vaultAccount) {

@@ -40,9 +40,7 @@ describe("shield_squads_propose_action", () => {
   it("calls squadsProposeAction on client", async () => {
     const client = createMockClient();
     await squadsProposeAction(client as any, mockConfig as any, validInput);
-    const call = client.calls.find(
-      (c) => c.method === "squadsProposeAction",
-    );
+    const call = client.calls.find((c) => c.method === "squadsProposeAction");
     expect(call).to.exist;
     const params = call!.args[0];
     expect(params.action).to.equal("update_policy");

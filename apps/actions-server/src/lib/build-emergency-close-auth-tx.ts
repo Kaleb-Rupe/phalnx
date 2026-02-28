@@ -28,13 +28,8 @@ export async function buildEmergencyCloseAuthTransaction(
   } = await import("@solana/web3.js");
   const { BN, Program, AnchorProvider, Wallet } =
     await import("@coral-xyz/anchor");
-  const {
-    IDL,
-    buildRevokeAgent,
-    getVaultPDA,
-    CU_OWNER_ACTION,
-    getEstimator,
-  } = await import("@agent-shield/sdk");
+  const { IDL, buildRevokeAgent, getVaultPDA, CU_OWNER_ACTION, getEstimator } =
+    await import("@agent-shield/sdk");
 
   const connection = new Connection(RPC_URL, "confirmed");
 

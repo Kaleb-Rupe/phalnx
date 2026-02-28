@@ -1,4 +1,8 @@
-import { Connection, ComputeBudgetProgram, TransactionInstruction } from "@solana/web3.js";
+import {
+  Connection,
+  ComputeBudgetProgram,
+  TransactionInstruction,
+} from "@solana/web3.js";
 
 // ─── Known Protocol Program IDs ──────────────────────────────────────────────
 // Must match integrations/jupiter.ts and integrations/flash-trade.ts

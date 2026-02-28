@@ -616,11 +616,21 @@ export function recordCU(label: string, result: VersionedTxResult): void {
 export function printCUSummary(): void {
   if (cuMeasurements.size === 0) return;
 
-  console.log("\n┌─────────────────────────────────────────────────────────────┐");
-  console.log("│                    CU Consumption Report                    │");
-  console.log("├──────────────────────────────────┬────────┬────────┬────────┤");
-  console.log("│ Operation                        │    Min │    Max │    Avg │");
-  console.log("├──────────────────────────────────┼────────┼────────┼────────┤");
+  console.log(
+    "\n┌─────────────────────────────────────────────────────────────┐",
+  );
+  console.log(
+    "│                    CU Consumption Report                    │",
+  );
+  console.log(
+    "├──────────────────────────────────┬────────┬────────┬────────┤",
+  );
+  console.log(
+    "│ Operation                        │    Min │    Max │    Avg │",
+  );
+  console.log(
+    "├──────────────────────────────────┼────────┼────────┼────────┤",
+  );
 
   for (const [label, values] of cuMeasurements.entries()) {
     const min = Math.min(...values);
@@ -633,7 +643,9 @@ export function printCUSummary(): void {
     console.log(`│ ${padLabel} │ ${padMin} │ ${padMax} │ ${padAvg} │`);
   }
 
-  console.log("└──────────────────────────────────┴────────┴────────┴────────┘\n");
+  console.log(
+    "└──────────────────────────────────┴────────┴────────┴────────┘\n",
+  );
 }
 
 /** Clear all recorded CU measurements. */

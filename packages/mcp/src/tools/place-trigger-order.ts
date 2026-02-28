@@ -16,9 +16,7 @@ export const placeTriggerOrderSchema = z.object({
   side: z.enum(["long", "short"]).describe("Position side"),
   triggerPrice: z.string().describe("Trigger price in base units"),
   deltaSizeAmount: z.string().describe("Size delta in base units"),
-  isStopLoss: z
-    .boolean()
-    .describe("True for stop-loss, false for take-profit"),
+  isStopLoss: z.boolean().describe("True for stop-loss, false for take-profit"),
 });
 
 export type PlaceTriggerOrderInput = z.infer<typeof placeTriggerOrderSchema>;

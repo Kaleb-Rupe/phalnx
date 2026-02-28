@@ -36,16 +36,13 @@ describe("Sync Positions Route", () => {
     });
 
     it("returns 400 without actualPositions", async () => {
-      const res = await app.request(
-        "/api/actions/sync-positions?vaultId=0",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            account: "11111111111111111111111111111111",
-          }),
-        },
-      );
+      const res = await app.request("/api/actions/sync-positions?vaultId=0", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          account: "11111111111111111111111111111111",
+        }),
+      });
       expect(res.status).to.equal(400);
       const body = (await res.json()) as any;
       expect(body.error).to.include("actualPositions");

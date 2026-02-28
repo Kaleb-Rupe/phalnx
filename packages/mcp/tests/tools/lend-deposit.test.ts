@@ -39,12 +39,7 @@ describe("shield_lend_deposit", () => {
 
   it("calls jupiterLendDeposit with correct params", async () => {
     const client = createMockClient();
-    await lendDeposit(
-      client as any,
-      mockConfig,
-      validInput,
-      mockCustodyWallet,
-    );
+    await lendDeposit(client as any, mockConfig, validInput, mockCustodyWallet);
     const call = client.calls.find((c) => c.method === "jupiterLendDeposit");
     expect(call).to.exist;
     expect(call!.args[0].agent.toBase58()).to.equal(

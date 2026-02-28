@@ -17,9 +17,7 @@ describe("shield_cancel_trigger_order", () => {
   let config: McpConfig;
 
   before(() => {
-    tmpDir = fs.mkdtempSync(
-      path.join(os.tmpdir(), "mcp-cancel-trigger-test-"),
-    );
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "mcp-cancel-trigger-test-"));
     const kp = Keypair.generate();
     agentKeypairPath = path.join(tmpDir, "agent.json");
     fs.writeFileSync(
