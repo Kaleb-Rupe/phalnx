@@ -1,14 +1,26 @@
 /**
- * Devnet Session Tests — 6 tests (V2)
+ * Devnet Session Tests — 4 tests (V3)
  *
- * Session expiration is the #1 thing LiteSVM cannot replicate.
- * On devnet, 20 slots = ~8-12 real seconds.
+ * With the composed TX model (validate + finalize in same atomic transaction),
+ * sessions are now transient — created and closed within a single TX.
+ * Session expiry and permissionless cleanup are no longer testable because
+ * the MissingFinalizeInstruction check (6035) prevents standalone validate.
+ *
+ * Tests cover composed TX success/failure paths, access control, and
+ * sequential same-mint reuse.
  *
  *     Stablecoin-only architecture.
  *     finalizeSession includes policy and tracker accounts.
  */
 import * as anchor from "@coral-xyz/anchor";
-import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
+import {
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  SYSVAR_INSTRUCTIONS_PUBKEY,
+  TransactionMessage,
+  VersionedTransaction,
+} from "@solana/web3.js";
 import {
   TOKEN_PROGRAM_ID,
   createMint,
@@ -20,14 +32,13 @@ import BN from "bn.js";
 import {
   getDevnetProvider,
   nextVaultId,
-  derivePDAs,
   deriveSessionPda,
   createFullVault,
   authorize,
-  finalize,
+  authorizeAndFinalize,
+  buildAuthorizeIx,
+  buildFinalizeIx,
   fundKeypair,
-  sleep,
-  waitForSlot,
   expectError,
   FullVaultResult,
   PROTOCOL_TREASURY,
@@ -45,20 +56,15 @@ describe("devnet-sessions", () => {
   let mintA: PublicKey;
   let mintB: PublicKey;
   let vault: FullVaultResult;
-  let vaultId: BN;
   let mintBVaultAta: PublicKey;
   let mintBTreasuryAta: PublicKey;
 
   before(async () => {
-    // Fund agent and third party from owner
     await fundKeypair(provider, agent.publicKey);
     await fundKeypair(provider, thirdParty.publicKey);
 
-    // Create two test mints
     mintA = await createMint(connection, payer, owner.publicKey, null, 6);
     mintB = await createMint(connection, payer, owner.publicKey, null, 6);
-
-    vaultId = nextVaultId(3);
 
     vault = await createFullVault({
       program,
@@ -67,14 +73,14 @@ describe("devnet-sessions", () => {
       agent,
       feeDestination: feeDestination.publicKey,
       mint: mintA,
-      vaultId,
+      vaultId: nextVaultId(3),
       dailyCap: new BN(500_000_000),
       maxTx: new BN(100_000_000),
       allowedProtocols: [jupiterProgramId],
       depositAmount: new BN(500_000_000),
     });
 
-    // Create vault ATA + deposit for mintB too
+    // Create vault ATA + deposit for mintB
     mintBVaultAta = anchor.utils.token.associatedAddress({
       mint: mintB,
       owner: vault.vaultPda,
@@ -108,7 +114,6 @@ describe("devnet-sessions", () => {
       } as any)
       .rpc();
 
-    // Create protocol treasury ATA for mintB (needed for mintB finalize)
     const mintBTreasuryAccount = await getOrCreateAssociatedTokenAccount(
       connection,
       payer,
@@ -121,67 +126,10 @@ describe("devnet-sessions", () => {
     console.log("  Session tests vault:", vault.vaultPda.toString());
   });
 
-  it("1. session expires after ~20 slots and finalize forces success=false", async () => {
-    const sessionPda = deriveSessionPda(
-      vault.vaultPda,
-      agent.publicKey,
-      mintA,
-      program.programId,
-    );
-
-    await authorize({
-      program,
-      agent,
-      vaultPda: vault.vaultPda,
-      policyPda: vault.policyPda,
-      trackerPda: vault.trackerPda,
-      sessionPda,
-      vaultTokenAta: vault.vaultTokenAta,
-      mint: mintA,
-      amount: new BN(10_000_000),
-      protocol: jupiterProgramId,
-    });
-
-    // Get session expiry slot
-    const session = await program.account.sessionAuthority.fetch(sessionPda);
-    const expiresAtSlot = session.expiresAtSlot.toNumber();
-    console.log(`    Session expires at slot ${expiresAtSlot}`);
-
-    // Wait for expiration
-    await waitForSlot(connection, expiresAtSlot + 1);
-
+  it("1. composed TX with success=true increments vault stats", async () => {
     const vaultBefore = await program.account.agentVault.fetch(vault.vaultPda);
     const txCountBefore = vaultBefore.totalTransactions.toNumber();
 
-    // Finalize — expired session forces success=false even if we pass true
-    // V2: no tracker in finalize accounts
-    await finalize({
-      program,
-      payer: agent,
-      vaultPda: vault.vaultPda,
-      policyPda: vault.policyPda,
-      trackerPda: vault.trackerPda,
-      sessionPda,
-      agentPubkey: agent.publicKey,
-      vaultTokenAta: vault.vaultTokenAta,
-      feeDestinationAta: null,
-      protocolTreasuryAta: vault.protocolTreasuryAta,
-      success: true,
-    });
-
-    // Session closed
-    const sessionInfo = await connection.getAccountInfo(sessionPda);
-    expect(sessionInfo).to.be.null;
-
-    // totalTransactions should NOT increment (expired = forced failure)
-    const vaultAfter = await program.account.agentVault.fetch(vault.vaultPda);
-    expect(vaultAfter.totalTransactions.toNumber()).to.equal(txCountBefore);
-    console.log(
-      "    Expired session finalized as failure — no stats increment",
-    );
-  });
-
-  it("2. permissionless cleanup of expired session", async () => {
     const sessionPda = deriveSessionPda(
       vault.vaultPda,
       agent.publicKey,
@@ -189,7 +137,8 @@ describe("devnet-sessions", () => {
       program.programId,
     );
 
-    await authorize({
+    await authorizeAndFinalize({
+      connection,
       program,
       agent,
       vaultPda: vault.vaultPda,
@@ -200,91 +149,121 @@ describe("devnet-sessions", () => {
       mint: mintA,
       amount: new BN(10_000_000),
       protocol: jupiterProgramId,
+      protocolTreasuryAta: vault.protocolTreasuryAta,
+      feeDestinationAta: null,
+      success: true,
     });
 
-    // Wait for expiration
-    const session = await program.account.sessionAuthority.fetch(sessionPda);
-    await waitForSlot(connection, session.expiresAtSlot.toNumber() + 1);
+    // Session PDA closed atomically
+    const sessionInfo = await connection.getAccountInfo(sessionPda);
+    expect(sessionInfo).to.be.null;
 
-    // Third party (not agent) calls finalize — should succeed on expired session
-    await finalize({
+    // Stats incremented
+    const vaultAfter = await program.account.agentVault.fetch(vault.vaultPda);
+    expect(vaultAfter.totalTransactions.toNumber()).to.equal(
+      txCountBefore + 1,
+    );
+    console.log(
+      "    Composed TX: session created + closed atomically, stats incremented",
+    );
+  });
+
+  it("2. composed TX with success=false preserves vault stats", async () => {
+    const vaultBefore = await program.account.agentVault.fetch(vault.vaultPda);
+    const txCountBefore = vaultBefore.totalTransactions.toNumber();
+
+    const sessionPda = deriveSessionPda(
+      vault.vaultPda,
+      agent.publicKey,
+      mintA,
+      program.programId,
+    );
+
+    await authorizeAndFinalize({
+      connection,
+      program,
+      agent,
+      vaultPda: vault.vaultPda,
+      policyPda: vault.policyPda,
+      trackerPda: vault.trackerPda,
+      sessionPda,
+      vaultTokenAta: vault.vaultTokenAta,
+      mint: mintA,
+      amount: new BN(10_000_000),
+      protocol: jupiterProgramId,
+      protocolTreasuryAta: vault.protocolTreasuryAta,
+      feeDestinationAta: null,
+      success: false,
+    });
+
+    // Session PDA closed
+    const sessionInfo = await connection.getAccountInfo(sessionPda);
+    expect(sessionInfo).to.be.null;
+
+    // Stats NOT incremented
+    const vaultAfter = await program.account.agentVault.fetch(vault.vaultPda);
+    expect(vaultAfter.totalTransactions.toNumber()).to.equal(txCountBefore);
+    console.log("    success=false: session closed, stats preserved");
+  });
+
+  it("3. non-agent signer rejected in composed TX", async () => {
+    const sessionPda = deriveSessionPda(
+      vault.vaultPda,
+      agent.publicKey,
+      mintA,
+      program.programId,
+    );
+
+    // Build composed TX with thirdParty as signer (not the registered agent)
+    const validateIx = await buildAuthorizeIx({
+      program,
+      connection,
+      agent: thirdParty, // wrong signer
+      vaultPda: vault.vaultPda,
+      policyPda: vault.policyPda,
+      trackerPda: vault.trackerPda,
+      sessionPda,
+      vaultTokenAta: vault.vaultTokenAta,
+      mint: mintA,
+      amount: new BN(10_000_000),
+      protocol: jupiterProgramId,
+      protocolTreasuryAta: vault.protocolTreasuryAta,
+    });
+    const finalizeIx = await buildFinalizeIx({
       program,
       payer: thirdParty,
       vaultPda: vault.vaultPda,
       policyPda: vault.policyPda,
       trackerPda: vault.trackerPda,
       sessionPda,
-      agentPubkey: agent.publicKey,
+      agentPubkey: thirdParty.publicKey,
       vaultTokenAta: vault.vaultTokenAta,
       feeDestinationAta: null,
       protocolTreasuryAta: vault.protocolTreasuryAta,
-      success: false,
+      success: true,
     });
 
-    const sessionInfo = await connection.getAccountInfo(sessionPda);
-    expect(sessionInfo).to.be.null;
-    console.log("    Third-party cleanup of expired session succeeded");
-  });
+    const { blockhash } = await connection.getLatestBlockhash();
+    const messageV0 = new TransactionMessage({
+      payerKey: thirdParty.publicKey,
+      recentBlockhash: blockhash,
+      instructions: [validateIx, finalizeIx],
+    }).compileToV0Message();
 
-  it("3. non-expired session cannot be finalized by non-agent", async () => {
-    const sessionPda = deriveSessionPda(
-      vault.vaultPda,
-      agent.publicKey,
-      mintA,
-      program.programId,
-    );
+    const tx = new VersionedTransaction(messageV0);
+    tx.sign([thirdParty]);
 
-    await authorize({
-      program,
-      agent,
-      vaultPda: vault.vaultPda,
-      policyPda: vault.policyPda,
-      trackerPda: vault.trackerPda,
-      sessionPda,
-      vaultTokenAta: vault.vaultTokenAta,
-      mint: mintA,
-      amount: new BN(10_000_000),
-      protocol: jupiterProgramId,
-    });
-
-    // Immediately try finalize from third party (non-agent, non-expired)
     try {
-      await finalize({
-        program,
-        payer: thirdParty,
-        vaultPda: vault.vaultPda,
-        policyPda: vault.policyPda,
-        trackerPda: vault.trackerPda,
-        sessionPda,
-        agentPubkey: agent.publicKey,
-        vaultTokenAta: vault.vaultTokenAta,
-        feeDestinationAta: null,
-        protocolTreasuryAta: vault.protocolTreasuryAta,
-        success: true,
-      });
+      await connection.sendTransaction(tx);
       expect.fail("Should have thrown");
     } catch (err: any) {
-      expectError(err, "UnauthorizedAgent", "unauthorized");
+      // Session PDA seeds include agent key — wrong signer yields seed mismatch
+      expectError(err, "ConstraintSeeds", "seeds", "0x7d6");
     }
-
-    // Clean up — finalize properly with agent
-    await finalize({
-      program,
-      payer: agent,
-      vaultPda: vault.vaultPda,
-      policyPda: vault.policyPda,
-      trackerPda: vault.trackerPda,
-      sessionPda,
-      agentPubkey: agent.publicKey,
-      vaultTokenAta: vault.vaultTokenAta,
-      feeDestinationAta: null,
-      protocolTreasuryAta: vault.protocolTreasuryAta,
-      success: false,
-    });
-    console.log("    Non-agent finalize of active session correctly rejected");
+    console.log("    Non-agent signer correctly rejected in composed TX");
   });
 
-  it("4. concurrent sessions for different token mints succeed", async () => {
+  it("4. sequential composed TXes with different mints succeed", async () => {
     const sessionPdaA = deriveSessionPda(
       vault.vaultPda,
       agent.publicKey,
@@ -298,8 +277,12 @@ describe("devnet-sessions", () => {
       program.programId,
     );
 
-    // Authorize session on mintA
-    await authorize({
+    const vaultBefore = await program.account.agentVault.fetch(vault.vaultPda);
+    const txCountBefore = vaultBefore.totalTransactions.toNumber();
+
+    // Composed TX for mintA
+    await authorizeAndFinalize({
+      connection,
       program,
       agent,
       vaultPda: vault.vaultPda,
@@ -310,10 +293,14 @@ describe("devnet-sessions", () => {
       mint: mintA,
       amount: new BN(10_000_000),
       protocol: jupiterProgramId,
+      protocolTreasuryAta: vault.protocolTreasuryAta,
+      feeDestinationAta: null,
+      success: true,
     });
 
-    // Authorize session on mintB — different PDA seeds, should coexist
-    await authorize({
+    // Composed TX for mintB
+    await authorizeAndFinalize({
+      connection,
       program,
       agent,
       vaultPda: vault.vaultPda,
@@ -324,145 +311,22 @@ describe("devnet-sessions", () => {
       mint: mintB,
       amount: new BN(10_000_000),
       protocol: jupiterProgramId,
-    });
-
-    // Both sessions exist
-    const sessionA = await program.account.sessionAuthority.fetch(sessionPdaA);
-    const sessionB = await program.account.sessionAuthority.fetch(sessionPdaB);
-    expect(sessionA.authorized).to.equal(true);
-    expect(sessionB.authorized).to.equal(true);
-
-    // Finalize both — each uses the correct treasury ATA for its mint
-    await finalize({
-      program,
-      payer: agent,
-      vaultPda: vault.vaultPda,
-      policyPda: vault.policyPda,
-      trackerPda: vault.trackerPda,
-      sessionPda: sessionPdaA,
-      agentPubkey: agent.publicKey,
-      vaultTokenAta: vault.vaultTokenAta,
-      feeDestinationAta: null,
-      protocolTreasuryAta: vault.protocolTreasuryAta,
-      success: true,
-    });
-    await finalize({
-      program,
-      payer: agent,
-      vaultPda: vault.vaultPda,
-      policyPda: vault.policyPda,
-      trackerPda: vault.trackerPda,
-      sessionPda: sessionPdaB,
-      agentPubkey: agent.publicKey,
-      vaultTokenAta: mintBVaultAta,
-      feeDestinationAta: null,
       protocolTreasuryAta: mintBTreasuryAta,
+      feeDestinationAta: null,
       success: true,
     });
 
+    // Both sessions closed
     expect(await connection.getAccountInfo(sessionPdaA)).to.be.null;
     expect(await connection.getAccountInfo(sessionPdaB)).to.be.null;
-    console.log("    Concurrent sessions for different mints succeeded");
-  });
 
-  it("5. double-authorize same token mint fails", async () => {
-    const sessionPda = deriveSessionPda(
-      vault.vaultPda,
-      agent.publicKey,
-      mintA,
-      program.programId,
-    );
-
-    await authorize({
-      program,
-      agent,
-      vaultPda: vault.vaultPda,
-      policyPda: vault.policyPda,
-      trackerPda: vault.trackerPda,
-      sessionPda,
-      vaultTokenAta: vault.vaultTokenAta,
-      mint: mintA,
-      amount: new BN(10_000_000),
-      protocol: jupiterProgramId,
-    });
-
-    // Try authorizing again for same mint without finalize
-    try {
-      await authorize({
-        program,
-        agent,
-        vaultPda: vault.vaultPda,
-        policyPda: vault.policyPda,
-        trackerPda: vault.trackerPda,
-        sessionPda,
-        vaultTokenAta: vault.vaultTokenAta,
-        mint: mintA,
-        amount: new BN(10_000_000),
-        protocol: jupiterProgramId,
-      });
-      expect.fail("Should have thrown");
-    } catch (err: any) {
-      expectError(err, "already in use", "already been processed", "0x0");
-    }
-
-    // Clean up
-    await finalize({
-      program,
-      payer: agent,
-      vaultPda: vault.vaultPda,
-      policyPda: vault.policyPda,
-      trackerPda: vault.trackerPda,
-      sessionPda,
-      agentPubkey: agent.publicKey,
-      vaultTokenAta: vault.vaultTokenAta,
-      feeDestinationAta: null,
-      protocolTreasuryAta: vault.protocolTreasuryAta,
-      success: false,
-    });
-    console.log("    Double-authorize correctly rejected");
-  });
-
-  it("6. immediate finalize within slot window succeeds", async () => {
-    const sessionPda = deriveSessionPda(
-      vault.vaultPda,
-      agent.publicKey,
-      mintA,
-      program.programId,
-    );
-
-    const vaultBefore = await program.account.agentVault.fetch(vault.vaultPda);
-    const txCountBefore = vaultBefore.totalTransactions.toNumber();
-
-    await authorize({
-      program,
-      agent,
-      vaultPda: vault.vaultPda,
-      policyPda: vault.policyPda,
-      trackerPda: vault.trackerPda,
-      sessionPda,
-      vaultTokenAta: vault.vaultTokenAta,
-      mint: mintA,
-      amount: new BN(10_000_000),
-      protocol: jupiterProgramId,
-    });
-
-    // Immediately finalize (within slot window)
-    await finalize({
-      program,
-      payer: agent,
-      vaultPda: vault.vaultPda,
-      policyPda: vault.policyPda,
-      trackerPda: vault.trackerPda,
-      sessionPda,
-      agentPubkey: agent.publicKey,
-      vaultTokenAta: vault.vaultTokenAta,
-      feeDestinationAta: null,
-      protocolTreasuryAta: vault.protocolTreasuryAta,
-      success: true,
-    });
-
+    // Stats incremented by 2
     const vaultAfter = await program.account.agentVault.fetch(vault.vaultPda);
-    expect(vaultAfter.totalTransactions.toNumber()).to.equal(txCountBefore + 1);
-    console.log("    Immediate finalize succeeded — tx count incremented");
+    expect(vaultAfter.totalTransactions.toNumber()).to.equal(
+      txCountBefore + 2,
+    );
+    console.log(
+      "    Sequential composed TXes with different mints: both succeeded",
+    );
   });
 });

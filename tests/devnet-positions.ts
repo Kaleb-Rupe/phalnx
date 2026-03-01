@@ -1,10 +1,13 @@
 /**
- * Devnet Position Tests — 5 tests (V2)
+ * Devnet Position Tests — 5 tests (V3)
  *
  * Position tracking: open/close, max concurrent limit,
  * vault close prevention, and failed-open non-increment.
  *
- *     Stablecoin-only architecture.
+ * V3: Composed TX model (validate + finalize in same tx).
+ *     closePosition is non-spending: amount=0, no fees.
+ *     openPosition is spending: fees collected, cap checked.
+ *     Stablecoin-only architecture (devnet-testing feature).
  */
 import * as anchor from "@coral-xyz/anchor";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
@@ -16,8 +19,7 @@ import {
   nextVaultId,
   deriveSessionPda,
   createFullVault,
-  authorize,
-  finalize,
+  authorizeAndFinalize,
   fundKeypair,
   createTestMint,
   expectError,
@@ -59,15 +61,19 @@ describe("devnet-positions", () => {
     });
   }
 
-  /** Open a position (authorize openPosition + finalize) */
-  async function openPosition(vault: FullVaultResult, success: boolean = true) {
+  /** Open a position (composed validate + finalize) */
+  async function openPosition(
+    vault: FullVaultResult,
+    success: boolean = true,
+  ) {
     const sessionPda = deriveSessionPda(
       vault.vaultPda,
       agent.publicKey,
       mint,
       program.programId,
     );
-    await authorize({
+    await authorizeAndFinalize({
+      connection,
       program,
       agent,
       vaultPda: vault.vaultPda,
@@ -76,27 +82,17 @@ describe("devnet-positions", () => {
       sessionPda,
       vaultTokenAta: vault.vaultTokenAta,
       mint,
-      amount: new BN(10_000_000),
+      amount: new BN(10_000_000), // openPosition is spending
       protocol: jupiterProgramId,
       actionType: { openPosition: {} },
       leverageBps: 2000,
-    });
-    await finalize({
-      program,
-      payer: agent,
-      vaultPda: vault.vaultPda,
-      policyPda: vault.policyPda,
-      trackerPda: vault.trackerPda,
-      sessionPda,
-      agentPubkey: agent.publicKey,
-      vaultTokenAta: vault.vaultTokenAta,
-      feeDestinationAta: null,
       protocolTreasuryAta: vault.protocolTreasuryAta,
+      feeDestinationAta: null,
       success,
     });
   }
 
-  /** Close a position */
+  /** Close a position (non-spending: amount=0, no fees) */
   async function closePosition(vault: FullVaultResult) {
     const sessionPda = deriveSessionPda(
       vault.vaultPda,
@@ -104,7 +100,8 @@ describe("devnet-positions", () => {
       mint,
       program.programId,
     );
-    await authorize({
+    await authorizeAndFinalize({
+      connection,
       program,
       agent,
       vaultPda: vault.vaultPda,
@@ -113,21 +110,11 @@ describe("devnet-positions", () => {
       sessionPda,
       vaultTokenAta: vault.vaultTokenAta,
       mint,
-      amount: new BN(10_000_000),
+      amount: new BN(0), // closePosition is non-spending: amount must be 0
       protocol: jupiterProgramId,
       actionType: { closePosition: {} },
-    });
-    await finalize({
-      program,
-      payer: agent,
-      vaultPda: vault.vaultPda,
-      policyPda: vault.policyPda,
-      trackerPda: vault.trackerPda,
-      sessionPda,
-      agentPubkey: agent.publicKey,
-      vaultTokenAta: vault.vaultTokenAta,
+      protocolTreasuryAta: null, // no fees for non-spending
       feeDestinationAta: null,
-      protocolTreasuryAta: vault.protocolTreasuryAta,
       success: true,
     });
   }
@@ -174,7 +161,8 @@ describe("devnet-positions", () => {
       program.programId,
     );
     try {
-      await authorize({
+      await authorizeAndFinalize({
+        connection,
         program,
         agent,
         vaultPda: vault.vaultPda,
@@ -187,6 +175,9 @@ describe("devnet-positions", () => {
         protocol: jupiterProgramId,
         actionType: { openPosition: {} },
         leverageBps: 2000,
+        protocolTreasuryAta: vault.protocolTreasuryAta,
+        feeDestinationAta: null,
+        success: true,
       });
       expect.fail("Should have thrown");
     } catch (err: any) {

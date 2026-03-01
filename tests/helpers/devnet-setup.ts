@@ -14,6 +14,9 @@ import {
   SystemProgram,
   LAMPORTS_PER_SOL,
   Connection,
+  SYSVAR_INSTRUCTIONS_PUBKEY,
+  TransactionMessage,
+  VersionedTransaction,
 } from "@solana/web3.js";
 import {
   TOKEN_PROGRAM_ID,
@@ -169,6 +172,7 @@ export interface CreateFullVaultOpts {
   maxPositions?: number;
   canOpenPositions?: boolean;
   devFeeRate?: number;
+  maxSlippageBps?: number;
   timelockDuration?: BN;
   allowedDestinations?: PublicKey[];
   depositAmount?: BN;
@@ -205,6 +209,7 @@ export async function createFullVault(
     maxLevBps = 0,
     maxPositions = 3,
     devFeeRate = 0,
+    maxSlippageBps = 500,
     timelockDuration = new BN(0),
     allowedDestinations = [],
     depositAmount = new BN(1_000_000_000),
@@ -262,7 +267,7 @@ export async function createFullVault(
     feeDestinationAta = feeAtaAccount.address;
   }
 
-  // Initialize vault (V2: 10 args, no allowedTokens, no trackerTier)
+  // Initialize vault (11 args — includes maxSlippageBps)
   await program.methods
     .initializeVault(
       vaultId,
@@ -273,6 +278,7 @@ export async function createFullVault(
       new BN(maxLevBps) as any,
       maxPositions,
       devFeeRate,
+      maxSlippageBps,
       timelockDuration,
       allowedDestinations,
     )
@@ -323,10 +329,11 @@ export async function createFullVault(
   };
 }
 
-// ─── Authorize + Finalize helper ────────────────────────────────────────────
+// ─── Authorize + Finalize helper (composed into single versioned TX) ────────
 
 export interface AuthorizeOpts {
   program: Program<AgentShield>;
+  connection: Connection;
   agent: Keypair;
   vaultPda: PublicKey;
   policyPda: PublicKey;
@@ -338,6 +345,9 @@ export interface AuthorizeOpts {
   protocol: PublicKey;
   actionType?: any;
   leverageBps?: number | null;
+  protocolTreasuryAta?: PublicKey | null;
+  feeDestinationAta?: PublicKey | null;
+  outputStablecoinAccount?: PublicKey | null;
   remainingAccounts?: {
     pubkey: PublicKey;
     isWritable: boolean;
@@ -345,7 +355,11 @@ export interface AuthorizeOpts {
   }[];
 }
 
-export async function authorize(opts: AuthorizeOpts): Promise<string> {
+/**
+ * Build a validate_and_authorize instruction (not sent — use authorizeAndFinalize
+ * to compose with finalize into a single atomic transaction).
+ */
+export async function buildAuthorizeIx(opts: AuthorizeOpts) {
   const {
     program,
     agent,
@@ -359,6 +373,9 @@ export async function authorize(opts: AuthorizeOpts): Promise<string> {
     protocol,
     actionType = { swap: {} },
     leverageBps = null,
+    protocolTreasuryAta = null,
+    feeDestinationAta = null,
+    outputStablecoinAccount = null,
     remainingAccounts = [],
   } = opts;
   return program.methods
@@ -377,12 +394,15 @@ export async function authorize(opts: AuthorizeOpts): Promise<string> {
       session: sessionPda,
       vaultTokenAccount: vaultTokenAta,
       tokenMintAccount: mint,
+      protocolTreasuryTokenAccount: protocolTreasuryAta,
+      feeDestinationTokenAccount: feeDestinationAta,
+      outputStablecoinAccount,
       tokenProgram: TOKEN_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
+      instructionsSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
     } as any)
     .remainingAccounts(remainingAccounts)
-    .signers([agent])
-    .rpc();
+    .instruction();
 }
 
 export interface FinalizeOpts {
@@ -396,10 +416,14 @@ export interface FinalizeOpts {
   vaultTokenAta: PublicKey | null;
   feeDestinationAta: PublicKey | null;
   protocolTreasuryAta: PublicKey | null;
+  outputStablecoinAccount?: PublicKey | null;
   success: boolean;
 }
 
-export async function finalize(opts: FinalizeOpts): Promise<string> {
+/**
+ * Build a finalize_session instruction (not sent — compose with authorize).
+ */
+export async function buildFinalizeIx(opts: FinalizeOpts) {
   const {
     program,
     payer,
@@ -411,6 +435,7 @@ export async function finalize(opts: FinalizeOpts): Promise<string> {
     vaultTokenAta,
     feeDestinationAta,
     protocolTreasuryAta,
+    outputStablecoinAccount = null,
     success,
   } = opts;
   return program.methods
@@ -425,22 +450,27 @@ export async function finalize(opts: FinalizeOpts): Promise<string> {
       vaultTokenAccount: vaultTokenAta,
       feeDestinationTokenAccount: feeDestinationAta,
       protocolTreasuryTokenAccount: protocolTreasuryAta,
+      outputStablecoinAccount,
       tokenProgram: TOKEN_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
+      instructionsSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
     } as any)
-    .signers([payer])
-    .rpc();
+    .instruction();
 }
 
+/**
+ * Compose validate + finalize into a single versioned transaction.
+ * Returns the transaction signature.
+ */
 export async function authorizeAndFinalize(
   opts: AuthorizeOpts & {
     feeDestinationAta: PublicKey | null;
-    protocolTreasuryAta: PublicKey;
+    protocolTreasuryAta: PublicKey | null;
     success?: boolean;
   },
-): Promise<void> {
-  await authorize(opts);
-  await finalize({
+): Promise<string> {
+  const validateIx = await buildAuthorizeIx(opts);
+  const finalizeIx = await buildFinalizeIx({
     program: opts.program,
     payer: opts.agent,
     vaultPda: opts.vaultPda,
@@ -451,8 +481,44 @@ export async function authorizeAndFinalize(
     vaultTokenAta: opts.vaultTokenAta,
     feeDestinationAta: opts.feeDestinationAta,
     protocolTreasuryAta: opts.protocolTreasuryAta,
+    outputStablecoinAccount: opts.outputStablecoinAccount ?? null,
     success: opts.success ?? true,
   });
+
+  const { blockhash } = await opts.connection.getLatestBlockhash();
+  const messageV0 = new TransactionMessage({
+    payerKey: opts.agent.publicKey,
+    recentBlockhash: blockhash,
+    instructions: [validateIx, finalizeIx],
+  }).compileToV0Message();
+
+  const tx = new VersionedTransaction(messageV0);
+  tx.sign([opts.agent]);
+  const sig = await opts.connection.sendTransaction(tx);
+  await opts.connection.confirmTransaction(sig, "confirmed");
+  return sig;
+}
+
+/**
+ * Backward-compat: authorize() now composes validate + finalize into one tx.
+ * For error-path tests, Anchor constraint errors fire before handler logic,
+ * so the expected error codes remain the same.
+ */
+export async function authorize(opts: AuthorizeOpts): Promise<string> {
+  return authorizeAndFinalize({
+    ...opts,
+    feeDestinationAta: opts.feeDestinationAta ?? null,
+    protocolTreasuryAta: opts.protocolTreasuryAta ?? null,
+    success: true,
+  });
+}
+
+export async function finalize(opts: FinalizeOpts): Promise<string> {
+  // Standalone finalize is no longer supported — validate + finalize must
+  // be in the same transaction. Keep for interface compat but throw.
+  throw new Error(
+    "Standalone finalize() is no longer supported. Use authorizeAndFinalize().",
+  );
 }
 
 // ─── Utility helpers ────────────────────────────────────────────────────────

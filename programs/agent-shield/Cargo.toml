@@ -17,6 +17,7 @@ cpi = ["no-entrypoint"]
 default = ["devnet"]
 mainnet = []
 devnet = []
+devnet-testing = ["devnet"]
 idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
 certora = ["no-entrypoint", "dep:cvlr"]
 

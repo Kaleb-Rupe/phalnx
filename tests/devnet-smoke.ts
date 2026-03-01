@@ -122,7 +122,7 @@ describe("devnet-smoke-test", () => {
   });
 
   it("1. initialize_vault", async () => {
-    // V2: 10 args (no allowedTokens, no trackerTier)
+    // 11 args (includes maxSlippageBps)
     await program.methods
       .initializeVault(
         vaultId,
@@ -133,6 +133,7 @@ describe("devnet-smoke-test", () => {
         new BN(0) as any, // max_leverage_bps
         3, // max_concurrent_positions
         0, // developer_fee_rate: 0 bps
+        500, // maxSlippageBps: 5%
         new BN(0), // timelockDuration
         [], // allowedDestinations
       )
@@ -187,7 +188,7 @@ describe("devnet-smoke-test", () => {
   });
 
   it("4. update_policy", async () => {
-    // V2: 10 optional args, no tracker in accounts
+    // 11 optional args (includes maxSlippageBps)
     await program.methods
       .updatePolicy(
         null, // keep daily cap
@@ -198,6 +199,7 @@ describe("devnet-smoke-test", () => {
         null, // keep can_open_positions
         null, // keep max_concurrent_positions
         null, // keep developer_fee_rate
+        null, // keep maxSlippageBps
         null, // keep timelockDuration
         null, // keep allowedDestinations
       )

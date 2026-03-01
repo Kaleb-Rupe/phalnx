@@ -100,8 +100,16 @@ mod treasury_tests {
 }
 
 /// Check if a mint address is a recognized stablecoin (USDC or USDT).
+/// With `devnet-testing` feature, accepts any mint for integration testing
+/// on devnet where Circle-controlled USDC cannot be minted.
+#[cfg(not(feature = "devnet-testing"))]
 pub fn is_stablecoin_mint(mint: &Pubkey) -> bool {
     *mint == USDC_MINT || *mint == USDT_MINT
+}
+
+#[cfg(feature = "devnet-testing")]
+pub fn is_stablecoin_mint(_mint: &Pubkey) -> bool {
+    true
 }
 
 // --- Protocol program IDs (same address on mainnet and devnet) ---

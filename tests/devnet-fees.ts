@@ -20,7 +20,7 @@ import {
   deriveSessionPda,
   createFullVault,
   authorize,
-  finalize,
+  authorizeAndFinalize,
   fundKeypair,
   createTestMint,
   calculateFees,
@@ -108,6 +108,7 @@ describe("devnet-fees", () => {
     );
 
     await authorize({
+      connection,
       program,
       agent: agentB,
       vaultPda: vaultB.vaultPda,
@@ -118,19 +119,7 @@ describe("devnet-fees", () => {
       mint,
       amount: new BN(amount),
       protocol: jupiterProgramId,
-    });
-    await finalize({
-      program,
-      payer: agentB,
-      vaultPda: vaultB.vaultPda,
-      policyPda: vaultB.policyPda,
-      trackerPda: vaultB.trackerPda,
-      sessionPda,
-      agentPubkey: agentB.publicKey,
-      vaultTokenAta: vaultB.vaultTokenAta,
-      feeDestinationAta: null,
       protocolTreasuryAta: vaultB.protocolTreasuryAta,
-      success: true,
     });
 
     const treasuryAfter = await getTokenBalance(
@@ -158,6 +147,7 @@ describe("devnet-fees", () => {
     );
 
     await authorize({
+      connection,
       program,
       agent: agentA,
       vaultPda: vaultA.vaultPda,
@@ -168,19 +158,8 @@ describe("devnet-fees", () => {
       mint,
       amount: new BN(amount),
       protocol: jupiterProgramId,
-    });
-    await finalize({
-      program,
-      payer: agentA,
-      vaultPda: vaultA.vaultPda,
-      policyPda: vaultA.policyPda,
-      trackerPda: vaultA.trackerPda,
-      sessionPda,
-      agentPubkey: agentA.publicKey,
-      vaultTokenAta: vaultA.vaultTokenAta,
-      feeDestinationAta: vaultA.feeDestinationAta,
       protocolTreasuryAta: vaultA.protocolTreasuryAta,
-      success: true,
+      feeDestinationAta: vaultA.feeDestinationAta,
     });
 
     const feeDestAfter = await getTokenBalance(
@@ -208,6 +187,7 @@ describe("devnet-fees", () => {
     );
 
     await authorize({
+      connection,
       program,
       agent: agentA,
       vaultPda: vaultA.vaultPda,
@@ -218,19 +198,8 @@ describe("devnet-fees", () => {
       mint,
       amount: new BN(amount),
       protocol: jupiterProgramId,
-    });
-    await finalize({
-      program,
-      payer: agentA,
-      vaultPda: vaultA.vaultPda,
-      policyPda: vaultA.policyPda,
-      trackerPda: vaultA.trackerPda,
-      sessionPda,
-      agentPubkey: agentA.publicKey,
-      vaultTokenAta: vaultA.vaultTokenAta,
-      feeDestinationAta: vaultA.feeDestinationAta,
       protocolTreasuryAta: vaultA.protocolTreasuryAta,
-      success: true,
+      feeDestinationAta: vaultA.feeDestinationAta,
     });
 
     const vaultAfter = await getTokenBalance(connection, vaultA.vaultTokenAta);
@@ -238,7 +207,12 @@ describe("devnet-fees", () => {
     console.log(`    Combined fees deducted: ${totalFees}`);
   });
 
-  it("4. failed finalize (success=false) collects zero fees", async () => {
+  it("4. success=false: fees collected upfront, but stats preserved", async () => {
+    // Fees are collected during validate_and_authorize (upfront), not finalize.
+    // success=false only prevents vault stats increment (totalTransactions, totalVolume).
+    const amount = 50_000_000;
+    const { protocolFee, developerFee } = calculateFees(amount, 500);
+
     const treasuryBefore = await getTokenBalance(
       connection,
       vaultA.protocolTreasuryAta,
@@ -247,6 +221,8 @@ describe("devnet-fees", () => {
       connection,
       vaultA.feeDestinationAta!,
     );
+    const vaultBefore = await program.account.agentVault.fetch(vaultA.vaultPda);
+    const txCountBefore = vaultBefore.totalTransactions.toNumber();
 
     const sessionPda = deriveSessionPda(
       vaultA.vaultPda,
@@ -255,7 +231,8 @@ describe("devnet-fees", () => {
       program.programId,
     );
 
-    await authorize({
+    await authorizeAndFinalize({
+      connection,
       program,
       agent: agentA,
       vaultPda: vaultA.vaultPda,
@@ -264,23 +241,14 @@ describe("devnet-fees", () => {
       sessionPda,
       vaultTokenAta: vaultA.vaultTokenAta,
       mint,
-      amount: new BN(50_000_000),
+      amount: new BN(amount),
       protocol: jupiterProgramId,
-    });
-    await finalize({
-      program,
-      payer: agentA,
-      vaultPda: vaultA.vaultPda,
-      policyPda: vaultA.policyPda,
-      trackerPda: vaultA.trackerPda,
-      sessionPda,
-      agentPubkey: agentA.publicKey,
-      vaultTokenAta: vaultA.vaultTokenAta,
-      feeDestinationAta: vaultA.feeDestinationAta,
       protocolTreasuryAta: vaultA.protocolTreasuryAta,
+      feeDestinationAta: vaultA.feeDestinationAta,
       success: false,
     });
 
+    // Fees WERE collected (upfront in validate)
     const treasuryAfter = await getTokenBalance(
       connection,
       vaultA.protocolTreasuryAta,
@@ -289,9 +257,15 @@ describe("devnet-fees", () => {
       connection,
       vaultA.feeDestinationAta!,
     );
-    expect(treasuryAfter).to.equal(treasuryBefore);
-    expect(feeDestAfter).to.equal(feeDestBefore);
-    console.log("    Failed finalize: zero fees collected");
+    expect(treasuryAfter - treasuryBefore).to.equal(protocolFee);
+    expect(feeDestAfter - feeDestBefore).to.equal(developerFee);
+
+    // But stats NOT incremented
+    const vaultAfter = await program.account.agentVault.fetch(vaultA.vaultPda);
+    expect(vaultAfter.totalTransactions.toNumber()).to.equal(txCountBefore);
+    console.log(
+      `    success=false: fees collected (proto=${protocolFee}, dev=${developerFee}), stats preserved`,
+    );
   });
 
   it("5. dust amount (1 lamport) rounds fee to zero", async () => {
@@ -308,6 +282,7 @@ describe("devnet-fees", () => {
     );
 
     await authorize({
+      connection,
       program,
       agent: agentA,
       vaultPda: vaultA.vaultPda,
@@ -318,19 +293,8 @@ describe("devnet-fees", () => {
       mint,
       amount: new BN(1),
       protocol: jupiterProgramId,
-    });
-    await finalize({
-      program,
-      payer: agentA,
-      vaultPda: vaultA.vaultPda,
-      policyPda: vaultA.policyPda,
-      trackerPda: vaultA.trackerPda,
-      sessionPda,
-      agentPubkey: agentA.publicKey,
-      vaultTokenAta: vaultA.vaultTokenAta,
-      feeDestinationAta: vaultA.feeDestinationAta,
       protocolTreasuryAta: vaultA.protocolTreasuryAta,
-      success: true,
+      feeDestinationAta: vaultA.feeDestinationAta,
     });
 
     const treasuryAfter = await getTokenBalance(
@@ -419,7 +383,9 @@ describe("devnet-fees", () => {
       program.programId,
     );
 
+    // feeDestinationTokenAccount=null is fine when devFeeRate=0
     await authorize({
+      connection,
       program,
       agent: agentB,
       vaultPda: vaultB.vaultPda,
@@ -430,21 +396,7 @@ describe("devnet-fees", () => {
       mint,
       amount: new BN(50_000_000),
       protocol: jupiterProgramId,
-    });
-
-    // feeDestinationTokenAccount=null is fine when devFeeRate=0
-    await finalize({
-      program,
-      payer: agentB,
-      vaultPda: vaultB.vaultPda,
-      policyPda: vaultB.policyPda,
-      trackerPda: vaultB.trackerPda,
-      sessionPda,
-      agentPubkey: agentB.publicKey,
-      vaultTokenAta: vaultB.vaultTokenAta,
-      feeDestinationAta: null,
       protocolTreasuryAta: vaultB.protocolTreasuryAta,
-      success: true,
     });
 
     const sessionInfo = await connection.getAccountInfo(sessionPda);

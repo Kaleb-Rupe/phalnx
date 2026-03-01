@@ -9,7 +9,12 @@
  *     updatePolicy: no tracker in accounts.
  */
 import * as anchor from "@coral-xyz/anchor";
-import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
+import {
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  SYSVAR_INSTRUCTIONS_PUBKEY,
+} from "@solana/web3.js";
 import {
   TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -22,11 +27,9 @@ import BN from "bn.js";
 import {
   getDevnetProvider,
   nextVaultId,
-  derivePDAs,
   deriveSessionPda,
   createFullVault,
   authorize,
-  finalize,
   fundKeypair,
   expectError,
   FullVaultResult,
@@ -83,6 +86,7 @@ describe("devnet-security", () => {
     try {
       await program.methods
         .updatePolicy(
+          null,
           null,
           null,
           null,
@@ -197,8 +201,12 @@ describe("devnet-security", () => {
           session: sessionPda,
           vaultTokenAccount: vault.vaultTokenAta,
           tokenMintAccount: mint,
+          protocolTreasuryTokenAccount: null,
+          feeDestinationTokenAccount: null,
+          outputStablecoinAccount: null,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
+          instructionsSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
         } as any)
         .signers([attacker])
         .rpc();
@@ -213,6 +221,7 @@ describe("devnet-security", () => {
     try {
       await program.methods
         .updatePolicy(
+          null,
           null,
           null,
           null,
@@ -239,7 +248,7 @@ describe("devnet-security", () => {
   });
 
   it("7. over-cap spending blocked with DailyCapExceeded", async () => {
-    // Spend 40 USDC (within maxTx=50)
+    // Spend 40 USDC twice (within maxTx=50 each, composed validate+finalize)
     const sessionPda1 = deriveSessionPda(
       vault.vaultPda,
       agent.publicKey,
@@ -248,6 +257,7 @@ describe("devnet-security", () => {
     );
 
     await authorize({
+      connection,
       program,
       agent,
       vaultPda: vault.vaultPda,
@@ -258,19 +268,7 @@ describe("devnet-security", () => {
       mint,
       amount: new BN(40_000_000), // 40 USDC
       protocol: jupiterProgramId,
-    });
-    await finalize({
-      program,
-      payer: agent,
-      vaultPda: vault.vaultPda,
-      policyPda: vault.policyPda,
-      trackerPda: vault.trackerPda,
-      sessionPda: sessionPda1,
-      agentPubkey: agent.publicKey,
-      vaultTokenAta: vault.vaultTokenAta,
-      feeDestinationAta: null,
       protocolTreasuryAta: vault.protocolTreasuryAta,
-      success: true,
     });
 
     const sessionPda2 = deriveSessionPda(
@@ -280,6 +278,7 @@ describe("devnet-security", () => {
       program.programId,
     );
     await authorize({
+      connection,
       program,
       agent,
       vaultPda: vault.vaultPda,
@@ -290,19 +289,7 @@ describe("devnet-security", () => {
       mint,
       amount: new BN(40_000_000),
       protocol: jupiterProgramId,
-    });
-    await finalize({
-      program,
-      payer: agent,
-      vaultPda: vault.vaultPda,
-      policyPda: vault.policyPda,
-      trackerPda: vault.trackerPda,
-      sessionPda: sessionPda2,
-      agentPubkey: agent.publicKey,
-      vaultTokenAta: vault.vaultTokenAta,
-      feeDestinationAta: null,
       protocolTreasuryAta: vault.protocolTreasuryAta,
-      success: true,
     });
 
     // Now at 80 USDC of 100 cap — try 21 more to exceed
@@ -314,6 +301,7 @@ describe("devnet-security", () => {
     );
     try {
       await authorize({
+        connection,
         program,
         agent,
         vaultPda: vault.vaultPda,
@@ -324,6 +312,7 @@ describe("devnet-security", () => {
         mint,
         amount: new BN(21_000_000), // 21 USDC — exceeds remaining 20
         protocol: jupiterProgramId,
+        protocolTreasuryAta: vault.protocolTreasuryAta,
       });
       expect.fail("Should have thrown");
     } catch (err: any) {
@@ -362,6 +351,7 @@ describe("devnet-security", () => {
 
     try {
       await authorize({
+        connection,
         program,
         agent: freshAgent,
         vaultPda: freshVault.vaultPda,
@@ -380,7 +370,10 @@ describe("devnet-security", () => {
     console.log("    Aggregate TransactionTooLarge enforced");
   });
 
-  it("9. double-finalize same session fails", async () => {
+  it("9. back-to-back composed TXes reuse same session PDA", async () => {
+    // With composed TX model, each authorize() does validate+finalize atomically.
+    // The session PDA is created and closed within a single TX, so the same
+    // session PDA (same vault+agent+mint) can be reused for subsequent TXes.
     const freshVaultId = nextVaultId(4);
     const freshAgent = Keypair.generate();
     await fundKeypair(provider, freshAgent.publicKey);
@@ -406,7 +399,9 @@ describe("devnet-security", () => {
       program.programId,
     );
 
+    // First composed TX
     await authorize({
+      connection,
       program,
       agent: freshAgent,
       vaultPda: freshVault.vaultPda,
@@ -417,49 +412,37 @@ describe("devnet-security", () => {
       mint,
       amount: new BN(10_000_000),
       protocol: jupiterProgramId,
+      protocolTreasuryAta: freshVault.protocolTreasuryAta,
     });
 
-    // First finalize succeeds
-    await finalize({
+    // Session PDA closed after first TX
+    const session1 = await connection.getAccountInfo(sessionPda);
+    expect(session1).to.be.null;
+
+    // Second composed TX — same session PDA works
+    await authorize({
+      connection,
       program,
-      payer: freshAgent,
+      agent: freshAgent,
       vaultPda: freshVault.vaultPda,
       policyPda: freshVault.policyPda,
       trackerPda: freshVault.trackerPda,
       sessionPda,
-      agentPubkey: freshAgent.publicKey,
       vaultTokenAta: freshVault.vaultTokenAta,
-      feeDestinationAta: null,
+      mint,
+      amount: new BN(10_000_000),
+      protocol: jupiterProgramId,
       protocolTreasuryAta: freshVault.protocolTreasuryAta,
-      success: true,
     });
 
-    // Second finalize fails (session PDA closed)
-    try {
-      await finalize({
-        program,
-        payer: freshAgent,
-        vaultPda: freshVault.vaultPda,
-        policyPda: freshVault.policyPda,
-        trackerPda: freshVault.trackerPda,
-        sessionPda,
-        agentPubkey: freshAgent.publicKey,
-        vaultTokenAta: freshVault.vaultTokenAta,
-        feeDestinationAta: null,
-        protocolTreasuryAta: freshVault.protocolTreasuryAta,
-        success: true,
-      });
-      expect.fail("Should have thrown");
-    } catch (err: any) {
-      expectError(
-        err,
-        "AccountNotInitialized",
-        "not found",
-        "not exist",
-        "3012",
-      );
-    }
-    console.log("    Double-finalize correctly rejected");
+    // Session PDA closed after second TX too
+    const session2 = await connection.getAccountInfo(sessionPda);
+    expect(session2).to.be.null;
+
+    // Vault stats incremented by 2
+    const v = await program.account.agentVault.fetch(freshVault.vaultPda);
+    expect(v.totalTransactions.toNumber()).to.equal(2);
+    console.log("    Back-to-back composed TXes: session PDA reused successfully");
   });
 
   it("10. frozen vault blocks validate_and_authorize", async () => {
@@ -498,6 +481,7 @@ describe("devnet-security", () => {
 
     try {
       await authorize({
+        connection,
         program,
         agent: freshAgent,
         vaultPda: freshVault.vaultPda,

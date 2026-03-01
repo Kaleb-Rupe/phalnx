@@ -134,6 +134,7 @@ describe("devnet-spending", () => {
       program.programId,
     );
     await authorizeAndFinalize({
+      connection,
       program,
       agent,
       vaultPda: vault.vaultPda,
@@ -158,6 +159,7 @@ describe("devnet-spending", () => {
       program.programId,
     );
     await authorizeAndFinalize({
+      connection,
       program,
       agent,
       vaultPda: vault.vaultPda,
@@ -181,6 +183,7 @@ describe("devnet-spending", () => {
     );
     try {
       await authorize({
+        connection,
         program,
         agent,
         vaultPda: vault.vaultPda,
@@ -213,6 +216,7 @@ describe("devnet-spending", () => {
     );
     // Spend exactly 100 USDC = cap
     await authorizeAndFinalize({
+      connection,
       program,
       agent,
       vaultPda: vault.vaultPda,
@@ -243,6 +247,7 @@ describe("devnet-spending", () => {
     );
     try {
       await authorize({
+        connection,
         program,
         agent,
         vaultPda: vault.vaultPda,
@@ -276,6 +281,7 @@ describe("devnet-spending", () => {
         program.programId,
       );
       await authorizeAndFinalize({
+        connection,
         program,
         agent,
         vaultPda: vault.vaultPda,
@@ -313,6 +319,7 @@ describe("devnet-spending", () => {
       program.programId,
     );
     await authorizeAndFinalize({
+      connection,
       program,
       agent,
       vaultPda: vault.vaultPda,
@@ -363,6 +370,7 @@ describe("devnet-spending", () => {
     );
     try {
       await authorize({
+        connection,
         program,
         agent,
         vaultPda: vault.vaultPda,
@@ -395,6 +403,7 @@ describe("devnet-spending", () => {
       program.programId,
     );
     await authorizeAndFinalize({
+      connection,
       program,
       agent,
       vaultPda: vault.vaultPda,
@@ -409,10 +418,11 @@ describe("devnet-spending", () => {
       protocolTreasuryAta: vault.protocolTreasuryAta,
     });
 
-    // Update daily cap higher (V2: no tracker account, no allowedTokens param)
+    // Update daily cap higher (11 args — includes maxSlippageBps)
     await program.methods
       .updatePolicy(
         new BN(500_000_000), // new daily cap
+        null,
         null,
         null,
         null,
@@ -442,6 +452,7 @@ describe("devnet-spending", () => {
       program.programId,
     );
     await authorizeAndFinalize({
+      connection,
       program,
       agent,
       vaultPda: vault.vaultPda,

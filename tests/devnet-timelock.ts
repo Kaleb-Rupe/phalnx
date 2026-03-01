@@ -76,6 +76,7 @@ describe("devnet-timelock", () => {
           null,
           null,
           null,
+          null,
         )
         .accounts({
           owner: owner.publicKey,
@@ -94,10 +95,11 @@ describe("devnet-timelock", () => {
     const vault = await createTimelockVault(5);
     const newDailyCap = new BN(999_000_000);
 
-    // Queue policy change (V2: 10 optional args, no allowedTokens)
+    // Queue policy change (11 optional args — includes maxSlippageBps)
     await program.methods
       .queuePolicyUpdate(
         newDailyCap,
+        null,
         null,
         null,
         null,
@@ -168,6 +170,7 @@ describe("devnet-timelock", () => {
         null,
         null,
         null,
+        null,
       )
       .accounts({
         owner: owner.publicKey,
@@ -213,6 +216,7 @@ describe("devnet-timelock", () => {
     await program.methods
       .queuePolicyUpdate(
         new BN(777_000_000),
+        null,
         null,
         null,
         null,
