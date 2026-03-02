@@ -27,14 +27,14 @@
   "dependencies": {
     "@agent-shield/core": "workspace:*",
     "@solana/spl-token": "^0.4.0",
-    "@x402/core": "^2.4.0"
+    "@x402/core": "^2.5.0"
   },
   "peerDependencies": {
     "@coral-xyz/anchor": "^0.32.1",
     "@solana/web3.js": "^1.95.0"
   },
   "optionalDependencies": {
-    "flash-sdk": "^15.1.4",
+    "flash-sdk": "^15.4.1",
     "@sqds/multisig": "^2.1.4"
   },
   "devDependencies": {
