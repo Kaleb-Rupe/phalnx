@@ -12,15 +12,49 @@ npx @phalnx/mcp
 
 ## Security Model
 
-Phalnx bundles three layers of protection in a single integration:
+Phalnx uses a three-layer defense. A fully compromised machine **cannot extract your Solana private key**.
 
-| Layer | What It Does |
-| ----- | ------------ |
-| **Client-side policy checks** | Fast deny before transactions hit the network |
-| **TEE key custody** | Agent private keys stored in hardware enclaves (Crossmint, Turnkey, Privy) |
-| **On-chain vault enforcement** | PDA vaults with cryptographic policy guarantees enforced by Solana validators |
+### Layer 1 — Private Key in TEE Enclave
 
-All three layers are set up with a single `shield_configure` call. TEE is required for production use.
+Your agent's Solana private key lives exclusively in a remote hardware enclave. It never touches your filesystem.
+
+| Provider | Enclave | Attestation |
+|----------|---------|-------------|
+| Crossmint | Intel TDX | Provider-verified |
+| Turnkey | AWS Nitro | Cryptographically verified (PCR values) |
+| Privy | AWS Nitro | Provider-verified |
+
+An attacker with full read access to your machine finds no key to steal — it doesn't exist there.
+
+### Layer 2 — TEE Credentials in OS Keychain
+
+API credentials (Crossmint API key, Turnkey API key, Privy app secret) are stored in the OS keychain:
+
+- **macOS**: Keychain Access — requires login password or Touch ID
+- **Windows**: Windows Credential Manager — requires Windows Hello / PIN
+- **Linux**: GNOME Keyring / KWallet — requires session password
+
+Credentials are never written to `config.json` or shell profiles. `shield_configure` saves them to the keychain on first run; `resolveClient()` reads from the keychain at runtime.
+
+**If credentials are stolen**: the attacker can sign transactions through the enclave, but only up to your configured daily cap before you freeze the vault via `shield_revoke_agent`.
+
+### Layer 3 — On-Chain Spending Caps and Vault Freeze
+
+Even if Layers 1 and 2 are both compromised, the Phalnx vault provides a blockchain backstop:
+
+- **Daily spending cap**: enforced by the Solana program, cannot be bypassed
+- **Vault freeze**: `shield_revoke_agent` freezes the vault instantly from any machine
+- **Protocol allowlist**: agent can only call pre-approved DeFi programs
+
+### Cross-Device Design
+
+This model works identically on any device. The Solana private key is always in the remote enclave. TEE credentials are protected by the device's biometric or PIN. On-chain caps limit the blast radius even in the worst case.
+
+### Mainnet Requirement
+
+**Local keypair wallets are never permitted on mainnet-beta.** `shield_configure` will return a hard error. `resolveClient()` will throw. This is enforced at both the config-load level and the tool level.
+
+For devnet, local keypairs are allowed but every tool call prepends a visible warning.
 
 ## Quickstart
 
@@ -38,6 +72,23 @@ All three layers are set up with a single `shield_configure` call. TEE is requir
 | `PHALNX_WALLET_PATH`        | No       | —       | Path to Solana keypair JSON (vault owner). Not required — server starts in setup mode without it. |
 | `PHALNX_RPC_URL`            | No       | devnet  | Solana RPC endpoint URL                                                                           |
 | `PHALNX_AGENT_KEYPAIR_PATH` | No       | —       | Path to agent keypair JSON (needed for swap/position tools)                                       |
+
+### TEE Provisioning
+
+When you run `shield_configure`, Phalnx provisions a TEE (Trusted Execution Environment) wallet to protect your agent's private key. It tries providers in this order:
+
+1. **Local Privy** — if `PRIVY_APP_ID` and `PRIVY_APP_SECRET` are set
+2. **Local Turnkey** — if `TURNKEY_ORGANIZATION_ID`, `TURNKEY_API_KEY_ID`, and `TURNKEY_API_PRIVATE_KEY` are set
+3. **Local Crossmint** — if `CROSSMINT_API_KEY` is set (easiest to get started)
+4. **Hosted Phalnx API** — fallback; no env vars needed, but requires internet access
+
+| Provider | Env Vars Required |
+|----------|------------------|
+| Crossmint | `CROSSMINT_API_KEY` |
+| Turnkey | `TURNKEY_ORGANIZATION_ID`, `TURNKEY_API_KEY_ID`, `TURNKEY_API_PRIVATE_KEY` |
+| Privy | `PRIVY_APP_ID`, `PRIVY_APP_SECRET` |
+
+**Devnet note:** TEE attestation is not enforced on devnet. For local testing, you can skip TEE entirely by using `unsafeSkipTeeCheck: true` in the SDK.
 
 ### Claude Desktop
 

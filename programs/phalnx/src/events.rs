@@ -172,6 +172,7 @@ pub struct PositionsSynced {
 pub struct InstructionConstraintsCreated {
     pub vault: Pubkey,
     pub entries_count: u8,
+    pub strict_mode: bool,
     pub timestamp: i64,
 }
 
@@ -179,6 +180,7 @@ pub struct InstructionConstraintsCreated {
 pub struct InstructionConstraintsUpdated {
     pub vault: Pubkey,
     pub entries_count: u8,
+    pub strict_mode: bool,
     pub timestamp: i64,
 }
 

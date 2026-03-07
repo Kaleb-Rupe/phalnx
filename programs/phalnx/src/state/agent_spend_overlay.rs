@@ -1,47 +1,58 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::PhalnxError;
-use crate::state::tracker::{EPOCH_DURATION, NUM_EPOCHS, ROLLING_WINDOW_SECONDS};
 
-/// Number of agent entries per overlay shard.
-/// With 7 entries × ~1,184 bytes = 8,288 bytes of entry data.
-pub const ENTRIES_PER_SHARD: usize = 7;
+/// Overlay epoch duration: 1 hour (3600 seconds).
+/// Chosen over the global tracker's 10-minute epoch because per-agent spend
+/// windows need less granularity — 24 × 1h buckets cover 24h with 75% less storage.
+pub const OVERLAY_EPOCH_DURATION: i64 = 3600;
 
-/// Per-agent contribution entry within a shard.
-/// Tracks each agent's individual spend contributions using the same
-/// 144-bucket epoch scheme as the global SpendTracker.
-/// 32 (agent) + 8 * 144 (contributions) = 1,184 bytes
+/// Number of overlay epochs: 24 × 1h = 24h rolling window.
+pub const OVERLAY_NUM_EPOCHS: usize = 24;
+
+/// Rolling window duration in seconds (24 hours) — same as global tracker.
+pub const OVERLAY_ROLLING_WINDOW_SECONDS: i64 = 86_400;
+
+/// Maximum number of agent entries per overlay.
+/// 10 matches MAX_AGENTS_PER_VAULT so every registered agent can have per-agent tracking.
+/// Account size: 2,368 bytes (well within Solana's 10,240-byte CPI limit).
+pub const MAX_OVERLAY_ENTRIES: usize = 10;
+
+/// Per-agent contribution entry within an overlay.
+/// Tracks each agent's individual spend contributions using a 24-bucket
+/// hourly epoch scheme with per-entry `last_write_epoch` for correct gap-zeroing.
+///
+/// Layout: 32 (agent) + 8 (last_write_epoch) + 8 × 24 (contributions) = 232 bytes
 #[zero_copy]
 pub struct AgentContributionEntry {
     /// Agent pubkey stored as raw bytes (zero_copy requires fixed-size)
     pub agent: [u8; 32],
 
-    /// Per-epoch USD contributions from this agent (same indexing as SpendTracker buckets)
-    pub contributions: [u64; NUM_EPOCHS],
+    /// The epoch number of the most recent write to this entry.
+    /// Used to derive which buckets are stale via modular arithmetic.
+    /// epoch = unix_timestamp / OVERLAY_EPOCH_DURATION (3600)
+    pub last_write_epoch: i64,
+
+    /// Per-epoch USD contributions from this agent.
+    /// Indexed by `epoch % OVERLAY_NUM_EPOCHS`.
+    pub contributions: [u64; OVERLAY_NUM_EPOCHS],
 }
 
 /// Per-vault overlay PDA tracking per-agent spend contributions.
 ///
-/// Seeds: `[b"agent_spend", vault.key().as_ref(), &[shard_index]]`
+/// Seeds: `[b"agent_spend", vault.key().as_ref(), &[0u8]]`
 ///
-/// One shard supports up to 7 agents. The shard index (0-based) is stored
-/// in AgentVault.treasury_shard. Currently only shard 0 is used.
+/// Supports up to 10 agents (matches MAX_AGENTS_PER_VAULT).
 ///
 /// Size calculation:
-///   8 (discriminator) + 32 (vault) + 8 * 144 (sync_epochs) +
-///   1,184 * 7 (entries) + 1 (bump) + 7 (padding) = 9,488 bytes
+///   8 (discriminator) + 32 (vault) + 232 × 10 (entries) + 1 (bump) + 7 (padding) = 2,368 bytes
 #[account(zero_copy)]
 pub struct AgentSpendOverlay {
     /// Associated vault pubkey
     pub vault: Pubkey, // 32 bytes
 
-    /// Per-epoch sync timestamps — used to detect stale epochs across all entries.
-    /// When an epoch is stale (older than the current epoch), all agent contributions
-    /// for that epoch index are zeroed during the next access.
-    pub sync_epochs: [i64; NUM_EPOCHS], // 1,152 bytes
-
-    /// Agent contribution entries (up to ENTRIES_PER_SHARD agents per shard)
-    pub entries: [AgentContributionEntry; ENTRIES_PER_SHARD], // 8,288 bytes
+    /// Agent contribution entries (up to MAX_OVERLAY_ENTRIES agents)
+    pub entries: [AgentContributionEntry; MAX_OVERLAY_ENTRIES], // 2,320 bytes
 
     /// Bump seed for PDA
     pub bump: u8, // 1 byte
@@ -49,13 +60,12 @@ pub struct AgentSpendOverlay {
     /// Padding for 8-byte alignment
     pub _padding: [u8; 7], // 7 bytes
 }
-// Total data: 9,480 bytes + 8 (discriminator) = 9,488 bytes
+// Total data: 2,360 bytes + 8 (discriminator) = 2,368 bytes
 
 impl AgentSpendOverlay {
     /// Total account size including 8-byte discriminator
-    pub const SIZE: usize =
-        8 + 32 + (8 * NUM_EPOCHS) + (1184 * ENTRIES_PER_SHARD) + 1 + 7;
-    // = 9,488
+    pub const SIZE: usize = 8 + 32 + (232 * MAX_OVERLAY_ENTRIES) + 1 + 7;
+    // = 8 + 32 + 2320 + 1 + 7 = 2,368
 
     /// Find the slot index for a given agent, or None if not present.
     pub fn find_agent_slot(&self, agent: &Pubkey) -> Option<usize> {
@@ -71,63 +81,112 @@ impl AgentSpendOverlay {
         let zero = [0u8; 32];
         if let Some(idx) = self.entries.iter().position(|e| e.agent == zero) {
             self.entries[idx].agent = agent.to_bytes();
-            // contributions are already zero-initialized
+            // contributions and last_write_epoch are already zero-initialized
             Some(idx)
         } else {
             None
         }
     }
 
-    /// Sync stale epoch buckets for a given slot. Zeroes contributions for
-    /// epochs that have rolled past the current window.
-    fn sync_and_zero_if_stale(&mut self, clock: &Clock, slot_idx: usize) {
-        if clock.unix_timestamp <= 0 {
+    /// Release a slot by zeroing the agent key, last_write_epoch, and all contribution buckets.
+    /// Called when an agent is revoked to prevent slot leaks.
+    pub fn release_slot(&mut self, slot_idx: usize) {
+        if slot_idx >= MAX_OVERLAY_ENTRIES {
             return;
         }
-        let current_epoch = clock.unix_timestamp / EPOCH_DURATION;
-        for i in 0..NUM_EPOCHS {
-            let sync_epoch = self.sync_epochs[i];
-            if sync_epoch != current_epoch {
-                // This epoch index is stale — zero out contributions for this agent
-                self.entries[slot_idx].contributions[i] = 0;
+        self.entries[slot_idx].agent = [0u8; 32];
+        self.entries[slot_idx].last_write_epoch = 0;
+        for i in 0..OVERLAY_NUM_EPOCHS {
+            self.entries[slot_idx].contributions[i] = 0;
+        }
+    }
+
+    /// Zero contribution buckets in the gap between last_write_epoch and current_epoch.
+    /// Only zeroes buckets that have become stale — not the entire array.
+    ///
+    /// If the gap is >= OVERLAY_NUM_EPOCHS (24), all buckets are zeroed.
+    /// Otherwise, only buckets from (last_write_epoch+1)..=current_epoch are zeroed (wrapping).
+    fn zero_gap_buckets(&mut self, slot_idx: usize, current_epoch: i64) {
+        let entry = &mut self.entries[slot_idx];
+        let gap = current_epoch - entry.last_write_epoch;
+
+        if gap <= 0 {
+            // Same epoch or clock went backward — no zeroing needed
+            return;
+        }
+
+        if gap >= OVERLAY_NUM_EPOCHS as i64 {
+            // Entire window has expired — zero all buckets
+            for i in 0..OVERLAY_NUM_EPOCHS {
+                entry.contributions[i] = 0;
+            }
+        } else {
+            // Zero only the gap buckets: (last_write_epoch+1)..=current_epoch
+            for offset in 1..=gap {
+                let epoch = entry.last_write_epoch + offset;
+                let idx = (epoch % OVERLAY_NUM_EPOCHS as i64) as usize;
+                entry.contributions[idx] = 0;
             }
         }
     }
 
     /// Get the rolling 24h USD spend for a specific agent, with boundary correction.
-    /// Mirrors SpendTracker::get_rolling_24h_usd but for a single agent.
+    ///
+    /// Iterates backward from last_write_epoch, summing contributions within the
+    /// 24h window. Uses proportional scaling for the boundary bucket (same math
+    /// as the global SpendTracker).
     pub fn get_agent_rolling_24h_usd(&self, clock: &Clock, slot_idx: usize) -> u64 {
-        if clock.unix_timestamp <= 0 || slot_idx >= ENTRIES_PER_SHARD {
+        if clock.unix_timestamp <= 0 || slot_idx >= MAX_OVERLAY_ENTRIES {
             return 0;
         }
-        let current_epoch = clock.unix_timestamp / EPOCH_DURATION;
-        let window_start_ts = clock.unix_timestamp.saturating_sub(ROLLING_WINDOW_SECONDS);
+
+        let current_epoch = clock.unix_timestamp / OVERLAY_EPOCH_DURATION;
+        let entry = &self.entries[slot_idx];
+
+        // If last write was more than 24 epochs ago, all data is expired
+        if current_epoch - entry.last_write_epoch >= OVERLAY_NUM_EPOCHS as i64 {
+            return 0;
+        }
+
+        let window_start_ts = clock.unix_timestamp.saturating_sub(OVERLAY_ROLLING_WINDOW_SECONDS);
         let mut total: u128 = 0;
 
-        for i in 0..NUM_EPOCHS {
-            let contribution = self.entries[slot_idx].contributions[i];
+        // Iterate backward from last_write_epoch (most recent data)
+        for k in 0..(OVERLAY_NUM_EPOCHS as i64) {
+            let epoch_for_k = entry.last_write_epoch - k;
+            if epoch_for_k < 0 {
+                break;
+            }
+
+            let bucket_start = epoch_for_k * OVERLAY_EPOCH_DURATION;
+            let bucket_end = bucket_start + OVERLAY_EPOCH_DURATION;
+
+            // If this bucket ends before the window start, we're done (going backward)
+            if bucket_end <= window_start_ts {
+                break;
+            }
+
+            // If this bucket is in the future relative to current_epoch, skip it
+            if epoch_for_k > current_epoch {
+                continue;
+            }
+
+            let bucket_idx = (epoch_for_k % OVERLAY_NUM_EPOCHS as i64) as usize;
+            let contribution = entry.contributions[bucket_idx];
             if contribution == 0 {
                 continue;
             }
 
-            // Use sync_epochs to determine the epoch_id for this bucket index
-            let epoch_id = self.sync_epochs[i];
-            let bucket_start = epoch_id.saturating_mul(EPOCH_DURATION);
-            let bucket_end = bucket_start.saturating_add(EPOCH_DURATION);
-
-            if bucket_end <= window_start_ts || epoch_id > current_epoch {
-                continue; // outside window
-            }
-
             if bucket_start >= window_start_ts {
+                // Fully within window
                 total = total.saturating_add(contribution as u128);
             } else {
-                // Boundary — proportional scaling
-                let overlap = bucket_end.checked_sub(window_start_ts).unwrap() as u128;
+                // Boundary bucket — proportional scaling
+                let overlap = (bucket_end - window_start_ts) as u128;
                 let scaled = (contribution as u128)
                     .saturating_mul(overlap)
-                    .checked_div(EPOCH_DURATION as u128)
-                    .unwrap();
+                    .checked_div(OVERLAY_EPOCH_DURATION as u128)
+                    .unwrap_or(0);
                 total = total.saturating_add(scaled);
             }
         }
@@ -146,23 +205,24 @@ impl AgentSpendOverlay {
         slot_idx: usize,
         usd_amount: u64,
     ) -> Result<()> {
-        if slot_idx >= ENTRIES_PER_SHARD {
-            return Ok(()); // silently skip if invalid slot
+        if slot_idx >= MAX_OVERLAY_ENTRIES {
+            return Err(error!(PhalnxError::Overflow));
         }
 
-        // Sync stale epochs first
-        self.sync_and_zero_if_stale(clock, slot_idx);
+        let current_epoch = clock.unix_timestamp / OVERLAY_EPOCH_DURATION;
 
-        let current_epoch = clock.unix_timestamp / EPOCH_DURATION;
-        let idx = (current_epoch % NUM_EPOCHS as i64) as usize;
+        // Zero any gap buckets between last write and now
+        self.zero_gap_buckets(slot_idx, current_epoch);
 
-        // Update sync epoch for this bucket
-        self.sync_epochs[idx] = current_epoch;
+        let idx = (current_epoch % OVERLAY_NUM_EPOCHS as i64) as usize;
 
         // Add contribution
         self.entries[slot_idx].contributions[idx] = self.entries[slot_idx].contributions[idx]
             .checked_add(usd_amount)
             .ok_or(error!(PhalnxError::Overflow))?;
+
+        // Update last_write_epoch
+        self.entries[slot_idx].last_write_epoch = current_epoch;
 
         Ok(())
     }

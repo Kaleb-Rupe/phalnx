@@ -131,6 +131,12 @@ describe("flash-trade-integration", () => {
       units: CU_FLASH_TRADE,
     });
 
+    // Derive overlay PDA for this vault
+    const [overlayForVault] = PublicKey.findProgramAddressSync(
+      [Buffer.from("agent_spend"), vault.toBuffer(), Buffer.from([0])],
+      program.programId,
+    );
+
     const validateIx = await program.methods
       .validateAndAuthorize(
         actionType,
@@ -145,6 +151,7 @@ describe("flash-trade-integration", () => {
         policy,
         tracker,
         session,
+        agentSpendOverlay: overlayForVault,
         vaultTokenAccount: effectiveVaultAta,
         tokenMintAccount: tokenMint,
         protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
@@ -167,6 +174,7 @@ describe("flash-trade-integration", () => {
         sessionRentRecipient: agentKp.publicKey,
         policy,
         tracker,
+        agentSpendOverlay: overlayForVault,
         vaultTokenAccount: effectiveVaultAta,
         outputStablecoinAccount: null,
         tokenProgram: TOKEN_PROGRAM_ID,
@@ -249,6 +257,7 @@ describe("flash-trade-integration", () => {
         100, // maxSlippageBps
         new BN(0), // timelockDuration
         [], // allowedDestinations
+        [], // protocolCaps
       )
       .accountsPartial({
         owner: owner.publicKey,
@@ -526,6 +535,7 @@ describe("flash-trade-integration", () => {
           100, // maxSlippageBps
           new BN(0),
           [],
+          [], // protocolCaps
         )
         .accountsPartial({
           owner: owner.publicKey,
@@ -546,7 +556,7 @@ describe("flash-trade-integration", () => {
       // Freeze vault
       await program.methods
         .revokeAgent(agent.publicKey)
-        .accountsPartial({ owner: owner.publicKey, vault: frozenVault })
+        .accountsPartial({ owner: owner.publicKey, vault: frozenVault, agentSpendOverlay: frozenOverlay })
         .rpc();
     });
 
@@ -635,6 +645,7 @@ describe("flash-trade-integration", () => {
           100, // maxSlippageBps
           new BN(0),
           [],
+          [], // protocolCaps
         )
         .accountsPartial({
           owner: owner.publicKey,
@@ -686,6 +697,9 @@ describe("flash-trade-integration", () => {
           null, // maxSlippageBps
           null, // timelockDuration
           null, // allowedDestinations
+          null, // sessionExpirySlots
+          null, // hasProtocolCaps
+          null, // protocolCaps
         )
         .accountsPartial({
           owner: owner.publicKey,
@@ -827,6 +841,7 @@ describe("flash-trade-integration", () => {
           100, // maxSlippageBps
           new BN(0), // no timelock
           [], // no destination allowlist
+          [], // protocolCaps
         )
         .accountsPartial({
           owner: owner.publicKey,

@@ -42,7 +42,11 @@ pub struct QueueConstraintsUpdate<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(ctx: Context<QueueConstraintsUpdate>, entries: Vec<ConstraintEntry>) -> Result<()> {
+pub fn handler(
+    ctx: Context<QueueConstraintsUpdate>,
+    entries: Vec<ConstraintEntry>,
+    strict_mode: bool,
+) -> Result<()> {
     let policy = &ctx.accounts.policy;
 
     // Timelock must be configured to use queue
@@ -62,6 +66,7 @@ pub fn handler(ctx: Context<QueueConstraintsUpdate>, entries: Vec<ConstraintEntr
     let pending = &mut ctx.accounts.pending_constraints;
     pending.vault = ctx.accounts.vault.key();
     pending.entries = entries;
+    pending.strict_mode = strict_mode;
     pending.queued_at = clock.unix_timestamp;
     pending.executes_at = executes_at;
     pending.bump = ctx.bumps.pending_constraints;

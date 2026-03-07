@@ -140,6 +140,7 @@ describe("devnet-smoke-test", () => {
         500, // maxSlippageBps: 5%
         new BN(0), // timelockDuration
         [], // allowedDestinations
+        [], // protocolCaps
       )
       .accounts({
         owner: owner.publicKey,
@@ -214,6 +215,8 @@ describe("devnet-smoke-test", () => {
         null, // keep maxSlippageBps
         null, // keep timelockDuration
         null, // keep allowedDestinations
+        null, // hasProtocolCaps
+        null, // protocolCaps
       )
       .accounts({
         owner: owner.publicKey,

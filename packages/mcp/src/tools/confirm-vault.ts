@@ -84,22 +84,25 @@ export async function confirmVault(
 
     const vaultId = input.vaultId ?? 0;
 
-    // Derive PDA and check on-chain
+    // Derive PDA and check on-chain (3 attempts, 2s apart)
     const [vaultPda] = deriveVaultPDA(ownerPubkey, vaultId);
-    const accountInfo = await connection.getAccountInfo(vaultPda);
+    let accountInfo = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      accountInfo = await connection.getAccountInfo(vaultPda);
+      if (accountInfo) break;
+      if (attempt < 3) await new Promise(r => setTimeout(r, 2000));
+    }
 
     if (!accountInfo) {
       return [
-        "## Vault Not Found",
+        "## Vault Not Yet Confirmed",
         "",
-        `No vault found at PDA \`${vaultPda.toBase58()}\` (owner: \`${ownerStr}\`, vaultId: ${vaultId}).`,
+        `Checked 3 times over 6 seconds — vault not visible on-chain yet at \`${vaultPda.toBase58()}\`.`,
         "",
-        "Possible causes:",
-        "- The vault creation transaction hasn't been confirmed yet",
-        "- The owner or vaultId is incorrect",
-        "- The transaction was rejected or failed",
+        "Transaction may still be propagating (Solana finality typically takes 5–30s).",
         "",
-        "Try again in a few seconds, or use `shield_discover_vault` to scan for vaults.",
+        "**→ Next:** Wait 30 seconds and run `shield_confirm_vault` again.",
+        "Or use `shield_discover_vault` to scan all vault IDs for your owner.",
       ].join("\n");
     }
 
@@ -120,6 +123,8 @@ export async function confirmVault(
       "",
       "Vault address saved to config. Your setup is now complete!",
       "Run `shield_setup_status` to verify.",
+      "",
+      `**→ Next:** Fund your vault at \`${vaultPda.toBase58()}\` with SOL and USDC, then try \`shield_execute_swap\`.`,
     ].join("\n");
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);

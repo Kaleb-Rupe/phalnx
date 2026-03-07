@@ -55,7 +55,7 @@ pub struct FinalizeSession<'info> {
     )]
     pub tracker: AccountLoader<'info, SpendTracker>,
 
-    /// Zero-copy AgentSpendOverlay shard 0 — per-agent rolling spend enforcement
+    /// Zero-copy AgentSpendOverlay — per-agent rolling spend
     #[account(
         mut,
         seeds = [b"agent_spend", vault.key().as_ref(), &[0u8]],
@@ -117,7 +117,9 @@ pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
     let session_output_mint = session.output_mint;
     let session_balance_before = session.stablecoin_balance_before;
     let session_delegation_token_account = session.delegation_token_account;
+    let session_authorized_protocol = session.authorized_protocol;
 
+    let vault_key = ctx.accounts.vault.key();
     let vault = &mut ctx.accounts.vault;
 
     // Extract vault PDA seeds data upfront
@@ -139,16 +141,13 @@ pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
         // H1: vault_token_account MUST be provided when session was delegated.
         // Without this, passing None silently skips revocation and the agent
         // retains SPL token delegation authority.
+        let vault_token = ctx.accounts.vault_token_account
+            .as_ref()
+            .ok_or(error!(PhalnxError::InvalidTokenAccount))?;
         require!(
-            ctx.accounts.vault_token_account.is_some(),
+            vault_token.key() == session_delegation_token_account,
             PhalnxError::InvalidTokenAccount
         );
-        if let Some(ref vault_token) = ctx.accounts.vault_token_account {
-            require!(
-                vault_token.key() == session_delegation_token_account,
-                PhalnxError::InvalidTokenAccount
-            );
-        }
     }
 
     // Revoke delegation
@@ -166,7 +165,7 @@ pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
             token::revoke(revoke_ctx)?;
 
             emit!(DelegationRevoked {
-                vault: vault.key(),
+                vault: vault_key,
                 token_account: vault_token.key(),
                 timestamp: clock.unix_timestamp,
             });
@@ -181,7 +180,7 @@ pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
             .as_ref()
             .ok_or(error!(PhalnxError::InvalidTokenAccount))?;
         require!(
-            stablecoin_account.owner == vault.key(),
+            stablecoin_account.owner == vault_key,
             PhalnxError::InvalidTokenAccount
         );
         require!(
@@ -233,7 +232,7 @@ pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
                     PhalnxError::AgentSpendLimitExceeded
                 );
                 emit!(AgentSpendLimitChecked {
-                    vault: vault.key(),
+                    vault: vault_key,
                     agent: session_agent,
                     agent_rolling_spend: agent_rolling,
                     spending_limit_usd: agent_entry.spending_limit_usd,
@@ -242,11 +241,34 @@ pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
                 });
             }
             overlay.record_agent_contribution(&clock, agent_slot, stablecoin_delta)?;
+        } else if agent_entry.spending_limit_usd > 0 {
+            return Err(error!(PhalnxError::AgentSlotNotFound));
         }
         drop(overlay);
 
+        // Per-protocol cap check (when enabled)
+        if let Some(proto_cap) = policy.get_protocol_cap(&session_authorized_protocol) {
+            if proto_cap > 0 {
+                let proto_spend =
+                    tracker.get_protocol_spend(&clock, &session_authorized_protocol);
+                let new_proto_total = proto_spend
+                    .checked_add(stablecoin_delta)
+                    .ok_or(PhalnxError::Overflow)?;
+                require!(
+                    new_proto_total <= proto_cap,
+                    PhalnxError::ProtocolCapExceeded
+                );
+            }
+        }
+
         // Record spend in tracker
         tracker.record_spend(&clock, stablecoin_delta)?;
+
+        // Record per-protocol spend
+        if policy.has_protocol_caps {
+            tracker.record_protocol_spend(&clock, &session_authorized_protocol, stablecoin_delta)?;
+        }
+
         drop(tracker);
     }
 
@@ -291,7 +313,7 @@ pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
     }
 
     emit!(SessionFinalized {
-        vault: vault.key(),
+        vault: vault_key,
         agent: session_agent,
         success,
         is_expired,

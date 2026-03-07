@@ -49,6 +49,9 @@ pub fn handler(
     max_slippage_bps: Option<u16>,
     timelock_duration: Option<u64>,
     allowed_destinations: Option<Vec<Pubkey>>,
+    session_expiry_slots: Option<u64>,
+    has_protocol_caps: Option<bool>,
+    protocol_caps: Option<Vec<u64>>,
 ) -> Result<()> {
     let vault = &ctx.accounts.vault;
     let policy = &ctx.accounts.policy;
@@ -95,6 +98,34 @@ pub fn handler(
             PhalnxError::TooManyDestinations
         );
     }
+    if let Some(ref expiry) = session_expiry_slots {
+        if *expiry > 0 {
+            require!(
+                *expiry >= 10 && *expiry <= 450,
+                PhalnxError::InvalidSessionExpiry
+            );
+        }
+    }
+
+    // Validate per-protocol caps consistency against resulting policy state
+    {
+        let effective_hpc = has_protocol_caps.unwrap_or(policy.has_protocol_caps);
+        if effective_hpc {
+            let effective_mode = protocol_mode.unwrap_or(policy.protocol_mode);
+            require!(
+                effective_mode == PROTOCOL_MODE_ALLOWLIST,
+                PhalnxError::ProtocolCapsMismatch
+            );
+            let effective_protos_len = protocols.as_ref().map_or(policy.protocols.len(), |p| p.len());
+            let effective_caps_len = protocol_caps
+                .as_ref()
+                .map_or(policy.protocol_caps.len(), |c| c.len());
+            require!(
+                effective_caps_len == effective_protos_len,
+                PhalnxError::ProtocolCapsMismatch
+            );
+        }
+    }
 
     let clock = Clock::get()?;
     let executes_at = clock
@@ -117,6 +148,9 @@ pub fn handler(
     pending.max_slippage_bps = max_slippage_bps;
     pending.timelock_duration = timelock_duration;
     pending.allowed_destinations = allowed_destinations;
+    pending.session_expiry_slots = session_expiry_slots;
+    pending.has_protocol_caps = has_protocol_caps;
+    pending.protocol_caps = protocol_caps;
     pending.bump = ctx.bumps.pending_policy;
 
     emit!(PolicyChangeQueued {

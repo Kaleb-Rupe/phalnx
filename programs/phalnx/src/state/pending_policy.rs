@@ -29,6 +29,9 @@ pub struct PendingPolicyUpdate {
     pub max_slippage_bps: Option<u16>,
     pub timelock_duration: Option<u64>,
     pub allowed_destinations: Option<Vec<Pubkey>>,
+    pub session_expiry_slots: Option<u64>,
+    pub has_protocol_caps: Option<bool>,
+    pub protocol_caps: Option<Vec<u64>>,
 
     /// Bump seed for PDA
     pub bump: u8,
@@ -36,13 +39,6 @@ pub struct PendingPolicyUpdate {
 
 impl PendingPolicyUpdate {
     /// Worst-case size with all Option fields populated at max capacity.
-    ///
-    /// discriminator (8) + vault (32) + queued_at (8) + executes_at (8) +
-    /// Option<u64> (1+8) * 2 + Option<u8> (1+1) +
-    /// Option<Vec<Pubkey>> (1+4+32*10) +
-    /// Option<u16> (1+2) + Option<bool> (1+1) +
-    /// Option<u8> (1+1) + Option<u16> (1+2) +
-    /// Option<u64> (1+8) + Option<Vec<Pubkey>> (1+4+32*10) + bump (1)
     pub const SIZE: usize = 8
         + 32
         + 8
@@ -58,6 +54,9 @@ impl PendingPolicyUpdate {
         + (1 + 2) // max_slippage_bps
         + (1 + 8) // timelock_duration
         + (1 + 4 + 32 * MAX_ALLOWED_DESTINATIONS) // allowed_destinations
+        + (1 + 8) // session_expiry_slots
+        + (1 + 1) // has_protocol_caps
+        + (1 + 4 + 8 * MAX_ALLOWED_PROTOCOLS) // protocol_caps
         + 1; // bump
 
     /// Returns true if the timelock period has expired and the update

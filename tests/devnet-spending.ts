@@ -432,6 +432,8 @@ describe("devnet-spending", () => {
         null,
         null,
         null,
+        null, // hasProtocolCaps
+        null, // protocolCaps
       )
       .accounts({
         owner: owner.publicKey,

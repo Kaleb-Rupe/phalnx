@@ -1,4 +1,4 @@
-use super::{ActionType, SESSION_EXPIRY_SLOTS};
+use super::ActionType;
 use anchor_lang::prelude::*;
 
 #[account]
@@ -64,9 +64,9 @@ impl SessionAuthority {
         self.authorized && !self.is_expired(current_slot)
     }
 
-    /// Calculate the expiry slot from a given current slot
-    pub fn calculate_expiry(current_slot: u64) -> u64 {
+    /// Calculate the expiry slot from a given current slot and expiry window
+    pub fn calculate_expiry(current_slot: u64, expiry_slots: u64) -> u64 {
         // Saturating add to prevent overflow
-        current_slot.saturating_add(SESSION_EXPIRY_SLOTS)
+        current_slot.saturating_add(expiry_slots)
     }
 }

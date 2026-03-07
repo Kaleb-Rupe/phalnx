@@ -177,15 +177,18 @@ describe("shield_configure", () => {
     expect(config.layers.shield.protocols.length).to.equal(5);
   });
 
-  it("sets network to mainnet-beta when specified", async () => {
-    await configure(null, {
+  it("returns hard error for mainnet-beta without TEE credentials", async () => {
+    const result = await configure(null, {
       template: "conservative",
       network: "mainnet-beta",
     });
 
+    expect(result).to.include("TEE Wallet Required for Mainnet");
+    expect(result).to.include("Local keypair wallets are not permitted on mainnet-beta");
+
+    // No config file should be created
     const configPath = path.join(tmpHome, ".phalnx", "config.json");
-    const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-    expect(config.network).to.equal("mainnet-beta");
+    expect(fs.existsSync(configPath)).to.be.false;
   });
 
   it("returns error on invalid wallet path", async () => {

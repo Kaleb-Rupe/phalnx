@@ -9,7 +9,7 @@ export const provisionSchema = z.object({
       "Phalnx Actions server URL (default: https://agent-middleware.vercel.app)",
     ),
   template: z
-    .enum(["conservative", "moderate", "aggressive"])
+    .string()
     .optional()
     .default("conservative")
     .describe(
@@ -44,6 +44,34 @@ export const provisionSchema = z.object({
 
 export type ProvisionInput = z.infer<typeof provisionSchema>;
 
+const PROVISION_TEMPLATE_ALIASES: Record<string, string> = {
+  safe: "conservative", cautious: "conservative", low: "conservative",
+  medium: "moderate", mid: "moderate", balanced: "moderate",
+  high: "aggressive", yolo: "aggressive", fast: "aggressive", max: "aggressive",
+};
+
+function provisionLevenshtein(a: string, b: string): number {
+  const d = Array.from({ length: a.length + 1 }, (_, i) =>
+    Array.from({ length: b.length + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+  );
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++)
+      d[i][j] = a[i - 1] === b[j - 1] ? d[i - 1][j - 1]
+        : 1 + Math.min(d[i - 1][j], d[i][j - 1], d[i - 1][j - 1]);
+  return d[a.length][b.length];
+}
+
+function normalizeProvisionTemplate(input: string): { value: string; note?: string } {
+  const lower = input.trim().toLowerCase();
+  const VALID = ["conservative", "moderate", "aggressive"] as const;
+  if ((VALID as readonly string[]).includes(lower)) return { value: lower };
+  if (PROVISION_TEMPLATE_ALIASES[lower]) return { value: PROVISION_TEMPLATE_ALIASES[lower] };
+  const nearest = VALID.reduce((best, opt) =>
+    provisionLevenshtein(lower, opt) < provisionLevenshtein(lower, best) ? opt : best
+  );
+  return { value: nearest, note: `> Using '${nearest}' (closest match to '${input}')` };
+}
+
 /**
  * Generate a Solana Action URL for vault provisioning.
  *
@@ -55,10 +83,13 @@ export async function provision(
   _client: any,
   input: ProvisionInput,
 ): Promise<string> {
+  const rawTemplate = input.template ?? "conservative";
+  const { value: templateName, note: templateNote } = normalizeProvisionTemplate(rawTemplate);
+
   const baseUrl = input.platformUrl.replace(/\/$/, "");
 
   const params = new URLSearchParams();
-  params.set("template", input.template);
+  params.set("template", templateName);
   if (input.dailyCap) {
     params.set("dailyCap", input.dailyCap.toString());
   }
@@ -75,14 +106,14 @@ export async function provision(
       conservative: 500,
       moderate: 2000,
       aggressive: 10000,
-    }[input.template];
+    }[templateName];
 
-  return [
+  const output = [
     "## Vault Provisioning Request",
     "",
     "I need a protected wallet to trade. Please approve the vault creation by clicking the link below.",
     "",
-    `**Policy:** ${input.template} (${dailyCap} USDC/day cap)`,
+    `**Policy:** ${templateName} (${dailyCap} USDC/day cap)`,
     "",
     "### How to approve:",
     `1. **Blink URL** (paste in any blink-compatible app): ${blinkUrl}`,
@@ -93,6 +124,8 @@ export async function provision(
     "",
     "After you sign, I'll be able to trade within your policy limits.",
   ].join("\n");
+
+  return templateNote ? `${templateNote}\n\n${output}` : output;
 }
 
 export const provisionTool = {

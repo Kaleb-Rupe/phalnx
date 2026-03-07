@@ -77,6 +77,8 @@ describe("devnet-timelock", () => {
           null,
           null,
           null,
+          null, // hasProtocolCaps
+          null, // protocolCaps
         )
         .accounts({
           owner: owner.publicKey,
@@ -109,6 +111,8 @@ describe("devnet-timelock", () => {
         null,
         null,
         null,
+        null, // hasProtocolCaps
+        null, // protocolCaps
       )
       .accounts({
         owner: owner.publicKey,
@@ -171,6 +175,8 @@ describe("devnet-timelock", () => {
         null,
         null,
         null,
+        null, // hasProtocolCaps
+        null, // protocolCaps
       )
       .accounts({
         owner: owner.publicKey,
@@ -226,6 +232,8 @@ describe("devnet-timelock", () => {
         null,
         null,
         null,
+        null, // hasProtocolCaps
+        null, // protocolCaps
       )
       .accounts({
         owner: owner.publicKey,

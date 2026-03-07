@@ -28,6 +28,10 @@ pub struct SpendTracker {
     /// Reserved per-protocol spend counters (zeroed, no enforcement yet)
     pub protocol_counters: [ProtocolSpendCounter; MAX_ALLOWED_PROTOCOLS], // 480 bytes (10 × 48)
 
+    /// Epoch of most recent record_spend() call. Enables early exit in get_rolling_24h_usd().
+    /// Zero-initialized — value 0 correctly triggers early exit (current_epoch >> 144).
+    pub last_write_epoch: i64, // 8 bytes
+
     /// Bump seed for PDA
     pub bump: u8, // 1 byte
 
@@ -48,8 +52,8 @@ pub struct EpochBucket {
     pub usd_amount: u64, // 8 bytes
 }
 
-/// Reserved per-protocol spend counter for future per-protocol caps.
-/// Zeroed at init — no enforcement logic yet.
+/// Per-protocol spend counter using simple 24h window.
+/// When current_epoch - window_start >= 144, the window is expired and resets to 0.
 /// 48 bytes per entry (32 + 8 + 8).
 #[zero_copy]
 pub struct ProtocolSpendCounter {
@@ -63,7 +67,7 @@ pub struct ProtocolSpendCounter {
 
 impl SpendTracker {
     /// Total account size including 8-byte discriminator
-    pub const SIZE: usize = 8 + 32 + (16 * NUM_EPOCHS) + (48 * MAX_ALLOWED_PROTOCOLS) + 1 + 7;
+    pub const SIZE: usize = 8 + 32 + (16 * NUM_EPOCHS) + (48 * MAX_ALLOWED_PROTOCOLS) + 8 + 1 + 7;
 
     /// Record a spend in the current epoch bucket.
     /// If the bucket is from a different epoch, reset it first.
@@ -85,6 +89,8 @@ impl SpendTracker {
             .checked_add(usd_amount)
             .ok_or(error!(PhalnxError::Overflow))?;
 
+        self.last_write_epoch = current_epoch;
+
         Ok(())
     }
 
@@ -100,6 +106,12 @@ impl SpendTracker {
         }
         // Safe: EPOCH_DURATION is a non-zero constant (600)
         let current_epoch = clock.unix_timestamp.checked_div(EPOCH_DURATION).unwrap();
+
+        // Early exit: if no writes in 144+ epochs, all data is expired
+        if current_epoch - self.last_write_epoch >= NUM_EPOCHS as i64 {
+            return 0;
+        }
+
         let window_start_ts = clock.unix_timestamp.saturating_sub(ROLLING_WINDOW_SECONDS);
         let mut total: u128 = 0;
 
@@ -135,6 +147,74 @@ impl SpendTracker {
             u64::MAX
         } else {
             total as u64
+        }
+    }
+
+    /// Get per-protocol spend within the current simple 24h window.
+    /// Returns 0 if no counter exists or window has expired (>= 144 epochs old).
+    pub fn get_protocol_spend(&self, clock: &Clock, protocol_id: &Pubkey) -> u64 {
+        if clock.unix_timestamp <= 0 {
+            return 0;
+        }
+        let current_epoch = clock.unix_timestamp.checked_div(EPOCH_DURATION).unwrap();
+        let protocol_bytes = protocol_id.to_bytes();
+
+        for counter in &self.protocol_counters {
+            if counter.protocol == protocol_bytes {
+                // Check if window is still valid (< 144 epochs = 24h)
+                if current_epoch - counter.window_start < NUM_EPOCHS as i64 {
+                    return counter.window_spend;
+                }
+                return 0; // Window expired
+            }
+        }
+        0 // No counter found
+    }
+
+    /// Record per-protocol spend. Finds or allocates a counter slot by protocol ID.
+    /// Uses simple 24h window — resets entirely when window expires.
+    pub fn record_protocol_spend(
+        &mut self,
+        clock: &Clock,
+        protocol_id: &Pubkey,
+        usd_amount: u64,
+    ) -> Result<()> {
+        require!(clock.unix_timestamp > 0, PhalnxError::Overflow);
+        let current_epoch = clock.unix_timestamp.checked_div(EPOCH_DURATION).unwrap();
+        let protocol_bytes = protocol_id.to_bytes();
+        let empty_bytes = [0u8; 32];
+
+        // Scan for existing counter or empty slot
+        let mut empty_slot: Option<usize> = None;
+        for i in 0..self.protocol_counters.len() {
+            if self.protocol_counters[i].protocol == protocol_bytes {
+                // Found existing counter
+                if current_epoch - self.protocol_counters[i].window_start >= NUM_EPOCHS as i64 {
+                    // Window expired — reset
+                    self.protocol_counters[i].window_start = current_epoch;
+                    self.protocol_counters[i].window_spend = usd_amount;
+                } else {
+                    // Window still valid — accumulate
+                    self.protocol_counters[i].window_spend = self.protocol_counters[i]
+                        .window_spend
+                        .checked_add(usd_amount)
+                        .ok_or(error!(PhalnxError::Overflow))?;
+                }
+                return Ok(());
+            }
+            if empty_slot.is_none() && self.protocol_counters[i].protocol == empty_bytes {
+                empty_slot = Some(i);
+            }
+        }
+
+        // Not found — allocate empty slot
+        if let Some(idx) = empty_slot {
+            self.protocol_counters[idx].protocol = protocol_bytes;
+            self.protocol_counters[idx].window_start = current_epoch;
+            self.protocol_counters[idx].window_spend = usd_amount;
+            Ok(())
+        } else {
+            Err(error!(PhalnxError::ProtocolCapExceeded))
         }
     }
 }

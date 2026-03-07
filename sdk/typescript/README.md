@@ -17,45 +17,14 @@ Optional: `flash-sdk ^12.0.3` (only needed for Flash Trade perpetuals)
 ## Quick Start
 
 ```typescript
-import { PhalnxClient } from "@phalnx/sdk";
-import { Connection, Keypair, PublicKey } from "@solana/web3.js";
-import { Wallet, BN } from "@coral-xyz/anchor";
+import { withVault } from '@phalnx/sdk';
 
-const connection = new Connection("https://api.devnet.solana.com");
-const wallet = new Wallet(ownerKeypair);
-const client = new PhalnxClient(connection, wallet);
-
-// 1. Create a vault with policy
-await client.createVault({
-  vaultId: new BN(1),
-  dailySpendingCapUsd: new BN(500_000_000),   // $500 USD (6 decimals)
-  maxTransactionSizeUsd: new BN(100_000_000),  // $100 per tx
-  protocolMode: 1,                             // 1 = allowlist
-  protocols: [JUPITER_PROGRAM_ID],
-  maxLeverageBps: 0,
-  maxConcurrentPositions: 0,
-  feeDestination: feeWallet.publicKey,
-});
-
-// 2. Deposit funds
-const [vaultPDA] = client.getVaultPDA(wallet.publicKey, new BN(1));
-await client.deposit(vaultPDA, USDC_MINT, new BN(1_000_000_000));
-
-// 3. Register an agent
-await client.registerAgent(vaultPDA, agentKeypair.publicKey);
-
-// 4. Agent executes a swap through Jupiter
-const sig = await client.executeJupiterSwap({
-  vault: vaultPDA,
-  owner: wallet.publicKey,
-  vaultId: new BN(1),
-  agent: agentKeypair.publicKey,
-  inputMint: USDC_MINT,
-  outputMint: SOL_MINT,
-  amount: new BN(10_000_000),
-  slippageBps: 50,
-});
+// One call sets up client-side policy, TEE key custody, and on-chain vault enforcement.
+const result = await withVault(teeWallet, { maxSpend: '500 USDC/day' }, { connection });
+// result.wallet is ready — sign and submit transactions with full protection
 ```
+
+For direct vault management, see [Low-Level API](#low-level-api) below.
 
 ## On-Chain Account Model
 
@@ -276,6 +245,51 @@ All three layers are bundled into `withVault()` from `@phalnx/sdk`.
 Program deployed to devnet at: `4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL`
 
 IDL account: `Ev3gSzxLw6RwExAMpTHUKvn2o9YVULxiWehrHee7aepP`
+
+## Low-Level API
+
+Use `PhalnxClient` directly when you need fine-grained control over vault lifecycle, policy updates, or custom transaction composition.
+
+```typescript
+import { PhalnxClient } from "@phalnx/sdk";
+import { Connection, Keypair, PublicKey } from "@solana/web3.js";
+import { Wallet, BN } from "@coral-xyz/anchor";
+
+const connection = new Connection("https://api.devnet.solana.com");
+const wallet = new Wallet(ownerKeypair);
+const client = new PhalnxClient(connection, wallet);
+
+// Create a vault with policy
+await client.createVault({
+  vaultId: new BN(1),
+  dailySpendingCapUsd: new BN(500_000_000),   // $500 USD (6 decimals)
+  maxTransactionSizeUsd: new BN(100_000_000),  // $100 per tx
+  protocolMode: 1,                             // 1 = allowlist
+  protocols: [JUPITER_PROGRAM_ID],
+  maxLeverageBps: 0,
+  maxConcurrentPositions: 0,
+  feeDestination: feeWallet.publicKey,
+});
+
+// Deposit funds
+const [vaultPDA] = client.getVaultPDA(wallet.publicKey, new BN(1));
+await client.deposit(vaultPDA, USDC_MINT, new BN(1_000_000_000));
+
+// Register an agent
+await client.registerAgent(vaultPDA, agentKeypair.publicKey);
+
+// Agent executes a swap through Jupiter
+const sig = await client.executeJupiterSwap({
+  vault: vaultPDA,
+  owner: wallet.publicKey,
+  vaultId: new BN(1),
+  agent: agentKeypair.publicKey,
+  inputMint: USDC_MINT,
+  outputMint: SOL_MINT,
+  amount: new BN(10_000_000),
+  slippageBps: 50,
+});
+```
 
 ## Related Packages
 

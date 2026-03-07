@@ -14,6 +14,9 @@ pub struct PendingConstraintsUpdate {
     /// New constraint entries to apply
     pub entries: Vec<ConstraintEntry>,
 
+    /// Whether to reject programs without matching constraint entries
+    pub strict_mode: bool,
+
     /// Unix timestamp when this update was queued
     pub queued_at: i64,
 
@@ -26,8 +29,8 @@ pub struct PendingConstraintsUpdate {
 
 impl PendingConstraintsUpdate {
     // SIZE = InstructionConstraints::SIZE + queued_at (8) + executes_at (8)
-    // = 2355 + 8 + 8 = 2371
-    pub const SIZE: usize = 2371;
+    // = 8318 + 8 + 8 = 8334
+    pub const SIZE: usize = 8334;
 
     /// Returns true if the timelock period has expired and the update
     /// can be applied.

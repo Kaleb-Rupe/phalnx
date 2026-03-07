@@ -48,13 +48,14 @@ export function buildInitializeVault(
       params.maxSlippageBps ?? 100,
       params.timelockDuration ?? new BN(0),
       params.allowedDestinations ?? [],
+      params.protocolCaps ?? [],
     )
     .accounts({
       owner,
       vault,
       policy,
       tracker,
-      agentSpendOverlay: getAgentOverlayPDA(vault, 0, program.programId)[0],
+      agentSpendOverlay: getAgentOverlayPDA(vault, program.programId)[0],
       feeDestination: params.feeDestination,
       systemProgram: SystemProgram.programId,
     } as any);
@@ -90,7 +91,7 @@ export function buildRegisterAgent(
   permissions: BN,
   spendingLimitUsd: BN = new BN(0),
 ) {
-  const [agentSpendOverlay] = getAgentOverlayPDA(vault, 0, program.programId);
+  const [agentSpendOverlay] = getAgentOverlayPDA(vault, program.programId);
   return program.methods
     .registerAgent(agent, permissions, spendingLimitUsd)
     .accounts({
@@ -121,6 +122,9 @@ export function buildUpdatePolicy(
       params.maxSlippageBps ?? null,
       params.timelockDuration ?? null,
       params.allowedDestinations ?? null,
+      params.sessionExpirySlots ?? null,
+      params.hasProtocolCaps ?? null,
+      params.protocolCaps ?? null,
     )
     .accounts({
       owner,
@@ -289,6 +293,9 @@ export function buildQueuePolicyUpdate(
       params.maxSlippageBps ?? null,
       params.timelockDuration ?? null,
       params.allowedDestinations ?? null,
+      params.sessionExpirySlots ?? null,
+      params.hasProtocolCaps ?? null,
+      params.protocolCaps ?? null,
     )
     .accounts({
       owner,
@@ -505,11 +512,12 @@ export function buildCreateInstructionConstraints(
   owner: PublicKey,
   vault: PublicKey,
   entries: ConstraintEntry[],
+  strictMode?: boolean,
 ) {
   const [policy] = getPolicyPDA(vault, program.programId);
   const [constraints] = getConstraintsPDA(vault, program.programId);
 
-  return program.methods.createInstructionConstraints(entries as any).accounts({
+  return program.methods.createInstructionConstraints(entries as any, strictMode ?? false).accounts({
     owner,
     vault,
     policy,
@@ -539,11 +547,12 @@ export function buildUpdateInstructionConstraints(
   owner: PublicKey,
   vault: PublicKey,
   entries: ConstraintEntry[],
+  strictMode?: boolean,
 ) {
   const [policy] = getPolicyPDA(vault, program.programId);
   const [constraints] = getConstraintsPDA(vault, program.programId);
 
-  return program.methods.updateInstructionConstraints(entries as any).accounts({
+  return program.methods.updateInstructionConstraints(entries as any, strictMode ?? false).accounts({
     owner,
     vault,
     policy,
@@ -556,6 +565,7 @@ export function buildQueueConstraintsUpdate(
   owner: PublicKey,
   vault: PublicKey,
   entries: ConstraintEntry[],
+  strictMode?: boolean,
 ) {
   const [policy] = getPolicyPDA(vault, program.programId);
   const [constraints] = getConstraintsPDA(vault, program.programId);
@@ -564,7 +574,7 @@ export function buildQueueConstraintsUpdate(
     program.programId,
   );
 
-  return program.methods.queueConstraintsUpdate(entries as any).accounts({
+  return program.methods.queueConstraintsUpdate(entries as any, strictMode ?? false).accounts({
     owner,
     vault,
     policy,

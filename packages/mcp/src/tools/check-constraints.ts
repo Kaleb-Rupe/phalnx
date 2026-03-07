@@ -14,6 +14,9 @@ function formatOperator(op: any): string {
   if ("ne" in op) return "!=";
   if ("gte" in op) return ">=";
   if ("lte" in op) return "<=";
+  if ("gteSigned" in op) return ">=s";
+  if ("lteSigned" in op) return "<=s";
+  if ("bitmask" in op) return "&=";
   return "?";
 }
 

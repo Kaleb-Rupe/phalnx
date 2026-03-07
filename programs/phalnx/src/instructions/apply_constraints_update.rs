@@ -44,9 +44,10 @@ pub fn handler(ctx: Context<ApplyConstraintsUpdate>) -> Result<()> {
         PhalnxError::TimelockNotExpired
     );
 
-    // Overwrite constraint entries
+    // Overwrite constraint entries and strict_mode
     let constraints = &mut ctx.accounts.constraints;
     constraints.entries = pending.entries.clone();
+    constraints.strict_mode = pending.strict_mode;
 
     emit!(ConstraintsChangeApplied {
         vault: ctx.accounts.vault.key(),

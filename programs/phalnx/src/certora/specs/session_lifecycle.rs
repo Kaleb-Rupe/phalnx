@@ -16,12 +16,12 @@ use cvlr::prelude::*;
 #[rule]
 pub fn rule_expiry_at_least_current_slot() {
     let slot: u64 = nondet();
-    let expires = SessionAuthority::calculate_expiry(slot);
+    let expires = SessionAuthority::calculate_expiry(slot, SESSION_EXPIRY_SLOTS);
     cvlr_assert!(expires >= slot);
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Rule 2: calculate_expiry equals slot.saturating_add(20)
+// Rule 2: calculate_expiry equals slot.saturating_add(expiry_slots)
 //
 // Verifies the implementation matches the specification exactly.
 // ─────────────────────────────────────────────────────────────────
@@ -29,7 +29,7 @@ pub fn rule_expiry_at_least_current_slot() {
 #[rule]
 pub fn rule_expiry_equals_saturating_add() {
     let slot: u64 = nondet();
-    let expires = SessionAuthority::calculate_expiry(slot);
+    let expires = SessionAuthority::calculate_expiry(slot, SESSION_EXPIRY_SLOTS);
     cvlr_assert!(expires == slot.saturating_add(SESSION_EXPIRY_SLOTS));
 }
 
@@ -45,7 +45,7 @@ pub fn rule_session_expires_after_window() {
     let creation_slot: u64 = nondet();
     cvlr_assume!(creation_slot < u64::MAX - SESSION_EXPIRY_SLOTS);
 
-    let expires_at = SessionAuthority::calculate_expiry(creation_slot);
+    let expires_at = SessionAuthority::calculate_expiry(creation_slot, SESSION_EXPIRY_SLOTS);
     let after_window = creation_slot + SESSION_EXPIRY_SLOTS + 1;
 
     // is_expired checks: current_slot > expires_at_slot
@@ -62,7 +62,7 @@ pub fn rule_session_expires_after_window() {
 #[rule]
 pub fn rule_session_valid_at_creation() {
     let creation_slot: u64 = nondet();
-    let expires_at = SessionAuthority::calculate_expiry(creation_slot);
+    let expires_at = SessionAuthority::calculate_expiry(creation_slot, SESSION_EXPIRY_SLOTS);
 
     // is_expired = current_slot > expires_at_slot
     // At creation_slot, this must be false
@@ -81,10 +81,10 @@ pub fn rule_session_valid_at_creation() {
 #[rule]
 pub fn rule_expiry_saturates_at_max() {
     // u64::MAX itself must saturate
-    let expires_max = SessionAuthority::calculate_expiry(u64::MAX);
+    let expires_max = SessionAuthority::calculate_expiry(u64::MAX, SESSION_EXPIRY_SLOTS);
     cvlr_assert!(expires_max == u64::MAX);
 
     // u64::MAX - 10 is within the saturation zone (> u64::MAX - 20)
-    let expires_near = SessionAuthority::calculate_expiry(u64::MAX - 10);
+    let expires_near = SessionAuthority::calculate_expiry(u64::MAX - 10, SESSION_EXPIRY_SLOTS);
     cvlr_assert!(expires_near == u64::MAX);
 }

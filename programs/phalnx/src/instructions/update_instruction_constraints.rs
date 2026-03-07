@@ -35,6 +35,7 @@ pub struct UpdateInstructionConstraints<'info> {
 pub fn handler(
     ctx: Context<UpdateInstructionConstraints>,
     entries: Vec<ConstraintEntry>,
+    strict_mode: bool,
 ) -> Result<()> {
     // Timelock guard: direct updates only allowed without timelock.
     // For timelocked vaults, use queue_constraints_update / apply_constraints_update.
@@ -47,10 +48,12 @@ pub fn handler(
 
     let constraints = &mut ctx.accounts.constraints;
     constraints.entries = entries;
+    constraints.strict_mode = strict_mode;
 
     emit!(InstructionConstraintsUpdated {
         vault: ctx.accounts.vault.key(),
         entries_count: constraints.entries.len() as u8,
+        strict_mode,
         timestamp: Clock::get()?.unix_timestamp,
     });
 

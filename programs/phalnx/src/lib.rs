@@ -35,6 +35,7 @@ pub mod phalnx {
         max_slippage_bps: u16,
         timelock_duration: u64,
         allowed_destinations: Vec<Pubkey>,
+        protocol_caps: Vec<u64>,
     ) -> Result<()> {
         instructions::initialize_vault::handler(
             ctx,
@@ -49,6 +50,7 @@ pub mod phalnx {
             max_slippage_bps,
             timelock_duration,
             allowed_destinations,
+            protocol_caps,
         )
     }
 
@@ -84,6 +86,9 @@ pub mod phalnx {
         max_slippage_bps: Option<u16>,
         timelock_duration: Option<u64>,
         allowed_destinations: Option<Vec<Pubkey>>,
+        session_expiry_slots: Option<u64>,
+        has_protocol_caps: Option<bool>,
+        protocol_caps: Option<Vec<u64>>,
     ) -> Result<()> {
         instructions::update_policy::handler(
             ctx,
@@ -98,6 +103,9 @@ pub mod phalnx {
             max_slippage_bps,
             timelock_duration,
             allowed_destinations,
+            session_expiry_slots,
+            has_protocol_caps,
+            protocol_caps,
         )
     }
 
@@ -168,6 +176,9 @@ pub mod phalnx {
         max_slippage_bps: Option<u16>,
         timelock_duration: Option<u64>,
         allowed_destinations: Option<Vec<Pubkey>>,
+        session_expiry_slots: Option<u64>,
+        has_protocol_caps: Option<bool>,
+        protocol_caps: Option<Vec<u64>>,
     ) -> Result<()> {
         instructions::queue_policy_update::handler(
             ctx,
@@ -182,6 +193,9 @@ pub mod phalnx {
             max_slippage_bps,
             timelock_duration,
             allowed_destinations,
+            session_expiry_slots,
+            has_protocol_caps,
+            protocol_caps,
         )
     }
 
@@ -200,8 +214,9 @@ pub mod phalnx {
     pub fn create_instruction_constraints(
         ctx: Context<CreateInstructionConstraints>,
         entries: Vec<state::ConstraintEntry>,
+        strict_mode: bool,
     ) -> Result<()> {
-        instructions::create_instruction_constraints::handler(ctx, entries)
+        instructions::create_instruction_constraints::handler(ctx, entries, strict_mode)
     }
 
     /// Close instruction constraints for the vault.
@@ -215,16 +230,18 @@ pub mod phalnx {
     pub fn update_instruction_constraints(
         ctx: Context<UpdateInstructionConstraints>,
         entries: Vec<state::ConstraintEntry>,
+        strict_mode: bool,
     ) -> Result<()> {
-        instructions::update_instruction_constraints::handler(ctx, entries)
+        instructions::update_instruction_constraints::handler(ctx, entries, strict_mode)
     }
 
     /// Queue a constraints update when timelock is active.
     pub fn queue_constraints_update(
         ctx: Context<QueueConstraintsUpdate>,
         entries: Vec<state::ConstraintEntry>,
+        strict_mode: bool,
     ) -> Result<()> {
-        instructions::queue_constraints_update::handler(ctx, entries)
+        instructions::queue_constraints_update::handler(ctx, entries, strict_mode)
     }
 
     /// Apply a queued constraints update after the timelock expires.

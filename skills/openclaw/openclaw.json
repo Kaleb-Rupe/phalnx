@@ -4,7 +4,7 @@
       "mcp": {
         "phalnx": {
           "command": "npx",
-          "args": ["@phalnx/mcp@0.4.7"],
+          "args": ["@phalnx/mcp@0.4.8"],
           "env": {
             "PHALNX_RPC_URL": "https://api.devnet.solana.com"
           }

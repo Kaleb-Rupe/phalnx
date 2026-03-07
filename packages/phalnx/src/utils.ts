@@ -17,15 +17,27 @@ export function detectPackageManager(): PackageManager {
   return "npm";
 }
 
+export function normalizeProjectName(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-\s]/g, "")  // remove invalid chars except spaces and hyphens
+    .replace(/\s+/g, "-")           // spaces to hyphens
+    .replace(/-+/g, "-")            // collapse multiple hyphens
+    .replace(/^-|-$/g, "");         // strip leading/trailing hyphens
+}
+
 export function validateProjectName(name: string): string | undefined {
   if (!name || name.trim().length === 0) {
     return "Project name cannot be empty";
   }
-  if (name.length > 214) {
-    return "Project name must be 214 characters or fewer";
+  // Normalize first to check the actual length after cleanup
+  const normalized = normalizeProjectName(name);
+  if (normalized.length === 0) {
+    return "Project name cannot be empty after normalization";
   }
-  if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) {
-    return "Project name must be lowercase alphanumeric with hyphens, starting with a letter or number";
+  if (normalized.length > 214) {
+    return "Project name must be 214 characters or fewer";
   }
   return undefined;
 }

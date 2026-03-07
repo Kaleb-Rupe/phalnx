@@ -84,6 +84,9 @@ describe("escrow-integration", () => {
   let destPolicyPda: PublicKey;
   let destTrackerPda: PublicKey;
 
+  // Overlay PDAs
+  let sourceOverlayPda: PublicKey;
+
   // Token accounts
   let sourceOwnerUsdcAta: PublicKey;
   let sourceVaultUsdcAta: PublicKey;
@@ -140,6 +143,7 @@ describe("escrow-integration", () => {
         sourceVault: sourceVaultPda,
         policy: sourcePolicyPda,
         tracker: sourceTrackerPda,
+        agentSpendOverlay: sourceOverlayPda,
         destinationVault: destVaultPda,
         escrow: escrowPda,
         sourceVaultAta: sourceVaultUsdcAta,
@@ -272,6 +276,7 @@ describe("escrow-integration", () => {
       [Buffer.from("agent_spend"), sourceVaultPda.toBuffer(), Buffer.from([0])],
       program.programId,
     );
+    sourceOverlayPda = sourceOverlay;
     await program.methods
       .initializeVault(
         sourceVaultId,
@@ -285,6 +290,7 @@ describe("escrow-integration", () => {
         500, // max_slippage_bps
         new BN(0), // timelock_duration (0 = no timelock)
         [], // allowed_destinations
+        [], // protocolCaps
       )
       .accounts({
         owner: sourceOwner.publicKey,
@@ -357,6 +363,7 @@ describe("escrow-integration", () => {
         500, // max_slippage_bps
         new BN(0), // timelock_duration (0 = no timelock)
         [], // allowed_destinations
+        [], // protocolCaps
       )
       .accounts({
         owner: destOwnerKeypair.publicKey,
@@ -976,6 +983,7 @@ describe("escrow-integration", () => {
           sourceVault: sourceVaultPda,
           policy: sourcePolicyPda,
           tracker: sourceTrackerPda,
+          agentSpendOverlay: sourceOverlayPda,
           destinationVault: destVaultPda,
           escrow: escrowPda,
           sourceVaultAta: sourceVaultUsdcAta,
@@ -1042,6 +1050,7 @@ describe("escrow-integration", () => {
           sourceVault: sourceVaultPda,
           policy: sourcePolicyPda,
           tracker: sourceTrackerPda,
+          agentSpendOverlay: sourceOverlayPda,
           destinationVault: destVaultPda,
           escrow: escrowPda,
           sourceVaultAta: sourceVaultFakeAta,

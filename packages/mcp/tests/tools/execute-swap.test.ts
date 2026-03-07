@@ -8,6 +8,7 @@ import {
   createMockClient,
   TEST_VAULT_PDA,
   TEST_MINT,
+  TEST_AGENT,
 } from "../helpers/mock-client";
 import type { McpConfig } from "../../src/config";
 
@@ -19,7 +20,8 @@ describe("shield_execute_swap", () => {
 
   before(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "mcp-swap-test-"));
-    agentKeypair = Keypair.generate();
+    // Use TEST_AGENT so the registration pre-flight check passes (mock vault has TEST_AGENT registered)
+    agentKeypair = TEST_AGENT;
     agentKeypairPath = path.join(tmpDir, "agent.json");
     fs.writeFileSync(
       agentKeypairPath,
@@ -84,7 +86,8 @@ describe("shield_execute_swap", () => {
 
   it("executes swap with custody wallet (no keypair loading)", async () => {
     const client = createMockClient();
-    const custodyPubkey = Keypair.generate().publicKey;
+    // Use TEST_AGENT so the registration pre-flight check passes (mock vault has TEST_AGENT registered)
+    const custodyPubkey = TEST_AGENT.publicKey;
     const mockCustodyWallet = {
       publicKey: custodyPubkey,
       signTransaction: async <T>(tx: T): Promise<T> => tx,

@@ -98,6 +98,12 @@ const NOT_CONFIGURED_MSG =
   "Phalnx is not configured yet. " +
   'Use shield_setup_status to check status, or ask me to "Set up Phalnx".';
 
+const LOCAL_KEYPAIR_WARNING =
+  "⚠️  LOCAL KEYPAIR MODE — DEVNET ONLY\n" +
+  "Your agent's private key is stored unencrypted at ~/.phalnx/wallets/agent.json.\n" +
+  "Safe for devnet testing only. Run `shield_configure` to provision a TEE wallet before mainnet.\n" +
+  "─────────────────────────────────────────────────────────────\n\n";
+
 /**
  * Helper to register a tool with the MCP server.
  * Uses `any` cast to work around zod version mismatch between
@@ -176,8 +182,14 @@ async function main() {
           };
         }
       }
+      const result = await fn(input);
       return {
-        content: [{ type: "text", text: await fn(input) }],
+        content: [
+          {
+            type: "text",
+            text: config?.localKeypairWarning ? LOCAL_KEYPAIR_WARNING + result : result,
+          },
+        ],
       };
     };
   }

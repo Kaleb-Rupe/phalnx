@@ -48,6 +48,17 @@ export async function executeSwap(
     // Fetch vault to get owner and vaultId for the swap params
     const vault = await client.fetchVaultByAddress(vaultAddress);
 
+    // Pre-flight: verify agent is registered to this vault
+    const isRegistered = vault.agents.some(
+      (a) => a.pubkey.toBase58() === agentPubkey.toBase58(),
+    );
+    if (!isRegistered) {
+      return (
+        `Agent not registered to vault.\n\n` +
+        `**→ Next:** Run \`shield_register_agent\` with agent pubkey \`${agentPubkey.toBase58()}\`, then retry.`
+      );
+    }
+
     // Execute swap through Phalnx
     // executeJupiterSwap fetches the quote internally if not provided
     const sig = await client.executeJupiterSwap(

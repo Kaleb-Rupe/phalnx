@@ -201,4 +201,27 @@ pub enum PhalnxError {
     // --- Per-agent spend limit errors (6063) ---
     #[msg("Agent rolling 24h spend exceeds per-agent spending limit")]
     AgentSpendLimitExceeded,
+
+    #[msg("Per-agent overlay is full; cannot register agent with spending limit")]
+    OverlaySlotExhausted,
+
+    #[msg("Agent has per-agent spending limit but no overlay tracking slot")]
+    AgentSlotNotFound,
+
+    #[msg("Unauthorized SPL Token Approve between validate and finalize")]
+    UnauthorizedTokenApproval,
+
+    #[msg("Session expiry slots out of range (10-450)")]
+    InvalidSessionExpiry,
+
+    // --- Generic constraints V2 errors (6068) ---
+    #[msg("Program has no constraint entry and strict mode is enabled")]
+    UnconstrainedProgramBlocked,
+
+    // --- Per-protocol spend cap errors (6069-6070) ---
+    #[msg("Per-protocol daily spending cap would be exceeded")]
+    ProtocolCapExceeded,
+
+    #[msg("protocol_caps length must match protocols length when has_protocol_caps is true")]
+    ProtocolCapsMismatch,
 }

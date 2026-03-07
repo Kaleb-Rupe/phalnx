@@ -43,3 +43,12 @@ certora/output/
 
 # Claude Code skills (local development tools)
 .claude/skills/
+/MEMORY
+
+/Plans
+packages/mcp/Plans
+apps/actions-server/Plans
+sdk/core/Plans
+sdk/custody/crossmint/Plans
+sdk/custody/turnkey/Plans
+programs/phalnx/Plans

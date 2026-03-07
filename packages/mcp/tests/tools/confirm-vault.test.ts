@@ -88,8 +88,8 @@ describe("shield_confirm_vault", () => {
       owner: walletPubkey,
       vaultId: 0,
     });
-    expect(result).to.include("Vault Not Found");
-    expect(result).to.include("hasn't been confirmed yet");
+    expect(result).to.include("Vault Not Yet Confirmed");
+    expect(result).to.include("vault not visible on-chain yet");
   });
 
   it("confirms vault and updates config", async () => {

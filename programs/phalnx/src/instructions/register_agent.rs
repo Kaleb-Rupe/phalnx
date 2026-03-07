@@ -16,7 +16,7 @@ pub struct RegisterAgent<'info> {
     )]
     pub vault: Account<'info, AgentVault>,
 
-    /// Agent spend overlay (shard 0) — for claiming a per-agent tracking slot.
+    /// Agent spend overlay — per-agent tracking slot.
     #[account(
         mut,
         seeds = [b"agent_spend", vault.key().as_ref(), &[0u8]],
@@ -55,12 +55,22 @@ pub fn handler(
         spending_limit_usd,
     });
 
-    // Try to claim a slot in the overlay for per-agent tracking.
-    // If shard 0 is full (7 agents), silently continue — agents 8-10
-    // won't have per-agent tracking but vault-wide cap still applies.
+    // Claim a slot in the overlay for per-agent tracking.
+    // Fail-closed: if spending_limit_usd > 0 but no slot available,
+    // reject registration to guarantee per-agent limits are enforced.
     if let Ok(mut overlay) = ctx.accounts.agent_spend_overlay.load_mut() {
         if overlay.find_agent_slot(&agent).is_none() {
-            let _ = overlay.claim_slot(&agent);
+            match overlay.claim_slot(&agent) {
+                Some(_) => {} // slot claimed successfully
+                None => {
+                    if spending_limit_usd > 0 {
+                        // Remove the agent we just pushed — no slot to enforce limit
+                        vault.agents.retain(|a| a.pubkey != agent);
+                        return Err(error!(PhalnxError::OverlaySlotExhausted));
+                    }
+                    // spending_limit_usd == 0: no per-agent limit needed, continue
+                }
+            }
         }
     }
 

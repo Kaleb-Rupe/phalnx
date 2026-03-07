@@ -285,6 +285,7 @@ export async function createFullVault(
       maxSlippageBps,
       timelockDuration,
       allowedDestinations,
+      [], // protocolCaps
     )
     .accounts({
       owner: owner.publicKey,

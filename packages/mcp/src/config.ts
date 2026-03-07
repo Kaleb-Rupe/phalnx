@@ -4,6 +4,7 @@ import { PhalnxClient } from "@phalnx/sdk";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import { getCredential, KC } from "./keychain";
 
 /** Supported custody providers for MCP server. */
 export type McpCustodyProvider = "crossmint" | "turnkey" | "privy";
@@ -41,6 +42,7 @@ export interface ShieldLocalConfig {
     path: string | null;
     publicKey: string;
   };
+  agentKeypairPath?: string;
   network: "devnet" | "mainnet-beta";
   template: "conservative" | "moderate" | "aggressive";
   configuredAt: string;
@@ -67,7 +69,8 @@ function isValidConfig(obj: any): obj is ShieldLocalConfig {
     typeof obj.layers?.tee === "object" &&
     typeof obj.layers?.vault === "object" &&
     typeof obj.wallet?.publicKey === "string" &&
-    (obj.network === "devnet" || obj.network === "mainnet-beta")
+    (obj.network === "devnet" || obj.network === "mainnet-beta") &&
+    !(obj.network === "mainnet-beta" && obj.wallet?.type === "keypair")
   );
 }
 
@@ -186,6 +189,8 @@ export interface McpConfig {
   turnkeyApiPrivateKey?: string;
   /** Turnkey wallet ID (optional — creates new wallet if omitted). */
   turnkeyWalletId?: string;
+  /** True when running with a local keypair on devnet. Causes tool outputs to prepend a security warning. */
+  localKeypairWarning?: boolean;
 }
 
 export function loadConfig(): McpConfig {
@@ -390,11 +395,14 @@ export async function resolveClient(): Promise<{
       fileConfig.wallet.type === "crossmint" &&
       fileConfig.layers.tee.enabled
     ) {
-      const apiKey = process.env.CROSSMINT_API_KEY;
+      const apiKey =
+        (await getCredential(KC.CROSSMINT_API_KEY)) ??
+        process.env.CROSSMINT_API_KEY;
       if (!apiKey) {
         throw new Error(
-          "Crossmint wallet configured but CROSSMINT_API_KEY is not set. " +
-            "Set CROSSMINT_API_KEY in your environment to use your custody wallet.",
+          "Crossmint wallet configured but CROSSMINT_API_KEY is not found. " +
+            "Run shield_configure with crossmintApiKey to save it to the OS keychain, " +
+            "or set CROSSMINT_API_KEY in your environment.",
         );
       }
       const mcpConfig: McpConfig = {
@@ -408,12 +416,15 @@ export async function resolveClient(): Promise<{
     }
 
     if (fileConfig.wallet.type === "privy" && fileConfig.layers.tee.enabled) {
-      const appId = process.env.PRIVY_APP_ID;
-      const appSecret = process.env.PRIVY_APP_SECRET;
+      const appId =
+        (await getCredential(KC.PRIVY_APP_ID)) ?? process.env.PRIVY_APP_ID;
+      const appSecret =
+        (await getCredential(KC.PRIVY_APP_SECRET)) ?? process.env.PRIVY_APP_SECRET;
       if (!appId || !appSecret) {
         throw new Error(
-          "Privy wallet configured but PRIVY_APP_ID and PRIVY_APP_SECRET are not set. " +
-            "Set both environment variables to use your custody wallet.",
+          "Privy wallet configured but credentials not found. " +
+            "Run shield_configure with privyAppId and privyAppSecret to save to OS keychain, " +
+            "or set PRIVY_APP_ID and PRIVY_APP_SECRET in your environment.",
         );
       }
       const mcpConfig: McpConfig = {
@@ -428,14 +439,18 @@ export async function resolveClient(): Promise<{
     }
 
     if (fileConfig.wallet.type === "turnkey" && fileConfig.layers.tee.enabled) {
-      const orgId = process.env.TURNKEY_ORGANIZATION_ID;
-      const apiKeyId = process.env.TURNKEY_API_KEY_ID;
-      const apiPrivateKey = process.env.TURNKEY_API_PRIVATE_KEY;
+      const orgId =
+        (await getCredential(KC.TURNKEY_ORG_ID)) ?? process.env.TURNKEY_ORGANIZATION_ID;
+      const apiKeyId =
+        (await getCredential(KC.TURNKEY_API_KEY_ID)) ?? process.env.TURNKEY_API_KEY_ID;
+      const apiPrivateKey =
+        (await getCredential(KC.TURNKEY_API_PRIVATE_KEY)) ?? process.env.TURNKEY_API_PRIVATE_KEY;
       if (!orgId || !apiKeyId || !apiPrivateKey) {
         throw new Error(
-          "Turnkey wallet configured but TURNKEY_ORGANIZATION_ID, TURNKEY_API_KEY_ID, " +
-            "and TURNKEY_API_PRIVATE_KEY are not all set. " +
-            "Set all three environment variables to use your custody wallet.",
+          "Turnkey wallet configured but credentials not found. " +
+            "Run shield_configure with turnkeyOrganizationId, turnkeyApiKeyId, turnkeyApiPrivateKey " +
+            "to save to OS keychain, or set TURNKEY_ORGANIZATION_ID, TURNKEY_API_KEY_ID, " +
+            "and TURNKEY_API_PRIVATE_KEY in your environment.",
         );
       }
       const mcpConfig: McpConfig = {
@@ -451,10 +466,17 @@ export async function resolveClient(): Promise<{
     }
 
     if (fileConfig.wallet.type === "keypair" && fileConfig.wallet.path) {
+      if (fileConfig.network === "mainnet-beta") {
+        throw new Error(
+          "Local keypair wallets are not permitted on mainnet-beta. " +
+            "Run shield_configure to provision a TEE wallet (Turnkey, Crossmint, or Privy).",
+        );
+      }
       const mcpConfig: McpConfig = {
         walletPath: fileConfig.wallet.path,
         rpcUrl: rpcUrlForNetwork(fileConfig.network),
-        agentKeypairPath: fileConfig.wallet.path,
+        agentKeypairPath: fileConfig.agentKeypairPath ?? fileConfig.wallet.path,
+        localKeypairWarning: true,
       };
       const client = createClient(mcpConfig);
       return { client, config: mcpConfig, custodyWallet: null };
@@ -468,10 +490,21 @@ export async function resolveClient(): Promise<{
       const { client, custodyWallet } = await createCustodyClient(envConfig);
       return { client, config: envConfig, custodyWallet };
     }
-    const client = createClient(envConfig);
-    return { client, config: envConfig, custodyWallet: null };
-  } catch {
-    // loadConfig throws when no wallet path — that's fine, fall through
+    // Keypair from env vars — check if pointing at mainnet
+    const isMainnet = envConfig.rpcUrl?.includes("mainnet");
+    if (isMainnet) {
+      throw new Error(
+        "Local keypair wallets are not permitted on mainnet-beta. " +
+          "Run shield_configure to provision a TEE wallet (Turnkey, Crossmint, or Privy).",
+      );
+    }
+    const configWithWarning = { ...envConfig, localKeypairWarning: true };
+    const client = createClient(configWithWarning);
+    return { client, config: configWithWarning, custodyWallet: null };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("not permitted on mainnet-beta")) throw err;
+    // loadConfig throws when no wallet path — fall through
   }
 
   return null;

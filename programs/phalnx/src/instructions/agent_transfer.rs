@@ -36,7 +36,7 @@ pub struct AgentTransfer<'info> {
     )]
     pub tracker: AccountLoader<'info, SpendTracker>,
 
-    /// Zero-copy AgentSpendOverlay shard 0 — per-agent rolling spend enforcement
+    /// Zero-copy AgentSpendOverlay — per-agent rolling spend
     #[account(
         mut,
         seeds = [b"agent_spend", vault.key().as_ref(), &[0u8]],
@@ -90,9 +90,13 @@ pub fn handler(ctx: Context<AgentTransfer>, amount: u64) -> Result<()> {
     // 1. Vault must be active
     require!(vault.is_active(), PhalnxError::VaultNotActive);
 
-    // 1a. Agent must have Transfer permission
+    // 1a. Agent must have Transfer permission (single lookup replaces has_permission + get_agent)
+    let agent_key = ctx.accounts.agent.key();
+    let agent_entry = vault
+        .get_agent(&agent_key)
+        .ok_or(error!(PhalnxError::UnauthorizedAgent))?;
     require!(
-        vault.has_permission(&ctx.accounts.agent.key(), &ActionType::Transfer),
+        agent_entry.permissions & (1u64 << ActionType::Transfer.permission_bit()) != 0,
         PhalnxError::InsufficientPermissions
     );
 
@@ -143,10 +147,6 @@ pub fn handler(ctx: Context<AgentTransfer>, amount: u64) -> Result<()> {
     );
 
     // --- Per-agent cap check via contribution overlay ---
-    let agent_key = ctx.accounts.agent.key();
-    let agent_entry = vault
-        .get_agent(&agent_key)
-        .ok_or(error!(PhalnxError::UnauthorizedAgent))?;
     let mut overlay = ctx.accounts.agent_spend_overlay.load_mut()?;
     if let Some(agent_slot) = overlay.find_agent_slot(&agent_key) {
         if agent_entry.spending_limit_usd > 0 {
@@ -168,6 +168,8 @@ pub fn handler(ctx: Context<AgentTransfer>, amount: u64) -> Result<()> {
             });
         }
         overlay.record_agent_contribution(&clock, agent_slot, usd_amount)?;
+    } else if agent_entry.spending_limit_usd > 0 {
+        return Err(error!(PhalnxError::AgentSlotNotFound));
     }
     drop(overlay);
 

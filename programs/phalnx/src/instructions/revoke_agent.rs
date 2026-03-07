@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_lang::accounts::account_loader::AccountLoader;
 
 use crate::errors::PhalnxError;
 use crate::events::AgentRevoked;
@@ -15,6 +16,14 @@ pub struct RevokeAgent<'info> {
         bump = vault.bump,
     )]
     pub vault: Account<'info, AgentVault>,
+
+    /// Agent spend overlay — release slot on revocation.
+    #[account(
+        mut,
+        seeds = [b"agent_spend", vault.key().as_ref(), &[0u8]],
+        bump,
+    )]
+    pub agent_spend_overlay: AccountLoader<'info, AgentSpendOverlay>,
 }
 
 pub fn handler(ctx: Context<RevokeAgent>, agent_to_remove: Pubkey) -> Result<()> {
@@ -28,6 +37,13 @@ pub fn handler(ctx: Context<RevokeAgent>, agent_to_remove: Pubkey) -> Result<()>
         vault.is_agent(&agent_to_remove),
         PhalnxError::UnauthorizedAgent
     );
+
+    // Release overlay slot before removing agent from vault
+    if let Ok(mut overlay) = ctx.accounts.agent_spend_overlay.load_mut() {
+        if let Some(slot_idx) = overlay.find_agent_slot(&agent_to_remove) {
+            overlay.release_slot(slot_idx);
+        }
+    }
 
     vault.agents.retain(|a| a.pubkey != agent_to_remove);
 

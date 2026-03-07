@@ -1,4 +1,4 @@
-use super::{MAX_ALLOWED_DESTINATIONS, MAX_ALLOWED_PROTOCOLS};
+use super::{MAX_ALLOWED_DESTINATIONS, MAX_ALLOWED_PROTOCOLS, SESSION_EXPIRY_SLOTS};
 use anchor_lang::prelude::*;
 
 /// Protocol access control mode: all protocols allowed
@@ -60,8 +60,18 @@ pub struct PolicyConfig {
     /// Set true by create_instruction_constraints, false by close_instruction_constraints.
     pub has_constraints: bool,
 
-    /// Whether per-protocol spend caps are configured (reserved, not enforced yet).
+    /// Whether per-protocol spend caps are configured.
+    /// Requires protocol_mode == ALLOWLIST and protocol_caps.len() == protocols.len().
     pub has_protocol_caps: bool,
+
+    /// Per-protocol daily spending caps in USD (6 decimals).
+    /// Index-aligned with `protocols`. Only enforced when `has_protocol_caps = true`.
+    /// A value of 0 means no per-protocol limit (global cap still applies).
+    pub protocol_caps: Vec<u64>,
+
+    /// Configurable session expiry in slots. 0 = use default (SESSION_EXPIRY_SLOTS = 20).
+    /// Valid range when non-zero: 10-450 slots.
+    pub session_expiry_slots: u64,
 
     /// Bump seed for PDA
     pub bump: u8,
@@ -74,7 +84,8 @@ impl PolicyConfig {
     /// max_leverage (2) + can_open (1) + max_positions (1) +
     /// developer_fee_rate (2) + max_slippage_bps (2) + timelock_duration (8) +
     /// allowed_destinations vec (4 + 32 * MAX) + has_constraints (1) +
-    /// has_protocol_caps (1) + bump (1)
+    /// has_protocol_caps (1) + protocol_caps vec (4 + 8 * MAX) +
+    /// session_expiry_slots (8) + bump (1)
     pub const SIZE: usize = 8
         + 32
         + 8
@@ -90,6 +101,8 @@ impl PolicyConfig {
         + (4 + 32 * MAX_ALLOWED_DESTINATIONS)
         + 1 // has_constraints
         + 1 // has_protocol_caps
+        + (4 + 8 * MAX_ALLOWED_PROTOCOLS) // protocol_caps
+        + 8 // session_expiry_slots
         + 1;
 
     /// Check if a protocol is allowed based on the protocol mode.
@@ -111,5 +124,27 @@ impl PolicyConfig {
     pub fn is_destination_allowed(&self, destination_owner: &Pubkey) -> bool {
         self.allowed_destinations.is_empty()
             || self.allowed_destinations.contains(destination_owner)
+    }
+
+    /// Get the per-protocol daily cap for a given protocol.
+    /// Returns None if caps disabled, or Some(cap) where 0 means unlimited.
+    pub fn get_protocol_cap(&self, protocol: &Pubkey) -> Option<u64> {
+        if !self.has_protocol_caps {
+            return None;
+        }
+        self.protocols
+            .iter()
+            .position(|p| p == protocol)
+            .map(|i| self.protocol_caps.get(i).copied().unwrap_or(0))
+    }
+
+    /// Returns the effective session expiry in slots.
+    /// 0 = use default (SESSION_EXPIRY_SLOTS = 20).
+    pub fn effective_session_expiry_slots(&self) -> u64 {
+        if self.session_expiry_slots == 0 {
+            SESSION_EXPIRY_SLOTS
+        } else {
+            self.session_expiry_slots
+        }
     }
 }

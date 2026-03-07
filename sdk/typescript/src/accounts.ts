@@ -224,11 +224,10 @@ export async function fetchEscrowByAddress(
 
 export function getAgentOverlayPDA(
   vault: PublicKey,
-  shardIndex: number = 0,
   programId: PublicKey = PHALNX_PROGRAM_ID,
 ): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
-    [Buffer.from("agent_spend"), vault.toBuffer(), Buffer.from([shardIndex])],
+    [Buffer.from("agent_spend"), vault.toBuffer(), Buffer.from([0])],
     programId,
   );
 }

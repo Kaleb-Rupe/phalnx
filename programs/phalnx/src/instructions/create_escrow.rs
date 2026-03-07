@@ -1,10 +1,11 @@
 use anchor_lang::prelude::*;
+use anchor_lang::accounts::account_loader::AccountLoader;
 use anchor_lang::solana_program::instruction::get_stack_height;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
 use crate::errors::PhalnxError;
-use crate::events::{EscrowCreated, FeesCollected};
+use crate::events::{AgentSpendLimitChecked, EscrowCreated, FeesCollected};
 use crate::state::*;
 
 use super::utils::stablecoin_to_usd;
@@ -37,6 +38,14 @@ pub struct CreateEscrow<'info> {
         bump,
     )]
     pub tracker: AccountLoader<'info, SpendTracker>,
+
+    /// Zero-copy AgentSpendOverlay — per-agent rolling spend
+    #[account(
+        mut,
+        seeds = [b"agent_spend", source_vault.key().as_ref(), &[0u8]],
+        bump,
+    )]
+    pub agent_spend_overlay: AccountLoader<'info, AgentSpendOverlay>,
 
     #[account(
         constraint = destination_vault.is_active() @ PhalnxError::VaultNotActive,
@@ -120,18 +129,10 @@ pub fn handler(
     // 3. Amount must be positive
     require!(amount > 0, PhalnxError::InsufficientBalance);
 
-    // 4. Validate expiry: must be in the future
+    // 4-5. Validate expiry: must be in the future and within max duration
     require!(
-        expires_at > clock.unix_timestamp,
-        PhalnxError::EscrowDurationExceeded
-    );
-
-    // 5. Validate duration: max 30 days
-    let duration = expires_at
-        .checked_sub(clock.unix_timestamp)
-        .ok_or(PhalnxError::Overflow)?;
-    require!(
-        duration <= MAX_ESCROW_DURATION,
+        expires_at > clock.unix_timestamp
+            && expires_at <= clock.unix_timestamp.saturating_add(MAX_ESCROW_DURATION),
         PhalnxError::EscrowDurationExceeded
     );
 
@@ -157,6 +158,37 @@ pub fn handler(
     );
     tracker.record_spend(&clock, usd_amount)?;
     drop(tracker);
+
+    // 6b. Per-agent cap check via contribution overlay
+    let agent_key = ctx.accounts.agent.key();
+    let agent_entry = source_vault
+        .get_agent(&agent_key)
+        .ok_or(error!(PhalnxError::UnauthorizedAgent))?;
+    let mut overlay = ctx.accounts.agent_spend_overlay.load_mut()?;
+    if let Some(agent_slot) = overlay.find_agent_slot(&agent_key) {
+        if agent_entry.spending_limit_usd > 0 {
+            let agent_rolling = overlay.get_agent_rolling_24h_usd(&clock, agent_slot);
+            let new_agent_spend = agent_rolling
+                .checked_add(usd_amount)
+                .ok_or(PhalnxError::Overflow)?;
+            require!(
+                new_agent_spend <= agent_entry.spending_limit_usd,
+                PhalnxError::AgentSpendLimitExceeded
+            );
+            emit!(AgentSpendLimitChecked {
+                vault: source_vault.key(),
+                agent: agent_key,
+                agent_rolling_spend: agent_rolling,
+                spending_limit_usd: agent_entry.spending_limit_usd,
+                amount: usd_amount,
+                timestamp: clock.unix_timestamp,
+            });
+        }
+        overlay.record_agent_contribution(&clock, agent_slot, usd_amount)?;
+    } else if agent_entry.spending_limit_usd > 0 {
+        return Err(error!(PhalnxError::AgentSlotNotFound));
+    }
+    drop(overlay);
 
     // 7. Fee calculation (same pattern as agent_transfer)
     let dev_fee_rate = policy.developer_fee_rate;
@@ -269,17 +301,19 @@ pub fn handler(
     }
 
     // 10. Transfer net amount from source vault ATA → escrow ATA
-    let cpi_accounts = Transfer {
-        from: ctx.accounts.source_vault_ata.to_account_info(),
-        to: ctx.accounts.escrow_ata.to_account_info(),
-        authority: ctx.accounts.source_vault.to_account_info(),
-    };
-    let cpi_ctx = CpiContext::new_with_signer(
-        ctx.accounts.token_program.to_account_info(),
-        cpi_accounts,
-        &binding,
-    );
-    token::transfer(cpi_ctx, net_amount)?;
+    if net_amount > 0 {
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.source_vault_ata.to_account_info(),
+            to: ctx.accounts.escrow_ata.to_account_info(),
+            authority: ctx.accounts.source_vault.to_account_info(),
+        };
+        let cpi_ctx = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            cpi_accounts,
+            &binding,
+        );
+        token::transfer(cpi_ctx, net_amount)?;
+    }
 
     // 11. Init escrow PDA
     let escrow = &mut ctx.accounts.escrow;

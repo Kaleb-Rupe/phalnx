@@ -9,7 +9,7 @@ use crate::errors::PhalnxError;
 use crate::events::{ActionAuthorized, AgentSpendLimitChecked, FeesCollected};
 use crate::state::*;
 
-use super::integrations::{flash_trade, generic_constraints, jupiter, jupiter_lend};
+use super::integrations::{generic_constraints, jupiter};
 use super::utils::stablecoin_to_usd;
 
 use crate::state::PositionEffect;
@@ -42,7 +42,7 @@ pub struct ValidateAndAuthorize<'info> {
     )]
     pub tracker: AccountLoader<'info, SpendTracker>,
 
-    /// Zero-copy AgentSpendOverlay shard 0 — per-agent rolling spend enforcement
+    /// Zero-copy AgentSpendOverlay — per-agent rolling spend
     #[account(
         mut,
         seeds = [b"agent_spend", vault.key().as_ref(), &[0u8]],
@@ -126,25 +126,29 @@ pub fn handler(
     let vault = &ctx.accounts.vault;
     let policy = &ctx.accounts.policy;
     let clock = Clock::get()?;
+    let vault_key = vault.key();
     let is_spending = action_type.is_spending();
     let is_stablecoin_input = is_stablecoin_mint(&token_mint);
 
     // Load constraints PDA deterministically — agent CANNOT omit this
     let loaded_constraints: Option<InstructionConstraints> = if !ctx.remaining_accounts.is_empty() {
         let info = &ctx.remaining_accounts[0];
-        let (constraints_pda, _) =
-            Pubkey::find_program_address(&[b"constraints", vault.key().as_ref()], &crate::ID);
+        require!(info.owner == &crate::ID, PhalnxError::InvalidConstraintsPda);
+        let data = info.try_borrow_data()?;
+        let constraints = InstructionConstraints::try_deserialize(&mut &data[..])?;
+        // Use stored bump for O(1) PDA verification instead of find_program_address (~1,500 CU)
+        let constraints_pda = Pubkey::create_program_address(
+            &[b"constraints", vault_key.as_ref(), &[constraints.bump]],
+            &crate::ID,
+        ).map_err(|_| error!(PhalnxError::InvalidConstraintsPda))?;
         require_keys_eq!(
             info.key(),
             constraints_pda,
             PhalnxError::InvalidConstraintsPda
         );
-        require!(info.owner == &crate::ID, PhalnxError::InvalidConstraintsPda);
-        let data = info.try_borrow_data()?;
-        let constraints = InstructionConstraints::try_deserialize(&mut &data[..])?;
         require_keys_eq!(
             constraints.vault,
-            vault.key(),
+            vault_key,
             PhalnxError::InvalidConstraintsPda
         );
         Some(constraints)
@@ -183,6 +187,7 @@ pub fn handler(
     // --- Stablecoin-only spending path ---
     let mut output_mint = Pubkey::default();
     let mut stablecoin_balance_before: u64 = 0;
+    let mut rolling_spend_after_record: u64 = 0;
     let (usd_amount, protocol_fee, developer_fee) = if is_spending {
         let token_decimals = ctx.accounts.token_mint_account.decimals;
 
@@ -226,7 +231,7 @@ pub fn handler(
                         PhalnxError::AgentSpendLimitExceeded
                     );
                     emit!(AgentSpendLimitChecked {
-                        vault: vault.key(),
+                        vault: vault_key,
                         agent: agent_key,
                         agent_rolling_spend: agent_rolling,
                         spending_limit_usd: agent_entry.spending_limit_usd,
@@ -235,11 +240,34 @@ pub fn handler(
                     });
                 }
                 overlay.record_agent_contribution(&clock, agent_slot, usd_amt)?;
+            } else if agent_entry.spending_limit_usd > 0 {
+                return Err(error!(PhalnxError::AgentSlotNotFound));
             }
             drop(overlay);
 
-            // Record spend
+            // Per-protocol cap check (when enabled)
+            if let Some(proto_cap) = policy.get_protocol_cap(&target_protocol) {
+                if proto_cap > 0 {
+                    let proto_spend = tracker.get_protocol_spend(&clock, &target_protocol);
+                    let new_proto_total = proto_spend
+                        .checked_add(usd_amt)
+                        .ok_or(PhalnxError::Overflow)?;
+                    require!(
+                        new_proto_total <= proto_cap,
+                        PhalnxError::ProtocolCapExceeded
+                    );
+                }
+            }
+
+            // Record spend and capture post-record rolling value (avoids second tracker load)
             tracker.record_spend(&clock, usd_amt)?;
+
+            // Record per-protocol spend
+            if policy.has_protocol_caps {
+                tracker.record_protocol_spend(&clock, &target_protocol, usd_amt)?;
+            }
+
+            rolling_spend_after_record = tracker.get_rolling_24h_usd(&clock);
             drop(tracker);
 
             // Calculate fees
@@ -267,7 +295,7 @@ pub fn handler(
 
             // Verify the stablecoin account belongs to the vault
             require!(
-                stablecoin_acct.owner == vault.key(),
+                stablecoin_acct.owner == vault_key,
                 PhalnxError::InvalidTokenAccount
             );
             // Verify it's actually a stablecoin mint
@@ -287,6 +315,18 @@ pub fn handler(
         (0u64, 0u64, 0u64)
     };
 
+    // Shared across spending and non-spending scan paths
+    let ix_sysvar = ctx.accounts.instructions_sysvar.to_account_info();
+    let current_idx = load_current_index_checked(&ix_sysvar)
+        .map_err(|_| error!(PhalnxError::MissingFinalizeInstruction))?;
+    let current_idx_usize = current_idx as usize;
+    let spl_token_id = ctx.accounts.token_program.key();
+    let compute_budget_id = Pubkey::new_from_array([
+        3, 6, 70, 111, 229, 33, 23, 50, 255, 236, 173, 186, 114, 195, 155, 231, 188, 140, 229,
+        187, 197, 247, 18, 107, 44, 67, 155, 58, 64, 0, 0, 0,
+    ]);
+    let finalize_hash = FINALIZE_SESSION_DISCRIMINATOR;
+
     // --- Hardened instruction scan ---
     // Scan ALL instructions between validate and finalize to enforce:
     // 1. Block ALL top-level SPL Token Transfer/TransferChecked (theft prevention)
@@ -295,39 +335,46 @@ pub fn handler(
     // 4. Slippage verification on recognized DeFi programs
     // 5. Single DeFi instruction for non-stablecoin inputs (split-swap prevention)
     if is_spending {
-        let ix_sysvar = &ctx.accounts.instructions_sysvar.to_account_info();
-        let current_idx = load_current_index_checked(ix_sysvar)
-            .map_err(|_| error!(PhalnxError::MissingFinalizeInstruction))?;
-        let finalize_hash = FINALIZE_SESSION_DISCRIMINATOR;
-
-        let spl_token_id = ctx.accounts.token_program.key();
-        // ComputeBudget111111111111111111111111111111
-        let compute_budget_id = Pubkey::new_from_array([
-            3, 6, 70, 111, 229, 33, 23, 50, 255, 236, 173, 186, 114, 195, 155, 231, 188, 140, 229,
-            187, 197, 247, 18, 107, 44, 67, 155, 58, 64, 0, 0, 0,
-        ]);
         let mut defi_ix_count: u8 = 0;
+        let mut found_finalize = false;
 
-        let mut scan_idx = (current_idx as usize).saturating_add(1);
+        let mut scan_idx = current_idx_usize.saturating_add(1);
         for _ in 0..20 {
-            match load_instruction_at_checked(scan_idx, ix_sysvar) {
+            match load_instruction_at_checked(scan_idx, &ix_sysvar) {
                 Ok(ix) => {
                     // Stop at finalize_session
                     if ix.program_id == crate::ID
                         && ix.data.len() >= 8
                         && ix.data[..8] == finalize_hash
                     {
+                        found_finalize = true;
                         break;
                     }
 
-                    // 1. Block ALL top-level SPL Token Transfer/TransferChecked.
+                    // 1. Block ALL top-level SPL Token Transfer/TransferChecked/Approve.
                     // Legitimate DeFi interactions move tokens via CPI, never
                     // as top-level SPL Token instructions.
                     if ix.program_id == spl_token_id
                         && !ix.data.is_empty()
-                        && (ix.data[0] == 3 || ix.data[0] == 12)
                     {
-                        return Err(error!(PhalnxError::DustDepositDetected));
+                        if ix.data[0] == 4 {
+                            return Err(error!(PhalnxError::UnauthorizedTokenApproval));
+                        }
+                        if ix.data[0] == 3 || ix.data[0] == 12 {
+                            return Err(error!(PhalnxError::DustDepositDetected));
+                        }
+                    }
+
+                    // 1b. Block Token-2022 Transfer/Approve/TransferChecked/TransferCheckedWithFee
+                    if ix.program_id == TOKEN_2022_PROGRAM_ID
+                        && !ix.data.is_empty()
+                    {
+                        if ix.data[0] == 4 {
+                            return Err(error!(PhalnxError::UnauthorizedTokenApproval));
+                        }
+                        if ix.data[0] == 3 || ix.data[0] == 12 || ix.data[0] == 26 {
+                            return Err(error!(PhalnxError::DustDepositDetected));
+                        }
                     }
 
                     // 2. Whitelist infrastructure programs (no policy check needed)
@@ -344,16 +391,16 @@ pub fn handler(
                         PhalnxError::ProtocolNotAllowed
                     );
 
-                    // 3b. Generic instruction constraints
+                    // 3b. Generic instruction constraints (OR across entries)
                     if let Some(ref constraints) = loaded_constraints {
-                        if let Some(entry) = generic_constraints::find_constraint_entry(
+                        let matched = generic_constraints::verify_against_entries(
                             &constraints.entries,
                             &ix.program_id,
-                        ) {
-                            generic_constraints::verify_data_constraints(
-                                &ix.data,
-                                &entry.data_constraints,
-                            )?;
+                            &ix.data,
+                            &ix.accounts,
+                        )?;
+                        if !matched && constraints.strict_mode {
+                            return Err(error!(PhalnxError::UnconstrainedProgramBlocked));
                         }
                     }
 
@@ -372,16 +419,9 @@ pub fn handler(
                         defi_ix_count = defi_ix_count.saturating_add(1);
                     }
 
-                    // Slippage verification on DeFi instructions
+                    // Slippage verification on Jupiter V6 swaps
                     if ix.program_id == JUPITER_PROGRAM {
                         jupiter::verify_jupiter_slippage(&ix.data, policy.max_slippage_bps)?;
-                    } else if ix.program_id == FLASH_TRADE_PROGRAM {
-                        flash_trade::verify_flash_trade_instruction(&ix.data)?;
-                    } else if ix.program_id == JUPITER_LEND_PROGRAM
-                        || ix.program_id == JUPITER_EARN_PROGRAM
-                        || ix.program_id == JUPITER_BORROW_PROGRAM
-                    {
-                        jupiter_lend::verify_jupiter_lend_instruction(&ix.data)?;
                     }
 
                     scan_idx = scan_idx.saturating_add(1);
@@ -395,6 +435,8 @@ pub fn handler(
         if !is_stablecoin_input {
             require!(defi_ix_count == 1, PhalnxError::TooManyDeFiInstructions);
         }
+
+        require!(found_finalize, PhalnxError::MissingFinalizeInstruction);
     }
 
     // 6b. Non-spending instruction scan — ALWAYS runs (unconditional).
@@ -405,34 +447,44 @@ pub fn handler(
     // target_protocol passes the Step 2 policy check, but actual instructions
     // would go unverified.
     if !is_spending {
-        let ixs = ctx.accounts.instructions_sysvar.to_account_info();
-        let current_index = load_current_index_checked(&ixs)? as usize;
-        let spl_token_id = ctx.accounts.token_program.key();
-        // ComputeBudget111111111111111111111111111111
-        let compute_budget_id = Pubkey::new_from_array([
-            3, 6, 70, 111, 229, 33, 23, 50, 255, 236, 173, 186, 114, 195, 155, 231, 188, 140, 229,
-            187, 197, 247, 18, 107, 44, 67, 155, 58, 64, 0, 0, 0,
-        ]);
-        let mut idx = current_index
+        let mut found_finalize = false;
+        let mut idx = current_idx_usize
             .checked_add(1)
             .ok_or(error!(PhalnxError::Overflow))?;
         for _ in 0..20 {
-            match load_instruction_at_checked(idx, &ixs) {
+            match load_instruction_at_checked(idx, &ix_sysvar) {
                 Ok(ix) => {
                     // Stop at finalize_session
                     if ix.program_id == crate::ID
                         && ix.data.len() >= 8
-                        && ix.data[..8] == FINALIZE_SESSION_DISCRIMINATOR
+                        && ix.data[..8] == finalize_hash
                     {
+                        found_finalize = true;
                         break;
                     }
 
-                    // 1. Block top-level SPL Token Transfer/TransferChecked
+                    // 1. Block top-level SPL Token Transfer/TransferChecked/Approve
                     if ix.program_id == spl_token_id
                         && !ix.data.is_empty()
-                        && (ix.data[0] == 3 || ix.data[0] == 12)
                     {
-                        return Err(error!(PhalnxError::DustDepositDetected));
+                        if ix.data[0] == 4 {
+                            return Err(error!(PhalnxError::UnauthorizedTokenApproval));
+                        }
+                        if ix.data[0] == 3 || ix.data[0] == 12 {
+                            return Err(error!(PhalnxError::DustDepositDetected));
+                        }
+                    }
+
+                    // 1b. Block Token-2022 Transfer/Approve/TransferChecked/TransferCheckedWithFee
+                    if ix.program_id == TOKEN_2022_PROGRAM_ID
+                        && !ix.data.is_empty()
+                    {
+                        if ix.data[0] == 4 {
+                            return Err(error!(PhalnxError::UnauthorizedTokenApproval));
+                        }
+                        if ix.data[0] == 3 || ix.data[0] == 12 || ix.data[0] == 26 {
+                            return Err(error!(PhalnxError::DustDepositDetected));
+                        }
                     }
 
                     // 2. Whitelist infrastructure programs (no policy check needed)
@@ -449,16 +501,16 @@ pub fn handler(
                         PhalnxError::ProtocolNotAllowed
                     );
 
-                    // 4. Generic constraints (if configured)
+                    // 4. Generic constraints (OR across entries + strict_mode)
                     if let Some(ref constraints) = loaded_constraints {
-                        if let Some(entry) = generic_constraints::find_constraint_entry(
+                        let matched = generic_constraints::verify_against_entries(
                             &constraints.entries,
                             &ix.program_id,
-                        ) {
-                            generic_constraints::verify_data_constraints(
-                                &ix.data,
-                                &entry.data_constraints,
-                            )?;
+                            &ix.data,
+                            &ix.accounts,
+                        )?;
+                        if !matched && constraints.strict_mode {
+                            return Err(error!(PhalnxError::UnconstrainedProgramBlocked));
                         }
                     }
                 }
@@ -466,6 +518,8 @@ pub fn handler(
             }
             idx = idx.checked_add(1).ok_or(error!(PhalnxError::Overflow))?;
         }
+
+        require!(found_finalize, PhalnxError::MissingFinalizeInstruction);
     }
 
     // 7. Leverage check (for perp actions) — ALL actions
@@ -492,34 +546,6 @@ pub fn handler(
             require!(vault.open_positions > 0, PhalnxError::NoPositionsToClose);
         }
         PositionEffect::None => {}
-    }
-
-    // 9. Verify finalize_session is present in this transaction.
-    {
-        let ix_sysvar = &ctx.accounts.instructions_sysvar.to_account_info();
-        let current_idx = load_current_index_checked(ix_sysvar)
-            .map_err(|_| error!(PhalnxError::MissingFinalizeInstruction))?;
-        let finalize_disc = FINALIZE_SESSION_DISCRIMINATOR;
-
-        let mut found_finalize = false;
-        let mut check_idx = (current_idx as usize).saturating_add(1);
-        for _ in 0..20 {
-            match load_instruction_at_checked(check_idx, ix_sysvar) {
-                Ok(ix) => {
-                    if ix.program_id == crate::ID
-                        && ix.data.len() >= 8
-                        && ix.data[..8] == finalize_disc
-                    {
-                        found_finalize = true;
-                        break;
-                    }
-                    check_idx = check_idx.saturating_add(1);
-                }
-                Err(_) => break,
-            }
-        }
-
-        require!(found_finalize, PhalnxError::MissingFinalizeInstruction);
     }
 
     // Extract vault PDA seeds data upfront
@@ -606,7 +632,7 @@ pub fn handler(
 
         if protocol_fee > 0 || developer_fee > 0 {
             emit!(FeesCollected {
-                vault: vault.key(),
+                vault: vault_key,
                 token_mint,
                 protocol_fee_amount: protocol_fee,
                 developer_fee_amount: developer_fee,
@@ -636,14 +662,14 @@ pub fn handler(
 
     // Create session PDA
     let session = &mut ctx.accounts.session;
-    session.vault = vault.key();
+    session.vault = vault_key;
     session.agent = ctx.accounts.agent.key();
     session.authorized = true;
     session.authorized_amount = amount;
     session.authorized_token = token_mint;
     session.authorized_protocol = target_protocol;
     session.action_type = action_type;
-    session.expires_at_slot = SessionAuthority::calculate_expiry(clock.slot);
+    session.expires_at_slot = SessionAuthority::calculate_expiry(clock.slot, policy.effective_session_expiry_slots());
     session.delegation_token_account = ctx.accounts.vault_token_account.key();
     session.protocol_fee = protocol_fee;
     session.developer_fee = developer_fee;
@@ -652,23 +678,15 @@ pub fn handler(
     session.stablecoin_balance_before = stablecoin_balance_before;
     session.bump = ctx.bumps.session;
 
-    // Compute rolling spend for event
-    let rolling_spend_after = if is_spending && is_stablecoin_input {
-        let tracker = ctx.accounts.tracker.load()?;
-        tracker.get_rolling_24h_usd(&clock)
-    } else {
-        0
-    };
-
     emit!(ActionAuthorized {
-        vault: vault.key(),
+        vault: vault_key,
         agent: ctx.accounts.agent.key(),
         action_type,
         token_mint,
         amount,
         usd_amount,
         protocol: target_protocol,
-        rolling_spend_usd_after: rolling_spend_after,
+        rolling_spend_usd_after: rolling_spend_after_record,
         daily_cap_usd: policy.daily_spending_cap_usd,
         delegated: is_spending,
         timestamp: clock.unix_timestamp,

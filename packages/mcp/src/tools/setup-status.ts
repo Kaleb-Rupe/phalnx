@@ -114,7 +114,7 @@ export async function setupStatus(
     if (!config.layers.vault.enabled) missing.push("On-chain vault");
     lines.push(`Missing: ${missing.join(", ")}`);
     lines.push("");
-    lines.push("Run shield_configure to set up full protection.");
+    lines.push("**→ Next:** Run `shield_configure` to complete setup.");
   }
 
   return lines.join("\n");

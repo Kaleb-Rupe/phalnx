@@ -38,7 +38,7 @@ pub struct InitializeVault<'info> {
     )]
     pub tracker: AccountLoader<'info, SpendTracker>,
 
-    /// Agent spend overlay shard 0 — per-agent contribution tracking
+    /// Agent spend overlay — per-agent contribution tracking
     #[account(
         init,
         payer = owner,
@@ -68,6 +68,7 @@ pub fn handler(
     max_slippage_bps: u16,
     timelock_duration: u64,
     allowed_destinations: Vec<Pubkey>,
+    protocol_caps: Vec<u64>,
 ) -> Result<()> {
     // Validate protocol_mode
     require!(
@@ -95,6 +96,18 @@ pub fn handler(
         PhalnxError::TooManyDestinations
     );
 
+    // Validate per-protocol caps
+    if !protocol_caps.is_empty() {
+        require!(
+            protocol_mode == PROTOCOL_MODE_ALLOWLIST,
+            PhalnxError::ProtocolCapsMismatch
+        );
+        require!(
+            protocol_caps.len() == protocols.len(),
+            PhalnxError::ProtocolCapsMismatch
+        );
+    }
+
     let clock = Clock::get()?;
 
     // Initialize vault
@@ -110,7 +123,6 @@ pub fn handler(
     vault.total_volume = 0;
     vault.open_positions = 0;
     vault.total_fees_collected = 0;
-    vault.treasury_shard = 0;
 
     // Initialize policy
     let policy = &mut ctx.accounts.policy;
@@ -127,7 +139,9 @@ pub fn handler(
     policy.timelock_duration = timelock_duration;
     policy.allowed_destinations = allowed_destinations;
     policy.has_constraints = false;
-    policy.has_protocol_caps = false;
+    policy.has_protocol_caps = !protocol_caps.is_empty();
+    policy.protocol_caps = protocol_caps;
+    policy.session_expiry_slots = 0;
     policy.bump = ctx.bumps.policy;
 
     // Initialize zero-copy tracker (buckets + protocol_counters zero-initialized by allocator)
@@ -135,7 +149,7 @@ pub fn handler(
     tracker.vault = vault.key();
     tracker.bump = ctx.bumps.tracker;
 
-    // Initialize agent spend overlay shard 0
+    // Initialize agent spend overlay
     let mut overlay = ctx.accounts.agent_spend_overlay.load_init()?;
     overlay.vault = vault.key();
     overlay.bump = ctx.bumps.agent_spend_overlay;

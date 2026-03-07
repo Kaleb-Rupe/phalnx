@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import * as prompts from "@clack/prompts";
 import { scaffold, formatPostScaffoldMessage, cleanupOnFailure } from "../scaffolder";
-import { validateProjectName } from "../utils";
+import { validateProjectName, normalizeProjectName } from "../utils";
 import { PRESETS, type PolicyPreset, PRESET_LABELS } from "../presets";
 import {
   TEMPLATE_CHOICES,
@@ -60,7 +60,10 @@ async function resolveWizardConfig(): Promise<ProjectConfig | null> {
     validate: validateProjectName,
   });
   if (prompts.isCancel(nameValue)) return null;
-  const projectName = nameValue;
+  const projectName = normalizeProjectName(nameValue);
+  if (projectName !== nameValue.trim()) {
+    prompts.log.info(`Normalized to: ${projectName}`);
+  }
 
   // Step 2: Template
   prompts.note(

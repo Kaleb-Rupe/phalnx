@@ -37,13 +37,17 @@
     "@solana/spl-token": ">=0.4.0",
     "@solana/web3.js": ">=1.95.0",
     "zod": "^3.25.0 || ^4.0.0",
-    "@sqds/multisig": ">=2.1.0"
+    "@sqds/multisig": ">=2.1.0",
+    "keytar": "^7.9.0"
   },
   "peerDependenciesMeta": {
     "@phalnx/custody-crossmint": {
       "optional": true
     },
     "@sqds/multisig": {
+      "optional": true
+    },
+    "keytar": {
       "optional": true
     }
   },

@@ -15,9 +15,9 @@ export const createVaultSchema = z.object({
   protocolMode: z
     .number()
     .optional()
-    .default(0)
+    .default(1)
     .describe(
-      "Protocol access mode: 0 = all allowed, 1 = allowlist, 2 = denylist",
+      "Protocol access mode: 0 = all allowed, 1 = allowlist (recommended default), 2 = denylist",
     ),
   protocols: z
     .array(z.string())
@@ -83,12 +83,19 @@ export async function createVault(
   input: CreateVaultInput,
 ): Promise<string> {
   try {
+    const protocolMode = input.protocolMode ?? 1;
+    let protocols = input.protocols ? input.protocols.map(toPublicKey) : [];
+    // When allowlist mode with no protocols specified, include Jupiter as sensible default
+    if (protocolMode === 1 && protocols.length === 0) {
+      protocols = [toPublicKey("JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4")];
+    }
+
     const params = {
       vaultId: toBN(input.vaultId),
       dailySpendingCapUsd: toBN(input.dailySpendingCapUsd),
       maxTransactionSizeUsd: toBN(input.maxTransactionSizeUsd),
-      protocolMode: input.protocolMode ?? 0,
-      protocols: input.protocols ? input.protocols.map(toPublicKey) : [],
+      protocolMode,
+      protocols,
       maxLeverageBps: input.maxLeverageBps,
       maxConcurrentPositions: input.maxConcurrentPositions,
       feeDestination: toPublicKey(input.feeDestination),

@@ -97,6 +97,8 @@ describe("devnet-security", () => {
           null,
           null,
           null,
+          null, // hasProtocolCaps
+          null, // protocolCaps
         )
         .accounts({
           owner: attacker.publicKey,
@@ -233,6 +235,8 @@ describe("devnet-security", () => {
           null,
           null,
           null,
+          null, // hasProtocolCaps
+          null, // protocolCaps
         )
         .accounts({
           owner: agent.publicKey,

@@ -38,6 +38,9 @@ pub fn handler(
     max_slippage_bps: Option<u16>,
     timelock_duration: Option<u64>,
     allowed_destinations: Option<Vec<Pubkey>>,
+    session_expiry_slots: Option<u64>,
+    has_protocol_caps: Option<bool>,
+    protocol_caps: Option<Vec<u64>>,
 ) -> Result<()> {
     let vault = &ctx.accounts.vault;
     require!(
@@ -102,6 +105,34 @@ pub fn handler(
             PhalnxError::TooManyDestinations
         );
         policy.allowed_destinations = destinations;
+    }
+    if let Some(expiry) = session_expiry_slots {
+        if expiry > 0 {
+            require!(
+                expiry >= 10 && expiry <= 450,
+                PhalnxError::InvalidSessionExpiry
+            );
+        }
+        policy.session_expiry_slots = expiry;
+    }
+    if let Some(caps) = protocol_caps {
+        policy.protocol_caps = caps;
+    }
+    if let Some(hpc) = has_protocol_caps {
+        policy.has_protocol_caps = hpc;
+    }
+
+    // Validate consistency: if has_protocol_caps is true, mode must be ALLOWLIST
+    // and protocol_caps.len() must match protocols.len()
+    if policy.has_protocol_caps {
+        require!(
+            policy.protocol_mode == PROTOCOL_MODE_ALLOWLIST,
+            PhalnxError::ProtocolCapsMismatch
+        );
+        require!(
+            policy.protocol_caps.len() == policy.protocols.len(),
+            PhalnxError::ProtocolCapsMismatch
+        );
     }
 
     let clock = Clock::get()?;

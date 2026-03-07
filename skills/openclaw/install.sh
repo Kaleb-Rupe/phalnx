@@ -5,7 +5,7 @@ set -euo pipefail
 # Idempotent — safe to run multiple times.
 # Does NOT execute remote code. Only copies files and merges JSON config.
 
-MCP_VERSION="0.4.7"
+MCP_VERSION="0.4.8"
 SKILL_DIR="${HOME}/.openclaw/workspace/skills/phalnx"
 CONFIG_FILE="${HOME}/.openclaw/openclaw.json"
 SHIELD_DIR="${HOME}/.phalnx"

@@ -39,12 +39,14 @@ pub struct CreateInstructionConstraints<'info> {
 pub fn handler(
     ctx: Context<CreateInstructionConstraints>,
     entries: Vec<ConstraintEntry>,
+    strict_mode: bool,
 ) -> Result<()> {
     InstructionConstraints::validate_entries(&entries)?;
 
     let constraints = &mut ctx.accounts.constraints;
     constraints.vault = ctx.accounts.vault.key();
     constraints.entries = entries;
+    constraints.strict_mode = strict_mode;
     constraints.bump = ctx.bumps.constraints;
 
     // Set has_constraints flag on policy
@@ -53,6 +55,7 @@ pub fn handler(
     emit!(InstructionConstraintsCreated {
         vault: ctx.accounts.vault.key(),
         entries_count: constraints.entries.len() as u8,
+        strict_mode,
         timestamp: Clock::get()?.unix_timestamp,
     });
 
