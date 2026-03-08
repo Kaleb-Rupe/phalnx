@@ -199,24 +199,24 @@ cargo fmt --check --manifest-path programs/phalnx/Cargo.toml
 
 ### Test Suites
 
-| Suite                                          | Tests    |
-| ---------------------------------------------- | -------- |
-| Core vault management & permission engine      | 67       |
-| Jupiter integration (composed swaps)           | 9        |
-| Jupiter Lend integration (deposit/withdraw)    | 7        |
-| Flash Trade integration (leveraged perps)      | 30       |
-| Security exploit scenarios                     | 109      |
-| Devnet integration tests (real network)        | 56       |
-| Surfpool integration tests (local Surfnet)     | 20       |
-| Core policy engine (`@phalnx/core`)            | 73       |
-| SDK tests (`@phalnx/sdk`)                      | 199      |
-| Platform client tests (`@phalnx/platform`)     | 17       |
-| Crossmint custody adapter                      | 29       |
-| SAK plugin (`@phalnx/plugin-solana-agent-kit`) | 29       |
-| ElizaOS plugin (`@phalnx/plugin-elizaos`)      | 35       |
-| MCP server (`@phalnx/mcp`)                     | 291      |
-| Actions server (`@phalnx/actions-server`)      | 61       |
-| **Total**                                      | **1032** |
+| Suite                                                | Tests   |
+| ---------------------------------------------------- | ------- |
+| Core vault management & permission engine            |      67 |
+| Jupiter integration (composed swaps)                 |       9 |
+| Jupiter Lend integration (deposit/withdraw)          |       7 |
+| Flash Trade integration (leveraged perps)            |      30 |
+| Security exploit scenarios                           |     109 |
+| Devnet integration tests (real network)              |      56 |
+| Surfpool integration tests (local Surfnet)           |      20 |
+| Core policy engine (`@phalnx/core`)                  |      73 |
+| SDK tests (`@phalnx/sdk`)                            |     199 |
+| Platform client tests (`@phalnx/platform`)           |      17 |
+| Crossmint custody adapter                            |      29 |
+| SAK plugin (`@phalnx/plugin-solana-agent-kit`)       |      29 |
+| ElizaOS plugin (`@phalnx/plugin-elizaos`)            |      35 |
+| MCP server (`@phalnx/mcp`)                           |     291 |
+| Actions server (`@phalnx/actions-server`)            |      61 |
+| **Total**                                            | **1032** |
 
 ## Security
 
