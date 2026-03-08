@@ -1,5 +1,11 @@
 import { expect } from "chai";
-import { Connection, Keypair, PublicKey, TransactionMessage, VersionedTransaction } from "@solana/web3.js";
+import {
+  Connection,
+  Keypair,
+  PublicKey,
+  TransactionMessage,
+  VersionedTransaction,
+} from "@solana/web3.js";
 import {
   simulateTransaction,
   isHeliusConnection,
@@ -58,7 +64,9 @@ describe("simulation", () => {
 
   describe("isHeliusConnection", () => {
     it("returns true for helius endpoint", () => {
-      const conn = new Connection("https://mainnet.helius-rpc.com/?api-key=test");
+      const conn = new Connection(
+        "https://mainnet.helius-rpc.com/?api-key=test",
+      );
       expect(isHeliusConnection(conn)).to.be.true;
     });
 
@@ -146,9 +154,7 @@ describe("simulation", () => {
         simulateTransaction: async () => ({
           value: {
             err: { InstructionError: [0, { Custom: 6006 }] },
-            logs: [
-              "Program log: custom program error: 0x1776",
-            ],
+            logs: ["Program log: custom program error: 0x1776"],
             unitsConsumed: 2000,
             returnData: null,
             accounts: null,
@@ -205,7 +211,13 @@ describe("simulation", () => {
         simulateTransaction: async (_tx: any, config: any) => {
           capturedConfig = config;
           return {
-            value: { err: null, logs: [], unitsConsumed: 0, returnData: null, accounts: null },
+            value: {
+              err: null,
+              logs: [],
+              unitsConsumed: 0,
+              returnData: null,
+              accounts: null,
+            },
           };
         },
       } as unknown as Connection;
@@ -228,7 +240,13 @@ describe("simulation", () => {
         simulateTransaction: async (_tx: any, config: any) => {
           capturedConfig = config;
           return {
-            value: { err: null, logs: [], unitsConsumed: 0, returnData: null, accounts: null },
+            value: {
+              err: null,
+              logs: [],
+              unitsConsumed: 0,
+              returnData: null,
+              accounts: null,
+            },
           };
         },
       } as unknown as Connection;
@@ -242,7 +260,9 @@ describe("simulation", () => {
       const tx = new VersionedTransaction(msg);
 
       const addresses = [Keypair.generate().publicKey.toBase58()];
-      await simulateTransaction(mockConnection, tx, { accountAddresses: addresses });
+      await simulateTransaction(mockConnection, tx, {
+        accountAddresses: addresses,
+      });
       expect(capturedConfig.accounts.addresses).to.deep.equal(addresses);
     });
   });
@@ -259,7 +279,9 @@ describe("simulation", () => {
         },
       };
       const err = new TransactionSimulationError(result);
-      expect(err.message).to.equal("Check vault status — it may be frozen or closed.");
+      expect(err.message).to.equal(
+        "Check vault status — it may be frozen or closed.",
+      );
       expect(err.name).to.equal("TransactionSimulationError");
       expect(err.anchorCode).to.equal(6000);
       expect(err.anchorName).to.equal("VaultNotActive");

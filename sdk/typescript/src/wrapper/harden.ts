@@ -180,8 +180,9 @@ export async function findNextVaultId(
   const BATCH_SIZE = 100;
   for (let start = 0; start < 256; start += BATCH_SIZE) {
     const end = Math.min(start + BATCH_SIZE, 256);
-    const pdas = Array.from({ length: end - start }, (_, i) =>
-      getVaultPDA(ownerPubkey, new BN(start + i), programId)[0],
+    const pdas = Array.from(
+      { length: end - start },
+      (_, i) => getVaultPDA(ownerPubkey, new BN(start + i), programId)[0],
     );
     const accounts = await connection.getMultipleAccountsInfo(pdas);
     const emptyIdx = accounts.findIndex((a) => a === null);

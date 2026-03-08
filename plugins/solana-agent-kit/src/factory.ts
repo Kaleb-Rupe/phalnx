@@ -103,11 +103,7 @@ export function createClientSideWallet(config: FactoryConfig): ShieldedWallet {
 export async function createOnChainVault(
   config: OnChainVaultConfig,
 ): Promise<HardenResult> {
-  return withVault(
-    config.wallet,
-    config.policies,
-    config.hardenOptions,
-  );
+  return withVault(config.wallet, config.policies, config.hardenOptions);
 }
 
 /**

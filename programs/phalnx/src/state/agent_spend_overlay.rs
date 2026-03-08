@@ -53,16 +53,13 @@ pub struct AgentSpendOverlay {
 
 impl AgentSpendOverlay {
     /// Total account size including 8-byte discriminator
-    pub const SIZE: usize =
-        8 + 32 + (8 * NUM_EPOCHS) + (1184 * ENTRIES_PER_SHARD) + 1 + 7;
+    pub const SIZE: usize = 8 + 32 + (8 * NUM_EPOCHS) + (1184 * ENTRIES_PER_SHARD) + 1 + 7;
     // = 9,488
 
     /// Find the slot index for a given agent, or None if not present.
     pub fn find_agent_slot(&self, agent: &Pubkey) -> Option<usize> {
         let agent_bytes = agent.to_bytes();
-        self.entries
-            .iter()
-            .position(|e| e.agent == agent_bytes)
+        self.entries.iter().position(|e| e.agent == agent_bytes)
     }
 
     /// Claim an empty slot for a new agent. Returns the slot index, or None if full.

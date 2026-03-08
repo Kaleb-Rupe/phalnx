@@ -29,13 +29,14 @@ The plugin reads environment variables to create a `ShieldedWallet` automaticall
 
 ## Environment Variables
 
-| Variable | Required | Description | Default |
-|----------|----------|-------------|---------|
-| `SOLANA_WALLET_PRIVATE_KEY` | Yes | Agent wallet private key (base58 or JSON array) | - |
-| `PHALNX_MAX_SPEND` | No | Spending limit string | `"1000 USDC/day"` + `"1000 USDT/day"` + `"10 SOL/day"` |
-| `PHALNX_BLOCK_UNKNOWN` | No | Block unknown programs | `"true"` |
+| Variable                    | Required | Description                                     | Default                                                |
+| --------------------------- | -------- | ----------------------------------------------- | ------------------------------------------------------ |
+| `SOLANA_WALLET_PRIVATE_KEY` | Yes      | Agent wallet private key (base58 or JSON array) | -                                                      |
+| `PHALNX_MAX_SPEND`          | No       | Spending limit string                           | `"1000 USDC/day"` + `"1000 USDT/day"` + `"10 SOL/day"` |
+| `PHALNX_BLOCK_UNKNOWN`      | No       | Block unknown programs                          | `"true"`                                               |
 
 **Private key formats supported:**
+
 - Base58 string: `"4wBqp..."` (standard Solana CLI format)
 - JSON array: `"[104,29,171,...]"` (Uint8Array bytes)
 
@@ -50,6 +51,7 @@ The plugin provides 6 actions that agents can invoke conversationally:
 Returns current spending summary including enforcement state, per-token usage with percentages, and rate limit status.
 
 **Example conversation:**
+
 ```
 User: "What's my shield spending status?"
 Agent: "=== Phalnx Status ===
@@ -68,10 +70,12 @@ Rate limit: 5/60 transactions (55 remaining)"
 Updates spending limits or program blocking at runtime.
 
 **Message parameters:**
+
 - `maxSpend` (string) — new spending limit, e.g. `"1000 USDC/day"`
 - `blockUnknownPrograms` (boolean) — whether to block unknown programs
 
 **Example conversation:**
+
 ```
 User: "Update my shield limit to 1000 USDC per day"
 Agent: "Phalnx policies updated: maxSpend: 1000 USDC/day"
@@ -84,6 +88,7 @@ Agent: "Phalnx policies updated: maxSpend: 1000 USDC/day"
 Pauses or resumes policy enforcement. The action infers the intent (pause vs resume) from the message text. When paused, transactions pass through without policy checks or spend recording.
 
 **Example conversations:**
+
 ```
 User: "Pause the shield enforcement"
 Agent: "Phalnx enforcement paused. Transactions will pass through without policy checks."
@@ -99,6 +104,7 @@ Agent: "Phalnx enforcement resumed. Policy checks are active."
 Returns a detailed per-token usage summary with percentages, remaining budgets, rolling window information, and rate limit status.
 
 **Example conversation:**
+
 ```
 User: "Show me the transaction history"
 Agent: "=== Phalnx Transaction History ===
@@ -138,12 +144,14 @@ Providers inject shield context into the agent's memory before each response, gi
 **Name:** `PHALNX_STATUS`
 
 Injects into every conversation turn:
+
 - Wallet address
 - Enforcement state (ACTIVE or PAUSED)
 - Per-token spending summary with percentages
 - Rate limit usage
 
 **Returned data:**
+
 ```typescript
 {
   text: "Phalnx Status: ...",  // Human-readable for agent context
@@ -161,6 +169,7 @@ Injects into every conversation turn:
 **Name:** `PHALNX_SPEND_TRACKING`
 
 Injects per-token spending data with:
+
 - Usage percentages per token
 - Rolling window durations (in hours)
 - Remaining budget per token
@@ -177,12 +186,14 @@ Post-action evaluator that warns when any token's spending exceeds 80% of its ca
 **Triggers on:** Messages containing "phalnx", "shield", or "transaction:"
 
 **Behavior:**
+
 - Returns `null` if enforcement is paused (no warnings when paused)
 - Checks each token against the 80% threshold
 - Returns warning text with token name, usage percentage, and remaining budget
 - Silently fails on errors (evaluators should never block the agent)
 
 **Example warning:**
+
 ```
 "[Phalnx Warning] USDC spending at 85% of cap (150000000 remaining)"
 ```
@@ -191,19 +202,20 @@ Post-action evaluator that warns when any token's spending exceeds 80% of its ca
 
 The plugin automatically wires shield event callbacks to the ElizaOS runtime logger:
 
-| Event | Log Level | Message |
-|-------|-----------|---------|
-| `onDenied` | `warn` | `[Phalnx] Transaction denied: <reason>` |
-| `onApproved` | `info` | `[Phalnx] Transaction approved` |
-| `onPause` | `info` | `[Phalnx] Enforcement paused` |
-| `onResume` | `info` | `[Phalnx] Enforcement resumed` |
-| `onPolicyUpdate` | `info` | `[Phalnx] Policies updated` |
+| Event            | Log Level | Message                                 |
+| ---------------- | --------- | --------------------------------------- |
+| `onDenied`       | `warn`    | `[Phalnx] Transaction denied: <reason>` |
+| `onApproved`     | `info`    | `[Phalnx] Transaction approved`         |
+| `onPause`        | `info`    | `[Phalnx] Enforcement paused`           |
+| `onResume`       | `info`    | `[Phalnx] Enforcement resumed`          |
+| `onPolicyUpdate` | `info`    | `[Phalnx] Policies updated`             |
 
 Falls back to `console` if `runtime.logger` is not available.
 
 ## Wallet Caching
 
 The plugin uses a `WeakMap` to cache `ShieldedWallet` instances per ElizaOS runtime. This ensures:
+
 - The same wallet is reused across all actions, providers, and evaluators within a runtime
 - Spending state is consistent across the entire agent lifecycle
 - Different runtime instances get independent wallets
@@ -211,20 +223,20 @@ The plugin uses a `WeakMap` to cache `ShieldedWallet` instances per ElizaOS runt
 
 ## Exported API
 
-| Export | Description |
-|--------|-------------|
-| `phalnxPlugin` | Plugin object for ElizaOS registration |
-| `getConfig(runtime)` | Read config from runtime settings |
-| `getOrCreateShieldedWallet(runtime)` | Get/create cached ShieldedWallet |
-| `statusAction` | SHIELD_STATUS action |
-| `updatePolicyAction` | SHIELD_UPDATE_POLICY action |
-| `pauseResumeAction` | SHIELD_PAUSE_RESUME action |
-| `transactionHistoryAction` | SHIELD_TRANSACTION_HISTORY action |
-| `shieldStatusProvider` | Phalnx status context provider |
-| `spendTrackingProvider` | Spend tracking context provider |
-| `policyCheckEvaluator` | Policy cap warning evaluator |
-| `ENV_KEYS` | Environment variable key constants |
-| `PhalnxElizaConfig` | Config type interface |
+| Export                               | Description                            |
+| ------------------------------------ | -------------------------------------- |
+| `phalnxPlugin`                       | Plugin object for ElizaOS registration |
+| `getConfig(runtime)`                 | Read config from runtime settings      |
+| `getOrCreateShieldedWallet(runtime)` | Get/create cached ShieldedWallet       |
+| `statusAction`                       | SHIELD_STATUS action                   |
+| `updatePolicyAction`                 | SHIELD_UPDATE_POLICY action            |
+| `pauseResumeAction`                  | SHIELD_PAUSE_RESUME action             |
+| `transactionHistoryAction`           | SHIELD_TRANSACTION_HISTORY action      |
+| `shieldStatusProvider`               | Phalnx status context provider         |
+| `spendTrackingProvider`              | Spend tracking context provider        |
+| `policyCheckEvaluator`               | Policy cap warning evaluator           |
+| `ENV_KEYS`                           | Environment variable key constants     |
+| `PhalnxElizaConfig`                  | Config type interface                  |
 
 The plugin is also available as a default export for ElizaOS plugin loader compatibility.
 
@@ -263,11 +275,11 @@ npm test
 
 ## Related Packages
 
-| Package | Description |
-|---------|-------------|
-| [`@phalnx/sdk`](https://www.npmjs.com/package/@phalnx/sdk) | On-chain guardrails — `withVault()` primary API |
-| [`@phalnx/core`](https://www.npmjs.com/package/@phalnx/core) | Pure TypeScript policy engine |
-| [`@phalnx/plugin-solana-agent-kit`](https://www.npmjs.com/package/@phalnx/plugin-solana-agent-kit) | Solana Agent Kit integration |
+| Package                                                                                            | Description                                     |
+| -------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| [`@phalnx/sdk`](https://www.npmjs.com/package/@phalnx/sdk)                                         | On-chain guardrails — `withVault()` primary API |
+| [`@phalnx/core`](https://www.npmjs.com/package/@phalnx/core)                                       | Pure TypeScript policy engine                   |
+| [`@phalnx/plugin-solana-agent-kit`](https://www.npmjs.com/package/@phalnx/plugin-solana-agent-kit) | Solana Agent Kit integration                    |
 
 ## Support
 

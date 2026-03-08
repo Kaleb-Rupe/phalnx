@@ -1,4 +1,8 @@
-import { registerTemplate, type ProjectConfig, type GeneratedFile } from "./registry";
+import {
+  registerTemplate,
+  type ProjectConfig,
+  type GeneratedFile,
+} from "./registry";
 
 function generateElizaos(config: ProjectConfig): GeneratedFile[] {
   const files: GeneratedFile[] = [];

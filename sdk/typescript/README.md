@@ -28,9 +28,9 @@ const client = new PhalnxClient(connection, wallet);
 // 1. Create a vault with policy
 await client.createVault({
   vaultId: new BN(1),
-  dailySpendingCapUsd: new BN(500_000_000),   // $500 USD (6 decimals)
-  maxTransactionSizeUsd: new BN(100_000_000),  // $100 per tx
-  protocolMode: 1,                             // 1 = allowlist
+  dailySpendingCapUsd: new BN(500_000_000), // $500 USD (6 decimals)
+  maxTransactionSizeUsd: new BN(100_000_000), // $100 per tx
+  protocolMode: 1, // 1 = allowlist
   protocols: [JUPITER_PROGRAM_ID],
   maxLeverageBps: 0,
   maxConcurrentPositions: 0,
@@ -61,13 +61,13 @@ const sig = await client.executeJupiterSwap({
 
 Phalnx uses 5 PDA account types:
 
-| Account | Seeds | Description |
-|---------|-------|-------------|
-| **AgentVault** | `[b"vault", owner, vault_id]` | Holds owner/agent pubkeys, vault status, fee destination |
-| **PolicyConfig** | `[b"policy", vault]` | Spending caps, protocol mode + protocols, leverage limits, slippage limits, destinations |
-| **SpendTracker** | `[b"tracker", vault]` | Zero-copy 144-epoch circular buffer for rolling 24h USD spend tracking |
-| **SessionAuthority** | `[b"session", vault, agent, token_mint]` | Ephemeral PDA for atomic transaction validation (expires after 20 slots) |
-| **PendingPolicyUpdate** | `[b"pending_policy", vault]` | Queued policy change with timelock, applied after delay |
+| Account                 | Seeds                                    | Description                                                                              |
+| ----------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------- |
+| **AgentVault**          | `[b"vault", owner, vault_id]`            | Holds owner/agent pubkeys, vault status, fee destination                                 |
+| **PolicyConfig**        | `[b"policy", vault]`                     | Spending caps, protocol mode + protocols, leverage limits, slippage limits, destinations |
+| **SpendTracker**        | `[b"tracker", vault]`                    | Zero-copy 144-epoch circular buffer for rolling 24h USD spend tracking                   |
+| **SessionAuthority**    | `[b"session", vault, agent, token_mint]` | Ephemeral PDA for atomic transaction validation (expires after 20 slots)                 |
+| **PendingPolicyUpdate** | `[b"pending_policy", vault]`             | Queued policy change with timelock, applied after delay                                  |
 
 ## Instruction Composition Pattern
 
@@ -88,54 +88,54 @@ All instructions succeed or fail atomically. If the DeFi instruction fails, the 
 
 ### Vault Management
 
-| Method | Description | Signer |
-|--------|-------------|--------|
-| `createVault(params)` | Create a new vault with policy, tracker, and fee destination | Owner |
-| `deposit(vault, mint, amount)` | Deposit SPL tokens into the vault | Owner |
-| `registerAgent(vault, agent)` | Register an agent signing key on the vault | Owner |
-| `updatePolicy(vault, params)` | Update policy fields (partial update — only set fields change) | Owner |
-| `revokeAgent(vault)` | Freeze the vault (kill switch) | Owner |
-| `reactivateVault(vault, newAgent?)` | Unfreeze vault and optionally rotate agent key | Owner |
-| `withdraw(vault, mint, amount)` | Withdraw tokens to owner | Owner |
-| `closeVault(vault)` | Close vault and reclaim rent | Owner |
+| Method                              | Description                                                    | Signer |
+| ----------------------------------- | -------------------------------------------------------------- | ------ |
+| `createVault(params)`               | Create a new vault with policy, tracker, and fee destination   | Owner  |
+| `deposit(vault, mint, amount)`      | Deposit SPL tokens into the vault                              | Owner  |
+| `registerAgent(vault, agent)`       | Register an agent signing key on the vault                     | Owner  |
+| `updatePolicy(vault, params)`       | Update policy fields (partial update — only set fields change) | Owner  |
+| `revokeAgent(vault)`                | Freeze the vault (kill switch)                                 | Owner  |
+| `reactivateVault(vault, newAgent?)` | Unfreeze vault and optionally rotate agent key                 | Owner  |
+| `withdraw(vault, mint, amount)`     | Withdraw tokens to owner                                       | Owner  |
+| `closeVault(vault)`                 | Close vault and reclaim rent                                   | Owner  |
 
 ### Permission Engine
 
-| Method | Description | Signer |
-|--------|-------------|--------|
-| `authorizeAction(vault, params)` | Validate agent action against policy, create session PDA | Agent |
-| `finalizeSession(vault, agent, success, ...)` | Close session, record audit | Agent |
+| Method                                        | Description                                              | Signer |
+| --------------------------------------------- | -------------------------------------------------------- | ------ |
+| `authorizeAction(vault, params)`              | Validate agent action against policy, create session PDA | Agent  |
+| `finalizeSession(vault, agent, success, ...)` | Close session, record audit                              | Agent  |
 
 ### Transaction Composition
 
 These methods build atomic transactions in the pattern `[ValidateAndAuthorize, DeFi_ix, FinalizeSession]`:
 
-| Method | Description |
-|--------|-------------|
-| `composePermittedAction(params, computeUnits?)` | Build instruction array for any DeFi action |
-| `composePermittedTransaction(params, computeUnits?)` | Build a complete `VersionedTransaction` |
-| `composePermittedSwap(params, computeUnits?)` | Shorthand for swap-type actions |
-| `composeAndSend(params, signers?, computeUnits?)` | Compose, sign, send, and confirm in one call |
+| Method                                               | Description                                  |
+| ---------------------------------------------------- | -------------------------------------------- |
+| `composePermittedAction(params, computeUnits?)`      | Build instruction array for any DeFi action  |
+| `composePermittedTransaction(params, computeUnits?)` | Build a complete `VersionedTransaction`      |
+| `composePermittedSwap(params, computeUnits?)`        | Shorthand for swap-type actions              |
+| `composeAndSend(params, signers?, computeUnits?)`    | Compose, sign, send, and confirm in one call |
 
 ### Jupiter Integration
 
-| Method | Description |
-|--------|-------------|
-| `getJupiterQuote(params)` | Fetch a swap quote from Jupiter V6 API |
-| `jupiterSwap(params)` | Build an unsigned `VersionedTransaction` for a Jupiter swap |
-| `executeJupiterSwap(params, signers?)` | Quote, compose, sign, send, and confirm in one call |
+| Method                                 | Description                                                 |
+| -------------------------------------- | ----------------------------------------------------------- |
+| `getJupiterQuote(params)`              | Fetch a swap quote from Jupiter V6 API                      |
+| `jupiterSwap(params)`                  | Build an unsigned `VersionedTransaction` for a Jupiter swap |
+| `executeJupiterSwap(params, signers?)` | Quote, compose, sign, send, and confirm in one call         |
 
 ### Flash Trade Integration
 
-| Method | Description |
-|--------|-------------|
-| `flashTradeOpen(params, poolConfig?)` | Compose an open position through Flash Trade |
-| `flashTradeClose(params, poolConfig?)` | Compose a close position |
-| `flashTradeIncrease(params, poolConfig?)` | Compose an increase position |
-| `flashTradeDecrease(params, poolConfig?)` | Compose a decrease position |
+| Method                                       | Description                                       |
+| -------------------------------------------- | ------------------------------------------------- |
+| `flashTradeOpen(params, poolConfig?)`        | Compose an open position through Flash Trade      |
+| `flashTradeClose(params, poolConfig?)`       | Compose a close position                          |
+| `flashTradeIncrease(params, poolConfig?)`    | Compose an increase position                      |
+| `flashTradeDecrease(params, poolConfig?)`    | Compose a decrease position                       |
 | `executeFlashTrade(result, agent, signers?)` | Sign, send, and confirm a Flash Trade transaction |
-| `createFlashTradeClient(config?)` | Create/cache a `PerpetualsClient` |
-| `getFlashPoolConfig(poolName?, cluster?)` | Get/cache Flash Trade pool config |
+| `createFlashTradeClient(config?)`            | Create/cache a `PerpetualsClient`                 |
+| `getFlashPoolConfig(poolName?, cluster?)`    | Get/cache Flash Trade pool config                 |
 
 ### PDA Helpers
 
@@ -180,28 +180,28 @@ const tracker = await client.fetchTrackerByAddress(trackerPDA);
 
 ```typescript
 // Vault status
-VaultStatus.active    // Normal operation
-VaultStatus.frozen    // Kill switch activated
-VaultStatus.closed    // Vault closed
+VaultStatus.active; // Normal operation
+VaultStatus.frozen; // Kill switch activated
+VaultStatus.closed; // Vault closed
 
 // Action types (for validation + audit)
-ActionType.swap
-ActionType.openPosition
-ActionType.closePosition
-ActionType.increasePosition
-ActionType.decreasePosition
-ActionType.deposit
-ActionType.withdraw
+ActionType.swap;
+ActionType.openPosition;
+ActionType.closePosition;
+ActionType.increasePosition;
+ActionType.decreasePosition;
+ActionType.deposit;
+ActionType.withdraw;
 ```
 
 ## Constants
 
 ```typescript
 import {
-  PHALNX_PROGRAM_ID,  // 4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL
-  JUPITER_V6_API,            // https://quote-api.jup.ag/v6
-  JUPITER_PROGRAM_ID,        // JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4
-  FLASH_TRADE_PROGRAM_ID,    // FLASH6Lo6h3iasJKWDs2F8TkW2UKf3s15C8PMGuVfgBn
+  PHALNX_PROGRAM_ID, // 4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL
+  JUPITER_V6_API, // https://quote-api.jup.ag/v6
+  JUPITER_PROGRAM_ID, // JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4
+  FLASH_TRADE_PROGRAM_ID, // FLASH6Lo6h3iasJKWDs2F8TkW2UKf3s15C8PMGuVfgBn
 } from "@phalnx/sdk";
 ```
 
@@ -232,27 +232,27 @@ Owner creates vault with policy → Agent operates within policy constraints
 
 ### Key Design Decisions
 
-| Decision | Rationale |
-|----------|-----------|
-| One agent per vault | Multiple agents = multiple vaults. Simplifies permission model. |
-| Rolling 24h window | Not calendar-day. Prevents edge-case burst at midnight. |
-| Fees at authorization (upfront) | Non-bypassable. If DeFi fails, atomic revert returns fees. |
-| Immutable fee destination | Prevents owner from changing fee recipient after vault creation. |
-| Bounded vectors | Max 10 protocols, 10 destinations, 104 oracle entries. SpendTracker uses fixed 144-epoch circular buffer. |
+| Decision                        | Rationale                                                                                                 |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| One agent per vault             | Multiple agents = multiple vaults. Simplifies permission model.                                           |
+| Rolling 24h window              | Not calendar-day. Prevents edge-case burst at midnight.                                                   |
+| Fees at authorization (upfront) | Non-bypassable. If DeFi fails, atomic revert returns fees.                                                |
+| Immutable fee destination       | Prevents owner from changing fee recipient after vault creation.                                          |
+| Bounded vectors                 | Max 10 protocols, 10 destinations, 104 oracle entries. SpendTracker uses fixed 144-epoch circular buffer. |
 
 ### Policy Constraints
 
-| Field | Range | Description |
-|-------|-------|-------------|
-| `dailySpendingCapUsd` | `u64` | Max aggregate USD spend in rolling 24h window (6 decimals) |
-| `maxTransactionSizeUsd` | `u64` | Max single transaction USD value (6 decimals) |
-| `protocolMode` | 0, 1, 2 | 0=allow all, 1=allowlist, 2=denylist |
-| `protocols` | max 10 | Program IDs for allowlist/denylist |
-| `maxLeverageBps` | `u16` | Max leverage in basis points |
-| `maxConcurrentPositions` | `u8` | Max open positions |
-| `developerFeeRate` | 0–500 | Developer fee in BPS (max 5%) |
-| `timelockDuration` | `u64` | Seconds before policy changes take effect (0 = instant) |
-| `allowedDestinations` | max 10 | Allowed destination addresses for agent transfers |
+| Field                    | Range   | Description                                                |
+| ------------------------ | ------- | ---------------------------------------------------------- |
+| `dailySpendingCapUsd`    | `u64`   | Max aggregate USD spend in rolling 24h window (6 decimals) |
+| `maxTransactionSizeUsd`  | `u64`   | Max single transaction USD value (6 decimals)              |
+| `protocolMode`           | 0, 1, 2 | 0=allow all, 1=allowlist, 2=denylist                       |
+| `protocols`              | max 10  | Program IDs for allowlist/denylist                         |
+| `maxLeverageBps`         | `u16`   | Max leverage in basis points                               |
+| `maxConcurrentPositions` | `u8`    | Max open positions                                         |
+| `developerFeeRate`       | 0–500   | Developer fee in BPS (max 5%)                              |
+| `timelockDuration`       | `u64`   | Seconds before policy changes take effect (0 = instant)    |
+| `allowedDestinations`    | max 10  | Allowed destination addresses for agent transfers          |
 
 ## Security Model
 
@@ -265,6 +265,7 @@ Phalnx provides three layers of protection in a single integration:
 All three layers are bundled into `withVault()` from `@phalnx/sdk`.
 
 **On-chain enforcement means:**
+
 - Agent cannot exceed spending caps even if the agent software is compromised
 - Owner can freeze the vault at any time (kill switch)
 - All transactions are audited in the SpendTracker
@@ -279,11 +280,11 @@ IDL account: `Ev3gSzxLw6RwExAMpTHUKvn2o9YVULxiWehrHee7aepP`
 
 ## Related Packages
 
-| Package | Description |
-|---------|-------------|
-| [`@phalnx/core`](https://www.npmjs.com/package/@phalnx/core) | Pure TypeScript policy engine |
-| [`@phalnx/plugin-solana-agent-kit`](https://www.npmjs.com/package/@phalnx/plugin-solana-agent-kit) | Solana Agent Kit integration |
-| [`@phalnx/plugin-elizaos`](https://www.npmjs.com/package/@phalnx/plugin-elizaos) | ElizaOS integration |
+| Package                                                                                            | Description                   |
+| -------------------------------------------------------------------------------------------------- | ----------------------------- |
+| [`@phalnx/core`](https://www.npmjs.com/package/@phalnx/core)                                       | Pure TypeScript policy engine |
+| [`@phalnx/plugin-solana-agent-kit`](https://www.npmjs.com/package/@phalnx/plugin-solana-agent-kit) | Solana Agent Kit integration  |
+| [`@phalnx/plugin-elizaos`](https://www.npmjs.com/package/@phalnx/plugin-elizaos)                   | ElizaOS integration           |
 
 ## Support
 

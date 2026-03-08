@@ -1,4 +1,8 @@
-export type PolicyPreset = "conservative" | "moderate" | "aggressive" | "custom";
+export type PolicyPreset =
+  | "conservative"
+  | "moderate"
+  | "aggressive"
+  | "custom";
 
 export interface PresetConfig {
   dailyCapUsd: number;

@@ -561,7 +561,11 @@ describe("jupiter-integration", () => {
 
       await program.methods
         .registerAgent(agent.publicKey, FULL_PERMISSIONS, new BN(0))
-        .accountsPartial({ owner: owner.publicKey, vault: frozenVault, agentSpendOverlay: frozenOverlay })
+        .accountsPartial({
+          owner: owner.publicKey,
+          vault: frozenVault,
+          agentSpendOverlay: frozenOverlay,
+        })
         .rpc();
 
       // Freeze it
@@ -681,7 +685,11 @@ describe("jupiter-integration", () => {
 
       await program.methods
         .registerAgent(agent.publicKey, FULL_PERMISSIONS, new BN(0))
-        .accountsPartial({ owner: owner.publicKey, vault: rollingVault, agentSpendOverlay: rollingOverlay })
+        .accountsPartial({
+          owner: owner.publicKey,
+          vault: rollingVault,
+          agentSpendOverlay: rollingOverlay,
+        })
         .rpc();
 
       // Deposit USDC into rolling vault (needed for protocol fee transfers)

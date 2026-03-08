@@ -13,16 +13,7 @@
         "Transfer tokens from the vault to an allowed destination.",
         "Only the agent can call this. Stablecoin-only."
       ],
-      "discriminator": [
-        199,
-        111,
-        151,
-        49,
-        124,
-        13,
-        150,
-        44
-      ],
+      "discriminator": [199, 111, 151, 49, 124, 13, 150, 44],
       "accounts": [
         {
           "name": "agent",
@@ -36,13 +27,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -56,9 +41,7 @@
               }
             ]
           },
-          "relations": [
-            "policy"
-          ]
+          "relations": ["policy"]
         },
         {
           "name": "policy",
@@ -66,14 +49,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
+                "value": [112, 111, 108, 105, 99, 121]
               },
               {
                 "kind": "account",
@@ -84,23 +60,13 @@
         },
         {
           "name": "tracker",
-          "docs": [
-            "Zero-copy SpendTracker"
-          ],
+          "docs": ["Zero-copy SpendTracker"],
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  116,
-                  114,
-                  97,
-                  99,
-                  107,
-                  101,
-                  114
-                ]
+                "value": [116, 114, 97, 99, 107, 101, 114]
               },
               {
                 "kind": "account",
@@ -118,16 +84,12 @@
         },
         {
           "name": "vault_token_account",
-          "docs": [
-            "Vault's PDA-owned token account (source)"
-          ],
+          "docs": ["Vault's PDA-owned token account (source)"],
           "writable": true
         },
         {
           "name": "token_mint_account",
-          "docs": [
-            "Token mint account for decimals validation"
-          ]
+          "docs": ["Token mint account for decimals validation"]
         },
         {
           "name": "destination_token_account",
@@ -138,17 +100,13 @@
         },
         {
           "name": "fee_destination_token_account",
-          "docs": [
-            "Developer fee destination token account"
-          ],
+          "docs": ["Developer fee destination token account"],
           "writable": true,
           "optional": true
         },
         {
           "name": "protocol_treasury_token_account",
-          "docs": [
-            "Protocol treasury token account"
-          ],
+          "docs": ["Protocol treasury token account"],
           "writable": true,
           "optional": true
         },
@@ -166,27 +124,14 @@
     },
     {
       "name": "apply_constraints_update",
-      "docs": [
-        "Apply a queued constraints update after the timelock expires."
-      ],
-      "discriminator": [
-        175,
-        103,
-        90,
-        155,
-        134,
-        91,
-        135,
-        242
-      ],
+      "docs": ["Apply a queued constraints update after the timelock expires."],
+      "discriminator": [175, 103, 90, 155, 134, 91, 135, 242],
       "accounts": [
         {
           "name": "owner",
           "writable": true,
           "signer": true,
-          "relations": [
-            "vault"
-          ]
+          "relations": ["vault"]
         },
         {
           "name": "vault",
@@ -194,13 +139,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -213,10 +152,7 @@
               }
             ]
           },
-          "relations": [
-            "constraints",
-            "pending_constraints"
-          ]
+          "relations": ["constraints", "pending_constraints"]
         },
         {
           "name": "constraints",
@@ -225,19 +161,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  99,
-                  111,
-                  110,
-                  115,
-                  116,
-                  114,
-                  97,
-                  105,
-                  110,
-                  116,
-                  115
-                ]
+                "value": [99, 111, 110, 115, 116, 114, 97, 105, 110, 116, 115]
               },
               {
                 "kind": "account",
@@ -254,25 +178,8 @@
               {
                 "kind": "const",
                 "value": [
-                  112,
-                  101,
-                  110,
-                  100,
-                  105,
-                  110,
-                  103,
-                  95,
-                  99,
-                  111,
-                  110,
-                  115,
-                  116,
-                  114,
-                  97,
-                  105,
-                  110,
-                  116,
-                  115
+                  112, 101, 110, 100, 105, 110, 103, 95, 99, 111, 110, 115, 116,
+                  114, 97, 105, 110, 116, 115
                 ]
               },
               {
@@ -287,27 +194,14 @@
     },
     {
       "name": "apply_pending_policy",
-      "docs": [
-        "Apply a queued policy update after the timelock expires."
-      ],
-      "discriminator": [
-        114,
-        212,
-        19,
-        227,
-        89,
-        199,
-        74,
-        62
-      ],
+      "docs": ["Apply a queued policy update after the timelock expires."],
+      "discriminator": [114, 212, 19, 227, 89, 199, 74, 62],
       "accounts": [
         {
           "name": "owner",
           "writable": true,
           "signer": true,
-          "relations": [
-            "vault"
-          ]
+          "relations": ["vault"]
         },
         {
           "name": "vault",
@@ -315,13 +209,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -334,10 +222,7 @@
               }
             ]
           },
-          "relations": [
-            "policy",
-            "pending_policy"
-          ]
+          "relations": ["policy", "pending_policy"]
         },
         {
           "name": "policy",
@@ -346,14 +231,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
+                "value": [112, 111, 108, 105, 99, 121]
               },
               {
                 "kind": "account",
@@ -370,19 +248,7 @@
               {
                 "kind": "const",
                 "value": [
-                  112,
-                  101,
-                  110,
-                  100,
-                  105,
-                  110,
-                  103,
-                  95,
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
+                  112, 101, 110, 100, 105, 110, 103, 95, 112, 111, 108, 105, 99,
                   121
                 ]
               },
@@ -398,27 +264,14 @@
     },
     {
       "name": "cancel_constraints_update",
-      "docs": [
-        "Cancel a queued constraints update."
-      ],
-      "discriminator": [
-        169,
-        121,
-        85,
-        230,
-        154,
-        2,
-        78,
-        61
-      ],
+      "docs": ["Cancel a queued constraints update."],
+      "discriminator": [169, 121, 85, 230, 154, 2, 78, 61],
       "accounts": [
         {
           "name": "owner",
           "writable": true,
           "signer": true,
-          "relations": [
-            "vault"
-          ]
+          "relations": ["vault"]
         },
         {
           "name": "vault",
@@ -426,13 +279,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -445,9 +292,7 @@
               }
             ]
           },
-          "relations": [
-            "pending_constraints"
-          ]
+          "relations": ["pending_constraints"]
         },
         {
           "name": "pending_constraints",
@@ -457,25 +302,8 @@
               {
                 "kind": "const",
                 "value": [
-                  112,
-                  101,
-                  110,
-                  100,
-                  105,
-                  110,
-                  103,
-                  95,
-                  99,
-                  111,
-                  110,
-                  115,
-                  116,
-                  114,
-                  97,
-                  105,
-                  110,
-                  116,
-                  115
+                  112, 101, 110, 100, 105, 110, 103, 95, 99, 111, 110, 115, 116,
+                  114, 97, 105, 110, 116, 115
                 ]
               },
               {
@@ -490,27 +318,14 @@
     },
     {
       "name": "cancel_pending_policy",
-      "docs": [
-        "Cancel a queued policy update."
-      ],
-      "discriminator": [
-        153,
-        36,
-        104,
-        200,
-        50,
-        94,
-        207,
-        33
-      ],
+      "docs": ["Cancel a queued policy update."],
+      "discriminator": [153, 36, 104, 200, 50, 94, 207, 33],
       "accounts": [
         {
           "name": "owner",
           "writable": true,
           "signer": true,
-          "relations": [
-            "vault"
-          ]
+          "relations": ["vault"]
         },
         {
           "name": "vault",
@@ -518,13 +333,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -537,9 +346,7 @@
               }
             ]
           },
-          "relations": [
-            "pending_policy"
-          ]
+          "relations": ["pending_policy"]
         },
         {
           "name": "pending_policy",
@@ -549,19 +356,7 @@
               {
                 "kind": "const",
                 "value": [
-                  112,
-                  101,
-                  110,
-                  100,
-                  105,
-                  110,
-                  103,
-                  95,
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
+                  112, 101, 110, 100, 105, 110, 103, 95, 112, 111, 108, 105, 99,
                   121
                 ]
               },
@@ -581,24 +376,13 @@
         "Close instruction constraints for the vault.",
         "Only the owner can call this. Blocked when timelock > 0 (removing constraints loosens security)."
       ],
-      "discriminator": [
-        145,
-        240,
-        233,
-        37,
-        11,
-        78,
-        195,
-        145
-      ],
+      "discriminator": [145, 240, 233, 37, 11, 78, 195, 145],
       "accounts": [
         {
           "name": "owner",
           "writable": true,
           "signer": true,
-          "relations": [
-            "vault"
-          ]
+          "relations": ["vault"]
         },
         {
           "name": "vault",
@@ -606,13 +390,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -625,10 +403,7 @@
               }
             ]
           },
-          "relations": [
-            "policy",
-            "constraints"
-          ]
+          "relations": ["policy", "constraints"]
         },
         {
           "name": "policy",
@@ -637,14 +412,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
+                "value": [112, 111, 108, 105, 99, 121]
               },
               {
                 "kind": "account",
@@ -660,19 +428,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  99,
-                  111,
-                  110,
-                  115,
-                  116,
-                  114,
-                  97,
-                  105,
-                  110,
-                  116,
-                  115
-                ]
+                "value": [99, 111, 110, 115, 116, 114, 97, 105, 110, 116, 115]
               },
               {
                 "kind": "account",
@@ -686,19 +442,8 @@
     },
     {
       "name": "close_settled_escrow",
-      "docs": [
-        "Close a settled/refunded escrow PDA — owner reclaims rent."
-      ],
-      "discriminator": [
-        169,
-        244,
-        164,
-        173,
-        181,
-        214,
-        139,
-        6
-      ],
+      "docs": ["Close a settled/refunded escrow PDA — owner reclaims rent."],
+      "discriminator": [169, 244, 164, 173, 181, 214, 139, 6],
       "accounts": [
         {
           "name": "signer",
@@ -711,13 +456,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -731,9 +470,7 @@
               }
             ]
           },
-          "relations": [
-            "escrow"
-          ]
+          "relations": ["escrow"]
         },
         {
           "name": "destination_vault_key",
@@ -749,14 +486,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  101,
-                  115,
-                  99,
-                  114,
-                  111,
-                  119
-                ]
+                "value": [101, 115, 99, 114, 111, 119]
               },
               {
                 "kind": "account",
@@ -783,27 +513,14 @@
     },
     {
       "name": "close_vault",
-      "docs": [
-        "Close the vault entirely. Reclaims rent from all PDAs."
-      ],
-      "discriminator": [
-        141,
-        103,
-        17,
-        126,
-        72,
-        75,
-        29,
-        29
-      ],
+      "docs": ["Close the vault entirely. Reclaims rent from all PDAs."],
+      "discriminator": [141, 103, 17, 126, 72, 75, 29, 29],
       "accounts": [
         {
           "name": "owner",
           "writable": true,
           "signer": true,
-          "relations": [
-            "vault"
-          ]
+          "relations": ["vault"]
         },
         {
           "name": "vault",
@@ -812,13 +529,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -831,9 +542,7 @@
               }
             ]
           },
-          "relations": [
-            "policy"
-          ]
+          "relations": ["policy"]
         },
         {
           "name": "policy",
@@ -842,14 +551,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
+                "value": [112, 111, 108, 105, 99, 121]
               },
               {
                 "kind": "account",
@@ -860,23 +562,13 @@
         },
         {
           "name": "tracker",
-          "docs": [
-            "Zero-copy SpendTracker — close returns rent to owner"
-          ],
+          "docs": ["Zero-copy SpendTracker — close returns rent to owner"],
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  116,
-                  114,
-                  97,
-                  99,
-                  107,
-                  101,
-                  114
-                ]
+                "value": [116, 114, 97, 99, 107, 101, 114]
               },
               {
                 "kind": "account",
@@ -887,9 +579,7 @@
         },
         {
           "name": "agent_spend_overlay",
-          "docs": [
-            "Zero-copy AgentSpendOverlay — close returns rent to owner"
-          ],
+          "docs": ["Zero-copy AgentSpendOverlay — close returns rent to owner"],
           "writable": true
         },
         {
@@ -905,16 +595,7 @@
         "Create an escrow deposit between two vaults.",
         "Agent-initiated, stablecoin-only, fees deducted upfront, cap-checked."
       ],
-      "discriminator": [
-        253,
-        215,
-        165,
-        116,
-        36,
-        108,
-        68,
-        80
-      ],
+      "discriminator": [253, 215, 165, 116, 36, 108, 68, 80],
       "accounts": [
         {
           "name": "agent",
@@ -928,13 +609,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -955,14 +630,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
+                "value": [112, 111, 108, 105, 99, 121]
               },
               {
                 "kind": "account",
@@ -978,15 +646,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  116,
-                  114,
-                  97,
-                  99,
-                  107,
-                  101,
-                  114
-                ]
+                "value": [116, 114, 97, 99, 107, 101, 114]
               },
               {
                 "kind": "account",
@@ -1001,13 +661,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -1029,14 +683,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  101,
-                  115,
-                  99,
-                  114,
-                  111,
-                  119
-                ]
+                "value": [101, 115, 99, 114, 111, 119]
               },
               {
                 "kind": "account",
@@ -1055,9 +702,7 @@
         },
         {
           "name": "source_vault_ata",
-          "docs": [
-            "Source vault's token account (vault PDA is authority)"
-          ],
+          "docs": ["Source vault's token account (vault PDA is authority)"],
           "writable": true
         },
         {
@@ -1075,38 +720,9 @@
               {
                 "kind": "const",
                 "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
+                  6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206,
+                  235, 121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140,
+                  245, 133, 126, 255, 0, 169
                 ]
               },
               {
@@ -1117,38 +733,9 @@
             "program": {
               "kind": "const",
               "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
+                140, 151, 37, 143, 78, 36, 137, 241, 187, 61, 16, 41, 20, 142,
+                13, 131, 11, 90, 19, 153, 218, 255, 16, 132, 4, 142, 123, 216,
+                219, 233, 248, 89
               ]
             }
           }
@@ -1201,10 +788,7 @@
         {
           "name": "condition_hash",
           "type": {
-            "array": [
-              "u8",
-              32
-            ]
+            "array": ["u8", 32]
           }
         }
       ]
@@ -1215,24 +799,13 @@
         "Create instruction constraints for the vault.",
         "Only the owner can call this. No timelock check (additive change)."
       ],
-      "discriminator": [
-        13,
-        182,
-        97,
-        5,
-        57,
-        136,
-        26,
-        152
-      ],
+      "discriminator": [13, 182, 97, 5, 57, 136, 26, 152],
       "accounts": [
         {
           "name": "owner",
           "writable": true,
           "signer": true,
-          "relations": [
-            "vault"
-          ]
+          "relations": ["vault"]
         },
         {
           "name": "vault",
@@ -1240,13 +813,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -1259,9 +826,7 @@
               }
             ]
           },
-          "relations": [
-            "policy"
-          ]
+          "relations": ["policy"]
         },
         {
           "name": "policy",
@@ -1270,14 +835,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
+                "value": [112, 111, 108, 105, 99, 121]
               },
               {
                 "kind": "account",
@@ -1293,19 +851,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  99,
-                  111,
-                  110,
-                  115,
-                  116,
-                  114,
-                  97,
-                  105,
-                  110,
-                  116,
-                  115
-                ]
+                "value": [99, 111, 110, 115, 116, 114, 97, 105, 110, 116, 115]
               },
               {
                 "kind": "account",
@@ -1338,24 +884,13 @@
         "Deposit SPL tokens into the vault's PDA-controlled token account.",
         "Only the owner can call this."
       ],
-      "discriminator": [
-        202,
-        39,
-        52,
-        211,
-        53,
-        20,
-        250,
-        88
-      ],
+      "discriminator": [202, 39, 52, 211, 53, 20, 250, 88],
       "accounts": [
         {
           "name": "owner",
           "writable": true,
           "signer": true,
-          "relations": [
-            "vault"
-          ]
+          "relations": ["vault"]
         },
         {
           "name": "vault",
@@ -1363,13 +898,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -1388,9 +917,7 @@
         },
         {
           "name": "owner_token_account",
-          "docs": [
-            "Owner's token account to transfer from"
-          ],
+          "docs": ["Owner's token account to transfer from"],
           "writable": true,
           "pda": {
             "seeds": [
@@ -1401,38 +928,9 @@
               {
                 "kind": "const",
                 "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
+                  6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206,
+                  235, 121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140,
+                  245, 133, 126, 255, 0, 169
                 ]
               },
               {
@@ -1443,47 +941,16 @@
             "program": {
               "kind": "const",
               "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
+                140, 151, 37, 143, 78, 36, 137, 241, 187, 61, 16, 41, 20, 142,
+                13, 131, 11, 90, 19, 153, 218, 255, 16, 132, 4, 142, 123, 216,
+                219, 233, 248, 89
               ]
             }
           }
         },
         {
           "name": "vault_token_account",
-          "docs": [
-            "Vault's PDA-controlled token account"
-          ],
+          "docs": ["Vault's PDA-controlled token account"],
           "writable": true,
           "pda": {
             "seeds": [
@@ -1494,38 +961,9 @@
               {
                 "kind": "const",
                 "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
+                  6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206,
+                  235, 121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140,
+                  245, 133, 126, 255, 0, 169
                 ]
               },
               {
@@ -1536,38 +974,9 @@
             "program": {
               "kind": "const",
               "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
+                140, 151, 37, 143, 78, 36, 137, 241, 187, 61, 16, 41, 20, 142,
+                13, 131, 11, 90, 19, 153, 218, 255, 16, 132, 4, 142, 123, 216,
+                219, 233, 248, 89
               ]
             }
           }
@@ -1598,16 +1007,7 @@
         "Finalize a session after the DeFi action completes.",
         "Revokes delegation and closes the SessionAuthority PDA."
       ],
-      "discriminator": [
-        34,
-        148,
-        144,
-        47,
-        37,
-        130,
-        206,
-        161
-      ],
+      "discriminator": [34, 148, 144, 47, 37, 130, 206, 161],
       "accounts": [
         {
           "name": "payer",
@@ -1621,13 +1021,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -1641,9 +1035,7 @@
               }
             ]
           },
-          "relations": [
-            "session"
-          ]
+          "relations": ["session"]
         },
         {
           "name": "session",
@@ -1656,15 +1048,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  115,
-                  101,
-                  115,
-                  115,
-                  105,
-                  111,
-                  110
-                ]
+                "value": [115, 101, 115, 115, 105, 111, 110]
               },
               {
                 "kind": "account",
@@ -1696,14 +1080,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
+                "value": [112, 111, 108, 105, 99, 121]
               },
               {
                 "kind": "account",
@@ -1722,15 +1099,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  116,
-                  114,
-                  97,
-                  99,
-                  107,
-                  101,
-                  114
-                ]
+                "value": [116, 114, 97, 99, 107, 101, 114]
               },
               {
                 "kind": "account",
@@ -1748,9 +1117,7 @@
         },
         {
           "name": "vault_token_account",
-          "docs": [
-            "Vault's PDA token account for the session's token"
-          ],
+          "docs": ["Vault's PDA token account for the session's token"],
           "writable": true,
           "optional": true
         },
@@ -1786,16 +1153,7 @@
         "Only the owner can call this. Creates vault PDA, policy PDA,",
         "and zero-copy spend tracker PDA."
       ],
-      "discriminator": [
-        48,
-        191,
-        163,
-        44,
-        71,
-        129,
-        63,
-        164
-      ],
+      "discriminator": [48, 191, 163, 44, 71, 129, 63, 164],
       "accounts": [
         {
           "name": "owner",
@@ -1809,13 +1167,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -1835,14 +1187,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
+                "value": [112, 111, 108, 105, 99, 121]
               },
               {
                 "kind": "account",
@@ -1853,23 +1198,13 @@
         },
         {
           "name": "tracker",
-          "docs": [
-            "Zero-copy SpendTracker"
-          ],
+          "docs": ["Zero-copy SpendTracker"],
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  116,
-                  114,
-                  97,
-                  99,
-                  107,
-                  101,
-                  114
-                ]
+                "value": [116, 114, 97, 99, 107, 101, 114]
               },
               {
                 "kind": "account",
@@ -1946,27 +1281,14 @@
     },
     {
       "name": "queue_constraints_update",
-      "docs": [
-        "Queue a constraints update when timelock is active."
-      ],
-      "discriminator": [
-        247,
-        253,
-        233,
-        93,
-        233,
-        54,
-        53,
-        131
-      ],
+      "docs": ["Queue a constraints update when timelock is active."],
+      "discriminator": [247, 253, 233, 93, 233, 54, 53, 131],
       "accounts": [
         {
           "name": "owner",
           "writable": true,
           "signer": true,
-          "relations": [
-            "vault"
-          ]
+          "relations": ["vault"]
         },
         {
           "name": "vault",
@@ -1974,13 +1296,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -1993,10 +1309,7 @@
               }
             ]
           },
-          "relations": [
-            "policy",
-            "constraints"
-          ]
+          "relations": ["policy", "constraints"]
         },
         {
           "name": "policy",
@@ -2004,14 +1317,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
+                "value": [112, 111, 108, 105, 99, 121]
               },
               {
                 "kind": "account",
@@ -2026,19 +1332,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  99,
-                  111,
-                  110,
-                  115,
-                  116,
-                  114,
-                  97,
-                  105,
-                  110,
-                  116,
-                  115
-                ]
+                "value": [99, 111, 110, 115, 116, 114, 97, 105, 110, 116, 115]
               },
               {
                 "kind": "account",
@@ -2055,25 +1349,8 @@
               {
                 "kind": "const",
                 "value": [
-                  112,
-                  101,
-                  110,
-                  100,
-                  105,
-                  110,
-                  103,
-                  95,
-                  99,
-                  111,
-                  110,
-                  115,
-                  116,
-                  114,
-                  97,
-                  105,
-                  110,
-                  116,
-                  115
+                  112, 101, 110, 100, 105, 110, 103, 95, 99, 111, 110, 115, 116,
+                  114, 97, 105, 110, 116, 115
                 ]
               },
               {
@@ -2103,27 +1380,14 @@
     },
     {
       "name": "queue_policy_update",
-      "docs": [
-        "Queue a policy update when timelock is active."
-      ],
-      "discriminator": [
-        149,
-        18,
-        76,
-        197,
-        179,
-        193,
-        91,
-        77
-      ],
+      "docs": ["Queue a policy update when timelock is active."],
+      "discriminator": [149, 18, 76, 197, 179, 193, 91, 77],
       "accounts": [
         {
           "name": "owner",
           "writable": true,
           "signer": true,
-          "relations": [
-            "vault"
-          ]
+          "relations": ["vault"]
         },
         {
           "name": "vault",
@@ -2131,13 +1395,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -2150,9 +1408,7 @@
               }
             ]
           },
-          "relations": [
-            "policy"
-          ]
+          "relations": ["policy"]
         },
         {
           "name": "policy",
@@ -2160,14 +1416,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
+                "value": [112, 111, 108, 105, 99, 121]
               },
               {
                 "kind": "account",
@@ -2184,19 +1433,7 @@
               {
                 "kind": "const",
                 "value": [
-                  112,
-                  101,
-                  110,
-                  100,
-                  105,
-                  110,
-                  103,
-                  95,
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
+                  112, 101, 110, 100, 105, 110, 103, 95, 112, 111, 108, 105, 99,
                   121
                 ]
               },
@@ -2290,23 +1527,12 @@
       "docs": [
         "Reactivate a frozen vault. Optionally add a new agent with permissions."
       ],
-      "discriminator": [
-        245,
-        50,
-        143,
-        70,
-        114,
-        220,
-        25,
-        251
-      ],
+      "discriminator": [245, 50, 143, 70, 114, 220, 25, 251],
       "accounts": [
         {
           "name": "owner",
           "signer": true,
-          "relations": [
-            "vault"
-          ]
+          "relations": ["vault"]
         },
         {
           "name": "vault",
@@ -2315,13 +1541,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -2357,22 +1577,11 @@
         "Refund an escrow — source vault's agent or owner reclaims funds after expiry.",
         "Cap charge is NOT reversed (prevents cap-washing attacks)."
       ],
-      "discriminator": [
-        107,
-        186,
-        89,
-        99,
-        26,
-        194,
-        23,
-        204
-      ],
+      "discriminator": [107, 186, 89, 99, 26, 194, 23, 204],
       "accounts": [
         {
           "name": "source_signer",
-          "docs": [
-            "Source vault's agent or owner"
-          ],
+          "docs": ["Source vault's agent or owner"],
           "writable": true,
           "signer": true
         },
@@ -2382,13 +1591,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -2410,14 +1613,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  101,
-                  115,
-                  99,
-                  114,
-                  111,
-                  119
-                ]
+                "value": [101, 115, 99, 114, 111, 119]
               },
               {
                 "kind": "account",
@@ -2448,38 +1644,9 @@
               {
                 "kind": "const",
                 "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
+                  6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206,
+                  235, 121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140,
+                  245, 133, 126, 255, 0, 169
                 ]
               },
               {
@@ -2490,38 +1657,9 @@
             "program": {
               "kind": "const",
               "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
+                140, 151, 37, 143, 78, 36, 137, 241, 187, 61, 16, 41, 20, 142,
+                13, 131, 11, 90, 19, 153, 218, 255, 16, 132, 4, 142, 123, 216,
+                219, 233, 248, 89
               ]
             }
           }
@@ -2550,23 +1688,12 @@
         "Register an agent's signing key to this vault with per-agent permissions.",
         "Only the owner can call this. Up to 10 agents per vault."
       ],
-      "discriminator": [
-        135,
-        157,
-        66,
-        195,
-        2,
-        113,
-        175,
-        30
-      ],
+      "discriminator": [135, 157, 66, 195, 2, 113, 175, 30],
       "accounts": [
         {
           "name": "owner",
           "signer": true,
-          "relations": [
-            "vault"
-          ]
+          "relations": ["vault"]
         },
         {
           "name": "vault",
@@ -2575,13 +1702,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -2624,23 +1745,12 @@
         "Revoke a specific agent from the vault.",
         "Only the owner can call this. Freezes vault if last agent is removed."
       ],
-      "discriminator": [
-        227,
-        60,
-        209,
-        125,
-        240,
-        117,
-        163,
-        73
-      ],
+      "discriminator": [227, 60, 209, 125, 240, 117, 163, 73],
       "accounts": [
         {
           "name": "owner",
           "signer": true,
-          "relations": [
-            "vault"
-          ]
+          "relations": ["vault"]
         },
         {
           "name": "vault",
@@ -2649,13 +1759,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -2683,16 +1787,7 @@
         "Settle an escrow — destination vault's agent claims funds before expiry.",
         "For conditional escrows, proof must match the SHA-256 condition hash."
       ],
-      "discriminator": [
-        22,
-        135,
-        160,
-        194,
-        23,
-        186,
-        124,
-        110
-      ],
+      "discriminator": [22, 135, 160, 194, 23, 186, 124, 110],
       "accounts": [
         {
           "name": "destination_agent",
@@ -2705,13 +1800,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -2732,13 +1821,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -2760,14 +1843,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  101,
-                  115,
-                  99,
-                  114,
-                  111,
-                  119
-                ]
+                "value": [101, 115, 99, 114, 111, 119]
               },
               {
                 "kind": "account",
@@ -2797,38 +1873,9 @@
               {
                 "kind": "const",
                 "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
+                  6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206,
+                  235, 121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140,
+                  245, 133, 126, 255, 0, 169
                 ]
               },
               {
@@ -2839,38 +1886,9 @@
             "program": {
               "kind": "const",
               "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
+                140, 151, 37, 143, 78, 36, 137, 241, 187, 61, 16, 41, 20, 142,
+                13, 131, 11, 90, 19, 153, 218, 255, 16, 132, 4, 142, 123, 216,
+                219, 233, 248, 89
               ]
             }
           }
@@ -2900,19 +1918,8 @@
     },
     {
       "name": "sync_positions",
-      "docs": [
-        "Sync the vault's open position counter with the actual state."
-      ],
-      "discriminator": [
-        255,
-        102,
-        161,
-        80,
-        185,
-        74,
-        140,
-        60
-      ],
+      "docs": ["Sync the vault's open position counter with the actual state."],
+      "discriminator": [255, 102, 161, 80, 185, 74, 140, 60],
       "accounts": [
         {
           "name": "owner",
@@ -2925,13 +1932,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -2960,16 +1961,7 @@
         "Update an agent's permission bitmask and spending limit.",
         "Only the owner can call this. Blocked when timelock is active."
       ],
-      "discriminator": [
-        56,
-        163,
-        109,
-        133,
-        69,
-        188,
-        163,
-        184
-      ],
+      "discriminator": [56, 163, 109, 133, 69, 188, 163, 184],
       "accounts": [
         {
           "name": "owner",
@@ -2983,13 +1975,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -3010,14 +1996,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
+                "value": [112, 111, 108, 105, 99, 121]
               },
               {
                 "kind": "account",
@@ -3048,24 +2027,13 @@
         "Update instruction constraints for the vault.",
         "Only the owner can call this. Blocked when timelock > 0."
       ],
-      "discriminator": [
-        229,
-        117,
-        208,
-        238,
-        102,
-        240,
-        54,
-        74
-      ],
+      "discriminator": [229, 117, 208, 238, 102, 240, 54, 74],
       "accounts": [
         {
           "name": "owner",
           "writable": true,
           "signer": true,
-          "relations": [
-            "vault"
-          ]
+          "relations": ["vault"]
         },
         {
           "name": "vault",
@@ -3073,13 +2041,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -3092,10 +2054,7 @@
               }
             ]
           },
-          "relations": [
-            "policy",
-            "constraints"
-          ]
+          "relations": ["policy", "constraints"]
         },
         {
           "name": "policy",
@@ -3103,14 +2062,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
+                "value": [112, 111, 108, 105, 99, 121]
               },
               {
                 "kind": "account",
@@ -3126,19 +2078,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  99,
-                  111,
-                  110,
-                  115,
-                  116,
-                  114,
-                  97,
-                  105,
-                  110,
-                  116,
-                  115
-                ]
+                "value": [99, 111, 110, 115, 116, 114, 97, 105, 110, 116, 115]
               },
               {
                 "kind": "account",
@@ -3167,23 +2107,12 @@
         "Update the policy configuration for a vault.",
         "Only the owner can call this. Blocked when timelock > 0."
       ],
-      "discriminator": [
-        212,
-        245,
-        246,
-        7,
-        163,
-        151,
-        18,
-        57
-      ],
+      "discriminator": [212, 245, 246, 7, 163, 151, 18, 57],
       "accounts": [
         {
           "name": "owner",
           "signer": true,
-          "relations": [
-            "vault"
-          ]
+          "relations": ["vault"]
         },
         {
           "name": "vault",
@@ -3191,13 +2120,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -3210,9 +2133,7 @@
               }
             ]
           },
-          "relations": [
-            "policy"
-          ]
+          "relations": ["policy"]
         },
         {
           "name": "policy",
@@ -3221,14 +2142,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
+                "value": [112, 111, 108, 105, 99, 121]
               },
               {
                 "kind": "account",
@@ -3319,16 +2233,7 @@
         "and protocol slippage verification.",
         "Creates a SessionAuthority PDA, delegates tokens to agent."
       ],
-      "discriminator": [
-        22,
-        183,
-        48,
-        222,
-        218,
-        11,
-        197,
-        152
-      ],
+      "discriminator": [22, 183, 48, 222, 218, 11, 197, 152],
       "accounts": [
         {
           "name": "agent",
@@ -3341,13 +2246,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -3361,9 +2260,7 @@
               }
             ]
           },
-          "relations": [
-            "policy"
-          ]
+          "relations": ["policy"]
         },
         {
           "name": "policy",
@@ -3371,14 +2268,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
+                "value": [112, 111, 108, 105, 99, 121]
               },
               {
                 "kind": "account",
@@ -3389,23 +2279,13 @@
         },
         {
           "name": "tracker",
-          "docs": [
-            "Zero-copy SpendTracker"
-          ],
+          "docs": ["Zero-copy SpendTracker"],
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  116,
-                  114,
-                  97,
-                  99,
-                  107,
-                  101,
-                  114
-                ]
+                "value": [116, 114, 97, 99, 107, 101, 114]
               },
               {
                 "kind": "account",
@@ -3432,15 +2312,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  115,
-                  101,
-                  115,
-                  115,
-                  105,
-                  111,
-                  110
-                ]
+                "value": [115, 101, 115, 115, 105, 111, 110]
               },
               {
                 "kind": "account",
@@ -3459,9 +2331,7 @@
         },
         {
           "name": "vault_token_account",
-          "docs": [
-            "Vault's PDA-owned token account for the spend token"
-          ],
+          "docs": ["Vault's PDA-owned token account for the spend token"],
           "writable": true
         },
         {
@@ -3543,27 +2413,14 @@
     },
     {
       "name": "withdraw_funds",
-      "docs": [
-        "Withdraw tokens from the vault back to the owner."
-      ],
-      "discriminator": [
-        241,
-        36,
-        29,
-        111,
-        208,
-        31,
-        104,
-        217
-      ],
+      "docs": ["Withdraw tokens from the vault back to the owner."],
+      "discriminator": [241, 36, 29, 111, 208, 31, 104, 217],
       "accounts": [
         {
           "name": "owner",
           "writable": true,
           "signer": true,
-          "relations": [
-            "vault"
-          ]
+          "relations": ["vault"]
         },
         {
           "name": "vault",
@@ -3571,13 +2428,7 @@
             "seeds": [
               {
                 "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
+                "value": [118, 97, 117, 108, 116]
               },
               {
                 "kind": "account",
@@ -3596,9 +2447,7 @@
         },
         {
           "name": "vault_token_account",
-          "docs": [
-            "Vault's PDA-controlled token account"
-          ],
+          "docs": ["Vault's PDA-controlled token account"],
           "writable": true,
           "pda": {
             "seeds": [
@@ -3609,38 +2458,9 @@
               {
                 "kind": "const",
                 "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
+                  6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206,
+                  235, 121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140,
+                  245, 133, 126, 255, 0, 169
                 ]
               },
               {
@@ -3651,47 +2471,16 @@
             "program": {
               "kind": "const",
               "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
+                140, 151, 37, 143, 78, 36, 137, 241, 187, 61, 16, 41, 20, 142,
+                13, 131, 11, 90, 19, 153, 218, 255, 16, 132, 4, 142, 123, 216,
+                219, 233, 248, 89
               ]
             }
           }
         },
         {
           "name": "owner_token_account",
-          "docs": [
-            "Owner's token account to receive funds"
-          ],
+          "docs": ["Owner's token account to receive funds"],
           "writable": true,
           "pda": {
             "seeds": [
@@ -3702,38 +2491,9 @@
               {
                 "kind": "const",
                 "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
+                  6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206,
+                  235, 121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140,
+                  245, 133, 126, 255, 0, 169
                 ]
               },
               {
@@ -3744,38 +2504,9 @@
             "program": {
               "kind": "const",
               "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
+                140, 151, 37, 143, 78, 36, 137, 241, 187, 61, 16, 41, 20, 142,
+                13, 131, 11, 90, 19, 153, 218, 255, 16, 132, 4, 142, 123, 216,
+                219, 233, 248, 89
               ]
             }
           }
@@ -3796,486 +2527,153 @@
   "accounts": [
     {
       "name": "AgentSpendOverlay",
-      "discriminator": [
-        126,
-        248,
-        13,
-        218,
-        101,
-        148,
-        135,
-        44
-      ]
+      "discriminator": [126, 248, 13, 218, 101, 148, 135, 44]
     },
     {
       "name": "AgentVault",
-      "discriminator": [
-        232,
-        220,
-        237,
-        164,
-        157,
-        9,
-        215,
-        194
-      ]
+      "discriminator": [232, 220, 237, 164, 157, 9, 215, 194]
     },
     {
       "name": "EscrowDeposit",
-      "discriminator": [
-        56,
-        152,
-        208,
-        160,
-        159,
-        83,
-        6,
-        17
-      ]
+      "discriminator": [56, 152, 208, 160, 159, 83, 6, 17]
     },
     {
       "name": "InstructionConstraints",
-      "discriminator": [
-        183,
-        235,
-        149,
-        166,
-        174,
-        58,
-        98,
-        218
-      ]
+      "discriminator": [183, 235, 149, 166, 174, 58, 98, 218]
     },
     {
       "name": "PendingConstraintsUpdate",
-      "discriminator": [
-        22,
-        206,
-        77,
-        208,
-        147,
-        121,
-        53,
-        174
-      ]
+      "discriminator": [22, 206, 77, 208, 147, 121, 53, 174]
     },
     {
       "name": "PendingPolicyUpdate",
-      "discriminator": [
-        77,
-        255,
-        2,
-        51,
-        79,
-        237,
-        183,
-        239
-      ]
+      "discriminator": [77, 255, 2, 51, 79, 237, 183, 239]
     },
     {
       "name": "PolicyConfig",
-      "discriminator": [
-        219,
-        7,
-        79,
-        84,
-        175,
-        51,
-        148,
-        146
-      ]
+      "discriminator": [219, 7, 79, 84, 175, 51, 148, 146]
     },
     {
       "name": "SessionAuthority",
-      "discriminator": [
-        48,
-        9,
-        30,
-        120,
-        134,
-        35,
-        172,
-        170
-      ]
+      "discriminator": [48, 9, 30, 120, 134, 35, 172, 170]
     },
     {
       "name": "SpendTracker",
-      "discriminator": [
-        180,
-        17,
-        195,
-        180,
-        162,
-        207,
-        239,
-        205
-      ]
+      "discriminator": [180, 17, 195, 180, 162, 207, 239, 205]
     }
   ],
   "events": [
     {
       "name": "ActionAuthorized",
-      "discriminator": [
-        85,
-        90,
-        59,
-        218,
-        126,
-        8,
-        179,
-        63
-      ]
+      "discriminator": [85, 90, 59, 218, 126, 8, 179, 63]
     },
     {
       "name": "AgentPermissionsUpdated",
-      "discriminator": [
-        203,
-        110,
-        249,
-        149,
-        51,
-        17,
-        246,
-        63
-      ]
+      "discriminator": [203, 110, 249, 149, 51, 17, 246, 63]
     },
     {
       "name": "AgentRegistered",
-      "discriminator": [
-        191,
-        78,
-        217,
-        54,
-        232,
-        100,
-        189,
-        85
-      ]
+      "discriminator": [191, 78, 217, 54, 232, 100, 189, 85]
     },
     {
       "name": "AgentRevoked",
-      "discriminator": [
-        12,
-        251,
-        249,
-        166,
-        122,
-        83,
-        162,
-        116
-      ]
+      "discriminator": [12, 251, 249, 166, 122, 83, 162, 116]
     },
     {
       "name": "AgentSpendLimitChecked",
-      "discriminator": [
-        107,
-        128,
-        60,
-        144,
-        163,
-        83,
-        45,
-        215
-      ]
+      "discriminator": [107, 128, 60, 144, 163, 83, 45, 215]
     },
     {
       "name": "AgentTransferExecuted",
-      "discriminator": [
-        88,
-        52,
-        117,
-        69,
-        112,
-        152,
-        167,
-        40
-      ]
+      "discriminator": [88, 52, 117, 69, 112, 152, 167, 40]
     },
     {
       "name": "ConstraintsChangeApplied",
-      "discriminator": [
-        112,
-        150,
-        111,
-        125,
-        243,
-        133,
-        35,
-        55
-      ]
+      "discriminator": [112, 150, 111, 125, 243, 133, 35, 55]
     },
     {
       "name": "ConstraintsChangeCancelled",
-      "discriminator": [
-        15,
-        75,
-        104,
-        222,
-        104,
-        193,
-        65,
-        145
-      ]
+      "discriminator": [15, 75, 104, 222, 104, 193, 65, 145]
     },
     {
       "name": "ConstraintsChangeQueued",
-      "discriminator": [
-        111,
-        221,
-        100,
-        149,
-        52,
-        23,
-        88,
-        212
-      ]
+      "discriminator": [111, 221, 100, 149, 52, 23, 88, 212]
     },
     {
       "name": "DelegationRevoked",
-      "discriminator": [
-        59,
-        158,
-        142,
-        49,
-        164,
-        116,
-        220,
-        8
-      ]
+      "discriminator": [59, 158, 142, 49, 164, 116, 220, 8]
     },
     {
       "name": "EscrowCreated",
-      "discriminator": [
-        70,
-        127,
-        105,
-        102,
-        92,
-        97,
-        7,
-        173
-      ]
+      "discriminator": [70, 127, 105, 102, 92, 97, 7, 173]
     },
     {
       "name": "EscrowRefunded",
-      "discriminator": [
-        132,
-        209,
-        49,
-        109,
-        135,
-        138,
-        28,
-        81
-      ]
+      "discriminator": [132, 209, 49, 109, 135, 138, 28, 81]
     },
     {
       "name": "EscrowSettled",
-      "discriminator": [
-        97,
-        27,
-        150,
-        55,
-        203,
-        179,
-        173,
-        23
-      ]
+      "discriminator": [97, 27, 150, 55, 203, 179, 173, 23]
     },
     {
       "name": "FeesCollected",
-      "discriminator": [
-        233,
-        23,
-        117,
-        225,
-        107,
-        178,
-        254,
-        8
-      ]
+      "discriminator": [233, 23, 117, 225, 107, 178, 254, 8]
     },
     {
       "name": "FundsDeposited",
-      "discriminator": [
-        157,
-        209,
-        100,
-        95,
-        59,
-        100,
-        3,
-        68
-      ]
+      "discriminator": [157, 209, 100, 95, 59, 100, 3, 68]
     },
     {
       "name": "FundsWithdrawn",
-      "discriminator": [
-        56,
-        130,
-        230,
-        154,
-        35,
-        92,
-        11,
-        118
-      ]
+      "discriminator": [56, 130, 230, 154, 35, 92, 11, 118]
     },
     {
       "name": "InstructionConstraintsClosed",
-      "discriminator": [
-        107,
-        107,
-        90,
-        8,
-        81,
-        158,
-        130,
-        86
-      ]
+      "discriminator": [107, 107, 90, 8, 81, 158, 130, 86]
     },
     {
       "name": "InstructionConstraintsCreated",
-      "discriminator": [
-        8,
-        170,
-        99,
-        232,
-        31,
-        216,
-        57,
-        26
-      ]
+      "discriminator": [8, 170, 99, 232, 31, 216, 57, 26]
     },
     {
       "name": "InstructionConstraintsUpdated",
-      "discriminator": [
-        159,
-        63,
-        148,
-        194,
-        150,
-        209,
-        43,
-        129
-      ]
+      "discriminator": [159, 63, 148, 194, 150, 209, 43, 129]
     },
     {
       "name": "PolicyChangeApplied",
-      "discriminator": [
-        104,
-        89,
-        5,
-        100,
-        180,
-        202,
-        52,
-        73
-      ]
+      "discriminator": [104, 89, 5, 100, 180, 202, 52, 73]
     },
     {
       "name": "PolicyChangeCancelled",
-      "discriminator": [
-        200,
-        158,
-        226,
-        255,
-        25,
-        211,
-        30,
-        151
-      ]
+      "discriminator": [200, 158, 226, 255, 25, 211, 30, 151]
     },
     {
       "name": "PolicyChangeQueued",
-      "discriminator": [
-        73,
-        231,
-        182,
-        136,
-        141,
-        120,
-        32,
-        79
-      ]
+      "discriminator": [73, 231, 182, 136, 141, 120, 32, 79]
     },
     {
       "name": "PolicyUpdated",
-      "discriminator": [
-        225,
-        112,
-        112,
-        67,
-        95,
-        236,
-        245,
-        161
-      ]
+      "discriminator": [225, 112, 112, 67, 95, 236, 245, 161]
     },
     {
       "name": "PositionsSynced",
-      "discriminator": [
-        83,
-        33,
-        144,
-        201,
-        168,
-        13,
-        0,
-        95
-      ]
+      "discriminator": [83, 33, 144, 201, 168, 13, 0, 95]
     },
     {
       "name": "SessionFinalized",
-      "discriminator": [
-        33,
-        12,
-        242,
-        91,
-        206,
-        42,
-        163,
-        235
-      ]
+      "discriminator": [33, 12, 242, 91, 206, 42, 163, 235]
     },
     {
       "name": "VaultClosed",
-      "discriminator": [
-        238,
-        129,
-        38,
-        228,
-        227,
-        118,
-        249,
-        215
-      ]
+      "discriminator": [238, 129, 38, 228, 227, 118, 249, 215]
     },
     {
       "name": "VaultCreated",
-      "discriminator": [
-        117,
-        25,
-        120,
-        254,
-        75,
-        236,
-        78,
-        115
-      ]
+      "discriminator": [117, 25, 120, 254, 75, 236, 78, 115]
     },
     {
       "name": "VaultReactivated",
-      "discriminator": [
-        197,
-        52,
-        160,
-        147,
-        159,
-        89,
-        90,
-        28
-      ]
+      "discriminator": [197, 52, 160, 147, 159, 89, 90, 28]
     }
   ],
   "errors": [
@@ -4678,9 +3076,7 @@
     },
     {
       "name": "ActionType",
-      "docs": [
-        "Action types that agents can request"
-      ],
+      "docs": ["Action types that agents can request"],
       "type": {
         "kind": "enum",
         "variants": [
@@ -4771,10 +3167,7 @@
               "Agent pubkey stored as raw bytes (zero_copy requires fixed-size)"
             ],
             "type": {
-              "array": [
-                "u8",
-                32
-              ]
+              "array": ["u8", 32]
             }
           },
           {
@@ -4783,10 +3176,7 @@
               "Per-epoch USD contributions from this agent (same indexing as SpendTracker buckets)"
             ],
             "type": {
-              "array": [
-                "u64",
-                144
-              ]
+              "array": ["u64", 144]
             }
           }
         ]
@@ -4943,9 +3333,7 @@
         "fields": [
           {
             "name": "vault",
-            "docs": [
-              "Associated vault pubkey"
-            ],
+            "docs": ["Associated vault pubkey"],
             "type": "pubkey"
           },
           {
@@ -4956,10 +3344,7 @@
               "for that epoch index are zeroed during the next access."
             ],
             "type": {
-              "array": [
-                "i64",
-                144
-              ]
+              "array": ["i64", 144]
             }
           },
           {
@@ -4980,21 +3365,14 @@
           },
           {
             "name": "bump",
-            "docs": [
-              "Bump seed for PDA"
-            ],
+            "docs": ["Bump seed for PDA"],
             "type": "u8"
           },
           {
             "name": "_padding",
-            "docs": [
-              "Padding for 8-byte alignment"
-            ],
+            "docs": ["Padding for 8-byte alignment"],
             "type": {
-              "array": [
-                "u8",
-                7
-              ]
+              "array": ["u8", 7]
             }
           }
         ]
@@ -5031,9 +3409,7 @@
         "fields": [
           {
             "name": "owner",
-            "docs": [
-              "The owner who created this vault (has full authority)"
-            ],
+            "docs": ["The owner who created this vault (has full authority)"],
             "type": "pubkey"
           },
           {
@@ -5066,9 +3442,7 @@
           },
           {
             "name": "status",
-            "docs": [
-              "Vault status: Active, Frozen, or Closed"
-            ],
+            "docs": ["Vault status: Active, Frozen, or Closed"],
             "type": {
               "defined": {
                 "name": "VaultStatus"
@@ -5077,16 +3451,12 @@
           },
           {
             "name": "bump",
-            "docs": [
-              "Bump seed for PDA derivation"
-            ],
+            "docs": ["Bump seed for PDA derivation"],
             "type": "u8"
           },
           {
             "name": "created_at",
-            "docs": [
-              "Unix timestamp of vault creation"
-            ],
+            "docs": ["Unix timestamp of vault creation"],
             "type": "i64"
           },
           {
@@ -5098,16 +3468,12 @@
           },
           {
             "name": "total_volume",
-            "docs": [
-              "Total volume processed in token base units"
-            ],
+            "docs": ["Total volume processed in token base units"],
             "type": "u64"
           },
           {
             "name": "open_positions",
-            "docs": [
-              "Number of currently open positions (for perps tracking)"
-            ],
+            "docs": ["Number of currently open positions (for perps tracking)"],
             "type": "u8"
           },
           {
@@ -5292,16 +3658,12 @@
         "fields": [
           {
             "name": "epoch_id",
-            "docs": [
-              "Epoch identifier: unix_timestamp / EPOCH_DURATION"
-            ],
+            "docs": ["Epoch identifier: unix_timestamp / EPOCH_DURATION"],
             "type": "i64"
           },
           {
             "name": "usd_amount",
-            "docs": [
-              "Aggregate USD spent in this epoch (6 decimals)"
-            ],
+            "docs": ["Aggregate USD spent in this epoch (6 decimals)"],
             "type": "u64"
           }
         ]
@@ -5339,10 +3701,7 @@
           {
             "name": "condition_hash",
             "type": {
-              "array": [
-                "u8",
-                32
-              ]
+              "array": ["u8", 32]
             }
           }
         ]
@@ -5392,10 +3751,7 @@
           {
             "name": "condition_hash",
             "type": {
-              "array": [
-                "u8",
-                32
-              ]
+              "array": ["u8", 32]
             }
           },
           {
@@ -5681,16 +4037,12 @@
         "fields": [
           {
             "name": "vault",
-            "docs": [
-              "Associated vault pubkey"
-            ],
+            "docs": ["Associated vault pubkey"],
             "type": "pubkey"
           },
           {
             "name": "entries",
-            "docs": [
-              "New constraint entries to apply"
-            ],
+            "docs": ["New constraint entries to apply"],
             "type": {
               "vec": {
                 "defined": {
@@ -5701,23 +4053,17 @@
           },
           {
             "name": "queued_at",
-            "docs": [
-              "Unix timestamp when this update was queued"
-            ],
+            "docs": ["Unix timestamp when this update was queued"],
             "type": "i64"
           },
           {
             "name": "executes_at",
-            "docs": [
-              "Unix timestamp when this update becomes executable"
-            ],
+            "docs": ["Unix timestamp when this update becomes executable"],
             "type": "i64"
           },
           {
             "name": "bump",
-            "docs": [
-              "Bump seed for PDA"
-            ],
+            "docs": ["Bump seed for PDA"],
             "type": "u8"
           }
         ]
@@ -5737,23 +4083,17 @@
         "fields": [
           {
             "name": "vault",
-            "docs": [
-              "Associated vault pubkey"
-            ],
+            "docs": ["Associated vault pubkey"],
             "type": "pubkey"
           },
           {
             "name": "queued_at",
-            "docs": [
-              "Unix timestamp when this update was queued"
-            ],
+            "docs": ["Unix timestamp when this update was queued"],
             "type": "i64"
           },
           {
             "name": "executes_at",
-            "docs": [
-              "Unix timestamp when this update becomes executable"
-            ],
+            "docs": ["Unix timestamp when this update becomes executable"],
             "type": "i64"
           },
           {
@@ -5828,9 +4168,7 @@
           },
           {
             "name": "bump",
-            "docs": [
-              "Bump seed for PDA"
-            ],
+            "docs": ["Bump seed for PDA"],
             "type": "u8"
           }
         ]
@@ -5887,9 +4225,7 @@
         "fields": [
           {
             "name": "vault",
-            "docs": [
-              "Associated vault pubkey"
-            ],
+            "docs": ["Associated vault pubkey"],
             "type": "pubkey"
           },
           {
@@ -5902,9 +4238,7 @@
           },
           {
             "name": "max_transaction_size_usd",
-            "docs": [
-              "Maximum single transaction size in USD (6 decimals)."
-            ],
+            "docs": ["Maximum single transaction size in USD (6 decimals)."],
             "type": "u64"
           },
           {
@@ -5944,9 +4278,7 @@
           },
           {
             "name": "max_concurrent_positions",
-            "docs": [
-              "Maximum number of concurrent open positions"
-            ],
+            "docs": ["Maximum number of concurrent open positions"],
             "type": "u8"
           },
           {
@@ -6000,9 +4332,7 @@
           },
           {
             "name": "bump",
-            "docs": [
-              "Bump seed for PDA"
-            ],
+            "docs": ["Bump seed for PDA"],
             "type": "u8"
           }
         ]
@@ -6092,21 +4422,14 @@
         "fields": [
           {
             "name": "protocol",
-            "docs": [
-              "Protocol program ID"
-            ],
+            "docs": ["Protocol program ID"],
             "type": {
-              "array": [
-                "u8",
-                32
-              ]
+              "array": ["u8", 32]
             }
           },
           {
             "name": "window_start",
-            "docs": [
-              "Window start timestamp (for future rolling window)"
-            ],
+            "docs": ["Window start timestamp (for future rolling window)"],
             "type": "i64"
           },
           {
@@ -6126,16 +4449,12 @@
         "fields": [
           {
             "name": "vault",
-            "docs": [
-              "Associated vault"
-            ],
+            "docs": ["Associated vault"],
             "type": "pubkey"
           },
           {
             "name": "agent",
-            "docs": [
-              "The agent who initiated this session"
-            ],
+            "docs": ["The agent who initiated this session"],
             "type": "pubkey"
           },
           {
@@ -6173,16 +4492,12 @@
           },
           {
             "name": "expires_at_slot",
-            "docs": [
-              "Slot-based expiry: session is valid until this slot"
-            ],
+            "docs": ["Slot-based expiry: session is valid until this slot"],
             "type": "u64"
           },
           {
             "name": "delegated",
-            "docs": [
-              "Whether token delegation was set up (approve CPI)"
-            ],
+            "docs": ["Whether token delegation was set up (approve CPI)"],
             "type": "bool"
           },
           {
@@ -6225,9 +4540,7 @@
           },
           {
             "name": "bump",
-            "docs": [
-              "Bump seed for PDA"
-            ],
+            "docs": ["Bump seed for PDA"],
             "type": "u8"
           }
         ]
@@ -6280,16 +4593,12 @@
         "fields": [
           {
             "name": "vault",
-            "docs": [
-              "Associated vault pubkey"
-            ],
+            "docs": ["Associated vault pubkey"],
             "type": "pubkey"
           },
           {
             "name": "buckets",
-            "docs": [
-              "144 epoch buckets for rolling 24h spend tracking"
-            ],
+            "docs": ["144 epoch buckets for rolling 24h spend tracking"],
             "type": {
               "array": [
                 {
@@ -6319,21 +4628,14 @@
           },
           {
             "name": "bump",
-            "docs": [
-              "Bump seed for PDA"
-            ],
+            "docs": ["Bump seed for PDA"],
             "type": "u8"
           },
           {
             "name": "_padding",
-            "docs": [
-              "Padding for 8-byte alignment"
-            ],
+            "docs": ["Padding for 8-byte alignment"],
             "type": {
-              "array": [
-                "u8",
-                7
-              ]
+              "array": ["u8", 7]
             }
           }
         ]
@@ -6413,9 +4715,7 @@
     },
     {
       "name": "VaultStatus",
-      "docs": [
-        "Vault status enum"
-      ],
+      "docs": ["Vault status enum"],
       "type": {
         "kind": "enum",
         "variants": [

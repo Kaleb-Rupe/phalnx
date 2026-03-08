@@ -17,9 +17,13 @@ Phalnx wraps your agent's wallet with on-chain policy enforcement. One call give
 ```typescript
 import { withVault } from "@phalnx/sdk";
 
-const result = await withVault(teeWallet, { maxSpend: "500 USDC/day" }, {
-  connection,
-});
+const result = await withVault(
+  teeWallet,
+  { maxSpend: "500 USDC/day" },
+  {
+    connection,
+  },
+);
 // result.wallet is ready — policies enforced by Solana validators
 ```
 
@@ -63,38 +67,38 @@ All instructions succeed or all revert atomically. The agent's signing key is va
 
 ### Account Model
 
-| Account                 | Seeds                                    | Purpose                                                                                            |
-| ----------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| **AgentVault**          | `[b"vault", owner, vault_id]`            | Holds owner/agent pubkeys, status, fee destination                                                 |
+| Account                 | Seeds                                    | Purpose                                                                                                               |
+| ----------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **AgentVault**          | `[b"vault", owner, vault_id]`            | Holds owner/agent pubkeys, status, fee destination                                                                    |
 | **PolicyConfig**        | `[b"policy", vault]`                     | Spending caps, protocol allowlist/denylist, leverage limits, slippage limits, timelock duration, allowed destinations |
-| **SpendTracker**        | `[b"tracker", vault]`                    | Zero-copy 144-epoch circular buffer for rolling 24h USD spend tracking (2,352 bytes)               |
-| **SessionAuthority**    | `[b"session", vault, agent, token_mint]` | Ephemeral PDA created per action, expires after 20 slots                                           |
-| **PendingPolicyUpdate** | `[b"pending_policy", vault]`             | Queued policy change with timelock, applied after delay                                            |
+| **SpendTracker**        | `[b"tracker", vault]`                    | Zero-copy 144-epoch circular buffer for rolling 24h USD spend tracking (2,352 bytes)                                  |
+| **SessionAuthority**    | `[b"session", vault, agent, token_mint]` | Ephemeral PDA created per action, expires after 20 slots                                                              |
+| **PendingPolicyUpdate** | `[b"pending_policy", vault]`             | Queued policy change with timelock, applied after delay                                                               |
 
 ### On-Chain Instructions (15)
 
-| Instruction              | Signer | Description                                                    |
-| ------------------------ | ------ | -------------------------------------------------------------- |
-| `initialize_vault`       | Owner  | Create vault, policy, and tracker PDAs                         |
-| `deposit_funds`          | Owner  | Transfer SPL tokens into vault                                 |
-| `register_agent`         | Owner  | Register agent signing key                                     |
-| `update_policy`          | Owner  | Modify policy (direct if no timelock)                          |
-| `validate_and_authorize` | Agent  | Check policy, collect fees, create session, delegate tokens    |
-| `finalize_session`       | Agent  | Revoke delegation, close session PDA                           |
-| `revoke_agent`           | Owner  | Kill switch — freeze vault                                     |
-| `reactivate_vault`       | Owner  | Unfreeze vault, optionally rotate agent key                    |
-| `withdraw_funds`         | Owner  | Withdraw tokens to owner                                       |
-| `close_vault`            | Owner  | Close all PDAs, reclaim rent                                   |
-| `queue_policy_update`    | Owner  | Queue timelocked policy change                                 |
-| `apply_pending_policy`   | Owner  | Apply queued change after timelock expires                     |
-| `cancel_pending_policy`  | Owner  | Cancel queued policy change                                    |
-| `agent_transfer`         | Agent  | Transfer stablecoins to allowlisted destination                |
-| `sync_positions`         | Owner  | Correct open position counter if out of sync                   |
+| Instruction              | Signer | Description                                                 |
+| ------------------------ | ------ | ----------------------------------------------------------- |
+| `initialize_vault`       | Owner  | Create vault, policy, and tracker PDAs                      |
+| `deposit_funds`          | Owner  | Transfer SPL tokens into vault                              |
+| `register_agent`         | Owner  | Register agent signing key                                  |
+| `update_policy`          | Owner  | Modify policy (direct if no timelock)                       |
+| `validate_and_authorize` | Agent  | Check policy, collect fees, create session, delegate tokens |
+| `finalize_session`       | Agent  | Revoke delegation, close session PDA                        |
+| `revoke_agent`           | Owner  | Kill switch — freeze vault                                  |
+| `reactivate_vault`       | Owner  | Unfreeze vault, optionally rotate agent key                 |
+| `withdraw_funds`         | Owner  | Withdraw tokens to owner                                    |
+| `close_vault`            | Owner  | Close all PDAs, reclaim rent                                |
+| `queue_policy_update`    | Owner  | Queue timelocked policy change                              |
+| `apply_pending_policy`   | Owner  | Apply queued change after timelock expires                  |
+| `cancel_pending_policy`  | Owner  | Cancel queued policy change                                 |
+| `agent_transfer`         | Agent  | Transfer stablecoins to allowlisted destination             |
+| `sync_positions`         | Owner  | Correct open position counter if out of sync                |
 
 ## Packages
 
-| Package                                                               | Description                                                          | npm                                                                                                                                               |
-| --------------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Package                                                         | Description                                                          | npm                                                                                                                                   |
+| --------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | [`@phalnx/core`](./sdk/core)                                    | Pure TypeScript policy engine — zero blockchain dependencies         | [![npm](https://img.shields.io/npm/v/@phalnx/core)](https://www.npmjs.com/package/@phalnx/core)                                       |
 | [`@phalnx/sdk`](./sdk/typescript)                               | On-chain guardrails — `withVault()` primary API                      | [![npm](https://img.shields.io/npm/v/@phalnx/sdk)](https://www.npmjs.com/package/@phalnx/sdk)                                         |
 | [`@phalnx/platform`](./sdk/platform)                            | Platform client — request TEE wallet provisioning via Solana Actions | [![npm](https://img.shields.io/npm/v/@phalnx/platform)](https://www.npmjs.com/package/@phalnx/platform)                               |
@@ -115,20 +119,29 @@ npm install @phalnx/sdk
 import { withVault } from "@phalnx/sdk";
 
 // One call = full protection (client-side + TEE + on-chain vault)
-const result = await withVault(teeWallet, { maxSpend: "500 USDC/day" }, {
-  connection,
-});
+const result = await withVault(
+  teeWallet,
+  { maxSpend: "500 USDC/day" },
+  {
+    connection,
+  },
+);
 
 // Use it like a normal wallet — policies enforced transparently
 const agent = new SolanaAgentKit(result.wallet, RPC_URL, config);
 ```
 
 For devnet testing without TEE:
+
 ```typescript
-const result = await withVault(wallet, { maxSpend: "500 USDC/day" }, {
-  connection,
-  unsafeSkipTeeCheck: true,
-});
+const result = await withVault(
+  wallet,
+  { maxSpend: "500 USDC/day" },
+  {
+    connection,
+    unsafeSkipTeeCheck: true,
+  },
+);
 ```
 
 ### MCP Server (Claude Desktop / Cursor)
@@ -186,24 +199,24 @@ cargo fmt --check --manifest-path programs/phalnx/Cargo.toml
 
 ### Test Suites
 
-| Suite                                                | Tests   |
-| ---------------------------------------------------- | ------- |
-| Core vault management & permission engine            |      67 |
-| Jupiter integration (composed swaps)                 |       9 |
-| Jupiter Lend integration (deposit/withdraw)          |       7 |
-| Flash Trade integration (leveraged perps)            |      30 |
-| Security exploit scenarios                           |     109 |
-| Devnet integration tests (real network)              |      56 |
-| Surfpool integration tests (local Surfnet)           |      20 |
-| Core policy engine (`@phalnx/core`)            |      73 |
-| SDK tests (`@phalnx/sdk`)                      |     199 |
-| Platform client tests (`@phalnx/platform`)     |      17 |
-| Crossmint custody adapter                            |      29 |
-| SAK plugin (`@phalnx/plugin-solana-agent-kit`) |      29 |
-| ElizaOS plugin (`@phalnx/plugin-elizaos`)      |      35 |
-| MCP server (`@phalnx/mcp`)                     |     291 |
-| Actions server (`@phalnx/actions-server`)      |      61 |
-| **Total**                                            | **1032** |
+| Suite                                          | Tests    |
+| ---------------------------------------------- | -------- |
+| Core vault management & permission engine      | 67       |
+| Jupiter integration (composed swaps)           | 9        |
+| Jupiter Lend integration (deposit/withdraw)    | 7        |
+| Flash Trade integration (leveraged perps)      | 30       |
+| Security exploit scenarios                     | 109      |
+| Devnet integration tests (real network)        | 56       |
+| Surfpool integration tests (local Surfnet)     | 20       |
+| Core policy engine (`@phalnx/core`)            | 73       |
+| SDK tests (`@phalnx/sdk`)                      | 199      |
+| Platform client tests (`@phalnx/platform`)     | 17       |
+| Crossmint custody adapter                      | 29       |
+| SAK plugin (`@phalnx/plugin-solana-agent-kit`) | 29       |
+| ElizaOS plugin (`@phalnx/plugin-elizaos`)      | 35       |
+| MCP server (`@phalnx/mcp`)                     | 291      |
+| Actions server (`@phalnx/actions-server`)      | 61       |
+| **Total**                                      | **1032** |
 
 ## Security
 

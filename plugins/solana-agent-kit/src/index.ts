@@ -137,8 +137,7 @@ export function createPhalnxPlugin(config: PhalnxPluginConfig) {
           refundEscrow(agent, resolved, input),
       },
       shield_check_escrow: {
-        description:
-          "Check the on-chain status of an escrow deposit.",
+        description: "Check the on-chain status of an escrow deposit.",
         schema: checkEscrowSchema,
         handler: (agent: any, input: any) =>
           checkEscrow(agent, resolved, input),

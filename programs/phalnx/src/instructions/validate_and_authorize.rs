@@ -216,8 +216,7 @@ pub fn handler(
             let mut overlay = ctx.accounts.agent_spend_overlay.load_mut()?;
             if let Some(agent_slot) = overlay.find_agent_slot(&agent_key) {
                 if agent_entry.spending_limit_usd > 0 {
-                    let agent_rolling =
-                        overlay.get_agent_rolling_24h_usd(&clock, agent_slot);
+                    let agent_rolling = overlay.get_agent_rolling_24h_usd(&clock, agent_slot);
                     let new_agent_spend = agent_rolling
                         .checked_add(usd_amt)
                         .ok_or(PhalnxError::Overflow)?;

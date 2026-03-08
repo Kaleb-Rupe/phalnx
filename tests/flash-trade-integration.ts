@@ -547,7 +547,11 @@ describe("flash-trade-integration", () => {
 
       await program.methods
         .registerAgent(agent.publicKey, FULL_PERMISSIONS, new BN(0))
-        .accountsPartial({ owner: owner.publicKey, vault: frozenVault, agentSpendOverlay: frozenOverlay })
+        .accountsPartial({
+          owner: owner.publicKey,
+          vault: frozenVault,
+          agentSpendOverlay: frozenOverlay,
+        })
         .rpc();
 
       // Freeze vault
@@ -625,7 +629,11 @@ describe("flash-trade-integration", () => {
       );
 
       const [disabledOverlay] = PublicKey.findProgramAddressSync(
-        [Buffer.from("agent_spend"), disabledVault.toBuffer(), Buffer.from([0])],
+        [
+          Buffer.from("agent_spend"),
+          disabledVault.toBuffer(),
+          Buffer.from([0]),
+        ],
         program.programId,
       );
 
@@ -656,7 +664,11 @@ describe("flash-trade-integration", () => {
 
       await program.methods
         .registerAgent(agent.publicKey, FULL_PERMISSIONS, new BN(0))
-        .accountsPartial({ owner: owner.publicKey, vault: disabledVault, agentSpendOverlay: disabledOverlay })
+        .accountsPartial({
+          owner: owner.publicKey,
+          vault: disabledVault,
+          agentSpendOverlay: disabledOverlay,
+        })
         .rpc();
 
       // Deposit funds so vault token account exists (needed for delegation)
@@ -848,7 +860,11 @@ describe("flash-trade-integration", () => {
 
       await program.methods
         .registerAgent(capAgentKp.publicKey, FULL_PERMISSIONS, new BN(0))
-        .accountsPartial({ owner: owner.publicKey, vault: capVault, agentSpendOverlay: capOverlay })
+        .accountsPartial({
+          owner: owner.publicKey,
+          vault: capVault,
+          agentSpendOverlay: capOverlay,
+        })
         .rpc();
 
       // Mint fresh USDC for this vault's deposit

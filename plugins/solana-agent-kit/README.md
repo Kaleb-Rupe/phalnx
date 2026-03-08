@@ -66,26 +66,28 @@ const protectedWallet = createShieldedWallet({
 
 The plugin registers 6 monitoring/management tools on the agent:
 
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `shield_status` | Check current spending vs limits, rate limit usage, and enforcement state | *(none)* |
-| `shield_update_policy` | Update spending limits or program blocking at runtime | `maxSpend?`, `blockUnknownPrograms?` |
-| `shield_pause_resume` | Pause or resume policy enforcement | `action: "pause" \| "resume"` |
-| `shield_transaction_history` | View per-token usage percentages and rate limit summary | *(none)* |
-| `shield_provision` | Provision a vault via Solana Actions | `vaultAddress` |
-| `shield_x402_fetch` | Fetch a URL with automatic x402 payment negotiation | `url`, `method?`, `body?` |
+| Tool                         | Description                                                               | Parameters                           |
+| ---------------------------- | ------------------------------------------------------------------------- | ------------------------------------ |
+| `shield_status`              | Check current spending vs limits, rate limit usage, and enforcement state | _(none)_                             |
+| `shield_update_policy`       | Update spending limits or program blocking at runtime                     | `maxSpend?`, `blockUnknownPrograms?` |
+| `shield_pause_resume`        | Pause or resume policy enforcement                                        | `action: "pause" \| "resume"`        |
+| `shield_transaction_history` | View per-token usage percentages and rate limit summary                   | _(none)_                             |
+| `shield_provision`           | Provision a vault via Solana Actions                                      | `vaultAddress`                       |
+| `shield_x402_fetch`          | Fetch a URL with automatic x402 payment negotiation                       | `url`, `method?`, `body?`            |
 
 ### Tool Details
 
 #### `shield_status`
 
 Returns a formatted status report including:
+
 - Whether enforcement is paused or active
 - Per-token spending vs limits (with percentage used and window duration)
 - Remaining budget per token
 - Rate limit usage (transaction count vs limit, remaining, window)
 
 **Example output:**
+
 ```
 === Phalnx Status ===
 Paused: false
@@ -106,6 +108,7 @@ Paused: false
 Updates Phalnx policies at runtime. Both parameters are optional — only provided fields are changed.
 
 **Schema:**
+
 ```typescript
 {
   maxSpend?: string;              // e.g. "1000 USDC/day"
@@ -118,6 +121,7 @@ Updates Phalnx policies at runtime. Both parameters are optional — only provid
 Toggles enforcement on or off. When paused, transactions pass through without policy checks or spend recording.
 
 **Schema:**
+
 ```typescript
 {
   action: "pause" | "resume";
@@ -129,6 +133,7 @@ Toggles enforcement on or off. When paused, transactions pass through without po
 Returns a detailed per-token usage summary with percentages and rolling window information, plus rate limit status.
 
 **Example output:**
+
 ```
 === Phalnx Transaction History ===
 Enforcement: ACTIVE
@@ -164,21 +169,22 @@ interface PhalnxPluginConfig {
 You must provide either `wallet` or `rawWallet`. If both are provided, `wallet` takes precedence.
 
 When using `rawWallet`, the factory automatically wires event callbacks to the logger:
+
 - `onDenied` logs warnings with the denial reason
 - `onApproved`, `onPause`, `onResume`, `onPolicyUpdate` log info messages
 - Any callbacks in `options` are chained after logger callbacks
 
 ## Exported Functions
 
-| Export | Description |
-|--------|-------------|
-| `createPhalnxPlugin(config)` | Create the SAK plugin with 6 tools |
-| `createShieldedWallet(config)` | Standalone factory for ShieldedWallet creation |
-| `resolveWallet(config)` | Resolve config to a `{ wallet: ShieldedWallet }` |
-| `status(agent, config, input)` | Status tool handler (for custom use) |
-| `updatePolicy(agent, config, input)` | Update policy tool handler |
-| `pauseResume(agent, config, input)` | Pause/resume tool handler |
-| `transactionHistory(agent, config, input)` | Transaction history tool handler |
+| Export                                     | Description                                      |
+| ------------------------------------------ | ------------------------------------------------ |
+| `createPhalnxPlugin(config)`               | Create the SAK plugin with 6 tools               |
+| `createShieldedWallet(config)`             | Standalone factory for ShieldedWallet creation   |
+| `resolveWallet(config)`                    | Resolve config to a `{ wallet: ShieldedWallet }` |
+| `status(agent, config, input)`             | Status tool handler (for custom use)             |
+| `updatePolicy(agent, config, input)`       | Update policy tool handler                       |
+| `pauseResume(agent, config, input)`        | Pause/resume tool handler                        |
+| `transactionHistory(agent, config, input)` | Transaction history tool handler                 |
 
 All Zod schemas are also exported: `statusSchema`, `updatePolicySchema`, `pauseResumeSchema`, `transactionHistorySchema`.
 
@@ -210,11 +216,11 @@ npm test
 
 ## Related Packages
 
-| Package | Description |
-|---------|-------------|
-| [`@phalnx/sdk`](https://www.npmjs.com/package/@phalnx/sdk) | On-chain guardrails — `withVault()` primary API |
-| [`@phalnx/core`](https://www.npmjs.com/package/@phalnx/core) | Pure TypeScript policy engine |
-| [`@phalnx/plugin-elizaos`](https://www.npmjs.com/package/@phalnx/plugin-elizaos) | ElizaOS integration |
+| Package                                                                          | Description                                     |
+| -------------------------------------------------------------------------------- | ----------------------------------------------- |
+| [`@phalnx/sdk`](https://www.npmjs.com/package/@phalnx/sdk)                       | On-chain guardrails — `withVault()` primary API |
+| [`@phalnx/core`](https://www.npmjs.com/package/@phalnx/core)                     | Pure TypeScript policy engine                   |
+| [`@phalnx/plugin-elizaos`](https://www.npmjs.com/package/@phalnx/plugin-elizaos) | ElizaOS integration                             |
 
 ## Support
 

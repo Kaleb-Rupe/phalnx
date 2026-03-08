@@ -29,13 +29,13 @@ const blinkUrl = platform.getBlinkUrl({ dailyCap: 500 });
 // 4. Request a provision transaction for a specific account
 const { transaction } = await platform.requestProvision(
   "UserPublicKeyBase58...",
-  { dailyCap: 500, template: "conservative" }
+  { dailyCap: 500, template: "conservative" },
 );
 
 // 5. After the user signs, poll for the result
 const result = await platform.waitForProvision(txSignature);
-console.log(result.vaultAddress);  // On-chain vault PDA
-console.log(result.agentPubkey);   // Agent signing key
+console.log(result.vaultAddress); // On-chain vault PDA
+console.log(result.agentPubkey); // Agent signing key
 ```
 
 ## API Reference
@@ -44,8 +44,8 @@ console.log(result.agentPubkey);   // Agent signing key
 
 Create a platform client pointing to an Phalnx Actions server.
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
+| Parameter | Type     | Description                                                                 |
+| --------- | -------- | --------------------------------------------------------------------------- |
 | `baseUrl` | `string` | Base URL of the Actions server (e.g. `https://agent-middleware.vercel.app`) |
 
 ### `getProvisionActionUrl(options?): string`
@@ -53,7 +53,10 @@ Create a platform client pointing to an Phalnx Actions server.
 Generate a Solana Action URL for vault provisioning.
 
 ```typescript
-const url = platform.getProvisionActionUrl({ dailyCap: 500, template: "moderate" });
+const url = platform.getProvisionActionUrl({
+  dailyCap: 500,
+  template: "moderate",
+});
 // → "https://agent-middleware.vercel.app/api/actions/provision?template=moderate&dailyCap=500"
 ```
 
@@ -74,17 +77,17 @@ Fetch the Action metadata (GET endpoint). Returns the action's title, descriptio
 
 Request a provision transaction for a specific Solana account. Returns a base64-encoded unsigned `VersionedTransaction`.
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `account` | `string` | User's Solana public key (base58) |
-| `options` | `ProvisionOptions` | Optional daily cap and template |
+| Parameter | Type               | Description                       |
+| --------- | ------------------ | --------------------------------- |
+| `account` | `string`           | User's Solana public key (base58) |
+| `options` | `ProvisionOptions` | Optional daily cap and template   |
 
 ### `checkStatus(txSignature): Promise<ProvisionResult>`
 
 Poll the status endpoint for a provision result.
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
+| Parameter     | Type     | Description                                  |
+| ------------- | -------- | -------------------------------------------- |
 | `txSignature` | `string` | Transaction signature from the user's wallet |
 
 ### `waitForProvision(txSignature, timeoutMs?, intervalMs?): Promise<ProvisionResult>`
@@ -101,8 +104,8 @@ Generate a human-readable message with both Action URL and Blink URL for present
 
 ```typescript
 interface ProvisionOptions {
-  dailyCap?: number;   // Daily spending cap in USDC (e.g. 500)
-  template?: string;   // Policy template: "conservative" | "moderate" | "aggressive"
+  dailyCap?: number; // Daily spending cap in USDC (e.g. 500)
+  template?: string; // Policy template: "conservative" | "moderate" | "aggressive"
 }
 ```
 
@@ -140,11 +143,11 @@ interface ActionMetadata {
 
 ## Related Packages
 
-| Package | Description |
-|---------|-------------|
-| [`@phalnx/sdk`](https://www.npmjs.com/package/@phalnx/sdk) | On-chain guardrails — `withVault()` primary API |
-| [`@phalnx/core`](https://www.npmjs.com/package/@phalnx/core) | Pure TypeScript policy engine |
-| [`@phalnx/mcp`](https://www.npmjs.com/package/@phalnx/mcp) | MCP server for AI tools |
+| Package                                                      | Description                                     |
+| ------------------------------------------------------------ | ----------------------------------------------- |
+| [`@phalnx/sdk`](https://www.npmjs.com/package/@phalnx/sdk)   | On-chain guardrails — `withVault()` primary API |
+| [`@phalnx/core`](https://www.npmjs.com/package/@phalnx/core) | Pure TypeScript policy engine                   |
+| [`@phalnx/mcp`](https://www.npmjs.com/package/@phalnx/mcp)   | MCP server for AI tools                         |
 
 ## Support
 

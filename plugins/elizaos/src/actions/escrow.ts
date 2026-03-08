@@ -3,9 +3,16 @@ import { getOrCreateShieldedWallet } from "../client-factory";
 export const createEscrowAction = {
   name: "SHIELD_CREATE_ESCROW",
   similes: ["CREATE_ESCROW", "ESCROW_CREATE", "NEW_ESCROW"],
-  description: "Create an inter-vault escrow deposit with optional condition hash and expiry.",
+  description:
+    "Create an inter-vault escrow deposit with optional condition hash and expiry.",
   validate: async (_runtime: any, _message: any) => true,
-  handler: async (_runtime: any, _message: any, _state: any, _options: any, callback: (response: any) => void) => {
+  handler: async (
+    _runtime: any,
+    _message: any,
+    _state: any,
+    _options: any,
+    callback: (response: any) => void,
+  ) => {
     try {
       const { wallet } = await getOrCreateShieldedWallet(_runtime);
       const summary = wallet.getSpendingSummary();
@@ -15,22 +22,43 @@ export const createEscrowAction = {
       });
       return true;
     } catch (error: any) {
-      callback({ text: `Failed: ${error.message}`, content: { success: false, error: error.message } });
+      callback({
+        text: `Failed: ${error.message}`,
+        content: { success: false, error: error.message },
+      });
       return false;
     }
   },
-  examples: [[
-    { user: "{{user1}}", content: { text: "Create an escrow to vault ABC for 100 USDC" } },
-    { user: "{{agentName}}", content: { text: "Escrow creation requires on-chain transaction composition.", action: "SHIELD_CREATE_ESCROW" } },
-  ]],
+  examples: [
+    [
+      {
+        user: "{{user1}}",
+        content: { text: "Create an escrow to vault ABC for 100 USDC" },
+      },
+      {
+        user: "{{agentName}}",
+        content: {
+          text: "Escrow creation requires on-chain transaction composition.",
+          action: "SHIELD_CREATE_ESCROW",
+        },
+      },
+    ],
+  ],
 };
 
 export const settleEscrowAction = {
   name: "SHIELD_SETTLE_ESCROW",
   similes: ["SETTLE_ESCROW", "ESCROW_SETTLE", "CLAIM_ESCROW"],
-  description: "Settle an active escrow, releasing funds to the destination vault.",
+  description:
+    "Settle an active escrow, releasing funds to the destination vault.",
   validate: async (_runtime: any, _message: any) => true,
-  handler: async (_runtime: any, _message: any, _state: any, _options: any, callback: (response: any) => void) => {
+  handler: async (
+    _runtime: any,
+    _message: any,
+    _state: any,
+    _options: any,
+    callback: (response: any) => void,
+  ) => {
     try {
       callback({
         text: "Escrow settlement requires destination agent authorization.\nUse SDK buildSettleEscrow() to execute.",
@@ -38,14 +66,25 @@ export const settleEscrowAction = {
       });
       return true;
     } catch (error: any) {
-      callback({ text: `Failed: ${error.message}`, content: { success: false, error: error.message } });
+      callback({
+        text: `Failed: ${error.message}`,
+        content: { success: false, error: error.message },
+      });
       return false;
     }
   },
-  examples: [[
-    { user: "{{user1}}", content: { text: "Settle escrow XYZ" } },
-    { user: "{{agentName}}", content: { text: "Escrow settlement requires destination agent authorization.", action: "SHIELD_SETTLE_ESCROW" } },
-  ]],
+  examples: [
+    [
+      { user: "{{user1}}", content: { text: "Settle escrow XYZ" } },
+      {
+        user: "{{agentName}}",
+        content: {
+          text: "Escrow settlement requires destination agent authorization.",
+          action: "SHIELD_SETTLE_ESCROW",
+        },
+      },
+    ],
+  ],
 };
 
 export const refundEscrowAction = {
@@ -53,7 +92,13 @@ export const refundEscrowAction = {
   similes: ["REFUND_ESCROW", "ESCROW_REFUND", "CANCEL_ESCROW"],
   description: "Refund an expired escrow, returning funds to the source vault.",
   validate: async (_runtime: any, _message: any) => true,
-  handler: async (_runtime: any, _message: any, _state: any, _options: any, callback: (response: any) => void) => {
+  handler: async (
+    _runtime: any,
+    _message: any,
+    _state: any,
+    _options: any,
+    callback: (response: any) => void,
+  ) => {
     try {
       callback({
         text: "Escrow refund only available after expiry.\nCap is NOT reversed (prevents cap-washing).\nUse SDK buildRefundEscrow() to execute.",
@@ -61,12 +106,23 @@ export const refundEscrowAction = {
       });
       return true;
     } catch (error: any) {
-      callback({ text: `Failed: ${error.message}`, content: { success: false, error: error.message } });
+      callback({
+        text: `Failed: ${error.message}`,
+        content: { success: false, error: error.message },
+      });
       return false;
     }
   },
-  examples: [[
-    { user: "{{user1}}", content: { text: "Refund expired escrow ABC" } },
-    { user: "{{agentName}}", content: { text: "Escrow refund only available after expiry.", action: "SHIELD_REFUND_ESCROW" } },
-  ]],
+  examples: [
+    [
+      { user: "{{user1}}", content: { text: "Refund expired escrow ABC" } },
+      {
+        user: "{{agentName}}",
+        content: {
+          text: "Escrow refund only available after expiry.",
+          action: "SHIELD_REFUND_ESCROW",
+        },
+      },
+    ],
+  ],
 };

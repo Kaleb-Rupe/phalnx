@@ -22,7 +22,10 @@ describe("intents", () => {
   describe("createIntent", () => {
     it("generates a UUID id", () => {
       const intent = createIntent(
-        { type: "swap", params: { inputMint: "USDC", outputMint: "SOL", amount: "100" } },
+        {
+          type: "swap",
+          params: { inputMint: "USDC", outputMint: "SOL", amount: "100" },
+        },
         vault,
         agent,
       );
@@ -33,7 +36,10 @@ describe("intents", () => {
 
     it("sets status to pending", () => {
       const intent = createIntent(
-        { type: "swap", params: { inputMint: "USDC", outputMint: "SOL", amount: "100" } },
+        {
+          type: "swap",
+          params: { inputMint: "USDC", outputMint: "SOL", amount: "100" },
+        },
         vault,
         agent,
       );
@@ -43,7 +49,10 @@ describe("intents", () => {
     it("sets createdAt and updatedAt to current time", () => {
       const before = Date.now();
       const intent = createIntent(
-        { type: "swap", params: { inputMint: "USDC", outputMint: "SOL", amount: "100" } },
+        {
+          type: "swap",
+          params: { inputMint: "USDC", outputMint: "SOL", amount: "100" },
+        },
         vault,
         agent,
       );
@@ -55,17 +64,25 @@ describe("intents", () => {
 
     it("calculates expiresAt using default TTL", () => {
       const intent = createIntent(
-        { type: "swap", params: { inputMint: "USDC", outputMint: "SOL", amount: "100" } },
+        {
+          type: "swap",
+          params: { inputMint: "USDC", outputMint: "SOL", amount: "100" },
+        },
         vault,
         agent,
       );
-      expect(intent.expiresAt).to.equal(intent.createdAt + DEFAULT_INTENT_TTL_MS);
+      expect(intent.expiresAt).to.equal(
+        intent.createdAt + DEFAULT_INTENT_TTL_MS,
+      );
     });
 
     it("uses custom TTL when provided", () => {
       const customTtl = 60_000; // 1 minute
       const intent = createIntent(
-        { type: "swap", params: { inputMint: "USDC", outputMint: "SOL", amount: "100" } },
+        {
+          type: "swap",
+          params: { inputMint: "USDC", outputMint: "SOL", amount: "100" },
+        },
         vault,
         agent,
         { ttlMs: customTtl },
@@ -75,7 +92,10 @@ describe("intents", () => {
 
     it("stores vault and agent public keys", () => {
       const intent = createIntent(
-        { type: "swap", params: { inputMint: "USDC", outputMint: "SOL", amount: "100" } },
+        {
+          type: "swap",
+          params: { inputMint: "USDC", outputMint: "SOL", amount: "100" },
+        },
         vault,
         agent,
       );
@@ -85,7 +105,10 @@ describe("intents", () => {
 
     it("generates summary from action", () => {
       const intent = createIntent(
-        { type: "swap", params: { inputMint: "USDC", outputMint: "SOL", amount: "100" } },
+        {
+          type: "swap",
+          params: { inputMint: "USDC", outputMint: "SOL", amount: "100" },
+        },
         vault,
         agent,
       );
@@ -110,7 +133,12 @@ describe("intents", () => {
     it("summarizes openPosition action", () => {
       const summary = summarizeAction({
         type: "openPosition",
-        params: { market: "SOL-PERP", side: "long", collateral: "100", leverage: 5 },
+        params: {
+          market: "SOL-PERP",
+          side: "long",
+          collateral: "100",
+          leverage: 5,
+        },
       });
       expect(summary).to.include("Open");
       expect(summary).to.include("long");
@@ -176,7 +204,10 @@ describe("intents", () => {
 
     it("saves and retrieves an intent", async () => {
       const intent = createIntent(
-        { type: "swap", params: { inputMint: "USDC", outputMint: "SOL", amount: "100" } },
+        {
+          type: "swap",
+          params: { inputMint: "USDC", outputMint: "SOL", amount: "100" },
+        },
         vault,
         agent,
       );
@@ -194,7 +225,10 @@ describe("intents", () => {
 
     it("lists all intents", async () => {
       const intent1 = createIntent(
-        { type: "swap", params: { inputMint: "USDC", outputMint: "SOL", amount: "100" } },
+        {
+          type: "swap",
+          params: { inputMint: "USDC", outputMint: "SOL", amount: "100" },
+        },
         vault,
         agent,
       );
@@ -211,7 +245,10 @@ describe("intents", () => {
 
     it("filters by status", async () => {
       const intent1 = createIntent(
-        { type: "swap", params: { inputMint: "USDC", outputMint: "SOL", amount: "100" } },
+        {
+          type: "swap",
+          params: { inputMint: "USDC", outputMint: "SOL", amount: "100" },
+        },
         vault,
         agent,
       );
@@ -222,7 +259,10 @@ describe("intents", () => {
       );
       await storage.save(intent1);
       await storage.save(intent2);
-      await storage.update(intent1.id, { status: "approved", updatedAt: Date.now() });
+      await storage.update(intent1.id, {
+        status: "approved",
+        updatedAt: Date.now(),
+      });
 
       const approved = await storage.list({ status: "approved" });
       expect(approved).to.have.lengthOf(1);
@@ -236,7 +276,10 @@ describe("intents", () => {
     it("filters by vault", async () => {
       const vault2 = Keypair.generate().publicKey;
       const intent1 = createIntent(
-        { type: "swap", params: { inputMint: "USDC", outputMint: "SOL", amount: "100" } },
+        {
+          type: "swap",
+          params: { inputMint: "USDC", outputMint: "SOL", amount: "100" },
+        },
         vault,
         agent,
       );
@@ -255,12 +298,18 @@ describe("intents", () => {
 
     it("updates intent status", async () => {
       const intent = createIntent(
-        { type: "swap", params: { inputMint: "USDC", outputMint: "SOL", amount: "100" } },
+        {
+          type: "swap",
+          params: { inputMint: "USDC", outputMint: "SOL", amount: "100" },
+        },
         vault,
         agent,
       );
       await storage.save(intent);
-      await storage.update(intent.id, { status: "approved", updatedAt: Date.now() });
+      await storage.update(intent.id, {
+        status: "approved",
+        updatedAt: Date.now(),
+      });
 
       const retrieved = await storage.get(intent.id);
       expect(retrieved!.status).to.equal("approved");
@@ -277,7 +326,10 @@ describe("intents", () => {
 
     it("creates defensive copies on save", async () => {
       const intent = createIntent(
-        { type: "swap", params: { inputMint: "USDC", outputMint: "SOL", amount: "100" } },
+        {
+          type: "swap",
+          params: { inputMint: "USDC", outputMint: "SOL", amount: "100" },
+        },
         vault,
         agent,
       );
@@ -295,7 +347,10 @@ describe("intents", () => {
 
     it("creates defensive copies on get", async () => {
       const intent = createIntent(
-        { type: "swap", params: { inputMint: "USDC", outputMint: "SOL", amount: "100" } },
+        {
+          type: "swap",
+          params: { inputMint: "USDC", outputMint: "SOL", amount: "100" },
+        },
         vault,
         agent,
       );
@@ -310,35 +365,53 @@ describe("intents", () => {
 
     it("supports lifecycle: pending → approved → executed", async () => {
       const intent = createIntent(
-        { type: "swap", params: { inputMint: "USDC", outputMint: "SOL", amount: "100" } },
+        {
+          type: "swap",
+          params: { inputMint: "USDC", outputMint: "SOL", amount: "100" },
+        },
         vault,
         agent,
       );
       await storage.save(intent);
       expect((await storage.get(intent.id))!.status).to.equal("pending");
 
-      await storage.update(intent.id, { status: "approved", updatedAt: Date.now() });
+      await storage.update(intent.id, {
+        status: "approved",
+        updatedAt: Date.now(),
+      });
       expect((await storage.get(intent.id))!.status).to.equal("approved");
 
-      await storage.update(intent.id, { status: "executed", updatedAt: Date.now() });
+      await storage.update(intent.id, {
+        status: "executed",
+        updatedAt: Date.now(),
+      });
       expect((await storage.get(intent.id))!.status).to.equal("executed");
     });
 
     it("supports lifecycle: pending → rejected", async () => {
       const intent = createIntent(
-        { type: "swap", params: { inputMint: "USDC", outputMint: "SOL", amount: "100" } },
+        {
+          type: "swap",
+          params: { inputMint: "USDC", outputMint: "SOL", amount: "100" },
+        },
         vault,
         agent,
       );
       await storage.save(intent);
 
-      await storage.update(intent.id, { status: "rejected", updatedAt: Date.now() });
+      await storage.update(intent.id, {
+        status: "rejected",
+        updatedAt: Date.now(),
+      });
       expect((await storage.get(intent.id))!.status).to.equal("rejected");
     });
 
     it("records error on failed intent", async () => {
       const intent = createIntent(
-        { type: "swap", params: { inputMint: "USDC", outputMint: "SOL", amount: "100" } },
+        {
+          type: "swap",
+          params: { inputMint: "USDC", outputMint: "SOL", amount: "100" },
+        },
         vault,
         agent,
       );

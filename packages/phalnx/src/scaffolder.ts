@@ -1,8 +1,16 @@
 import * as fs from "fs";
 import * as path from "path";
 import { execFileSync } from "child_process";
-import { getTemplate, type ProjectConfig, type GeneratedFile } from "./templates/registry";
-import { detectPackageManager, getInstallCommand, getRunCommand } from "./utils";
+import {
+  getTemplate,
+  type ProjectConfig,
+  type GeneratedFile,
+} from "./templates/registry";
+import {
+  detectPackageManager,
+  getInstallCommand,
+  getRunCommand,
+} from "./utils";
 
 // Side-effect imports to register all templates
 import "./templates/standalone";
@@ -17,7 +25,10 @@ export interface ScaffoldResult {
   gitInitialized: boolean;
 }
 
-export function scaffold(targetDir: string, config: ProjectConfig): ScaffoldResult {
+export function scaffold(
+  targetDir: string,
+  config: ProjectConfig,
+): ScaffoldResult {
   const template = getTemplate(config.template);
   if (!template) {
     throw new Error(`Unknown template: ${config.template}`);

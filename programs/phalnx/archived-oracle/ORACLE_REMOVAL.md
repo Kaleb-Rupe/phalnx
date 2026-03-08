@@ -21,7 +21,9 @@ Every swap must have a stablecoin (USDC/USDT) on at least one side. USD spent = 
 ## Code Removed from Partially-Modified Files
 
 ### state/mod.rs
+
 Removed oracle constants:
+
 - `PYTH_RECEIVER_PROGRAM` — Pyth Receiver program ID
 - `SWITCHBOARD_ON_DEMAND_PROGRAM` — Switchboard On-Demand program ID
 - `MAX_ORACLE_STALE_SLOTS` (50) — slot-based staleness threshold
@@ -37,7 +39,9 @@ Removed oracle constants:
 Removed module declarations: `pub mod registry`, `pub mod pending_oracle_update`
 
 ### instructions/utils.rs
+
 Removed functions:
+
 - `convert_to_usd()` — main USD conversion (stablecoin + oracle paths)
 - `check_oracle_divergence()` — primary vs fallback midpoint divergence check
 - `oracle_price_to_usd()` — oracle mantissa to USD conversion
@@ -45,6 +49,7 @@ Removed functions:
 Kept: `stablecoin_to_usd()` — now the ONLY USD conversion function
 
 ### instructions/validate_and_authorize.rs
+
 - Removed `oracle_registry: AccountLoader<'info, OracleRegistry>` account
 - Removed oracle registry lookup + oracle feed reading from remaining_accounts
 - Added `output_stablecoin_account` for non-stablecoin swap balance snapshots
@@ -52,24 +57,29 @@ Kept: `stablecoin_to_usd()` — now the ONLY USD conversion function
 - Added dust deposit guard (rejects top-level SPL transfers to vault stablecoin ATA)
 
 ### instructions/agent_transfer.rs
+
 - Removed `oracle_registry: AccountLoader<'info, OracleRegistry>` account
 - Replaced oracle lookup with `is_stablecoin_mint()` check
 - Replaced `convert_to_usd()` with `stablecoin_to_usd()`
 - Removed remaining_accounts oracle usage
 
 ### instructions/mod.rs
+
 Removed 7 module declarations: initialize_oracle_registry, update_oracle_registry,
 queue_oracle_update, apply_oracle_update, cancel_oracle_update,
 propose_oracle_authority, accept_oracle_authority
 
 ### lib.rs
+
 - Removed `pub mod oracle;`
 - Removed 7 instruction handlers: initialize_oracle_registry, propose_oracle_authority,
   accept_oracle_authority, update_oracle_registry, queue_oracle_update,
   apply_oracle_update, cancel_oracle_update
 
 ### errors.rs
+
 Oracle errors reserved (error codes preserved for ABI compatibility):
+
 - OracleFeedStale (6028) → Reserved6028
 - OracleFeedInvalid (6029) → Reserved6029
 - OracleAccountMissing (6032) → Reserved6032
@@ -87,7 +97,9 @@ Oracle errors reserved (error codes preserved for ABI compatibility):
 - OracleUpdateBatchTooLarge (6056) → Reserved6056
 
 ### events.rs
+
 Removed 6 events:
+
 - OracleRegistryInitialized
 - OracleRegistryUpdated
 - OracleAuthorityProposed

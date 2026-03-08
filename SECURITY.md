@@ -2,13 +2,13 @@
 
 ## Supported Versions
 
-| Package | Supported |
-|---------|-----------|
-| @phalnx/sdk >= 0.4.0 | Yes |
-| @phalnx/mcp >= 0.4.0 | Yes |
-| @phalnx/core >= 0.1.0 | Yes |
-| @phalnx/sdk >= 0.5.0 | Yes |
-| On-chain program (phalnx) | Yes |
+| Package                   | Supported |
+| ------------------------- | --------- |
+| @phalnx/sdk >= 0.4.0      | Yes       |
+| @phalnx/mcp >= 0.4.0      | Yes       |
+| @phalnx/core >= 0.1.0     | Yes       |
+| @phalnx/sdk >= 0.5.0      | Yes       |
+| On-chain program (phalnx) | Yes       |
 
 ## Reporting a Vulnerability
 

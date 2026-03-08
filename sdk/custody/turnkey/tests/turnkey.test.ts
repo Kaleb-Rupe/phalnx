@@ -135,7 +135,8 @@ describe("@phalnx/custody-turnkey", () => {
         validateConfig({
           organizationId: "",
           apiKeyId: "key-id",
-          apiPrivateKey: "-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----",
+          apiPrivateKey:
+            "-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----",
         }),
       ).to.throw("organizationId is required");
     });
@@ -145,7 +146,8 @@ describe("@phalnx/custody-turnkey", () => {
         validateConfig({
           organizationId: "   ",
           apiKeyId: "key-id",
-          apiPrivateKey: "-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----",
+          apiPrivateKey:
+            "-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----",
         }),
       ).to.throw("organizationId is required");
     });
@@ -155,7 +157,8 @@ describe("@phalnx/custody-turnkey", () => {
         validateConfig({
           organizationId: "org-123",
           apiKeyId: "",
-          apiPrivateKey: "-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----",
+          apiPrivateKey:
+            "-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----",
         }),
       ).to.throw("apiKeyId is required");
     });
@@ -175,7 +178,8 @@ describe("@phalnx/custody-turnkey", () => {
         validateConfig({
           organizationId: "org-123",
           apiKeyId: "key-id",
-          apiPrivateKey: "-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----",
+          apiPrivateKey:
+            "-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----",
         }),
       ).to.not.throw();
     });

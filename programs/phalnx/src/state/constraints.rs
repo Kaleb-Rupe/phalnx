@@ -28,13 +28,13 @@ pub struct DataConstraint {
 /// Account-index constraint: requires a specific pubkey at a specific account index.
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq)]
 pub struct AccountConstraint {
-    pub index: u8,         // 1
-    pub expected: Pubkey,  // 32
+    pub index: u8,        // 1
+    pub expected: Pubkey, // 32
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq)]
 pub struct ConstraintEntry {
-    pub program_id: Pubkey,                         // 32
+    pub program_id: Pubkey,                          // 32
     pub data_constraints: Vec<DataConstraint>,       // bounded to MAX_DATA_CONSTRAINTS_PER_ENTRY
     pub account_constraints: Vec<AccountConstraint>, // bounded to MAX_ACCOUNT_CONSTRAINTS_PER_ENTRY
 }
@@ -82,10 +82,7 @@ impl InstructionConstraints {
                     PhalnxError::InvalidConstraintConfig
                 );
                 // Reject zero-length constraint values
-                require!(
-                    !dc.value.is_empty(),
-                    PhalnxError::InvalidConstraintConfig
-                );
+                require!(!dc.value.is_empty(), PhalnxError::InvalidConstraintConfig);
             }
         }
         Ok(())

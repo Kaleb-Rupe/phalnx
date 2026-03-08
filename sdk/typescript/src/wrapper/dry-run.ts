@@ -114,10 +114,7 @@ export function dryRunPolicy(
       };
     } else {
       // Transaction mode — full analysis
-      analysis = analyzeTransaction(
-        input.transaction,
-        input.signerPublicKey,
-      );
+      analysis = analyzeTransaction(input.transaction, input.signerPublicKey);
     }
 
     // Evaluate policies
@@ -135,9 +132,7 @@ export function dryRunPolicy(
         const windowMs = limit.windowMs ?? 86_400_000;
         const currentSpent = state.getSpendInWindow(limit.mint, windowMs);
         const remaining =
-          limit.amount > currentSpent
-            ? limit.amount - currentSpent
-            : BigInt(0);
+          limit.amount > currentSpent ? limit.amount - currentSpent : BigInt(0);
         const tokenInfo = getTokenInfo(limit.mint);
         return {
           mint: limit.mint,

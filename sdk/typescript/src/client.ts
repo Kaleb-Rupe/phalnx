@@ -658,7 +658,11 @@ export class PhalnxClient {
     }
 
     const signed = await this.provider.wallet.signTransaction(tx);
-    return this.sendWithOptionalSimulation(signed, blockhash, lastValidBlockHeight);
+    return this.sendWithOptionalSimulation(
+      signed,
+      blockhash,
+      lastValidBlockHeight,
+    );
   }
 
   /**
@@ -743,7 +747,11 @@ export class PhalnxClient {
     }
 
     const signed = await this.provider.wallet.signTransaction(tx);
-    return this.sendWithOptionalSimulation(signed, blockhash, lastValidBlockHeight);
+    return this.sendWithOptionalSimulation(
+      signed,
+      blockhash,
+      lastValidBlockHeight,
+    );
   }
 
   // --- Jupiter Price API ---
@@ -802,7 +810,11 @@ export class PhalnxClient {
 
     const tx = new VersionedTransaction(messageV0);
     const signed = await this.provider.wallet.signTransaction(tx);
-    return this.sendWithOptionalSimulation(signed, blockhash, lastValidBlockHeight);
+    return this.sendWithOptionalSimulation(
+      signed,
+      blockhash,
+      lastValidBlockHeight,
+    );
   }
 
   async jupiterLendWithdraw(
@@ -825,7 +837,11 @@ export class PhalnxClient {
 
     const tx = new VersionedTransaction(messageV0);
     const signed = await this.provider.wallet.signTransaction(tx);
-    return this.sendWithOptionalSimulation(signed, blockhash, lastValidBlockHeight);
+    return this.sendWithOptionalSimulation(
+      signed,
+      blockhash,
+      lastValidBlockHeight,
+    );
   }
 
   // --- Jupiter Trigger Orders ---
@@ -1509,7 +1525,15 @@ export class PhalnxClient {
   }): Promise<TransactionIntent> {
     const agent = this.provider.wallet.publicKey;
     const intent = createIntent(
-      { type: "swap", params: { inputMint: params.inputMint, outputMint: params.outputMint, amount: params.amount, slippageBps: params.slippageBps } },
+      {
+        type: "swap",
+        params: {
+          inputMint: params.inputMint,
+          outputMint: params.outputMint,
+          amount: params.amount,
+          slippageBps: params.slippageBps,
+        },
+      },
       params.vault,
       agent,
     );
@@ -1526,7 +1550,15 @@ export class PhalnxClient {
   }): Promise<TransactionIntent> {
     const agent = this.provider.wallet.publicKey;
     const intent = createIntent(
-      { type: "openPosition", params: { market: params.market, side: params.side, collateral: params.collateral, leverage: params.leverage } },
+      {
+        type: "openPosition",
+        params: {
+          market: params.market,
+          side: params.side,
+          collateral: params.collateral,
+          leverage: params.leverage,
+        },
+      },
       params.vault,
       agent,
     );
@@ -1542,7 +1574,14 @@ export class PhalnxClient {
   }): Promise<TransactionIntent> {
     const agent = this.provider.wallet.publicKey;
     const intent = createIntent(
-      { type: "transfer", params: { destination: params.destination, mint: params.mint, amount: params.amount } },
+      {
+        type: "transfer",
+        params: {
+          destination: params.destination,
+          mint: params.mint,
+          amount: params.amount,
+        },
+      },
       params.vault,
       agent,
     );
@@ -1567,12 +1606,18 @@ export class PhalnxClient {
 
   async approveIntent(intentId: string): Promise<void> {
     const storage = this.getIntentStorage();
-    await storage.update(intentId, { status: "approved", updatedAt: Date.now() });
+    await storage.update(intentId, {
+      status: "approved",
+      updatedAt: Date.now(),
+    });
   }
 
   async rejectIntent(intentId: string): Promise<void> {
     const storage = this.getIntentStorage();
-    await storage.update(intentId, { status: "rejected", updatedAt: Date.now() });
+    await storage.update(intentId, {
+      status: "rejected",
+      updatedAt: Date.now(),
+    });
   }
 
   async executeIntent(_intentId: string): Promise<string> {
@@ -1580,10 +1625,15 @@ export class PhalnxClient {
     const intent = await storage.get(_intentId);
     if (!intent) throw new Error(`Intent not found: ${_intentId}`);
     if (intent.status !== "approved") {
-      throw new Error(`Intent must be approved before execution. Current status: ${intent.status}`);
+      throw new Error(
+        `Intent must be approved before execution. Current status: ${intent.status}`,
+      );
     }
 
-    await storage.update(_intentId, { status: "executed", updatedAt: Date.now() });
+    await storage.update(_intentId, {
+      status: "executed",
+      updatedAt: Date.now(),
+    });
 
     // Execute the underlying action based on intent type
     try {
@@ -1604,7 +1654,9 @@ export class PhalnxClient {
           return this.sendWithOptionalSimulation(signed);
         }
         default:
-          throw new Error(`Intent execution for '${intent.action.type}' not yet implemented`);
+          throw new Error(
+            `Intent execution for '${intent.action.type}' not yet implemented`,
+          );
       }
     } catch (err: any) {
       await storage.update(_intentId, {

@@ -15,6 +15,7 @@ To add a new changeset, run `pnpm changeset` in the root of the repository. This
 The changeset file will be committed alongside your code changes.
 
 When the PR merges to `main`, the release workflow opens a **Version Packages** PR that:
+
 - Bumps versions in `package.json` files
 - Updates `CHANGELOG.md` for each affected package
 - Deletes the consumed changeset files

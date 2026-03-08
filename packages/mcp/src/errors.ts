@@ -456,14 +456,16 @@ const ERROR_MAP: Record<number, ErrorInfo> = {
   6063: {
     code: 6063,
     name: "AgentSpendLimitExceeded",
-    message: "Agent's rolling 24h spend exceeds their individual spending limit",
+    message:
+      "Agent's rolling 24h spend exceeds their individual spending limit",
     suggestion:
       "This agent has reached their per-agent spending cap. Wait for the rolling window to expire or ask the vault owner to increase the agent's spending_limit_usd via update_agent_permissions.",
   },
   6064: {
     code: 6064,
     name: "OverlaySlotExhausted",
-    message: "Per-agent overlay is full; cannot register agent with spending limit",
+    message:
+      "Per-agent overlay is full; cannot register agent with spending limit",
     suggestion:
       "The agent spend overlay has no free slots. Remove an agent with a per-agent spending limit before registering a new one.",
   },
@@ -505,7 +507,8 @@ const ERROR_MAP: Record<number, ErrorInfo> = {
   6070: {
     code: 6070,
     name: "ProtocolCapsMismatch",
-    message: "protocol_caps length must match protocols length when has_protocol_caps is true",
+    message:
+      "protocol_caps length must match protocols length when has_protocol_caps is true",
     suggestion:
       "When has_protocol_caps is true, the protocol_caps array must have the same length as the protocols array. Ensure both arrays match.",
   },

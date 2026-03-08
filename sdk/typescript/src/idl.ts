@@ -3627,7 +3627,9 @@ export type Phalnx = {
           },
           {
             name: "contributions";
-            docs: ["Per-epoch contribution amounts (one per epoch in 24h window)"];
+            docs: [
+              "Per-epoch contribution amounts (one per epoch in 24h window)",
+            ];
             type: {
               array: ["u64", 144];
             };
@@ -3758,7 +3760,9 @@ export type Phalnx = {
           },
           {
             name: "syncEpochs";
-            docs: ["Epoch IDs for each bucket slot (used for staleness detection)"];
+            docs: [
+              "Epoch IDs for each bucket slot (used for staleness detection)",
+            ];
             type: {
               array: ["i64", 144];
             };

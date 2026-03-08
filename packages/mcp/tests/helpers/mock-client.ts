@@ -58,7 +58,11 @@ export function makeVaultAccount(
   return {
     owner: TEST_OWNER.publicKey,
     agents: [
-      { pubkey: TEST_AGENT.publicKey, permissions: new BN(2097151), spendingLimitUsd: new BN(0) },
+      {
+        pubkey: TEST_AGENT.publicKey,
+        permissions: new BN(2097151),
+        spendingLimitUsd: new BN(0),
+      },
     ] as AgentEntry[],
     feeDestination: TEST_FEE_DEST,
     vaultId: new BN(1),
@@ -250,7 +254,12 @@ export function createMockClient(
       return "mock-sig-withdraw";
     },
 
-    async registerAgent(vault: PublicKey, agent: PublicKey, permissions: BN, spendingLimitUsd: BN = new BN(0)) {
+    async registerAgent(
+      vault: PublicKey,
+      agent: PublicKey,
+      permissions: BN,
+      spendingLimitUsd: BN = new BN(0),
+    ) {
       calls.push({
         method: "registerAgent",
         args: [vault, agent, permissions, spendingLimitUsd],

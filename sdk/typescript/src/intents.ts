@@ -5,10 +5,29 @@ import { randomUUID } from "crypto";
 export const DEFAULT_INTENT_TTL_MS = 3_600_000; // 1 hour
 
 export type IntentAction =
-  | { type: "swap"; params: { inputMint: string; outputMint: string; amount: string; slippageBps?: number } }
-  | { type: "openPosition"; params: { market: string; side: "long" | "short"; collateral: string; leverage: number } }
+  | {
+      type: "swap";
+      params: {
+        inputMint: string;
+        outputMint: string;
+        amount: string;
+        slippageBps?: number;
+      };
+    }
+  | {
+      type: "openPosition";
+      params: {
+        market: string;
+        side: "long" | "short";
+        collateral: string;
+        leverage: number;
+      };
+    }
   | { type: "closePosition"; params: { market: string; positionId?: string } }
-  | { type: "transfer"; params: { destination: string; mint: string; amount: string } }
+  | {
+      type: "transfer";
+      params: { destination: string; mint: string; amount: string };
+    }
   | { type: "deposit"; params: { mint: string; amount: string } }
   | { type: "withdraw"; params: { mint: string; amount: string } };
 
@@ -36,8 +55,14 @@ export interface TransactionIntent {
 export interface IntentStorage {
   save(intent: TransactionIntent): Promise<void>;
   get(id: string): Promise<TransactionIntent | null>;
-  list(filter?: { status?: IntentStatus; vault?: PublicKey }): Promise<TransactionIntent[]>;
-  update(id: string, updates: Partial<Pick<TransactionIntent, "status" | "updatedAt" | "error">>): Promise<void>;
+  list(filter?: {
+    status?: IntentStatus;
+    vault?: PublicKey;
+  }): Promise<TransactionIntent[]>;
+  update(
+    id: string,
+    updates: Partial<Pick<TransactionIntent, "status" | "updatedAt" | "error">>,
+  ): Promise<void>;
 }
 
 /**
@@ -94,7 +119,10 @@ export class MemoryIntentStorage implements IntentStorage {
   private _clone(intent: TransactionIntent): TransactionIntent {
     return {
       ...intent,
-      action: { ...intent.action, params: { ...intent.action.params } } as IntentAction,
+      action: {
+        ...intent.action,
+        params: { ...intent.action.params },
+      } as IntentAction,
       vault: new PublicKey(intent.vault.toBytes()),
       agent: new PublicKey(intent.agent.toBytes()),
     };
@@ -109,9 +137,10 @@ export class MemoryIntentStorage implements IntentStorage {
     return intent ? this._clone(intent) : null;
   }
 
-  async list(
-    filter?: { status?: IntentStatus; vault?: PublicKey },
-  ): Promise<TransactionIntent[]> {
+  async list(filter?: {
+    status?: IntentStatus;
+    vault?: PublicKey;
+  }): Promise<TransactionIntent[]> {
     let results = Array.from(this._intents.values());
 
     if (filter?.status) {

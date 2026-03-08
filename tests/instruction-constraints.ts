@@ -564,7 +564,9 @@ describe("instruction-constraints", () => {
         .createInstructionConstraints([
           {
             programId: jupiterProgramId,
-            dataConstraints: [{offset: 0, operator: {eq: {}}, value: Buffer.from([0x01])}],
+            dataConstraints: [
+              { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01]) },
+            ],
             accountConstraints: [],
           },
         ])
@@ -617,7 +619,9 @@ describe("instruction-constraints", () => {
       for (let i = 0; i < 17; i++) {
         entries.push({
           programId: Keypair.generate().publicKey,
-          dataConstraints: [{offset: 0, operator: {eq: {}}, value: Buffer.from([0x01])}],
+          dataConstraints: [
+            { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01]) },
+          ],
           accountConstraints: [],
         });
       }
@@ -834,7 +838,9 @@ describe("instruction-constraints", () => {
           .updateInstructionConstraints([
             {
               programId: jupiterProgramId,
-              dataConstraints: [{offset: 0, operator: {eq: {}}, value: Buffer.from([0x01])}],
+              dataConstraints: [
+                { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01]) },
+              ],
               accountConstraints: [],
             },
           ])
@@ -943,7 +949,9 @@ describe("instruction-constraints", () => {
         .queueConstraintsUpdate([
           {
             programId: jupiterProgramId,
-            dataConstraints: [{offset: 0, operator: {eq: {}}, value: Buffer.from([0x01])}],
+            dataConstraints: [
+              { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01]) },
+            ],
             accountConstraints: [],
           },
         ])
@@ -979,7 +987,9 @@ describe("instruction-constraints", () => {
           .queueConstraintsUpdate([
             {
               programId: jupiterProgramId,
-              dataConstraints: [{offset: 0, operator: {eq: {}}, value: Buffer.from([0x01])}],
+              dataConstraints: [
+                { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01]) },
+              ],
               accountConstraints: [],
             },
           ])
@@ -1028,7 +1038,7 @@ describe("instruction-constraints", () => {
           {
             programId: jupiterProgramId,
             dataConstraints: [], // No data constraints — any instruction from Jupiter passes
-            accountConstraints: [{index: 0, expected: jupiterProgramId}],
+            accountConstraints: [{ index: 0, expected: jupiterProgramId }],
           },
         ])
         .accounts({
@@ -1127,7 +1137,9 @@ describe("instruction-constraints", () => {
           .createInstructionConstraints([
             {
               programId: jupiterProgramId,
-              dataConstraints: [{offset: 0, operator: {eq: {}}, value: Buffer.from([0x01])}],
+              dataConstraints: [
+                { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01]) },
+              ],
               accountConstraints: [],
             },
           ])
@@ -1182,7 +1194,9 @@ describe("instruction-constraints", () => {
           .updateInstructionConstraints([
             {
               programId: jupiterProgramId,
-              dataConstraints: [{offset: 0, operator: {eq: {}}, value: Buffer.from([0x01])}],
+              dataConstraints: [
+                { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01]) },
+              ],
               accountConstraints: [],
             },
           ])
@@ -1228,14 +1242,18 @@ describe("instruction-constraints", () => {
         {
           programId: jupiterProgramId,
           dataConstraints: [
-            { offset: 0, operator: { eq: {} }, value: Buffer.from([0xFF]) },
+            { offset: 0, operator: { eq: {} }, value: Buffer.from([0xff]) },
           ],
           accountConstraints: [],
         },
         {
           programId: jupiterProgramId,
           dataConstraints: [
-            { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01, 0x02]) },
+            {
+              offset: 0,
+              operator: { eq: {} },
+              value: Buffer.from([0x01, 0x02]),
+            },
           ],
           accountConstraints: [],
         },
@@ -1270,14 +1288,18 @@ describe("instruction-constraints", () => {
           {
             programId: jupiterProgramId,
             dataConstraints: [
-              { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01, 0x02]) },
+              {
+                offset: 0,
+                operator: { eq: {} },
+                value: Buffer.from([0x01, 0x02]),
+              },
             ],
             accountConstraints: [],
           },
           {
             programId: jupiterProgramId,
             dataConstraints: [
-              { offset: 0, operator: { eq: {} }, value: Buffer.from([0xFF]) },
+              { offset: 0, operator: { eq: {} }, value: Buffer.from([0xff]) },
             ],
             accountConstraints: [],
           },
@@ -1329,7 +1351,11 @@ describe("instruction-constraints", () => {
           {
             programId: jupiterProgramId,
             dataConstraints: [
-              { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01, 0x02]) },
+              {
+                offset: 0,
+                operator: { eq: {} },
+                value: Buffer.from([0x01, 0x02]),
+              },
             ],
             accountConstraints: [],
           },
@@ -1520,7 +1546,8 @@ describe("instruction-constraints", () => {
         } as any)
         .rpc();
 
-      const acct = await program.account.instructionConstraints.fetch(constraintsPda);
+      const acct =
+        await program.account.instructionConstraints.fetch(constraintsPda);
       expect(acct.entries.length).to.equal(1);
       const dc = acct.entries[0].dataConstraints[0];
       expect(dc.offset).to.equal(8);
@@ -1566,7 +1593,8 @@ describe("instruction-constraints", () => {
         } as any)
         .rpc();
 
-      const acct = await program.account.instructionConstraints.fetch(constraintsPda);
+      const acct =
+        await program.account.instructionConstraints.fetch(constraintsPda);
       const dc = acct.entries[0].dataConstraints[0];
       expect("lteSigned" in dc.operator).to.equal(true);
       expect(Buffer.from(dc.value).equals(thousand)).to.equal(true);
@@ -1607,7 +1635,8 @@ describe("instruction-constraints", () => {
         } as any)
         .rpc();
 
-      const acct = await program.account.instructionConstraints.fetch(constraintsPda);
+      const acct =
+        await program.account.instructionConstraints.fetch(constraintsPda);
       const dc = acct.entries[0].dataConstraints[0];
       expect("bitmask" in dc.operator).to.equal(true);
       expect(Buffer.from(dc.value).equals(Buffer.from([0x05]))).to.equal(true);
@@ -1681,7 +1710,7 @@ describe("instruction-constraints", () => {
               {
                 offset: 0,
                 operator: { bitmask: {} },
-                value: Buffer.from([0x0F]),
+                value: Buffer.from([0x0f]),
               },
             ],
             accountConstraints: [],
@@ -1756,12 +1785,21 @@ describe("instruction-constraints", () => {
         .rpc();
 
       // Verify both entries stored with OR structure
-      const acct = await program.account.instructionConstraints.fetch(constraintsPda);
+      const acct =
+        await program.account.instructionConstraints.fetch(constraintsPda);
       expect(acct.entries.length).to.equal(2);
-      expect(acct.entries[0].programId.toString()).to.equal(signedTestProgram.toString());
-      expect(acct.entries[1].programId.toString()).to.equal(signedTestProgram.toString());
-      expect("gteSigned" in acct.entries[0].dataConstraints[0].operator).to.equal(true);
-      expect("bitmask" in acct.entries[1].dataConstraints[0].operator).to.equal(true);
+      expect(acct.entries[0].programId.toString()).to.equal(
+        signedTestProgram.toString(),
+      );
+      expect(acct.entries[1].programId.toString()).to.equal(
+        signedTestProgram.toString(),
+      );
+      expect(
+        "gteSigned" in acct.entries[0].dataConstraints[0].operator,
+      ).to.equal(true);
+      expect("bitmask" in acct.entries[1].dataConstraints[0].operator).to.equal(
+        true,
+      );
     });
 
     it("mixed unsigned + signed constraints AND", async () => {
@@ -1787,7 +1825,7 @@ describe("instruction-constraints", () => {
               {
                 offset: 0,
                 operator: { eq: {} },
-                value: Buffer.from([0xAA, 0xBB, 0xCC, 0xDD]),
+                value: Buffer.from([0xaa, 0xbb, 0xcc, 0xdd]),
               },
               {
                 offset: 8,
@@ -1808,11 +1846,16 @@ describe("instruction-constraints", () => {
         .rpc();
 
       // Verify both constraints stored with AND
-      const acct = await program.account.instructionConstraints.fetch(constraintsPda);
+      const acct =
+        await program.account.instructionConstraints.fetch(constraintsPda);
       expect(acct.entries.length).to.equal(1);
       expect(acct.entries[0].dataConstraints.length).to.equal(2);
-      expect("eq" in acct.entries[0].dataConstraints[0].operator).to.equal(true);
-      expect("gteSigned" in acct.entries[0].dataConstraints[1].operator).to.equal(true);
+      expect("eq" in acct.entries[0].dataConstraints[0].operator).to.equal(
+        true,
+      );
+      expect(
+        "gteSigned" in acct.entries[0].dataConstraints[1].operator,
+      ).to.equal(true);
     });
 
     it("all 7 operators in a single entry round-trip correctly", async () => {
@@ -1836,9 +1879,21 @@ describe("instruction-constraints", () => {
               { offset: 1, operator: { ne: {} }, value: Buffer.from([0x02]) },
               { offset: 2, operator: { gte: {} }, value: Buffer.from([0x03]) },
               { offset: 3, operator: { lte: {} }, value: Buffer.from([0x04]) },
-              { offset: 4, operator: { gteSigned: {} }, value: Buffer.from([0x05]) },
-              { offset: 5, operator: { lteSigned: {} }, value: Buffer.from([0x06]) },
-              { offset: 6, operator: { bitmask: {} }, value: Buffer.from([0x07]) },
+              {
+                offset: 4,
+                operator: { gteSigned: {} },
+                value: Buffer.from([0x05]),
+              },
+              {
+                offset: 5,
+                operator: { lteSigned: {} },
+                value: Buffer.from([0x06]),
+              },
+              {
+                offset: 6,
+                operator: { bitmask: {} },
+                value: Buffer.from([0x07]),
+              },
             ],
             accountConstraints: [],
           },
@@ -1852,7 +1907,8 @@ describe("instruction-constraints", () => {
         } as any)
         .rpc();
 
-      const acct = await program.account.instructionConstraints.fetch(constraintsPda);
+      const acct =
+        await program.account.instructionConstraints.fetch(constraintsPda);
       const dcs = acct.entries[0].dataConstraints;
       expect(dcs.length).to.equal(7);
       expect("eq" in dcs[0].operator).to.equal(true);
@@ -1883,88 +1939,159 @@ describe("instruction-constraints", () => {
     before(async () => {
       airdropSol(svm, cvAgent.publicKey, 10 * LAMPORTS_PER_SOL);
       [cvVault] = PublicKey.findProgramAddressSync(
-        [Buffer.from("vault"), owner.publicKey.toBuffer(), cvVaultId.toArrayLike(Buffer, "le", 8)],
+        [
+          Buffer.from("vault"),
+          owner.publicKey.toBuffer(),
+          cvVaultId.toArrayLike(Buffer, "le", 8),
+        ],
         program.programId,
       );
       [cvPolicy] = PublicKey.findProgramAddressSync(
-        [Buffer.from("policy"), cvVault.toBuffer()], program.programId,
+        [Buffer.from("policy"), cvVault.toBuffer()],
+        program.programId,
       );
       [cvTracker] = PublicKey.findProgramAddressSync(
-        [Buffer.from("tracker"), cvVault.toBuffer()], program.programId,
+        [Buffer.from("tracker"), cvVault.toBuffer()],
+        program.programId,
       );
       [cvOverlay] = PublicKey.findProgramAddressSync(
-        [Buffer.from("agent_spend"), cvVault.toBuffer(), Buffer.from([0])], program.programId,
+        [Buffer.from("agent_spend"), cvVault.toBuffer(), Buffer.from([0])],
+        program.programId,
       );
       [cvConstraints] = PublicKey.findProgramAddressSync(
-        [Buffer.from("constraints"), cvVault.toBuffer()], program.programId,
+        [Buffer.from("constraints"), cvVault.toBuffer()],
+        program.programId,
       );
 
       // Init vault with protocolMode=0 (all protocols allowed)
       await program.methods
         .initializeVault(
-          cvVaultId, new BN(1_000_000_000), new BN(500_000_000),
-          0, [], new BN(0) as any, 3, 0, 100, new BN(0), [],
+          cvVaultId,
+          new BN(1_000_000_000),
+          new BN(500_000_000),
+          0,
+          [],
+          new BN(0) as any,
+          3,
+          0,
+          100,
+          new BN(0),
+          [],
         )
         .accounts({
-          owner: owner.publicKey, vault: cvVault, policy: cvPolicy,
-          tracker: cvTracker, agentSpendOverlay: cvOverlay,
-          feeDestination: feeDestination.publicKey, systemProgram: SystemProgram.programId,
+          owner: owner.publicKey,
+          vault: cvVault,
+          policy: cvPolicy,
+          tracker: cvTracker,
+          agentSpendOverlay: cvOverlay,
+          feeDestination: feeDestination.publicKey,
+          systemProgram: SystemProgram.programId,
         } as any)
         .rpc();
 
       await program.methods
         .registerAgent(cvAgent.publicKey, FULL_PERMISSIONS, new BN(0))
-        .accounts({ owner: owner.publicKey, vault: cvVault, agentSpendOverlay: cvOverlay } as any)
+        .accounts({
+          owner: owner.publicKey,
+          vault: cvVault,
+          agentSpendOverlay: cvOverlay,
+        } as any)
         .rpc();
 
-      cvVaultAta = createAtaIdempotentHelper(svm, (owner as any).payer, usdcMint, cvVault, true);
+      cvVaultAta = createAtaIdempotentHelper(
+        svm,
+        (owner as any).payer,
+        usdcMint,
+        cvVault,
+        true,
+      );
       await program.methods
         .depositFunds(new BN(500_000_000))
         .accounts({
-          owner: owner.publicKey, vault: cvVault, mint: usdcMint,
-          ownerTokenAccount: ownerUsdcAta, vaultTokenAccount: cvVaultAta,
-          tokenProgram: TOKEN_PROGRAM_ID, associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          owner: owner.publicKey,
+          vault: cvVault,
+          mint: usdcMint,
+          ownerTokenAccount: ownerUsdcAta,
+          vaultTokenAccount: cvVaultAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
         .rpc();
     });
 
     function buildCvValidateIx(
-      amount: BN, actionType: any, targetProtocol: PublicKey,
-      remainingAccounts?: { pubkey: PublicKey; isSigner: boolean; isWritable: boolean }[],
+      amount: BN,
+      actionType: any,
+      targetProtocol: PublicKey,
+      remainingAccounts?: {
+        pubkey: PublicKey;
+        isSigner: boolean;
+        isWritable: boolean;
+      }[],
     ) {
       const [sessionPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("session"), cvVault.toBuffer(), cvAgent.publicKey.toBuffer(), usdcMint.toBuffer()],
+        [
+          Buffer.from("session"),
+          cvVault.toBuffer(),
+          cvAgent.publicKey.toBuffer(),
+          usdcMint.toBuffer(),
+        ],
         program.programId,
       );
       let builder = program.methods
-        .validateAndAuthorize(actionType, usdcMint, amount, targetProtocol, null)
+        .validateAndAuthorize(
+          actionType,
+          usdcMint,
+          amount,
+          targetProtocol,
+          null,
+        )
         .accounts({
-          agent: cvAgent.publicKey, vault: cvVault, policy: cvPolicy,
-          tracker: cvTracker, session: sessionPda, agentSpendOverlay: cvOverlay,
-          vaultTokenAccount: cvVaultAta, tokenMintAccount: usdcMint,
+          agent: cvAgent.publicKey,
+          vault: cvVault,
+          policy: cvPolicy,
+          tracker: cvTracker,
+          session: sessionPda,
+          agentSpendOverlay: cvOverlay,
+          vaultTokenAccount: cvVaultAta,
+          tokenMintAccount: usdcMint,
           protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
-          feeDestinationTokenAccount: null, outputStablecoinAccount: null,
-          tokenProgram: TOKEN_PROGRAM_ID, systemProgram: SystemProgram.programId,
+          feeDestinationTokenAccount: null,
+          outputStablecoinAccount: null,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
           instructionsSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
         } as any);
-      if (remainingAccounts) builder = builder.remainingAccounts(remainingAccounts);
+      if (remainingAccounts)
+        builder = builder.remainingAccounts(remainingAccounts);
       return builder.instruction();
     }
 
     function buildCvFinalizeIx() {
       const [sessionPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("session"), cvVault.toBuffer(), cvAgent.publicKey.toBuffer(), usdcMint.toBuffer()],
+        [
+          Buffer.from("session"),
+          cvVault.toBuffer(),
+          cvAgent.publicKey.toBuffer(),
+          usdcMint.toBuffer(),
+        ],
         program.programId,
       );
       return program.methods
         .finalizeSession(true)
         .accountsPartial({
-          payer: cvAgent.publicKey, vault: cvVault, session: sessionPda,
-          sessionRentRecipient: cvAgent.publicKey, policy: cvPolicy,
-          tracker: cvTracker, agentSpendOverlay: cvOverlay,
-          vaultTokenAccount: cvVaultAta, outputStablecoinAccount: null,
-          tokenProgram: TOKEN_PROGRAM_ID, systemProgram: SystemProgram.programId,
+          payer: cvAgent.publicKey,
+          vault: cvVault,
+          session: sessionPda,
+          sessionRentRecipient: cvAgent.publicKey,
+          policy: cvPolicy,
+          tracker: cvTracker,
+          agentSpendOverlay: cvOverlay,
+          vaultTokenAccount: cvVaultAta,
+          outputStablecoinAccount: null,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
         })
         .instruction();
     }
@@ -1977,14 +2104,17 @@ describe("instruction-constraints", () => {
           {
             programId: program.programId,
             dataConstraints: [
-              { offset: 0, operator: { eq: {} }, value: Buffer.from([0xAA]) },
+              { offset: 0, operator: { eq: {} }, value: Buffer.from([0xaa]) },
             ],
             accountConstraints: [],
           },
         ])
         .accounts({
-          owner: owner.publicKey, vault: cvVault, policy: cvPolicy,
-          constraints: cvConstraints, systemProgram: SystemProgram.programId,
+          owner: owner.publicKey,
+          vault: cvVault,
+          policy: cvPolicy,
+          constraints: cvConstraints,
+          systemProgram: SystemProgram.programId,
         } as any)
         .rpc();
 
@@ -1992,10 +2122,12 @@ describe("instruction-constraints", () => {
       const mockDeFiIx = new TransactionInstruction({
         programId: program.programId,
         keys: [],
-        data: Buffer.from([0xBB]),
+        data: Buffer.from([0xbb]),
       });
       const validateIx = await buildCvValidateIx(
-        new BN(10_000_000), { swap: {} }, program.programId,
+        new BN(10_000_000),
+        { swap: {} },
+        program.programId,
         [{ pubkey: cvConstraints, isSigner: false, isWritable: false }],
       );
       const finalizeIx = await buildCvFinalizeIx();
@@ -2011,7 +2143,9 @@ describe("instruction-constraints", () => {
       await program.methods
         .closeInstructionConstraints()
         .accounts({
-          owner: owner.publicKey, vault: cvVault, policy: cvPolicy,
+          owner: owner.publicKey,
+          vault: cvVault,
+          policy: cvPolicy,
           constraints: cvConstraints,
         } as any)
         .rpc();
@@ -2032,8 +2166,11 @@ describe("instruction-constraints", () => {
           },
         ]) // strict_mode not supported on this branch
         .accounts({
-          owner: owner.publicKey, vault: cvVault, policy: cvPolicy,
-          constraints: cvConstraints, systemProgram: SystemProgram.programId,
+          owner: owner.publicKey,
+          vault: cvVault,
+          policy: cvPolicy,
+          constraints: cvConstraints,
+          systemProgram: SystemProgram.programId,
         } as any)
         .rpc();
 
@@ -2044,7 +2181,9 @@ describe("instruction-constraints", () => {
         data: Buffer.from([0x01]),
       });
       const validateIx = await buildCvValidateIx(
-        new BN(10_000_000), { swap: {} }, program.programId,
+        new BN(10_000_000),
+        { swap: {} },
+        program.programId,
         [{ pubkey: cvConstraints, isSigner: false, isWritable: false }],
       );
       const finalizeIx = await buildCvFinalizeIx();
@@ -2060,7 +2199,9 @@ describe("instruction-constraints", () => {
       await program.methods
         .closeInstructionConstraints()
         .accounts({
-          owner: owner.publicKey, vault: cvVault, policy: cvPolicy,
+          owner: owner.publicKey,
+          vault: cvVault,
+          policy: cvPolicy,
           constraints: cvConstraints,
         } as any)
         .rpc();
@@ -2087,9 +2228,9 @@ describe("instruction-constraints", () => {
         const errStr = err.toString();
         expect(
           errStr.includes("NoPendingConstraintsUpdate") ||
-          errStr.includes("AccountNotInitialized") ||
-          errStr.includes("not found") ||
-          errStr.includes("3012"),
+            errStr.includes("AccountNotInitialized") ||
+            errStr.includes("not found") ||
+            errStr.includes("3012"),
           `Expected NoPendingConstraintsUpdate or account-not-found, got: ${errStr}`,
         ).to.equal(true);
       }
@@ -2100,7 +2241,11 @@ describe("instruction-constraints", () => {
       // Need a vault with timelock > 0 and constraints
       const tlVaultId = new BN(410);
       const [tlVault] = PublicKey.findProgramAddressSync(
-        [Buffer.from("vault"), owner.publicKey.toBuffer(), tlVaultId.toArrayLike(Buffer, "le", 8)],
+        [
+          Buffer.from("vault"),
+          owner.publicKey.toBuffer(),
+          tlVaultId.toArrayLike(Buffer, "le", 8),
+        ],
         program.programId,
       );
       const [tlPolicy] = PublicKey.findProgramAddressSync(
@@ -2127,13 +2272,26 @@ describe("instruction-constraints", () => {
       // Init vault with timelock=60
       await program.methods
         .initializeVault(
-          tlVaultId, new BN(1_000_000_000), new BN(500_000_000),
-          0, [], new BN(0) as any, 3, 0, 100, new BN(60), [],
+          tlVaultId,
+          new BN(1_000_000_000),
+          new BN(500_000_000),
+          0,
+          [],
+          new BN(0) as any,
+          3,
+          0,
+          100,
+          new BN(60),
+          [],
         )
         .accounts({
-          owner: owner.publicKey, vault: tlVault, policy: tlPolicy,
-          tracker: tlTracker, agentSpendOverlay: tlOverlay,
-          feeDestination: feeDestination.publicKey, systemProgram: SystemProgram.programId,
+          owner: owner.publicKey,
+          vault: tlVault,
+          policy: tlPolicy,
+          tracker: tlTracker,
+          agentSpendOverlay: tlOverlay,
+          feeDestination: feeDestination.publicKey,
+          systemProgram: SystemProgram.programId,
         } as any)
         .rpc();
 
@@ -2142,13 +2300,18 @@ describe("instruction-constraints", () => {
         .createInstructionConstraints([
           {
             programId: jupiterProgramId,
-            dataConstraints: [{ offset: 0, operator: { eq: {} }, value: Buffer.from([0x01]) }],
+            dataConstraints: [
+              { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01]) },
+            ],
             accountConstraints: [],
           },
         ])
         .accounts({
-          owner: owner.publicKey, vault: tlVault, policy: tlPolicy,
-          constraints: tlConstraints, systemProgram: SystemProgram.programId,
+          owner: owner.publicKey,
+          vault: tlVault,
+          policy: tlPolicy,
+          constraints: tlConstraints,
+          systemProgram: SystemProgram.programId,
         } as any)
         .rpc();
 
@@ -2157,13 +2320,18 @@ describe("instruction-constraints", () => {
         .queueConstraintsUpdate([
           {
             programId: jupiterProgramId,
-            dataConstraints: [{ offset: 0, operator: { ne: {} }, value: Buffer.from([0x00]) }],
+            dataConstraints: [
+              { offset: 0, operator: { ne: {} }, value: Buffer.from([0x00]) },
+            ],
             accountConstraints: [],
           },
         ])
         .accounts({
-          owner: owner.publicKey, vault: tlVault, policy: tlPolicy,
-          constraints: tlConstraints, pendingConstraints: tlPending,
+          owner: owner.publicKey,
+          vault: tlVault,
+          policy: tlPolicy,
+          constraints: tlConstraints,
+          pendingConstraints: tlPending,
           systemProgram: SystemProgram.programId,
         } as any)
         .rpc();
@@ -2174,13 +2342,18 @@ describe("instruction-constraints", () => {
           .queueConstraintsUpdate([
             {
               programId: jupiterProgramId,
-              dataConstraints: [{ offset: 0, operator: { eq: {} }, value: Buffer.from([0x02]) }],
+              dataConstraints: [
+                { offset: 0, operator: { eq: {} }, value: Buffer.from([0x02]) },
+              ],
               accountConstraints: [],
             },
           ])
           .accounts({
-            owner: owner.publicKey, vault: tlVault, policy: tlPolicy,
-            constraints: tlConstraints, pendingConstraints: tlPending,
+            owner: owner.publicKey,
+            vault: tlVault,
+            policy: tlPolicy,
+            constraints: tlConstraints,
+            pendingConstraints: tlPending,
             systemProgram: SystemProgram.programId,
           } as any)
           .rpc();
@@ -2188,7 +2361,8 @@ describe("instruction-constraints", () => {
       } catch (err: any) {
         const errStr = err.toString();
         expect(
-          errStr.includes("PendingConstraintsUpdateExists") || errStr.includes("already in use"),
+          errStr.includes("PendingConstraintsUpdateExists") ||
+            errStr.includes("already in use"),
           `Expected PendingConstraintsUpdateExists, got: ${errStr}`,
         ).to.equal(true);
       }
@@ -2197,7 +2371,9 @@ describe("instruction-constraints", () => {
       await program.methods
         .cancelConstraintsUpdate()
         .accounts({
-          owner: owner.publicKey, vault: tlVault, pendingConstraints: tlPending,
+          owner: owner.publicKey,
+          vault: tlVault,
+          pendingConstraints: tlPending,
         } as any)
         .rpc();
     });

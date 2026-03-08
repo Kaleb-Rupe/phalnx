@@ -93,13 +93,13 @@ Supported windows: `/day`, `/hour`, `/hr`, `/min`, `/minute`
 
 Secure defaults applied when no config is provided:
 
-| Policy | Default |
-|--------|---------|
-| USDC spending cap | 1,000 USDC / 24h |
-| USDT spending cap | 1,000 USDT / 24h |
-| SOL spending cap | 10 SOL / 24h |
-| Unknown programs | Blocked |
-| Rate limit | 60 transactions / hour |
+| Policy            | Default                |
+| ----------------- | ---------------------- |
+| USDC spending cap | 1,000 USDC / 24h       |
+| USDT spending cap | 1,000 USDT / 24h       |
+| SOL spending cap  | 10 SOL / 24h           |
+| Unknown programs  | Blocked                |
+| Rate limit        | 60 transactions / hour |
 
 ### Policy Evaluation
 
@@ -155,33 +155,33 @@ const state = new ShieldState({
 
 **Methods:**
 
-| Method | Description |
-|--------|-------------|
-| `recordSpend(mint, amount)` | Record a token transfer |
-| `recordTransaction()` | Record a transaction for rate limiting |
-| `getSpendInWindow(mint, windowMs)` | Get total spend for a token in the rolling window |
-| `getTransactionCountInWindow(windowMs)` | Get transaction count in the rolling window |
-| `pruneExpired(maxWindowMs)` | Remove entries older than the window |
-| `reset()` | Clear all state |
+| Method                                  | Description                                       |
+| --------------------------------------- | ------------------------------------------------- |
+| `recordSpend(mint, amount)`             | Record a token transfer                           |
+| `recordTransaction()`                   | Record a transaction for rate limiting            |
+| `getSpendInWindow(mint, windowMs)`      | Get total spend for a token in the rolling window |
+| `getTransactionCountInWindow(windowMs)` | Get transaction count in the rolling window       |
+| `pruneExpired(maxWindowMs)`             | Remove entries older than the window              |
+| `reset()`                               | Clear all state                                   |
 
 ### Protocol & Token Registry
 
 #### Constants
 
-| Constant | Description |
-|----------|-------------|
-| `KNOWN_PROTOCOLS` | `ReadonlyMap<string, string>` — 30+ DeFi protocol program IDs |
-| `KNOWN_TOKENS` | `ReadonlyMap<string, { symbol, decimals }>` — 12+ common token mints |
-| `SYSTEM_PROGRAMS` | `ReadonlySet<string>` — always-allowed system programs |
+| Constant          | Description                                                          |
+| ----------------- | -------------------------------------------------------------------- |
+| `KNOWN_PROTOCOLS` | `ReadonlyMap<string, string>` — 30+ DeFi protocol program IDs        |
+| `KNOWN_TOKENS`    | `ReadonlyMap<string, { symbol, decimals }>` — 12+ common token mints |
+| `SYSTEM_PROGRAMS` | `ReadonlySet<string>` — always-allowed system programs               |
 
 #### Functions
 
-| Function | Description |
-|----------|-------------|
-| `getTokenInfo(mint)` | Lookup token symbol and decimals by mint address |
-| `getProtocolName(programId)` | Lookup protocol name by program ID |
+| Function                     | Description                                                     |
+| ---------------------------- | --------------------------------------------------------------- |
+| `getTokenInfo(mint)`         | Lookup token symbol and decimals by mint address                |
+| `getProtocolName(programId)` | Lookup protocol name by program ID                              |
 | `isSystemProgram(programId)` | Check if a program is always-allowed (Token, ATA, System, etc.) |
-| `isKnownProtocol(programId)` | Check if a program is in the DeFi registry |
+| `isKnownProtocol(programId)` | Check if a program is in the DeFi registry                      |
 
 **Registered protocols include:** Jupiter (V2-V6), Orca, Raydium (V4 + CPMM + CLMM), Meteora (DLMM + Pools), Flash Trade, Drift, Mango V4, Kamino, Marginfi, Solend, Marinade, Jito, Saber, OpenBook V2, and more.
 
@@ -199,10 +199,10 @@ try {
 } catch (error) {
   if (error instanceof ShieldDeniedError) {
     for (const v of error.violations) {
-      console.log(v.rule);       // "spending_cap" | "rate_limit" | "unknown_program" | ...
-      console.log(v.message);    // "Spending cap exceeded for USDC: ..."
+      console.log(v.rule); // "spending_cap" | "rate_limit" | "unknown_program" | ...
+      console.log(v.message); // "Spending cap exceeded for USDC: ..."
       console.log(v.suggestion); // "Reduce amount to 300000000 or wait for the window to reset"
-      console.log(v.details);    // { limit: "500000000", attempted: "600000000", ... }
+      console.log(v.details); // { limit: "500000000", attempted: "600000000", ... }
     }
   }
 }
@@ -232,9 +232,9 @@ interface ShieldPolicies {
 
 ```typescript
 interface SpendLimit {
-  mint: string;       // Token mint address (base58)
-  amount: bigint;     // Maximum amount in base units per window
-  windowMs?: number;  // Rolling window in milliseconds (default: 86400000 = 24h)
+  mint: string; // Token mint address (base58)
+  amount: bigint; // Maximum amount in base units per window
+  windowMs?: number; // Rolling window in milliseconds (default: 86400000 = 24h)
 }
 ```
 
@@ -242,8 +242,13 @@ interface SpendLimit {
 
 ```typescript
 interface PolicyViolation {
-  rule: "spending_cap" | "transaction_size" | "protocol_not_allowed"
-      | "token_not_allowed" | "rate_limit" | "unknown_program";
+  rule:
+    | "spending_cap"
+    | "transaction_size"
+    | "protocol_not_allowed"
+    | "token_not_allowed"
+    | "rate_limit"
+    | "unknown_program";
   message: string;
   suggestion: string;
   details: Record<string, string>;

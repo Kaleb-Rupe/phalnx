@@ -14,10 +14,10 @@ npx @phalnx/mcp
 
 Phalnx bundles three layers of protection in a single integration:
 
-| Layer | What It Does |
-| ----- | ------------ |
-| **Client-side policy checks** | Fast deny before transactions hit the network |
-| **TEE key custody** | Agent private keys stored in hardware enclaves (Crossmint, Turnkey, Privy) |
+| Layer                          | What It Does                                                                  |
+| ------------------------------ | ----------------------------------------------------------------------------- |
+| **Client-side policy checks**  | Fast deny before transactions hit the network                                 |
+| **TEE key custody**            | Agent private keys stored in hardware enclaves (Crossmint, Turnkey, Privy)    |
 | **On-chain vault enforcement** | PDA vaults with cryptographic policy guarantees enforced by Solana validators |
 
 All three layers are set up with a single `shield_configure` call. TEE is required for production use.
@@ -33,8 +33,8 @@ All three layers are set up with a single `shield_configure` call. TEE is requir
 
 ### Environment Variables
 
-| Variable                         | Required | Default | Description                                                                                       |
-| -------------------------------- | -------- | ------- | ------------------------------------------------------------------------------------------------- |
+| Variable                    | Required | Default | Description                                                                                       |
+| --------------------------- | -------- | ------- | ------------------------------------------------------------------------------------------------- |
 | `PHALNX_WALLET_PATH`        | No       | —       | Path to Solana keypair JSON (vault owner). Not required — server starts in setup mode without it. |
 | `PHALNX_RPC_URL`            | No       | devnet  | Solana RPC endpoint URL                                                                           |
 | `PHALNX_AGENT_KEYPAIR_PATH` | No       | —       | Path to agent keypair JSON (needed for swap/position tools)                                       |
@@ -83,7 +83,7 @@ Add to `.cursor/mcp.json` in your project:
 | Tool                         | Description                                                                   |
 | ---------------------------- | ----------------------------------------------------------------------------- |
 | `shield_setup_status`        | Check current setup status — which layers are active                          |
-| `shield_configure`           | Set up Phalnx with full protection (Shield + TEE + Vault)                |
+| `shield_configure`           | Set up Phalnx with full protection (Shield + TEE + Vault)                     |
 | `shield_configure_from_file` | Apply a pre-written JSON config file (for CI/CD and programmatic deployments) |
 | `shield_fund_wallet`         | Generate funding links (Blink URL, Solana Pay, raw address)                   |
 
@@ -113,58 +113,58 @@ Add to `.cursor/mcp.json` in your project:
 
 ### Agent-Signed (Requires `PHALNX_AGENT_KEYPAIR_PATH`)
 
-| Tool                              | Description                                           |
-| --------------------------------- | ----------------------------------------------------- |
-| `shield_execute_swap`             | Execute a Jupiter token swap through the vault        |
-| `shield_agent_transfer`           | Transfer tokens to an allowlisted destination         |
-| `shield_open_position`            | Open a Flash Trade leveraged perpetual position       |
-| `shield_close_position`           | Close a Flash Trade perpetual position                |
-| `shield_increase_size`            | Increase an existing Flash Trade position             |
-| `shield_decrease_size`            | Decrease an existing Flash Trade position             |
-| `shield_add_collateral`           | Add collateral to a Flash Trade position              |
-| `shield_remove_collateral`        | Remove collateral from a Flash Trade position         |
-| `shield_place_trigger_order`      | Place a trigger order (take-profit/stop-loss)         |
-| `shield_cancel_trigger_order`     | Cancel a trigger order                                |
-| `shield_place_limit_order`        | Place a limit order                                   |
-| `shield_cancel_limit_order`       | Cancel a limit order                                  |
-| `shield_sync_positions`           | Sync vault open position counter                      |
-| `shield_swap_and_open`            | Swap token then open a Flash Trade position           |
-| `shield_close_and_swap`           | Close a Flash Trade position then swap output         |
-| `shield_lend_deposit`             | Deposit into Jupiter Lend                             |
-| `shield_lend_withdraw`            | Withdraw from Jupiter Lend                            |
-| `shield_create_trigger_order_jup` | Create a Jupiter trigger order                        |
-| `shield_cancel_trigger_order_jup` | Cancel a Jupiter trigger order                        |
-| `shield_create_recurring_order`   | Create a Jupiter recurring order (DCA)                |
-| `shield_cancel_recurring_order`   | Cancel a Jupiter recurring order                      |
+| Tool                              | Description                                     |
+| --------------------------------- | ----------------------------------------------- |
+| `shield_execute_swap`             | Execute a Jupiter token swap through the vault  |
+| `shield_agent_transfer`           | Transfer tokens to an allowlisted destination   |
+| `shield_open_position`            | Open a Flash Trade leveraged perpetual position |
+| `shield_close_position`           | Close a Flash Trade perpetual position          |
+| `shield_increase_size`            | Increase an existing Flash Trade position       |
+| `shield_decrease_size`            | Decrease an existing Flash Trade position       |
+| `shield_add_collateral`           | Add collateral to a Flash Trade position        |
+| `shield_remove_collateral`        | Remove collateral from a Flash Trade position   |
+| `shield_place_trigger_order`      | Place a trigger order (take-profit/stop-loss)   |
+| `shield_cancel_trigger_order`     | Cancel a trigger order                          |
+| `shield_place_limit_order`        | Place a limit order                             |
+| `shield_cancel_limit_order`       | Cancel a limit order                            |
+| `shield_sync_positions`           | Sync vault open position counter                |
+| `shield_swap_and_open`            | Swap token then open a Flash Trade position     |
+| `shield_close_and_swap`           | Close a Flash Trade position then swap output   |
+| `shield_lend_deposit`             | Deposit into Jupiter Lend                       |
+| `shield_lend_withdraw`            | Withdraw from Jupiter Lend                      |
+| `shield_create_trigger_order_jup` | Create a Jupiter trigger order                  |
+| `shield_cancel_trigger_order_jup` | Cancel a Jupiter trigger order                  |
+| `shield_create_recurring_order`   | Create a Jupiter recurring order (DCA)          |
+| `shield_cancel_recurring_order`   | Cancel a Jupiter recurring order                |
 
 ### Read-Only (Jupiter)
 
-| Tool                          | Description                                |
-| ----------------------------- | ------------------------------------------ |
-| `shield_get_prices`           | Get token prices from Jupiter              |
-| `shield_search_tokens`        | Search for tokens by name or symbol        |
-| `shield_trending_tokens`      | Get trending tokens from Jupiter           |
-| `shield_lend_tokens`          | Get available Jupiter Lend tokens/rates    |
-| `shield_get_trigger_orders_jup` | Get Jupiter trigger orders for a wallet  |
-| `shield_get_recurring_orders` | Get Jupiter recurring orders for a wallet  |
-| `shield_jupiter_portfolio`    | Get portfolio overview from Jupiter        |
+| Tool                            | Description                               |
+| ------------------------------- | ----------------------------------------- |
+| `shield_get_prices`             | Get token prices from Jupiter             |
+| `shield_search_tokens`          | Search for tokens by name or symbol       |
+| `shield_trending_tokens`        | Get trending tokens from Jupiter          |
+| `shield_lend_tokens`            | Get available Jupiter Lend tokens/rates   |
+| `shield_get_trigger_orders_jup` | Get Jupiter trigger orders for a wallet   |
+| `shield_get_recurring_orders`   | Get Jupiter recurring orders for a wallet |
+| `shield_jupiter_portfolio`      | Get portfolio overview from Jupiter       |
 
 ### Squads V4 Multisig Governance
 
-| Tool                              | Description                                  |
-| --------------------------------- | -------------------------------------------- |
-| `shield_squads_create_multisig`   | Create a Squads multisig                     |
-| `shield_squads_propose_action`    | Propose a vault action via multisig          |
-| `shield_squads_approve`           | Approve a multisig proposal                  |
-| `shield_squads_reject`            | Reject a multisig proposal                   |
-| `shield_squads_execute`           | Execute an approved multisig transaction     |
-| `shield_squads_status`            | Check multisig and proposal status           |
+| Tool                            | Description                              |
+| ------------------------------- | ---------------------------------------- |
+| `shield_squads_create_multisig` | Create a Squads multisig                 |
+| `shield_squads_propose_action`  | Propose a vault action via multisig      |
+| `shield_squads_approve`         | Approve a multisig proposal              |
+| `shield_squads_reject`          | Reject a multisig proposal               |
+| `shield_squads_execute`         | Execute an approved multisig transaction |
+| `shield_squads_status`          | Check multisig and proposal status       |
 
 ### Utility
 
-| Tool                 | Description                                              |
-| -------------------- | -------------------------------------------------------- |
-| `shield_x402_fetch`  | Fetch a URL with automatic x402 payment negotiation      |
+| Tool                | Description                                         |
+| ------------------- | --------------------------------------------------- |
+| `shield_x402_fetch` | Fetch a URL with automatic x402 payment negotiation |
 
 ## Resources (3)
 

@@ -19,10 +19,9 @@ import { shieldWallet } from "@phalnx/sdk";
 import { crossmint } from "@phalnx/custody-crossmint";
 
 // Create a TEE-backed wallet and wrap it with spending controls
-const wallet = shieldWallet(
-  await crossmint({ apiKey: "sk_production_..." }),
-  { maxSpend: "500 USDC/day" }
-);
+const wallet = shieldWallet(await crossmint({ apiKey: "sk_production_..." }), {
+  maxSpend: "500 USDC/day",
+});
 
 // Use like any other wallet — signing happens in hardware
 await wallet.signTransaction(tx);
@@ -35,7 +34,9 @@ import { shieldWallet } from "@phalnx/sdk";
 import { crossmintFromEnv } from "@phalnx/custody-crossmint";
 
 // Reads CROSSMINT_API_KEY from environment
-const wallet = shieldWallet(await crossmintFromEnv(), { maxSpend: "500 USDC/day" });
+const wallet = shieldWallet(await crossmintFromEnv(), {
+  maxSpend: "500 USDC/day",
+});
 ```
 
 ## API Reference
@@ -57,32 +58,32 @@ Create a `CrossmintWallet` from environment variables. Throws if `CROSSMINT_API_
 
 Implements `WalletLike` — compatible with `shieldWallet()`, Solana Agent Kit, and any code expecting a standard wallet interface.
 
-| Property/Method | Description |
-|-----------------|-------------|
-| `publicKey` | Solana `PublicKey` of the TEE-backed wallet |
-| `locator` | Crossmint wallet locator string |
-| `provider` | Always `"crossmint"` |
-| `signTransaction(tx)` | Sign via TEE — serializes tx, sends to Crossmint, returns signed tx |
-| `signAllTransactions(txs)` | Sign multiple transactions sequentially via TEE |
-| `CrossmintWallet.create(config, client?)` | Static factory method |
+| Property/Method                           | Description                                                         |
+| ----------------------------------------- | ------------------------------------------------------------------- |
+| `publicKey`                               | Solana `PublicKey` of the TEE-backed wallet                         |
+| `locator`                                 | Crossmint wallet locator string                                     |
+| `provider`                                | Always `"crossmint"`                                                |
+| `signTransaction(tx)`                     | Sign via TEE — serializes tx, sends to Crossmint, returns signed tx |
+| `signAllTransactions(txs)`                | Sign multiple transactions sequentially via TEE                     |
+| `CrossmintWallet.create(config, client?)` | Static factory method                                               |
 
 ### `CrossmintRESTClient`
 
 Default SDK client that calls Crossmint's REST API directly. Used automatically when no custom client is provided.
 
-| Method | Description |
-|--------|-------------|
-| `createWallet(params)` | Create a new wallet via Crossmint API |
-| `getWallet(locator)` | Get an existing wallet's address by locator |
-| `signTransaction(locator, transaction, encoding)` | Sign a serialized transaction |
+| Method                                            | Description                                 |
+| ------------------------------------------------- | ------------------------------------------- |
+| `createWallet(params)`                            | Create a new wallet via Crossmint API       |
+| `getWallet(locator)`                              | Get an existing wallet's address by locator |
+| `signTransaction(locator, transaction, encoding)` | Sign a serialized transaction               |
 
 ### Configuration Utilities
 
-| Export | Description |
-|--------|-------------|
-| `configFromEnv()` | Parse `CrossmintWalletConfig` from environment variables |
-| `validateConfig(config)` | Validate config, throw on missing/invalid fields |
-| `CROSSMINT_ENV_KEYS` | Environment variable key constants |
+| Export                   | Description                                              |
+| ------------------------ | -------------------------------------------------------- |
+| `configFromEnv()`        | Parse `CrossmintWalletConfig` from environment variables |
+| `validateConfig(config)` | Validate config, throw on missing/invalid fields         |
+| `CROSSMINT_ENV_KEYS`     | Environment variable key constants                       |
 
 ## Configuration
 
@@ -90,24 +91,24 @@ Default SDK client that calls Crossmint's REST API directly. Used automatically 
 
 ```typescript
 interface CrossmintWalletConfig {
-  apiKey: string;              // Required — Crossmint server-side API key
-  locator?: string;            // Existing wallet locator (creates new if omitted)
-  chain?: string;              // Default: "solana"
-  signerType?: "api-key" | "evm-keypair";  // Default: "api-key"
-  baseUrl?: string;            // Default: "https://www.crossmint.com"
-  linkedUser?: string;         // User identifier for wallet association
+  apiKey: string; // Required — Crossmint server-side API key
+  locator?: string; // Existing wallet locator (creates new if omitted)
+  chain?: string; // Default: "solana"
+  signerType?: "api-key" | "evm-keypair"; // Default: "api-key"
+  baseUrl?: string; // Default: "https://www.crossmint.com"
+  linkedUser?: string; // User identifier for wallet association
 }
 ```
 
 ### Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `CROSSMINT_API_KEY` | Yes | — | Server-side API key (needs `wallets.create` + `wallets:transactions.sign` scopes) |
-| `CROSSMINT_WALLET_LOCATOR` | No | — | Existing wallet locator (creates new wallet if omitted) |
-| `CROSSMINT_SIGNER_TYPE` | No | `api-key` | `"api-key"` (custodial) or `"evm-keypair"` |
-| `CROSSMINT_BASE_URL` | No | `https://www.crossmint.com` | API base URL override |
-| `CROSSMINT_LINKED_USER` | No | — | Linked user for wallet association |
+| Variable                   | Required | Default                     | Description                                                                       |
+| -------------------------- | -------- | --------------------------- | --------------------------------------------------------------------------------- |
+| `CROSSMINT_API_KEY`        | Yes      | —                           | Server-side API key (needs `wallets.create` + `wallets:transactions.sign` scopes) |
+| `CROSSMINT_WALLET_LOCATOR` | No       | —                           | Existing wallet locator (creates new wallet if omitted)                           |
+| `CROSSMINT_SIGNER_TYPE`    | No       | `api-key`                   | `"api-key"` (custodial) or `"evm-keypair"`                                        |
+| `CROSSMINT_BASE_URL`       | No       | `https://www.crossmint.com` | API base URL override                                                             |
+| `CROSSMINT_LINKED_USER`    | No       | —                           | Linked user for wallet association                                                |
 
 ## Integration with shieldWallet()
 
@@ -136,11 +137,11 @@ try {
 
 ## Related Packages
 
-| Package | Description |
-|---------|-------------|
-| [`@phalnx/sdk`](https://www.npmjs.com/package/@phalnx/sdk) | On-chain guardrails — `withVault()` primary API |
-| [`@phalnx/core`](https://www.npmjs.com/package/@phalnx/core) | Pure TypeScript policy engine |
-| [`@phalnx/mcp`](https://www.npmjs.com/package/@phalnx/mcp) | MCP server for AI tools |
+| Package                                                                          | Description                                      |
+| -------------------------------------------------------------------------------- | ------------------------------------------------ |
+| [`@phalnx/sdk`](https://www.npmjs.com/package/@phalnx/sdk)                       | On-chain guardrails — `withVault()` primary API  |
+| [`@phalnx/core`](https://www.npmjs.com/package/@phalnx/core)                     | Pure TypeScript policy engine                    |
+| [`@phalnx/mcp`](https://www.npmjs.com/package/@phalnx/mcp)                       | MCP server for AI tools                          |
 | [`@phalnx/plugin-elizaos`](https://www.npmjs.com/package/@phalnx/plugin-elizaos) | ElizaOS integration (supports Crossmint custody) |
 
 ## Support

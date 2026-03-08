@@ -25,11 +25,9 @@ describe("dryRunPolicy", () => {
   describe("intent mode", () => {
     it("allows an intent within budget", () => {
       const state = new ShieldState();
-      const result = dryRunPolicy(
-        { maxSpend: "500 USDC/day" },
-        state,
-        { intent: { mint: USDC_MINT, amount: BigInt(100_000_000) } },
-      );
+      const result = dryRunPolicy({ maxSpend: "500 USDC/day" }, state, {
+        intent: { mint: USDC_MINT, amount: BigInt(100_000_000) },
+      });
 
       expect(result.allowed).to.be.true;
       expect(result.violations).to.have.length(0);
@@ -38,11 +36,9 @@ describe("dryRunPolicy", () => {
 
     it("denies an intent exceeding budget", () => {
       const state = new ShieldState();
-      const result = dryRunPolicy(
-        { maxSpend: "100 USDC/day" },
-        state,
-        { intent: { mint: USDC_MINT, amount: BigInt(200_000_000) } },
-      );
+      const result = dryRunPolicy({ maxSpend: "100 USDC/day" }, state, {
+        intent: { mint: USDC_MINT, amount: BigInt(200_000_000) },
+      });
 
       expect(result.allowed).to.be.false;
       expect(result.violations.length).to.be.greaterThan(0);
@@ -50,11 +46,9 @@ describe("dryRunPolicy", () => {
 
     it("returns fee estimates", () => {
       const state = new ShieldState();
-      const result = dryRunPolicy(
-        { maxSpend: "500 USDC/day" },
-        state,
-        { intent: { mint: USDC_MINT, amount: BigInt(100_000_000) } },
-      );
+      const result = dryRunPolicy({ maxSpend: "500 USDC/day" }, state, {
+        intent: { mint: USDC_MINT, amount: BigInt(100_000_000) },
+      });
 
       expect(result.estimatedFees.protocolFeeBps).to.equal(2);
       expect(result.estimatedFees.estimatedFeeUsd).to.be.a("bigint");
@@ -62,11 +56,9 @@ describe("dryRunPolicy", () => {
 
     it("returns remaining budget", () => {
       const state = new ShieldState();
-      const result = dryRunPolicy(
-        { maxSpend: "500 USDC/day" },
-        state,
-        { intent: { mint: USDC_MINT, amount: BigInt(100_000_000) } },
-      );
+      const result = dryRunPolicy({ maxSpend: "500 USDC/day" }, state, {
+        intent: { mint: USDC_MINT, amount: BigInt(100_000_000) },
+      });
 
       expect(result.remainingBudgetUsd).to.be.a("bigint");
       expect(result.remainingBudgetUsd > BigInt(0)).to.be.true;
@@ -74,22 +66,18 @@ describe("dryRunPolicy", () => {
 
     it("handles zero amount", () => {
       const state = new ShieldState();
-      const result = dryRunPolicy(
-        { maxSpend: "500 USDC/day" },
-        state,
-        { intent: { mint: USDC_MINT, amount: BigInt(0) } },
-      );
+      const result = dryRunPolicy({ maxSpend: "500 USDC/day" }, state, {
+        intent: { mint: USDC_MINT, amount: BigInt(0) },
+      });
 
       expect(result.allowed).to.be.true;
     });
 
     it("handles string mint", () => {
       const state = new ShieldState();
-      const result = dryRunPolicy(
-        { maxSpend: "500 USDC/day" },
-        state,
-        { intent: { mint: USDC_MINT.toBase58(), amount: BigInt(100_000_000) } },
-      );
+      const result = dryRunPolicy({ maxSpend: "500 USDC/day" }, state, {
+        intent: { mint: USDC_MINT.toBase58(), amount: BigInt(100_000_000) },
+      });
 
       expect(result.allowed).to.be.true;
     });
@@ -126,11 +114,9 @@ describe("dryRunPolicy", () => {
       const { resolvePolicies } = require("../src/wrapper/policies");
       const resolved = resolvePolicies({ maxSpend: "500 USDC/day" });
 
-      const result = dryRunPolicy(
-        resolved,
-        state,
-        { intent: { mint: USDC_MINT, amount: BigInt(100_000_000) } },
-      );
+      const result = dryRunPolicy(resolved, state, {
+        intent: { mint: USDC_MINT, amount: BigInt(100_000_000) },
+      });
 
       expect(result.allowed).to.be.true;
     });
@@ -140,11 +126,9 @@ describe("dryRunPolicy", () => {
       // Record 400 USDC of prior spending
       state.recordSpend(USDC_MINT.toBase58(), BigInt(400_000_000));
 
-      const result = dryRunPolicy(
-        { maxSpend: "500 USDC/day" },
-        state,
-        { intent: { mint: USDC_MINT, amount: BigInt(200_000_000) } },
-      );
+      const result = dryRunPolicy({ maxSpend: "500 USDC/day" }, state, {
+        intent: { mint: USDC_MINT, amount: BigInt(200_000_000) },
+      });
 
       expect(result.allowed).to.be.false;
     });
@@ -155,11 +139,9 @@ describe("dryRunPolicy", () => {
       state.recordSpend(USDC_MINT.toBase58(), BigInt(400_000_000));
 
       // Try 200 USDC — should be denied
-      dryRunPolicy(
-        { maxSpend: "500 USDC/day" },
-        state,
-        { intent: { mint: USDC_MINT, amount: BigInt(200_000_000) } },
-      );
+      dryRunPolicy({ maxSpend: "500 USDC/day" }, state, {
+        intent: { mint: USDC_MINT, amount: BigInt(200_000_000) },
+      });
 
       // State should not have changed — still at 400
       const spent = state.getSpendInWindow(USDC_MINT.toBase58(), 86_400_000);
@@ -172,11 +154,9 @@ describe("dryRunPolicy", () => {
       const state = new ShieldState();
       const before = state.getSpendInWindow(USDC_MINT.toBase58(), 86_400_000);
 
-      dryRunPolicy(
-        { maxSpend: "500 USDC/day" },
-        state,
-        { intent: { mint: USDC_MINT, amount: BigInt(100_000_000) } },
-      );
+      dryRunPolicy({ maxSpend: "500 USDC/day" }, state, {
+        intent: { mint: USDC_MINT, amount: BigInt(100_000_000) },
+      });
 
       const after = state.getSpendInWindow(USDC_MINT.toBase58(), 86_400_000);
       expect(after).to.equal(before);

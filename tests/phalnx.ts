@@ -603,7 +603,11 @@ describe("phalnx", () => {
         program.programId,
       );
       const [revokeOverlay] = PublicKey.findProgramAddressSync(
-        [Buffer.from("agent_spend"), revokeVaultPda.toBuffer(), Buffer.from([0])],
+        [
+          Buffer.from("agent_spend"),
+          revokeVaultPda.toBuffer(),
+          Buffer.from([0]),
+        ],
         program.programId,
       );
 
@@ -633,7 +637,11 @@ describe("phalnx", () => {
         .rpc();
       await program.methods
         .registerAgent(agent.publicKey, FULL_PERMISSIONS, new BN(0))
-        .accounts({ owner: owner.publicKey, vault: revokeVaultPda, agentSpendOverlay: revokeOverlay } as any)
+        .accounts({
+          owner: owner.publicKey,
+          vault: revokeVaultPda,
+          agentSpendOverlay: revokeOverlay,
+        } as any)
         .rpc();
     });
 
@@ -705,7 +713,11 @@ describe("phalnx", () => {
         program.programId,
       );
       const [reactOverlay] = PublicKey.findProgramAddressSync(
-        [Buffer.from("agent_spend"), reactVaultPda.toBuffer(), Buffer.from([0])],
+        [
+          Buffer.from("agent_spend"),
+          reactVaultPda.toBuffer(),
+          Buffer.from([0]),
+        ],
         program.programId,
       );
 
@@ -737,7 +749,11 @@ describe("phalnx", () => {
       // Register agent then freeze by revoking
       await program.methods
         .registerAgent(agent.publicKey, FULL_PERMISSIONS, new BN(0))
-        .accounts({ owner: owner.publicKey, vault: reactVaultPda, agentSpendOverlay: reactOverlay } as any)
+        .accounts({
+          owner: owner.publicKey,
+          vault: reactVaultPda,
+          agentSpendOverlay: reactOverlay,
+        } as any)
         .rpc();
 
       await program.methods
@@ -1400,7 +1416,11 @@ describe("phalnx", () => {
         program.programId,
       );
       [closeOverlayPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("agent_spend"), closeVaultPda.toBuffer(), Buffer.from([0])],
+        [
+          Buffer.from("agent_spend"),
+          closeVaultPda.toBuffer(),
+          Buffer.from([0]),
+        ],
         program.programId,
       );
 
@@ -1753,7 +1773,11 @@ describe("phalnx", () => {
       );
       await program.methods
         .registerAgent(agent.publicKey, FULL_PERMISSIONS, new BN(0))
-        .accounts({ owner: owner.publicKey, vault: feeVaultPda, agentSpendOverlay: feeOverlay } as any)
+        .accounts({
+          owner: owner.publicKey,
+          vault: feeVaultPda,
+          agentSpendOverlay: feeOverlay,
+        } as any)
         .rpc();
 
       // Deposit to the fee vault
@@ -2107,7 +2131,11 @@ describe("phalnx", () => {
         program.programId,
       );
       [lifecycleOverlay] = PublicKey.findProgramAddressSync(
-        [Buffer.from("agent_spend"), lifecycleVaultPda.toBuffer(), Buffer.from([0])],
+        [
+          Buffer.from("agent_spend"),
+          lifecycleVaultPda.toBuffer(),
+          Buffer.from([0]),
+        ],
         program.programId,
       );
 
@@ -2140,7 +2168,11 @@ describe("phalnx", () => {
       // Register agent
       await program.methods
         .registerAgent(lifecycleAgent.publicKey, FULL_PERMISSIONS, new BN(0))
-        .accounts({ owner: owner.publicKey, vault: lifecycleVaultPda, agentSpendOverlay: lifecycleOverlay } as any)
+        .accounts({
+          owner: owner.publicKey,
+          vault: lifecycleVaultPda,
+          agentSpendOverlay: lifecycleOverlay,
+        } as any)
         .rpc();
 
       // Deposit USDC to vault
@@ -2392,7 +2424,11 @@ describe("phalnx", () => {
       try {
         await program.methods
           .registerAgent(owner.publicKey, FULL_PERMISSIONS, new BN(0)) // owner = agent → reject
-          .accounts({ owner: owner.publicKey, vault: v, agentSpendOverlay: vOverlay2 } as any)
+          .accounts({
+            owner: owner.publicKey,
+            vault: v,
+            agentSpendOverlay: vOverlay2,
+          } as any)
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
@@ -2549,7 +2585,11 @@ describe("phalnx", () => {
       // Register agent then freeze by revoking
       await program.methods
         .registerAgent(agent.publicKey, FULL_PERMISSIONS, new BN(0))
-        .accounts({ owner: owner.publicKey, vault: fv, agentSpendOverlay: fvOverlay } as any)
+        .accounts({
+          owner: owner.publicKey,
+          vault: fv,
+          agentSpendOverlay: fvOverlay,
+        } as any)
         .rpc();
 
       await program.methods
@@ -2737,7 +2777,11 @@ describe("phalnx", () => {
       // Register agent, then close
       await program.methods
         .registerAgent(agent.publicKey, FULL_PERMISSIONS, new BN(0))
-        .accounts({ owner: owner.publicKey, vault: cv, agentSpendOverlay: cvOverlay } as any)
+        .accounts({
+          owner: owner.publicKey,
+          vault: cv,
+          agentSpendOverlay: cvOverlay,
+        } as any)
         .rpc();
 
       await program.methods
@@ -2860,7 +2904,11 @@ describe("phalnx", () => {
         .rpc();
       await program.methods
         .registerAgent(ringAgent.publicKey, FULL_PERMISSIONS, new BN(0))
-        .accounts({ owner: owner.publicKey, vault: ringVaultPda, agentSpendOverlay: ringOverlay } as any)
+        .accounts({
+          owner: owner.publicKey,
+          vault: ringVaultPda,
+          agentSpendOverlay: ringOverlay,
+        } as any)
         .rpc();
 
       ringVaultUsdcAta = anchor.utils.token.associatedAddress({
@@ -2991,7 +3039,11 @@ describe("phalnx", () => {
 
       // developer_fee_rate = 0 to isolate protocol fee
       [feeEdgeOverlay] = PublicKey.findProgramAddressSync(
-        [Buffer.from("agent_spend"), feeEdgeVaultPda.toBuffer(), Buffer.from([0])],
+        [
+          Buffer.from("agent_spend"),
+          feeEdgeVaultPda.toBuffer(),
+          Buffer.from([0]),
+        ],
         program.programId,
       );
       await program.methods
@@ -3020,7 +3072,11 @@ describe("phalnx", () => {
         .rpc();
       await program.methods
         .registerAgent(feeEdgeAgent.publicKey, FULL_PERMISSIONS, new BN(0))
-        .accounts({ owner: owner.publicKey, vault: feeEdgeVaultPda, agentSpendOverlay: feeEdgeOverlay } as any)
+        .accounts({
+          owner: owner.publicKey,
+          vault: feeEdgeVaultPda,
+          agentSpendOverlay: feeEdgeOverlay,
+        } as any)
         .rpc();
 
       feeEdgeVaultUsdcAta = anchor.utils.token.associatedAddress({
@@ -3290,7 +3346,11 @@ describe("phalnx", () => {
         .rpc();
       await program.methods
         .registerAgent(tlAgent.publicKey, FULL_PERMISSIONS, new BN(0))
-        .accounts({ owner: owner.publicKey, vault: tlVaultPda, agentSpendOverlay: tlOverlay } as any)
+        .accounts({
+          owner: owner.publicKey,
+          vault: tlVaultPda,
+          agentSpendOverlay: tlOverlay,
+        } as any)
         .rpc();
     });
 
@@ -3810,7 +3870,11 @@ describe("phalnx", () => {
         .rpc();
       await program.methods
         .registerAgent(destAgent.publicKey, FULL_PERMISSIONS, new BN(0))
-        .accounts({ owner: owner.publicKey, vault: destVaultPda, agentSpendOverlay: destOverlay } as any)
+        .accounts({
+          owner: owner.publicKey,
+          vault: destVaultPda,
+          agentSpendOverlay: destOverlay,
+        } as any)
         .rpc();
 
       // Deposit USDC
@@ -3950,7 +4014,11 @@ describe("phalnx", () => {
         .rpc();
       await program.methods
         .registerAgent(destAgent.publicKey, FULL_PERMISSIONS, new BN(0))
-        .accounts({ owner: owner.publicKey, vault: anyVault, agentSpendOverlay: anyOverlay } as any)
+        .accounts({
+          owner: owner.publicKey,
+          vault: anyVault,
+          agentSpendOverlay: anyOverlay,
+        } as any)
         .rpc();
 
       const anyVaultAta = getAssociatedTokenAddressSync(
@@ -4187,7 +4255,11 @@ describe("phalnx", () => {
         .rpc();
       await program.methods
         .registerAgent(destAgent.publicKey, FULL_PERMISSIONS, new BN(0))
-        .accounts({ owner: owner.publicKey, vault: fv, agentSpendOverlay: fvOverlay2 } as any)
+        .accounts({
+          owner: owner.publicKey,
+          vault: fv,
+          agentSpendOverlay: fvOverlay2,
+        } as any)
         .rpc();
 
       const fvAta = getAssociatedTokenAddressSync(usdcMint, fv, true);
@@ -4341,13 +4413,21 @@ describe("phalnx", () => {
       const SWAP_ONLY = new BN(1);
       await program.methods
         .registerAgent(agent.publicKey, SWAP_ONLY, new BN(0))
-        .accounts({ owner: owner.publicKey, vault: maVault, agentSpendOverlay: maOverlay } as any)
+        .accounts({
+          owner: owner.publicKey,
+          vault: maVault,
+          agentSpendOverlay: maOverlay,
+        } as any)
         .rpc();
 
       // Agent 2: full permissions
       await program.methods
         .registerAgent(agent2.publicKey, FULL_PERMISSIONS, new BN(0))
-        .accounts({ owner: owner.publicKey, vault: maVault, agentSpendOverlay: maOverlay } as any)
+        .accounts({
+          owner: owner.publicKey,
+          vault: maVault,
+          agentSpendOverlay: maOverlay,
+        } as any)
         .rpc();
 
       const vault = await program.account.agentVault.fetch(maVault);
@@ -4528,7 +4608,11 @@ describe("phalnx", () => {
         airdropSol(svm, a.publicKey, LAMPORTS_PER_SOL);
         await program.methods
           .registerAgent(a.publicKey, FULL_PERMISSIONS, new BN(0))
-          .accounts({ owner: owner.publicKey, vault: maVault, agentSpendOverlay: maOverlay } as any)
+          .accounts({
+            owner: owner.publicKey,
+            vault: maVault,
+            agentSpendOverlay: maOverlay,
+          } as any)
           .rpc();
       }
 
@@ -4541,7 +4625,11 @@ describe("phalnx", () => {
       try {
         await program.methods
           .registerAgent(extra.publicKey, FULL_PERMISSIONS, new BN(0))
-          .accounts({ owner: owner.publicKey, vault: maVault, agentSpendOverlay: maOverlay } as any)
+          .accounts({
+            owner: owner.publicKey,
+            vault: maVault,
+            agentSpendOverlay: maOverlay,
+          } as any)
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
@@ -4583,7 +4671,11 @@ describe("phalnx", () => {
       airdropSol(svm, updAgent.publicKey, LAMPORTS_PER_SOL);
       await program.methods
         .registerAgent(updAgent.publicKey, new BN(1), new BN(0))
-        .accounts({ owner: owner.publicKey, vault: maVault, agentSpendOverlay: maOverlay } as any)
+        .accounts({
+          owner: owner.publicKey,
+          vault: maVault,
+          agentSpendOverlay: maOverlay,
+        } as any)
         .rpc();
 
       // Update permissions to full
@@ -4613,7 +4705,11 @@ describe("phalnx", () => {
       try {
         await program.methods
           .registerAgent(badAgent.publicKey, BAD_PERMS, new BN(0))
-          .accounts({ owner: owner.publicKey, vault: maVault, agentSpendOverlay: maOverlay } as any)
+          .accounts({
+            owner: owner.publicKey,
+            vault: maVault,
+            agentSpendOverlay: maOverlay,
+          } as any)
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {

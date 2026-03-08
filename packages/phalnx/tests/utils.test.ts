@@ -1,5 +1,9 @@
 import { expect } from "chai";
-import { validateProjectName, getInstallCommand, getRunCommand } from "../src/utils";
+import {
+  validateProjectName,
+  getInstallCommand,
+  getRunCommand,
+} from "../src/utils";
 
 describe("utils", () => {
   describe("validateProjectName", () => {

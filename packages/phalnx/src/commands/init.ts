@@ -1,6 +1,10 @@
 import { Command } from "commander";
 import * as prompts from "@clack/prompts";
-import { scaffold, formatPostScaffoldMessage, cleanupOnFailure } from "../scaffolder";
+import {
+  scaffold,
+  formatPostScaffoldMessage,
+  cleanupOnFailure,
+} from "../scaffolder";
 import { validateProjectName } from "../utils";
 import { PRESETS, type PolicyPreset } from "../presets";
 import {
@@ -245,8 +249,7 @@ export async function resolveConfig(
       placeholder: "300",
       validate: (v) => {
         const n = Number(v);
-        if (isNaN(n) || n < 0 || n > 5000)
-          return "Must be 0-5000 (0% to 50%)";
+        if (isNaN(n) || n < 0 || n > 5000) return "Must be 0-5000 (0% to 50%)";
         return undefined;
       },
     });

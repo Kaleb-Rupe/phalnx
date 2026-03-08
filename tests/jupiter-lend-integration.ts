@@ -488,7 +488,11 @@ describe("jupiter-lend-integration", () => {
 
       await program.methods
         .registerAgent(agent.publicKey, FULL_PERMISSIONS, new BN(0))
-        .accountsPartial({ owner: owner.publicKey, vault: frozenVault, agentSpendOverlay: frozenOverlay })
+        .accountsPartial({
+          owner: owner.publicKey,
+          vault: frozenVault,
+          agentSpendOverlay: frozenOverlay,
+        })
         .rpc();
 
       // Freeze via revoke
@@ -596,7 +600,11 @@ describe("jupiter-lend-integration", () => {
 
       await program.methods
         .registerAgent(agent.publicKey, FULL_PERMISSIONS, new BN(0))
-        .accountsPartial({ owner: owner.publicKey, vault: rollingVault, agentSpendOverlay: rollingOverlay })
+        .accountsPartial({
+          owner: owner.publicKey,
+          vault: rollingVault,
+          agentSpendOverlay: rollingOverlay,
+        })
         .rpc();
 
       rollingVaultUsdcAta = getAssociatedTokenAddressSync(
