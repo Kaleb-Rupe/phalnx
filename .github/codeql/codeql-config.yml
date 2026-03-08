@@ -1,9 +1,14 @@
 name: "Phalnx CodeQL Configuration"
 
-# Custody adapters (Turnkey, Privy, Crossmint) are designed to send
-# authenticated API requests to external custody providers. They use
-# P-256 ECDSA request stamping and crypto operations that trigger
-# false positives for js/file-access-to-http and js/insufficient-password-hash.
-paths-ignore:
-  - sdk/custody/turnkey/src/adapter.ts
-  - sdk/custody/privy/src/adapter.ts
+# Custody adapters (Turnkey, Privy) make authenticated API requests using
+# P-256 ECDSA request stamping and crypto.createHash for message digests.
+# These two queries always false-positive on this pattern:
+# - js/file-access-to-http: flags intentional API calls as data exfiltration
+# - js/insufficient-password-hash: flags ECDSA message hashing as password hashing
+#
+# Excluding the queries (not the files) so all other security checks still run.
+query-filters:
+  - exclude:
+      id: js/file-access-to-http
+  - exclude:
+      id: js/insufficient-password-hash
