@@ -7,7 +7,7 @@
  * V3: Composed TX model (validate + finalize in same tx).
  *     closePosition is non-spending: amount=0, no fees.
  *     openPosition is spending: fees collected, cap checked.
- *     Stablecoin-only architecture (devnet-testing feature).
+ *     Stablecoin-only architecture (custom test mints).
  */
 import * as anchor from "@coral-xyz/anchor";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
