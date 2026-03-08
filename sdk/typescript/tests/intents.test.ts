@@ -5,7 +5,9 @@ import {
   summarizeAction,
   MemoryIntentStorage,
   DEFAULT_INTENT_TTL_MS,
+  ACTION_TYPE_MAP,
   type IntentAction,
+  type IntentActionType,
   type TransactionIntent,
 } from "../src/intents";
 
@@ -192,6 +194,250 @@ describe("intents", () => {
       expect(summary).to.include("Withdraw");
       expect(summary).to.include("75");
       expect(summary).to.include("USDC");
+    });
+
+    it("summarizes increasePosition action", () => {
+      const summary = summarizeAction({
+        type: "increasePosition",
+        params: {
+          market: "SOL-PERP",
+          side: "long",
+          sizeDelta: "50",
+          collateralAmount: "100",
+        },
+      });
+      expect(summary).to.include("Increase");
+      expect(summary).to.include("long");
+      expect(summary).to.include("SOL-PERP");
+    });
+
+    it("summarizes decreasePosition action", () => {
+      const summary = summarizeAction({
+        type: "decreasePosition",
+        params: { market: "ETH-PERP", side: "short", sizeDelta: "25" },
+      });
+      expect(summary).to.include("Decrease");
+      expect(summary).to.include("short");
+    });
+
+    it("summarizes addCollateral action", () => {
+      const summary = summarizeAction({
+        type: "addCollateral",
+        params: {
+          market: "SOL-PERP",
+          side: "long",
+          collateralAmount: "200",
+        },
+      });
+      expect(summary).to.include("Add");
+      expect(summary).to.include("200");
+      expect(summary).to.include("collateral");
+    });
+
+    it("summarizes removeCollateral action", () => {
+      const summary = summarizeAction({
+        type: "removeCollateral",
+        params: {
+          market: "SOL-PERP",
+          side: "long",
+          collateralDeltaUsd: "50",
+        },
+      });
+      expect(summary).to.include("Remove");
+      expect(summary).to.include("50");
+    });
+
+    it("summarizes placeTriggerOrder action", () => {
+      const summary = summarizeAction({
+        type: "placeTriggerOrder",
+        params: {
+          market: "SOL-PERP",
+          side: "long",
+          triggerPrice: "150",
+          deltaSizeAmount: "10",
+          isStopLoss: true,
+        },
+      });
+      expect(summary).to.include("stop-loss");
+      expect(summary).to.include("SOL-PERP");
+      expect(summary).to.include("150");
+    });
+
+    it("summarizes placeTriggerOrder take-profit", () => {
+      const summary = summarizeAction({
+        type: "placeTriggerOrder",
+        params: {
+          market: "SOL-PERP",
+          side: "long",
+          triggerPrice: "200",
+          deltaSizeAmount: "10",
+          isStopLoss: false,
+        },
+      });
+      expect(summary).to.include("take-profit");
+    });
+
+    it("summarizes placeLimitOrder action", () => {
+      const summary = summarizeAction({
+        type: "placeLimitOrder",
+        params: {
+          market: "BTC-PERP",
+          side: "short",
+          reserveAmount: "500",
+          sizeAmount: "1000",
+          limitPrice: "60000",
+        },
+      });
+      expect(summary).to.include("limit order");
+      expect(summary).to.include("BTC-PERP");
+      expect(summary).to.include("60000");
+    });
+
+    it("summarizes createEscrow action", () => {
+      const summary = summarizeAction({
+        type: "createEscrow",
+        params: {
+          destinationVault: "dest123",
+          amount: "500",
+          mint: "USDC",
+          expiresInSeconds: 86400,
+        },
+      });
+      expect(summary).to.include("escrow");
+      expect(summary).to.include("500");
+      expect(summary).to.include("USDC");
+    });
+
+    it("summarizes settleEscrow action", () => {
+      const summary = summarizeAction({
+        type: "settleEscrow",
+        params: { sourceVault: "src123", escrowId: "42" },
+      });
+      expect(summary).to.include("Settle");
+      expect(summary).to.include("42");
+    });
+
+    it("summarizes refundEscrow action", () => {
+      const summary = summarizeAction({
+        type: "refundEscrow",
+        params: { destinationVault: "dest123", escrowId: "42" },
+      });
+      expect(summary).to.include("Refund");
+      expect(summary).to.include("42");
+    });
+
+    it("summarizes swapAndOpenPosition action", () => {
+      const summary = summarizeAction({
+        type: "swapAndOpenPosition",
+        params: {
+          inputMint: "USDC",
+          outputMint: "SOL",
+          amount: "100",
+          market: "SOL-PERP",
+          side: "long",
+          sizeAmount: "500",
+          leverageBps: 50000,
+        },
+      });
+      expect(summary).to.include("Swap");
+      expect(summary).to.include("open");
+      expect(summary).to.include("SOL-PERP");
+    });
+
+    it("summarizes closeAndSwapPosition action", () => {
+      const summary = summarizeAction({
+        type: "closeAndSwapPosition",
+        params: {
+          market: "ETH-PERP",
+          side: "short",
+          outputMint: "USDC",
+        },
+      });
+      expect(summary).to.include("Close");
+      expect(summary).to.include("swap");
+      expect(summary).to.include("USDC");
+    });
+  });
+
+  describe("ACTION_TYPE_MAP", () => {
+    const ALL_TYPES: IntentActionType[] = [
+      "swap",
+      "openPosition",
+      "closePosition",
+      "increasePosition",
+      "decreasePosition",
+      "deposit",
+      "withdraw",
+      "transfer",
+      "addCollateral",
+      "removeCollateral",
+      "placeTriggerOrder",
+      "editTriggerOrder",
+      "cancelTriggerOrder",
+      "placeLimitOrder",
+      "editLimitOrder",
+      "cancelLimitOrder",
+      "swapAndOpenPosition",
+      "closeAndSwapPosition",
+      "createEscrow",
+      "settleEscrow",
+      "refundEscrow",
+    ];
+
+    it("maps all 21 action types", () => {
+      expect(Object.keys(ACTION_TYPE_MAP)).to.have.lengthOf(21);
+    });
+
+    for (const type of ALL_TYPES) {
+      it(`maps ${type} to ActionType object`, () => {
+        const mapping = ACTION_TYPE_MAP[type];
+        expect(mapping).to.not.be.undefined;
+        expect(mapping.actionType).to.be.an("object");
+        expect(typeof mapping.isSpending).to.equal("boolean");
+        // ActionType has exactly one key
+        expect(Object.keys(mapping.actionType)).to.have.lengthOf(1);
+      });
+    }
+
+    it("marks spending actions correctly", () => {
+      const spendingTypes = [
+        "swap",
+        "openPosition",
+        "increasePosition",
+        "deposit",
+        "transfer",
+        "addCollateral",
+        "placeLimitOrder",
+        "swapAndOpenPosition",
+        "createEscrow",
+      ];
+      for (const type of spendingTypes) {
+        expect(
+          ACTION_TYPE_MAP[type as IntentActionType].isSpending,
+        ).to.equal(true, `${type} should be spending`);
+      }
+    });
+
+    it("marks non-spending actions correctly", () => {
+      const nonSpendingTypes = [
+        "closePosition",
+        "decreasePosition",
+        "withdraw",
+        "removeCollateral",
+        "placeTriggerOrder",
+        "editTriggerOrder",
+        "cancelTriggerOrder",
+        "editLimitOrder",
+        "cancelLimitOrder",
+        "closeAndSwapPosition",
+        "settleEscrow",
+        "refundEscrow",
+      ];
+      for (const type of nonSpendingTypes) {
+        expect(
+          ACTION_TYPE_MAP[type as IntentActionType].isSpending,
+        ).to.equal(false, `${type} should be non-spending`);
+      }
     });
   });
 

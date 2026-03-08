@@ -10,8 +10,16 @@ import {
 
 export const executeSwapSchema = z.object({
   vault: z.string().describe("Vault PDA address (base58)"),
-  inputMint: z.string().describe("Input token mint address (base58)"),
-  outputMint: z.string().describe("Output token mint address (base58)"),
+  inputMint: z
+    .string()
+    .describe(
+      "Input token mint address (base58) or symbol (e.g., 'USDC', 'SOL')",
+    ),
+  outputMint: z
+    .string()
+    .describe(
+      "Output token mint address (base58) or symbol (e.g., 'USDC', 'SOL')",
+    ),
   amount: z.string().describe("Input amount in token base units"),
   slippageBps: z
     .number()
@@ -33,34 +41,67 @@ export async function executeSwap(
     let signers: import("@solana/web3.js").Keypair[];
 
     if (custodyWallet) {
-      // Custody: provider.wallet IS the agent signer
       agentPubkey = custodyWallet.publicKey;
-      signers = []; // provider.wallet handles signing via custody API
+      signers = [];
     } else {
-      // Keypair: load from config
       const agentKeypair = loadAgentKeypair(config);
       agentPubkey = agentKeypair.publicKey;
       signers = [agentKeypair];
     }
 
     const vaultAddress = toPublicKey(input.vault);
-
-    // Fetch vault to get owner and vaultId for the swap params
     const vault = await client.fetchVaultByAddress(vaultAddress);
 
-    // Pre-flight: verify agent is registered to this vault
     const isRegistered = vault.agents.some(
       (a) => a.pubkey.toBase58() === agentPubkey.toBase58(),
     );
     if (!isRegistered) {
       return (
         `Agent not registered to vault.\n\n` +
-        `**→ Next:** Run \`shield_register_agent\` with agent pubkey \`${agentPubkey.toBase58()}\`, then retry.`
+        `**\u2192 Next:** Run \`shield_register_agent\` with agent pubkey \`${agentPubkey.toBase58()}\`, then retry.`
       );
     }
 
-    // Execute swap through Phalnx
-    // executeJupiterSwap fetches the quote internally if not provided
+    // Pre-flight policy check
+    let precheckSummary = "";
+    try {
+      const precheck = await client.precheck(
+        {
+          type: "swap",
+          params: {
+            inputMint: input.inputMint,
+            outputMint: input.outputMint,
+            amount: input.amount,
+            slippageBps: input.slippageBps,
+          },
+        },
+        vaultAddress,
+      );
+
+      if (!precheck.allowed) {
+        return [
+          "## Swap Denied by Policy",
+          `- **Reason:** ${precheck.reason}`,
+          `- **Summary:** ${precheck.summary}`,
+          precheck.details.spendingCap
+            ? `- **Daily Cap:** $${precheck.details.spendingCap.spent24h.toFixed(2)} / $${precheck.details.spendingCap.cap.toFixed(2)} used ($${precheck.details.spendingCap.remaining.toFixed(2)} remaining)`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n");
+      }
+
+      if (precheck.riskFlags.length > 0) {
+        precheckSummary = `\n- **Risk Flags:** ${precheck.riskFlags.join(", ")}`;
+      }
+      if (precheck.details.spendingCap) {
+        const cap = precheck.details.spendingCap;
+        precheckSummary += `\n- **Daily Cap:** $${cap.spent24h.toFixed(2)} / $${cap.cap.toFixed(2)} used ($${cap.remaining.toFixed(2)} remaining)`;
+      }
+    } catch {
+      // Precheck is best-effort; don't block execution on precheck failure
+    }
+
     const sig = await client.executeJupiterSwap(
       {
         owner: vault.owner,
@@ -81,7 +122,10 @@ export async function executeSwap(
       `- **Output Token:** ${input.outputMint}`,
       `- **Slippage:** ${input.slippageBps} BPS`,
       `- **Transaction:** ${sig}`,
-    ].join("\n");
+      precheckSummary,
+    ]
+      .filter(Boolean)
+      .join("\n");
   } catch (error) {
     return formatError(error);
   }
