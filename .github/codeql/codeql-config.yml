@@ -1,0 +1,9 @@
+name: "Phalnx CodeQL Configuration"
+
+# Custody adapters (Turnkey, Privy, Crossmint) are designed to send
+# authenticated API requests to external custody providers. They use
+# P-256 ECDSA request stamping and crypto operations that trigger
+# false positives for js/file-access-to-http and js/insufficient-password-hash.
+paths-ignore:
+  - sdk/custody/turnkey/src/adapter.ts
+  - sdk/custody/privy/src/adapter.ts
