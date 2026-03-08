@@ -20,11 +20,30 @@ export {
   summarizeAction,
   MemoryIntentStorage,
   DEFAULT_INTENT_TTL_MS,
+  ACTION_TYPE_MAP,
   type IntentAction,
+  type IntentActionType,
   type IntentStatus,
   type TransactionIntent,
   type IntentStorage,
+  type PrecheckResult,
+  type ExecuteResult,
 } from "./intents";
+
+// Token Resolution
+export {
+  resolveToken,
+  toBaseUnits,
+  fromBaseUnits,
+  type ResolvedToken,
+} from "./tokens";
+
+// Structured Errors
+export {
+  PhalnxSDKError,
+  parseOnChainError,
+  precheckError,
+} from "./errors";
 
 export {
   getVaultPDA,

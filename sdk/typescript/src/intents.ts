@@ -1,6 +1,7 @@
 import { PublicKey } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
 import { randomUUID } from "crypto";
+import type { ActionType } from "./types";
 
 export const DEFAULT_INTENT_TTL_MS = 3_600_000; // 1 hour
 
@@ -29,7 +30,216 @@ export type IntentAction =
       params: { destination: string; mint: string; amount: string };
     }
   | { type: "deposit"; params: { mint: string; amount: string } }
-  | { type: "withdraw"; params: { mint: string; amount: string } };
+  | { type: "withdraw"; params: { mint: string; amount: string } }
+  | {
+      type: "increasePosition";
+      params: {
+        market: string;
+        positionId?: string;
+        side: "long" | "short";
+        sizeDelta: string;
+        collateralAmount: string;
+        leverageBps?: number;
+      };
+    }
+  | {
+      type: "decreasePosition";
+      params: {
+        market: string;
+        positionId?: string;
+        side: "long" | "short";
+        sizeDelta: string;
+      };
+    }
+  | {
+      type: "addCollateral";
+      params: {
+        market: string;
+        positionId?: string;
+        side: "long" | "short";
+        collateralAmount: string;
+      };
+    }
+  | {
+      type: "removeCollateral";
+      params: {
+        market: string;
+        positionId?: string;
+        side: "long" | "short";
+        collateralDeltaUsd: string;
+      };
+    }
+  | {
+      type: "placeTriggerOrder";
+      params: {
+        market: string;
+        side: "long" | "short";
+        triggerPrice: string;
+        deltaSizeAmount: string;
+        isStopLoss: boolean;
+      };
+    }
+  | {
+      type: "editTriggerOrder";
+      params: {
+        market: string;
+        side: "long" | "short";
+        orderId: string;
+        triggerPrice: string;
+        deltaSizeAmount: string;
+        isStopLoss: boolean;
+      };
+    }
+  | {
+      type: "cancelTriggerOrder";
+      params: {
+        market: string;
+        side: "long" | "short";
+        orderId: string;
+        isStopLoss: boolean;
+      };
+    }
+  | {
+      type: "placeLimitOrder";
+      params: {
+        market: string;
+        side: "long" | "short";
+        reserveAmount: string;
+        sizeAmount: string;
+        limitPrice: string;
+        stopLossPrice?: string;
+        takeProfitPrice?: string;
+        leverageBps?: number;
+      };
+    }
+  | {
+      type: "editLimitOrder";
+      params: {
+        market: string;
+        side: "long" | "short";
+        orderId: string;
+        reserveAmount: string;
+        sizeAmount: string;
+        limitPrice: string;
+        stopLossPrice?: string;
+        takeProfitPrice?: string;
+        leverageBps?: number;
+      };
+    }
+  | {
+      type: "cancelLimitOrder";
+      params: {
+        market: string;
+        side: "long" | "short";
+        orderId: string;
+      };
+    }
+  | {
+      type: "swapAndOpenPosition";
+      params: {
+        inputMint: string;
+        outputMint: string;
+        amount: string;
+        slippageBps?: number;
+        market: string;
+        side: "long" | "short";
+        sizeAmount: string;
+        leverageBps: number;
+      };
+    }
+  | {
+      type: "closeAndSwapPosition";
+      params: {
+        market: string;
+        positionId?: string;
+        side: "long" | "short";
+        outputMint: string;
+        slippageBps?: number;
+      };
+    }
+  | {
+      type: "createEscrow";
+      params: {
+        destinationVault: string;
+        amount: string;
+        mint: string;
+        expiresInSeconds: number;
+        conditionHash?: string;
+      };
+    }
+  | {
+      type: "settleEscrow";
+      params: {
+        sourceVault: string;
+        escrowId: string;
+        conditionProof?: string;
+      };
+    }
+  | {
+      type: "refundEscrow";
+      params: {
+        destinationVault: string;
+        escrowId: string;
+      };
+    };
+
+/** All supported intent action type strings */
+export type IntentActionType = IntentAction["type"];
+
+/** Maps an intent action type string to the on-chain ActionType object */
+export const ACTION_TYPE_MAP: Record<
+  IntentActionType,
+  { actionType: ActionType; isSpending: boolean }
+> = {
+  swap: { actionType: { swap: {} }, isSpending: true },
+  openPosition: { actionType: { openPosition: {} }, isSpending: true },
+  closePosition: { actionType: { closePosition: {} }, isSpending: false },
+  increasePosition: {
+    actionType: { increasePosition: {} },
+    isSpending: true,
+  },
+  decreasePosition: {
+    actionType: { decreasePosition: {} },
+    isSpending: false,
+  },
+  deposit: { actionType: { deposit: {} }, isSpending: true },
+  withdraw: { actionType: { withdraw: {} }, isSpending: false },
+  transfer: { actionType: { transfer: {} }, isSpending: true },
+  addCollateral: { actionType: { addCollateral: {} }, isSpending: true },
+  removeCollateral: {
+    actionType: { removeCollateral: {} },
+    isSpending: false,
+  },
+  placeTriggerOrder: {
+    actionType: { placeTriggerOrder: {} },
+    isSpending: false,
+  },
+  editTriggerOrder: {
+    actionType: { editTriggerOrder: {} },
+    isSpending: false,
+  },
+  cancelTriggerOrder: {
+    actionType: { cancelTriggerOrder: {} },
+    isSpending: false,
+  },
+  placeLimitOrder: { actionType: { placeLimitOrder: {} }, isSpending: true },
+  editLimitOrder: { actionType: { editLimitOrder: {} }, isSpending: false },
+  cancelLimitOrder: {
+    actionType: { cancelLimitOrder: {} },
+    isSpending: false,
+  },
+  swapAndOpenPosition: {
+    actionType: { swapAndOpenPosition: {} },
+    isSpending: true,
+  },
+  closeAndSwapPosition: {
+    actionType: { closeAndSwapPosition: {} },
+    isSpending: false,
+  },
+  createEscrow: { actionType: { createEscrow: {} }, isSpending: true },
+  settleEscrow: { actionType: { settleEscrow: {} }, isSpending: false },
+  refundEscrow: { actionType: { refundEscrow: {} }, isSpending: false },
+};
 
 export type IntentStatus =
   | "pending"
@@ -38,6 +248,39 @@ export type IntentStatus =
   | "executed"
   | "expired"
   | "failed";
+
+export interface PrecheckResult {
+  allowed: boolean;
+  reason?: string;
+  details: {
+    permission: {
+      passed: boolean;
+      requiredBit: string;
+      agentHas: boolean;
+    };
+    spendingCap?: {
+      passed: boolean;
+      spent24h: number;
+      cap: number;
+      remaining: number;
+    };
+    protocol: { passed: boolean; inAllowlist: boolean };
+    slippage?: {
+      passed: boolean;
+      intentBps: number;
+      vaultMaxBps: number;
+    };
+  };
+  summary: string;
+  riskFlags: string[];
+}
+
+export interface ExecuteResult {
+  signature: string;
+  intent: IntentAction;
+  precheck?: PrecheckResult;
+  summary: string;
+}
 
 export interface TransactionIntent {
   id: string;
@@ -71,7 +314,7 @@ export interface IntentStorage {
 export function summarizeAction(action: IntentAction): string {
   switch (action.type) {
     case "swap":
-      return `Swap ${action.params.amount} of ${action.params.inputMint} → ${action.params.outputMint}`;
+      return `Swap ${action.params.amount} of ${action.params.inputMint} -> ${action.params.outputMint}`;
     case "openPosition":
       return `Open ${action.params.side} ${action.params.market} position, ${action.params.leverage}x leverage, ${action.params.collateral} collateral`;
     case "closePosition":
@@ -82,6 +325,36 @@ export function summarizeAction(action: IntentAction): string {
       return `Deposit ${action.params.amount} of ${action.params.mint}`;
     case "withdraw":
       return `Withdraw ${action.params.amount} of ${action.params.mint}`;
+    case "increasePosition":
+      return `Increase ${action.params.side} ${action.params.market} position by ${action.params.sizeDelta}, ${action.params.collateralAmount} collateral`;
+    case "decreasePosition":
+      return `Decrease ${action.params.side} ${action.params.market} position by ${action.params.sizeDelta}`;
+    case "addCollateral":
+      return `Add ${action.params.collateralAmount} collateral to ${action.params.side} ${action.params.market} position`;
+    case "removeCollateral":
+      return `Remove ${action.params.collateralDeltaUsd} USD collateral from ${action.params.side} ${action.params.market} position`;
+    case "placeTriggerOrder":
+      return `Place ${action.params.isStopLoss ? "stop-loss" : "take-profit"} on ${action.params.side} ${action.params.market} at ${action.params.triggerPrice}`;
+    case "editTriggerOrder":
+      return `Edit ${action.params.isStopLoss ? "stop-loss" : "take-profit"} #${action.params.orderId} on ${action.params.side} ${action.params.market}`;
+    case "cancelTriggerOrder":
+      return `Cancel ${action.params.isStopLoss ? "stop-loss" : "take-profit"} #${action.params.orderId} on ${action.params.side} ${action.params.market}`;
+    case "placeLimitOrder":
+      return `Place ${action.params.side} limit order on ${action.params.market} at ${action.params.limitPrice}, size ${action.params.sizeAmount}`;
+    case "editLimitOrder":
+      return `Edit limit order #${action.params.orderId} on ${action.params.side} ${action.params.market}`;
+    case "cancelLimitOrder":
+      return `Cancel limit order #${action.params.orderId} on ${action.params.side} ${action.params.market}`;
+    case "swapAndOpenPosition":
+      return `Swap ${action.params.amount} ${action.params.inputMint} -> ${action.params.outputMint} then open ${action.params.side} ${action.params.market} position`;
+    case "closeAndSwapPosition":
+      return `Close ${action.params.side} ${action.params.market} position then swap to ${action.params.outputMint}`;
+    case "createEscrow":
+      return `Create escrow: ${action.params.amount} ${action.params.mint} to vault ${action.params.destinationVault}, expires in ${action.params.expiresInSeconds}s`;
+    case "settleEscrow":
+      return `Settle escrow #${action.params.escrowId} from vault ${action.params.sourceVault}`;
+    case "refundEscrow":
+      return `Refund escrow #${action.params.escrowId} to vault ${action.params.destinationVault}`;
   }
 }
 

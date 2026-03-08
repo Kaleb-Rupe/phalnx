@@ -9,7 +9,13 @@ import {
   AddressLookupTableAccount,
 } from "@solana/web3.js";
 import { AnchorProvider, BN, Program, Wallet } from "@coral-xyz/anchor";
-import { FEE_RATE_DENOMINATOR, PROTOCOL_FEE_RATE } from "./types";
+import {
+  FEE_RATE_DENOMINATOR,
+  PROTOCOL_FEE_RATE,
+  EPOCH_DURATION,
+  NUM_EPOCHS,
+  hasPermission,
+} from "./types";
 import type {
   Phalnx,
   AgentVaultAccount,
@@ -27,6 +33,15 @@ import type {
   AuthorizeParams,
   ComposeActionParams,
 } from "./types";
+import {
+  ACTION_TYPE_MAP,
+  summarizeAction,
+  type PrecheckResult,
+  type ExecuteResult,
+  type IntentAction,
+} from "./intents";
+import { resolveToken, toBaseUnits } from "./tokens";
+import { PhalnxSDKError, precheckError, parseOnChainError } from "./errors";
 import {
   getVaultPDA,
   getPolicyPDA,
@@ -185,7 +200,6 @@ import {
   MemoryIntentStorage,
   type IntentStorage,
   type TransactionIntent,
-  type IntentAction,
 } from "./intents";
 import {
   createSquadsMultisig,
@@ -1507,6 +1521,542 @@ export class PhalnxClient {
     }
   }
 
+  // --- Intent Execution (Direct agent path) ---
+
+  /**
+   * Pre-flight policy check: validates an intent against on-chain vault state
+   * before submitting a transaction.
+   */
+  async precheck(
+    intent: IntentAction,
+    vault: PublicKey,
+  ): Promise<PrecheckResult> {
+    const agent = this.provider.wallet.publicKey;
+    const mapping = ACTION_TYPE_MAP[intent.type];
+    if (!mapping) {
+      throw new PhalnxSDKError({
+        code: -1,
+        name: "UnknownActionType",
+        message: `Unknown intent action type: ${intent.type}`,
+        suggestion: `Supported types: ${Object.keys(ACTION_TYPE_MAP).join(", ")}`,
+      });
+    }
+
+    // Fetch vault, policy, tracker in parallel
+    const [vaultAccount, policyAccount, trackerAccount] = await Promise.all([
+      this.fetchVaultByAddress(vault),
+      this.fetchPolicy(vault),
+      this.fetchTracker(vault),
+    ]);
+
+    const riskFlags: string[] = [];
+
+    // Check agent permission
+    const agentEntry = vaultAccount.agents.find(
+      (a) => a.pubkey.toBase58() === agent.toBase58(),
+    );
+    const agentPermissions = agentEntry
+      ? BigInt(agentEntry.permissions.toString())
+      : 0n;
+    const permPassed = hasPermission(agentPermissions, intent.type);
+
+    // Check spending cap (for spending actions only)
+    let capDetails:
+      | PrecheckResult["details"]["spendingCap"]
+      | undefined;
+    if (mapping.isSpending) {
+      const now = Math.floor(Date.now() / 1000);
+      const windowStart = now - NUM_EPOCHS * EPOCH_DURATION;
+      let spent24h = 0;
+      for (const bucket of trackerAccount.buckets) {
+        const epochTime = bucket.epochId.toNumber() * EPOCH_DURATION;
+        if (epochTime >= windowStart) {
+          spent24h += bucket.usdAmount.toNumber();
+        }
+      }
+      // Convert from micro-USD to USD
+      const spent24hUsd = spent24h / 1_000_000;
+      const capUsd =
+        policyAccount.dailySpendingCapUsd.toNumber() / 1_000_000;
+      const remaining = Math.max(0, capUsd - spent24hUsd);
+
+      capDetails = {
+        passed: remaining > 0,
+        spent24h: spent24hUsd,
+        cap: capUsd,
+        remaining,
+      };
+
+      if (capUsd > 0) {
+        const usagePct = (spent24hUsd / capUsd) * 100;
+        if (usagePct > 70) {
+          riskFlags.push(
+            `${Math.round(usagePct)}% of daily cap consumed`,
+          );
+        }
+      }
+    }
+
+    // Check protocol (simplified — actual protocol depends on routing)
+    const protocolPassed =
+      policyAccount.protocolMode === 0 ||
+      policyAccount.protocols.length > 0;
+
+    // Check slippage (if applicable)
+    let slippageDetails:
+      | PrecheckResult["details"]["slippage"]
+      | undefined;
+    if (
+      "slippageBps" in intent.params &&
+      intent.params.slippageBps !== undefined
+    ) {
+      const intentBps = intent.params.slippageBps as number;
+      const vaultMaxBps = policyAccount.maxSlippageBps;
+      const slipPassed = vaultMaxBps === 0 || intentBps <= vaultMaxBps;
+      slippageDetails = {
+        passed: slipPassed,
+        intentBps,
+        vaultMaxBps,
+      };
+      if (intentBps > 200) {
+        riskFlags.push(`High slippage tolerance: ${intentBps} BPS`);
+      }
+    }
+
+    const allPassed =
+      permPassed &&
+      (capDetails?.passed ?? true) &&
+      protocolPassed &&
+      (slippageDetails?.passed ?? true);
+
+    const reason = !permPassed
+      ? "Agent lacks permission for this action"
+      : capDetails && !capDetails.passed
+        ? "Spending cap would be exceeded"
+        : !protocolPassed
+          ? "Protocol not in allowlist"
+          : slippageDetails && !slippageDetails.passed
+            ? "Slippage exceeds vault maximum"
+            : undefined;
+
+    return {
+      allowed: allPassed,
+      reason,
+      details: {
+        permission: {
+          passed: permPassed,
+          requiredBit: intent.type,
+          agentHas: !!agentEntry,
+        },
+        spendingCap: capDetails,
+        protocol: { passed: protocolPassed, inAllowlist: protocolPassed },
+        slippage: slippageDetails,
+      },
+      summary: summarizeAction(intent),
+      riskFlags,
+    };
+  }
+
+  /**
+   * Direct execution path: intent -> precheck -> build -> sign -> send.
+   * No propose/approve cycle required.
+   */
+  async execute(
+    intent: IntentAction,
+    vault: PublicKey,
+    options?: {
+      skipPrecheck?: boolean;
+      signers?: Signer[];
+    },
+  ): Promise<ExecuteResult> {
+    // 1. Run precheck unless skipped
+    let precheckResult: PrecheckResult | undefined;
+    if (!options?.skipPrecheck) {
+      precheckResult = await this.precheck(intent, vault);
+      if (!precheckResult.allowed) {
+        throw precheckError({
+          check: precheckResult.reason ?? "policy",
+          expected: "allowed",
+          actual: precheckResult.reason ?? "denied",
+          suggestion: precheckResult.reason ?? "Check vault policy",
+        });
+      }
+    }
+
+    // 2. Execute the action
+    try {
+      const signature = await this._executeAction(
+        intent,
+        vault,
+        options?.signers,
+      );
+      return {
+        signature,
+        intent,
+        precheck: precheckResult,
+        summary: summarizeAction(intent),
+      };
+    } catch (err) {
+      const sdkError = parseOnChainError(err);
+      if (sdkError) throw sdkError;
+      throw err;
+    }
+  }
+
+  /**
+   * Route an intent action to the correct SDK method.
+   * Shared by execute() and executeIntent().
+   */
+  private async _executeAction(
+    intent: IntentAction,
+    vault: PublicKey,
+    signers?: Signer[],
+  ): Promise<string> {
+    const vaultAccount = await this.fetchVaultByAddress(vault);
+    const agent = this.provider.wallet.publicKey;
+    const owner = vaultAccount.owner;
+    const vaultId = vaultAccount.vaultId;
+
+    const toSide = (
+      s: "long" | "short",
+    ):
+      | { long: Record<string, never> }
+      | { short: Record<string, never> } =>
+      s === "long" ? { long: {} } : { short: {} };
+
+    switch (intent.type) {
+      case "swap": {
+        const p = intent.params;
+        const inputMint =
+          resolveToken(p.inputMint)?.mint ?? new PublicKey(p.inputMint);
+        const outputMint =
+          resolveToken(p.outputMint)?.mint ?? new PublicKey(p.outputMint);
+        const inputToken = resolveToken(p.inputMint);
+        const amount = inputToken
+          ? toBaseUnits(p.amount, inputToken.decimals)
+          : new BN(p.amount);
+        return this.executeJupiterSwap(
+          {
+            owner,
+            vaultId,
+            agent,
+            inputMint,
+            outputMint,
+            amount,
+            slippageBps: p.slippageBps ?? 50,
+          },
+          signers,
+        );
+      }
+
+      case "transfer": {
+        const p = intent.params;
+        const mint =
+          resolveToken(p.mint)?.mint ?? new PublicKey(p.mint);
+        const token = resolveToken(p.mint);
+        const amount = token
+          ? toBaseUnits(p.amount, token.decimals)
+          : new BN(p.amount);
+        const { getAssociatedTokenAddressSync } = await import(
+          "@solana/spl-token"
+        );
+        const dest = new PublicKey(p.destination);
+        const vaultAta = getAssociatedTokenAddressSync(
+          mint,
+          vault,
+          true,
+        );
+        const destAta = getAssociatedTokenAddressSync(mint, dest, true);
+        return this.agentTransfer(vault, {
+          amount,
+          vaultTokenAccount: vaultAta,
+          tokenMintAccount: mint,
+          destinationTokenAccount: destAta,
+        });
+      }
+
+      case "deposit": {
+        const p = intent.params;
+        const mint =
+          resolveToken(p.mint)?.mint ?? new PublicKey(p.mint);
+        const token = resolveToken(p.mint);
+        const amount = token
+          ? toBaseUnits(p.amount, token.decimals)
+          : new BN(p.amount);
+        return this.jupiterLendDeposit({
+          owner,
+          vaultId,
+          agent,
+          tokenMint: mint,
+          amount,
+        });
+      }
+
+      case "withdraw": {
+        const p = intent.params;
+        const mint =
+          resolveToken(p.mint)?.mint ?? new PublicKey(p.mint);
+        const token = resolveToken(p.mint);
+        const amount = token
+          ? toBaseUnits(p.amount, token.decimals)
+          : new BN(p.amount);
+        return this.jupiterLendWithdraw({
+          owner,
+          vaultId,
+          agent,
+          tokenMint: mint,
+          amount,
+        });
+      }
+
+      case "openPosition": {
+        const p = intent.params;
+        const result = await this.flashTradeOpen({
+          owner,
+          vaultId,
+          agent,
+          targetSymbol: p.market,
+          collateralSymbol: p.market,
+          collateralAmount: new BN(p.collateral),
+          sizeAmount: new BN(p.collateral),
+          side: toSide(p.side),
+          priceWithSlippage: { price: new BN("0"), exponent: 0 },
+          leverageBps: p.leverage * 10000,
+        });
+        return this.executeFlashTrade(result, agent, signers);
+      }
+
+      case "closePosition": {
+        const p = intent.params;
+        const result = await this.flashTradeClose({
+          owner,
+          vaultId,
+          agent,
+          targetSymbol: p.market,
+          collateralSymbol: p.market,
+          collateralAmount: new BN(0),
+          side: { long: {} },
+          priceWithSlippage: { price: new BN("0"), exponent: 0 },
+        });
+        return this.executeFlashTrade(result, agent, signers);
+      }
+
+      case "increasePosition": {
+        const p = intent.params;
+        throw new Error(
+          "increasePosition via intent requires positionPubKey. Use client.flashTradeIncrease() directly.",
+        );
+      }
+
+      case "decreasePosition": {
+        const p = intent.params;
+        throw new Error(
+          "decreasePosition via intent requires positionPubKey. Use client.flashTradeDecrease() directly.",
+        );
+      }
+
+      case "addCollateral": {
+        const p = intent.params;
+        throw new Error(
+          "addCollateral via intent requires positionPubKey. Use client.flashTradeAddCollateral() directly.",
+        );
+      }
+
+      case "removeCollateral": {
+        const p = intent.params;
+        throw new Error(
+          "removeCollateral via intent requires positionPubKey. Use client.flashTradeRemoveCollateral() directly.",
+        );
+      }
+
+      case "placeTriggerOrder": {
+        const p = intent.params;
+        const result = await this.flashTradePlaceTriggerOrder({
+          owner,
+          vaultId,
+          agent,
+          targetSymbol: p.market,
+          collateralSymbol: p.market,
+          receiveSymbol: "USDC",
+          side: toSide(p.side),
+          triggerPrice: { price: new BN(p.triggerPrice), exponent: 0 },
+          deltaSizeAmount: new BN(p.deltaSizeAmount),
+          isStopLoss: p.isStopLoss,
+        });
+        return this.executeFlashTrade(result, agent, signers);
+      }
+
+      case "editTriggerOrder": {
+        const p = intent.params;
+        const result = await this.flashTradeEditTriggerOrder({
+          owner,
+          vaultId,
+          agent,
+          targetSymbol: p.market,
+          collateralSymbol: p.market,
+          receiveSymbol: "USDC",
+          side: toSide(p.side),
+          orderId: parseInt(p.orderId, 10),
+          triggerPrice: { price: new BN(p.triggerPrice), exponent: 0 },
+          deltaSizeAmount: new BN(p.deltaSizeAmount),
+          isStopLoss: p.isStopLoss,
+        });
+        return this.executeFlashTrade(result, agent, signers);
+      }
+
+      case "cancelTriggerOrder": {
+        const p = intent.params;
+        const result = await this.flashTradeCancelTriggerOrder({
+          owner,
+          vaultId,
+          agent,
+          targetSymbol: p.market,
+          collateralSymbol: p.market,
+          side: toSide(p.side),
+          orderId: parseInt(p.orderId, 10),
+          isStopLoss: p.isStopLoss,
+        });
+        return this.executeFlashTrade(result, agent, signers);
+      }
+
+      case "placeLimitOrder": {
+        const p = intent.params;
+        const result = await this.flashTradePlaceLimitOrder({
+          owner,
+          vaultId,
+          agent,
+          targetSymbol: p.market,
+          collateralSymbol: p.market,
+          reserveSymbol: "USDC",
+          receiveSymbol: p.market,
+          reserveAmount: new BN(p.reserveAmount),
+          sizeAmount: new BN(p.sizeAmount),
+          side: toSide(p.side),
+          limitPrice: { price: new BN(p.limitPrice), exponent: 0 },
+          stopLossPrice: {
+            price: new BN(p.stopLossPrice ?? "0"),
+            exponent: 0,
+          },
+          takeProfitPrice: {
+            price: new BN(p.takeProfitPrice ?? "0"),
+            exponent: 0,
+          },
+          leverageBps: p.leverageBps ?? 10000,
+        });
+        return this.executeFlashTrade(result, agent, signers);
+      }
+
+      case "editLimitOrder": {
+        const p = intent.params;
+        const result = await this.flashTradeEditLimitOrder({
+          owner,
+          vaultId,
+          agent,
+          targetSymbol: p.market,
+          collateralSymbol: p.market,
+          reserveSymbol: "USDC",
+          receiveSymbol: p.market,
+          side: toSide(p.side),
+          orderId: parseInt(p.orderId, 10),
+          limitPrice: { price: new BN(p.limitPrice), exponent: 0 },
+          sizeAmount: new BN(p.sizeAmount),
+          stopLossPrice: {
+            price: new BN(p.stopLossPrice ?? "0"),
+            exponent: 0,
+          },
+          takeProfitPrice: {
+            price: new BN(p.takeProfitPrice ?? "0"),
+            exponent: 0,
+          },
+        });
+        return this.executeFlashTrade(result, agent, signers);
+      }
+
+      case "cancelLimitOrder": {
+        const p = intent.params;
+        const result = await this.flashTradeCancelLimitOrder({
+          owner,
+          vaultId,
+          agent,
+          targetSymbol: p.market,
+          collateralSymbol: p.market,
+          orderId: parseInt(p.orderId, 10),
+          reserveSymbol: "USDC",
+          receiveSymbol: p.market,
+          side: toSide(p.side),
+        });
+        return this.executeFlashTrade(result, agent, signers);
+      }
+
+      case "swapAndOpenPosition": {
+        throw new Error(
+          "swapAndOpenPosition via intent requires pre-built swap instructions. Use client.flashTradeSwapAndOpen() directly.",
+        );
+      }
+
+      case "closeAndSwapPosition": {
+        throw new Error(
+          "closeAndSwapPosition via intent requires pre-built swap instructions. Use client.flashTradeCloseAndSwap() directly.",
+        );
+      }
+
+      case "createEscrow": {
+        const p = intent.params;
+        const mint =
+          resolveToken(p.mint)?.mint ?? new PublicKey(p.mint);
+        const token = resolveToken(p.mint);
+        const amount = token
+          ? toBaseUnits(p.amount, token.decimals)
+          : new BN(p.amount);
+        const now = Math.floor(Date.now() / 1000);
+        const expiresAt = new BN(now + p.expiresInSeconds);
+        const conditionHash = p.conditionHash
+          ? Array.from(Buffer.from(p.conditionHash, "hex"))
+          : Array(32).fill(0);
+        const destVault = new PublicKey(p.destinationVault);
+        const { getAssociatedTokenAddressSync } = await import(
+          "@solana/spl-token"
+        );
+        const vaultAta = getAssociatedTokenAddressSync(
+          mint,
+          vault,
+          true,
+        );
+        const escrowId = new BN(Date.now());
+
+        return this.createEscrow(
+          vault,
+          destVault,
+          escrowId,
+          amount,
+          expiresAt,
+          conditionHash,
+          mint,
+          vaultAta,
+        );
+      }
+
+      case "settleEscrow": {
+        throw new Error(
+          "settleEscrow via intent requires on-chain account addresses. Use client.settleEscrow() directly.",
+        );
+      }
+
+      case "refundEscrow": {
+        throw new Error(
+          "refundEscrow via intent requires on-chain account addresses. Use client.refundEscrow() directly.",
+        );
+      }
+
+      default: {
+        const _exhaustive: never = intent;
+        throw new Error(
+          `Unhandled intent type: ${(intent as IntentAction).type}`,
+        );
+      }
+    }
+  }
+
   // --- Intents (Human-in-the-loop proposal flow) ---
 
   getIntentStorage(): IntentStorage {
@@ -1635,29 +2185,8 @@ export class PhalnxClient {
       updatedAt: Date.now(),
     });
 
-    // Execute the underlying action based on intent type
     try {
-      switch (intent.action.type) {
-        case "swap": {
-          const vaultAccount = await this.fetchVaultByAddress(intent.vault);
-          const swapParams: JupiterSwapParams = {
-            owner: new PublicKey(vaultAccount.owner),
-            vaultId: new BN(vaultAccount.vaultId.toString()),
-            agent: intent.agent,
-            inputMint: new PublicKey(intent.action.params.inputMint),
-            outputMint: new PublicKey(intent.action.params.outputMint),
-            amount: new BN(intent.action.params.amount),
-            slippageBps: intent.action.params.slippageBps ?? 50,
-          };
-          const tx = await this.jupiterSwap(swapParams);
-          const signed = await this.provider.wallet.signTransaction(tx);
-          return this.sendWithOptionalSimulation(signed);
-        }
-        default:
-          throw new Error(
-            `Intent execution for '${intent.action.type}' not yet implemented`,
-          );
-      }
+      return await this._executeAction(intent.action, intent.vault);
     } catch (err: any) {
       await storage.update(_intentId, {
         status: "failed",
