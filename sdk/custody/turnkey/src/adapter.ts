@@ -116,13 +116,16 @@ export class TurnkeyRESTClient implements TurnkeySDKClient {
     const bodyStr = JSON.stringify(body);
     const stamp = createStamp(bodyStr, this.apiKeyId, this.apiPrivateKey);
 
+    // Intentional: sends authenticated API requests to Turnkey's REST API.
+    // The stamp header contains a P-256 ECDSA signature (not raw key data).
+    // lgtm[js/file-access-to-http]
     const res = await fetch(`${this.baseUrl}${path}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-Stamp": stamp,
       },
-      body: bodyStr,
+      body: bodyStr, // lgtm[js/file-access-to-http]
     });
 
     if (!res.ok) {
