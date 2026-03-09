@@ -181,6 +181,95 @@ export type IntentAction =
         destinationVault: string;
         escrowId: string;
       };
+    }
+  // ─── Drift Protocol ──────────────────────────────────────────────────
+  | {
+      type: "driftDeposit";
+      params: {
+        mint: string;
+        amount: string;
+        marketIndex: number;
+        subAccountId?: number;
+      };
+    }
+  | {
+      type: "driftWithdraw";
+      params: {
+        mint: string;
+        amount: string;
+        marketIndex: number;
+        subAccountId?: number;
+      };
+    }
+  | {
+      type: "driftPerpOrder";
+      params: {
+        marketIndex: number;
+        side: "long" | "short";
+        amount: string;
+        price?: string;
+        orderType: "market" | "limit" | "triggerMarket" | "triggerLimit";
+        subAccountId?: number;
+      };
+    }
+  | {
+      type: "driftSpotOrder";
+      params: {
+        marketIndex: number;
+        side: "long" | "short";
+        amount: string;
+        price?: string;
+        orderType: "market" | "limit";
+      };
+    }
+  | {
+      type: "driftCancelOrder";
+      params: {
+        orderId: number;
+        subAccountId?: number;
+      };
+    }
+  // ─── Kamino Lending ──────────────────────────────────────────────────
+  | {
+      type: "kaminoDeposit";
+      params: {
+        mint: string;
+        amount: string;
+        market?: string;
+      };
+    }
+  | {
+      type: "kaminoBorrow";
+      params: {
+        mint: string;
+        amount: string;
+        market?: string;
+      };
+    }
+  | {
+      type: "kaminoRepay";
+      params: {
+        mint: string;
+        amount: string;
+        market?: string;
+      };
+    }
+  | {
+      type: "kaminoWithdraw";
+      params: {
+        mint: string;
+        amount: string;
+        market?: string;
+      };
+    }
+  // ─── Generic Protocol (escape hatch for registry-based dispatch) ────
+  | {
+      type: "protocol";
+      params: {
+        protocolId: string;
+        action: string;
+        [key: string]: unknown;
+      };
     };
 
 /** All supported intent action type strings */
@@ -239,6 +328,19 @@ export const ACTION_TYPE_MAP: Record<
   createEscrow: { actionType: { createEscrow: {} }, isSpending: true },
   settleEscrow: { actionType: { settleEscrow: {} }, isSpending: false },
   refundEscrow: { actionType: { refundEscrow: {} }, isSpending: false },
+  // Drift
+  driftDeposit: { actionType: { deposit: {} }, isSpending: true },
+  driftWithdraw: { actionType: { withdraw: {} }, isSpending: false },
+  driftPerpOrder: { actionType: { openPosition: {} }, isSpending: true },
+  driftSpotOrder: { actionType: { swap: {} }, isSpending: true },
+  driftCancelOrder: { actionType: { cancelLimitOrder: {} }, isSpending: false },
+  // Kamino
+  kaminoDeposit: { actionType: { deposit: {} }, isSpending: true },
+  kaminoBorrow: { actionType: { withdraw: {} }, isSpending: false },
+  kaminoRepay: { actionType: { deposit: {} }, isSpending: true },
+  kaminoWithdraw: { actionType: { withdraw: {} }, isSpending: false },
+  // Generic protocol (resolved dynamically via registry)
+  protocol: { actionType: { swap: {} }, isSpending: true },
 };
 
 export type IntentStatus =
@@ -355,6 +457,29 @@ export function summarizeAction(action: IntentAction): string {
       return `Settle escrow #${action.params.escrowId} from vault ${action.params.sourceVault}`;
     case "refundEscrow":
       return `Refund escrow #${action.params.escrowId} to vault ${action.params.destinationVault}`;
+    // Drift
+    case "driftDeposit":
+      return `Drift deposit ${action.params.amount} of ${action.params.mint} to market ${action.params.marketIndex}`;
+    case "driftWithdraw":
+      return `Drift withdraw ${action.params.amount} of ${action.params.mint} from market ${action.params.marketIndex}`;
+    case "driftPerpOrder":
+      return `Drift ${action.params.side} perp ${action.params.orderType} order on market ${action.params.marketIndex}, amount ${action.params.amount}`;
+    case "driftSpotOrder":
+      return `Drift ${action.params.side} spot ${action.params.orderType} order on market ${action.params.marketIndex}, amount ${action.params.amount}`;
+    case "driftCancelOrder":
+      return `Drift cancel order #${action.params.orderId}`;
+    // Kamino
+    case "kaminoDeposit":
+      return `Kamino deposit ${action.params.amount} of ${action.params.mint}`;
+    case "kaminoBorrow":
+      return `Kamino borrow ${action.params.amount} of ${action.params.mint}`;
+    case "kaminoRepay":
+      return `Kamino repay ${action.params.amount} of ${action.params.mint}`;
+    case "kaminoWithdraw":
+      return `Kamino withdraw ${action.params.amount} of ${action.params.mint}`;
+    // Generic protocol
+    case "protocol":
+      return `${action.params.protocolId}: ${action.params.action}`;
   }
 }
 

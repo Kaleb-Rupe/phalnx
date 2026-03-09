@@ -357,6 +357,105 @@ describe("intents", () => {
       expect(summary).to.include("swap");
       expect(summary).to.include("USDC");
     });
+
+    // Drift intent summaries
+    it("summarizes driftDeposit action", () => {
+      const summary = summarizeAction({
+        type: "driftDeposit",
+        params: { mint: "USDC", amount: "1000", marketIndex: 0 },
+      });
+      expect(summary).to.include("Drift deposit");
+      expect(summary).to.include("market 0");
+    });
+
+    it("summarizes driftWithdraw action", () => {
+      const summary = summarizeAction({
+        type: "driftWithdraw",
+        params: { mint: "USDC", amount: "500", marketIndex: 0 },
+      });
+      expect(summary).to.include("Drift withdraw");
+    });
+
+    it("summarizes driftPerpOrder action", () => {
+      const summary = summarizeAction({
+        type: "driftPerpOrder",
+        params: {
+          marketIndex: 0,
+          side: "long",
+          amount: "1000000000",
+          orderType: "limit",
+        },
+      });
+      expect(summary).to.include("Drift long perp");
+      expect(summary).to.include("limit");
+    });
+
+    it("summarizes driftSpotOrder action", () => {
+      const summary = summarizeAction({
+        type: "driftSpotOrder",
+        params: {
+          marketIndex: 1,
+          side: "short",
+          amount: "5000",
+          orderType: "market",
+        },
+      });
+      expect(summary).to.include("Drift short spot");
+      expect(summary).to.include("market");
+    });
+
+    it("summarizes driftCancelOrder action", () => {
+      const summary = summarizeAction({
+        type: "driftCancelOrder",
+        params: { orderId: 42 },
+      });
+      expect(summary).to.include("Drift cancel order #42");
+    });
+
+    // Kamino intent summaries
+    it("summarizes kaminoDeposit action", () => {
+      const summary = summarizeAction({
+        type: "kaminoDeposit",
+        params: { mint: "USDC", amount: "1000" },
+      });
+      expect(summary).to.include("Kamino deposit");
+      expect(summary).to.include("USDC");
+    });
+
+    it("summarizes kaminoBorrow action", () => {
+      const summary = summarizeAction({
+        type: "kaminoBorrow",
+        params: { mint: "SOL", amount: "10" },
+      });
+      expect(summary).to.include("Kamino borrow");
+      expect(summary).to.include("SOL");
+    });
+
+    it("summarizes kaminoRepay action", () => {
+      const summary = summarizeAction({
+        type: "kaminoRepay",
+        params: { mint: "SOL", amount: "10" },
+      });
+      expect(summary).to.include("Kamino repay");
+    });
+
+    it("summarizes kaminoWithdraw action", () => {
+      const summary = summarizeAction({
+        type: "kaminoWithdraw",
+        params: { mint: "USDC", amount: "500" },
+      });
+      expect(summary).to.include("Kamino withdraw");
+    });
+
+    // Generic protocol intent summary
+    it("summarizes protocol action", () => {
+      const summary = summarizeAction({
+        type: "protocol",
+        params: { protocolId: "my-proto", action: "stake" },
+      });
+      expect(summary).to.include("my-proto");
+      expect(summary).to.include("stake");
+    });
   });
 
   describe("ACTION_TYPE_MAP", () => {
@@ -382,10 +481,23 @@ describe("intents", () => {
       "createEscrow",
       "settleEscrow",
       "refundEscrow",
+      // Drift
+      "driftDeposit",
+      "driftWithdraw",
+      "driftPerpOrder",
+      "driftSpotOrder",
+      "driftCancelOrder",
+      // Kamino
+      "kaminoDeposit",
+      "kaminoBorrow",
+      "kaminoRepay",
+      "kaminoWithdraw",
+      // Generic
+      "protocol",
     ];
 
-    it("maps all 21 action types", () => {
-      expect(Object.keys(ACTION_TYPE_MAP)).to.have.lengthOf(21);
+    it("maps all 31 action types", () => {
+      expect(Object.keys(ACTION_TYPE_MAP)).to.have.lengthOf(31);
     });
 
     for (const type of ALL_TYPES) {
@@ -410,6 +522,12 @@ describe("intents", () => {
         "placeLimitOrder",
         "swapAndOpenPosition",
         "createEscrow",
+        "driftDeposit",
+        "driftPerpOrder",
+        "driftSpotOrder",
+        "kaminoDeposit",
+        "kaminoRepay",
+        "protocol",
       ];
       for (const type of spendingTypes) {
         expect(ACTION_TYPE_MAP[type as IntentActionType].isSpending).to.equal(
@@ -433,6 +551,10 @@ describe("intents", () => {
         "closeAndSwapPosition",
         "settleEscrow",
         "refundEscrow",
+        "driftWithdraw",
+        "driftCancelOrder",
+        "kaminoBorrow",
+        "kaminoWithdraw",
       ];
       for (const type of nonSpendingTypes) {
         expect(ACTION_TYPE_MAP[type as IntentActionType].isSpending).to.equal(
