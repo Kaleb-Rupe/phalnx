@@ -309,4 +309,22 @@ pub mod phalnx {
     pub fn close_settled_escrow(ctx: Context<CloseSettledEscrow>, escrow_id: u64) -> Result<()> {
         instructions::close_settled_escrow::handler(ctx, escrow_id)
     }
+
+    /// Freeze the vault immediately. Preserves all agent entries.
+    /// Only the owner can call this. Use reactivate_vault to unfreeze.
+    pub fn freeze_vault(ctx: Context<FreezeVault>) -> Result<()> {
+        instructions::freeze_vault::handler(ctx)
+    }
+
+    /// Pause a specific agent. Blocks all agent actions while preserving config.
+    /// Only the owner can call this.
+    pub fn pause_agent(ctx: Context<PauseAgent>, agent_to_pause: Pubkey) -> Result<()> {
+        instructions::pause_agent::handler(ctx, agent_to_pause)
+    }
+
+    /// Unpause a paused agent. Restores ability to execute actions.
+    /// Only the owner can call this.
+    pub fn unpause_agent(ctx: Context<UnpauseAgent>, agent_to_unpause: Pubkey) -> Result<()> {
+        instructions::unpause_agent::handler(ctx, agent_to_unpause)
+    }
 }
