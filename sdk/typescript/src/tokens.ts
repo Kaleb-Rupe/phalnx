@@ -161,6 +161,11 @@ export function resolveToken(
  */
 export function toBaseUnits(amount: number | string, decimals: number): BN {
   const num = typeof amount === "string" ? parseFloat(amount) : amount;
+  if (!Number.isFinite(num) || num < 0) {
+    throw new Error(
+      `Invalid amount: ${amount}. Must be a finite non-negative number.`,
+    );
+  }
   const multiplier = Math.pow(10, decimals);
   // Use string conversion to avoid floating-point precision issues
   const baseUnits = Math.round(num * multiplier);

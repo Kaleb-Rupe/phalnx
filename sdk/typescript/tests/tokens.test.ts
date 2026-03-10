@@ -131,6 +131,26 @@ describe("tokens", () => {
       const result = toBaseUnits(0.000001, 6);
       expect(result.toNumber()).to.equal(1);
     });
+
+    it("rejects NaN", () => {
+      expect(() => toBaseUnits(NaN, 6)).to.throw("Invalid amount");
+    });
+
+    it("rejects Infinity", () => {
+      expect(() => toBaseUnits(Infinity, 6)).to.throw("Invalid amount");
+    });
+
+    it("rejects negative values", () => {
+      expect(() => toBaseUnits(-100, 6)).to.throw("Invalid amount");
+    });
+
+    it("rejects string NaN", () => {
+      expect(() => toBaseUnits("NaN", 6)).to.throw("Invalid amount");
+    });
+
+    it("rejects negative string", () => {
+      expect(() => toBaseUnits("-50", 6)).to.throw("Invalid amount");
+    });
   });
 
   describe("fromBaseUnits", () => {
