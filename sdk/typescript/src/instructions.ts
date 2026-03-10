@@ -400,6 +400,7 @@ export function buildUpdateAgentPermissions(
   spendingLimitUsd: BN = new BN(0),
 ) {
   const [policy] = getPolicyPDA(vault, program.programId);
+  const [agentSpendOverlay] = getAgentOverlayPDA(vault, program.programId);
 
   return program.methods
     .updateAgentPermissions(agent, newPermissions, spendingLimitUsd)
@@ -407,6 +408,7 @@ export function buildUpdateAgentPermissions(
       owner,
       vault,
       policy,
+      agentSpendOverlay,
     } as any);
 }
 
@@ -544,16 +546,33 @@ export function buildCloseInstructionConstraints(
   program: Program<Phalnx>,
   owner: PublicKey,
   vault: PublicKey,
+  opts?: { cleanupPendingUpdate?: boolean },
 ) {
   const [policy] = getPolicyPDA(vault, program.programId);
   const [constraints] = getConstraintsPDA(vault, program.programId);
 
-  return program.methods.closeInstructionConstraints().accounts({
+  const builder = program.methods.closeInstructionConstraints().accounts({
     owner,
     vault,
     policy,
     constraints,
   } as any);
+
+  if (opts?.cleanupPendingUpdate) {
+    const [pendingConstraints] = getPendingConstraintsPDA(
+      vault,
+      program.programId,
+    );
+    builder.remainingAccounts([
+      {
+        pubkey: pendingConstraints,
+        isWritable: true,
+        isSigner: false,
+      },
+    ]);
+  }
+
+  return builder;
 }
 
 export function buildUpdateInstructionConstraints(

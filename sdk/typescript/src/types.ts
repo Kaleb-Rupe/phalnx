@@ -130,6 +130,7 @@ export type AgentVaultAccount = {
   totalTransactions: BN;
   totalVolume: BN;
   openPositions: number;
+  activeEscrowCount: number;
   totalFeesCollected: BN;
   treasuryShard: number;
 };

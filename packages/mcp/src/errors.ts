@@ -6,7 +6,7 @@ export interface ErrorInfo {
 }
 
 /**
- * Maps all 71 Phalnx Anchor error codes (6000–6070) to
+ * Maps all 73 Phalnx Anchor error codes (6000–6072) to
  * human-readable messages with actionable suggestions for AI tools.
  */
 const ERROR_MAP: Record<number, ErrorInfo> = {
@@ -511,6 +511,21 @@ const ERROR_MAP: Record<number, ErrorInfo> = {
       "protocol_caps length must match protocols length when has_protocol_caps is true",
     suggestion:
       "When has_protocol_caps is true, the protocol_caps array must have the same length as the protocols array. Ensure both arrays match.",
+  },
+  6071: {
+    code: 6071,
+    name: "ActiveEscrowsExist",
+    message: "Cannot close vault with active escrow deposits",
+    suggestion:
+      "Settle or refund all active escrow deposits before closing the vault. Use settleEscrow or refundEscrow instructions first.",
+  },
+  6072: {
+    code: 6072,
+    name: "ConstraintsNotClosed",
+    message:
+      "Instruction constraints must be closed before closing vault",
+    suggestion:
+      "Close instruction constraints using closeInstructionConstraints before closing the vault.",
   },
 };
 
