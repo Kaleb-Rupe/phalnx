@@ -236,4 +236,14 @@ pub enum PhalnxError {
     // 6073
     #[msg("Pending policy update must be applied or cancelled before closing vault")]
     PendingPolicyExists,
+
+    // --- Emergency response errors (6074-6076) ---
+    #[msg("Agent is paused and cannot execute actions")]
+    AgentPaused,
+
+    #[msg("Agent is already paused")]
+    AgentAlreadyPaused,
+
+    #[msg("Agent is not paused")]
+    AgentNotPaused,
 }

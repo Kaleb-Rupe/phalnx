@@ -57,6 +57,7 @@ pub fn handler(
             pubkey: agent_key,
             permissions,
             spending_limit_usd: 0, // reactivation agent starts with no per-agent limit
+            paused: false,
         });
     }
 

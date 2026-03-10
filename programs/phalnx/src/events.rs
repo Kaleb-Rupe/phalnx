@@ -235,3 +235,25 @@ pub struct EscrowRefunded {
     pub amount: u64,
     pub refunded_by: Pubkey,
 }
+
+#[event]
+pub struct VaultFrozen {
+    pub vault: Pubkey,
+    pub owner: Pubkey,
+    pub agents_preserved: u8,
+    pub timestamp: i64,
+}
+
+#[event]
+pub struct AgentPausedEvent {
+    pub vault: Pubkey,
+    pub agent: Pubkey,
+    pub timestamp: i64,
+}
+
+#[event]
+pub struct AgentUnpausedEvent {
+    pub vault: Pubkey,
+    pub agent: Pubkey,
+    pub timestamp: i64,
+}

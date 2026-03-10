@@ -53,6 +53,7 @@ pub fn handler(
         pubkey: agent,
         permissions,
         spending_limit_usd,
+        paused: false,
     });
 
     // Claim a slot in the overlay for per-agent tracking.

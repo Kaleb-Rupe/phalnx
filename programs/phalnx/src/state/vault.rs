@@ -6,8 +6,9 @@ pub struct AgentEntry {
     pub pubkey: Pubkey,          // 32 bytes
     pub permissions: u64,        // 8 bytes
     pub spending_limit_usd: u64, // 8 bytes — 0 = no per-agent limit
+    pub paused: bool,            // 1 byte  — owner-controlled suspension
 }
-// Total: 48 bytes per entry
+// Total: 49 bytes per entry
 
 #[account]
 pub struct AgentVault {
@@ -51,13 +52,13 @@ pub struct AgentVault {
 
 impl AgentVault {
     /// Account discriminator (8) + owner (32) + vault_id (8) +
-    /// agents vec prefix (4) + agents data (48 * 10) +
+    /// agents vec prefix (4) + agents data (49 * 10) +
     /// fee_destination (32) + status (1) + bump (1) +
     /// created_at (8) + total_transactions (8) + total_volume (8) +
     /// open_positions (1) + active_escrow_count (1) + total_fees_collected (8)
     pub const SIZE: usize =
-        8 + 32 + 8 + 4 + (48 * MAX_AGENTS_PER_VAULT) + 32 + 1 + 1 + 8 + 8 + 8 + 1 + 1 + 8;
-    // = 600
+        8 + 32 + 8 + 4 + (49 * MAX_AGENTS_PER_VAULT) + 32 + 1 + 1 + 8 + 8 + 8 + 1 + 1 + 8;
+    // = 610
 
     pub fn is_active(&self) -> bool {
         self.status == VaultStatus::Active
@@ -87,6 +88,12 @@ impl AgentVault {
 
     pub fn is_owner(&self, signer: &Pubkey) -> bool {
         self.owner == *signer
+    }
+
+    pub fn is_agent_paused(&self, signer: &Pubkey) -> bool {
+        self.get_agent(signer)
+            .map(|a| a.paused)
+            .unwrap_or(false)
     }
 }
 
