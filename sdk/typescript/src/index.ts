@@ -40,6 +40,7 @@ export {
 // Token Resolution
 export {
   resolveToken,
+  resolveTokenAsync,
   toBaseUnits,
   fromBaseUnits,
   type ResolvedToken,
@@ -53,12 +54,29 @@ export {
   toAgentError,
   agentErrorFromCode,
   isAgentError,
+  protocolEscalationError,
   getAllOnChainErrorCodes,
   getAllSdkErrorCodes,
   type ErrorCategory,
   type RecoveryAction,
   type AgentError,
 } from "./agent-errors";
+
+// Protocol Resolver (4-Tier Dispatch + Escalation)
+export {
+  ProtocolTier,
+  resolveProtocol,
+  isProtocolAllowed,
+  type ProtocolResolution,
+  type EscalationInfo,
+} from "./protocol-resolver";
+
+// Account Resolution
+export {
+  resolveAccounts,
+  type ResolvedAccounts,
+  type ResolveAccountsInput,
+} from "./resolve-accounts";
 
 // Intent Input Validation
 export { validateIntentInput, type ValidationResult } from "./intent-validator";
