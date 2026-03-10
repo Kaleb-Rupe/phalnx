@@ -31,6 +31,24 @@ export {
   reactivateVault,
   reactivateVaultSchema,
 } from "./reactivate-vault";
+
+// --- Emergency Response ---
+export {
+  freezeVaultTool,
+  freezeVault,
+  freezeVaultSchema,
+} from "./freeze-vault";
+export {
+  pauseAgentTool,
+  pauseAgent,
+  pauseAgentSchema,
+} from "./pause-agent";
+export {
+  unpauseAgentTool,
+  unpauseAgent,
+  unpauseAgentSchema,
+} from "./unpause-agent";
+
 export {
   executeSwapTool,
   executeSwap,

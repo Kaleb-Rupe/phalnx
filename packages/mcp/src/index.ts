@@ -23,6 +23,9 @@ import { registerAgent } from "./tools/register-agent";
 import { updatePolicy } from "./tools/update-policy";
 import { revokeAgent } from "./tools/revoke-agent";
 import { reactivateVault } from "./tools/reactivate-vault";
+import { freezeVault } from "./tools/freeze-vault";
+import { pauseAgent } from "./tools/pause-agent";
+import { unpauseAgent } from "./tools/unpause-agent";
 import { executeSwap } from "./tools/execute-swap";
 import { openPosition } from "./tools/open-position";
 import { closePosition } from "./tools/close-position";
@@ -624,6 +627,41 @@ async function main() {
         ),
     },
     requireClient((input) => reactivateVault(client!, input)),
+  );
+
+  registerTool(
+    server,
+    "shield_freeze_vault",
+    "Freeze a vault immediately — blocks all agent actions while preserving agent entries. " +
+      "Owner-only emergency action. Use shield_reactivate_vault to unfreeze.",
+    {
+      vault: z.string().describe("Vault PDA address (base58)"),
+    },
+    requireClient((input) => freezeVault(client!, input)),
+  );
+
+  registerTool(
+    server,
+    "shield_pause_agent",
+    "Pause a specific agent — blocks all its actions while preserving config. " +
+      "Owner-only. Other agents are not affected.",
+    {
+      vault: z.string().describe("Vault PDA address (base58)"),
+      agent: z.string().describe("Agent public key to pause (base58)"),
+    },
+    requireClient((input) => pauseAgent(client!, input)),
+  );
+
+  registerTool(
+    server,
+    "shield_unpause_agent",
+    "Unpause a paused agent — restores its ability to execute actions. " +
+      "Owner-only.",
+    {
+      vault: z.string().describe("Vault PDA address (base58)"),
+      agent: z.string().describe("Agent public key to unpause (base58)"),
+    },
+    requireClient((input) => unpauseAgent(client!, input)),
   );
 
   registerTool(

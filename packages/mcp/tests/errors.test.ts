@@ -13,8 +13,8 @@ describe("errors", () => {
       }
     });
 
-    it("has exactly 74 entries", () => {
-      expect(Object.keys(ERROR_MAP)).to.have.length(74);
+    it("has exactly 77 entries", () => {
+      expect(Object.keys(ERROR_MAP)).to.have.length(77);
     });
   });
 

@@ -297,6 +297,24 @@ export function createMockClient(
       return "mock-sig-reactivate";
     },
 
+    async freezeVault(vault: PublicKey) {
+      calls.push({ method: "freezeVault", args: [vault] });
+      if (overrides.shouldThrow) throw overrides.shouldThrow;
+      return "mock-sig-freeze";
+    },
+
+    async pauseAgent(vault: PublicKey, agent: PublicKey) {
+      calls.push({ method: "pauseAgent", args: [vault, agent] });
+      if (overrides.shouldThrow) throw overrides.shouldThrow;
+      return "mock-sig-pause";
+    },
+
+    async unpauseAgent(vault: PublicKey, agent: PublicKey) {
+      calls.push({ method: "unpauseAgent", args: [vault, agent] });
+      if (overrides.shouldThrow) throw overrides.shouldThrow;
+      return "mock-sig-unpause";
+    },
+
     async updateAgentPermissions(
       vault: PublicKey,
       agent: PublicKey,

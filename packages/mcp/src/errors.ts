@@ -6,7 +6,7 @@ export interface ErrorInfo {
 }
 
 /**
- * Maps all 74 Phalnx Anchor error codes (6000–6073) to
+ * Maps all 77 Phalnx Anchor error codes (6000–6076) to
  * human-readable messages with actionable suggestions for AI tools.
  */
 const ERROR_MAP: Record<number, ErrorInfo> = {
@@ -533,6 +533,26 @@ const ERROR_MAP: Record<number, ErrorInfo> = {
       "Pending policy update must be applied or cancelled before closing vault",
     suggestion:
       "Apply the pending policy update using applyPendingPolicy, or cancel it using cancelPendingPolicy, before closing the vault. Alternatively, pass the PendingPolicyUpdate PDA in remainingAccounts to clean it up during close.",
+  },
+  6074: {
+    code: 6074,
+    name: "AgentPaused",
+    message: "Agent is paused and cannot execute actions",
+    suggestion:
+      "The vault owner has paused this agent. Use shield_unpause_agent to restore access.",
+  },
+  6075: {
+    code: 6075,
+    name: "AgentAlreadyPaused",
+    message: "Agent is already paused",
+    suggestion: "The agent is already paused — no action needed.",
+  },
+  6076: {
+    code: 6076,
+    name: "AgentNotPaused",
+    message: "Agent is not paused",
+    suggestion:
+      "Cannot unpause an agent that is not paused. Use shield_check_vault to check agent status.",
   },
 };
 
