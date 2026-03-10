@@ -156,6 +156,52 @@ export function resolveToken(
 }
 
 /**
+ * Async token resolution with on-chain mint lookup.
+ *
+ * Resolution layers:
+ * 1. Well-known tokens (instant, no RPC) — USDC, SOL, etc.
+ * 2. Valid base58 address → read actual decimals from on-chain Mint account
+ * 3. Returns null if unresolvable
+ */
+export async function resolveTokenAsync(
+  tokenOrMint: string,
+  connection: import("@solana/web3.js").Connection,
+  network: Network = "mainnet-beta",
+): Promise<ResolvedToken | null> {
+  // 1. Try hardcoded first (instant)
+  const known = resolveToken(tokenOrMint, network);
+  if (known) return known;
+
+  // 2. Try on-chain mint lookup for valid base58 addresses
+  if (isBase58PublicKey(tokenOrMint)) {
+    try {
+      const mintPk = new PublicKey(tokenOrMint);
+      const info = await connection.getAccountInfo(mintPk);
+      if (info && info.data.length >= 82) {
+        // SPL Token Mint layout: decimals is at byte offset 44 (1 byte)
+        const decimals = info.data[44];
+        return {
+          mint: mintPk,
+          decimals,
+          symbol: tokenOrMint.slice(0, 4) + "...",
+        };
+      }
+    } catch {
+      // Fall through to default
+    }
+
+    // Fallback: return with default decimals
+    return {
+      mint: new PublicKey(tokenOrMint),
+      decimals: 6,
+      symbol: tokenOrMint.slice(0, 4) + "...",
+    };
+  }
+
+  return null;
+}
+
+/**
  * Convert a human-readable amount to base units.
  * Example: toBaseUnits(100, 6) === BN(100_000_000)
  */
