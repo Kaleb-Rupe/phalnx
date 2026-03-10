@@ -158,7 +158,7 @@ export function buildValidateAndAuthorize(
 
   return program.methods
     .validateAndAuthorize(
-      params.actionType as any,
+      params.actionType as any, // Anchor 0.32.1: ActionType enum not structurally compatible
       params.tokenMint,
       params.amount,
       params.targetProtocol,
@@ -530,7 +530,7 @@ export function buildCreateInstructionConstraints(
   const [constraints] = getConstraintsPDA(vault, program.programId);
 
   return program.methods
-    .createInstructionConstraints(entries as any, strictMode ?? false)
+    .createInstructionConstraints(entries as any, strictMode ?? false) // Anchor 0.32.1: ConstraintEntry[] type mismatch
     .accounts({
       owner,
       vault,
@@ -567,7 +567,7 @@ export function buildUpdateInstructionConstraints(
   const [constraints] = getConstraintsPDA(vault, program.programId);
 
   return program.methods
-    .updateInstructionConstraints(entries as any, strictMode ?? false)
+    .updateInstructionConstraints(entries as any, strictMode ?? false) // Anchor 0.32.1: ConstraintEntry[] type mismatch
     .accounts({
       owner,
       vault,
@@ -591,7 +591,7 @@ export function buildQueueConstraintsUpdate(
   );
 
   return program.methods
-    .queueConstraintsUpdate(entries as any, strictMode ?? false)
+    .queueConstraintsUpdate(entries as any, strictMode ?? false) // Anchor 0.32.1: ConstraintEntry[] type mismatch
     .accounts({
       owner,
       vault,
