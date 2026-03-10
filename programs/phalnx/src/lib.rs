@@ -132,7 +132,7 @@ pub mod phalnx {
     }
 
     /// Finalize a session after the DeFi action completes.
-    /// Revokes delegation and closes the SessionAuthority PDA.
+    /// Revokes delegation, closes SessionAuthority PDA.
     pub fn finalize_session(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
         instructions::finalize_session::handler(ctx, success)
     }

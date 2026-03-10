@@ -142,7 +142,7 @@ impl AgentSpendOverlay {
         let entry = &self.entries[slot_idx];
 
         // If last write was more than 24 epochs ago, all data is expired
-        if current_epoch - entry.last_write_epoch >= OVERLAY_NUM_EPOCHS as i64 {
+        if current_epoch - entry.last_write_epoch > OVERLAY_NUM_EPOCHS as i64 {
             return 0;
         }
 

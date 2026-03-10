@@ -281,7 +281,7 @@ describe("instruction-constraints", () => {
       ];
 
       await program.methods
-        .createInstructionConstraints(entries)
+        .createInstructionConstraints(entries, false)
         .accounts({
           owner: owner.publicKey,
           vault: vaultPda,
@@ -322,7 +322,7 @@ describe("instruction-constraints", () => {
       ];
 
       await program.methods
-        .updateInstructionConstraints(newEntries)
+        .updateInstructionConstraints(newEntries, false)
         .accounts({
           owner: owner.publicKey,
           vault: vaultPda,
@@ -375,7 +375,7 @@ describe("instruction-constraints", () => {
       ];
 
       await program.methods
-        .createInstructionConstraints(entries)
+        .createInstructionConstraints(entries, false)
         .accounts({
           owner: owner.publicKey,
           vault: vaultPda,
@@ -422,7 +422,7 @@ describe("instruction-constraints", () => {
         },
       ];
       await program.methods
-        .createInstructionConstraints(entries)
+        .createInstructionConstraints(entries, false)
         .accounts({
           owner: owner.publicKey,
           vault: vaultPda,
@@ -563,15 +563,18 @@ describe("instruction-constraints", () => {
 
       // Create constraints on vault 2
       await program.methods
-        .createInstructionConstraints([
-          {
-            programId: jupiterProgramId,
-            dataConstraints: [
-              { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01]) },
-            ],
-            accountConstraints: [],
-          },
-        ])
+        .createInstructionConstraints(
+          [
+            {
+              programId: jupiterProgramId,
+              dataConstraints: [
+                { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01]) },
+              ],
+              accountConstraints: [],
+            },
+          ],
+          false,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: vault2Pda,
@@ -630,7 +633,7 @@ describe("instruction-constraints", () => {
 
       try {
         await program.methods
-          .createInstructionConstraints(entries)
+          .createInstructionConstraints(entries, false)
           .accounts({
             owner: owner.publicKey,
             vault: vaultPda,
@@ -657,13 +660,16 @@ describe("instruction-constraints", () => {
 
       try {
         await program.methods
-          .createInstructionConstraints([
-            {
-              programId: jupiterProgramId,
-              dataConstraints,
-              accountConstraints: [],
-            },
-          ])
+          .createInstructionConstraints(
+            [
+              {
+                programId: jupiterProgramId,
+                dataConstraints,
+                accountConstraints: [],
+              },
+            ],
+            false,
+          )
           .accounts({
             owner: owner.publicKey,
             vault: vaultPda,
@@ -683,19 +689,22 @@ describe("instruction-constraints", () => {
 
       try {
         await program.methods
-          .createInstructionConstraints([
-            {
-              programId: jupiterProgramId,
-              dataConstraints: [
-                {
-                  offset: 0,
-                  operator: { eq: {} },
-                  value: bigValue,
-                },
-              ],
-              accountConstraints: [],
-            },
-          ])
+          .createInstructionConstraints(
+            [
+              {
+                programId: jupiterProgramId,
+                dataConstraints: [
+                  {
+                    offset: 0,
+                    operator: { eq: {} },
+                    value: bigValue,
+                  },
+                ],
+                accountConstraints: [],
+              },
+            ],
+            false,
+          )
           .accounts({
             owner: owner.publicKey,
             vault: vaultPda,
@@ -716,19 +725,22 @@ describe("instruction-constraints", () => {
       const policy = await program.account.policyConfig.fetch(policyPda);
       if (!policy.hasConstraints) {
         await program.methods
-          .createInstructionConstraints([
-            {
-              programId: jupiterProgramId,
-              dataConstraints: [
-                {
-                  offset: 0,
-                  operator: { eq: {} },
-                  value: Buffer.from([0x01, 0x02]),
-                },
-              ],
-              accountConstraints: [],
-            },
-          ])
+          .createInstructionConstraints(
+            [
+              {
+                programId: jupiterProgramId,
+                dataConstraints: [
+                  {
+                    offset: 0,
+                    operator: { eq: {} },
+                    value: Buffer.from([0x01, 0x02]),
+                  },
+                ],
+                accountConstraints: [],
+              },
+            ],
+            false,
+          )
           .accounts({
             owner: owner.publicKey,
             vault: vaultPda,
@@ -812,19 +824,22 @@ describe("instruction-constraints", () => {
 
       // Create constraints (allowed — additive change)
       await program.methods
-        .createInstructionConstraints([
-          {
-            programId: jupiterProgramId,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { eq: {} },
-                value: Buffer.from([0xff]),
-              },
-            ],
-            accountConstraints: [],
-          },
-        ])
+        .createInstructionConstraints(
+          [
+            {
+              programId: jupiterProgramId,
+              dataConstraints: [
+                {
+                  offset: 0,
+                  operator: { eq: {} },
+                  value: Buffer.from([0xff]),
+                },
+              ],
+              accountConstraints: [],
+            },
+          ],
+          false,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: tlVaultPda,
@@ -838,15 +853,22 @@ describe("instruction-constraints", () => {
     it("direct update rejected when timelock > 0 → TimelockActive", async () => {
       try {
         await program.methods
-          .updateInstructionConstraints([
-            {
-              programId: jupiterProgramId,
-              dataConstraints: [
-                { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01]) },
-              ],
-              accountConstraints: [],
-            },
-          ])
+          .updateInstructionConstraints(
+            [
+              {
+                programId: jupiterProgramId,
+                dataConstraints: [
+                  {
+                    offset: 0,
+                    operator: { eq: {} },
+                    value: Buffer.from([0x01]),
+                  },
+                ],
+                accountConstraints: [],
+              },
+            ],
+            false,
+          )
           .accounts({
             owner: owner.publicKey,
             vault: tlVaultPda,
@@ -894,7 +916,7 @@ describe("instruction-constraints", () => {
 
       // Queue
       await program.methods
-        .queueConstraintsUpdate(newEntries)
+        .queueConstraintsUpdate(newEntries, false)
         .accounts({
           owner: owner.publicKey,
           vault: tlVaultPda,
@@ -949,15 +971,18 @@ describe("instruction-constraints", () => {
     it("cancel pending constraints update", async () => {
       // Queue another update
       await program.methods
-        .queueConstraintsUpdate([
-          {
-            programId: jupiterProgramId,
-            dataConstraints: [
-              { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01]) },
-            ],
-            accountConstraints: [],
-          },
-        ])
+        .queueConstraintsUpdate(
+          [
+            {
+              programId: jupiterProgramId,
+              dataConstraints: [
+                { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01]) },
+              ],
+              accountConstraints: [],
+            },
+          ],
+          false,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: tlVaultPda,
@@ -987,15 +1012,22 @@ describe("instruction-constraints", () => {
       // Use the main vault (no timelock)
       try {
         await program.methods
-          .queueConstraintsUpdate([
-            {
-              programId: jupiterProgramId,
-              dataConstraints: [
-                { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01]) },
-              ],
-              accountConstraints: [],
-            },
-          ])
+          .queueConstraintsUpdate(
+            [
+              {
+                programId: jupiterProgramId,
+                dataConstraints: [
+                  {
+                    offset: 0,
+                    operator: { eq: {} },
+                    value: Buffer.from([0x01]),
+                  },
+                ],
+                accountConstraints: [],
+              },
+            ],
+            false,
+          )
           .accounts({
             owner: owner.publicKey,
             vault: vaultPda,
@@ -1037,13 +1069,16 @@ describe("instruction-constraints", () => {
         .rpc();
 
       await program.methods
-        .createInstructionConstraints([
-          {
-            programId: jupiterProgramId,
-            dataConstraints: [], // No data constraints — any instruction from Jupiter passes
-            accountConstraints: [{ index: 0, expected: jupiterProgramId }],
-          },
-        ])
+        .createInstructionConstraints(
+          [
+            {
+              programId: jupiterProgramId,
+              dataConstraints: [], // No data constraints — any instruction from Jupiter passes
+              accountConstraints: [{ index: 0, expected: jupiterProgramId }],
+            },
+          ],
+          false,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: vaultPda,
@@ -1079,19 +1114,22 @@ describe("instruction-constraints", () => {
         .rpc();
 
       await program.methods
-        .createInstructionConstraints([
-          {
-            programId: unrelatedProgram,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { eq: {} },
-                value: Buffer.from([0xff]),
-              },
-            ],
-            accountConstraints: [],
-          },
-        ])
+        .createInstructionConstraints(
+          [
+            {
+              programId: unrelatedProgram,
+              dataConstraints: [
+                {
+                  offset: 0,
+                  operator: { eq: {} },
+                  value: Buffer.from([0xff]),
+                },
+              ],
+              accountConstraints: [],
+            },
+          ],
+          false,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: vaultPda,
@@ -1137,15 +1175,22 @@ describe("instruction-constraints", () => {
       // Attacker's vault PDA derivation uses attacker.publicKey → ConstraintSeeds
       try {
         await program.methods
-          .createInstructionConstraints([
-            {
-              programId: jupiterProgramId,
-              dataConstraints: [
-                { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01]) },
-              ],
-              accountConstraints: [],
-            },
-          ])
+          .createInstructionConstraints(
+            [
+              {
+                programId: jupiterProgramId,
+                dataConstraints: [
+                  {
+                    offset: 0,
+                    operator: { eq: {} },
+                    value: Buffer.from([0x01]),
+                  },
+                ],
+                accountConstraints: [],
+              },
+            ],
+            false,
+          )
           .accountsPartial({
             owner: attacker.publicKey,
             vault: vaultPda,
@@ -1165,19 +1210,22 @@ describe("instruction-constraints", () => {
 
       // Re-create constraints for subsequent tests
       await program.methods
-        .createInstructionConstraints([
-          {
-            programId: jupiterProgramId,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { eq: {} },
-                value: Buffer.from([0x01, 0x02]),
-              },
-            ],
-            accountConstraints: [],
-          },
-        ])
+        .createInstructionConstraints(
+          [
+            {
+              programId: jupiterProgramId,
+              dataConstraints: [
+                {
+                  offset: 0,
+                  operator: { eq: {} },
+                  value: Buffer.from([0x01, 0x02]),
+                },
+              ],
+              accountConstraints: [],
+            },
+          ],
+          false,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: vaultPda,
@@ -1194,15 +1242,22 @@ describe("instruction-constraints", () => {
 
       try {
         await program.methods
-          .updateInstructionConstraints([
-            {
-              programId: jupiterProgramId,
-              dataConstraints: [
-                { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01]) },
-              ],
-              accountConstraints: [],
-            },
-          ])
+          .updateInstructionConstraints(
+            [
+              {
+                programId: jupiterProgramId,
+                dataConstraints: [
+                  {
+                    offset: 0,
+                    operator: { eq: {} },
+                    value: Buffer.from([0x01]),
+                  },
+                ],
+                accountConstraints: [],
+              },
+            ],
+            false,
+          )
           .accountsPartial({
             owner: attacker.publicKey,
             vault: vaultPda,
@@ -1263,7 +1318,7 @@ describe("instruction-constraints", () => {
       ];
 
       await program.methods
-        .createInstructionConstraints(entries)
+        .createInstructionConstraints(entries, false)
         .accounts({
           owner: owner.publicKey,
           vault: vaultPda,
@@ -1287,26 +1342,29 @@ describe("instruction-constraints", () => {
     it("per-discriminator OR: first entry passes", async () => {
       // Update constraints: first entry matches [0x01, 0x02]
       await program.methods
-        .updateInstructionConstraints([
-          {
-            programId: jupiterProgramId,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { eq: {} },
-                value: Buffer.from([0x01, 0x02]),
-              },
-            ],
-            accountConstraints: [],
-          },
-          {
-            programId: jupiterProgramId,
-            dataConstraints: [
-              { offset: 0, operator: { eq: {} }, value: Buffer.from([0xff]) },
-            ],
-            accountConstraints: [],
-          },
-        ])
+        .updateInstructionConstraints(
+          [
+            {
+              programId: jupiterProgramId,
+              dataConstraints: [
+                {
+                  offset: 0,
+                  operator: { eq: {} },
+                  value: Buffer.from([0x01, 0x02]),
+                },
+              ],
+              accountConstraints: [],
+            },
+            {
+              programId: jupiterProgramId,
+              dataConstraints: [
+                { offset: 0, operator: { eq: {} }, value: Buffer.from([0xff]) },
+              ],
+              accountConstraints: [],
+            },
+          ],
+          false,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: vaultPda,
@@ -1350,19 +1408,22 @@ describe("instruction-constraints", () => {
         .rpc();
 
       await program.methods
-        .createInstructionConstraints([
-          {
-            programId: jupiterProgramId,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { eq: {} },
-                value: Buffer.from([0x01, 0x02]),
-              },
-            ],
-            accountConstraints: [],
-          },
-        ])
+        .createInstructionConstraints(
+          [
+            {
+              programId: jupiterProgramId,
+              dataConstraints: [
+                {
+                  offset: 0,
+                  operator: { eq: {} },
+                  value: Buffer.from([0x01, 0x02]),
+                },
+              ],
+              accountConstraints: [],
+            },
+          ],
+          false,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: vaultPda,
@@ -1392,15 +1453,18 @@ describe("instruction-constraints", () => {
 
       try {
         await program.methods
-          .createInstructionConstraints([
-            {
-              programId: jupiterProgramId,
-              dataConstraints: [
-                { offset: 0, operator: { eq: {} }, value: Buffer.from([]) },
-              ],
-              accountConstraints: [],
-            },
-          ])
+          .createInstructionConstraints(
+            [
+              {
+                programId: jupiterProgramId,
+                dataConstraints: [
+                  { offset: 0, operator: { eq: {} }, value: Buffer.from([]) },
+                ],
+                accountConstraints: [],
+              },
+            ],
+            false,
+          )
           .accounts({
             owner: owner.publicKey,
             vault: vaultPda,
@@ -1418,13 +1482,16 @@ describe("instruction-constraints", () => {
     it("empty entry rejected → InvalidConstraintConfig", async () => {
       try {
         await program.methods
-          .createInstructionConstraints([
-            {
-              programId: jupiterProgramId,
-              dataConstraints: [],
-              accountConstraints: [],
-            },
-          ])
+          .createInstructionConstraints(
+            [
+              {
+                programId: jupiterProgramId,
+                dataConstraints: [],
+                accountConstraints: [],
+              },
+            ],
+            false,
+          )
           .accounts({
             owner: owner.publicKey,
             vault: vaultPda,
@@ -1453,7 +1520,7 @@ describe("instruction-constraints", () => {
       }
 
       await program.methods
-        .createInstructionConstraints(entries)
+        .createInstructionConstraints(entries, false)
         .accounts({
           owner: owner.publicKey,
           vault: vaultPda,
@@ -1480,13 +1547,16 @@ describe("instruction-constraints", () => {
       }
 
       await program.methods
-        .updateInstructionConstraints([
-          {
-            programId: jupiterProgramId,
-            dataConstraints,
-            accountConstraints: [],
-          },
-        ])
+        .updateInstructionConstraints(
+          [
+            {
+              programId: jupiterProgramId,
+              dataConstraints,
+              accountConstraints: [],
+            },
+          ],
+          false,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: vaultPda,
@@ -1527,19 +1597,22 @@ describe("instruction-constraints", () => {
       negTen.writeBigInt64LE(-10n);
 
       await program.methods
-        .createInstructionConstraints([
-          {
-            programId: signedTestProgram,
-            dataConstraints: [
-              {
-                offset: 8,
-                operator: { gteSigned: {} },
-                value: negTen,
-              },
-            ],
-            accountConstraints: [],
-          },
-        ])
+        .createInstructionConstraints(
+          [
+            {
+              programId: signedTestProgram,
+              dataConstraints: [
+                {
+                  offset: 8,
+                  operator: { gteSigned: {} },
+                  value: negTen,
+                },
+              ],
+              accountConstraints: [],
+            },
+          ],
+          false,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: vaultPda,
@@ -1574,19 +1647,22 @@ describe("instruction-constraints", () => {
       thousand.writeBigInt64LE(1000n);
 
       await program.methods
-        .createInstructionConstraints([
-          {
-            programId: signedTestProgram,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { lteSigned: {} },
-                value: thousand,
-              },
-            ],
-            accountConstraints: [],
-          },
-        ])
+        .createInstructionConstraints(
+          [
+            {
+              programId: signedTestProgram,
+              dataConstraints: [
+                {
+                  offset: 0,
+                  operator: { lteSigned: {} },
+                  value: thousand,
+                },
+              ],
+              accountConstraints: [],
+            },
+          ],
+          false,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: vaultPda,
@@ -1616,19 +1692,22 @@ describe("instruction-constraints", () => {
 
       // Bitmask: require bits 0 and 2 set (0x05)
       await program.methods
-        .createInstructionConstraints([
-          {
-            programId: bitmaskTestProgram,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { bitmask: {} },
-                value: Buffer.from([0x05]),
-              },
-            ],
-            accountConstraints: [],
-          },
-        ])
+        .createInstructionConstraints(
+          [
+            {
+              programId: bitmaskTestProgram,
+              dataConstraints: [
+                {
+                  offset: 0,
+                  operator: { bitmask: {} },
+                  value: Buffer.from([0x05]),
+                },
+              ],
+              accountConstraints: [],
+            },
+          ],
+          false,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: vaultPda,
@@ -1662,19 +1741,22 @@ describe("instruction-constraints", () => {
       negFive.writeBigInt64LE(-5n);
 
       await program.methods
-        .createInstructionConstraints([
-          {
-            programId: signedTestProgram,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { gteSigned: {} },
-                value: negFive,
-              },
-            ],
-            accountConstraints: [],
-          },
-        ])
+        .createInstructionConstraints(
+          [
+            {
+              programId: signedTestProgram,
+              dataConstraints: [
+                {
+                  offset: 0,
+                  operator: { gteSigned: {} },
+                  value: negFive,
+                },
+              ],
+              accountConstraints: [],
+            },
+          ],
+          false,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: vaultPda,
@@ -1706,19 +1788,22 @@ describe("instruction-constraints", () => {
         .rpc();
 
       await program.methods
-        .createInstructionConstraints([
-          {
-            programId: bitmaskTestProgram,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { bitmask: {} },
-                value: Buffer.from([0x0f]),
-              },
-            ],
-            accountConstraints: [],
-          },
-        ])
+        .createInstructionConstraints(
+          [
+            {
+              programId: bitmaskTestProgram,
+              dataConstraints: [
+                {
+                  offset: 0,
+                  operator: { bitmask: {} },
+                  value: Buffer.from([0x0f]),
+                },
+              ],
+              accountConstraints: [],
+            },
+          ],
+          false,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: vaultPda,
@@ -1754,30 +1839,33 @@ describe("instruction-constraints", () => {
 
       // Two entries for same program: GteSigned OR Bitmask (OR logic)
       await program.methods
-        .createInstructionConstraints([
-          {
-            programId: signedTestProgram,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { gteSigned: {} },
-                value: negHundred,
-              },
-            ],
-            accountConstraints: [],
-          },
-          {
-            programId: signedTestProgram,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { bitmask: {} },
-                value: Buffer.from([0x01, 0x80]),
-              },
-            ],
-            accountConstraints: [],
-          },
-        ])
+        .createInstructionConstraints(
+          [
+            {
+              programId: signedTestProgram,
+              dataConstraints: [
+                {
+                  offset: 0,
+                  operator: { gteSigned: {} },
+                  value: negHundred,
+                },
+              ],
+              accountConstraints: [],
+            },
+            {
+              programId: signedTestProgram,
+              dataConstraints: [
+                {
+                  offset: 0,
+                  operator: { bitmask: {} },
+                  value: Buffer.from([0x01, 0x80]),
+                },
+              ],
+              accountConstraints: [],
+            },
+          ],
+          false,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: vaultPda,
@@ -1821,24 +1909,27 @@ describe("instruction-constraints", () => {
 
       // Eq on discriminator (offset 0) + GteSigned on amount (offset 8) — AND
       await program.methods
-        .createInstructionConstraints([
-          {
-            programId: signedTestProgram,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { eq: {} },
-                value: Buffer.from([0xaa, 0xbb, 0xcc, 0xdd]),
-              },
-              {
-                offset: 8,
-                operator: { gteSigned: {} },
-                value: posFifty,
-              },
-            ],
-            accountConstraints: [],
-          },
-        ])
+        .createInstructionConstraints(
+          [
+            {
+              programId: signedTestProgram,
+              dataConstraints: [
+                {
+                  offset: 0,
+                  operator: { eq: {} },
+                  value: Buffer.from([0xaa, 0xbb, 0xcc, 0xdd]),
+                },
+                {
+                  offset: 8,
+                  operator: { gteSigned: {} },
+                  value: posFifty,
+                },
+              ],
+              accountConstraints: [],
+            },
+          ],
+          false,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: vaultPda,
@@ -1874,33 +1965,44 @@ describe("instruction-constraints", () => {
 
       // Create entry with all 7 operators (max 8 per entry)
       await program.methods
-        .createInstructionConstraints([
-          {
-            programId: signedTestProgram,
-            dataConstraints: [
-              { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01]) },
-              { offset: 1, operator: { ne: {} }, value: Buffer.from([0x02]) },
-              { offset: 2, operator: { gte: {} }, value: Buffer.from([0x03]) },
-              { offset: 3, operator: { lte: {} }, value: Buffer.from([0x04]) },
-              {
-                offset: 4,
-                operator: { gteSigned: {} },
-                value: Buffer.from([0x05]),
-              },
-              {
-                offset: 5,
-                operator: { lteSigned: {} },
-                value: Buffer.from([0x06]),
-              },
-              {
-                offset: 6,
-                operator: { bitmask: {} },
-                value: Buffer.from([0x07]),
-              },
-            ],
-            accountConstraints: [],
-          },
-        ])
+        .createInstructionConstraints(
+          [
+            {
+              programId: signedTestProgram,
+              dataConstraints: [
+                { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01]) },
+                { offset: 1, operator: { ne: {} }, value: Buffer.from([0x02]) },
+                {
+                  offset: 2,
+                  operator: { gte: {} },
+                  value: Buffer.from([0x03]),
+                },
+                {
+                  offset: 3,
+                  operator: { lte: {} },
+                  value: Buffer.from([0x04]),
+                },
+                {
+                  offset: 4,
+                  operator: { gteSigned: {} },
+                  value: Buffer.from([0x05]),
+                },
+                {
+                  offset: 5,
+                  operator: { lteSigned: {} },
+                  value: Buffer.from([0x06]),
+                },
+                {
+                  offset: 6,
+                  operator: { bitmask: {} },
+                  value: Buffer.from([0x07]),
+                },
+              ],
+              accountConstraints: [],
+            },
+          ],
+          false,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: vaultPda,
@@ -2104,15 +2206,18 @@ describe("instruction-constraints", () => {
     it("ConstraintViolated when intermediate ix data mismatches constraint (C-4)", async () => {
       // Create constraints requiring data[0]==0xAA for the phalnx program
       await program.methods
-        .createInstructionConstraints([
-          {
-            programId: program.programId,
-            dataConstraints: [
-              { offset: 0, operator: { eq: {} }, value: Buffer.from([0xaa]) },
-            ],
-            accountConstraints: [],
-          },
-        ])
+        .createInstructionConstraints(
+          [
+            {
+              programId: program.programId,
+              dataConstraints: [
+                { offset: 0, operator: { eq: {} }, value: Buffer.from([0xaa]) },
+              ],
+              accountConstraints: [],
+            },
+          ],
+          false,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: cvVault,
@@ -2160,15 +2265,18 @@ describe("instruction-constraints", () => {
       // Create strict_mode=true constraints only for jupiterProgramId (random, not deployed)
       // The intermediate ix will use phalnx program (deployed but not in constraints) → blocked
       await program.methods
-        .createInstructionConstraints([
-          {
-            programId: jupiterProgramId, // only constrained program
-            dataConstraints: [
-              { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01]) },
-            ],
-            accountConstraints: [],
-          },
-        ]) // strict_mode not supported on this branch
+        .createInstructionConstraints(
+          [
+            {
+              programId: jupiterProgramId, // only constrained program
+              dataConstraints: [
+                { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01]) },
+              ],
+              accountConstraints: [],
+            },
+          ],
+          false,
+        ) // strict_mode not supported on this branch
         .accounts({
           owner: owner.publicKey,
           vault: cvVault,
@@ -2302,15 +2410,18 @@ describe("instruction-constraints", () => {
 
       // Create constraints
       await program.methods
-        .createInstructionConstraints([
-          {
-            programId: jupiterProgramId,
-            dataConstraints: [
-              { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01]) },
-            ],
-            accountConstraints: [],
-          },
-        ])
+        .createInstructionConstraints(
+          [
+            {
+              programId: jupiterProgramId,
+              dataConstraints: [
+                { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01]) },
+              ],
+              accountConstraints: [],
+            },
+          ],
+          false,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: tlVault,
@@ -2322,15 +2433,18 @@ describe("instruction-constraints", () => {
 
       // Queue first update
       await program.methods
-        .queueConstraintsUpdate([
-          {
-            programId: jupiterProgramId,
-            dataConstraints: [
-              { offset: 0, operator: { ne: {} }, value: Buffer.from([0x00]) },
-            ],
-            accountConstraints: [],
-          },
-        ])
+        .queueConstraintsUpdate(
+          [
+            {
+              programId: jupiterProgramId,
+              dataConstraints: [
+                { offset: 0, operator: { ne: {} }, value: Buffer.from([0x00]) },
+              ],
+              accountConstraints: [],
+            },
+          ],
+          false,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: tlVault,
@@ -2344,15 +2458,22 @@ describe("instruction-constraints", () => {
       // Queue second update → should fail
       try {
         await program.methods
-          .queueConstraintsUpdate([
-            {
-              programId: jupiterProgramId,
-              dataConstraints: [
-                { offset: 0, operator: { eq: {} }, value: Buffer.from([0x02]) },
-              ],
-              accountConstraints: [],
-            },
-          ])
+          .queueConstraintsUpdate(
+            [
+              {
+                programId: jupiterProgramId,
+                dataConstraints: [
+                  {
+                    offset: 0,
+                    operator: { eq: {} },
+                    value: Buffer.from([0x02]),
+                  },
+                ],
+                accountConstraints: [],
+              },
+            ],
+            false,
+          )
           .accounts({
             owner: owner.publicKey,
             vault: tlVault,

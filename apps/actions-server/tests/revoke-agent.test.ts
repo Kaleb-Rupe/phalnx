@@ -1,14 +1,14 @@
 import { expect } from "chai";
 import { Hono } from "hono";
-import { emergencyCloseAuth } from "../src/routes/emergency-close-auth";
+import { revokeAgent } from "../src/routes/revoke-agent";
 
 describe("Emergency Vault Freeze Route", () => {
   const app = new Hono();
-  app.route("/", emergencyCloseAuth);
+  app.route("/", revokeAgent);
 
-  describe("GET /api/actions/emergency-close-auth", () => {
+  describe("GET /api/actions/revoke-agent", () => {
     it("returns action metadata for vault freeze", async () => {
-      const res = await app.request("/api/actions/emergency-close-auth");
+      const res = await app.request("/api/actions/revoke-agent");
       expect(res.status).to.equal(200);
       const body = (await res.json()) as any;
       expect(body.type).to.equal("action");
@@ -18,20 +18,17 @@ describe("Emergency Vault Freeze Route", () => {
     });
   });
 
-  describe("POST /api/actions/emergency-close-auth", () => {
+  describe("POST /api/actions/revoke-agent", () => {
     const agentPubkey = "6wrkKTM2pjkcCAbMfRz2j3AXspavu6pq3ePcuJUE3Azp";
 
     it("returns 400 without agentPubkey", async () => {
-      const res = await app.request(
-        "/api/actions/emergency-close-auth?vaultId=0",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            account: "11111111111111111111111111111111",
-          }),
-        },
-      );
+      const res = await app.request("/api/actions/revoke-agent?vaultId=0", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          account: "11111111111111111111111111111111",
+        }),
+      });
       expect(res.status).to.equal(400);
       const body = (await res.json()) as any;
       expect(body.error).to.include("agentPubkey");
@@ -39,7 +36,7 @@ describe("Emergency Vault Freeze Route", () => {
 
     it("returns 400 without vaultId", async () => {
       const res = await app.request(
-        `/api/actions/emergency-close-auth?agentPubkey=${agentPubkey}`,
+        `/api/actions/revoke-agent?agentPubkey=${agentPubkey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -55,7 +52,7 @@ describe("Emergency Vault Freeze Route", () => {
 
     it("returns 400 without account", async () => {
       const res = await app.request(
-        `/api/actions/emergency-close-auth?vaultId=0&agentPubkey=${agentPubkey}`,
+        `/api/actions/revoke-agent?vaultId=0&agentPubkey=${agentPubkey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -69,7 +66,7 @@ describe("Emergency Vault Freeze Route", () => {
 
     it("returns unsigned transaction with valid params", async () => {
       const res = await app.request(
-        `/api/actions/emergency-close-auth?vaultId=0&agentPubkey=${agentPubkey}`,
+        `/api/actions/revoke-agent?vaultId=0&agentPubkey=${agentPubkey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -91,9 +88,9 @@ describe("Emergency Vault Freeze Route", () => {
     });
   });
 
-  describe("OPTIONS /api/actions/emergency-close-auth", () => {
+  describe("OPTIONS /api/actions/revoke-agent", () => {
     it("returns CORS headers", async () => {
-      const res = await app.request("/api/actions/emergency-close-auth", {
+      const res = await app.request("/api/actions/revoke-agent", {
         method: "OPTIONS",
       });
       expect(res.status).to.equal(200);

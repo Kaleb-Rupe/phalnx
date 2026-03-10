@@ -108,7 +108,7 @@ impl SpendTracker {
         let current_epoch = clock.unix_timestamp.checked_div(EPOCH_DURATION).unwrap();
 
         // Early exit: if no writes in 144+ epochs, all data is expired
-        if current_epoch - self.last_write_epoch >= NUM_EPOCHS as i64 {
+        if current_epoch - self.last_write_epoch > NUM_EPOCHS as i64 {
             return 0;
         }
 

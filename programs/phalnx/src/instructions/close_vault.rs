@@ -56,6 +56,38 @@ pub fn handler(ctx: Context<CloseVault>) -> Result<()> {
         PhalnxError::VaultAlreadyClosed
     );
     require!(vault.open_positions == 0, PhalnxError::OpenPositionsExist);
+    require!(
+        vault.active_escrow_count == 0,
+        PhalnxError::ActiveEscrowsExist
+    );
+    require!(
+        !ctx.accounts.policy.has_constraints,
+        PhalnxError::ConstraintsNotClosed
+    );
+
+    // If pending policy exists, caller MUST provide it in remaining_accounts for cleanup
+    if ctx.accounts.policy.has_pending_policy {
+        let pending_info = ctx
+            .remaining_accounts
+            .first()
+            .ok_or(error!(PhalnxError::PendingPolicyExists))?;
+        let (expected_pda, _) = Pubkey::find_program_address(
+            &[b"pending_policy", vault.key().as_ref()],
+            ctx.program_id,
+        );
+        require!(
+            pending_info.key() == expected_pda && pending_info.lamports() > 0,
+            PhalnxError::PendingPolicyExists
+        );
+        let owner_info = ctx.accounts.owner.to_account_info();
+        let dest_lamports = owner_info.lamports();
+        **owner_info.try_borrow_mut_lamports()? = dest_lamports
+            .checked_add(pending_info.lamports())
+            .ok_or(error!(PhalnxError::Overflow))?;
+        **pending_info.try_borrow_mut_lamports()? = 0;
+        pending_info.assign(&anchor_lang::system_program::ID);
+        pending_info.resize(0)?;
+    }
 
     let clock = Clock::get()?;
     emit!(VaultClosed {

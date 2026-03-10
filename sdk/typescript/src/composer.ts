@@ -6,7 +6,7 @@ import {
   ComputeBudgetProgram,
   Connection,
 } from "@solana/web3.js";
-import { Program } from "@coral-xyz/anchor";
+import { BN, Program } from "@coral-xyz/anchor";
 import type { Phalnx, ComposeActionParams } from "./types";
 import {
   buildValidateAndAuthorize,
@@ -112,7 +112,7 @@ export async function composePermittedTransaction(
     payerKey: params.agent,
     recentBlockhash: blockhash,
     instructions,
-  }).compileToV0Message();
+  }).compileToV0Message(params.addressLookupTables);
 
   return new VersionedTransaction(messageV0);
 }

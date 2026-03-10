@@ -1,7 +1,7 @@
 # Phalnx
 
 [![CI](https://github.com/Kaleb-Rupe/phalnx/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Kaleb-Rupe/phalnx/actions/workflows/ci.yml)
-![Tests](https://img.shields.io/badge/tests-1032-brightgreen)
+![Tests](https://img.shields.io/badge/tests-1660-brightgreen)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 
 On-chain guardrails for AI agents on Solana. Your policies are enforced by Solana validators, not software promises.
@@ -67,33 +67,48 @@ All instructions succeed or all revert atomically. The agent's signing key is va
 
 ### Account Model
 
-| Account                 | Seeds                                    | Purpose                                                                                                               |
-| ----------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| **AgentVault**          | `[b"vault", owner, vault_id]`            | Holds owner/agent pubkeys, status, fee destination                                                                    |
-| **PolicyConfig**        | `[b"policy", vault]`                     | Spending caps, protocol allowlist/denylist, leverage limits, slippage limits, timelock duration, allowed destinations |
-| **SpendTracker**        | `[b"tracker", vault]`                    | Zero-copy 144-epoch circular buffer for rolling 24h USD spend tracking (2,352 bytes)                                  |
-| **SessionAuthority**    | `[b"session", vault, agent, token_mint]` | Ephemeral PDA created per action, expires after 20 slots                                                              |
-| **PendingPolicyUpdate** | `[b"pending_policy", vault]`             | Queued policy change with timelock, applied after delay                                                               |
+| Account                      | Seeds                                              | Purpose                                                                 |
+| ---------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------- |
+| **AgentVault**               | `[b"vault", owner, vault_id]`                      | Multi-agent vault: up to 10 agents with per-agent permission bitmasks   |
+| **PolicyConfig**             | `[b"policy", vault]`                               | Spending caps, protocol allowlist, leverage/slippage limits, timelock   |
+| **SpendTracker**             | `[b"tracker", vault]`                              | Zero-copy 144-epoch circular buffer for rolling 24h USD spend tracking  |
+| **SessionAuthority**         | `[b"session", vault, agent, token_mint]`           | Ephemeral PDA created per action, expires after 20 slots                |
+| **PendingPolicyUpdate**      | `[b"pending_policy", vault]`                       | Queued policy change with timelock, applied after delay                 |
+| **EscrowDeposit**            | `[b"escrow", source_vault, dest_vault, escrow_id]` | Cross-vault stablecoin escrow with optional SHA-256 condition proof     |
+| **InstructionConstraints**   | `[b"constraints", vault]`                          | Up to 16 per-program instruction constraints with 7 operators           |
+| **PendingConstraintsUpdate** | `[b"pending_constraints", vault]`                  | Queued constraint changes with timelock                                 |
+| **AgentSpendOverlay**        | `[b"agent_spend", vault, shard_index]`             | Per-agent rolling 24h spend tracking (10 agent slots)                   |
 
-### On-Chain Instructions (15)
+### On-Chain Instructions (26)
 
-| Instruction              | Signer | Description                                                 |
-| ------------------------ | ------ | ----------------------------------------------------------- |
-| `initialize_vault`       | Owner  | Create vault, policy, and tracker PDAs                      |
-| `deposit_funds`          | Owner  | Transfer SPL tokens into vault                              |
-| `register_agent`         | Owner  | Register agent signing key                                  |
-| `update_policy`          | Owner  | Modify policy (direct if no timelock)                       |
-| `validate_and_authorize` | Agent  | Check policy, collect fees, create session, delegate tokens |
-| `finalize_session`       | Agent  | Revoke delegation, close session PDA                        |
-| `revoke_agent`           | Owner  | Kill switch — freeze vault                                  |
-| `reactivate_vault`       | Owner  | Unfreeze vault, optionally rotate agent key                 |
-| `withdraw_funds`         | Owner  | Withdraw tokens to owner                                    |
-| `close_vault`            | Owner  | Close all PDAs, reclaim rent                                |
-| `queue_policy_update`    | Owner  | Queue timelocked policy change                              |
-| `apply_pending_policy`   | Owner  | Apply queued change after timelock expires                  |
-| `cancel_pending_policy`  | Owner  | Cancel queued policy change                                 |
-| `agent_transfer`         | Agent  | Transfer stablecoins to allowlisted destination             |
-| `sync_positions`         | Owner  | Correct open position counter if out of sync                |
+| Instruction                       | Signer | Description                                                 |
+| --------------------------------- | ------ | ----------------------------------------------------------- |
+| `initialize_vault`                | Owner  | Create vault, policy, tracker, and overlay PDAs             |
+| `deposit_funds`                   | Owner  | Transfer SPL tokens into vault                              |
+| `register_agent`                  | Owner  | Register agent with permission bitmask and spending limit   |
+| `update_policy`                   | Owner  | Modify policy (direct if no timelock)                       |
+| `update_agent_permissions`        | Owner  | Update agent permissions and spending limit                 |
+| `validate_and_authorize`          | Agent  | Check policy, collect fees, create session, delegate tokens |
+| `finalize_session`                | Agent  | Revoke delegation, close session PDA                        |
+| `revoke_agent`                    | Owner  | Kill switch — freeze vault                                  |
+| `reactivate_vault`                | Owner  | Unfreeze vault, optionally rotate agent key                 |
+| `withdraw_funds`                  | Owner  | Withdraw tokens to owner                                    |
+| `close_vault`                     | Owner  | Close all PDAs, reclaim rent                                |
+| `queue_policy_update`             | Owner  | Queue timelocked policy change                              |
+| `apply_pending_policy`            | Owner  | Apply queued change after timelock expires                  |
+| `cancel_pending_policy`           | Owner  | Cancel queued policy change                                 |
+| `agent_transfer`                  | Agent  | Transfer stablecoins to allowlisted destination             |
+| `sync_positions`                  | Owner  | Correct open position counter if out of sync                |
+| `create_escrow`                   | Agent  | Create cross-vault stablecoin escrow                        |
+| `settle_escrow`                   | Agent  | Settle escrow to destination vault                          |
+| `refund_escrow`                   | Agent  | Refund expired escrow to source vault                       |
+| `close_settled_escrow`            | Owner  | Close settled/refunded escrow PDA, reclaim rent             |
+| `create_instruction_constraints`  | Owner  | Create per-program instruction constraints                  |
+| `close_instruction_constraints`   | Owner  | Close instruction constraints PDA                           |
+| `update_instruction_constraints`  | Owner  | Update constraints (direct if no timelock)                  |
+| `queue_constraints_update`        | Owner  | Queue timelocked constraint change                          |
+| `apply_constraints_update`        | Owner  | Apply queued constraint change after timelock               |
+| `cancel_constraints_update`       | Owner  | Cancel queued constraint change                             |
 
 ## Packages
 
@@ -109,7 +124,7 @@ All instructions succeed or all revert atomically. The agent's signing key is va
 
 ## Quick Start
 
-### SDK Integration
+### Option A — Add to an Existing Project
 
 ```bash
 npm install @phalnx/sdk
@@ -122,9 +137,7 @@ import { withVault } from "@phalnx/sdk";
 const result = await withVault(
   teeWallet,
   { maxSpend: "500 USDC/day" },
-  {
-    connection,
-  },
+  { connection },
 );
 
 // Use it like a normal wallet — policies enforced transparently
@@ -137,14 +150,11 @@ For devnet testing without TEE:
 const result = await withVault(
   wallet,
   { maxSpend: "500 USDC/day" },
-  {
-    connection,
-    unsafeSkipTeeCheck: true,
-  },
+  { connection, unsafeSkipTeeCheck: true },
 );
 ```
 
-### MCP Server (Claude Desktop / Cursor)
+### Option B — MCP Server (Claude Desktop / Cursor)
 
 Add to your Claude Desktop config (`claude_desktop_config.json`):
 
@@ -184,12 +194,13 @@ anchor build --no-idl
 # Generate IDL separately (requires nightly Rust — anchor-syn 0.32.1 bug)
 RUSTUP_TOOLCHAIN=nightly anchor idl build -o target/idl/phalnx.json
 
-# Run on-chain tests (222 LiteSVM tests — no validator needed)
+# Run on-chain tests (325 LiteSVM tests — no validator needed)
 npx ts-mocha -p ./tsconfig.json -t 300000 \
   tests/phalnx.ts tests/jupiter-integration.ts \
-  tests/flash-trade-integration.ts tests/security-exploits.ts
+  tests/flash-trade-integration.ts tests/security-exploits.ts \
+  tests/instruction-constraints.ts tests/escrow-integration.ts
 
-# Run all TypeScript tests (734 tests across 8 suites)
+# Run all TypeScript tests (~750 tests across 10 suites)
 pnpm -r run test
 
 # Lint
@@ -201,22 +212,24 @@ cargo fmt --check --manifest-path programs/phalnx/Cargo.toml
 
 | Suite                                                | Tests   |
 | ---------------------------------------------------- | ------- |
-| Core vault management & permission engine            |      67 |
-| Jupiter integration (composed swaps)                 |       9 |
-| Jupiter Lend integration (deposit/withdraw)          |       7 |
-| Flash Trade integration (leveraged perps)            |      30 |
-| Security exploit scenarios                           |     109 |
-| Devnet integration tests (real network)              |      56 |
+| Core vault management & permission engine            |      87 |
+| Jupiter integration (composed swaps)                 |       8 |
+| Jupiter Lend integration (deposit/withdraw)          |       6 |
+| Flash Trade integration (leveraged perps)            |      29 |
+| Security exploit scenarios                           |     142 |
+| Instruction constraints (generic enforcement)        |      39 |
+| Escrow integration (deposit/settle/refund)           |      14 |
+| Devnet integration tests (real network)              |      69 |
 | Surfpool integration tests (local Surfnet)           |      20 |
-| Core policy engine (`@phalnx/core`)                  |      73 |
-| SDK tests (`@phalnx/sdk`)                            |     199 |
+| Core policy engine (`@phalnx/core`)                  |      66 |
+| SDK tests (`@phalnx/sdk`)                            |     639 |
 | Platform client tests (`@phalnx/platform`)           |      17 |
 | Crossmint custody adapter                            |      29 |
-| SAK plugin (`@phalnx/plugin-solana-agent-kit`)       |      29 |
+| SAK plugin (`@phalnx/plugin-solana-agent-kit`)       |      34 |
 | ElizaOS plugin (`@phalnx/plugin-elizaos`)            |      35 |
-| MCP server (`@phalnx/mcp`)                           |     291 |
-| Actions server (`@phalnx/actions-server`)            |      61 |
-| **Total**                                            | **1032** |
+| MCP server (`@phalnx/mcp`)                           |     343 |
+| Actions server (`@phalnx/actions-server`)            |      83 |
+| **Total**                                            | **1660** |
 
 ## Security
 

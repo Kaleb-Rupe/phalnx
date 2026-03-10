@@ -195,6 +195,7 @@ pub enum PhalnxError {
     #[msg("Invalid pending constraints PDA: wrong owner or vault")]
     InvalidPendingConstraintsPda,
 
+    // Reserved — no expiry mechanism currently implemented
     #[msg("Pending constraints update has expired and is stale")]
     ConstraintsUpdateExpired,
 
@@ -224,4 +225,15 @@ pub enum PhalnxError {
 
     #[msg("protocol_caps length must match protocols length when has_protocol_caps is true")]
     ProtocolCapsMismatch,
+
+    // --- Audit fix errors (6071-6072) ---
+    #[msg("Cannot close vault with active escrow deposits")]
+    ActiveEscrowsExist,
+
+    #[msg("Instruction constraints must be closed before closing vault")]
+    ConstraintsNotClosed,
+
+    // 6073
+    #[msg("Pending policy update must be applied or cancelled before closing vault")]
+    PendingPolicyExists,
 }

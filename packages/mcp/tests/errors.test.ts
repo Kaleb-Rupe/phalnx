@@ -3,8 +3,8 @@ import { lookupError, formatError, ERROR_MAP } from "../src/errors";
 
 describe("errors", () => {
   describe("ERROR_MAP", () => {
-    it("has entries for error codes 6000–6070", () => {
-      for (let code = 6000; code <= 6070; code++) {
+    it("has entries for error codes 6000–6073", () => {
+      for (let code = 6000; code <= 6073; code++) {
         expect(ERROR_MAP[code], `Missing error code ${code}`).to.exist;
         expect(ERROR_MAP[code].code).to.equal(code);
         expect(ERROR_MAP[code].name).to.be.a("string");
@@ -13,8 +13,8 @@ describe("errors", () => {
       }
     });
 
-    it("has exactly 71 entries", () => {
-      expect(Object.keys(ERROR_MAP)).to.have.length(71);
+    it("has exactly 74 entries", () => {
+      expect(Object.keys(ERROR_MAP)).to.have.length(74);
     });
   });
 

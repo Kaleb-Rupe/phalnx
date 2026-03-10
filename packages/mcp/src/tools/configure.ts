@@ -447,7 +447,7 @@ export async function configure(
           return `Error creating Turnkey wallet: ${msg}\n💡 Check TURNKEY_ORGANIZATION_ID, TURNKEY_API_KEY_ID, and TURNKEY_API_PRIVATE_KEY are set.`;
         }
       }
-    } else if (teeProvider === "crossmint" || teeProvider === undefined) {
+    } else if (teeProvider === "crossmint") {
       const crossmintApiKey =
         input.crossmintApiKey ??
         (await getCredential(KC.CROSSMINT_API_KEY)) ??

@@ -40,7 +40,13 @@ describe("devnet-timelock", () => {
 
   before(async () => {
     await fundKeypair(provider, agent.publicKey);
-    mint = await ensureStablecoinMint(connection, payer, TEST_USDC_KEYPAIR, owner.publicKey, 6);
+    mint = await ensureStablecoinMint(
+      connection,
+      payer,
+      TEST_USDC_KEYPAIR,
+      owner.publicKey,
+      6,
+    );
   });
 
   /** Create a vault with timelock enabled */
@@ -213,6 +219,7 @@ describe("devnet-timelock", () => {
       .accounts({
         owner: owner.publicKey,
         vault: vault.vaultPda,
+        policy: vault.policyPda,
         pendingPolicy: vault.pendingPolicyPda,
       } as any)
       .rpc();
@@ -255,6 +262,7 @@ describe("devnet-timelock", () => {
       .accounts({
         owner: owner.publicKey,
         vault: vault.vaultPda,
+        policy: vault.policyPda,
         pendingPolicy: vault.pendingPolicyPda,
       } as any)
       .rpc();

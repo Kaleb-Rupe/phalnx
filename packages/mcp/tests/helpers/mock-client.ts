@@ -72,6 +72,7 @@ export function makeVaultAccount(
     totalTransactions: new BN(42),
     totalVolume: new BN("1000000000"),
     openPositions: 0,
+    activeEscrowCount: 0,
     totalFeesCollected: new BN(5000),
     treasuryShard: 0,
     ...overrides,
@@ -98,6 +99,7 @@ export function makePolicyAccount(
     hasProtocolCaps: false,
     protocolCaps: [],
     sessionExpirySlots: new BN(20),
+    hasPendingPolicy: false,
     bump: 254,
     ...overrides,
   };

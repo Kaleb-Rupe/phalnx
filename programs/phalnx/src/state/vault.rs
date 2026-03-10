@@ -42,6 +42,9 @@ pub struct AgentVault {
     /// Number of currently open positions (for perps tracking)
     pub open_positions: u8,
 
+    /// Number of active (unsettled/unrefunded) escrow deposits from this vault
+    pub active_escrow_count: u8,
+
     /// Cumulative developer fees collected from this vault (token base units)
     pub total_fees_collected: u64,
 }
@@ -51,10 +54,10 @@ impl AgentVault {
     /// agents vec prefix (4) + agents data (48 * 10) +
     /// fee_destination (32) + status (1) + bump (1) +
     /// created_at (8) + total_transactions (8) + total_volume (8) +
-    /// open_positions (1) + total_fees_collected (8)
+    /// open_positions (1) + active_escrow_count (1) + total_fees_collected (8)
     pub const SIZE: usize =
-        8 + 32 + 8 + 4 + (48 * MAX_AGENTS_PER_VAULT) + 32 + 1 + 1 + 8 + 8 + 8 + 1 + 8;
-    // = 599
+        8 + 32 + 8 + 4 + (48 * MAX_AGENTS_PER_VAULT) + 32 + 1 + 1 + 8 + 8 + 8 + 1 + 1 + 8;
+    // = 600
 
     pub fn is_active(&self) -> bool {
         self.status == VaultStatus::Active

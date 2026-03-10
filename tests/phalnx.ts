@@ -3586,6 +3586,7 @@ describe("phalnx", () => {
         .accounts({
           owner: owner.publicKey,
           vault: tlVaultPda,
+          policy: tlPolicyPda,
           pendingPolicy: tlPendingPda,
         } as any)
         .rpc();
@@ -3666,6 +3667,7 @@ describe("phalnx", () => {
         .accounts({
           owner: owner.publicKey,
           vault: tlVaultPda,
+          policy: tlPolicyPda,
           pendingPolicy: tlPendingPda,
         } as any)
         .rpc();

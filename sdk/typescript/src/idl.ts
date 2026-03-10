@@ -397,6 +397,22 @@ export type Phalnx = {
           relations: ["pendingPolicy"];
         },
         {
+          name: "policy";
+          writable: true;
+          pda: {
+            seeds: [
+              {
+                kind: "const";
+                value: [112, 111, 108, 105, 99, 121];
+              },
+              {
+                kind: "account";
+                path: "vault";
+              },
+            ];
+          };
+        },
+        {
           name: "pendingPolicy";
           writable: true;
           pda: {
@@ -1885,6 +1901,7 @@ export type Phalnx = {
         },
         {
           name: "sourceVault";
+          writable: true;
           pda: {
             seeds: [
               {
@@ -2176,6 +2193,7 @@ export type Phalnx = {
         },
         {
           name: "sourceVault";
+          writable: true;
           pda: {
             seeds: [
               {
@@ -2418,6 +2436,26 @@ export type Phalnx = {
               {
                 kind: "account";
                 path: "vault";
+              },
+            ];
+          };
+        },
+        {
+          name: "agentSpendOverlay";
+          writable: true;
+          pda: {
+            seeds: [
+              {
+                kind: "const";
+                value: [97, 103, 101, 110, 116, 95, 115, 112, 101, 110, 100];
+              },
+              {
+                kind: "account";
+                path: "vault";
+              },
+              {
+                kind: "const";
+                value: [0];
               },
             ];
           };
@@ -3587,6 +3625,21 @@ export type Phalnx = {
       name: "protocolCapsMismatch";
       msg: "protocol_caps length must match protocols length when has_protocol_caps is true";
     },
+    {
+      code: 6071;
+      name: "activeEscrowsExist";
+      msg: "Cannot close vault with active escrow deposits";
+    },
+    {
+      code: 6072;
+      name: "constraintsNotClosed";
+      msg: "Instruction constraints must be closed before closing vault";
+    },
+    {
+      code: 6073;
+      name: "pendingPolicyExists";
+      msg: "Pending policy update must be applied or cancelled before closing vault";
+    },
   ];
   types: [
     {
@@ -4062,6 +4115,13 @@ export type Phalnx = {
           {
             name: "openPositions";
             docs: ["Number of currently open positions (for perps tracking)"];
+            type: "u8";
+          },
+          {
+            name: "activeEscrowCount";
+            docs: [
+              "Number of active (unsettled/unrefunded) escrow deposits from this vault",
+            ];
             type: "u8";
           },
           {

@@ -90,6 +90,8 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
         policy.protocol_caps = caps.clone();
     }
 
+    policy.has_pending_policy = false;
+
     emit!(PolicyChangeApplied {
         vault: ctx.accounts.vault.key(),
         applied_at: clock.unix_timestamp,

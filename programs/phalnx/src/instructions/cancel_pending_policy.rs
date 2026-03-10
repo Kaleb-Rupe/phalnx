@@ -19,6 +19,14 @@ pub struct CancelPendingPolicy<'info> {
     #[account(
         mut,
         has_one = vault,
+        seeds = [b"policy", vault.key().as_ref()],
+        bump = policy.bump,
+    )]
+    pub policy: Account<'info, PolicyConfig>,
+
+    #[account(
+        mut,
+        has_one = vault,
         seeds = [b"pending_policy", vault.key().as_ref()],
         bump = pending_policy.bump,
         close = owner,
@@ -27,6 +35,8 @@ pub struct CancelPendingPolicy<'info> {
 }
 
 pub fn handler(ctx: Context<CancelPendingPolicy>) -> Result<()> {
+    ctx.accounts.policy.has_pending_policy = false;
+
     emit!(PolicyChangeCancelled {
         vault: ctx.accounts.vault.key(),
     });

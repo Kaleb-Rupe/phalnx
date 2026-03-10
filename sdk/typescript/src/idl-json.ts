@@ -346,6 +346,22 @@ export const IDL = {
           relations: ["pending_policy"],
         },
         {
+          name: "policy",
+          writable: true,
+          pda: {
+            seeds: [
+              {
+                kind: "const",
+                value: [112, 111, 108, 105, 99, 121],
+              },
+              {
+                kind: "account",
+                path: "vault",
+              },
+            ],
+          },
+        },
+        {
           name: "pending_policy",
           writable: true,
           pda: {
@@ -1621,6 +1637,7 @@ export const IDL = {
         },
         {
           name: "source_vault",
+          writable: true,
           pda: {
             seeds: [
               {
@@ -1854,6 +1871,7 @@ export const IDL = {
         },
         {
           name: "source_vault",
+          writable: true,
           pda: {
             seeds: [
               {
@@ -2038,6 +2056,26 @@ export const IDL = {
               {
                 kind: "account",
                 path: "vault",
+              },
+            ],
+          },
+        },
+        {
+          name: "agent_spend_overlay",
+          writable: true,
+          pda: {
+            seeds: [
+              {
+                kind: "const",
+                value: [97, 103, 101, 110, 116, 95, 115, 112, 101, 110, 100],
+              },
+              {
+                kind: "account",
+                path: "vault",
+              },
+              {
+                kind: "const",
+                value: [0],
               },
             ],
           },
@@ -3091,6 +3129,21 @@ export const IDL = {
       name: "ProtocolCapsMismatch",
       msg: "protocol_caps length must match protocols length when has_protocol_caps is true",
     },
+    {
+      code: 6071,
+      name: "ActiveEscrowsExist",
+      msg: "Cannot close vault with active escrow deposits",
+    },
+    {
+      code: 6072,
+      name: "ConstraintsNotClosed",
+      msg: "Instruction constraints must be closed before closing vault",
+    },
+    {
+      code: 6073,
+      name: "PendingPolicyExists",
+      msg: "Pending policy update must be applied or cancelled before closing vault",
+    },
   ],
   types: [
     {
@@ -3566,6 +3619,13 @@ export const IDL = {
           {
             name: "open_positions",
             docs: ["Number of currently open positions (for perps tracking)"],
+            type: "u8",
+          },
+          {
+            name: "active_escrow_count",
+            docs: [
+              "Number of active (unsettled/unrefunded) escrow deposits from this vault",
+            ],
             type: "u8",
           },
           {
@@ -4439,6 +4499,14 @@ export const IDL = {
             docs: [
               "Whether instruction constraints PDA exists for this vault.",
               "Set true by create_instruction_constraints, false by close_instruction_constraints.",
+            ],
+            type: "bool",
+          },
+          {
+            name: "has_pending_policy",
+            docs: [
+              "Whether a pending policy update PDA exists for this vault.",
+              "Set true by queue_policy_update, false by apply/cancel_pending_policy.",
             ],
             type: "bool",
           },

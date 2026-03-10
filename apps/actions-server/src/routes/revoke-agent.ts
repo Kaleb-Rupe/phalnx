@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 
-const emergencyCloseAuth = new Hono();
+const revokeAgent = new Hono();
 
 const ACTIONS_CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -14,15 +14,15 @@ const ACTIONS_CORS_HEADERS: Record<string, string> = {
 };
 
 /** OPTIONS preflight for CORS */
-emergencyCloseAuth.options("/api/actions/emergency-close-auth", (c) => {
+revokeAgent.options("/api/actions/revoke-agent", (c) => {
   return c.body(null, 200, ACTIONS_CORS_HEADERS);
 });
 
 /**
- * GET /api/actions/emergency-close-auth — Returns Blink UI metadata.
+ * GET /api/actions/revoke-agent — Returns Blink UI metadata.
  * Emergency vault freeze — immediately stops all agent actions.
  */
-emergencyCloseAuth.get("/api/actions/emergency-close-auth", (c) => {
+revokeAgent.get("/api/actions/revoke-agent", (c) => {
   const baseUrl = new URL(c.req.url).origin;
 
   const response = {
@@ -39,15 +39,15 @@ emergencyCloseAuth.get("/api/actions/emergency-close-auth", (c) => {
 });
 
 /**
- * POST /api/actions/emergency-close-auth — Builds unsigned revoke_agent tx.
+ * POST /api/actions/revoke-agent — Builds unsigned revoke_agent tx.
  * Body: { account: string }
  * Query: vaultId (required), agentPubkey (required)
  */
-emergencyCloseAuth.post("/api/actions/emergency-close-auth", async (c) => {
+revokeAgent.post("/api/actions/revoke-agent", async (c) => {
   try {
     const { PublicKey } = await import("@solana/web3.js");
-    const { buildEmergencyCloseAuthTransaction } =
-      await import("../lib/build-emergency-close-auth-tx");
+    const { buildRevokeAgentTransaction } =
+      await import("../lib/build-revoke-agent-tx");
 
     const body = await c.req.json<{ account: string }>();
 
@@ -108,12 +108,11 @@ emergencyCloseAuth.post("/api/actions/emergency-close-auth", async (c) => {
       );
     }
 
-    const { transaction, vaultAddress } =
-      await buildEmergencyCloseAuthTransaction({
-        owner,
-        agentToRemove,
-        vaultId,
-      });
+    const { transaction, vaultAddress } = await buildRevokeAgentTransaction({
+      owner,
+      agentToRemove,
+      vaultId,
+    });
 
     const serialized = Buffer.from(transaction.serialize()).toString("base64");
 
@@ -127,7 +126,7 @@ emergencyCloseAuth.post("/api/actions/emergency-close-auth", async (c) => {
     );
   } catch (error) {
     console.error(
-      "[Phalnx] emergency-freeze error:",
+      "[Phalnx] revoke-agent error:",
       error instanceof Error ? error.message : String(error),
     );
     return c.json(
@@ -138,4 +137,4 @@ emergencyCloseAuth.post("/api/actions/emergency-close-auth", async (c) => {
   }
 });
 
-export { emergencyCloseAuth };
+export { revokeAgent };

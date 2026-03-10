@@ -330,6 +330,10 @@ pub fn handler(
 
     // 12. Update vault stats
     let source_vault = &mut ctx.accounts.source_vault;
+    source_vault.active_escrow_count = source_vault
+        .active_escrow_count
+        .checked_add(1)
+        .ok_or(error!(PhalnxError::Overflow))?;
     source_vault.total_transactions = source_vault
         .total_transactions
         .checked_add(1)

@@ -5,7 +5,7 @@ import { provisionTee } from "./routes/provision-tee";
 import { fund } from "./routes/fund";
 import { status } from "./routes/status";
 import { protection } from "./routes/protection";
-import { emergencyCloseAuth } from "./routes/emergency-close-auth";
+import { revokeAgent } from "./routes/revoke-agent";
 import { syncPositions } from "./routes/sync-positions";
 import { escrow } from "./routes/escrow";
 
@@ -18,7 +18,7 @@ app.route("/", provisionTee);
 app.route("/", fund);
 app.route("/", status);
 app.route("/", protection);
-app.route("/", emergencyCloseAuth);
+app.route("/", revokeAgent);
 app.route("/", syncPositions);
 app.route("/", escrow);
 

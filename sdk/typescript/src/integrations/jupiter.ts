@@ -9,6 +9,7 @@ import {
 import { BN, Program } from "@coral-xyz/anchor";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import type { Phalnx, ComposeActionParams } from "../types";
+import { isStablecoinMint } from "../types";
 import { getVaultPDA } from "../accounts";
 import { composePermittedAction } from "../composer";
 import { jupiterFetch } from "./jupiter-api";
@@ -277,6 +278,12 @@ export async function composeJupiterSwap(
     params.vaultTokenAccount ??
     getAssociatedTokenAddressSync(params.inputMint, vault, true);
 
+  // Derive outputStablecoinAccount for non-stablecoin→stablecoin swaps
+  const outputStablecoinAccount =
+    !isStablecoinMint(params.inputMint) && isStablecoinMint(params.outputMint)
+      ? getAssociatedTokenAddressSync(params.outputMint, vault, true)
+      : undefined;
+
   const composeParams: ComposeActionParams = {
     vault,
     owner: params.owner,
@@ -290,6 +297,8 @@ export async function composeJupiterSwap(
     success: true,
     vaultTokenAccount,
     feeDestinationTokenAccount: params.feeDestinationTokenAccount,
+    outputStablecoinAccount,
+    addressLookupTables,
   };
 
   const instructions = await composePermittedAction(

@@ -2,37 +2,49 @@
   "suites": [
     {
       "name": "Core vault management & permission engine",
-      "count": 67,
+      "count": 87,
       "onChain": true,
       "claudePattern": "tests/phalnx.ts` (ts-mocha + LiteSVM, no validator needed, %d tests)"
     },
     {
       "name": "Jupiter integration (composed swaps)",
-      "count": 9,
+      "count": 8,
       "onChain": true,
       "claudePattern": "tests/jupiter-integration.ts` (%d tests)"
     },
     {
       "name": "Jupiter Lend integration (deposit/withdraw)",
-      "count": 7,
+      "count": 6,
       "onChain": true,
       "claudePattern": "tests/jupiter-lend-integration.ts` (%d tests)"
     },
     {
       "name": "Flash Trade integration (leveraged perps)",
-      "count": 30,
+      "count": 29,
       "onChain": true,
       "claudePattern": "tests/flash-trade-integration.ts` (%d tests)"
     },
     {
       "name": "Security exploit scenarios",
-      "count": 109,
+      "count": 142,
       "onChain": true,
       "claudePattern": "tests/security-exploits.ts` (ts-mocha + LiteSVM, %d tests)"
     },
     {
+      "name": "Instruction constraints (generic enforcement)",
+      "count": 39,
+      "onChain": true,
+      "claudePattern": "tests/instruction-constraints.ts` (ts-mocha + LiteSVM, %d tests)"
+    },
+    {
+      "name": "Escrow integration (deposit/settle/refund)",
+      "count": 14,
+      "onChain": true,
+      "claudePattern": "tests/escrow-integration.ts` (ts-mocha + LiteSVM, %d tests)"
+    },
+    {
       "name": "Devnet integration tests (real network)",
-      "count": 56,
+      "count": 69,
       "devnet": true
     },
     {
@@ -43,13 +55,13 @@
     },
     {
       "name": "Core policy engine (`@phalnx/core`)",
-      "count": 73,
+      "count": 66,
       "ciStepName": "Core policy engine tests",
       "claudePattern": "sdk/core/tests/` (mocha, %d tests)"
     },
     {
       "name": "SDK tests (`@phalnx/sdk`)",
-      "count": 199,
+      "count": 639,
       "ciStepName": "SDK tests",
       "claudePattern": "sdk/typescript/tests/` (mocha, %d tests"
     },
@@ -67,7 +79,7 @@
     },
     {
       "name": "SAK plugin (`@phalnx/plugin-solana-agent-kit`)",
-      "count": 29,
+      "count": 34,
       "ciStepName": "SAK plugin tests",
       "claudePattern": "plugins/solana-agent-kit/tests/plugin.test.ts` (mocha, %d tests)",
       "packageReadme": "plugins/solana-agent-kit/README.md",
@@ -83,7 +95,7 @@
     },
     {
       "name": "MCP server (`@phalnx/mcp`)",
-      "count": 291,
+      "count": 343,
       "ciStepName": "MCP server tests",
       "claudePattern": "packages/mcp/tests/` (mocha, %d tests",
       "packageReadme": "packages/mcp/README.md",
@@ -91,7 +103,7 @@
     },
     {
       "name": "Actions server (`@phalnx/actions-server`)",
-      "count": 61,
+      "count": 83,
       "ciStepName": "Actions server tests",
       "claudePattern": "apps/actions-server/tests/` (mocha, %d tests)"
     }

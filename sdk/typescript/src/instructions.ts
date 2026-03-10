@@ -154,10 +154,11 @@ export function buildValidateAndAuthorize(
     params.tokenMint,
     program.programId,
   );
+  const [agentSpendOverlay] = getAgentOverlayPDA(vault, program.programId);
 
   return program.methods
     .validateAndAuthorize(
-      params.actionType as any,
+      params.actionType as any, // Anchor 0.32.1: ActionType enum not structurally compatible
       params.tokenMint,
       params.amount,
       params.targetProtocol,
@@ -169,6 +170,7 @@ export function buildValidateAndAuthorize(
       policy,
       tracker,
       session,
+      agentSpendOverlay,
       vaultTokenAccount,
       tokenMintAccount: params.tokenMint,
       protocolTreasuryTokenAccount: protocolTreasuryTokenAccount ?? null,
@@ -192,6 +194,7 @@ export function buildFinalizeSession(
   const [session] = getSessionPDA(vault, agent, tokenMint, program.programId);
   const [policy] = getPolicyPDA(vault, program.programId);
   const [tracker] = getTrackerPDA(vault, program.programId);
+  const [agentSpendOverlay] = getAgentOverlayPDA(vault, program.programId);
 
   return program.methods.finalizeSession(success).accounts({
     payer,
@@ -200,6 +203,7 @@ export function buildFinalizeSession(
     sessionRentRecipient: agent,
     policy,
     tracker,
+    agentSpendOverlay,
     vaultTokenAccount,
     outputStablecoinAccount: outputStablecoinAccount ?? null,
     tokenProgram: TOKEN_PROGRAM_ID,
@@ -213,9 +217,11 @@ export function buildRevokeAgent(
   vault: PublicKey,
   agentToRemove: PublicKey,
 ) {
+  const [agentSpendOverlay] = getAgentOverlayPDA(vault, program.programId);
   return program.methods.revokeAgent(agentToRemove).accounts({
     owner,
     vault,
+    agentSpendOverlay,
   } as any);
 }
 
@@ -261,14 +267,28 @@ export function buildCloseVault(
 ) {
   const [policy] = getPolicyPDA(vault, program.programId);
   const [tracker] = getTrackerPDA(vault, program.programId);
+  const [agentSpendOverlay] = getAgentOverlayPDA(vault, program.programId);
+  const [pendingPolicy] = getPendingPolicyPDA(vault, program.programId);
 
-  return program.methods.closeVault().accounts({
-    owner,
-    vault,
-    policy,
-    tracker,
-    systemProgram: SystemProgram.programId,
-  } as any);
+  // Always pass PendingPolicyUpdate PDA — on-chain guard requires it when
+  // has_pending_policy is true, and harmlessly ignores it when false.
+  return program.methods
+    .closeVault()
+    .accounts({
+      owner,
+      vault,
+      policy,
+      tracker,
+      agentSpendOverlay,
+      systemProgram: SystemProgram.programId,
+    } as any)
+    .remainingAccounts([
+      {
+        pubkey: pendingPolicy,
+        isWritable: true,
+        isSigner: false,
+      },
+    ]);
 }
 
 export function buildQueuePolicyUpdate(
@@ -329,9 +349,12 @@ export function buildCancelPendingPolicy(
 ) {
   const [pendingPolicy] = getPendingPolicyPDA(vault, program.programId);
 
+  const [policy] = getPolicyPDA(vault, program.programId);
+
   return program.methods.cancelPendingPolicy().accounts({
     owner,
     vault,
+    policy,
     pendingPolicy,
   } as any);
 }
@@ -347,12 +370,14 @@ export function buildAgentTransfer(
 ) {
   const [policy] = getPolicyPDA(vault, program.programId);
   const [tracker] = getTrackerPDA(vault, program.programId);
+  const [agentSpendOverlay] = getAgentOverlayPDA(vault, program.programId);
 
   return program.methods.agentTransfer(params.amount).accounts({
     agent,
     vault,
     policy,
     tracker,
+    agentSpendOverlay,
     vaultTokenAccount: params.vaultTokenAccount,
     tokenMintAccount: params.tokenMintAccount,
     destinationTokenAccount: params.destinationTokenAccount,
@@ -390,6 +415,7 @@ export function buildUpdateAgentPermissions(
   spendingLimitUsd: BN = new BN(0),
 ) {
   const [policy] = getPolicyPDA(vault, program.programId);
+  const [agentSpendOverlay] = getAgentOverlayPDA(vault, program.programId);
 
   return program.methods
     .updateAgentPermissions(agent, newPermissions, spendingLimitUsd)
@@ -397,6 +423,7 @@ export function buildUpdateAgentPermissions(
       owner,
       vault,
       policy,
+      agentSpendOverlay,
     } as any);
 }
 
@@ -418,6 +445,10 @@ export function buildCreateEscrow(
 ) {
   const [policy] = getPolicyPDA(sourceVault, program.programId);
   const [tracker] = getTrackerPDA(sourceVault, program.programId);
+  const [agentSpendOverlay] = getAgentOverlayPDA(
+    sourceVault,
+    program.programId,
+  );
   const [escrow] = getEscrowPDA(
     sourceVault,
     destinationVault,
@@ -433,6 +464,7 @@ export function buildCreateEscrow(
       sourceVault,
       policy,
       tracker,
+      agentSpendOverlay,
       destinationVault,
       escrow,
       sourceVaultAta,
@@ -518,7 +550,7 @@ export function buildCreateInstructionConstraints(
   const [constraints] = getConstraintsPDA(vault, program.programId);
 
   return program.methods
-    .createInstructionConstraints(entries as any, strictMode ?? false)
+    .createInstructionConstraints(entries as any, strictMode ?? false) // Anchor 0.32.1: ConstraintEntry[] type mismatch
     .accounts({
       owner,
       vault,
@@ -532,16 +564,33 @@ export function buildCloseInstructionConstraints(
   program: Program<Phalnx>,
   owner: PublicKey,
   vault: PublicKey,
+  opts?: { cleanupPendingUpdate?: boolean },
 ) {
   const [policy] = getPolicyPDA(vault, program.programId);
   const [constraints] = getConstraintsPDA(vault, program.programId);
 
-  return program.methods.closeInstructionConstraints().accounts({
+  const builder = program.methods.closeInstructionConstraints().accounts({
     owner,
     vault,
     policy,
     constraints,
   } as any);
+
+  if (opts?.cleanupPendingUpdate) {
+    const [pendingConstraints] = getPendingConstraintsPDA(
+      vault,
+      program.programId,
+    );
+    builder.remainingAccounts([
+      {
+        pubkey: pendingConstraints,
+        isWritable: true,
+        isSigner: false,
+      },
+    ]);
+  }
+
+  return builder;
 }
 
 export function buildUpdateInstructionConstraints(
@@ -555,7 +604,7 @@ export function buildUpdateInstructionConstraints(
   const [constraints] = getConstraintsPDA(vault, program.programId);
 
   return program.methods
-    .updateInstructionConstraints(entries as any, strictMode ?? false)
+    .updateInstructionConstraints(entries as any, strictMode ?? false) // Anchor 0.32.1: ConstraintEntry[] type mismatch
     .accounts({
       owner,
       vault,
@@ -579,7 +628,7 @@ export function buildQueueConstraintsUpdate(
   );
 
   return program.methods
-    .queueConstraintsUpdate(entries as any, strictMode ?? false)
+    .queueConstraintsUpdate(entries as any, strictMode ?? false) // Anchor 0.32.1: ConstraintEntry[] type mismatch
     .accounts({
       owner,
       vault,

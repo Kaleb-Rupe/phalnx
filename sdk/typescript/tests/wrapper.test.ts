@@ -2033,6 +2033,8 @@ describe("wrapper — shieldWallet() & harden()", () => {
           vaultId: 0,
           policyAddress,
           pendingPolicyAddress,
+          agentFunded: false,
+          agentFundingAmount: 0,
         };
 
         const ctx = timelockContextFromResult(
@@ -2061,6 +2063,8 @@ describe("wrapper — shieldWallet() & harden()", () => {
           vaultId: 0,
           policyAddress,
           pendingPolicyAddress,
+          agentFunded: false,
+          agentFundingAmount: 0,
         };
 
         const manager = createVaultManager(

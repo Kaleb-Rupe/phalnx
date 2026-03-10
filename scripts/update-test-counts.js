@@ -115,7 +115,7 @@ updateFile("README.md", "root README", (content) => {
   const newTable = `${tableHeader}\n${rows}\n${totalRow}`;
 
   content = content.replace(
-    /\| Suite\s+\| Tests\s+\|[\s\S]*?\| \*\*Total\*\*\s+\| \*\*\d+\*\* \|/,
+    /\| Suite\s+\| Tests\s+\|[\s\S]*?\| \*\*Total\*\*\s+\| \*\*~?[\d,]+\*\* \|/,
     newTable,
   );
 
@@ -198,16 +198,16 @@ updateFile(
   ".github/workflows/devnet-test.yml",
   "devnet workflow",
   (content) => {
-    // Header comment: "N tests across 8 files"
+    // Header comment: "N tests across 9 files"
     content = content.replace(
-      /\d+ tests across 8 files/g,
-      `${devnetCount} tests across 8 files`,
+      /\d+ tests across \d+ files/g,
+      `${devnetCount} tests across 9 files`,
     );
 
-    // Echo line: "(N tests, 8 files)"
+    // Echo line: "(N tests, 9 files)"
     content = content.replace(
-      /\(\d+ tests, 8 files\)/g,
-      `(${devnetCount} tests, 8 files)`,
+      /\(\d+ tests, \d+ files\)/g,
+      `(${devnetCount} tests, 9 files)`,
     );
 
     return content;
@@ -223,10 +223,10 @@ updateFile("CLAUDE.md", "CLAUDE.md", (content) => {
     `~${total.toLocaleString()} tests passing across ${data.suites.length} suites (${ciCount} CI + ${surfpoolCount} Surfpool + ${devnetCount} devnet)`,
   );
 
-  // Devnet total line: "Devnet total: N tests across 8 files"
+  // Devnet total line: "Devnet total: N tests across 9 files"
   content = content.replace(
     /Devnet total: \d+ tests across \d+ files/,
-    `Devnet total: ${devnetCount} tests across 8 files`,
+    `Devnet total: ${devnetCount} tests across 9 files`,
   );
 
   // Individual suite lines in the Testing section (claudePattern field)

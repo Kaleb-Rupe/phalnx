@@ -13,6 +13,7 @@ pub struct RefundEscrow<'info> {
     pub source_signer: Signer<'info>,
 
     #[account(
+        mut,
         constraint = source_vault.is_agent(&source_signer.key())
             || source_vault.owner == source_signer.key()
             @ PhalnxError::UnauthorizedAgent,
@@ -133,6 +134,10 @@ pub fn handler(ctx: Context<RefundEscrow>) -> Result<()> {
     // 7. Update status
     let escrow = &mut ctx.accounts.escrow;
     escrow.status = EscrowStatus::Refunded;
+
+    // 7b. Decrement source vault escrow counter
+    let source_vault = &mut ctx.accounts.source_vault;
+    source_vault.active_escrow_count = source_vault.active_escrow_count.saturating_sub(1);
 
     // 8. Emit event
     emit!(EscrowRefunded {

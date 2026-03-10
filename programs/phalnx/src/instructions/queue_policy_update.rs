@@ -17,6 +17,7 @@ pub struct QueuePolicyUpdate<'info> {
     pub vault: Account<'info, AgentVault>,
 
     #[account(
+        mut,
         has_one = vault,
         seeds = [b"policy", vault.key().as_ref()],
         bump = policy.bump,
@@ -154,6 +155,8 @@ pub fn handler(
     pending.has_protocol_caps = has_protocol_caps;
     pending.protocol_caps = protocol_caps;
     pending.bump = ctx.bumps.pending_policy;
+
+    ctx.accounts.policy.has_pending_policy = true;
 
     emit!(PolicyChangeQueued {
         vault: vault.key(),

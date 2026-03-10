@@ -7,6 +7,7 @@ import {
   Signer,
   Keypair,
   AddressLookupTableAccount,
+  SystemProgram,
 } from "@solana/web3.js";
 import { AnchorProvider, BN, Program, Wallet } from "@coral-xyz/anchor";
 import {
@@ -203,6 +204,36 @@ import {
   type TransactionIntent,
 } from "./intents";
 import {
+  composeDriftDeposit,
+  composeDriftWithdraw,
+  composeDriftPlacePerpOrder,
+  composeDriftPlaceSpotOrder,
+  composeDriftCancelOrder,
+  composeDriftModifyOrder,
+  composeDriftSettlePnl,
+  type DriftDepositParams,
+  type DriftWithdrawParams,
+  type DriftPlacePerpOrderParams,
+  type DriftPlaceSpotOrderParams,
+  type DriftCancelOrderParams,
+  type DriftModifyOrderParams,
+  type DriftSettlePnlParams,
+  type DriftComposeResult,
+} from "./integrations/drift";
+import {
+  composeKaminoDeposit,
+  composeKaminoBorrow,
+  composeKaminoRepay,
+  composeKaminoWithdraw,
+  type KaminoDepositParams,
+  type KaminoBorrowParams,
+  type KaminoRepayParams,
+  type KaminoWithdrawParams,
+  type KaminoComposeResult,
+} from "./integrations/kamino";
+import { globalProtocolRegistry } from "./integrations/protocol-registry";
+import type { ProtocolRegistry } from "./integrations/protocol-registry";
+import {
   createSquadsMultisig,
   proposeVaultAction,
   approveProposal,
@@ -238,6 +269,8 @@ export interface PhalnxClientOptions {
   simulateBeforeSend?: boolean;
   /** Custom intent storage. Default: MemoryIntentStorage (lazy-initialized). */
   intentStorage?: IntentStorage;
+  /** Custom protocol registry. Default: globalProtocolRegistry. */
+  protocolRegistry?: ProtocolRegistry;
 }
 
 export class PhalnxClient {
@@ -249,6 +282,8 @@ export class PhalnxClient {
     | false;
   private readonly _simulateBeforeSend: boolean;
   private _intentStorage: IntentStorage | undefined;
+  private readonly _protocolRegistry: ProtocolRegistry;
+  private _intentsEngine: import("./intent-engine").IntentEngine | undefined;
 
   constructor(
     connection: Connection,
@@ -275,6 +310,7 @@ export class PhalnxClient {
       this.priorityFeeConfig = opts.priorityFees ?? {};
       this._simulateBeforeSend = opts.simulateBeforeSend ?? false;
       this._intentStorage = opts.intentStorage;
+      this._protocolRegistry = opts.protocolRegistry ?? globalProtocolRegistry;
       if (opts.jupiterApiConfig) {
         configureJupiterApi(opts.jupiterApiConfig);
       }
@@ -284,6 +320,7 @@ export class PhalnxClient {
       this.requireDestinations = false;
       this.priorityFeeConfig = {};
       this._simulateBeforeSend = false;
+      this._protocolRegistry = globalProtocolRegistry;
     }
 
     if (programId) {
@@ -664,7 +701,7 @@ export class PhalnxClient {
       payerKey: params.agent,
       recentBlockhash: blockhash,
       instructions,
-    }).compileToV0Message();
+    }).compileToV0Message(params.addressLookupTables);
 
     const tx = new VersionedTransaction(messageV0);
 
@@ -1522,6 +1559,196 @@ export class PhalnxClient {
     }
   }
 
+  // --- Drift Protocol Methods ---
+
+  async driftDeposit(params: DriftDepositParams): Promise<DriftComposeResult> {
+    return composeDriftDeposit(this.program, this.provider.connection, params);
+  }
+
+  async driftWithdraw(
+    params: DriftWithdrawParams,
+  ): Promise<DriftComposeResult> {
+    return composeDriftWithdraw(this.program, this.provider.connection, params);
+  }
+
+  async driftPlacePerpOrder(
+    params: DriftPlacePerpOrderParams,
+  ): Promise<DriftComposeResult> {
+    return composeDriftPlacePerpOrder(
+      this.program,
+      this.provider.connection,
+      params,
+    );
+  }
+
+  async driftPlaceSpotOrder(
+    params: DriftPlaceSpotOrderParams,
+  ): Promise<DriftComposeResult> {
+    return composeDriftPlaceSpotOrder(
+      this.program,
+      this.provider.connection,
+      params,
+    );
+  }
+
+  async driftCancelOrder(
+    params: DriftCancelOrderParams,
+  ): Promise<DriftComposeResult> {
+    return composeDriftCancelOrder(
+      this.program,
+      this.provider.connection,
+      params,
+    );
+  }
+
+  async driftModifyOrder(
+    params: DriftModifyOrderParams,
+  ): Promise<DriftComposeResult> {
+    return composeDriftModifyOrder(
+      this.program,
+      this.provider.connection,
+      params,
+    );
+  }
+
+  async driftSettlePnl(
+    params: DriftSettlePnlParams,
+  ): Promise<DriftComposeResult> {
+    return composeDriftSettlePnl(
+      this.program,
+      this.provider.connection,
+      params,
+    );
+  }
+
+  /** Execute a composed Drift transaction (same pattern as executeFlashTrade). */
+  async executeDrift(
+    result: DriftComposeResult,
+    agent: PublicKey,
+    signers?: Signer[],
+  ): Promise<string> {
+    const { blockhash, lastValidBlockHeight } =
+      await this.provider.connection.getLatestBlockhash();
+    const messageV0 = new TransactionMessage({
+      payerKey: agent,
+      recentBlockhash: blockhash,
+      instructions: result.instructions,
+    }).compileToV0Message();
+    const tx = new VersionedTransaction(messageV0);
+    const allSigners = [
+      ...(result.additionalSigners || []),
+      ...(signers || []),
+    ];
+    if (allSigners.length > 0) {
+      tx.sign(allSigners);
+    }
+    return this.provider.sendAndConfirm(tx, allSigners, {
+      skipPreflight: false,
+    });
+  }
+
+  // --- Kamino Lending Methods ---
+
+  async kaminoDeposit(
+    params: KaminoDepositParams,
+  ): Promise<KaminoComposeResult> {
+    return composeKaminoDeposit(this.program, this.provider.connection, params);
+  }
+
+  async kaminoBorrow(params: KaminoBorrowParams): Promise<KaminoComposeResult> {
+    return composeKaminoBorrow(this.program, this.provider.connection, params);
+  }
+
+  async kaminoRepay(params: KaminoRepayParams): Promise<KaminoComposeResult> {
+    return composeKaminoRepay(this.program, this.provider.connection, params);
+  }
+
+  async kaminoWithdraw(
+    params: KaminoWithdrawParams,
+  ): Promise<KaminoComposeResult> {
+    return composeKaminoWithdraw(
+      this.program,
+      this.provider.connection,
+      params,
+    );
+  }
+
+  async executeKamino(
+    result: KaminoComposeResult,
+    agent: PublicKey,
+    signers?: Signer[],
+  ): Promise<string> {
+    const { blockhash } = await this.provider.connection.getLatestBlockhash();
+    const messageV0 = new TransactionMessage({
+      payerKey: agent,
+      recentBlockhash: blockhash,
+      instructions: result.instructions,
+    }).compileToV0Message();
+    const tx = new VersionedTransaction(messageV0);
+    const allSigners = [
+      ...(result.additionalSigners || []),
+      ...(signers || []),
+    ];
+    if (allSigners.length > 0) {
+      tx.sign(allSigners);
+    }
+    return this.provider.sendAndConfirm(tx, allSigners, {
+      skipPreflight: false,
+    });
+  }
+
+  // --- Dynamic Protocol Execution ---
+
+  /**
+   * Execute an action via a registered protocol handler.
+   * Dispatches to the handler identified by protocolId in the registry.
+   */
+  async executeProtocol(
+    protocolId: string,
+    action: string,
+    params: Record<string, unknown>,
+    vault: PublicKey,
+  ): Promise<string> {
+    const handler = this._protocolRegistry.getByProtocolId(protocolId);
+    if (!handler) {
+      throw new PhalnxSDKError({
+        code: -1,
+        name: "UnknownProtocol",
+        message: `No protocol handler registered for "${protocolId}"`,
+      });
+    }
+
+    const vaultAccount = await this.fetchVaultByAddress(vault);
+    const ctx = {
+      program: this.program,
+      connection: this.provider.connection,
+      vault,
+      owner: vaultAccount.owner,
+      vaultId: vaultAccount.vaultId,
+      agent: this.provider.wallet.publicKey,
+    };
+
+    if (handler.initialize) {
+      await handler.initialize(this.provider.connection);
+    }
+
+    const result = await handler.compose(ctx, action, params);
+    const allSigners = result.additionalSigners ?? [];
+    const { blockhash } = await this.provider.connection.getLatestBlockhash();
+    const messageV0 = new TransactionMessage({
+      payerKey: this.provider.wallet.publicKey,
+      recentBlockhash: blockhash,
+      instructions: result.instructions,
+    }).compileToV0Message();
+    const tx = new VersionedTransaction(messageV0);
+    if (allSigners.length > 0) {
+      tx.sign(allSigners);
+    }
+    return this.provider.sendAndConfirm(tx, allSigners, {
+      skipPreflight: false,
+    });
+  }
+
   // --- Intent Execution (Direct agent path) ---
 
   /**
@@ -2086,6 +2313,182 @@ export class PhalnxClient {
         );
       }
 
+      // ─── Drift Protocol ──────────────────────────────────────────────
+
+      case "driftDeposit": {
+        const p = intent.params;
+        const mint = resolveToken(p.mint)?.mint ?? new PublicKey(p.mint);
+        const token = resolveToken(p.mint);
+        const amount = token
+          ? toBaseUnits(p.amount, token.decimals)
+          : new BN(p.amount);
+        const result = await this.driftDeposit({
+          owner,
+          vaultId,
+          agent,
+          amount,
+          marketIndex: p.marketIndex,
+          tokenMint: mint,
+          subAccountId: p.subAccountId,
+        });
+        return this.executeDrift(result, agent, signers);
+      }
+
+      case "driftWithdraw": {
+        const p = intent.params;
+        const mint = resolveToken(p.mint)?.mint ?? new PublicKey(p.mint);
+        const token = resolveToken(p.mint);
+        const amount = token
+          ? toBaseUnits(p.amount, token.decimals)
+          : new BN(p.amount);
+        const result = await this.driftWithdraw({
+          owner,
+          vaultId,
+          agent,
+          amount,
+          marketIndex: p.marketIndex,
+          tokenMint: mint,
+          subAccountId: p.subAccountId,
+        });
+        return this.executeDrift(result, agent, signers);
+      }
+
+      case "driftPerpOrder": {
+        const p = intent.params;
+        const usdcMint =
+          resolveToken("USDC")?.mint ??
+          new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+        const result = await this.driftPlacePerpOrder({
+          owner,
+          vaultId,
+          agent,
+          marketIndex: p.marketIndex,
+          side: p.side,
+          amount: new BN(p.amount),
+          price: p.price ? new BN(p.price) : undefined,
+          orderType: p.orderType,
+          tokenMint: usdcMint,
+          subAccountId: p.subAccountId,
+        });
+        return this.executeDrift(result, agent, signers);
+      }
+
+      case "driftSpotOrder": {
+        const p = intent.params;
+        const usdcMint =
+          resolveToken("USDC")?.mint ??
+          new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+        const result = await this.driftPlaceSpotOrder({
+          owner,
+          vaultId,
+          agent,
+          marketIndex: p.marketIndex,
+          side: p.side,
+          amount: new BN(p.amount),
+          price: p.price ? new BN(p.price) : undefined,
+          orderType: p.orderType,
+          tokenMint: usdcMint,
+        });
+        return this.executeDrift(result, agent, signers);
+      }
+
+      case "driftCancelOrder": {
+        const p = intent.params;
+        const usdcMint =
+          resolveToken("USDC")?.mint ??
+          new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+        const result = await this.driftCancelOrder({
+          owner,
+          vaultId,
+          agent,
+          orderId: p.orderId,
+          tokenMint: usdcMint,
+          subAccountId: p.subAccountId,
+        });
+        return this.executeDrift(result, agent, signers);
+      }
+
+      // ─── Kamino Lending ──────────────────────────────────────────────
+
+      case "kaminoDeposit": {
+        const p = intent.params;
+        const mint = resolveToken(p.mint)?.mint ?? new PublicKey(p.mint);
+        const token = resolveToken(p.mint);
+        const amount = token
+          ? toBaseUnits(p.amount, token.decimals)
+          : new BN(p.amount);
+        const result = await this.kaminoDeposit({
+          owner,
+          vaultId,
+          agent,
+          amount,
+          tokenMint: mint,
+          market: p.market ? new PublicKey(p.market) : undefined,
+        });
+        return this.executeKamino(result, agent, signers);
+      }
+
+      case "kaminoBorrow": {
+        const p = intent.params;
+        const mint = resolveToken(p.mint)?.mint ?? new PublicKey(p.mint);
+        const token = resolveToken(p.mint);
+        const amount = token
+          ? toBaseUnits(p.amount, token.decimals)
+          : new BN(p.amount);
+        const result = await this.kaminoBorrow({
+          owner,
+          vaultId,
+          agent,
+          amount,
+          tokenMint: mint,
+          market: p.market ? new PublicKey(p.market) : undefined,
+        });
+        return this.executeKamino(result, agent, signers);
+      }
+
+      case "kaminoRepay": {
+        const p = intent.params;
+        const mint = resolveToken(p.mint)?.mint ?? new PublicKey(p.mint);
+        const token = resolveToken(p.mint);
+        const amount = token
+          ? toBaseUnits(p.amount, token.decimals)
+          : new BN(p.amount);
+        const result = await this.kaminoRepay({
+          owner,
+          vaultId,
+          agent,
+          amount,
+          tokenMint: mint,
+          market: p.market ? new PublicKey(p.market) : undefined,
+        });
+        return this.executeKamino(result, agent, signers);
+      }
+
+      case "kaminoWithdraw": {
+        const p = intent.params;
+        const mint = resolveToken(p.mint)?.mint ?? new PublicKey(p.mint);
+        const token = resolveToken(p.mint);
+        const amount = token
+          ? toBaseUnits(p.amount, token.decimals)
+          : new BN(p.amount);
+        const result = await this.kaminoWithdraw({
+          owner,
+          vaultId,
+          agent,
+          amount,
+          tokenMint: mint,
+          market: p.market ? new PublicKey(p.market) : undefined,
+        });
+        return this.executeKamino(result, agent, signers);
+      }
+
+      // ─── Generic Protocol (registry-based dispatch) ──────────────────
+
+      case "protocol": {
+        const p = intent.params;
+        return this.executeProtocol(p.protocolId, p.action, p, vault);
+      }
+
       default: {
         const _exhaustive: never = intent;
         throw new Error(
@@ -2093,6 +2496,22 @@ export class PhalnxClient {
         );
       }
     }
+  }
+
+  // --- IntentEngine (Agent-first facade) ---
+
+  /**
+   * Lazy-initialized IntentEngine for agent-first workflows.
+   * Provides validate → precheck → execute pipeline with structured errors.
+   */
+  get intents(): import("./intent-engine").IntentEngine {
+    if (!this._intentsEngine) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { IntentEngine } =
+        require("./intent-engine") as typeof import("./intent-engine");
+      this._intentsEngine = new IntentEngine(this);
+    }
+    return this._intentsEngine;
   }
 
   // --- Intents (Human-in-the-loop proposal flow) ---
@@ -2244,5 +2663,64 @@ export class PhalnxClient {
 
   async getIntent(id: string): Promise<TransactionIntent | null> {
     return this.getIntentStorage().get(id);
+  }
+
+  // --- Fee Management Helpers ---
+
+  /** Check an agent's SOL balance (for monitoring/top-up decisions) */
+  async getAgentBalance(agent: PublicKey): Promise<number> {
+    return this.provider.connection.getBalance(agent);
+  }
+
+  /** Fund an agent with SOL from the current wallet (owner) */
+  async fundAgent(agent: PublicKey, lamports: number): Promise<string> {
+    const ix = SystemProgram.transfer({
+      fromPubkey: this.provider.wallet.publicKey,
+      toPubkey: agent,
+      lamports,
+    });
+    const { blockhash, lastValidBlockHeight } =
+      await this.provider.connection.getLatestBlockhash();
+    const msg = new TransactionMessage({
+      payerKey: this.provider.wallet.publicKey,
+      recentBlockhash: blockhash,
+      instructions: [ix],
+    }).compileToV0Message();
+    const tx = new VersionedTransaction(msg);
+    const signed = await this.provider.wallet.signTransaction(tx);
+    const sig = await this.provider.connection.sendRawTransaction(
+      signed.serialize(),
+    );
+    await this.provider.connection.confirmTransaction(
+      { signature: sig, blockhash, lastValidBlockHeight },
+      "confirmed",
+    );
+    return sig;
+  }
+
+  /** Fund a vault PDA with SOL (for fee refund reserves) */
+  async fundVaultSol(vault: PublicKey, lamports: number): Promise<string> {
+    const ix = SystemProgram.transfer({
+      fromPubkey: this.provider.wallet.publicKey,
+      toPubkey: vault,
+      lamports,
+    });
+    const { blockhash, lastValidBlockHeight } =
+      await this.provider.connection.getLatestBlockhash();
+    const msg = new TransactionMessage({
+      payerKey: this.provider.wallet.publicKey,
+      recentBlockhash: blockhash,
+      instructions: [ix],
+    }).compileToV0Message();
+    const tx = new VersionedTransaction(msg);
+    const signed = await this.provider.wallet.signTransaction(tx);
+    const sig = await this.provider.connection.sendRawTransaction(
+      signed.serialize(),
+    );
+    await this.provider.connection.confirmTransaction(
+      { signature: sig, blockhash, lastValidBlockHeight },
+      "confirmed",
+    );
+    return sig;
   }
 }

@@ -27,6 +27,7 @@ pub struct SettleEscrow<'info> {
     pub destination_vault: Account<'info, AgentVault>,
 
     #[account(
+        mut,
         seeds = [b"vault", source_vault.owner.as_ref(), source_vault.vault_id.to_le_bytes().as_ref()],
         bump = source_vault.bump,
     )]
@@ -152,6 +153,10 @@ pub fn handler(ctx: Context<SettleEscrow>, proof: Vec<u8>) -> Result<()> {
     // 8. Update status
     let escrow = &mut ctx.accounts.escrow;
     escrow.status = EscrowStatus::Settled;
+
+    // 8b. Decrement source vault escrow counter
+    let source_vault = &mut ctx.accounts.source_vault;
+    source_vault.active_escrow_count = source_vault.active_escrow_count.saturating_sub(1);
 
     // 9. Emit event
     emit!(EscrowSettled {

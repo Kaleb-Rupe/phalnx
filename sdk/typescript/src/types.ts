@@ -130,6 +130,7 @@ export type AgentVaultAccount = {
   totalTransactions: BN;
   totalVolume: BN;
   openPositions: number;
+  activeEscrowCount: number;
   totalFeesCollected: BN;
   treasuryShard: number;
 };
@@ -148,6 +149,7 @@ export type PolicyConfigAccount = {
   timelockDuration: BN;
   allowedDestinations: PublicKey[];
   hasConstraints: boolean;
+  hasPendingPolicy: boolean;
   hasProtocolCaps: boolean;
   protocolCaps: BN[];
   sessionExpirySlots: BN;
@@ -417,6 +419,8 @@ export interface ComposeActionParams {
   outputStablecoinAccount?: PublicKey;
   /** Optional: constraints PDA to pass as remaining account */
   constraintsPda?: PublicKey;
+  /** Optional: address lookup tables for V0 transaction compression (complex Jupiter routes) */
+  addressLookupTables?: import("@solana/web3.js").AddressLookupTableAccount[];
 }
 
 // Escrow param types

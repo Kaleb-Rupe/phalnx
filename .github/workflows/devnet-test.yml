@@ -5,7 +5,7 @@
 #   - Nightly at 2 AM UTC (catches network/RPC drift)
 #   - Manual dispatch (optional: specific test file or verbose mode)
 #
-# 68 tests across 9 files. Costs SOL — never runs on PRs.
+# 69 tests across 9 files. Costs SOL — never runs on PRs.
 
 name: Devnet Tests
 
@@ -111,7 +111,7 @@ jobs:
             echo "Running single test file: tests/$FILTER"
             npx ts-mocha -p ./tsconfig.json -t 600000 "tests/$FILTER"
           else
-            echo "Running all devnet tests (68 tests, 9 files)"
+            echo "Running all devnet tests (69 tests, 9 files)"
             npx ts-mocha -p ./tsconfig.json -t 600000 \
               tests/devnet-smoke.ts \
               tests/devnet-sessions.ts \
