@@ -1,0 +1,219 @@
+/**
+ * Kit-native type constants + permission helpers for Phalnx.
+ *
+ * All types use Kit's `Address` (branded string) instead of web3.js `PublicKey`,
+ * and `bigint` instead of `BN`.
+ */
+
+import type { Address } from "@solana/kit";
+
+// Re-export the program address from generated code
+export { PHALNX_PROGRAM_ADDRESS } from "./generated/programs/phalnx.js";
+
+// Re-export generated types
+export type { ActionType } from "./generated/types/actionType.js";
+export type { VaultStatus } from "./generated/types/vaultStatus.js";
+export type { EscrowStatus } from "./generated/types/escrowStatus.js";
+export type { AgentEntry } from "./generated/types/agentEntry.js";
+export type { EpochBucket } from "./generated/types/epochBucket.js";
+export type { ConstraintEntry } from "./generated/types/constraintEntry.js";
+export type { DataConstraint } from "./generated/types/dataConstraint.js";
+export type { AccountConstraint } from "./generated/types/accountConstraint.js";
+export type { ConstraintOperator } from "./generated/types/constraintOperator.js";
+
+// ─── Fee Constants ────────────────────────────────────────────────────────────
+
+export const FEE_RATE_DENOMINATOR = 1_000_000;
+export const PROTOCOL_FEE_RATE = 200; // 2 BPS
+export const MAX_DEVELOPER_FEE_RATE = 500; // 5 BPS
+export const PROTOCOL_TREASURY =
+  "ASHie1dFTnDSnrHMPGmniJhMgfJVGPm3rAaEPnrtWDiT" as Address;
+
+// ─── USD Constants ────────────────────────────────────────────────────────────
+
+export const USD_DECIMALS = 6;
+
+// ─── Multi-agent Constants ────────────────────────────────────────────────────
+
+export const MAX_AGENTS_PER_VAULT = 10;
+/** Permission bitmask with all 21 bits set (18 base + 3 escrow ActionType variants) */
+export const FULL_PERMISSIONS = (1n << 21n) - 1n;
+export const SWAP_ONLY = 1n << 0n;
+export const PERPS_ONLY = (1n << 1n) | (1n << 2n) | (1n << 3n) | (1n << 4n);
+export const TRANSFER_ONLY = 1n << 7n;
+export const ESCROW_ONLY = (1n << 18n) | (1n << 19n) | (1n << 20n);
+
+/** Full perps permission set: open, close, increase, decrease, deposit, withdraw, add/remove collateral, triggers, limits */
+export const PERPS_FULL =
+  PERPS_ONLY |
+  (1n << 5n) |
+  (1n << 6n) |
+  (1n << 8n) |
+  (1n << 9n) |
+  (1n << 10n) |
+  (1n << 11n) |
+  (1n << 12n) |
+  (1n << 13n) |
+  (1n << 14n) |
+  (1n << 15n) |
+  (1n << 16n) |
+  (1n << 17n);
+
+// ─── Escrow Constants ─────────────────────────────────────────────────────────
+
+export const MAX_ESCROW_DURATION = 2_592_000; // 30 days in seconds
+
+// ─── Slippage Constants ───────────────────────────────────────────────────────
+
+export const MAX_SLIPPAGE_BPS = 5_000; // 50%
+
+// ─── SpendTracker Constants ───────────────────────────────────────────────────
+
+export const EPOCH_DURATION = 600; // 10 minutes in seconds
+export const NUM_EPOCHS = 144; // 144 × 10 min = 24h
+
+// ─── Protocol Mode ────────────────────────────────────────────────────────────
+
+export const PROTOCOL_MODE_ALL = 0;
+export const PROTOCOL_MODE_ALLOWLIST = 1;
+export const PROTOCOL_MODE_DENYLIST = 2;
+
+// ─── Stablecoin Mints ─────────────────────────────────────────────────────────
+
+export const USDC_MINT_DEVNET =
+  "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU" as Address;
+export const USDC_MINT_MAINNET =
+  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" as Address;
+export const USDT_MINT_DEVNET =
+  "EJwZgeZrdC8TXTQbQBoL6bfuAnFUQS5S4iC5A2ciQtCK" as Address;
+export const USDT_MINT_MAINNET =
+  "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB" as Address;
+
+export const JUPITER_PROGRAM_ADDRESS =
+  "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" as Address;
+
+type Network = "devnet" | "mainnet-beta";
+
+/** Check if a mint address is a recognized stablecoin (network-aware). */
+export function isStablecoinMint(mint: Address, network: Network): boolean {
+  if (network === "devnet") {
+    return mint === USDC_MINT_DEVNET || mint === USDT_MINT_DEVNET;
+  }
+  return mint === USDC_MINT_MAINNET || mint === USDT_MINT_MAINNET;
+}
+
+// ─── Permission System ────────────────────────────────────────────────────────
+
+/** Permission bit mapping for each ActionType variant (21 total) */
+export const ACTION_PERMISSION_MAP: Record<string, bigint> = {
+  swap: 1n << 0n,
+  openPosition: 1n << 1n,
+  closePosition: 1n << 2n,
+  increasePosition: 1n << 3n,
+  decreasePosition: 1n << 4n,
+  deposit: 1n << 5n,
+  withdraw: 1n << 6n,
+  transfer: 1n << 7n,
+  addCollateral: 1n << 8n,
+  removeCollateral: 1n << 9n,
+  placeTriggerOrder: 1n << 10n,
+  editTriggerOrder: 1n << 11n,
+  cancelTriggerOrder: 1n << 12n,
+  placeLimitOrder: 1n << 13n,
+  editLimitOrder: 1n << 14n,
+  cancelLimitOrder: 1n << 15n,
+  swapAndOpenPosition: 1n << 16n,
+  closeAndSwapPosition: 1n << 17n,
+  createEscrow: 1n << 18n,
+  settleEscrow: 1n << 19n,
+  refundEscrow: 1n << 20n,
+};
+
+/** Check if a permission bitmask includes the permission for a given action type */
+export function hasPermission(
+  permissions: bigint,
+  actionType: string,
+): boolean {
+  const bit = ACTION_PERMISSION_MAP[actionType];
+  if (bit === undefined) return false;
+  return (permissions & bit) !== 0n;
+}
+
+/** Convert a permission bitmask to an array of action type strings */
+export function permissionsToStrings(permissions: bigint): string[] {
+  const result: string[] = [];
+  for (const [name, bit] of Object.entries(ACTION_PERMISSION_MAP)) {
+    if ((permissions & bit) !== 0n) {
+      result.push(name);
+    }
+  }
+  return result;
+}
+
+/** Parse an action type enum object to its string key */
+export function parseActionType(
+  actionType: Record<string, unknown>,
+): string | undefined {
+  return Object.keys(actionType)[0];
+}
+
+/** Builder for constructing permission bitmasks */
+export class PermissionBuilder {
+  private permissions = 0n;
+
+  add(actionType: string): this {
+    const bit = ACTION_PERMISSION_MAP[actionType];
+    if (bit !== undefined) {
+      this.permissions |= bit;
+    }
+    return this;
+  }
+
+  remove(actionType: string): this {
+    const bit = ACTION_PERMISSION_MAP[actionType];
+    if (bit !== undefined) {
+      this.permissions &= ~bit;
+    }
+    return this;
+  }
+
+  build(): bigint {
+    return this.permissions;
+  }
+}
+
+// ─── Position Effect ──────────────────────────────────────────────────────────
+
+export type PositionEffect = "increment" | "decrement" | "none";
+
+export function isSpendingAction(actionType: string): boolean {
+  return [
+    "swap",
+    "openPosition",
+    "increasePosition",
+    "deposit",
+    "transfer",
+    "addCollateral",
+    "placeLimitOrder",
+    "swapAndOpenPosition",
+    "createEscrow",
+  ].includes(actionType);
+}
+
+export function getPositionEffect(actionType: string): PositionEffect {
+  if (
+    ["openPosition", "swapAndOpenPosition", "placeLimitOrder"].includes(
+      actionType,
+    )
+  ) {
+    return "increment";
+  }
+  if (
+    ["closePosition", "closeAndSwapPosition", "cancelLimitOrder"].includes(
+      actionType,
+    )
+  ) {
+    return "decrement";
+  }
+  return "none";
+}
