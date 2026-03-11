@@ -199,18 +199,9 @@ pub fn handler(ctx: Context<AgentTransfer>, amount: u64) -> Result<()> {
     ];
     let binding = [signer_seeds.as_slice()];
 
-    // Calculate fees
-    let protocol_fee = amount
-        .checked_mul(PROTOCOL_FEE_RATE as u64)
-        .ok_or(PhalnxError::Overflow)?
-        .checked_div(FEE_RATE_DENOMINATOR)
-        .ok_or(PhalnxError::Overflow)?;
-
-    let developer_fee = amount
-        .checked_mul(developer_fee_rate as u64)
-        .ok_or(PhalnxError::Overflow)?
-        .checked_div(FEE_RATE_DENOMINATOR)
-        .ok_or(PhalnxError::Overflow)?;
+    // Calculate fees (ceiling division — guarantees non-zero fee on any non-zero spending)
+    let protocol_fee = ceil_fee(amount, PROTOCOL_FEE_RATE as u64)?;
+    let developer_fee = ceil_fee(amount, developer_fee_rate as u64)?;
 
     let net_amount = amount
         .checked_sub(protocol_fee)

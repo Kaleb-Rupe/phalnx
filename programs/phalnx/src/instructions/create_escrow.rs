@@ -196,18 +196,10 @@ pub fn handler(
     }
     drop(overlay);
 
-    // 7. Fee calculation (same pattern as agent_transfer)
+    // 7. Fee calculation (ceiling division — guarantees non-zero fee on any non-zero spending)
     let dev_fee_rate = policy.developer_fee_rate;
-    let protocol_fee = amount
-        .checked_mul(PROTOCOL_FEE_RATE as u64)
-        .ok_or(PhalnxError::Overflow)?
-        .checked_div(FEE_RATE_DENOMINATOR)
-        .ok_or(PhalnxError::Overflow)?;
-    let developer_fee = amount
-        .checked_mul(dev_fee_rate as u64)
-        .ok_or(PhalnxError::Overflow)?
-        .checked_div(FEE_RATE_DENOMINATOR)
-        .ok_or(PhalnxError::Overflow)?;
+    let protocol_fee = ceil_fee(amount, PROTOCOL_FEE_RATE as u64)?;
+    let developer_fee = ceil_fee(amount, dev_fee_rate as u64)?;
     let net_amount = amount
         .checked_sub(protocol_fee)
         .ok_or(PhalnxError::Overflow)?

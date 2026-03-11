@@ -547,12 +547,16 @@ export class PhalnxClient {
     amount: BN,
     developerFeeRate: number,
   ): { protocolFee: BN; developerFee: BN; totalFee: BN } {
+    const denom = new BN(FEE_RATE_DENOMINATOR);
+    const roundUp = denom.subn(1);
     const protocolFee = amount
       .mul(new BN(PROTOCOL_FEE_RATE))
-      .div(new BN(FEE_RATE_DENOMINATOR));
+      .add(roundUp)
+      .div(denom);
     const developerFee = amount
       .mul(new BN(developerFeeRate))
-      .div(new BN(FEE_RATE_DENOMINATOR));
+      .add(roundUp)
+      .div(denom);
     return {
       protocolFee,
       developerFee,
