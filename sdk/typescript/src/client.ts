@@ -1266,7 +1266,10 @@ export class PhalnxClient {
     // Verify adapter output if vault is provided (agent-first path)
     if (vault) {
       const verification = verifyAdapterOutput(
-        { instructions: result.instructions, additionalSigners: result.additionalSigners },
+        {
+          instructions: result.instructions,
+          additionalSigners: result.additionalSigners,
+        },
         [FLASH_TRADE_PROGRAM_ID],
         vault,
       );
@@ -1678,7 +1681,10 @@ export class PhalnxClient {
     if (vault) {
       const driftProgramIds = [new PublicKey(DRIFT_PROGRAM_ID_STR)];
       const verification = verifyAdapterOutput(
-        { instructions: result.instructions, additionalSigners: result.additionalSigners },
+        {
+          instructions: result.instructions,
+          additionalSigners: result.additionalSigners,
+        },
         driftProgramIds,
         vault,
       );
@@ -1691,8 +1697,7 @@ export class PhalnxClient {
       }
     }
 
-    const { blockhash } =
-      await this.provider.connection.getLatestBlockhash();
+    const { blockhash } = await this.provider.connection.getLatestBlockhash();
     const messageV0 = new TransactionMessage({
       payerKey: agent,
       recentBlockhash: blockhash,
@@ -1747,7 +1752,10 @@ export class PhalnxClient {
     if (vault) {
       const kaminoProgramIds = [new PublicKey(KAMINO_LEND_PROGRAM_ID_STR)];
       const verification = verifyAdapterOutput(
-        { instructions: result.instructions, additionalSigners: result.additionalSigners },
+        {
+          instructions: result.instructions,
+          additionalSigners: result.additionalSigners,
+        },
         kaminoProgramIds,
         vault,
       );
@@ -1852,9 +1860,12 @@ export class PhalnxClient {
       tokenMint = USDC_MINT_DEVNET;
     }
 
-    const { getAssociatedTokenAddressSync } =
-      await import("@solana/spl-token");
-    const vaultTokenAccount = getAssociatedTokenAddressSync(tokenMint, vault, true);
+    const { getAssociatedTokenAddressSync } = await import("@solana/spl-token");
+    const vaultTokenAccount = getAssociatedTokenAddressSync(
+      tokenMint,
+      vault,
+      true,
+    );
     const feeDestinationTokenAccount = getAssociatedTokenAddressSync(
       tokenMint,
       vaultAccount.feeDestination,
@@ -1891,9 +1902,7 @@ export class PhalnxClient {
       composeParams,
     );
 
-    const allSigners = [
-      ...(result.additionalSigners ?? []),
-    ];
+    const allSigners = [...(result.additionalSigners ?? [])];
     if (allSigners.length > 0) {
       tx.sign(allSigners);
     }
@@ -1944,16 +1953,20 @@ export class PhalnxClient {
 
     // Resolve action type from params
     const actionTypeKey = p.actionType;
-    const mapping = ACTION_TYPE_MAP[actionTypeKey as keyof typeof ACTION_TYPE_MAP];
+    const mapping =
+      ACTION_TYPE_MAP[actionTypeKey as keyof typeof ACTION_TYPE_MAP];
     const actionType = mapping?.actionType ?? { swap: {} };
 
     const tokenMint = p.tokenMint
       ? new PublicKey(p.tokenMint)
       : USDC_MINT_DEVNET;
 
-    const { getAssociatedTokenAddressSync } =
-      await import("@solana/spl-token");
-    const vaultTokenAccount = getAssociatedTokenAddressSync(tokenMint, vault, true);
+    const { getAssociatedTokenAddressSync } = await import("@solana/spl-token");
+    const vaultTokenAccount = getAssociatedTokenAddressSync(
+      tokenMint,
+      vault,
+      true,
+    );
     const feeDestinationTokenAccount = getAssociatedTokenAddressSync(
       tokenMint,
       vaultAccount.feeDestination,

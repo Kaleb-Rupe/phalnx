@@ -18,16 +18,21 @@ import { confirmVault } from "../tools/confirm-vault";
 import { provision } from "../tools/provision";
 
 export const phalnxSetupSchema = z.object({
-  step: z.enum([
-    "status",
-    "configure",
-    "configureFromFile",
-    "fundWallet",
-    "discoverVault",
-    "confirmVault",
-    "provision",
-  ]).describe("Setup step to execute"),
-  params: z.record(z.string(), z.unknown()).optional().describe("Step-specific parameters"),
+  step: z
+    .enum([
+      "status",
+      "configure",
+      "configureFromFile",
+      "fundWallet",
+      "discoverVault",
+      "confirmVault",
+      "provision",
+    ])
+    .describe("Setup step to execute"),
+  params: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe("Step-specific parameters"),
 });
 
 export type PhalnxSetupInput = z.infer<typeof phalnxSetupSchema>;

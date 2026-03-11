@@ -214,8 +214,8 @@ pub const USD_DECIMALS: u8 = 6;
 /// 10^6 — base multiplier for USD amounts with 6 decimals
 pub const USD_BASE: u64 = 1_000_000;
 
-use anchor_lang::prelude::*;
 use crate::errors::PhalnxError;
+use anchor_lang::prelude::*;
 
 /// Vault status enum
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Default, PartialEq, Eq)]

@@ -1,7 +1,10 @@
 import { expect } from "chai";
 import type { PhalnxClient } from "@phalnx/sdk";
 import type { McpConfig } from "../../src/config";
-import { phalnxQuery, type PhalnxQueryInput } from "../../src/tools-v2/phalnx-query";
+import {
+  phalnxQuery,
+  type PhalnxQueryInput,
+} from "../../src/tools-v2/phalnx-query";
 import {
   createMockClient,
   TEST_VAULT_PDA,
@@ -12,7 +15,9 @@ import {
   makeTrackerAccount,
 } from "../helpers/mock-client";
 
-function makeMockClientWithIntents(overrides: Parameters<typeof createMockClient>[0] = {}) {
+function makeMockClientWithIntents(
+  overrides: Parameters<typeof createMockClient>[0] = {},
+) {
   const base = createMockClient(overrides);
   return {
     ...base,
@@ -26,9 +31,7 @@ function makeMockClientWithIntents(overrides: Parameters<typeof createMockClient
         },
       ],
       listActions: (id: string) =>
-        id === "jupiter"
-          ? [{ name: "swap", isSpending: true }]
-          : [],
+        id === "jupiter" ? [{ name: "swap", isSpending: true }] : [],
     },
   };
 }
@@ -38,10 +41,14 @@ const mockConfig = { rpcUrl: "https://mock.rpc" } as McpConfig;
 describe("phalnx_query", () => {
   it("vault query returns JSON with owner, agents, and status", async () => {
     const client = makeMockClientWithIntents();
-    const result = await phalnxQuery(client as unknown as PhalnxClient, mockConfig, {
-      query: "vault",
-      params: { vault: TEST_VAULT_PDA.toBase58() },
-    });
+    const result = await phalnxQuery(
+      client as unknown as PhalnxClient,
+      mockConfig,
+      {
+        query: "vault",
+        params: { vault: TEST_VAULT_PDA.toBase58() },
+      },
+    );
     const parsed = JSON.parse(result);
     expect(parsed).to.have.property("owner");
     expect(parsed.owner).to.equal(TEST_OWNER.publicKey.toBase58());
@@ -54,19 +61,27 @@ describe("phalnx_query", () => {
 
   it("vault query without vault returns 'No vault specified'", async () => {
     const client = makeMockClientWithIntents();
-    const result = await phalnxQuery(client as unknown as PhalnxClient, mockConfig, {
-      query: "vault",
-      params: {},
-    });
+    const result = await phalnxQuery(
+      client as unknown as PhalnxClient,
+      mockConfig,
+      {
+        query: "vault",
+        params: {},
+      },
+    );
     expect(result).to.equal("No vault specified");
   });
 
   it("policy query returns JSON with dailySpendingCapUsd and protocolMode", async () => {
     const client = makeMockClientWithIntents();
-    const result = await phalnxQuery(client as unknown as PhalnxClient, mockConfig, {
-      query: "policy",
-      params: { vault: TEST_VAULT_PDA.toBase58() },
-    });
+    const result = await phalnxQuery(
+      client as unknown as PhalnxClient,
+      mockConfig,
+      {
+        query: "policy",
+        params: { vault: TEST_VAULT_PDA.toBase58() },
+      },
+    );
     const parsed = JSON.parse(result);
     expect(parsed).to.have.property("dailySpendingCapUsd");
     expect(parsed).to.have.property("protocolMode");
@@ -80,9 +95,13 @@ describe("phalnx_query", () => {
 
   it("protocols query returns JSON array from intents.listProtocols()", async () => {
     const client = makeMockClientWithIntents();
-    const result = await phalnxQuery(client as unknown as PhalnxClient, mockConfig, {
-      query: "protocols",
-    });
+    const result = await phalnxQuery(
+      client as unknown as PhalnxClient,
+      mockConfig,
+      {
+        query: "protocols",
+      },
+    );
     const parsed = JSON.parse(result);
     expect(parsed).to.be.an("array");
     expect(parsed).to.have.length(1);
@@ -93,19 +112,27 @@ describe("phalnx_query", () => {
 
   it("actions query without protocolId returns error message", async () => {
     const client = makeMockClientWithIntents();
-    const result = await phalnxQuery(client as unknown as PhalnxClient, mockConfig, {
-      query: "actions",
-      params: {},
-    });
+    const result = await phalnxQuery(
+      client as unknown as PhalnxClient,
+      mockConfig,
+      {
+        query: "actions",
+        params: {},
+      },
+    );
     expect(result).to.equal("protocolId parameter required");
   });
 
   it("actions query with protocolId returns action list", async () => {
     const client = makeMockClientWithIntents();
-    const result = await phalnxQuery(client as unknown as PhalnxClient, mockConfig, {
-      query: "actions",
-      params: { protocolId: "jupiter" },
-    });
+    const result = await phalnxQuery(
+      client as unknown as PhalnxClient,
+      mockConfig,
+      {
+        query: "actions",
+        params: { protocolId: "jupiter" },
+      },
+    );
     const parsed = JSON.parse(result);
     expect(parsed).to.be.an("array");
     expect(parsed).to.have.length(1);
@@ -115,10 +142,14 @@ describe("phalnx_query", () => {
 
   it("pendingPolicy query returns exists:false when no pending policy", async () => {
     const client = makeMockClientWithIntents({ pendingPolicy: null });
-    const result = await phalnxQuery(client as unknown as PhalnxClient, mockConfig, {
-      query: "pendingPolicy",
-      params: { vault: TEST_VAULT_PDA.toBase58() },
-    });
+    const result = await phalnxQuery(
+      client as unknown as PhalnxClient,
+      mockConfig,
+      {
+        query: "pendingPolicy",
+        params: { vault: TEST_VAULT_PDA.toBase58() },
+      },
+    );
     const parsed = JSON.parse(result);
     expect(parsed).to.have.property("exists", false);
   });
@@ -126,29 +157,41 @@ describe("phalnx_query", () => {
   it("constraints query returns exists:false when mock throws", async () => {
     // The mock client's fetchConstraints returns null, which means no constraints
     const client = makeMockClientWithIntents();
-    const result = await phalnxQuery(client as unknown as PhalnxClient, mockConfig, {
-      query: "constraints",
-      params: { vault: TEST_VAULT_PDA.toBase58() },
-    });
+    const result = await phalnxQuery(
+      client as unknown as PhalnxClient,
+      mockConfig,
+      {
+        query: "constraints",
+        params: { vault: TEST_VAULT_PDA.toBase58() },
+      },
+    );
     const parsed = JSON.parse(result);
     expect(parsed).to.have.property("exists", false);
   });
 
   it("squadsStatus query without multisig returns error message", async () => {
     const client = makeMockClientWithIntents();
-    const result = await phalnxQuery(client as unknown as PhalnxClient, mockConfig, {
-      query: "squadsStatus",
-      params: {},
-    });
+    const result = await phalnxQuery(
+      client as unknown as PhalnxClient,
+      mockConfig,
+      {
+        query: "squadsStatus",
+        params: {},
+      },
+    );
     expect(result).to.equal("multisig parameter required");
   });
 
   it("spending query returns JSON with spent24hUsd", async () => {
     const client = makeMockClientWithIntents();
-    const result = await phalnxQuery(client as unknown as PhalnxClient, mockConfig, {
-      query: "spending",
-      params: { vault: TEST_VAULT_PDA.toBase58() },
-    });
+    const result = await phalnxQuery(
+      client as unknown as PhalnxClient,
+      mockConfig,
+      {
+        query: "spending",
+        params: { vault: TEST_VAULT_PDA.toBase58() },
+      },
+    );
     const parsed = JSON.parse(result);
     expect(parsed).to.have.property("spent24hUsd");
     expect(parsed).to.have.property("totalBuckets");

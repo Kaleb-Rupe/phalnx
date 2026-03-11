@@ -8,7 +8,11 @@
 import { z } from "zod";
 import type { PhalnxClient, IntentAction, AgentError } from "@phalnx/sdk";
 import { isAgentError } from "@phalnx/sdk";
-import { formatAgentError, formatEscalation, formatExecuteResult } from "./format";
+import {
+  formatAgentError,
+  formatEscalation,
+  formatExecuteResult,
+} from "./format";
 import { formatError } from "../errors";
 import {
   loadAgentKeypair,
@@ -19,48 +23,55 @@ import {
 import { toPublicKey } from "../utils";
 
 export const phalnxExecuteSchema = z.object({
-  action: z.enum([
-    // Core
-    "swap",
-    "transfer",
-    "deposit",
-    "withdraw",
-    // Flash Trade perps
-    "openPosition",
-    "closePosition",
-    "increasePosition",
-    "decreasePosition",
-    "addCollateral",
-    "removeCollateral",
-    "placeTriggerOrder",
-    "editTriggerOrder",
-    "cancelTriggerOrder",
-    "placeLimitOrder",
-    "editLimitOrder",
-    "cancelLimitOrder",
-    "swapAndOpenPosition",
-    "closeAndSwapPosition",
-    // Escrow
-    "createEscrow",
-    "settleEscrow",
-    "refundEscrow",
-    // Drift
-    "driftDeposit",
-    "driftWithdraw",
-    "driftPerpOrder",
-    "driftSpotOrder",
-    "driftCancelOrder",
-    // Kamino
-    "kaminoDeposit",
-    "kaminoBorrow",
-    "kaminoRepay",
-    "kaminoWithdraw",
-    // Generic
-    "protocol",
-    "passthrough",
-  ]).describe("The action type to execute"),
-  params: z.record(z.string(), z.unknown()).describe("Action-specific parameters"),
-  vault: z.string().optional().describe("Vault PDA address (base58). Uses default vault if omitted."),
+  action: z
+    .enum([
+      // Core
+      "swap",
+      "transfer",
+      "deposit",
+      "withdraw",
+      // Flash Trade perps
+      "openPosition",
+      "closePosition",
+      "increasePosition",
+      "decreasePosition",
+      "addCollateral",
+      "removeCollateral",
+      "placeTriggerOrder",
+      "editTriggerOrder",
+      "cancelTriggerOrder",
+      "placeLimitOrder",
+      "editLimitOrder",
+      "cancelLimitOrder",
+      "swapAndOpenPosition",
+      "closeAndSwapPosition",
+      // Escrow
+      "createEscrow",
+      "settleEscrow",
+      "refundEscrow",
+      // Drift
+      "driftDeposit",
+      "driftWithdraw",
+      "driftPerpOrder",
+      "driftSpotOrder",
+      "driftCancelOrder",
+      // Kamino
+      "kaminoDeposit",
+      "kaminoBorrow",
+      "kaminoRepay",
+      "kaminoWithdraw",
+      // Generic
+      "protocol",
+      "passthrough",
+    ])
+    .describe("The action type to execute"),
+  params: z
+    .record(z.string(), z.unknown())
+    .describe("Action-specific parameters"),
+  vault: z
+    .string()
+    .optional()
+    .describe("Vault PDA address (base58). Uses default vault if omitted."),
 });
 
 export type PhalnxExecuteInput = z.infer<typeof phalnxExecuteSchema>;
@@ -73,7 +84,8 @@ export async function phalnxExecute(
 ): Promise<string> {
   try {
     // Resolve vault
-    const rawVault = input.vault ?? loadShieldConfig()?.layers.vault.address ?? undefined;
+    const rawVault =
+      input.vault ?? loadShieldConfig()?.layers.vault.address ?? undefined;
     const vaultAddress = rawVault ? toPublicKey(rawVault) : null;
 
     if (!vaultAddress) {

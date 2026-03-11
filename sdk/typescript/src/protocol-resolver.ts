@@ -59,11 +59,7 @@ const T1_PROTOCOL_IDS = new Set(["jupiter"]);
 // T2 protocols (SDK-wrapped) — keyed by registry protocolId
 // ---------------------------------------------------------------------------
 
-const T2_PROTOCOL_IDS = new Set([
-  "drift",
-  "flash-trade",
-  "kamino-lending",
-]);
+const T2_PROTOCOL_IDS = new Set(["drift", "flash-trade", "kamino-lending"]);
 
 // ---------------------------------------------------------------------------
 // Core Logic
@@ -152,7 +148,8 @@ export function resolveProtocol(
       protocolId: programBase58,
       programId,
       displayName: programBase58,
-      reason: "No SDK handler — using on-chain constraint validation (passthrough)",
+      reason:
+        "No SDK handler — using on-chain constraint validation (passthrough)",
       constraintsConfigured: true,
     };
   }
@@ -164,7 +161,8 @@ export function resolveProtocol(
       protocolId: programBase58,
       programId,
       displayName: programBase58,
-      reason: "Protocol is allowed but no handler or constraints are configured",
+      reason:
+        "Protocol is allowed but no handler or constraints are configured",
       escalation: {
         type: "no_handler_no_constraints",
         message: `Program ${programBase58} is in the allowlist but has no SDK handler and no on-chain instruction constraints configured.`,

@@ -1,7 +1,10 @@
 import { expect } from "chai";
 import type { PhalnxClient } from "@phalnx/sdk";
 import type { McpConfig } from "../../src/config";
-import { phalnxExecute, type PhalnxExecuteInput } from "../../src/tools-v2/phalnx-execute";
+import {
+  phalnxExecute,
+  type PhalnxExecuteInput,
+} from "../../src/tools-v2/phalnx-execute";
 import {
   createMockConfig,
   createMockClient,
@@ -15,7 +18,8 @@ function makeMockClientWithIntents(
   return {
     ...base,
     intents: {
-      run: runImpl ??
+      run:
+        runImpl ??
         (async (intent: any, _vault: any, _opts: any) => ({
           signature: "mock-sig-abc",
           intent,

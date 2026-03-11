@@ -75,11 +75,7 @@ export async function resolveAccounts(
 
   const feeDestinationTokenAccount = input.feeDestination
     ? getAssociatedTokenAddressSync(input.tokenMint, input.feeDestination, true)
-    : getAssociatedTokenAddressSync(
-        input.tokenMint,
-        program.programId,
-        true,
-      );
+    : getAssociatedTokenAddressSync(input.tokenMint, program.programId, true);
 
   const protocolTreasuryTokenAccount = getAssociatedTokenAddressSync(
     input.tokenMint,

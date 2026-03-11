@@ -1,6 +1,9 @@
 import { expect } from "chai";
 import type { PhalnxClient } from "@phalnx/sdk";
-import { phalnxSetup, type PhalnxSetupInput } from "../../src/tools-v2/phalnx-setup";
+import {
+  phalnxSetup,
+  type PhalnxSetupInput,
+} from "../../src/tools-v2/phalnx-setup";
 
 describe("phalnx_setup", () => {
   it("returns a string for the 'status' step", async () => {
@@ -50,7 +53,10 @@ describe("phalnx_setup", () => {
 
   it("every enum value is a valid step that returns a string", async () => {
     // Each step gets minimal params to avoid required-field crashes
-    const stepsWithParams: Array<{ step: PhalnxSetupInput["step"]; params: Record<string, unknown> }> = [
+    const stepsWithParams: Array<{
+      step: PhalnxSetupInput["step"];
+      params: Record<string, unknown>;
+    }> = [
       { step: "status", params: {} },
       { step: "configure", params: {} },
       { step: "configureFromFile", params: {} },
@@ -61,9 +67,7 @@ describe("phalnx_setup", () => {
     ];
     for (const { step, params } of stepsWithParams) {
       const result = await phalnxSetup(null, null, { step, params });
-      expect(result, `step '${step}' should return a string`).to.be.a(
-        "string",
-      );
+      expect(result, `step '${step}' should return a string`).to.be.a("string");
     }
   });
 });

@@ -86,7 +86,11 @@ export class IntentEngine {
     if (intent.type === "protocol" || intent.type === "passthrough") {
       try {
         const resolution = await this._resolveProtocolTier(intent, vault);
-        if (resolution && resolution.tier === ProtocolTier.NOT_SUPPORTED && resolution.escalation) {
+        if (
+          resolution &&
+          resolution.tier === ProtocolTier.NOT_SUPPORTED &&
+          resolution.escalation
+        ) {
           return protocolEscalationError(resolution.escalation);
         }
       } catch (err) {
@@ -220,7 +224,9 @@ export class IntentEngine {
     // Extract program ID from intent
     let programId: PublicKey | null = null;
     if (intent.type === "protocol") {
-      const protocolId = (intent.params as any).protocolId as string | undefined;
+      const protocolId = (intent.params as any).protocolId as
+        | string
+        | undefined;
       if (protocolId) {
         const registry = this._getRegistry();
         const handler = registry.getByProtocolId(protocolId);
@@ -256,9 +262,8 @@ export class IntentEngine {
   }
 
   private _getRegistry(): ProtocolRegistry {
-    return (
-      this.client as unknown as { _protocolRegistry: ProtocolRegistry }
-    )._protocolRegistry;
+    return (this.client as unknown as { _protocolRegistry: ProtocolRegistry })
+      ._protocolRegistry;
   }
 
   /**

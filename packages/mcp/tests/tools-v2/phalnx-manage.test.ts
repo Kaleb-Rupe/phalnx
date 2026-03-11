@@ -1,7 +1,10 @@
 import { expect } from "chai";
 import type { PhalnxClient } from "@phalnx/sdk";
 import type { McpConfig } from "../../src/config";
-import { phalnxManage, type PhalnxManageInput } from "../../src/tools-v2/phalnx-manage";
+import {
+  phalnxManage,
+  type PhalnxManageInput,
+} from "../../src/tools-v2/phalnx-manage";
 import {
   createMockClient,
   createMockConfig,
@@ -60,7 +63,10 @@ describe("phalnx_manage", () => {
 
   it("unknown action returns 'Unknown management action'", async () => {
     const client = createMockClient();
-    const input = { action: "doSomethingWeird", params: {} } as unknown as PhalnxManageInput;
+    const input = {
+      action: "doSomethingWeird",
+      params: {},
+    } as unknown as PhalnxManageInput;
     const result = await phalnxManage(
       client as unknown as PhalnxClient,
       mockConfig,
