@@ -3,7 +3,7 @@
 # Runs on every push to main and on pull requests.
 # Eight jobs (1 detection + 6 parallel + 1 gate):
 #   0. changes                — Detect which file groups changed (package-level path filtering)
-#   1. build-lint-test        — TypeScript builds, Prettier, 734 TS tests (conditional: any-ts or push)
+#   1. build-lint-test        — TypeScript builds, Prettier, 1490 TS tests (conditional: any-ts or push)
 #   2. rust-checks            — cargo fmt + cargo clippy (conditional: rust changes or push)
 #   3. on-chain-tests         — Anchor build + LiteSVM 349 tests (conditional: rust changes or push)
 #  3b. build-verification     — Feature flag safety net (conditional: rust changes or push)
@@ -24,7 +24,7 @@
 #   apps/ → Actions server tests
 #   sdk/typescript → all downstream suites (everything depends on SDK)
 #
-# Total: ~1,729 tests across 17 suites (1291 TS + 349 on-chain + 20 Surfpool + 69 devnet)
+# Total: ~1,928 tests across 18 suites (1490 TS + 349 on-chain + 20 Surfpool + 69 devnet)
 # All security checks are BLOCKING — zero tolerance for known issues.
 
 name: CI
@@ -63,6 +63,7 @@ jobs:
       sdk-typescript: ${{ steps.filter.outputs.sdk-typescript }}
       sdk-platform: ${{ steps.filter.outputs.sdk-platform }}
       sdk-crossmint: ${{ steps.filter.outputs.sdk-crossmint }}
+      sdk-kit: ${{ steps.filter.outputs.sdk-kit }}
       plugins: ${{ steps.filter.outputs.plugins }}
       packages: ${{ steps.filter.outputs.packages }}
       apps: ${{ steps.filter.outputs.apps }}
@@ -95,6 +96,8 @@ jobs:
               - 'packages/**'
             apps:
               - 'apps/**'
+            sdk-kit:
+              - 'sdk/kit/**'
             any-ts:
               - 'sdk/**'
               - 'plugins/**'
@@ -106,7 +109,7 @@ jobs:
               - 'tsconfig*.json'
 
   # ──────────────────────────────────────────────────────────────
-  # Job 1: TypeScript build, lint, and tests (8 suites, 1291 tests)
+  # Job 1: TypeScript build, lint, and tests (9 suites, 1490 tests)
   # ──────────────────────────────────────────────────────────────
   build-lint-test:
     name: Build, Lint & TS Tests
@@ -222,6 +225,14 @@ jobs:
         working-directory: packages/mcp
         run: pnpm test
 
+      - name: Kit SDK tests (199 tests)
+        if: >-
+          needs.changes.outputs.sdk-kit == 'true' ||
+          needs.changes.outputs.sdk-typescript == 'true' ||
+          github.event_name == 'push'
+        working-directory: sdk/kit
+        run: pnpm test
+
       - name: Actions server tests (99 tests)
         if: >-
           needs.changes.outputs.apps == 'true' ||
@@ -237,7 +248,7 @@ jobs:
           echo "Branch: ${{ github.ref_name }}" >> test-summary.txt
           echo "Commit: ${{ github.sha }}" >> test-summary.txt
           echo "---" >> test-summary.txt
-          echo "All 8 TypeScript test suites executed." >> test-summary.txt
+          echo "All 9 TypeScript test suites executed." >> test-summary.txt
           echo "See individual step logs for detailed output." >> test-summary.txt
 
       - name: Upload test summary

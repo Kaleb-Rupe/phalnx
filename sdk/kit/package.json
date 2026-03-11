@@ -1,0 +1,74 @@
+{
+  "name": "@phalnx/kit",
+  "version": "0.1.0",
+  "type": "module",
+  "author": "Kaleb Rupe (https://x.com/MightieMags)",
+  "homepage": "https://github.com/Kaleb-Rupe/phalnx#readme",
+  "bugs": {
+    "url": "https://github.com/Kaleb-Rupe/phalnx/issues",
+    "email": "https://t.me/MightyMags"
+  },
+  "description": "Kit-native TypeScript SDK for Phalnx — zero web3.js dependency, ESM-only",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "codama": "node codama.mjs",
+    "pretest": "tsc -p tsconfig.test.json --noEmit",
+    "test": "mocha --require tsx tests/**/*.test.ts --timeout 30000"
+  },
+  "dependencies": {
+    "@phalnx/core": "workspace:*",
+    "@solana-program/compute-budget": "^0.14.0"
+  },
+  "peerDependencies": {
+    "@solana/kit": "^6.2.0"
+  },
+  "optionalDependencies": {
+    "@solana/web3.js": "^1.95.0",
+    "@coral-xyz/anchor": "^0.32.1"
+  },
+  "devDependencies": {
+    "@codama/nodes-from-anchor": "^1.3.9",
+    "@codama/renderers-js": "^2.0.3",
+    "@types/chai": "^5.2.3",
+    "@types/mocha": "^10.0.6",
+    "chai": "^6.2.2",
+    "codama": "^1.5.1",
+    "mocha": "^11.7.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "keywords": [
+    "solana",
+    "ai-agent",
+    "solana-kit",
+    "defi",
+    "security",
+    "spending-limits",
+    "policy-engine",
+    "esm"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kaleb-Rupe/phalnx",
+    "directory": "sdk/kit"
+  }
+}

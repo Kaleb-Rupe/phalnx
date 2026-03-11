@@ -130,7 +130,13 @@ updateFile(".github/workflows/ci.yml", "CI workflow", (content) => {
     `# Eight jobs (1 detection + 6 parallel + 1 gate):`,
   );
 
-  // Header: TS test count + suite count
+  // Header: TS test count + suite count (line 6: "Prettier, N TS tests")
+  content = content.replace(
+    /Prettier, \d+ TS tests/,
+    `Prettier, ${tsCount} TS tests`,
+  );
+
+  // Header: TS test count + suite count (line ~20: "N TS tests across M suites")
   content = content.replace(
     /\d+ TS tests across \d+ suites/,
     `${tsCount} TS tests across ${tsSuiteCount} suites`,

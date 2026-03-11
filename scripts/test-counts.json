@@ -106,6 +106,12 @@
       "count": 99,
       "ciStepName": "Actions server tests",
       "claudePattern": "apps/actions-server/tests/` (mocha, %d tests)"
+    },
+    {
+      "name": "Kit-native SDK (`@phalnx/kit`)",
+      "count": 199,
+      "ciStepName": "Kit SDK tests",
+      "claudePattern": "sdk/kit/tests/` (mocha + tsx, %d tests — types, resolve-accounts, composer, events, priority-fees, simulation, tokens, policies, tee-attestation, compat)"
     }
   ]
 }
