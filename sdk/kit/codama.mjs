@@ -16,7 +16,17 @@ const anchorIdl = JSON.parse(readFileSync(idlPath, "utf-8"));
 const codama = createFromRoot(rootNodeFromAnchor(anchorIdl));
 
 // Generate Kit-native JS client
+// renderVisitor creates a full npm package structure (package.json + src/generated/).
+// We render to a temp dir and move the inner src/generated/ to our src/generated/.
+import { mkdtempSync, cpSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+
+const tempDir = mkdtempSync(join(tmpdir(), "codama-"));
+await codama.accept(renderVisitor(tempDir));
+
 const outputDir = join(__dirname, "src", "generated");
-codama.accept(renderVisitor(outputDir));
+rmSync(outputDir, { recursive: true, force: true });
+cpSync(join(tempDir, "src", "generated"), outputDir, { recursive: true });
+rmSync(tempDir, { recursive: true, force: true });
 
 console.log(`Generated Kit-native client in ${outputDir}`);
