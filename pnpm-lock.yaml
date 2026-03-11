@@ -394,8 +394,11 @@ importers:
       '@phalnx/core':
         specifier: workspace:*
         version: link:../core
+      '@solana-program/compute-budget':
+        specifier: ^0.14.0
+        version: 0.14.0(@solana/kit@6.2.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))
       '@solana/kit':
-        specifier: 6.2.0
+        specifier: ^6.2.0
         version: 6.2.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10)
     devDependencies:
       '@codama/nodes-from-anchor':
@@ -404,9 +407,6 @@ importers:
       '@codama/renderers-js':
         specifier: ^2.0.3
         version: 2.0.3(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)
-      '@solana-program/compute-budget':
-        specifier: ^0.14.0
-        version: 0.14.0(@solana/kit@6.2.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))
       '@types/chai':
         specifier: ^5.2.3
         version: 5.2.3
