@@ -292,5 +292,14 @@ export type {
   ShieldedContext,
 } from "./shield.js";
 
+// ─── Intent Engine ──────────────────────────────────────────────────────────
+export { IntentEngine } from "./intent-engine.js";
+export type {
+  ExplainResult,
+  ProtocolInfo,
+  ActionInfo,
+  IntentEngineConfig,
+} from "./intent-engine.js";
+
 // NOTE: compat.ts is intentionally NOT exported.
 // It is for internal use only when bridging T2 protocol SDKs.
