@@ -3177,7 +3177,7 @@ describe("phalnx", () => {
         .rpc();
     });
 
-    it("amount = 1 lamport → protocol_fee = 0 → no fee transfer", async () => {
+    it("amount = 1 lamport → protocol_fee = 1 (ceiling division)", async () => {
       const [sessionPda] = PublicKey.findProgramAddressSync(
         [
           Buffer.from("session"),
@@ -3189,9 +3189,10 @@ describe("phalnx", () => {
       );
 
       const vaultBalBefore = getTokenBalance(svm, feeEdgeVaultUsdcAta);
+      const treasuryBefore = getTokenBalance(svm, protocolTreasuryUsdcAta);
 
-      // protocol_fee = 1 * 200 / 1_000_000 = 0
-      // Compose validate+finalize atomically
+      // ceil(1 * 200 / 1_000_000) = 1 protocol fee (devFeeRate=0 → dev fee = 0)
+      // net = 1 - 1 = 0 → delegation = 0, 1 unit goes to treasury
       const validateIx = await program.methods
         .validateAndAuthorize(
           { swap: {} },
@@ -3227,7 +3228,7 @@ describe("phalnx", () => {
           sessionRentRecipient: feeEdgeAgent.publicKey,
           policy: feeEdgePolicyPda,
           tracker: feeEdgeTrackerPda,
-          vaultTokenAccount: feeEdgeVaultUsdcAta, // H1: must provide for delegation revocation
+          vaultTokenAccount: feeEdgeVaultUsdcAta,
           agentSpendOverlay: feeEdgeOverlay,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
@@ -3238,12 +3239,14 @@ describe("phalnx", () => {
 
       sendVersionedTx(svm, [validateIx, finalizeIx], feeEdgeAgent);
 
-      // Vault balance unchanged (no fee deducted)
+      // Vault lost 1 unit (protocol fee), treasury gained 1 unit
       const vaultBalAfter = getTokenBalance(svm, feeEdgeVaultUsdcAta);
-      expect(Number(vaultBalAfter)).to.equal(Number(vaultBalBefore));
+      const treasuryAfter = getTokenBalance(svm, protocolTreasuryUsdcAta);
+      expect(Number(vaultBalBefore) - Number(vaultBalAfter)).to.equal(1);
+      expect(Number(treasuryAfter) - Number(treasuryBefore)).to.equal(1);
     });
 
-    it("amount = 4999 → fee = 0; amount = 5000 → fee = 1", async () => {
+    it("amount = 4999 → fee = 1 (ceiling); amount = 5000 → fee = 1 (exact)", async () => {
       const [sessionPda] = PublicKey.findProgramAddressSync(
         [
           Buffer.from("session"),
@@ -3254,7 +3257,7 @@ describe("phalnx", () => {
         program.programId,
       );
 
-      // Test amount = 4999: protocol_fee = 4999 * 200 / 1_000_000 = 0 (integer division)
+      // Test amount = 4999: ceil(4999 * 200 / 1_000_000) = 1 (ceiling division)
       // Compose validate+finalize atomically
       const validateIx1 = await program.methods
         .validateAndAuthorize(
@@ -3302,7 +3305,7 @@ describe("phalnx", () => {
 
       sendVersionedTx(svm, [validateIx1, finalizeIx1], feeEdgeAgent);
 
-      // Test amount = 5000: protocol_fee = 5000 * 200 / 1_000_000 = 1
+      // Test amount = 5000: ceil(5000 * 200 / 1_000_000) = 1 (exact division, same result)
       // Capture vault balance BEFORE validate (fee collected during validate)
       const vaultBalBefore = getTokenBalance(svm, feeEdgeVaultUsdcAta);
 

@@ -271,6 +271,21 @@ export type IntentAction =
         action: string;
         [key: string]: unknown;
       };
+    }
+  // ─── Passthrough (raw instructions + on-chain constraint validation) ──
+  | {
+      type: "passthrough";
+      params: {
+        programId: string;
+        instructions: {
+          programId: string;
+          keys: { pubkey: string; isSigner: boolean; isWritable: boolean }[];
+          data: string;
+        }[];
+        actionType: string;
+        amount?: string;
+        tokenMint?: string;
+      };
     };
 
 /** All supported intent action type strings */
@@ -342,6 +357,8 @@ export const ACTION_TYPE_MAP: Record<
   kaminoWithdraw: { actionType: { withdraw: {} }, isSpending: false },
   // Generic protocol (resolved dynamically via registry)
   protocol: { actionType: { swap: {} }, isSpending: true },
+  // Passthrough (raw instructions validated on-chain via constraints)
+  passthrough: { actionType: { swap: {} }, isSpending: true },
 };
 
 export type IntentStatus =
@@ -482,6 +499,9 @@ export function summarizeAction(action: IntentAction): string {
     // Generic protocol
     case "protocol":
       return `${action.params.protocolId}: ${action.params.action}`;
+    // Passthrough
+    case "passthrough":
+      return `Passthrough to ${action.params.programId} (${action.params.actionType})`;
   }
 }
 

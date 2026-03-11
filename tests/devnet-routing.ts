@@ -606,7 +606,7 @@ describe("devnet-routing", () => {
     // Protocol fee = 10_000_000 * 200 / 1_000_000 = 2000
     const expected =
       10_000_000 -
-      Math.floor((10_000_000 * PROTOCOL_FEE_RATE) / FEE_RATE_DENOMINATOR);
+      Math.ceil((10_000_000 * PROTOCOL_FEE_RATE) / FEE_RATE_DENOMINATOR);
     expect(balance).to.equal(expected);
     console.log(`    agent_transfer USDC succeeded, dest received ${balance}`);
   });
@@ -646,7 +646,7 @@ describe("devnet-routing", () => {
     const balance = await getTokenBalance(connection, destAta.address);
     const expected =
       10_000_000 -
-      Math.floor((10_000_000 * PROTOCOL_FEE_RATE) / FEE_RATE_DENOMINATOR);
+      Math.ceil((10_000_000 * PROTOCOL_FEE_RATE) / FEE_RATE_DENOMINATOR);
     expect(balance).to.equal(expected);
     console.log(`    agent_transfer USDT succeeded, dest received ${balance}`);
   });

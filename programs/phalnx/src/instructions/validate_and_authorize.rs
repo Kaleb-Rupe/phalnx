@@ -276,18 +276,10 @@ pub fn handler(
             rolling_spend_after_record = tracker.get_rolling_24h_usd(&clock);
             drop(tracker);
 
-            // Calculate fees
+            // Calculate fees (ceiling division — guarantees non-zero fee on any non-zero spending)
             let dev_fee_rate = policy.developer_fee_rate;
-            let p_fee = amount
-                .checked_mul(PROTOCOL_FEE_RATE as u64)
-                .ok_or(PhalnxError::Overflow)?
-                .checked_div(FEE_RATE_DENOMINATOR)
-                .ok_or(PhalnxError::Overflow)?;
-            let d_fee = amount
-                .checked_mul(dev_fee_rate as u64)
-                .ok_or(PhalnxError::Overflow)?
-                .checked_div(FEE_RATE_DENOMINATOR)
-                .ok_or(PhalnxError::Overflow)?;
+            let p_fee = ceil_fee(amount, PROTOCOL_FEE_RATE as u64)?;
+            let d_fee = ceil_fee(amount, dev_fee_rate as u64)?;
 
             (usd_amt, p_fee, d_fee)
         } else {

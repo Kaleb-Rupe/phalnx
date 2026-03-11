@@ -21,6 +21,8 @@ export type ErrorCategory =
   | "RESOURCE_NOT_FOUND"
   | "SPENDING_CAP"
   | "POLICY_VIOLATION"
+  | "PROTOCOL_NOT_SUPPORTED"
+  | "ESCALATION_REQUIRED"
   | "FATAL";
 
 export interface RecoveryAction {
@@ -1456,6 +1458,67 @@ function fromSdkMapping(
       ...context,
       error_name: mapping.name,
       original_message: originalMessage,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Protocol Escalation Errors
+// ---------------------------------------------------------------------------
+
+import type { EscalationInfo } from "./protocol-resolver";
+
+/**
+ * Build an AgentError for Tier 5 (NOT_SUPPORTED) protocol resolution.
+ *
+ * The anti-redirect behavior is embedded in the error structure:
+ * 1. Primary recovery = escalate_to_human (ALWAYS first)
+ * 2. Secondary = what vault owner must change
+ * 3. Tertiary = alternatives ONLY IF user agrees (ALWAYS last)
+ * 4. Context includes explicit anti-redirect instruction
+ */
+export function protocolEscalationError(
+  escalation: EscalationInfo,
+): AgentError {
+  const recovery_actions: RecoveryAction[] = [];
+
+  // 1. ALWAYS first: tell the human
+  recovery_actions.push({
+    action: "escalate_to_human",
+    description: `TELL THE USER: ${escalation.message}`,
+  });
+
+  // 2. Required changes for the vault owner
+  for (const action of escalation.requiredActions) {
+    recovery_actions.push({
+      action: "required_vault_change",
+      description: action,
+    });
+  }
+
+  // 3. ALWAYS last: alternatives only if user agrees
+  if (escalation.alternatives && escalation.alternatives.length > 0) {
+    const altNames = escalation.alternatives
+      .map((a) => a.displayName)
+      .join(", ");
+    recovery_actions.push({
+      action: "suggest_alternatives_secondary",
+      description: `ONLY IF USER AGREES TO SWITCH: ${altNames} support similar actions`,
+    });
+  }
+
+  return {
+    code: "PROTOCOL_ESCALATION",
+    message: escalation.message,
+    category: "ESCALATION_REQUIRED",
+    retryable: false,
+    recovery_actions,
+    context: {
+      escalation_type: escalation.type,
+      required_actions: escalation.requiredActions,
+      alternatives: escalation.alternatives?.map((a) => a.protocolId) ?? [],
+      IMPORTANT:
+        "Do NOT silently switch to an alternative protocol. The user explicitly requested this protocol.",
     },
   };
 }

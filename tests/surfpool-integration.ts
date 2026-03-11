@@ -936,7 +936,7 @@ describe("surfpool-integration", function () {
       );
 
       const amount = 100_000_000; // 100 USDC
-      const expectedProtocolFee = Math.floor(
+      const expectedProtocolFee = Math.ceil(
         (amount * PROTOCOL_FEE_RATE) / FEE_RATE_DENOMINATOR,
       );
 

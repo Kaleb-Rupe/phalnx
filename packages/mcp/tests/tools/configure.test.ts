@@ -317,7 +317,19 @@ describe("shield_configure", () => {
     };
     // We need to intercept require() for the custody adapter.
     // The configure function uses require("@phalnx/custody-crossmint").
+    // Clear any pre-cached resolved path first (other test suites may have loaded it).
     const Module = require("module");
+    let resolvedPath: string | undefined;
+    try {
+      resolvedPath = require.resolve("@phalnx/custody-crossmint");
+    } catch {
+      /* not installed — fine */
+    }
+    const origResolvedCache = resolvedPath
+      ? require.cache[resolvedPath]
+      : undefined;
+    if (resolvedPath) delete require.cache[resolvedPath];
+
     const origResolve = Module._resolveFilename;
     Module._resolveFilename = function (request: string, ...args: any[]) {
       if (request === "@phalnx/custody-crossmint") {
@@ -353,6 +365,14 @@ describe("shield_configure", () => {
       } else {
         delete require.cache["@phalnx/custody-crossmint"];
       }
+      // Restore the resolved-path cache entry
+      if (resolvedPath) {
+        if (origResolvedCache) {
+          require.cache[resolvedPath] = origResolvedCache;
+        } else {
+          delete require.cache[resolvedPath];
+        }
+      }
       if (origCrossmintKey) {
         process.env.CROSSMINT_API_KEY = origCrossmintKey;
       } else {
@@ -365,8 +385,18 @@ describe("shield_configure", () => {
     const origCrossmintKey = process.env.CROSSMINT_API_KEY;
     process.env.CROSSMINT_API_KEY = "test-crossmint-api-key";
 
-    // Ensure no cached module from previous test
+    // Ensure no cached module from previous test (both short key and resolved path)
     delete require.cache["@phalnx/custody-crossmint"];
+    let resolvedPath: string | undefined;
+    try {
+      resolvedPath = require.resolve("@phalnx/custody-crossmint");
+    } catch {
+      /* not installed — fine */
+    }
+    const origResolvedCache = resolvedPath
+      ? require.cache[resolvedPath]
+      : undefined;
+    if (resolvedPath) delete require.cache[resolvedPath];
 
     // Override resolver to ensure require() fails (no cached resolution)
     const Module = require("module");
@@ -388,6 +418,14 @@ describe("shield_configure", () => {
       expect(result).to.include("not installed");
     } finally {
       Module._resolveFilename = origResolve;
+      // Restore the resolved-path cache entry
+      if (resolvedPath) {
+        if (origResolvedCache) {
+          require.cache[resolvedPath] = origResolvedCache;
+        } else {
+          delete require.cache[resolvedPath];
+        }
+      }
       if (origCrossmintKey) {
         process.env.CROSSMINT_API_KEY = origCrossmintKey;
       } else {

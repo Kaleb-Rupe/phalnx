@@ -275,7 +275,8 @@ describe("devnet-fees", () => {
     );
   });
 
-  it("5. dust amount (1 lamport) rounds fee to zero", async () => {
+  it("5. dust amount (1 lamport) rejected: ceiling fees exceed amount", async () => {
+    // ceil(1*200/1M)=1 + ceil(1*500/1M)=1 = 2 total fees > amount of 1 → Overflow
     const sessionPda = deriveSessionPda(
       vaultA.vaultPda,
       agentA.publicKey,
@@ -283,34 +284,27 @@ describe("devnet-fees", () => {
       program.programId,
     );
 
-    const treasuryBefore = await getTokenBalance(
-      connection,
-      vaultA.protocolTreasuryAta,
-    );
-
-    await authorize({
-      connection,
-      program,
-      agent: agentA,
-      vaultPda: vaultA.vaultPda,
-      policyPda: vaultA.policyPda,
-      trackerPda: vaultA.trackerPda,
-      sessionPda,
-      vaultTokenAta: vaultA.vaultTokenAta,
-      mint,
-      amount: new BN(1),
-      protocol: jupiterProgramId,
-      protocolTreasuryAta: vaultA.protocolTreasuryAta,
-      feeDestinationAta: vaultA.feeDestinationAta,
-    });
-
-    const treasuryAfter = await getTokenBalance(
-      connection,
-      vaultA.protocolTreasuryAta,
-    );
-    // 1 * 200 / 1_000_000 = 0 (truncated)
-    expect(treasuryAfter).to.equal(treasuryBefore);
-    console.log("    Dust amount: fees rounded to zero");
+    try {
+      await authorize({
+        connection,
+        program,
+        agent: agentA,
+        vaultPda: vaultA.vaultPda,
+        policyPda: vaultA.policyPda,
+        trackerPda: vaultA.trackerPda,
+        sessionPda,
+        vaultTokenAta: vaultA.vaultTokenAta,
+        mint,
+        amount: new BN(1),
+        protocol: jupiterProgramId,
+        protocolTreasuryAta: vaultA.protocolTreasuryAta,
+        feeDestinationAta: vaultA.feeDestinationAta,
+      });
+      expect.fail("should have rejected dust amount");
+    } catch (err) {
+      expectError(err, "Overflow");
+    }
+    console.log("    Dust amount: ceiling fees exceed amount, rejected");
   });
 
   it("6. vault.totalFeesCollected tracks developer fees cumulatively", async () => {

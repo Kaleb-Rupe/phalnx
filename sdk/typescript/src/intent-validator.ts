@@ -293,6 +293,22 @@ export function validateIntentInput(intent: IntentAction): ValidationResult {
       validateNonEmpty(errors, intent.params.protocolId, "protocolId");
       validateNonEmpty(errors, intent.params.action, "action");
       break;
+    case "passthrough":
+      validateAddress(errors, intent.params.programId, "programId");
+      if (
+        !Array.isArray(intent.params.instructions) ||
+        intent.params.instructions.length === 0
+      ) {
+        errors.push(
+          makeError(
+            "instructions",
+            intent.params.instructions,
+            "passthrough requires at least one instruction",
+          ),
+        );
+      }
+      validateNonEmpty(errors, intent.params.actionType, "actionType");
+      break;
   }
 
   return {

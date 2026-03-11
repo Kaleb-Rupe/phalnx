@@ -495,10 +495,11 @@ describe("intents", () => {
       "kaminoWithdraw",
       // Generic
       "protocol",
+      "passthrough",
     ];
 
-    it("maps all 31 action types", () => {
-      expect(Object.keys(ACTION_TYPE_MAP)).to.have.lengthOf(31);
+    it("maps all 32 action types", () => {
+      expect(Object.keys(ACTION_TYPE_MAP)).to.have.lengthOf(32);
     });
 
     for (const type of ALL_TYPES) {

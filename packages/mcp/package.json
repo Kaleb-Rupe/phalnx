@@ -18,7 +18,7 @@
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",
-    "test": "NODE_OPTIONS='--no-experimental-strip-types' mocha --require ts-node/register 'tests/*.test.ts' 'tests/**/*.test.ts' --timeout 30000"
+    "test": "NODE_OPTIONS='--no-experimental-strip-types' mocha --require ts-node/register 'tests/*.test.ts' 'tests/resources/*.test.ts' 'tests/tools/*.test.ts' 'tests/tools-v2/*.test.ts' --timeout 30000"
   },
   "files": [
     "dist/**/*",

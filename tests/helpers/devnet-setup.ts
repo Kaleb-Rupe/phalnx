@@ -625,10 +625,10 @@ export async function waitForSlot(
 }
 
 export function calculateFees(amount: number, devFeeRate: number) {
-  const protocolFee = Math.floor(
+  const protocolFee = Math.ceil(
     (amount * PROTOCOL_FEE_RATE) / FEE_RATE_DENOMINATOR,
   );
-  const developerFee = Math.floor((amount * devFeeRate) / FEE_RATE_DENOMINATOR);
+  const developerFee = Math.ceil((amount * devFeeRate) / FEE_RATE_DENOMINATOR);
   const netAmount = amount - protocolFee - developerFee;
   return { protocolFee, developerFee, netAmount };
 }

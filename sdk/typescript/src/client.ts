@@ -17,6 +17,7 @@ import {
   NUM_EPOCHS,
   hasPermission,
   isStablecoinMint,
+  USDC_MINT_DEVNET,
 } from "./types";
 import type {
   Phalnx,
@@ -102,6 +103,7 @@ import {
 } from "./composer";
 import { wrapTransaction, type WrapTransactionParams } from "./wrap";
 import {
+  JUPITER_PROGRAM_ID,
   fetchJupiterQuote,
   composeJupiterSwap,
   composeJupiterSwapTransaction,
@@ -149,6 +151,7 @@ import {
   type JupiterPortfolioSummary,
 } from "./integrations/jupiter-portfolio";
 import {
+  FLASH_TRADE_PROGRAM_ID,
   createFlashTradeClient as _createFlashTradeClient,
   getPoolConfig,
   composeFlashTradeOpen,
@@ -207,6 +210,7 @@ import {
   type TransactionIntent,
 } from "./intents";
 import {
+  DRIFT_PROGRAM_ID_STR,
   composeDriftDeposit,
   composeDriftWithdraw,
   composeDriftPlacePerpOrder,
@@ -224,6 +228,7 @@ import {
   type DriftComposeResult,
 } from "./integrations/drift";
 import {
+  KAMINO_LEND_PROGRAM_ID_STR,
   composeKaminoDeposit,
   composeKaminoBorrow,
   composeKaminoRepay,
@@ -236,6 +241,8 @@ import {
 } from "./integrations/kamino";
 import { globalProtocolRegistry } from "./integrations/protocol-registry";
 import type { ProtocolRegistry } from "./integrations/protocol-registry";
+import { verifyAdapterOutput } from "./integrations/adapter-verifier";
+import { resolveProtocolActionType } from "./intents";
 import {
   createSquadsMultisig,
   proposeVaultAction,
@@ -540,12 +547,16 @@ export class PhalnxClient {
     amount: BN,
     developerFeeRate: number,
   ): { protocolFee: BN; developerFee: BN; totalFee: BN } {
+    const denom = new BN(FEE_RATE_DENOMINATOR);
+    const roundUp = denom.subn(1);
     const protocolFee = amount
       .mul(new BN(PROTOCOL_FEE_RATE))
-      .div(new BN(FEE_RATE_DENOMINATOR));
+      .add(roundUp)
+      .div(denom);
     const developerFee = amount
       .mul(new BN(developerFeeRate))
-      .div(new BN(FEE_RATE_DENOMINATOR));
+      .add(roundUp)
+      .div(denom);
     return {
       protocolFee,
       developerFee,
@@ -1250,7 +1261,27 @@ export class PhalnxClient {
     result: FlashTradeResult,
     agent: PublicKey,
     signers?: Signer[],
+    vault?: PublicKey,
   ): Promise<string> {
+    // Verify adapter output if vault is provided (agent-first path)
+    if (vault) {
+      const verification = verifyAdapterOutput(
+        {
+          instructions: result.instructions,
+          additionalSigners: result.additionalSigners,
+        },
+        [FLASH_TRADE_PROGRAM_ID],
+        vault,
+      );
+      if (!verification.valid) {
+        throw new PhalnxSDKError({
+          code: -1,
+          name: "AdapterVerificationFailed",
+          message: `Flash Trade compose produced unsafe instructions: ${verification.violations.join("; ")}`,
+        });
+      }
+    }
+
     const tx = await composeFlashTradeTransaction(
       this.provider.connection,
       agent,
@@ -1644,9 +1675,29 @@ export class PhalnxClient {
     result: DriftComposeResult,
     agent: PublicKey,
     signers?: Signer[],
+    vault?: PublicKey,
   ): Promise<string> {
-    const { blockhash, lastValidBlockHeight } =
-      await this.provider.connection.getLatestBlockhash();
+    // Verify adapter output if vault is provided (agent-first path)
+    if (vault) {
+      const driftProgramIds = [new PublicKey(DRIFT_PROGRAM_ID_STR)];
+      const verification = verifyAdapterOutput(
+        {
+          instructions: result.instructions,
+          additionalSigners: result.additionalSigners,
+        },
+        driftProgramIds,
+        vault,
+      );
+      if (!verification.valid) {
+        throw new PhalnxSDKError({
+          code: -1,
+          name: "AdapterVerificationFailed",
+          message: `Drift compose produced unsafe instructions: ${verification.violations.join("; ")}`,
+        });
+      }
+    }
+
+    const { blockhash } = await this.provider.connection.getLatestBlockhash();
     const messageV0 = new TransactionMessage({
       payerKey: agent,
       recentBlockhash: blockhash,
@@ -1695,7 +1746,28 @@ export class PhalnxClient {
     result: KaminoComposeResult,
     agent: PublicKey,
     signers?: Signer[],
+    vault?: PublicKey,
   ): Promise<string> {
+    // Verify adapter output if vault is provided (agent-first path)
+    if (vault) {
+      const kaminoProgramIds = [new PublicKey(KAMINO_LEND_PROGRAM_ID_STR)];
+      const verification = verifyAdapterOutput(
+        {
+          instructions: result.instructions,
+          additionalSigners: result.additionalSigners,
+        },
+        kaminoProgramIds,
+        vault,
+      );
+      if (!verification.valid) {
+        throw new PhalnxSDKError({
+          code: -1,
+          name: "AdapterVerificationFailed",
+          message: `Kamino compose produced unsafe instructions: ${verification.violations.join("; ")}`,
+        });
+      }
+    }
+
     const { blockhash } = await this.provider.connection.getLatestBlockhash();
     const messageV0 = new TransactionMessage({
       payerKey: agent,
@@ -1737,34 +1809,277 @@ export class PhalnxClient {
     }
 
     const vaultAccount = await this.fetchVaultByAddress(vault);
+    const agent = this.provider.wallet.publicKey;
     const ctx = {
       program: this.program,
       connection: this.provider.connection,
       vault,
       owner: vaultAccount.owner,
       vaultId: vaultAccount.vaultId,
-      agent: this.provider.wallet.publicKey,
+      agent,
     };
 
     if (handler.initialize) {
       await handler.initialize(this.provider.connection);
     }
 
+    // Compose the protocol-specific instructions
     const result = await handler.compose(ctx, action, params);
-    const allSigners = result.additionalSigners ?? [];
-    const { blockhash } = await this.provider.connection.getLatestBlockhash();
-    const messageV0 = new TransactionMessage({
-      payerKey: this.provider.wallet.publicKey,
-      recentBlockhash: blockhash,
-      instructions: result.instructions,
-    }).compileToV0Message();
-    const tx = new VersionedTransaction(messageV0);
+
+    // Verify adapter output before wrapping in sandwich
+    const verification = verifyAdapterOutput(
+      result,
+      handler.metadata.programIds,
+      vault,
+    );
+    if (!verification.valid) {
+      throw new PhalnxSDKError({
+        code: -1,
+        name: "AdapterVerificationFailed",
+        message: `Protocol handler "${protocolId}" produced unsafe instructions: ${verification.violations.join("; ")}`,
+      });
+    }
+
+    // Resolve the correct on-chain ActionType for this protocol action
+    const { actionType, isSpending } = resolveProtocolActionType(
+      this._protocolRegistry,
+      protocolId,
+      action,
+    );
+
+    // Determine token mint (use USDC as default for protocol actions)
+    let tokenMint: PublicKey;
+    if (params.tokenMint) {
+      try {
+        const candidate = new PublicKey(params.tokenMint as string);
+        tokenMint = isStablecoinMint(candidate) ? candidate : USDC_MINT_DEVNET;
+      } catch {
+        tokenMint = USDC_MINT_DEVNET;
+      }
+    } else {
+      tokenMint = USDC_MINT_DEVNET;
+    }
+
+    const { getAssociatedTokenAddressSync } = await import("@solana/spl-token");
+    const vaultTokenAccount = getAssociatedTokenAddressSync(
+      tokenMint,
+      vault,
+      true,
+    );
+    const feeDestinationTokenAccount = getAssociatedTokenAddressSync(
+      tokenMint,
+      vaultAccount.feeDestination,
+      true,
+    );
+    const protocolTreasuryTokenAccount = getAssociatedTokenAddressSync(
+      tokenMint,
+      this.program.programId,
+      true,
+    );
+
+    // Build the sandwich: validate → protocol instructions → finalize
+    const composeParams: ComposeActionParams = {
+      agent,
+      vault,
+      owner: vaultAccount.owner,
+      vaultId: vaultAccount.vaultId,
+      vaultTokenAccount,
+      actionType,
+      tokenMint,
+      amount: new BN(0), // Protocol handler manages amounts internally
+      targetProtocol: handler.metadata.programIds[0],
+      defiInstructions: result.instructions,
+      feeDestinationTokenAccount,
+      protocolTreasuryTokenAccount,
+      addressLookupTables: result.addressLookupTables
+        ? await this._resolveALTs(result.addressLookupTables)
+        : undefined,
+    };
+
+    const tx = await composePermittedTransaction(
+      this.program,
+      this.provider.connection,
+      composeParams,
+    );
+
+    const allSigners = [...(result.additionalSigners ?? [])];
     if (allSigners.length > 0) {
       tx.sign(allSigners);
     }
-    return this.provider.sendAndConfirm(tx, allSigners, {
-      skipPreflight: false,
-    });
+
+    const signed = await this.provider.wallet.signTransaction(tx);
+    return this.sendWithOptionalSimulation(signed);
+  }
+
+  /**
+   * Execute a passthrough intent: deserialize instructions, verify them,
+   * and wrap in the validate/finalize sandwich.
+   * Requires constraints to be configured on the vault.
+   */
+  private async _executePassthrough(
+    intent: IntentAction & { type: "passthrough" },
+    vault: PublicKey,
+    signers?: Signer[],
+  ): Promise<string> {
+    const p = intent.params;
+    const programId = new PublicKey(p.programId);
+    const agent = this.provider.wallet.publicKey;
+    const vaultAccount = await this.fetchVaultByAddress(vault);
+
+    // Deserialize instructions
+    const instructions: TransactionInstruction[] = p.instructions.map((ix) => ({
+      programId: new PublicKey(ix.programId),
+      keys: ix.keys.map((k) => ({
+        pubkey: new PublicKey(k.pubkey),
+        isSigner: k.isSigner,
+        isWritable: k.isWritable,
+      })),
+      data: Buffer.from(ix.data, "base64"),
+    }));
+
+    // Verify adapter output — treat the passthrough program as the sole allowed program
+    const verification = verifyAdapterOutput(
+      { instructions },
+      [programId],
+      vault,
+    );
+    if (!verification.valid) {
+      throw new PhalnxSDKError({
+        code: -1,
+        name: "AdapterVerificationFailed",
+        message: `Passthrough instructions failed verification: ${verification.violations.join("; ")}`,
+      });
+    }
+
+    // Resolve action type from params
+    const actionTypeKey = p.actionType;
+    const mapping =
+      ACTION_TYPE_MAP[actionTypeKey as keyof typeof ACTION_TYPE_MAP];
+    const actionType = mapping?.actionType ?? { swap: {} };
+
+    const tokenMint = p.tokenMint
+      ? new PublicKey(p.tokenMint)
+      : USDC_MINT_DEVNET;
+
+    const { getAssociatedTokenAddressSync } = await import("@solana/spl-token");
+    const vaultTokenAccount = getAssociatedTokenAddressSync(
+      tokenMint,
+      vault,
+      true,
+    );
+    const feeDestinationTokenAccount = getAssociatedTokenAddressSync(
+      tokenMint,
+      vaultAccount.feeDestination,
+      true,
+    );
+    const protocolTreasuryTokenAccount = getAssociatedTokenAddressSync(
+      tokenMint,
+      this.program.programId,
+      true,
+    );
+
+    const composeParams: ComposeActionParams = {
+      agent,
+      vault,
+      owner: vaultAccount.owner,
+      vaultId: vaultAccount.vaultId,
+      vaultTokenAccount,
+      actionType,
+      tokenMint,
+      amount: p.amount ? new BN(p.amount) : new BN(0),
+      targetProtocol: programId,
+      defiInstructions: instructions,
+      feeDestinationTokenAccount,
+      protocolTreasuryTokenAccount,
+    };
+
+    const tx = await composePermittedTransaction(
+      this.program,
+      this.provider.connection,
+      composeParams,
+    );
+
+    if (signers && signers.length > 0) {
+      tx.sign(signers);
+    }
+
+    const signed = await this.provider.wallet.signTransaction(tx);
+    return this.sendWithOptionalSimulation(signed);
+  }
+
+  /**
+   * Resolve the target protocol program ID for an intent.
+   * Used by precheck to validate against the vault's protocol allowlist/denylist.
+   */
+  private _resolveTargetProtocol(intent: IntentAction): PublicKey | null {
+    switch (intent.type) {
+      case "swap":
+      case "swapAndOpenPosition":
+      case "closeAndSwapPosition":
+        return JUPITER_PROGRAM_ID;
+      case "openPosition":
+      case "closePosition":
+      case "increasePosition":
+      case "decreasePosition":
+      case "addCollateral":
+      case "removeCollateral":
+      case "placeTriggerOrder":
+      case "editTriggerOrder":
+      case "cancelTriggerOrder":
+      case "placeLimitOrder":
+      case "editLimitOrder":
+      case "cancelLimitOrder":
+        return FLASH_TRADE_PROGRAM_ID;
+      case "driftDeposit":
+      case "driftWithdraw":
+      case "driftPerpOrder":
+      case "driftSpotOrder":
+      case "driftCancelOrder":
+        return new PublicKey(DRIFT_PROGRAM_ID_STR);
+      case "kaminoDeposit":
+      case "kaminoBorrow":
+      case "kaminoRepay":
+      case "kaminoWithdraw":
+        return new PublicKey(KAMINO_LEND_PROGRAM_ID_STR);
+      case "protocol": {
+        // Look up from registry
+        const handler = this._protocolRegistry.getByProtocolId(
+          intent.params.protocolId,
+        );
+        return handler?.metadata.programIds[0] ?? null;
+      }
+      case "passthrough": {
+        try {
+          return new PublicKey(intent.params.programId);
+        } catch {
+          return null;
+        }
+      }
+      // Non-protocol intents
+      case "transfer":
+      case "deposit":
+      case "withdraw":
+      case "createEscrow":
+      case "settleEscrow":
+      case "refundEscrow":
+        return null;
+      default:
+        return null;
+    }
+  }
+
+  /** Resolve AddressLookupTable PublicKeys to actual table accounts */
+  private async _resolveALTs(
+    altAddresses: PublicKey[],
+  ): Promise<AddressLookupTableAccount[]> {
+    const tables: AddressLookupTableAccount[] = [];
+    for (const addr of altAddresses) {
+      const result = await this.provider.connection.getAddressLookupTable(addr);
+      if (result.value) {
+        tables.push(result.value);
+      }
+    }
+    return tables;
   }
 
   // --- Intent Execution (Direct agent path) ---
@@ -1911,9 +2226,32 @@ export class PhalnxClient {
       }
     }
 
-    // Check protocol (simplified — actual protocol depends on routing)
-    const protocolPassed =
-      policyAccount.protocolMode === 0 || policyAccount.protocols.length > 0;
+    // Check protocol — resolve the specific target protocol for this intent
+    const targetProtocolId = this._resolveTargetProtocol(intent);
+    let protocolPassed: boolean;
+    let protocolInAllowlist: boolean;
+    if (policyAccount.protocolMode === 0) {
+      // Mode 0: all allowed
+      protocolPassed = true;
+      protocolInAllowlist = true;
+    } else if (targetProtocolId) {
+      const isInList = policyAccount.protocols.some(
+        (p) => p.toBase58() === targetProtocolId.toBase58(),
+      );
+      if (policyAccount.protocolMode === 1) {
+        // Mode 1: allowlist — must be in list
+        protocolPassed = isInList;
+        protocolInAllowlist = isInList;
+      } else {
+        // Mode 2: denylist — must NOT be in list
+        protocolPassed = !isInList;
+        protocolInAllowlist = !isInList;
+      }
+    } else {
+      // No target protocol resolvable — pass for mode 0, conservative pass otherwise
+      protocolPassed = policyAccount.protocolMode === 0;
+      protocolInAllowlist = false;
+    }
 
     // Check slippage (if applicable)
     let slippageDetails: PrecheckResult["details"]["slippage"] | undefined;
@@ -1945,7 +2283,7 @@ export class PhalnxClient {
       : capDetails && !capDetails.passed
         ? "Spending cap would be exceeded"
         : !protocolPassed
-          ? "Protocol not in allowlist"
+          ? `Protocol ${targetProtocolId?.toBase58() ?? "unknown"} not in vault allowlist`
           : slippageDetails && !slippageDetails.passed
             ? "Slippage exceeds vault maximum"
             : undefined;
@@ -1960,7 +2298,7 @@ export class PhalnxClient {
           agentHas: !!agentEntry,
         },
         spendingCap: capDetails,
-        protocol: { passed: protocolPassed, inAllowlist: protocolPassed },
+        protocol: { passed: protocolPassed, inAllowlist: protocolInAllowlist },
         slippage: slippageDetails,
       },
       summary: summarizeAction(intent),
@@ -2124,7 +2462,7 @@ export class PhalnxClient {
           priceWithSlippage: { price: new BN("0"), exponent: 0 },
           leverageBps: p.leverage * 10000,
         });
-        return this.executeFlashTrade(result, agent, signers);
+        return this.executeFlashTrade(result, agent, signers, vault);
       }
 
       case "closePosition": {
@@ -2139,7 +2477,7 @@ export class PhalnxClient {
           side: { long: {} },
           priceWithSlippage: { price: new BN("0"), exponent: 0 },
         });
-        return this.executeFlashTrade(result, agent, signers);
+        return this.executeFlashTrade(result, agent, signers, vault);
       }
 
       case "increasePosition": {
@@ -2184,7 +2522,7 @@ export class PhalnxClient {
           deltaSizeAmount: new BN(p.deltaSizeAmount),
           isStopLoss: p.isStopLoss,
         });
-        return this.executeFlashTrade(result, agent, signers);
+        return this.executeFlashTrade(result, agent, signers, vault);
       }
 
       case "editTriggerOrder": {
@@ -2202,7 +2540,7 @@ export class PhalnxClient {
           deltaSizeAmount: new BN(p.deltaSizeAmount),
           isStopLoss: p.isStopLoss,
         });
-        return this.executeFlashTrade(result, agent, signers);
+        return this.executeFlashTrade(result, agent, signers, vault);
       }
 
       case "cancelTriggerOrder": {
@@ -2217,7 +2555,7 @@ export class PhalnxClient {
           orderId: parseInt(p.orderId, 10),
           isStopLoss: p.isStopLoss,
         });
-        return this.executeFlashTrade(result, agent, signers);
+        return this.executeFlashTrade(result, agent, signers, vault);
       }
 
       case "placeLimitOrder": {
@@ -2244,7 +2582,7 @@ export class PhalnxClient {
           },
           leverageBps: p.leverageBps ?? 10000,
         });
-        return this.executeFlashTrade(result, agent, signers);
+        return this.executeFlashTrade(result, agent, signers, vault);
       }
 
       case "editLimitOrder": {
@@ -2270,7 +2608,7 @@ export class PhalnxClient {
             exponent: 0,
           },
         });
-        return this.executeFlashTrade(result, agent, signers);
+        return this.executeFlashTrade(result, agent, signers, vault);
       }
 
       case "cancelLimitOrder": {
@@ -2286,7 +2624,7 @@ export class PhalnxClient {
           receiveSymbol: p.market,
           side: toSide(p.side),
         });
-        return this.executeFlashTrade(result, agent, signers);
+        return this.executeFlashTrade(result, agent, signers, vault);
       }
 
       case "swapAndOpenPosition": {
@@ -2361,7 +2699,7 @@ export class PhalnxClient {
           tokenMint: mint,
           subAccountId: p.subAccountId,
         });
-        return this.executeDrift(result, agent, signers);
+        return this.executeDrift(result, agent, signers, vault);
       }
 
       case "driftWithdraw": {
@@ -2380,7 +2718,7 @@ export class PhalnxClient {
           tokenMint: mint,
           subAccountId: p.subAccountId,
         });
-        return this.executeDrift(result, agent, signers);
+        return this.executeDrift(result, agent, signers, vault);
       }
 
       case "driftPerpOrder": {
@@ -2400,7 +2738,7 @@ export class PhalnxClient {
           tokenMint: usdcMint,
           subAccountId: p.subAccountId,
         });
-        return this.executeDrift(result, agent, signers);
+        return this.executeDrift(result, agent, signers, vault);
       }
 
       case "driftSpotOrder": {
@@ -2419,7 +2757,7 @@ export class PhalnxClient {
           orderType: p.orderType,
           tokenMint: usdcMint,
         });
-        return this.executeDrift(result, agent, signers);
+        return this.executeDrift(result, agent, signers, vault);
       }
 
       case "driftCancelOrder": {
@@ -2435,7 +2773,7 @@ export class PhalnxClient {
           tokenMint: usdcMint,
           subAccountId: p.subAccountId,
         });
-        return this.executeDrift(result, agent, signers);
+        return this.executeDrift(result, agent, signers, vault);
       }
 
       // ─── Kamino Lending ──────────────────────────────────────────────
@@ -2455,7 +2793,7 @@ export class PhalnxClient {
           tokenMint: mint,
           market: p.market ? new PublicKey(p.market) : undefined,
         });
-        return this.executeKamino(result, agent, signers);
+        return this.executeKamino(result, agent, signers, vault);
       }
 
       case "kaminoBorrow": {
@@ -2473,7 +2811,7 @@ export class PhalnxClient {
           tokenMint: mint,
           market: p.market ? new PublicKey(p.market) : undefined,
         });
-        return this.executeKamino(result, agent, signers);
+        return this.executeKamino(result, agent, signers, vault);
       }
 
       case "kaminoRepay": {
@@ -2491,7 +2829,7 @@ export class PhalnxClient {
           tokenMint: mint,
           market: p.market ? new PublicKey(p.market) : undefined,
         });
-        return this.executeKamino(result, agent, signers);
+        return this.executeKamino(result, agent, signers, vault);
       }
 
       case "kaminoWithdraw": {
@@ -2509,7 +2847,7 @@ export class PhalnxClient {
           tokenMint: mint,
           market: p.market ? new PublicKey(p.market) : undefined,
         });
-        return this.executeKamino(result, agent, signers);
+        return this.executeKamino(result, agent, signers, vault);
       }
 
       // ─── Generic Protocol (registry-based dispatch) ──────────────────
@@ -2517,6 +2855,12 @@ export class PhalnxClient {
       case "protocol": {
         const p = intent.params;
         return this.executeProtocol(p.protocolId, p.action, p, vault);
+      }
+
+      // ─── Passthrough (raw instructions + constraint validation) ────────
+
+      case "passthrough": {
+        return this._executePassthrough(intent, vault, signers);
       }
 
       default: {
