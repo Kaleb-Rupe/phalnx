@@ -1,23 +1,20 @@
 # Devnet Tests — Real Solana devnet integration tests
 #
 # Triggers:
-#   - Push to main (path-filtered: programs, tests, workflow, Anchor.toml)
+#   - Called by deploy-devnet.yml after program + IDL deploy (primary)
 #   - Nightly at 2 AM UTC (catches network/RPC drift)
 #   - Manual dispatch (optional: specific test file or verbose mode)
+#
+# NOTE: No longer triggers on push to main for programs/** paths.
+# The deploy-devnet.yml workflow handles: build → deploy → test (chained).
+# This prevents tests from running against a stale program binary.
 #
 # 69 tests across 9 files. Costs SOL — never runs on PRs.
 
 name: Devnet Tests
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "programs/phalnx/src/**"
-      - "tests/devnet-*.ts"
-      - "tests/helpers/devnet-setup.ts"
-      - ".github/workflows/devnet-test.yml"
-      - "Anchor.toml"
+  workflow_call: # Called by deploy-devnet.yml after successful deploy
   schedule:
     - cron: "0 2 * * *" # 2 AM UTC nightly
   workflow_dispatch:
@@ -105,6 +102,9 @@ jobs:
       - name: Run devnet tests
         env:
           TEST_FILTER: ${{ github.event.inputs.test-filter || 'all' }}
+          # Node 23+ enables --experimental-strip-types by default, which
+          # conflicts with ts-node's CJS loader for .ts imports. Disable it.
+          NODE_OPTIONS: "--no-experimental-strip-types"
         run: |
           FILTER="$TEST_FILTER"
           if [ "$FILTER" != "all" ] && [ -f "tests/$FILTER" ]; then

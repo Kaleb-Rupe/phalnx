@@ -376,6 +376,36 @@ jobs:
             tests/flash-trade-integration.ts \
             tests/security-exploits.ts
 
+      - name: Check for IDL drift
+        run: |
+          # Build the IDL using nightly toolchain and compare to committed version.
+          # If they differ, the Rust changes affected the program interface and
+          # the committed IDL needs to be regenerated.
+          echo "Generating IDL from source..."
+          RUSTUP_TOOLCHAIN=nightly anchor idl build 2>/dev/null \
+            | grep -v '^\s*Compiling\|^\s*Finished\|^\s*Running' \
+            > /tmp/generated-idl.json 2>/dev/null || true
+
+          if [ -s /tmp/generated-idl.json ]; then
+            # Normalize both JSONs (sort keys) for stable comparison
+            python3 -c "import json,sys; json.dump(json.load(open(sys.argv[1])),open('/tmp/committed.json','w'),sort_keys=True)" target/idl/phalnx.json
+            python3 -c "import json,sys; json.dump(json.load(open(sys.argv[1])),open('/tmp/generated.json','w'),sort_keys=True)" /tmp/generated-idl.json
+
+            if ! diff -q /tmp/committed.json /tmp/generated.json > /dev/null 2>&1; then
+              echo "::warning::IDL drift detected! The committed IDL does not match the generated IDL."
+              echo "Run this locally to update:"
+              echo "  RUSTUP_TOOLCHAIN=nightly anchor idl build 2>/dev/null | grep -v '^\s*Compiling\|^\s*Finished\|^\s*Running' > target/idl/phalnx.json"
+              echo "  git add target/idl/phalnx.json && git commit -m 'chore: regenerate IDL'"
+              echo ""
+              echo "=== Diff ==="
+              diff /tmp/committed.json /tmp/generated.json | head -50 || true
+            else
+              echo "IDL is up to date."
+            fi
+          else
+            echo "IDL generation skipped (nightly toolchain not available or build failed). Not blocking."
+          fi
+
   # ──────────────────────────────────────────────────────────────
   # Job 3b: Build verification (feature flag safety net)
   #

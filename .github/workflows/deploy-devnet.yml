@@ -1,0 +1,236 @@
+# Deploy to Devnet — Auto-deploy program + IDL after Rust changes merge to main
+#
+# Triggers:
+#   - Push to main (path-filtered: programs/**, Anchor.toml)
+#   - Manual dispatch (for re-deploy after devnet reset or debugging)
+#
+# Flow: build → deploy binary → close+init IDL → chain devnet tests
+#
+# IDL Strategy: Always `close` then `init` (never `upgrade`).
+# Anchor's `idl upgrade` fails with RequireGteViolated when the IDL grows
+# beyond the initial account allocation. close+init handles any size change.
+#
+# Requires GitHub environment "devnet" with secrets:
+#   - DEVNET_DEPLOY_KEYPAIR: upgrade authority keypair (JSON array)
+#   - DEVNET_RPC_URL: devnet RPC endpoint
+#   - DEVNET_WALLET_KEYPAIR: test wallet keypair (passed to devnet-test.yml)
+
+name: Deploy to Devnet
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "programs/phalnx/src/**"
+      - "Anchor.toml"
+  workflow_dispatch: # Manual trigger for devnet reset recovery or debugging
+
+# Never cancel a deploy mid-flight — incomplete deploys waste SOL
+concurrency:
+  group: devnet-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  SOLANA_VERSION: "v2.1.14"
+  ANCHOR_VERSION: "0.32.1"
+  NODE_VERSION: "24"
+  PROGRAM_ID: "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL"
+
+jobs:
+  # ────────────────────────────────────────────────────────────────
+  # Job 1: Build program, deploy binary + IDL, verify health
+  # ────────────────────────────────────────────────────────────────
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    environment: devnet
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9 # stable
+        with:
+          toolchain: stable
+
+      - name: Cache Cargo registry + build
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+            target
+          key: deploy-${{ runner.os }}-${{ hashFiles('programs/phalnx/Cargo.lock') }}
+          restore-keys: deploy-${{ runner.os }}-
+
+      - name: Install Solana CLI
+        run: |
+          sh -c "$(curl -sSfL https://release.anza.xyz/${{ env.SOLANA_VERSION }}/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libudev-dev
+
+      - name: Install Anchor CLI
+        run: |
+          if ! command -v anchor &> /dev/null; then
+            cargo install --git https://github.com/coral-xyz/anchor --tag v${{ env.ANCHOR_VERSION }} anchor-cli --locked --force
+          fi
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
+        with:
+          version: 10
+
+      - name: Install Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build program (devnet feature)
+        run: anchor build --no-idl
+
+      - name: Restore committed IDL
+        run: git checkout -- target/idl/ target/types/
+
+      - name: Configure deploy wallet
+        run: |
+          mkdir -p "$HOME/.config/solana"
+          echo '${{ secrets.DEVNET_DEPLOY_KEYPAIR }}' > "$HOME/.config/solana/deployer.json"
+          solana config set \
+            --url "${{ secrets.DEVNET_RPC_URL }}" \
+            --keypair "$HOME/.config/solana/deployer.json" \
+            > /dev/null 2>&1
+
+      - name: Balance gate
+        run: |
+          BAL=$(solana balance | awk '{print $1}')
+          BAL_INT=$(echo "$BAL" | awk '{print int($1)}')
+          echo "Deploy wallet balance: $BAL SOL"
+          if [ "$BAL_INT" -lt 3 ]; then
+            echo "::error::Deploy wallet balance too low: ${BAL} SOL (need >= 3 SOL)"
+            echo "Top up: solana airdrop 2 $(solana address) --url https://api.devnet.solana.com"
+            exit 1
+          fi
+          if [ "$BAL_INT" -lt 10 ]; then
+            echo "::warning::Deploy wallet balance is low: ${BAL} SOL. Consider topping up."
+          fi
+
+      - name: Deploy program binary
+        run: |
+          MAX_RETRIES=3
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Deploy attempt $i/$MAX_RETRIES"
+            if solana program deploy target/deploy/phalnx.so \
+                --program-id ${{ env.PROGRAM_ID }} \
+                --upgrade-authority "$HOME/.config/solana/deployer.json" \
+                --with-compute-unit-price 1000 \
+                --max-sign-attempts 50; then
+              echo "Program deploy succeeded on attempt $i"
+              break
+            fi
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "::error::Program deploy failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            echo "Deploy failed, waiting 30s before retry..."
+            sleep 30
+          done
+
+      - name: Deploy IDL (close + init strategy)
+        run: |
+          # Always close then init — never use `anchor idl upgrade`.
+          # Upgrade fails with RequireGteViolated when IDL grows beyond
+          # the initial account allocation (e.g., 9498 < 11675 bytes).
+
+          echo "Closing existing IDL account (if any)..."
+          anchor idl close ${{ env.PROGRAM_ID }} \
+            --provider.cluster "${{ secrets.DEVNET_RPC_URL }}" 2>&1 || {
+            echo "No existing IDL to close (first deploy or already closed). Continuing..."
+          }
+
+          echo "Initializing IDL account with current IDL..."
+          MAX_RETRIES=3
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "IDL init attempt $i/$MAX_RETRIES"
+            if anchor idl init \
+                --filepath target/idl/phalnx.json \
+                ${{ env.PROGRAM_ID }} \
+                --provider.cluster "${{ secrets.DEVNET_RPC_URL }}"; then
+              echo "IDL init succeeded on attempt $i"
+              break
+            fi
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "::error::IDL init failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            echo "IDL init failed, waiting 15s before retry..."
+            sleep 15
+          done
+
+      - name: Verify deployment
+        run: |
+          echo "=== Program Verification ==="
+          solana program show ${{ env.PROGRAM_ID }}
+
+          echo ""
+          echo "=== IDL Verification ==="
+          IDL_JSON=$(anchor idl fetch ${{ env.PROGRAM_ID }} --provider.cluster "${{ secrets.DEVNET_RPC_URL }}")
+          IX_COUNT=$(echo "$IDL_JSON" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('instructions',[])))")
+          ACC_COUNT=$(echo "$IDL_JSON" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('accounts',[])))")
+          ERR_COUNT=$(echo "$IDL_JSON" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('errors',[])))")
+          echo "On-chain IDL: $IX_COUNT instructions, $ACC_COUNT accounts, $ERR_COUNT errors"
+
+          # Sanity check — IDL should have our known instruction count
+          if [ "$IX_COUNT" -lt 20 ]; then
+            echo "::error::IDL verification failed: only $IX_COUNT instructions (expected 29)"
+            exit 1
+          fi
+
+      - name: Save deploy metadata
+        run: |
+          BINARY_HASH=$(sha256sum target/deploy/phalnx.so | cut -d' ' -f1)
+          cat > deploy-metadata.json <<EOF
+          {
+            "commit": "${{ github.sha }}",
+            "branch": "${{ github.ref_name }}",
+            "binary_hash": "$BINARY_HASH",
+            "binary_size": $(wc -c < target/deploy/phalnx.so),
+            "deployed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "deployed_by": "github-actions",
+            "anchor_version": "${{ env.ANCHOR_VERSION }}",
+            "solana_cli": "${{ env.SOLANA_VERSION }}",
+            "program_id": "${{ env.PROGRAM_ID }}",
+            "wallet_balance_after": "$(solana balance | awk '{print $1}')"
+          }
+          EOF
+          cat deploy-metadata.json
+
+      - name: Upload deploy metadata
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: devnet-deploy-metadata
+          path: deploy-metadata.json
+          retention-days: 90
+
+      - name: Cleanup deploy wallet
+        if: always()
+        run: rm -f "$HOME/.config/solana/deployer.json"
+
+  # ────────────────────────────────────────────────────────────────
+  # Job 2: Run devnet tests against freshly deployed program
+  # ────────────────────────────────────────────────────────────────
+  test:
+    name: Devnet Tests (post-deploy)
+    needs: deploy
+    uses: ./.github/workflows/devnet-test.yml
+    secrets: inherit
