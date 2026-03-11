@@ -462,7 +462,7 @@ describe("surfpool-integration", function () {
         await sendVersionedTx(env.connection, [validateIx], agent);
         expect.fail("Should have rejected — no finalize instruction");
       } catch (err: any) {
-        const errStr = err.message || err.toString() || JSON.stringify(err);
+        const errStr = err.message || JSON.stringify(err);
         expect(errStr).to.include("MissingFinalizeInstruction");
       }
     });
@@ -743,7 +743,7 @@ describe("surfpool-integration", function () {
         await sendVersionedTx(env.connection, [validateIx, finalizeIx], agent);
         expect.fail("Should have failed — amount exceeds max tx size");
       } catch (err: any) {
-        const errStr = err.message || err.toString() || JSON.stringify(err);
+        const errStr = err.message || JSON.stringify(err);
         expect(errStr).to.include("TransactionTooLarge");
       }
 
@@ -1353,7 +1353,7 @@ describe("surfpool-integration", function () {
         await program.account.agentVault.fetch(pdas.vaultPda);
         expect.fail("Vault should not exist after network reset");
       } catch (err: any) {
-        const errStr = err.message || err.toString() || JSON.stringify(err);
+        const errStr = err.message || JSON.stringify(err);
         expect(errStr).to.satisfy(
           (s: string) =>
             s.includes("Account does not exist") ||
@@ -1575,7 +1575,7 @@ describe("surfpool-integration", function () {
         await sendVersionedTx(env.connection, [applyIx], env.payer);
         expect.fail("Should have thrown TimelockNotExpired");
       } catch (err: any) {
-        const errStr = err.message || err.toString() || JSON.stringify(err);
+        const errStr = err.message || JSON.stringify(err);
         expect(errStr).to.include("TimelockNotExpired");
       }
     });
