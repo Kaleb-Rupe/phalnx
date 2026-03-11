@@ -258,5 +258,39 @@ export type {
   InstructionAnalysis,
 } from "./inspector.js";
 
+// ─── Jupiter Handler (T1) ───────────────────────────────────────────────────
+export {
+  deserializeJupiterInstruction,
+  JupiterHandler,
+} from "./integrations/jupiter-handler.js";
+export type { JupiterSerializedInstruction } from "./integrations/jupiter-handler.js";
+
+// ─── T2 Protocol Handlers ───────────────────────────────────────────────────
+export {
+  DriftHandler,
+  FlashTradeHandler,
+  KaminoHandler,
+  SquadsHandler,
+  driftHandler,
+  flashTradeHandler,
+  kaminoHandler,
+  squadsHandler,
+} from "./integrations/t2-handlers.js";
+
+// ─── Shield ─────────────────────────────────────────────────────────────────
+export {
+  ShieldState,
+  ShieldDeniedError,
+  evaluateInstructions,
+  shield,
+} from "./shield.js";
+export type {
+  PolicyViolation,
+  ShieldCheckResult,
+  SpendingSummary as ShieldSpendingSummary,
+  ShieldOptions,
+  ShieldedContext,
+} from "./shield.js";
+
 // NOTE: compat.ts is intentionally NOT exported.
 // It is for internal use only when bridging T2 protocol SDKs.
