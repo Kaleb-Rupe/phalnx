@@ -121,6 +121,7 @@ export class TransactionExecutor {
     params: ExecuteTransactionParams,
     compiledTx: ReturnType<typeof composePhalnxTransaction>,
     estimatedCU: number,
+    blockhash: { blockhash: string; lastValidBlockHeight: bigint },
   ): Promise<{
     simulation: SimulationResult;
     recomposedTx?: ReturnType<typeof composePhalnxTransaction>;
@@ -136,8 +137,7 @@ export class TransactionExecutor {
     // Check if CU adjustment is needed
     const adjustedCU = adjustCU(estimatedCU, simulation.unitsConsumed);
     if (adjustedCU !== estimatedCU) {
-      // Re-compose with adjusted CU
-      const blockhash = await this.blockhashCache.get(this.rpc);
+      // Re-compose with adjusted CU — reuse blockhash from initial compose
       const recomposedTx = composePhalnxTransaction({
         feePayer: params.feePayer,
         validateIx: params.validateIx,
@@ -186,7 +186,7 @@ export class TransactionExecutor {
     params: ExecuteTransactionParams,
   ): Promise<ExecuteTransactionResult> {
     // Step 9: Compose
-    const { compiledTx, computeUnits } =
+    const { compiledTx, computeUnits, blockhash } =
       await this.composeTransaction(params);
 
     // Step 10: Simulate (unless skipped)
@@ -199,6 +199,7 @@ export class TransactionExecutor {
         params,
         compiledTx,
         computeUnits,
+        blockhash,
       );
 
       if (!simulation.success) {

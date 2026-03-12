@@ -94,7 +94,7 @@ describe("TransactionExecutor", () => {
     it("returns success when simulation succeeds", async () => {
       const executor = new TransactionExecutor(createMockRpc(), mockAgent());
       const { compiledTx, computeUnits } = await executor.composeTransaction(baseParams());
-      const { simulation } = await executor.simulate(baseParams(), compiledTx, computeUnits);
+      const { simulation } = await executor.simulate(baseParams(), compiledTx, computeUnits, MOCK_BLOCKHASH);
       expect(simulation.success).to.be.true;
     });
 
@@ -110,7 +110,7 @@ describe("TransactionExecutor", () => {
       });
       const executor = new TransactionExecutor(rpc, mockAgent());
       const { compiledTx, computeUnits } = await executor.composeTransaction(baseParams());
-      const { simulation } = await executor.simulate(baseParams(), compiledTx, computeUnits);
+      const { simulation } = await executor.simulate(baseParams(), compiledTx, computeUnits, MOCK_BLOCKHASH);
       expect(simulation.success).to.be.false;
       expect(simulation.error?.anchorCode).to.equal(6000);
     });
@@ -127,7 +127,7 @@ describe("TransactionExecutor", () => {
       });
       const executor = new TransactionExecutor(rpc, mockAgent());
       const { compiledTx, computeUnits } = await executor.composeTransaction(baseParams());
-      const { simulation } = await executor.simulate(baseParams(), compiledTx, computeUnits);
+      const { simulation } = await executor.simulate(baseParams(), compiledTx, computeUnits, MOCK_BLOCKHASH);
       expect(simulation.error?.anchorName).to.equal("DailyCapExceeded");
       expect(simulation.error?.suggestion).to.include("spending cap");
     });
@@ -142,7 +142,7 @@ describe("TransactionExecutor", () => {
       });
       const executor = new TransactionExecutor(rpc, mockAgent());
       const { compiledTx, computeUnits } = await executor.composeTransaction(baseParams());
-      const { recomposedTx } = await executor.simulate(baseParams(), compiledTx, computeUnits);
+      const { recomposedTx } = await executor.simulate(baseParams(), compiledTx, computeUnits, MOCK_BLOCKHASH);
       expect(recomposedTx).to.be.undefined;
     });
 
@@ -159,6 +159,7 @@ describe("TransactionExecutor", () => {
         baseParams(),
         compiledTx,
         computeUnits,
+        MOCK_BLOCKHASH,
       );
       expect(recomposedTx).to.not.be.undefined;
       expect(finalCU).to.be.lessThan(computeUnits);
