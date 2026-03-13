@@ -98,6 +98,11 @@ export class ProtocolRegistry {
     return this.handlers.has(protocolId);
   }
 
+  /** Whether the registry has been frozen. */
+  get isFrozen(): boolean {
+    return this.frozen;
+  }
+
   /** Number of registered handlers. */
   get size(): number {
     return this.handlers.size;

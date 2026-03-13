@@ -10,6 +10,7 @@
 
 import type { Instruction } from "@solana/kit";
 import type { ProtocolContext, ProtocolComposeResult } from "./protocol-handler.js";
+import { createRequireField } from "./compose-errors.js";
 import { toKitInstruction } from "../compat.js";
 
 // ─── Precision Constants ────────────────────────────────────────────────────
@@ -63,12 +64,27 @@ async function getDriftSdk(): Promise<any> {
 
 // ─── DriftClient Cache ──────────────────────────────────────────────────────
 
-let _cachedClient: any = null;
+/** Per-context cache keyed on `agent:network` to avoid cross-agent contamination. */
+const _clientCache = new Map<string, any>();
+const MAX_CACHED_CLIENTS = 50;
+
+/** Clear all cached DriftClients. Call on shutdown or between test runs. */
+export function clearDriftClientCache(): void {
+  _clientCache.clear();
+}
 
 async function getOrCreateDriftClient(
   ctx: ProtocolContext,
 ): Promise<any> {
-  if (_cachedClient) return _cachedClient;
+  const cacheKey = `${ctx.agent}:${ctx.network}`;
+  const cached = _clientCache.get(cacheKey);
+  if (cached) return cached;
+
+  // Evict oldest entry if at capacity
+  if (_clientCache.size >= MAX_CACHED_CLIENTS) {
+    const oldest = _clientCache.keys().next().value;
+    if (oldest !== undefined) _clientCache.delete(oldest);
+  }
 
   const sdk = await getDriftSdk();
 
@@ -110,7 +126,7 @@ async function getOrCreateDriftClient(
   });
 
   await client.subscribe();
-  _cachedClient = client;
+  _clientCache.set(cacheKey, client);
   return client;
 }
 
@@ -134,13 +150,9 @@ function buildDriftDirection(sdk: any, side: "long" | "short"): any {
 
 // ─── Param Validation ───────────────────────────────────────────────────────
 
-function requireField<T>(params: Record<string, unknown>, field: string): T {
-  const val = params[field];
-  if (val === undefined || val === null) {
-    throw new Error(`Missing required Drift parameter: ${field}`);
-  }
-  return val as T;
-}
+const requireField = createRequireField(
+  (field) => new Error(`Missing required Drift parameter: ${field}`),
+);
 
 function parseAmountParams(params: Record<string, unknown>): DriftAmountParams {
   return {

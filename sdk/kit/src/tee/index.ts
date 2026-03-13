@@ -15,6 +15,7 @@ export {
 export { AttestationCache, DEFAULT_CACHE_TTL_MS } from "./cache.js";
 
 export {
+  VALID_TEE_PROVIDERS,
   isTeeWallet,
   TeeAttestationError,
   AttestationCertChainError,

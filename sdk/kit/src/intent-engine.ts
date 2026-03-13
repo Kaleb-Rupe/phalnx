@@ -91,6 +91,14 @@ export class IntentEngine {
     this.registry = config.protocolRegistry;
     this.agent = config.agent;
     this.executor = config.executor ?? null;
+
+    // H-5: Warn if protocol registry is not frozen
+    if (!config.protocolRegistry.isFrozen) {
+      console.warn(
+        "[IntentEngine] Protocol registry is not frozen. " +
+        "Call registry.freeze() after registering all handlers to prevent runtime mutation."
+      );
+    }
   }
 
   // ─── Core Agent Workflow ─────────────────────────────────────────────
@@ -594,9 +602,11 @@ export class IntentEngine {
   /**
    * Get the base action type string from an intent.
    * For protocol intents, uses resolveProtocolActionType with the registry.
-   * For standard intents, the type IS the base action type.
+   * For ALL other intent types, resolves through the handler's action type
+   * metadata to ensure protocol-specific mappings are always applied (M-2).
    */
   private _getBaseActionType(intent: IntentAction): string {
+    // For "protocol" intents, use explicit protocolId + action
     if (intent.type === "protocol") {
       const params = intent.params as Record<string, unknown>;
       const protocolId = params.protocolId as string | undefined;
@@ -611,6 +621,22 @@ export class IntentEngine {
         return typeStr?.[0] ?? intent.type;
       }
     }
+
+    // M-2: For ALL other intent types, resolve through the handler's action type.
+    // This ensures protocol-specific action type mappings are always applied
+    // instead of relying on the raw intent type string.
+    const handler = this._resolveHandler(intent);
+    if (handler) {
+      const composeAction = this._getComposeAction(intent);
+      const descriptor = handler.metadata.supportedActions.get(composeAction);
+      if (descriptor) {
+        const typeStr = Object.entries(ACTION_TYPE_MAP).find(
+          ([, v]) => v.actionType === descriptor.actionType,
+        );
+        if (typeStr) return typeStr[0];
+      }
+    }
+
     return intent.type;
   }
 

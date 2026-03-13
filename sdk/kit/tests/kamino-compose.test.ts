@@ -10,7 +10,7 @@ import type { Address, Rpc, SolanaRpcApi } from "@solana/kit";
 import type { ProtocolContext } from "../src/integrations/protocol-handler.js";
 import { dispatchKaminoCompose } from "../src/integrations/kamino-compose.js";
 import { KaminoHandler } from "../src/integrations/t2-handlers.js";
-import { KaminoComposeError } from "../src/integrations/compose-errors.js";
+import { KaminoComposeError, COMPOSE_ERROR_CODES } from "../src/integrations/compose-errors.js";
 import { KAMINO_LEND_PROGRAM } from "../src/integrations/config/kamino-markets.js";
 
 // ─── Test Context ────────────────────────────────────────────────────────────
@@ -223,7 +223,7 @@ describe("Kamino Compose (Codama)", () => {
           expect.fail("should have thrown");
         } catch (e: any) {
           expect(e.name).to.equal("KaminoComposeError");
-          expect(e.code).to.equal("INVALID_BIGINT");
+          expect(e.code).to.equal(COMPOSE_ERROR_CODES.INVALID_BIGINT);
         }
       });
 
@@ -247,7 +247,7 @@ describe("Kamino Compose (Codama)", () => {
           expect.fail("should have thrown");
         } catch (e: any) {
           expect(e.name).to.equal("KaminoComposeError");
-          expect(e.code).to.equal("INVALID_BIGINT");
+          expect(e.code).to.equal(COMPOSE_ERROR_CODES.INVALID_BIGINT);
         }
       });
 
@@ -261,7 +261,7 @@ describe("Kamino Compose (Codama)", () => {
           expect.fail("should have thrown");
         } catch (e: any) {
           expect(e.name).to.equal("KaminoComposeError");
-          expect(e.code).to.equal("INVALID_BIGINT");
+          expect(e.code).to.equal(COMPOSE_ERROR_CODES.INVALID_BIGINT);
         }
       });
     });
@@ -277,7 +277,7 @@ describe("Kamino Compose (Codama)", () => {
           expect.fail("should have thrown");
         } catch (e: any) {
           expect(e.name).to.equal("KaminoComposeError");
-          expect(e.code).to.equal("MISSING_PARAM");
+          expect(e.code).to.equal(COMPOSE_ERROR_CODES.MISSING_PARAM);
         }
       });
     });
@@ -305,7 +305,7 @@ describe("Kamino Compose (Codama)", () => {
           expect.fail("should have thrown");
         } catch (e: any) {
           expect(e.name).to.equal("KaminoComposeError");
-          expect(e.code).to.equal("UNSUPPORTED_ACTION");
+          expect(e.code).to.equal(COMPOSE_ERROR_CODES.UNSUPPORTED_ACTION);
           expect(e.message).to.include("unknownAction");
         }
       });

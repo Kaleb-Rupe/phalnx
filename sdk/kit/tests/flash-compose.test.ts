@@ -10,8 +10,9 @@ import type { Address, Rpc, SolanaRpcApi } from "@solana/kit";
 import type { ProtocolContext } from "../src/integrations/protocol-handler.js";
 import { dispatchFlashTradeCompose } from "../src/integrations/flash-compose.js";
 import { FlashTradeHandler } from "../src/integrations/t2-handlers.js";
-import { FlashTradeComposeError } from "../src/integrations/compose-errors.js";
+import { FlashTradeComposeError, COMPOSE_ERROR_CODES } from "../src/integrations/compose-errors.js";
 import { PERPETUALS_PROGRAM } from "../src/integrations/config/flash-trade-markets.js";
+import { JUPITER_PROGRAM_ADDRESS } from "../src/types.js";
 import { OPEN_POSITION_DISCRIMINATOR } from "../src/generated/protocols/flash-trade/instructions/openPosition.js";
 import { CLOSE_POSITION_DISCRIMINATOR } from "../src/generated/protocols/flash-trade/instructions/closePosition.js";
 import { INCREASE_SIZE_DISCRIMINATOR } from "../src/generated/protocols/flash-trade/instructions/increaseSize.js";
@@ -428,7 +429,7 @@ describe("Flash Trade Compose (Codama)", () => {
           expect.fail("should have thrown");
         } catch (e: any) {
           expect(e.name).to.equal("FlashTradeComposeError");
-          expect(e.code).to.equal("INVALID_SIDE");
+          expect(e.code).to.equal(COMPOSE_ERROR_CODES.INVALID_SIDE);
         }
       });
 
@@ -441,7 +442,7 @@ describe("Flash Trade Compose (Codama)", () => {
           expect.fail("should have thrown");
         } catch (e: any) {
           expect(e.name).to.equal("FlashTradeComposeError");
-          expect(e.code).to.equal("INVALID_SIDE");
+          expect(e.code).to.equal(COMPOSE_ERROR_CODES.INVALID_SIDE);
         }
       });
 
@@ -454,7 +455,7 @@ describe("Flash Trade Compose (Codama)", () => {
           expect.fail("should have thrown");
         } catch (e: any) {
           expect(e.name).to.equal("FlashTradeComposeError");
-          expect(e.code).to.equal("INVALID_SIDE");
+          expect(e.code).to.equal(COMPOSE_ERROR_CODES.INVALID_SIDE);
         }
       });
     });
@@ -469,7 +470,7 @@ describe("Flash Trade Compose (Codama)", () => {
           expect.fail("should have thrown");
         } catch (e: any) {
           expect(e.name).to.equal("FlashTradeComposeError");
-          expect(e.code).to.equal("INVALID_BIGINT");
+          expect(e.code).to.equal(COMPOSE_ERROR_CODES.INVALID_BIGINT);
         }
       });
 
@@ -517,7 +518,7 @@ describe("Flash Trade Compose (Codama)", () => {
           expect.fail("should have thrown");
         } catch (e: any) {
           expect(e.name).to.equal("FlashTradeComposeError");
-          expect(e.code).to.equal("INVALID_BIGINT");
+          expect(e.code).to.equal(COMPOSE_ERROR_CODES.INVALID_BIGINT);
         }
       });
 
@@ -530,7 +531,7 @@ describe("Flash Trade Compose (Codama)", () => {
           expect.fail("should have thrown");
         } catch (e: any) {
           expect(e.name).to.equal("FlashTradeComposeError");
-          expect(e.code).to.equal("INVALID_BIGINT");
+          expect(e.code).to.equal(COMPOSE_ERROR_CODES.INVALID_BIGINT);
         }
       });
     });
@@ -545,7 +546,7 @@ describe("Flash Trade Compose (Codama)", () => {
           expect.fail("should have thrown");
         } catch (e: any) {
           expect(e.name).to.equal("FlashTradeComposeError");
-          expect(e.code).to.equal("MISSING_PARAM");
+          expect(e.code).to.equal(COMPOSE_ERROR_CODES.MISSING_PARAM);
         }
       });
 
@@ -575,7 +576,7 @@ describe("Flash Trade Compose (Codama)", () => {
           expect.fail("should have thrown");
         } catch (e: any) {
           expect(e.name).to.equal("FlashTradeComposeError");
-          expect(e.code).to.equal("UNSUPPORTED_ACTION");
+          expect(e.code).to.equal(COMPOSE_ERROR_CODES.UNSUPPORTED_ACTION);
           expect(e.message).to.include("unknownAction");
         }
       });
@@ -594,6 +595,203 @@ describe("Flash Trade Compose (Codama)", () => {
           expect(e.message).to.include("Available");
         }
       });
+    });
+  });
+
+  describe("M-7: swapInstructions program validation", () => {
+    const WRONG_PROGRAM = "11111111111111111111111111111111" as Address;
+
+    function swapAndOpenParams(swapInstructions?: unknown) {
+      return {
+        targetSymbol: "SOL",
+        collateralSymbol: "SOL",
+        side: "long",
+        priceWithSlippage: DEFAULT_PRICE,
+        collateralAmount: "1000000000",
+        sizeAmount: "5000000000",
+        ...(swapInstructions !== undefined ? { swapInstructions } : {}),
+      };
+    }
+
+    function closeAndSwapParams(swapInstructions?: unknown) {
+      return {
+        targetSymbol: "SOL",
+        collateralSymbol: "SOL",
+        side: "long",
+        priceWithSlippage: DEFAULT_PRICE,
+        positionPubKey: FAKE_POSITION,
+        ...(swapInstructions !== undefined ? { swapInstructions } : {}),
+      };
+    }
+
+    function makeSwapIx(programAddress: Address) {
+      return { programAddress, accounts: [], data: new Uint8Array([1, 2, 3]) };
+    }
+
+    it("swapAndOpen accepts instructions with Jupiter V6 program", async () => {
+      const result = await dispatchFlashTradeCompose(ctx, "swapAndOpen", swapAndOpenParams([
+        makeSwapIx(JUPITER_PROGRAM_ADDRESS),
+      ]));
+      expect(result.instructions).to.have.length(2); // swap + Flash swapAndOpen
+      expect(result.instructions[0].programAddress).to.equal(JUPITER_PROGRAM_ADDRESS);
+    });
+
+    it("swapAndOpen rejects instruction with wrong program", async () => {
+      try {
+        await dispatchFlashTradeCompose(ctx, "swapAndOpen", swapAndOpenParams([
+          makeSwapIx(WRONG_PROGRAM),
+        ]));
+        expect.fail("should have thrown");
+      } catch (e: any) {
+        expect(e).to.be.instanceOf(FlashTradeComposeError);
+        expect(e.code).to.equal(COMPOSE_ERROR_CODES.INVALID_PARAM);
+        expect(e.message).to.include("swapInstructions[0]");
+        expect(e.message).to.include(WRONG_PROGRAM);
+      }
+    });
+
+    it("swapAndOpen accepts empty swapInstructions array", async () => {
+      const result = await dispatchFlashTradeCompose(ctx, "swapAndOpen", swapAndOpenParams([]));
+      expect(result.instructions).to.have.length(1); // Only Flash swapAndOpen, no swap ix
+    });
+
+    it("closeAndSwap accepts instructions with Jupiter V6 program", async () => {
+      const result = await dispatchFlashTradeCompose(ctx, "closeAndSwap", closeAndSwapParams([
+        makeSwapIx(JUPITER_PROGRAM_ADDRESS),
+      ]));
+      expect(result.instructions).to.have.length(2); // Flash closeAndSwap + swap
+      expect(result.instructions[1].programAddress).to.equal(JUPITER_PROGRAM_ADDRESS);
+    });
+
+    it("closeAndSwap rejects instruction with wrong program", async () => {
+      try {
+        await dispatchFlashTradeCompose(ctx, "closeAndSwap", closeAndSwapParams([
+          makeSwapIx(WRONG_PROGRAM),
+        ]));
+        expect.fail("should have thrown");
+      } catch (e: any) {
+        expect(e).to.be.instanceOf(FlashTradeComposeError);
+        expect(e.code).to.equal(COMPOSE_ERROR_CODES.INVALID_PARAM);
+        expect(e.message).to.include("swapInstructions[0]");
+      }
+    });
+
+    it("error message includes the invalid program address", async () => {
+      const badProgram = "BadProgramAddress111111111111111" as Address;
+      try {
+        await dispatchFlashTradeCompose(ctx, "swapAndOpen", swapAndOpenParams([
+          makeSwapIx(badProgram),
+        ]));
+        expect.fail("should have thrown");
+      } catch (e: any) {
+        expect(e).to.be.instanceOf(FlashTradeComposeError);
+        expect(e.message).to.include(badProgram);
+        expect(e.message).to.include("Jupiter V6");
+        expect(e.message).to.include(JUPITER_PROGRAM_ADDRESS);
+      }
+    });
+  });
+
+  describe("H-4: Trigger order validation", () => {
+    function placeTriggerParams(triggerPrice: { price: string; exponent: number } = DEFAULT_PRICE) {
+      return {
+        targetSymbol: "SOL",
+        collateralSymbol: "SOL",
+        receiveSymbol: "USDC",
+        side: "long",
+        triggerPrice,
+        deltaSizeAmount: "1000000000",
+        isStopLoss: true,
+        positionPubKey: FAKE_POSITION,
+      };
+    }
+
+    function editTriggerParams(triggerPrice: { price: string; exponent: number } = DEFAULT_PRICE) {
+      return {
+        targetSymbol: "SOL",
+        collateralSymbol: "SOL",
+        receiveSymbol: "USDC",
+        side: "long",
+        orderId: 0,
+        triggerPrice,
+        deltaSizeAmount: "500000000",
+        isStopLoss: false,
+        positionPubKey: FAKE_POSITION,
+        orderPubKey: FAKE_ORDER,
+      };
+    }
+
+    it("placeTriggerOrder rejects triggerPrice.price = '0'", async () => {
+      try {
+        await dispatchFlashTradeCompose(ctx, "placeTriggerOrder", placeTriggerParams({ price: "0", exponent: -9 }));
+        expect.fail("should have thrown");
+      } catch (e: any) {
+        expect(e.name).to.equal("FlashTradeComposeError");
+        expect(e.code).to.equal(COMPOSE_ERROR_CODES.INVALID_BIGINT);
+        expect(e.message).to.include("triggerPrice must be > 0");
+      }
+    });
+
+    it("placeTriggerOrder rejects negative triggerPrice", async () => {
+      try {
+        await dispatchFlashTradeCompose(ctx, "placeTriggerOrder", placeTriggerParams({ price: "-100", exponent: -9 }));
+        expect.fail("should have thrown");
+      } catch (e: any) {
+        expect(e.name).to.equal("FlashTradeComposeError");
+        expect(e.code).to.equal(COMPOSE_ERROR_CODES.INVALID_BIGINT);
+        expect(e.message).to.include("triggerPrice must be > 0");
+      }
+    });
+
+    it("placeTriggerOrder accepts positive triggerPrice", async () => {
+      const result = await dispatchFlashTradeCompose(ctx, "placeTriggerOrder", placeTriggerParams({ price: "150000000000", exponent: -9 }));
+      expect(result.instructions).to.have.length(1);
+      expect(result.additionalSigners).to.have.length(1);
+    });
+
+    it("editTriggerOrder rejects triggerPrice.price = '0'", async () => {
+      try {
+        await dispatchFlashTradeCompose(ctx, "editTriggerOrder", editTriggerParams({ price: "0", exponent: -9 }));
+        expect.fail("should have thrown");
+      } catch (e: any) {
+        expect(e.name).to.equal("FlashTradeComposeError");
+        expect(e.code).to.equal(COMPOSE_ERROR_CODES.INVALID_BIGINT);
+        expect(e.message).to.include("triggerPrice must be > 0");
+      }
+    });
+
+    it("editTriggerOrder rejects negative triggerPrice", async () => {
+      try {
+        await dispatchFlashTradeCompose(ctx, "editTriggerOrder", editTriggerParams({ price: "-500", exponent: -9 }));
+        expect.fail("should have thrown");
+      } catch (e: any) {
+        expect(e.name).to.equal("FlashTradeComposeError");
+        expect(e.code).to.equal(COMPOSE_ERROR_CODES.INVALID_BIGINT);
+        expect(e.message).to.include("triggerPrice must be > 0");
+      }
+    });
+
+    it("editTriggerOrder accepts positive triggerPrice", async () => {
+      const result = await dispatchFlashTradeCompose(ctx, "editTriggerOrder", editTriggerParams({ price: "200000000000", exponent: -9 }));
+      expect(result.instructions).to.have.length(1);
+      expect(result.additionalSigners).to.be.undefined;
+    });
+
+    it("placeTriggerOrder with valid params does not throw on triggerPrice validation", async () => {
+      // Use a small but positive price to verify boundary acceptance
+      const result = await dispatchFlashTradeCompose(ctx, "placeTriggerOrder", placeTriggerParams({ price: "1", exponent: 0 }));
+      expect(result.instructions).to.have.length(1);
+    });
+
+    it("verify error code is INVALID_BIGINT", async () => {
+      try {
+        await dispatchFlashTradeCompose(ctx, "placeTriggerOrder", placeTriggerParams({ price: "0", exponent: -9 }));
+        expect.fail("should have thrown");
+      } catch (e: any) {
+        expect(e).to.be.instanceOf(FlashTradeComposeError);
+        expect(e.code).to.equal("INVALID_BIGINT");
+        expect(e.code).to.equal(COMPOSE_ERROR_CODES.INVALID_BIGINT);
+      }
     });
   });
 });

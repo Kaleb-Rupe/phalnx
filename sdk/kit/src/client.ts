@@ -56,6 +56,7 @@ function createDefaultRegistry(): ProtocolRegistry {
   reg.register(new FlashTradeHandler());
   reg.register(new KaminoHandler());
   reg.register(new SquadsHandler());
+  reg.freeze();
   return reg;
 }
 

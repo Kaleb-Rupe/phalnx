@@ -8,9 +8,15 @@
  * Each prepends refreshReserve + refreshObligation.
  */
 
-import type { Address, Instruction, TransactionSigner } from "@solana/kit";
+import type { Address, Instruction } from "@solana/kit";
 import type { ProtocolContext, ProtocolComposeResult } from "./protocol-handler.js";
-import { KaminoComposeError } from "./compose-errors.js";
+import {
+  COMPOSE_ERROR_CODES,
+  KaminoComposeError,
+  createSafeBigInt,
+  createRequireField,
+  addressAsSigner,
+} from "./compose-errors.js";
 import {
   resolveKaminoAccounts,
   KAMINO_LEND_PROGRAM,
@@ -30,33 +36,13 @@ import { getWithdrawObligationCollateralAndRedeemReserveCollateralInstruction } 
 
 // ─── Param Validation ────────────────────────────────────────────────────────
 
-function requireField<T>(params: Record<string, unknown>, field: string): T {
-  const val = params[field];
-  if (val === undefined || val === null) {
-    throw new KaminoComposeError("MISSING_PARAM", `Missing required parameter: ${field}`);
-  }
-  return val as T;
-}
+const requireField = createRequireField(
+  (field) => new KaminoComposeError(COMPOSE_ERROR_CODES.MISSING_PARAM, `Missing required parameter: ${field}`),
+);
 
-function safeBigInt(value: unknown, field: string): bigint {
-  try {
-    return BigInt(value as string | number | bigint);
-  } catch {
-    throw new KaminoComposeError(
-      "INVALID_BIGINT",
-      `Invalid numeric value for ${field}: ${String(value)}`,
-    );
-  }
-}
-
-// ─── Signer Helper ───────────────────────────────────────────────────────────
-
-function addressAsSigner(address: Address): TransactionSigner {
-  return {
-    address,
-    signTransactions: async () => { throw new Error("addressAsSigner is for compose-time only"); },
-  } as unknown as TransactionSigner;
-}
+const safeBigInt = createSafeBigInt(
+  (field, value) => new KaminoComposeError(COMPOSE_ERROR_CODES.INVALID_BIGINT, `Invalid numeric value for ${field}: ${String(value)}`),
+);
 
 // ─── Refresh Instructions ────────────────────────────────────────────────────
 
@@ -217,7 +203,17 @@ async function composeWithdraw(
 
 // ─── Dispatcher ──────────────────────────────────────────────────────────────
 
-const SUPPORTED_ACTIONS = ["deposit", "borrow", "repay", "withdraw"];
+type KaminoActionHandler = (
+  ctx: ProtocolContext,
+  params: Record<string, unknown>,
+) => Promise<ProtocolComposeResult>;
+
+const KAMINO_ACTIONS: Readonly<Record<string, KaminoActionHandler>> = Object.freeze({
+  deposit: composeDeposit,
+  borrow: composeBorrow,
+  repay: composeRepay,
+  withdraw: composeWithdraw,
+});
 
 /**
  * Dispatch a Kamino action to the correct compose function.
@@ -228,18 +224,11 @@ export async function dispatchKaminoCompose(
   action: string,
   params: Record<string, unknown>,
 ): Promise<ProtocolComposeResult> {
-  if (!SUPPORTED_ACTIONS.includes(action)) {
+  if (!Object.hasOwn(KAMINO_ACTIONS, action)) {
     throw new KaminoComposeError(
-      "UNSUPPORTED_ACTION",
-      `Unsupported action: ${action}. Supported: ${SUPPORTED_ACTIONS.join(", ")}`,
+      COMPOSE_ERROR_CODES.UNSUPPORTED_ACTION,
+      `Unsupported action: ${action}. Supported: ${Object.keys(KAMINO_ACTIONS).join(", ")}`,
     );
   }
-
-  switch (action) {
-    case "deposit": return composeDeposit(ctx, params);
-    case "borrow": return composeBorrow(ctx, params);
-    case "repay": return composeRepay(ctx, params);
-    case "withdraw": return composeWithdraw(ctx, params);
-    default: throw new KaminoComposeError("UNSUPPORTED_ACTION", `Unsupported action: ${action}. Supported: ${SUPPORTED_ACTIONS.join(", ")}`);
-  }
+  return KAMINO_ACTIONS[action as keyof typeof KAMINO_ACTIONS](ctx, params);
 }

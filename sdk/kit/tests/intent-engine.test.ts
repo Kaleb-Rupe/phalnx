@@ -6,6 +6,8 @@ import { JupiterHandler } from "../src/integrations/jupiter-handler.js";
 import { DriftHandler, FlashTradeHandler, KaminoHandler, SquadsHandler } from "../src/integrations/t2-handlers.js";
 import type { IntentAction } from "../src/intents.js";
 import { isAgentError, type AgentError } from "../src/agent-errors.js";
+import { ACTION_TYPE_MAP } from "../src/intents.js";
+import { ActionType } from "../src/generated/types/actionType.js";
 
 // ─── Test Fixtures ──────────────────────────────────────────────────────────
 
@@ -286,6 +288,117 @@ describe("IntentEngine", () => {
       );
       // Should fail at validation (not at missing executor)
       expect(isAgentError(result)).to.be.true;
+    });
+  });
+
+  describe("M-2: resolveProtocolActionType everywhere", () => {
+    // Access the private method via type cast for direct unit testing
+    function getBaseActionType(engine: IntentEngine, intent: IntentAction): string {
+      return (engine as any)._getBaseActionType(intent);
+    }
+
+    it("swap intent resolves through Jupiter handler's action type", () => {
+      const engine = buildEngine();
+      const result = getBaseActionType(engine, {
+        type: "swap",
+        params: { inputMint: USDC_MINT, outputMint: SOL_MINT, amount: "1000000" },
+      });
+      // Jupiter handler maps "swap" -> ActionType.Swap
+      // ACTION_TYPE_MAP entry for "swap" also has ActionType.Swap
+      expect(result).to.equal("swap");
+      // Verify the resolved type matches the handler's declared ActionType
+      const mapping = ACTION_TYPE_MAP[result as keyof typeof ACTION_TYPE_MAP];
+      expect(mapping).to.exist;
+      expect(mapping.actionType).to.equal(ActionType.Swap);
+    });
+
+    it("openPosition intent resolves through Flash Trade handler's action type", () => {
+      const engine = buildEngine();
+      const result = getBaseActionType(engine, {
+        type: "openPosition",
+        params: { market: "SOL-PERP", side: "long", collateral: "100", leverage: 5 },
+      });
+      // Flash Trade handler maps "openPosition" -> ActionType.OpenPosition
+      expect(result).to.equal("openPosition");
+      const mapping = ACTION_TYPE_MAP[result as keyof typeof ACTION_TYPE_MAP];
+      expect(mapping).to.exist;
+      expect(mapping.actionType).to.equal(ActionType.OpenPosition);
+    });
+
+    it("protocol intent still resolves via explicit protocolId + action", () => {
+      const engine = buildEngine();
+      const result = getBaseActionType(engine, {
+        type: "protocol",
+        params: { protocolId: "drift", action: "deposit" },
+      });
+      // Drift handler maps "deposit" -> ActionType.Deposit
+      // Should resolve to the "deposit" key in ACTION_TYPE_MAP
+      expect(result).to.equal("deposit");
+      const mapping = ACTION_TYPE_MAP[result as keyof typeof ACTION_TYPE_MAP];
+      expect(mapping).to.exist;
+      expect(mapping.actionType).to.equal(ActionType.Deposit);
+    });
+
+    it("unknown intent type falls back to raw type string", () => {
+      const engine = buildEngine();
+      // Force an unknown type via cast — no handler will match
+      const result = getBaseActionType(engine, {
+        type: "unknownAction" as any,
+        params: {} as any,
+      });
+      // No handler resolves for "unknownAction", so falls back to raw type
+      expect(result).to.equal("unknownAction");
+    });
+
+    it("intent with no matching handler falls back to raw type", () => {
+      // Build an engine with an empty registry — no handlers registered
+      const emptyRegistry = new ProtocolRegistry();
+      const engine = buildEngine({ protocolRegistry: emptyRegistry });
+      const result = getBaseActionType(engine, {
+        type: "swap",
+        params: { inputMint: USDC_MINT, outputMint: SOL_MINT, amount: "1000000" },
+      });
+      // No Jupiter handler in empty registry, so _resolveHandler returns null
+      // Falls back to raw type string
+      expect(result).to.equal("swap");
+    });
+
+    it("Kamino intent types resolve correctly through handler", () => {
+      const engine = buildEngine();
+
+      // kaminoDeposit -> _getComposeAction strips "kamino" -> "deposit"
+      // Kamino handler maps "deposit" -> ActionType.Deposit
+      const depositResult = getBaseActionType(engine, {
+        type: "kaminoDeposit",
+        params: { tokenMint: USDC_MINT, amount: "1000000", obligation: "obl111" },
+      });
+      expect(depositResult).to.equal("deposit");
+      expect(ACTION_TYPE_MAP[depositResult as keyof typeof ACTION_TYPE_MAP].actionType)
+        .to.equal(ActionType.Deposit);
+
+      // kaminoBorrow -> _getComposeAction strips "kamino" -> "borrow"
+      // Kamino handler maps "borrow" -> ActionType.Withdraw
+      const borrowResult = getBaseActionType(engine, {
+        type: "kaminoBorrow",
+        params: { tokenMint: USDC_MINT, amount: "500000", obligation: "obl111" },
+      });
+      expect(borrowResult).to.equal("withdraw");
+      expect(ACTION_TYPE_MAP[borrowResult as keyof typeof ACTION_TYPE_MAP].actionType)
+        .to.equal(ActionType.Withdraw);
+
+      // kaminoRepay -> "repay" -> Kamino maps to ActionType.Deposit
+      const repayResult = getBaseActionType(engine, {
+        type: "kaminoRepay",
+        params: { tokenMint: USDC_MINT, amount: "500000", obligation: "obl111" },
+      });
+      expect(repayResult).to.equal("deposit");
+
+      // kaminoWithdraw -> "withdraw" -> Kamino maps to ActionType.Withdraw
+      const withdrawResult = getBaseActionType(engine, {
+        type: "kaminoWithdraw",
+        params: { tokenMint: USDC_MINT, amount: "500000", obligation: "obl111" },
+      });
+      expect(withdrawResult).to.equal("withdraw");
     });
   });
 });

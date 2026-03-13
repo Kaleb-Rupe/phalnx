@@ -11,10 +11,17 @@
  * swapAndOpen, closeAndSwap.
  */
 
-import type { Address, Instruction, TransactionSigner } from "@solana/kit";
+import type { Address, Instruction } from "@solana/kit";
 import { generateKeyPairSigner } from "@solana/kit";
+import { JUPITER_PROGRAM_ADDRESS } from "../types.js";
 import type { ProtocolContext, ProtocolComposeResult } from "./protocol-handler.js";
-import { FlashTradeComposeError } from "./compose-errors.js";
+import {
+  COMPOSE_ERROR_CODES,
+  FlashTradeComposeError,
+  createSafeBigInt,
+  createRequireField,
+  addressAsSigner,
+} from "./compose-errors.js";
 import {
   resolveFlashAccounts,
   FLASH_PERPETUALS,
@@ -48,13 +55,9 @@ import { getCloseAndSwapInstruction } from "../generated/protocols/flash-trade/i
 
 // ─── Param Validation ────────────────────────────────────────────────────────
 
-function requireField<T>(params: Record<string, unknown>, field: string): T {
-  const val = params[field];
-  if (val === undefined || val === null) {
-    throw new FlashTradeComposeError("MISSING_PARAM", `Missing required parameter: ${field}`);
-  }
-  return val as T;
-}
+const requireField = createRequireField(
+  (field) => new FlashTradeComposeError(COMPOSE_ERROR_CODES.MISSING_PARAM, `Missing required parameter: ${field}`),
+);
 
 function parseOraclePrice(price: { price: string; exponent: number }): OraclePriceArgs {
   return { price: safeBigInt(price.price, "oraclePrice.price"), exponent: price.exponent };
@@ -62,33 +65,25 @@ function parseOraclePrice(price: { price: string; exponent: number }): OraclePri
 
 function parseSide(side: string): "long" | "short" {
   if (side !== "long" && side !== "short") {
-    throw new FlashTradeComposeError("INVALID_SIDE", `Invalid side: ${side}. Must be "long" or "short".`);
+    throw new FlashTradeComposeError(COMPOSE_ERROR_CODES.INVALID_SIDE, `Invalid side: ${side}. Must be "long" or "short".`);
   }
   return side;
 }
 
-function safeBigInt(value: unknown, field: string): bigint {
-  try {
-    return BigInt(value as string | number | bigint);
-  } catch {
-    throw new FlashTradeComposeError(
-      "INVALID_BIGINT",
-      `Invalid numeric value for ${field}: ${String(value)}`,
-    );
+const safeBigInt = createSafeBigInt(
+  (field, value) => new FlashTradeComposeError(COMPOSE_ERROR_CODES.INVALID_BIGINT, `Invalid numeric value for ${field}: ${String(value)}`),
+);
+
+function validateSwapInstructions(instructions: Instruction[]): void {
+  for (let i = 0; i < instructions.length; i++) {
+    const ix = instructions[i];
+    if (ix.programAddress !== JUPITER_PROGRAM_ADDRESS) {
+      throw new FlashTradeComposeError(
+        COMPOSE_ERROR_CODES.INVALID_PARAM,
+        `swapInstructions[${i}] has unexpected program ${ix.programAddress} — expected Jupiter V6 (${JUPITER_PROGRAM_ADDRESS})`,
+      );
+    }
   }
-}
-
-// ─── Signer Helpers ──────────────────────────────────────────────────────────
-
-/**
- * Create a fake TransactionSigner from an Address for compose-time account resolution.
- * The actual signing happens at transaction execution time.
- */
-function addressAsSigner(address: Address): TransactionSigner {
-  return {
-    address,
-    signTransactions: async () => { throw new Error("addressAsSigner is for compose-time only"); },
-  } as unknown as TransactionSigner;
 }
 
 // ─── Compose: Core Perps (6 actions) ─────────────────────────────────────────
@@ -327,6 +322,13 @@ async function composePlaceTriggerOrder(
   const receiveSymbol = requireField<string>(params, "receiveSymbol");
   const side = parseSide(requireField<string>(params, "side"));
   const triggerPrice = requireField<{ price: string; exponent: number }>(params, "triggerPrice");
+  const triggerPriceVal = BigInt(triggerPrice.price);
+  if (triggerPriceVal <= 0n) {
+    throw new FlashTradeComposeError(
+      COMPOSE_ERROR_CODES.INVALID_BIGINT,
+      "triggerPrice must be > 0 for placeTriggerOrder",
+    );
+  }
   const deltaSizeAmount = requireField<string>(params, "deltaSizeAmount");
   const isStopLoss = requireField<boolean>(params, "isStopLoss");
 
@@ -371,6 +373,13 @@ async function composeEditTriggerOrder(
   const side = parseSide(requireField<string>(params, "side"));
   const orderId = requireField<number>(params, "orderId");
   const triggerPrice = requireField<{ price: string; exponent: number }>(params, "triggerPrice");
+  const triggerPriceVal = BigInt(triggerPrice.price);
+  if (triggerPriceVal <= 0n) {
+    throw new FlashTradeComposeError(
+      COMPOSE_ERROR_CODES.INVALID_BIGINT,
+      "triggerPrice must be > 0 for editTriggerOrder",
+    );
+  }
   const deltaSizeAmount = requireField<string>(params, "deltaSizeAmount");
   const isStopLoss = requireField<boolean>(params, "isStopLoss");
 
@@ -562,6 +571,9 @@ async function composeSwapAndOpen(
   const collateralAmount = requireField<string>(params, "collateralAmount");
   const sizeAmount = requireField<string>(params, "sizeAmount");
   const swapInstructions = (params.swapInstructions ?? []) as Instruction[];
+  if (swapInstructions.length > 0) {
+    validateSwapInstructions(swapInstructions);
+  }
 
   const accts = resolveFlashAccounts(targetSymbol, collateralSymbol, side);
   // For swapAndOpen: receivingCustody = the custody that receives the swap output
@@ -616,6 +628,9 @@ async function composeCloseAndSwap(
   const side = parseSide(requireField<string>(params, "side"));
   const priceWithSlippage = requireField<{ price: string; exponent: number }>(params, "priceWithSlippage");
   const swapInstructions = (params.swapInstructions ?? []) as Instruction[];
+  if (swapInstructions.length > 0) {
+    validateSwapInstructions(swapInstructions);
+  }
 
   const accts = resolveFlashAccounts(targetSymbol, collateralSymbol, side);
   // For closeAndSwap: dispensingCustody = what gets dispensed after close
@@ -659,22 +674,27 @@ async function composeCloseAndSwap(
 
 // ─── Dispatcher ──────────────────────────────────────────────────────────────
 
-const SUPPORTED_ACTIONS = [
-  "openPosition",
-  "closePosition",
-  "increasePosition",
-  "decreasePosition",
-  "addCollateral",
-  "removeCollateral",
-  "placeTriggerOrder",
-  "editTriggerOrder",
-  "cancelTriggerOrder",
-  "placeLimitOrder",
-  "editLimitOrder",
-  "cancelLimitOrder",
-  "swapAndOpen",
-  "closeAndSwap",
-];
+type FlashActionHandler = (
+  ctx: ProtocolContext,
+  params: Record<string, unknown>,
+) => Promise<ProtocolComposeResult>;
+
+const FLASH_ACTIONS: Readonly<Record<string, FlashActionHandler>> = Object.freeze({
+  openPosition: composeOpenPosition,
+  closePosition: composeClosePosition,
+  increasePosition: composeIncreasePosition,
+  decreasePosition: composeDecreasePosition,
+  addCollateral: composeAddCollateral,
+  removeCollateral: composeRemoveCollateral,
+  placeTriggerOrder: composePlaceTriggerOrder,
+  editTriggerOrder: composeEditTriggerOrder,
+  cancelTriggerOrder: composeCancelTriggerOrder,
+  placeLimitOrder: composePlaceLimitOrder,
+  editLimitOrder: composeEditLimitOrder,
+  cancelLimitOrder: composeCancelLimitOrder,
+  swapAndOpen: composeSwapAndOpen,
+  closeAndSwap: composeCloseAndSwap,
+});
 
 /**
  * Dispatch a Flash Trade action to the correct compose function.
@@ -685,28 +705,11 @@ export async function dispatchFlashTradeCompose(
   action: string,
   params: Record<string, unknown>,
 ): Promise<ProtocolComposeResult> {
-  if (!SUPPORTED_ACTIONS.includes(action)) {
+  if (!Object.hasOwn(FLASH_ACTIONS, action)) {
     throw new FlashTradeComposeError(
-      "UNSUPPORTED_ACTION",
-      `Unsupported action: ${action}. Supported: ${SUPPORTED_ACTIONS.join(", ")}`,
+      COMPOSE_ERROR_CODES.UNSUPPORTED_ACTION,
+      `Unsupported action: ${action}. Supported: ${Object.keys(FLASH_ACTIONS).join(", ")}`,
     );
   }
-
-  switch (action) {
-    case "openPosition": return composeOpenPosition(ctx, params);
-    case "closePosition": return composeClosePosition(ctx, params);
-    case "increasePosition": return composeIncreasePosition(ctx, params);
-    case "decreasePosition": return composeDecreasePosition(ctx, params);
-    case "addCollateral": return composeAddCollateral(ctx, params);
-    case "removeCollateral": return composeRemoveCollateral(ctx, params);
-    case "placeTriggerOrder": return composePlaceTriggerOrder(ctx, params);
-    case "editTriggerOrder": return composeEditTriggerOrder(ctx, params);
-    case "cancelTriggerOrder": return composeCancelTriggerOrder(ctx, params);
-    case "placeLimitOrder": return composePlaceLimitOrder(ctx, params);
-    case "editLimitOrder": return composeEditLimitOrder(ctx, params);
-    case "cancelLimitOrder": return composeCancelLimitOrder(ctx, params);
-    case "swapAndOpen": return composeSwapAndOpen(ctx, params);
-    case "closeAndSwap": return composeCloseAndSwap(ctx, params);
-    default: throw new FlashTradeComposeError("UNSUPPORTED_ACTION", `Unsupported action: ${action}. Supported: ${SUPPORTED_ACTIONS.join(", ")}`);
-  }
+  return FLASH_ACTIONS[action as keyof typeof FLASH_ACTIONS](ctx, params);
 }

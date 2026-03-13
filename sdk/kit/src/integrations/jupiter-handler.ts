@@ -124,16 +124,32 @@ export async function fetchJupiterQuote(
     ...params.extraParams,
   });
 
-  return jupiterFetch<JupiterQuoteResponse>(`/v6/quote?${qs.toString()}`, {
+  const response = await jupiterFetch<JupiterQuoteResponse>(`/v6/quote?${qs.toString()}`, {
     timeoutMs: 5_000,
   });
+
+  if (
+    !response ||
+    typeof response.inputMint !== "string" ||
+    typeof response.outputMint !== "string" ||
+    typeof response.inAmount !== "string" ||
+    typeof response.outAmount !== "string" ||
+    !Array.isArray(response.routePlan)
+  ) {
+    throw new JupiterApiError(
+      0,
+      "Invalid Jupiter quote response: missing required fields (inputMint, outputMint, inAmount, outAmount, routePlan)",
+    );
+  }
+
+  return response;
 }
 
 export async function fetchJupiterSwapInstructions(
   quote: JupiterQuoteResponse,
   userPublicKey: Address,
 ): Promise<JupiterSwapInstructionsResponse> {
-  return jupiterFetch<JupiterSwapInstructionsResponse>(
+  const response = await jupiterFetch<JupiterSwapInstructionsResponse>(
     "/v6/swap-instructions",
     {
       method: "POST",
@@ -144,6 +160,22 @@ export async function fetchJupiterSwapInstructions(
       },
     },
   );
+
+  if (
+    !response ||
+    !response.swapInstruction ||
+    typeof response.swapInstruction.programId !== "string" ||
+    !Array.isArray(response.computeBudgetInstructions) ||
+    !Array.isArray(response.setupInstructions) ||
+    !Array.isArray(response.addressLookupTableAddresses)
+  ) {
+    throw new JupiterApiError(
+      0,
+      "Invalid Jupiter swap-instructions response: missing required fields (swapInstruction, computeBudgetInstructions, setupInstructions, addressLookupTableAddresses)",
+    );
+  }
+
+  return response;
 }
 
 // ─── Jupiter Protocol Handler ───────────────────────────────────────────────

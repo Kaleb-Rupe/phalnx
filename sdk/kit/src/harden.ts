@@ -22,6 +22,9 @@ import { getVaultPDA, getPolicyPDA, getPendingPolicyPDA } from "./resolve-accoun
 import { fetchMaybeAgentVault } from "./generated/accounts/agentVault.js";
 import { PHALNX_PROGRAM_ADDRESS } from "./generated/programs/phalnx.js";
 import type { Network } from "./types.js";
+import type { ProtocolRuleConfig } from "./constraints/types.js";
+import type { ConstraintEntryArgs } from "./generated/index.js";
+import type { ConstraintBuilder } from "./constraints/builder.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -57,6 +60,10 @@ export interface HardenOptions {
   allowedDestinations?: Address[];
   /** Skip TEE wallet requirement — devnet testing only. Default: false */
   unsafeSkipTeeCheck?: boolean;
+  /** Protocol constraint configs to compile during provisioning. */
+  protocolConstraints?: ProtocolRuleConfig[];
+  /** Pre-configured ConstraintBuilder with registered descriptors. Required if protocolConstraints is provided. */
+  constraintBuilder?: ConstraintBuilder;
 }
 
 /** Result of hardening a wallet. */
@@ -73,6 +80,12 @@ export interface HardenResult {
   agentAddress: Address;
   /** Owner address */
   ownerAddress: Address;
+  /** Compiled constraint entries (if protocolConstraints provided) */
+  constraintEntries?: ConstraintEntryArgs[];
+  /** Constraint build warnings */
+  constraintWarnings?: string[];
+  /** Constraint budget info */
+  constraintBudget?: { used: number; total: number; perProtocol: Record<string, number> };
 }
 
 /** Configuration for withVault() convenience wrapper. */
@@ -220,6 +233,25 @@ export async function harden(
   const [policyAddress] = await getPolicyPDA(vaultAddress);
   const [pendingPolicyAddress] = await getPendingPolicyPDA(vaultAddress);
 
+  // Compile constraints if provided
+  let constraintEntries: ConstraintEntryArgs[] | undefined;
+  let constraintWarnings: string[] | undefined;
+  let constraintBudget: { used: number; total: number; perProtocol: Record<string, number> } | undefined;
+
+  if (options.protocolConstraints && options.protocolConstraints.length > 0) {
+    if (!options.constraintBuilder) {
+      throw new Error(
+        "protocolConstraints requires a constraintBuilder with registered descriptors. " +
+        "Create a ConstraintBuilder, register descriptors, and pass it via options.constraintBuilder.",
+      );
+    }
+
+    const buildResult = options.constraintBuilder.compile(options.protocolConstraints);
+    constraintEntries = buildResult.entries;
+    constraintWarnings = buildResult.warnings;
+    constraintBudget = buildResult.budget;
+  }
+
   return {
     vaultAddress,
     vaultId,
@@ -227,6 +259,9 @@ export async function harden(
     pendingPolicyAddress,
     agentAddress: agent.address,
     ownerAddress: owner.address,
+    constraintEntries,
+    constraintWarnings,
+    constraintBudget,
   };
 }
 

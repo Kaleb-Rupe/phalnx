@@ -43,12 +43,15 @@ export interface TeeWallet extends WalletLike {
   getAttestation?(): Promise<unknown>;
 }
 
+/** Known TEE wallet providers. */
+export const VALID_TEE_PROVIDERS = new Set(["crossmint", "privy", "turnkey"]);
+
 /** Type guard to detect TEE-backed wallets. */
 export function isTeeWallet(wallet: WalletLike): wallet is TeeWallet {
   return (
     "provider" in wallet &&
     typeof (wallet as Record<string, unknown>).provider === "string" &&
-    ((wallet as Record<string, unknown>).provider as string).length > 0
+    VALID_TEE_PROVIDERS.has((wallet as Record<string, unknown>).provider as string)
   );
 }
 
