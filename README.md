@@ -1,7 +1,7 @@
 # Phalnx
 
 [![CI](https://github.com/Kaleb-Rupe/phalnx/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Kaleb-Rupe/phalnx/actions/workflows/ci.yml)
-![Tests](https://img.shields.io/badge/tests-2326-brightgreen)
+![Tests](https://img.shields.io/badge/tests-2670-brightgreen)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 
 On-chain guardrails for AI agents on Solana. Your policies are enforced by Solana validators, not software promises.
@@ -227,10 +227,10 @@ cargo fmt --check --manifest-path programs/phalnx/Cargo.toml
 | Crossmint custody adapter                            |      29 |
 | SAK plugin (`@phalnx/plugin-solana-agent-kit`)       |      34 |
 | ElizaOS plugin (`@phalnx/plugin-elizaos`)            |      35 |
-| MCP server (`@phalnx/mcp`)                           |     355 |
+| MCP server (`@phalnx/mcp`)                           |     443 |
 | Actions server (`@phalnx/actions-server`)            |      99 |
-| Kit-native SDK (`@phalnx/kit`)                       |     597 |
-| **Total**                                            | **2326** |
+| Kit-native SDK (`@phalnx/kit`)                       |     853 |
+| **Total**                                            | **2670** |
 
 ## Security
 
