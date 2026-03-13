@@ -189,15 +189,15 @@ describe("agent-errors", () => {
 
   // ─── SDK error codes ──────────────────────────────────────────────────────
 
-  describe("SDK error codes (7000-7015)", () => {
-    it("getAllSdkErrorCodes returns 16 entries", () => {
+  describe("SDK error codes (7000-7032)", () => {
+    it("getAllSdkErrorCodes returns 33 entries", () => {
       const codes = getAllSdkErrorCodes();
-      expect(codes).to.have.lengthOf(16);
+      expect(codes).to.have.lengthOf(33);
       expect(codes[0].code).to.equal(7000);
-      expect(codes[codes.length - 1].code).to.equal(7015);
+      expect(codes[codes.length - 1].code).to.equal(7032);
     });
 
-    it("all 16 SDK codes map to valid error names", () => {
+    it("all 33 SDK codes map to valid error names", () => {
       const codes = getAllSdkErrorCodes();
       const expectedNames = [
         "NETWORK_ERROR",
@@ -216,6 +216,23 @@ describe("agent-errors", () => {
         "SLIPPAGE_EXCEEDED",
         "TEE_VERIFICATION_FAILED",
         "SHIELD_DENIED",
+        "SIMULATION_TIMEOUT",
+        "BLOCKHASH_EXPIRED",
+        "CODAMA_DECODE_FAILED",
+        "CODAMA_VERSION_MISMATCH",
+        "COMPAT_BRIDGE_FAILED",
+        "INTENT_DRIFT_DETECTED",
+        "VELOCITY_EXCEEDED",
+        "AGENT_DEFENSE_TRIGGERED",
+        "X402_PARSE_ERROR",
+        "X402_PAYMENT_DENIED",
+        "X402_UNSUPPORTED",
+        "X402_DESTINATION_BLOCKED",
+        "X402_REPLAY_DETECTED",
+        "X402_AMOUNT_SUSPICIOUS",
+        "X402_FACILITATOR_UNTRUSTED",
+        "X402_CONNECTION_REQUIRED",
+        "X402_SETTLEMENT_FAILED",
       ];
       expect(codes.map((c) => c.name)).to.deep.equal(expectedNames);
     });

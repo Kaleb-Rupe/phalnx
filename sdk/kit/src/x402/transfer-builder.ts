@@ -43,11 +43,17 @@ export async function deriveAta(
 }
 
 /**
- * Convert a base58 Address to 32 bytes for PDA seeds.
+ * Convert a base58 Address to exactly 32 bytes for PDA seeds.
  * Uses base58 decode (no external dependency).
  */
 function getAddressBytes(address: Address): Uint8Array {
-  return base58Decode(address);
+  const decoded = base58Decode(address);
+  if (decoded.length === 32) return decoded;
+  // Pad or truncate to exactly 32 bytes
+  if (decoded.length > 32) return decoded.slice(decoded.length - 32);
+  const result = new Uint8Array(32);
+  result.set(decoded, 32 - decoded.length);
+  return result;
 }
 
 // ─── Instruction Builder ────────────────────────────────────────────────────
