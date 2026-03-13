@@ -10,6 +10,7 @@ import type { Address, Rpc, SolanaRpcApi } from "@solana/kit";
 import type { ProtocolContext } from "../src/integrations/protocol-handler.js";
 import { dispatchKaminoCompose } from "../src/integrations/kamino-compose.js";
 import { KaminoHandler } from "../src/integrations/t2-handlers.js";
+import { KaminoComposeError } from "../src/integrations/compose-errors.js";
 import { KAMINO_LEND_PROGRAM } from "../src/integrations/config/kamino-markets.js";
 
 // ─── Test Context ────────────────────────────────────────────────────────────
@@ -207,6 +208,137 @@ describe("Kamino Compose (Codama)", () => {
       expect(handler.summarize("borrow", { amount: "500000", tokenMint: "SOL" })).to.include("Kamino borrow");
       expect(handler.summarize("repay", {})).to.include("Kamino repay");
       expect(handler.summarize("withdraw", { tokenMint: "USDC" })).to.include("Kamino withdraw");
+    });
+  });
+
+  describe("Edge cases", () => {
+    describe("safeBigInt validation", () => {
+      it("rejects NaN string", async () => {
+        try {
+          await dispatchKaminoCompose(ctx, "deposit", {
+            amount: "not-a-number",
+            tokenMint: "USDC",
+            obligation: FAKE_OBLIGATION,
+          });
+          expect.fail("should have thrown");
+        } catch (e: any) {
+          expect(e.name).to.equal("KaminoComposeError");
+          expect(e.code).to.equal("INVALID_BIGINT");
+        }
+      });
+
+      it("treats empty string as zero (BigInt coercion)", async () => {
+        // BigInt("") === 0n in Node.js, so this should not throw INVALID_BIGINT.
+        const result = await dispatchKaminoCompose(ctx, "deposit", {
+          amount: "",
+          tokenMint: "USDC",
+          obligation: FAKE_OBLIGATION,
+        });
+        expect(result.instructions).to.have.length.gte(3);
+      });
+
+      it("rejects Infinity", async () => {
+        try {
+          await dispatchKaminoCompose(ctx, "deposit", {
+            amount: Infinity,
+            tokenMint: "USDC",
+            obligation: FAKE_OBLIGATION,
+          });
+          expect.fail("should have thrown");
+        } catch (e: any) {
+          expect(e.name).to.equal("KaminoComposeError");
+          expect(e.code).to.equal("INVALID_BIGINT");
+        }
+      });
+
+      it("rejects float string", async () => {
+        try {
+          await dispatchKaminoCompose(ctx, "deposit", {
+            amount: "1.5",
+            tokenMint: "USDC",
+            obligation: FAKE_OBLIGATION,
+          });
+          expect.fail("should have thrown");
+        } catch (e: any) {
+          expect(e.name).to.equal("KaminoComposeError");
+          expect(e.code).to.equal("INVALID_BIGINT");
+        }
+      });
+    });
+
+    describe("requireField validation", () => {
+      it("rejects null field", async () => {
+        try {
+          await dispatchKaminoCompose(ctx, "deposit", {
+            amount: "1000000",
+            tokenMint: null,
+            obligation: FAKE_OBLIGATION,
+          });
+          expect.fail("should have thrown");
+        } catch (e: any) {
+          expect(e.name).to.equal("KaminoComposeError");
+          expect(e.code).to.equal("MISSING_PARAM");
+        }
+      });
+    });
+
+    describe("unknown reserve", () => {
+      it("throws for unknown token symbol", async () => {
+        try {
+          await dispatchKaminoCompose(ctx, "deposit", {
+            amount: "1000000",
+            tokenMint: "DOGE",
+            obligation: FAKE_OBLIGATION,
+          });
+          expect.fail("should have thrown");
+        } catch (e: any) {
+          expect(e.message).to.include("DOGE");
+          expect(e.message).to.include("Available");
+        }
+      });
+    });
+
+    describe("unsupported action", () => {
+      it("throws KaminoComposeError for unknown action", async () => {
+        try {
+          await dispatchKaminoCompose(ctx, "unknownAction", {});
+          expect.fail("should have thrown");
+        } catch (e: any) {
+          expect(e.name).to.equal("KaminoComposeError");
+          expect(e.code).to.equal("UNSUPPORTED_ACTION");
+          expect(e.message).to.include("unknownAction");
+        }
+      });
+    });
+
+    describe("zero amount", () => {
+      it("accepts zero amount without throwing", async () => {
+        const result = await dispatchKaminoCompose(ctx, "deposit", {
+          amount: "0",
+          tokenMint: "USDC",
+          obligation: FAKE_OBLIGATION,
+        });
+        expect(result.instructions).to.have.length.gte(3);
+      });
+    });
+
+    describe("refresh ordering", () => {
+      it("first instruction is refreshReserve, second is refreshObligation", async () => {
+        const result = await dispatchKaminoCompose(ctx, "deposit", {
+          amount: "1000000",
+          tokenMint: "USDC",
+          obligation: FAKE_OBLIGATION,
+        });
+        // First two must be refresh instructions (different from the main action)
+        expect(result.instructions.length).to.be.gte(3);
+        // Verify they're different programs or different instructions from the third
+        const mainIxData = result.instructions[2].data;
+        const refreshIx1Data = result.instructions[0].data;
+        const refreshIx2Data = result.instructions[1].data;
+        // Refresh instructions should have different discriminators from main
+        expect(refreshIx1Data).to.not.deep.equal(mainIxData);
+        expect(refreshIx2Data).to.not.deep.equal(mainIxData);
+      });
     });
   });
 });

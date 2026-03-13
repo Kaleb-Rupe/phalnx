@@ -10,6 +10,7 @@ import type { Address, Rpc, SolanaRpcApi } from "@solana/kit";
 import type { ProtocolContext } from "../src/integrations/protocol-handler.js";
 import { dispatchFlashTradeCompose } from "../src/integrations/flash-compose.js";
 import { FlashTradeHandler } from "../src/integrations/t2-handlers.js";
+import { FlashTradeComposeError } from "../src/integrations/compose-errors.js";
 import { PERPETUALS_PROGRAM } from "../src/integrations/config/flash-trade-markets.js";
 import { OPEN_POSITION_DISCRIMINATOR } from "../src/generated/protocols/flash-trade/instructions/openPosition.js";
 import { CLOSE_POSITION_DISCRIMINATOR } from "../src/generated/protocols/flash-trade/instructions/closePosition.js";
@@ -403,5 +404,196 @@ describe("Flash Trade Compose (Codama)", () => {
         }
       });
     }
+  });
+
+  function openPositionParams() {
+    return {
+      targetSymbol: "SOL",
+      collateralSymbol: "SOL",
+      side: "long",
+      priceWithSlippage: { price: "150000000000", exponent: -9 },
+      collateralAmount: "1000000000",
+      sizeAmount: "5000000000",
+    };
+  }
+
+  describe("Edge cases", () => {
+    describe("parseSide validation", () => {
+      it("rejects empty string", async () => {
+        try {
+          await dispatchFlashTradeCompose(ctx, "openPosition", {
+            ...openPositionParams(),
+            side: "",
+          });
+          expect.fail("should have thrown");
+        } catch (e: any) {
+          expect(e.name).to.equal("FlashTradeComposeError");
+          expect(e.code).to.equal("INVALID_SIDE");
+        }
+      });
+
+      it("rejects uppercase LONG", async () => {
+        try {
+          await dispatchFlashTradeCompose(ctx, "openPosition", {
+            ...openPositionParams(),
+            side: "LONG",
+          });
+          expect.fail("should have thrown");
+        } catch (e: any) {
+          expect(e.name).to.equal("FlashTradeComposeError");
+          expect(e.code).to.equal("INVALID_SIDE");
+        }
+      });
+
+      it("rejects numeric side", async () => {
+        try {
+          await dispatchFlashTradeCompose(ctx, "openPosition", {
+            ...openPositionParams(),
+            side: 1 as any,
+          });
+          expect.fail("should have thrown");
+        } catch (e: any) {
+          expect(e.name).to.equal("FlashTradeComposeError");
+          expect(e.code).to.equal("INVALID_SIDE");
+        }
+      });
+    });
+
+    describe("safeBigInt validation", () => {
+      it("rejects NaN string", async () => {
+        try {
+          await dispatchFlashTradeCompose(ctx, "openPosition", {
+            ...openPositionParams(),
+            collateralAmount: "not-a-number",
+          });
+          expect.fail("should have thrown");
+        } catch (e: any) {
+          expect(e.name).to.equal("FlashTradeComposeError");
+          expect(e.code).to.equal("INVALID_BIGINT");
+        }
+      });
+
+      it("treats empty string as zero (BigInt coercion)", async () => {
+        // BigInt("") === 0n in Node.js, so this should not throw INVALID_BIGINT.
+        // It may succeed or throw a different error (e.g., if zero is invalid),
+        // but NOT INVALID_BIGINT.
+        try {
+          const result = await dispatchFlashTradeCompose(ctx, "openPosition", {
+            ...openPositionParams(),
+            collateralAmount: "",
+          });
+          // If it succeeds, BigInt("") was treated as 0n
+          expect(result.instructions).to.have.length.gte(1);
+        } catch (e: any) {
+          expect(e.code).to.not.equal("INVALID_BIGINT");
+        }
+      });
+
+      it("rejects undefined amount", async () => {
+        try {
+          await dispatchFlashTradeCompose(ctx, "openPosition", {
+            ...openPositionParams(),
+            collateralAmount: undefined,
+          });
+          expect.fail("should have thrown");
+        } catch (e: any) {
+          // Could be MISSING_PARAM or INVALID_BIGINT depending on requireField
+          expect(e.name).to.equal("FlashTradeComposeError");
+        }
+      });
+
+      it("accepts valid BigInt string", async () => {
+        // Should not throw — tests that valid BigInt strings work
+        const result = await dispatchFlashTradeCompose(ctx, "openPosition", openPositionParams());
+        expect(result.instructions).to.have.length.gte(1);
+      });
+
+      it("rejects Infinity", async () => {
+        try {
+          await dispatchFlashTradeCompose(ctx, "openPosition", {
+            ...openPositionParams(),
+            sizeAmount: Infinity,
+          });
+          expect.fail("should have thrown");
+        } catch (e: any) {
+          expect(e.name).to.equal("FlashTradeComposeError");
+          expect(e.code).to.equal("INVALID_BIGINT");
+        }
+      });
+
+      it("rejects float string", async () => {
+        try {
+          await dispatchFlashTradeCompose(ctx, "openPosition", {
+            ...openPositionParams(),
+            collateralAmount: "1.5",
+          });
+          expect.fail("should have thrown");
+        } catch (e: any) {
+          expect(e.name).to.equal("FlashTradeComposeError");
+          expect(e.code).to.equal("INVALID_BIGINT");
+        }
+      });
+    });
+
+    describe("requireField validation", () => {
+      it("rejects null field", async () => {
+        try {
+          await dispatchFlashTradeCompose(ctx, "openPosition", {
+            ...openPositionParams(),
+            targetSymbol: null,
+          });
+          expect.fail("should have thrown");
+        } catch (e: any) {
+          expect(e.name).to.equal("FlashTradeComposeError");
+          expect(e.code).to.equal("MISSING_PARAM");
+        }
+      });
+
+      it("accepts zero as valid", async () => {
+        // Zero is a valid value, should not throw MISSING_PARAM
+        // (may throw INVALID_BIGINT or other validation error, but not MISSING_PARAM for the field)
+        try {
+          await dispatchFlashTradeCompose(ctx, "addCollateral", {
+            targetSymbol: "SOL",
+            collateralSymbol: "SOL",
+            side: "long",
+            positionPubKey: "44444444444444444444444444444444",
+            amount: "0",
+          });
+          // If it succeeds, that's fine
+        } catch (e: any) {
+          // Should NOT be MISSING_PARAM
+          expect(e.code).to.not.equal("MISSING_PARAM");
+        }
+      });
+    });
+
+    describe("unsupported action", () => {
+      it("throws FlashTradeComposeError for unknown action", async () => {
+        try {
+          await dispatchFlashTradeCompose(ctx, "unknownAction", {});
+          expect.fail("should have thrown");
+        } catch (e: any) {
+          expect(e.name).to.equal("FlashTradeComposeError");
+          expect(e.code).to.equal("UNSUPPORTED_ACTION");
+          expect(e.message).to.include("unknownAction");
+        }
+      });
+    });
+
+    describe("unknown symbol", () => {
+      it("throws for unknown target symbol with available list", async () => {
+        try {
+          await dispatchFlashTradeCompose(ctx, "openPosition", {
+            ...openPositionParams(),
+            targetSymbol: "DOGE",
+          });
+          expect.fail("should have thrown");
+        } catch (e: any) {
+          expect(e.message).to.include("DOGE");
+          expect(e.message).to.include("Available");
+        }
+      });
+    });
   });
 });
