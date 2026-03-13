@@ -10,6 +10,7 @@
 
 import type { Address, Instruction, TransactionSigner } from "@solana/kit";
 import type { ProtocolContext, ProtocolComposeResult } from "./protocol-handler.js";
+import { KaminoComposeError } from "./compose-errors.js";
 import {
   resolveKaminoAccounts,
   KAMINO_LEND_PROGRAM,
@@ -32,7 +33,7 @@ import { getWithdrawObligationCollateralAndRedeemReserveCollateralInstruction } 
 function requireField<T>(params: Record<string, unknown>, field: string): T {
   const val = params[field];
   if (val === undefined || val === null) {
-    throw new Error(`Missing required Kamino parameter: ${field}`);
+    throw new KaminoComposeError("MISSING_PARAM", `Missing required parameter: ${field}`);
   }
   return val as T;
 }
@@ -217,8 +218,9 @@ export async function dispatchKaminoCompose(
   params: Record<string, unknown>,
 ): Promise<ProtocolComposeResult> {
   if (!SUPPORTED_ACTIONS.includes(action)) {
-    throw new Error(
-      `Unsupported Kamino action: ${action}. Supported: ${SUPPORTED_ACTIONS.join(", ")}`,
+    throw new KaminoComposeError(
+      "UNSUPPORTED_ACTION",
+      `Unsupported action: ${action}. Supported: ${SUPPORTED_ACTIONS.join(", ")}`,
     );
   }
 
@@ -227,6 +229,6 @@ export async function dispatchKaminoCompose(
     case "borrow": return composeBorrow(ctx, params);
     case "repay": return composeRepay(ctx, params);
     case "withdraw": return composeWithdraw(ctx, params);
-    default: throw new Error(`Unsupported Kamino action: ${action}`);
+    default: throw new KaminoComposeError("UNSUPPORTED_ACTION", `Unsupported action: ${action}. Supported: ${SUPPORTED_ACTIONS.join(", ")}`);
   }
 }

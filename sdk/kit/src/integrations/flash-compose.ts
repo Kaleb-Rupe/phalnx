@@ -14,6 +14,7 @@
 import type { Address, Instruction, TransactionSigner } from "@solana/kit";
 import { generateKeyPairSigner } from "@solana/kit";
 import type { ProtocolContext, ProtocolComposeResult } from "./protocol-handler.js";
+import { FlashTradeComposeError } from "./compose-errors.js";
 import {
   resolveFlashAccounts,
   FLASH_PERPETUALS,
@@ -50,7 +51,7 @@ import { getCloseAndSwapInstruction } from "../generated/protocols/flash-trade/i
 function requireField<T>(params: Record<string, unknown>, field: string): T {
   const val = params[field];
   if (val === undefined || val === null) {
-    throw new Error(`Missing required Flash Trade parameter: ${field}`);
+    throw new FlashTradeComposeError("MISSING_PARAM", `Missing required parameter: ${field}`);
   }
   return val as T;
 }
@@ -61,7 +62,7 @@ function parseOraclePrice(price: { price: string; exponent: number }): OraclePri
 
 function parseSide(side: string): "long" | "short" {
   if (side !== "long" && side !== "short") {
-    throw new Error(`Invalid side: ${side}. Must be "long" or "short".`);
+    throw new FlashTradeComposeError("INVALID_SIDE", `Invalid side: ${side}. Must be "long" or "short".`);
   }
   return side;
 }
@@ -674,8 +675,9 @@ export async function dispatchFlashTradeCompose(
   params: Record<string, unknown>,
 ): Promise<ProtocolComposeResult> {
   if (!SUPPORTED_ACTIONS.includes(action)) {
-    throw new Error(
-      `Unsupported Flash Trade action: ${action}. Supported: ${SUPPORTED_ACTIONS.join(", ")}`,
+    throw new FlashTradeComposeError(
+      "UNSUPPORTED_ACTION",
+      `Unsupported action: ${action}. Supported: ${SUPPORTED_ACTIONS.join(", ")}`,
     );
   }
 
@@ -694,6 +696,6 @@ export async function dispatchFlashTradeCompose(
     case "cancelLimitOrder": return composeCancelLimitOrder(ctx, params);
     case "swapAndOpen": return composeSwapAndOpen(ctx, params);
     case "closeAndSwap": return composeCloseAndSwap(ctx, params);
-    default: throw new Error(`Unsupported Flash Trade action: ${action}`);
+    default: throw new FlashTradeComposeError("UNSUPPORTED_ACTION", `Unsupported action: ${action}. Supported: ${SUPPORTED_ACTIONS.join(", ")}`);
   }
 }

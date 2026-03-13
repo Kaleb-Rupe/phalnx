@@ -343,5 +343,58 @@ export type {
   SendAndConfirmOptions,
 } from "./rpc-helpers.js";
 
+// ─── Constraint Builder ──────────────────────────────────────────────────
+export {
+  // Builder
+  ConstraintBuilder,
+  ConstraintBudgetExceededError,
+  // Flash Trade
+  FlashTradeDescriptor,
+  FLASH_TRADE_SCHEMA,
+  FLASH_TRADE_PROGRAM,
+  checkStrictModeWarnings,
+  // Kamino
+  KaminoDescriptor,
+  KAMINO_SCHEMA,
+  KAMINO_LENDING_PROGRAM,
+  KAMINO_SPENDING_ACTIONS,
+  KAMINO_RISK_REDUCING_ACTIONS,
+  KAMINO_AMOUNT_CONSTRAINED_ACTIONS,
+  // Encoding
+  bigintToLeBytes,
+  numberToLeBytes,
+  mapOperator,
+  fieldTypeToSize,
+  // Schema constants
+  SPENDING_ACTIONS,
+  RISK_REDUCING_ACTIONS,
+  SIZE_CONSTRAINED_ACTIONS,
+  COLLATERAL_CONSTRAINED_ACTIONS,
+  ORDER_SIZE_ACTIONS,
+} from "./constraints/index.js";
+export type {
+  FieldType,
+  InstructionFieldSchema,
+  InstructionSchema,
+  ProtocolSchema,
+  ProtocolRuleConfig,
+  ActionRule,
+  CompiledConstraint,
+  ProtocolDescriptor,
+  ConstraintBuildResult,
+  RuleTypeMetadata,
+  RuleParamMeta,
+} from "./constraints/index.js";
+
+// ─── Flash Trade Analytics ──────────────────────────────────────────────────
+export * from "./analytics/index.js";
+
+// ─── Compose Errors ──────────────────────────────────────────────────────
+export {
+  ComposeError,
+  FlashTradeComposeError,
+  KaminoComposeError,
+} from "./integrations/compose-errors.js";
+
 // NOTE: compat.ts is intentionally NOT exported.
 // It is for internal use only when bridging T2 protocol SDKs.
