@@ -51,6 +51,34 @@ describe("phalnx_setup", () => {
     expect(result).to.be.a("string");
   });
 
+  it("configureFromFile step delegates without throwing", async () => {
+    const result = await phalnxSetup(null, null, {
+      step: "configureFromFile",
+      params: { configPath: "/nonexistent/path.json" },
+    });
+    expect(result).to.be.a("string");
+  });
+
+  it("provision step with explicit params returns a string", async () => {
+    const result = await phalnxSetup(null, null, {
+      step: "provision",
+      params: {
+        platformUrl: "https://example.com/provision",
+        vaultId: "42",
+      },
+    });
+    expect(result).to.be.a("string");
+  });
+
+  it("error from underlying handler caught gracefully", async () => {
+    // discoverVault with invalid owner should not throw
+    const result = await phalnxSetup(null, null, {
+      step: "discoverVault",
+      params: { owner: "not-a-valid-pubkey" },
+    });
+    expect(result).to.be.a("string");
+  });
+
   it("every enum value is a valid step that returns a string", async () => {
     // Each step gets minimal params to avoid required-field crashes
     const stepsWithParams: Array<{

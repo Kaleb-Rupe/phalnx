@@ -108,6 +108,80 @@ describe("phalnx_manage", () => {
     expect(result).to.be.a("string");
   });
 
+  it("createConstraints action delegates to handler", async () => {
+    const client = createMockClient();
+    const result = await phalnxManage(
+      client as unknown as PhalnxClient,
+      mockConfig,
+      {
+        action: "createConstraints",
+        params: { entries: [] },
+        vault: TEST_VAULT_PDA.toBase58(),
+      },
+    );
+    expect(result).to.be.a("string");
+  });
+
+  it("closeConstraints action delegates to handler", async () => {
+    const client = createMockClient();
+    const result = await phalnxManage(
+      client as unknown as PhalnxClient,
+      mockConfig,
+      {
+        action: "closeConstraints",
+        params: {},
+        vault: TEST_VAULT_PDA.toBase58(),
+      },
+    );
+    expect(result).to.be.a("string");
+  });
+
+  it("closeSettledEscrow action delegates to handler", async () => {
+    const client = createMockClient();
+    const result = await phalnxManage(
+      client as unknown as PhalnxClient,
+      mockConfig,
+      {
+        action: "closeSettledEscrow",
+        params: {
+          sourceVault: TEST_VAULT_PDA.toBase58(),
+          destinationVault: TEST_VAULT_PDA.toBase58(),
+          escrowId: "1",
+        },
+        vault: TEST_VAULT_PDA.toBase58(),
+      },
+    );
+    expect(result).to.be.a("string");
+  });
+
+  it("queuePolicyUpdate action delegates to handler", async () => {
+    const client = createMockClient();
+    const result = await phalnxManage(
+      client as unknown as PhalnxClient,
+      mockConfig,
+      {
+        action: "queuePolicyUpdate",
+        params: { dailySpendingCapUsd: "20000000000" },
+        vault: TEST_VAULT_PDA.toBase58(),
+      },
+    );
+    expect(result).to.be.a("string");
+  });
+
+  it("applyPendingPolicy action delegates to handler", async () => {
+    const client = createMockClient();
+    const result = await phalnxManage(
+      client as unknown as PhalnxClient,
+      mockConfig,
+      {
+        action: "applyPendingPolicy",
+        params: {},
+        vault: TEST_VAULT_PDA.toBase58(),
+      },
+    );
+    expect(result).to.be.a("string");
+  });
+
   it("catches errors from underlying handlers and returns a string", async () => {
     const client = createMockClient({
       shouldThrow: new Error("Simulated SDK failure"),

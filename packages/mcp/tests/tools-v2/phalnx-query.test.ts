@@ -182,6 +182,47 @@ describe("phalnx_query", () => {
     expect(result).to.equal("multisig parameter required");
   });
 
+  it("searchTokens without query returns error message", async () => {
+    const client = makeMockClientWithIntents();
+    const result = await phalnxQuery(
+      client as unknown as PhalnxClient,
+      mockConfig,
+      {
+        query: "searchTokens",
+        params: {},
+      },
+    );
+    expect(result).to.equal("query parameter required");
+  });
+
+  it("prices without mints returns error message", async () => {
+    const client = makeMockClientWithIntents();
+    const result = await phalnxQuery(
+      client as unknown as PhalnxClient,
+      mockConfig,
+      {
+        query: "prices",
+        params: {},
+      },
+    );
+    expect(result).to.include("mints parameter required");
+  });
+
+  it("error from fetchVault caught and formatted", async () => {
+    const client = makeMockClientWithIntents({
+      shouldThrow: new Error("Account does not exist"),
+    });
+    const result = await phalnxQuery(
+      client as unknown as PhalnxClient,
+      mockConfig,
+      {
+        query: "vault",
+        params: { vault: TEST_VAULT_PDA.toBase58() },
+      },
+    );
+    expect(result).to.include("Account not found");
+  });
+
   it("spending query returns JSON with spent24hUsd", async () => {
     const client = makeMockClientWithIntents();
     const result = await phalnxQuery(
