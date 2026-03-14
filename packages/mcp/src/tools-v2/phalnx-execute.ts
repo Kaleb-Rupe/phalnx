@@ -89,10 +89,12 @@ export async function phalnxExecute(
     const vaultAddress = rawVault ? toPublicKey(rawVault) : null;
 
     if (!vaultAddress) {
-      return "No vault specified and no default vault configured. Pass a vault address or run shield_configure.";
+      return "No vault specified and no default vault configured. Pass a vault address or run phalnx_setup step='configure'.";
     }
 
-    // Build IntentAction from input
+    // Build IntentAction from input.
+    // Cast is safe: Zod enum validation on phalnxExecuteSchema.action runs
+    // before this code, guaranteeing input.action is a valid IntentAction type.
     const intent: IntentAction = {
       type: input.action,
       params: input.params,

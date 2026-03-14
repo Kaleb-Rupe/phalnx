@@ -64,7 +64,7 @@ describe("phalnx_execute", () => {
     expect(result).to.include("Mock execution succeeded");
   });
 
-  it("execute without vault returns 'No vault specified'", async () => {
+  it("execute without vault returns 'No vault specified' with phalnx_setup reference", async () => {
     const client = makeMockClientWithIntents();
     const config: McpConfig = {
       rpcUrl: "https://mock.rpc",
@@ -80,6 +80,8 @@ describe("phalnx_execute", () => {
       },
     );
     expect(result).to.include("No vault specified");
+    expect(result).to.include("phalnx_setup");
+    expect(result).to.not.include("shield_");
   });
 
   it("execute with AgentError returns formatted error with code and recovery steps", async () => {
@@ -172,6 +174,77 @@ describe("phalnx_execute", () => {
     );
     expect(result).to.be.a("string");
     expect(result).to.include("Network timeout");
+  });
+
+  it("custody wallet path produces empty signers", async () => {
+    let capturedOpts: any = null;
+    const client = makeMockClientWithIntents(async (_intent, _vault, opts) => {
+      capturedOpts = opts;
+      return { signature: "mock-sig-custody", summary: "Custody execution" };
+    });
+    const config: McpConfig = {
+      rpcUrl: "https://mock.rpc",
+      agentKeypairPath: mockCfg.walletPath,
+    };
+    const custodyWallet = { signTransaction: async (tx: any) => tx };
+    const result = await phalnxExecute(
+      client as unknown as PhalnxClient,
+      config,
+      {
+        action: "swap",
+        params: { amount: "1000000" },
+        vault: TEST_VAULT_PDA.toBase58(),
+      },
+      custodyWallet,
+    );
+    expect(result).to.include("Transaction Executed Successfully");
+    expect(capturedOpts.signers).to.have.length(0);
+  });
+
+  it("multiple action types execute without error", async () => {
+    const actions = ["swap", "transfer", "openPosition", "deposit"] as const;
+    for (const action of actions) {
+      const client = makeMockClientWithIntents(async (intent) => ({
+        signature: `mock-sig-${action}`,
+        summary: `${action} succeeded`,
+      }));
+      const config: McpConfig = {
+        rpcUrl: "https://mock.rpc",
+        agentKeypairPath: mockCfg.walletPath,
+      };
+      const result = await phalnxExecute(
+        client as unknown as PhalnxClient,
+        config,
+        {
+          action,
+          params: { amount: "1000000" },
+          vault: TEST_VAULT_PDA.toBase58(),
+        },
+      );
+      expect(result, `${action} should succeed`).to.include("Transaction Executed Successfully");
+    }
+  });
+
+  it("Anchor error thrown inside run() returns formatted error with suggestion", async () => {
+    const client = makeMockClientWithIntents(async () => {
+      throw Object.assign(new Error("DailyCapExceeded"), { code: 6006 });
+    });
+    const config: McpConfig = {
+      rpcUrl: "https://mock.rpc",
+      agentKeypairPath: mockCfg.walletPath,
+    };
+    const result = await phalnxExecute(
+      client as unknown as PhalnxClient,
+      config,
+      {
+        action: "swap",
+        params: { amount: "1000000" },
+        vault: TEST_VAULT_PDA.toBase58(),
+      },
+    );
+    expect(result).to.include("DailyCapExceeded");
+    expect(result).to.include("Suggestion:");
+    expect(result).to.not.include("shield_");
   });
 
   it("successful result includes risk flags when present", async () => {
