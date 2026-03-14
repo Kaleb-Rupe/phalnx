@@ -1,22 +1,5 @@
 import type { AnnotationConfig } from "../types.js";
-
-function pascalCase(kebab: string): string {
-  return kebab
-    .split("-")
-    .map((w) => w[0].toUpperCase() + w.slice(1))
-    .join("");
-}
-
-function camelCase(kebab: string): string {
-  const parts = kebab.split("-");
-  return (
-    parts[0] +
-    parts
-      .slice(1)
-      .map((w) => w[0].toUpperCase() + w.slice(1))
-      .join("")
-  );
-}
+import { pascalCase } from "../naming.js";
 
 /**
  * Prints human-readable diff-style instructions for the 4 registry files
@@ -25,7 +8,6 @@ function camelCase(kebab: string): string {
 export function generateRegistryPatches(config: AnnotationConfig): string {
   const { protocol } = config;
   const pascal = pascalCase(protocol.id);
-  const camel = camelCase(protocol.id);
 
   const sections: string[] = [];
 

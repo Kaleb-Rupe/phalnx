@@ -8,17 +8,7 @@
  */
 
 import type { AnnotationConfig, ParsedInstruction, RuleTypeAnnotation } from "../types.js";
-
-function pascalCase(kebab: string): string {
-  return kebab
-    .split("-")
-    .map((w) => w[0].toUpperCase() + w.slice(1))
-    .join("");
-}
-
-function upperSnake(kebab: string): string {
-  return kebab.toUpperCase().replace(/-/g, "_");
-}
+import { pascalCase, upperSnake } from "../naming.js";
 
 /**
  * Generate a complete descriptor TypeScript file.

@@ -9,17 +9,7 @@
  */
 
 import type { AnnotationConfig, ParsedInstruction } from "../types.js";
-
-function pascalCase(kebab: string): string {
-  return kebab
-    .split("-")
-    .map((w) => w[0].toUpperCase() + w.slice(1))
-    .join("");
-}
-
-function upperSnake(kebab: string): string {
-  return kebab.toUpperCase().replace(/-/g, "_");
-}
+import { pascalCase, upperSnake } from "../naming.js";
 
 function formatDiscriminator(disc: Uint8Array): string {
   return `new Uint8Array([${Array.from(disc).join(", ")}])`;

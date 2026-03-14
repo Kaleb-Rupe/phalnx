@@ -1,26 +1,5 @@
 import type { AnnotationConfig } from "../types.js";
-
-function pascalCase(kebab: string): string {
-  return kebab
-    .split("-")
-    .map((w) => w[0].toUpperCase() + w.slice(1))
-    .join("");
-}
-
-function camelCase(kebab: string): string {
-  const parts = kebab.split("-");
-  return (
-    parts[0] +
-    parts
-      .slice(1)
-      .map((w) => w[0].toUpperCase() + w.slice(1))
-      .join("")
-  );
-}
-
-function upperSnakeCase(kebab: string): string {
-  return kebab.replace(/-/g, "_").toUpperCase();
-}
+import { pascalCase, camelCase, upperSnake } from "../naming.js";
 
 /**
  * Generates a market config file from the YAML markets section.
@@ -34,7 +13,7 @@ function upperSnakeCase(kebab: string): string {
 export function generateMarkets(config: AnnotationConfig): string {
   const { protocol, markets } = config;
   const pascal = pascalCase(protocol.id);
-  const upper = upperSnakeCase(protocol.id);
+  const upper = upperSnake(protocol.id);
 
   const lines: string[] = [];
 

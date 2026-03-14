@@ -7,22 +7,7 @@
  */
 
 import type { AnnotationConfig, ParsedInstruction } from "../types.js";
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function pascalCase(kebab: string): string {
-  return kebab
-    .split("-")
-    .map((w) => w[0].toUpperCase() + w.slice(1))
-    .join("");
-}
-
-function camelCase(kebab: string): string {
-  const parts = kebab.split("-");
-  return parts[0] + parts.slice(1).map((w) => w[0].toUpperCase() + w.slice(1)).join("");
-}
-
-// ─── Generator ───────────────────────────────────────────────────────────────
+import { pascalCase, camelCase } from "../naming.js";
 
 export function generateHandler(
   config: AnnotationConfig,
