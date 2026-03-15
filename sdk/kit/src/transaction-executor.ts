@@ -18,10 +18,12 @@ import type {
   Rpc,
   SolanaRpcApi,
   TransactionSigner,
+  AddressesByLookupTableAddress,
 } from "@solana/kit";
 import { getBase64EncodedWireTransaction } from "@solana/kit";
 
-import { composePhalnxTransaction } from "./composer.js";
+import { composePhalnxTransaction, measureTransactionSize } from "./composer.js";
+import { AltCache } from "./alt-loader.js";
 import {
   simulateBeforeSend,
   adjustCU,
@@ -52,6 +54,8 @@ export interface ExecuteTransactionParams {
   priorityFeeMicroLamports?: number;
   /** Skip simulation (default: false — simulation is fail-closed) */
   skipSimulation?: boolean;
+  /** Resolved address lookup tables for transaction compression */
+  addressLookupTables?: AddressesByLookupTableAddress;
 }
 
 export interface ExecuteTransactionResult {
@@ -79,6 +83,7 @@ export class TransactionExecutor {
   readonly agent: TransactionSigner;
   private readonly blockhashCache: BlockhashCache;
   private readonly confirmOptions: SendAndConfirmOptions;
+  private altCache?: AltCache;
 
   constructor(
     rpc: Rpc<SolanaRpcApi>,
@@ -89,6 +94,18 @@ export class TransactionExecutor {
     this.agent = agent;
     this.blockhashCache = new BlockhashCache(options?.blockhashCacheTtlMs);
     this.confirmOptions = options?.confirmOptions ?? {};
+  }
+
+  /**
+   * Resolve ALT addresses via cached RPC fetch.
+   * Returns a map of ALT address → resolved addresses.
+   */
+  async resolveAlts(
+    rpc: Rpc<SolanaRpcApi>,
+    altAddresses: Address[],
+  ): Promise<AddressesByLookupTableAddress> {
+    if (!this.altCache) this.altCache = new AltCache();
+    return this.altCache.resolve(rpc, altAddresses);
   }
 
   /**
@@ -108,6 +125,7 @@ export class TransactionExecutor {
       blockhash,
       computeUnits,
       priorityFeeMicroLamports: params.priorityFeeMicroLamports,
+      addressLookupTables: params.addressLookupTables,
     });
 
     return { compiledTx, computeUnits, blockhash };
@@ -146,6 +164,7 @@ export class TransactionExecutor {
         blockhash,
         computeUnits: adjustedCU,
         priorityFeeMicroLamports: params.priorityFeeMicroLamports,
+        addressLookupTables: params.addressLookupTables,
       });
       return { simulation, recomposedTx, finalCU: adjustedCU };
     }

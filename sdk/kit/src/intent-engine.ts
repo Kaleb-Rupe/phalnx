@@ -26,16 +26,24 @@ import type { ResolvedToken } from "./tokens.js";
 import { validateIntentInput, type ValidationResult } from "./intent-validator.js";
 import type { TransactionExecutor } from "./transaction-executor.js";
 import { toAgentError, protocolEscalationError } from "./agent-errors.js";
+import { getPhalnxAltAddress } from "./alt-config.js";
+import { mergeAltAddresses } from "./alt-loader.js";
 import { resolveProtocol, isProtocolAllowed, ProtocolTier } from "./protocol-resolver.js";
 import { ACTION_TYPE_MAP, summarizeAction, resolveProtocolActionType } from "./intents.js";
 import { resolveToken } from "./tokens.js";
-import { hasPermission, isSpendingAction, isStablecoinMint, type Network } from "./types.js";
+import { hasPermission, isSpendingAction, getPositionEffect, isStablecoinMint, type Network } from "./types.js";
+import { resolveVaultState, type ResolvedVaultState } from "./state-resolver.js";
 import { VaultStatus } from "./generated/types/vaultStatus.js";
 import { resolveAccounts } from "./resolve-accounts.js";
 import { verifyAdapterOutput, type VerifiableInstruction } from "./integrations/adapter-verifier.js";
 import { fetchAgentVault } from "./generated/accounts/agentVault.js";
 import { fetchPolicyConfig } from "./generated/accounts/policyConfig.js";
 import { getPolicyPDA, getTrackerPDA, getAgentOverlayPDA } from "./resolve-accounts.js";
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+/** Escrow actions use standalone instructions, not the composition flow */
+const ESCROW_ACTIONS = new Set(["createEscrow", "settleEscrow", "refundEscrow"]);
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -74,6 +82,8 @@ export interface IntentEngineConfig {
   agent: TransactionSigner;
   /** Optional TransactionExecutor for steps 9-12. When absent, execute() throws. */
   executor?: TransactionExecutor;
+  /** @internal Override state resolver for testing */
+  _stateResolver?: typeof resolveVaultState;
 }
 
 // ─── IntentEngine ───────────────────────────────────────────────────────────
@@ -84,6 +94,7 @@ export class IntentEngine {
   readonly registry: ProtocolRegistry;
   readonly agent: TransactionSigner;
   readonly executor: TransactionExecutor | null;
+  private readonly _stateResolver: typeof resolveVaultState;
 
   constructor(config: IntentEngineConfig) {
     this.rpc = config.rpc;
@@ -91,6 +102,7 @@ export class IntentEngine {
     this.registry = config.protocolRegistry;
     this.agent = config.agent;
     this.executor = config.executor ?? null;
+    this._stateResolver = config._stateResolver ?? resolveVaultState;
 
     // H-5: Warn if protocol registry is not frozen
     if (!config.protocolRegistry.isFrozen) {
@@ -184,15 +196,11 @@ export class IntentEngine {
     vault: Address,
   ): Promise<PrecheckResult> {
     try {
-      // Fetch vault and policy accounts
-      const [policyPda] = await getPolicyPDA(vault);
-      const [vaultAccount, policyAccount] = await Promise.all([
-        fetchAgentVault(this.rpc, vault),
-        fetchPolicyConfig(this.rpc, policyPda),
-      ]);
-
-      const vaultData = vaultAccount.data;
-      const policyData = policyAccount.data;
+      // Single batched RPC call fetches vault + policy + tracker + overlay + constraints.
+      const state = await this._stateResolver(this.rpc, vault, this.agent.address);
+      const vaultData = state.vault;
+      const policyData = state.policy;
+      const riskFlags: string[] = [];
 
       // Find the agent entry in vault
       const agentAddress = this.agent.address;
@@ -253,6 +261,19 @@ export class IntentEngine {
         );
       }
 
+      // Escrow actions use standalone instructions, not the composition flow (on-chain line 178)
+      if (ESCROW_ACTIONS.has(baseActionType)) {
+        return this._failedPrecheck(
+          "Escrow actions use standalone instructions, not the composition flow",
+          "InvalidSession",
+          {
+            permission: { passed: true, requiredBit: baseActionType, agentHas: true },
+            protocol: { passed: true, inAllowlist: true },
+          },
+          6011,
+        );
+      }
+
       // Protocol allowlist check
       let protocolPassed = true;
       let protocolInAllowlist = true;
@@ -303,52 +324,196 @@ export class IntentEngine {
         }
       }
 
-      // Spending check
+      // Spending check — 4 ordered checks matching on-chain validate_and_authorize
       let spendingDetails: PrecheckResult["details"]["spendingCap"];
       if (isSpendingAction(baseActionType)) {
         const token = this._resolveIntentToken(intent);
-        if (token) {
-          const amountStr = this._getIntentAmount(intent);
-          if (amountStr) {
-            const amountUsd = this._estimateUsd(amountStr, token);
-            const cap = Number(agentEntry.spendingLimitUsd);
-            const intentAmount = Number(amountUsd);
-            const spendingPassed = amountUsd <= agentEntry.spendingLimitUsd;
+        const amountStr = token ? this._getIntentAmount(intent) : null;
+
+        // Unresolvable token or amount — can't verify spending, flag as risk
+        if (!token || !amountStr) {
+          spendingDetails = {
+            passed: true,
+            spent24h: 0n,
+            cap: state.globalBudget.cap,
+            remaining: state.globalBudget.remaining,
+            deferred: true,
+          };
+          riskFlags.push("SPENDING_UNVERIFIED");
+        } else {
+          const amountUsd = this._estimateUsd(amountStr, token);
+
+          if (amountUsd === 0n) {
+            // Non-stablecoin input: cap check deferred to finalize_session
             spendingDetails = {
-              passed: spendingPassed,
-              spent24h: 0, // Would require fetching SpendTracker
-              cap,
-              remaining: cap,
-              intentAmount,
+              passed: true,
+              spent24h: state.globalBudget.spent24h,
+              cap: state.globalBudget.cap,
+              remaining: state.globalBudget.remaining,
+              deferred: true,
             };
-            if (!spendingPassed) {
+          } else {
+            // Stablecoin input: 4 ordered checks matching on-chain
+
+            // Check 1: Transaction size (on-chain line 206, error 6005)
+            if (amountUsd > state.maxTransactionUsd) {
               return this._failedPrecheck(
-                "Amount exceeds agent spending limit",
-                `${amountUsd} USD > agent limit ${agentEntry.spendingLimitUsd}`,
+                `Transaction $${amountUsd} exceeds max $${state.maxTransactionUsd}`,
+                "TRANSACTION_TOO_LARGE",
                 {
                   permission: { passed: true, requiredBit: baseActionType, agentHas: true },
-                  spendingCap: spendingDetails,
-                  protocol: { passed: true, inAllowlist: true },
+                  protocol: { passed: true, inAllowlist: protocolInAllowlist },
+                  transactionSize: { passed: false, maxUsd: state.maxTransactionUsd, intentUsd: amountUsd },
                 },
+                6005,
               );
             }
+
+            // Check 2: Rolling 24h vault cap (on-chain line 218, error 6006)
+            const newGlobalTotal = state.globalBudget.spent24h + amountUsd;
+            if (newGlobalTotal > state.globalBudget.cap) {
+              return this._failedPrecheck(
+                `Daily cap exceeded: ${newGlobalTotal} > ${state.globalBudget.cap}`,
+                "DAILY_CAP_EXCEEDED",
+                {
+                  permission: { passed: true, requiredBit: baseActionType, agentHas: true },
+                  spendingCap: {
+                    passed: false,
+                    spent24h: state.globalBudget.spent24h,
+                    cap: state.globalBudget.cap,
+                    remaining: state.globalBudget.remaining,
+                    intentAmount: amountUsd,
+                  },
+                  protocol: { passed: true, inAllowlist: protocolInAllowlist },
+                },
+                6006,
+              );
+            }
+
+            // Check 3: Per-agent cap (on-chain line 235, error 6063)
+            if (state.agentBudget) {
+              const newAgentTotal = state.agentBudget.spent24h + amountUsd;
+              if (newAgentTotal > state.agentBudget.cap) {
+                return this._failedPrecheck(
+                  `Agent spend limit exceeded: ${newAgentTotal} > ${state.agentBudget.cap}`,
+                  "AGENT_SPEND_LIMIT_EXCEEDED",
+                  {
+                    permission: { passed: true, requiredBit: baseActionType, agentHas: true },
+                    spendingCap: {
+                      passed: false,
+                      spent24h: state.agentBudget.spent24h,
+                      cap: state.agentBudget.cap,
+                      remaining: state.agentBudget.remaining,
+                      intentAmount: amountUsd,
+                    },
+                    protocol: { passed: true, inAllowlist: protocolInAllowlist },
+                  },
+                  6063,
+                );
+              }
+            }
+
+            // Check 4: Per-protocol cap (on-chain line 261, error 6069)
+            const protocolAddr = this._resolveProtocolAddress(intent);
+            if (protocolAddr) {
+              const protocolBudget = state.protocolBudgets.find(
+                (p) => p.protocol === protocolAddr,
+              );
+              if (protocolBudget) {
+                const newProtoTotal = protocolBudget.spent24h + amountUsd;
+                if (newProtoTotal > protocolBudget.cap) {
+                  return this._failedPrecheck(
+                    `Protocol cap exceeded: ${newProtoTotal} > ${protocolBudget.cap}`,
+                    "PROTOCOL_CAP_EXCEEDED",
+                    {
+                      permission: { passed: true, requiredBit: baseActionType, agentHas: true },
+                      spendingCap: {
+                        passed: false,
+                        spent24h: protocolBudget.spent24h,
+                        cap: protocolBudget.cap,
+                        remaining: protocolBudget.remaining,
+                        intentAmount: amountUsd,
+                      },
+                      protocol: { passed: true, inAllowlist: protocolInAllowlist },
+                    },
+                    6069,
+                  );
+                }
+              }
+            } else if (intent.type === "passthrough") {
+              riskFlags.push("PASSTHROUGH_PROTOCOL_UNVERIFIED");
+            }
+
+            // All spending checks passed
+            spendingDetails = {
+              passed: true,
+              spent24h: state.globalBudget.spent24h,
+              cap: state.globalBudget.cap,
+              remaining: state.globalBudget.remaining,
+              intentAmount: amountUsd,
+            };
           }
         }
       }
 
+      // Leverage check (on-chain line 515, error 6007)
+      const intentLeverageBps = this._getLeverageBps(intent);
+      if (intentLeverageBps !== null && policyData.maxLeverageBps > 0) {
+        if (intentLeverageBps > policyData.maxLeverageBps) {
+          return this._failedPrecheck(
+            `Leverage ${intentLeverageBps} BPS > max ${policyData.maxLeverageBps} BPS`,
+            "LEVERAGE_TOO_HIGH",
+            {
+              permission: { passed: true, requiredBit: baseActionType, agentHas: true },
+              protocol: { passed: true, inAllowlist: protocolInAllowlist },
+              leverage: { passed: false, maxBps: policyData.maxLeverageBps, intentBps: intentLeverageBps },
+            },
+            6007,
+          );
+        }
+      }
+
       // Position check
-      if (
-        (baseActionType === "openPosition" || baseActionType === "swapAndOpenPosition") &&
-        !policyData.canOpenPositions
-      ) {
-        return this._failedPrecheck(
-          "Vault does not allow opening positions",
-          "canOpenPositions is false in policy",
-          {
-            permission: { passed: true, requiredBit: baseActionType, agentHas: true },
-            protocol: { passed: true, inAllowlist: true },
-          },
-        );
+      const posEffect = getPositionEffect(baseActionType);
+
+      if (posEffect === "increment") {
+        if (!policyData.canOpenPositions) {
+          return this._failedPrecheck(
+            "Vault does not allow opening positions",
+            "POSITION_OPENING_DISALLOWED",
+            {
+              permission: { passed: true, requiredBit: baseActionType, agentHas: true },
+              protocol: { passed: true, inAllowlist: protocolInAllowlist },
+              positions: { passed: false, max: policyData.maxConcurrentPositions, current: vaultData.openPositions, canOpen: false },
+            },
+            6009,
+          );
+        }
+        if (vaultData.openPositions >= policyData.maxConcurrentPositions) {
+          return this._failedPrecheck(
+            `Positions at max: ${vaultData.openPositions} >= ${policyData.maxConcurrentPositions}`,
+            "TOO_MANY_POSITIONS",
+            {
+              permission: { passed: true, requiredBit: baseActionType, agentHas: true },
+              protocol: { passed: true, inAllowlist: protocolInAllowlist },
+              positions: { passed: false, max: policyData.maxConcurrentPositions, current: vaultData.openPositions, canOpen: true },
+            },
+            6008,
+          );
+        }
+      } else if (posEffect === "decrement") {
+        if (vaultData.openPositions === 0) {
+          return this._failedPrecheck(
+            "No positions to close",
+            "NO_POSITIONS_TO_CLOSE",
+            {
+              permission: { passed: true, requiredBit: baseActionType, agentHas: true },
+              protocol: { passed: true, inAllowlist: protocolInAllowlist },
+              positions: { passed: false, max: policyData.maxConcurrentPositions, current: 0, canOpen: policyData.canOpenPositions },
+            },
+            6033,
+          );
+        }
       }
 
       return {
@@ -360,7 +525,18 @@ export class IntentEngine {
           protocol: { passed: true, inAllowlist: protocolInAllowlist },
           slippage: slippageDetails,
         },
-        riskFlags: [],
+        budget: {
+          global: { spent24h: state.globalBudget.spent24h, cap: state.globalBudget.cap, remaining: state.globalBudget.remaining },
+          agent: state.agentBudget ? { spent24h: state.agentBudget.spent24h, cap: state.agentBudget.cap, remaining: state.agentBudget.remaining } : null,
+          protocols: state.protocolBudgets.map((p) => ({
+            protocol: p.protocol as string,
+            spent24h: p.spent24h,
+            cap: p.cap,
+            remaining: p.remaining,
+          })),
+          maxTransactionUsd: state.maxTransactionUsd,
+        },
+        riskFlags,
       };
     } catch (err) {
       return this._failedPrecheck(
@@ -517,12 +693,25 @@ export class IntentEngine {
       );
     }
 
+    // Collect ALTs: Phalnx ALT + protocol-returned ALTs (e.g. Jupiter route ALTs)
+    const mergedAltAddresses = mergeAltAddresses(
+      getPhalnxAltAddress(this.network),
+      composeResult.addressLookupTables,
+    );
+
+    // Resolve via cached RPC fetch (graceful degradation on failure)
+    const resolvedAlts = await this.executor.resolveAlts(
+      this.rpc,
+      mergedAltAddresses,
+    );
+
     const txResult = await this.executor.executeTransaction({
       feePayer: this.agent.address,
       validateIx: _validateIx,
       defiInstructions: composeResult.instructions,
       finalizeIx: _finalizeIx,
       skipSimulation: false,
+      addressLookupTables: resolvedAlts,
     });
 
     return {
@@ -595,8 +784,10 @@ export class IntentEngine {
     summary: string,
     reason: string,
     details: PrecheckResult["details"],
+    errorCode?: number,
+    riskFlags: string[] = [],
   ): PrecheckResult {
-    return { allowed: false, summary, reason, details, riskFlags: [] };
+    return { allowed: false, summary, reason, details, errorCode, riskFlags };
   }
 
   /**
@@ -687,6 +878,16 @@ export class IntentEngine {
       },
       policyAccount.data.hasConstraints,
     );
+  }
+
+  private _resolveProtocolAddress(intent: IntentAction): Address | null {
+    const handler = this._resolveHandler(intent);
+    if (handler?.metadata.programIds[0]) return handler.metadata.programIds[0] as Address;
+    if (intent.type === "passthrough") {
+      // Advisory only — on-chain validates actual instruction program IDs
+      return (intent.params as Record<string, unknown>).programId as Address | undefined ?? null;
+    }
+    return null;
   }
 
   private _resolveHandler(intent: IntentAction) {
