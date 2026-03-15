@@ -7,7 +7,8 @@
  * Kit differences from web3.js version:
  *   - Works at Instruction[] level, not Transaction level
  *   - Uses analyzeInstructions() from inspector instead of analyzeTransaction()
- *   - No ALT resolution needed (pre-compilation analysis)
+ *   - Pre-compilation analysis (analyzeInstructions) needs no ALT resolution
+ *   - ShieldedSigner (post-compilation) requires AltCache for ALT-compressed accounts
  *   - Address (string) instead of PublicKey throughout
  */
 
@@ -30,6 +31,7 @@ import { PHALNX_PROGRAM_ADDRESS } from "./generated/programs/phalnx.js";
 import { VALIDATE_AND_AUTHORIZE_DISCRIMINATOR } from "./generated/instructions/validateAndAuthorize.js";
 import { FINALIZE_SESSION_DISCRIMINATOR } from "./generated/instructions/finalizeSession.js";
 import { ACTION_TYPE_MAP, type IntentAction } from "./intents.js";
+import type { AltCache } from "./alt-loader.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -454,6 +456,9 @@ export interface ShieldedSignerOptions {
     maxTxPerHour?: number;
     maxUsdPerHour?: bigint;
   };
+  /** AltCache for resolving ALT-compressed accounts in compiled transactions.
+   *  Populated during compose, read synchronously during sign. */
+  altCache?: AltCache;
 }
 
 /**
@@ -483,7 +488,7 @@ export function createShieldedSigner(
       txs: readonly any[],
     ): Promise<readonly any[]> {
       for (const tx of txs) {
-        const instructions = extractInstructionsFromCompiled(tx);
+        const instructions = extractInstructionsFromCompiled(tx, options?.altCache);
 
         // Property 1: Intent-TX correspondence (SOFT)
         if (options?.intentContext) {
@@ -566,16 +571,43 @@ export function createShieldedSigner(
 /**
  * Extract InspectableInstruction[] from a compiled transaction object.
  * Resolves program addresses from staticAccounts[programAddressIndex].
+ * When ALTs are used, resolves ALT-compressed account indices via AltCache.
  */
-function extractInstructionsFromCompiled(tx: any): InspectableInstruction[] {
+function extractInstructionsFromCompiled(
+  tx: any,
+  altCache?: AltCache,
+): InspectableInstruction[] {
   const msg = tx.compiledMessage;
   if (!msg?.staticAccounts?.length || !msg?.instructions?.length) {
     return [];
   }
+
+  // Build combined account table: static + ALT-resolved
+  let accountTable: Address[] = [...msg.staticAccounts];
+
+  if (msg.addressTableLookups?.length && altCache) {
+    for (const lookup of msg.addressTableLookups) {
+      const altAddress = lookup.lookupTableAddress as Address;
+      const resolved = altCache.getCachedAddresses(altAddress);
+      if (resolved) {
+        for (const idx of lookup.writableIndices ?? []) {
+          accountTable.push(resolved[idx]);
+        }
+        for (const idx of lookup.readonlyIndices ?? []) {
+          accountTable.push(resolved[idx]);
+        }
+      }
+    }
+  } else if (msg.addressTableLookups?.length) {
+    console.warn(
+      "[ShieldedSigner] ALT-compressed accounts cannot be resolved without AltCache",
+    );
+  }
+
   return msg.instructions.map((ix: any) => ({
-    programAddress: msg.staticAccounts[ix.programAddressIndex] as Address,
+    programAddress: accountTable[ix.programAddressIndex] as Address,
     accounts: (ix.accountIndices ?? []).map((i: number) => ({
-      address: msg.staticAccounts[i] as Address,
+      address: accountTable[i] as Address,
     })),
     data: ix.data ? new Uint8Array(ix.data) : new Uint8Array(),
   }));
