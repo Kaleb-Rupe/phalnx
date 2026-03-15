@@ -9,11 +9,13 @@ import {
 import type { InspectableInstruction } from "../src/inspector.js";
 import type { Address } from "@solana/kit";
 import { AltCache } from "../src/alt-loader.js";
+import type { ResolvedVaultState } from "../src/state-resolver.js";
 
 const SIGNER = "SignerAddr1111111111111111111111111111111" as Address;
 const TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address;
 const UNKNOWN_PROGRAM = "UnknownProg111111111111111111111111111111" as Address;
 const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" as Address;
+const SOL_MINT = "So11111111111111111111111111111111111111112" as Address;
 const DEST = "Dest1111111111111111111111111111111111111111" as Address;
 
 function buildTransferIx(
@@ -382,8 +384,8 @@ describe("shield", () => {
       expect(ixs).to.have.length(1);
       expect(ixs[0].programAddress).to.equal(PROG);
       // Account table: [PROG, ACCT_W1 (writable pass), ACCT_R1 (readonly pass)]
-      expect(ixs[0].accounts[0].address).to.equal(ACCT_W1);
-      expect(ixs[0].accounts[1].address).to.equal(ACCT_R1);
+      expect(ixs[0].accounts![0].address).to.equal(ACCT_W1);
+      expect(ixs[0].accounts![1].address).to.equal(ACCT_R1);
     });
 
     it("V10 — warns without crash when AltCache absent", () => {
@@ -449,10 +451,424 @@ describe("shield", () => {
       expect(ixs).to.have.length(1);
       // Two-pass ordering: all writables first, then all readonlys
       // [PROG, ACCT_W1, ACCT_W2, ACCT_R1, ACCT_R2]
-      expect(ixs[0].accounts[0].address).to.equal(ACCT_W1); // idx 1
-      expect(ixs[0].accounts[1].address).to.equal(ACCT_W2); // idx 2
-      expect(ixs[0].accounts[2].address).to.equal(ACCT_R1); // idx 3
-      expect(ixs[0].accounts[3].address).to.equal(ACCT_R2); // idx 4
+      expect(ixs[0].accounts![0].address).to.equal(ACCT_W1); // idx 1
+      expect(ixs[0].accounts![1].address).to.equal(ACCT_W2); // idx 2
+      expect(ixs[0].accounts![2].address).to.equal(ACCT_R1); // idx 3
+      expect(ixs[0].accounts![3].address).to.equal(ACCT_R2); // idx 4
+    });
+  });
+
+  describe("on-chain sync", () => {
+    // TransferChecked: [1 byte disc=12][8 bytes amount LE][1 byte decimals]
+    // Accounts: [source, mint, destination, authority]
+    function buildTransferCheckedIx(
+      amount: bigint,
+      authority: Address,
+      mint: Address,
+      destination: Address = DEST,
+    ): InspectableInstruction {
+      const data = new Uint8Array(10);
+      data[0] = 12; // TransferChecked discriminator
+      const view = new DataView(data.buffer);
+      view.setBigUint64(1, amount, true);
+      data[9] = 6; // decimals
+      return {
+        programAddress: TOKEN_PROGRAM,
+        accounts: [
+          { address: "Source11111111111111111111111111111111111111" as Address },
+          { address: mint },
+          { address: destination },
+          { address: authority },
+        ],
+        data,
+      };
+    }
+
+    function mockResolvedState(overrides: Partial<ResolvedVaultState> = {}): ResolvedVaultState {
+      return {
+        vault: {} as any,
+        policy: {} as any,
+        tracker: null,
+        overlay: null,
+        constraints: null,
+        globalBudget: { spent24h: 0n, cap: 1_000_000_000n, remaining: 1_000_000_000n },
+        agentBudget: null,
+        protocolBudgets: [],
+        maxTransactionUsd: 500_000_000n,
+        resolvedAtTimestamp: BigInt(Math.floor(Date.now() / 1000)),
+        ...overrides,
+      };
+    }
+
+    // --- ShieldState tests ---
+
+    it("syncFromOnChain sets baseline", () => {
+      const state = new ShieldState();
+      const resolved = mockResolvedState({ globalBudget: { spent24h: 500n, cap: 1000n, remaining: 500n } });
+      state.syncFromOnChain(resolved);
+      expect(state.getEffectiveGlobalSpent24h()).to.equal(500n);
+      expect(state.resolvedState).to.equal(resolved);
+    });
+
+    it("recordUsdSpend adds to baseline", () => {
+      const state = new ShieldState();
+      state.syncFromOnChain(mockResolvedState({ globalBudget: { spent24h: 100n, cap: 1000n, remaining: 900n } }));
+      state.recordUsdSpend(50n);
+      expect(state.getEffectiveGlobalSpent24h()).to.equal(150n);
+    });
+
+    it("getEffectiveGlobalRemaining decrements", () => {
+      const state = new ShieldState();
+      state.syncFromOnChain(mockResolvedState({ globalBudget: { spent24h: 0n, cap: 1000n, remaining: 1000n } }));
+      state.recordUsdSpend(300n);
+      expect(state.getEffectiveGlobalRemaining()).to.equal(700n);
+    });
+
+    it("without sync returns localUsdAdditions only", () => {
+      const state = new ShieldState();
+      state.recordUsdSpend(42n);
+      expect(state.resolvedState).to.be.null;
+      expect(state.getEffectiveGlobalSpent24h()).to.equal(42n);
+      expect(state.getEffectiveGlobalRemaining()).to.be.null;
+    });
+
+    it("syncFromOnChain resets local additions", () => {
+      const state = new ShieldState();
+      state.recordUsdSpend(999n);
+      state.syncFromOnChain(mockResolvedState());
+      expect(state.localUsdAdditions).to.equal(0n);
+    });
+
+    it("checkpoint/rollback preserves on-chain state", () => {
+      const state = new ShieldState();
+      const resolved = mockResolvedState();
+      state.syncFromOnChain(resolved);
+      state.recordUsdSpend(100n);
+
+      const cp = state.checkpoint();
+
+      state.recordUsdSpend(900n);
+      expect(state.localUsdAdditions).to.equal(1000n);
+
+      state.rollback(cp);
+      expect(state.localUsdAdditions).to.equal(100n);
+      expect(state.resolvedState).to.equal(resolved);
+    });
+
+    // --- ShieldedContext tests ---
+
+    it("shield() with onChainSync has hasOnChainSync === true", () => {
+      const ctx = shield(undefined, {
+        onChainSync: {
+          rpc: {} as any,
+          vaultAddress: "Vault111111111111111111111111111111111111111" as Address,
+          agentAddress: SIGNER,
+          network: "mainnet-beta",
+        },
+      });
+      expect(ctx.hasOnChainSync).to.be.true;
+    });
+
+    it("shield() without onChainSync has hasOnChainSync === false", () => {
+      const ctx = shield();
+      expect(ctx.hasOnChainSync).to.be.false;
+    });
+
+    it("sync() without config throws", async () => {
+      const ctx = shield();
+      try {
+        await ctx.sync();
+        expect.fail("should throw");
+      } catch (e: any) {
+        expect(e.message).to.include("Cannot sync");
+      }
+    });
+
+    it("evaluateInstructions blocks when on-chain vault cap exceeded", () => {
+      const state = new ShieldState();
+      state.syncFromOnChain(mockResolvedState({
+        globalBudget: { spent24h: 900_000_000n, cap: 1_000_000_000n, remaining: 100_000_000n },
+      }));
+
+      const { violations } = evaluateInstructions(
+        [buildTransferCheckedIx(200_000_000n, SIGNER, USDC_MINT)],
+        SIGNER,
+        { blockUnknownPrograms: false, spendLimits: [], rateLimit: { maxTransactions: 100, windowMs: 3_600_000 } } as any,
+        state,
+        "mainnet-beta",
+      );
+      expect(violations.some((v) => v.rule === "on_chain_vault_cap")).to.be.true;
+    });
+
+    it("evaluateInstructions blocks when on-chain agent cap exceeded", () => {
+      const state = new ShieldState();
+      state.syncFromOnChain(mockResolvedState({
+        globalBudget: { spent24h: 0n, cap: 10_000_000_000n, remaining: 10_000_000_000n },
+        agentBudget: { spent24h: 450_000_000n, cap: 500_000_000n, remaining: 50_000_000n },
+      }));
+
+      const { violations } = evaluateInstructions(
+        [buildTransferCheckedIx(100_000_000n, SIGNER, USDC_MINT)],
+        SIGNER,
+        { blockUnknownPrograms: false, spendLimits: [], rateLimit: { maxTransactions: 100, windowMs: 3_600_000 } } as any,
+        state,
+        "mainnet-beta",
+      );
+      expect(violations.some((v) => v.rule === "on_chain_agent_cap")).to.be.true;
+    });
+
+    it("evaluateInstructions blocks when on-chain tx size exceeded", () => {
+      const state = new ShieldState();
+      state.syncFromOnChain(mockResolvedState({
+        maxTransactionUsd: 100_000_000n, // $100
+      }));
+
+      const { violations } = evaluateInstructions(
+        [buildTransferCheckedIx(200_000_000n, SIGNER, USDC_MINT)],
+        SIGNER,
+        { blockUnknownPrograms: false, spendLimits: [], rateLimit: { maxTransactions: 100, windowMs: 3_600_000 } } as any,
+        state,
+        "mainnet-beta",
+      );
+      expect(violations.some((v) => v.rule === "on_chain_tx_size")).to.be.true;
+    });
+
+    it("ignores non-stablecoin transfers (F-2)", () => {
+      const state = new ShieldState();
+      state.syncFromOnChain(mockResolvedState({
+        globalBudget: { spent24h: 0n, cap: 100n, remaining: 100n },
+        maxTransactionUsd: 100n,
+      }));
+
+      // SOL_MINT transfer with huge amount — NOT a stablecoin
+      const { violations } = evaluateInstructions(
+        [buildTransferCheckedIx(1_000_000_000n, SIGNER, SOL_MINT)],
+        SIGNER,
+        { blockUnknownPrograms: false, spendLimits: [], rateLimit: { maxTransactions: 100, windowMs: 3_600_000 } } as any,
+        state,
+        "mainnet-beta",
+      );
+      expect(violations.some((v) => v.rule === "on_chain_vault_cap")).to.be.false;
+      expect(violations.some((v) => v.rule === "on_chain_tx_size")).to.be.false;
+    });
+
+    it("enforce() records stablecoin USD in state.localUsdAdditions", () => {
+      const ctx = shield(undefined, {
+        onChainSync: {
+          rpc: {} as any,
+          vaultAddress: "Vault111111111111111111111111111111111111111" as Address,
+          agentAddress: SIGNER,
+          network: "mainnet-beta",
+        },
+      });
+      // Manually sync state to enable on-chain recording
+      ctx.state.syncFromOnChain(mockResolvedState());
+
+      ctx.enforce(
+        [buildTransferCheckedIx(50_000_000n, SIGNER, USDC_MINT)],
+        SIGNER,
+      );
+      expect(ctx.state.localUsdAdditions).to.equal(50_000_000n);
+    });
+
+    it("getSpendingSummary().onChain populated after sync", () => {
+      const ctx = shield(undefined, {
+        onChainSync: {
+          rpc: {} as any,
+          vaultAddress: "Vault111111111111111111111111111111111111111" as Address,
+          agentAddress: SIGNER,
+          network: "mainnet-beta",
+        },
+      });
+      ctx.state.syncFromOnChain(mockResolvedState({
+        globalBudget: { spent24h: 100n, cap: 1000n, remaining: 900n },
+        maxTransactionUsd: 500n,
+      }));
+
+      const summary = ctx.getSpendingSummary();
+      expect(summary.onChain).to.exist;
+      expect(summary.onChain!.globalSpent24h).to.equal(100n);
+      expect(summary.onChain!.globalCap).to.equal(1000n);
+      expect(summary.onChain!.syncedAt).to.be.a("bigint");
+    });
+  });
+
+  // ─── S-1: Ephemeral warning ─────────────────────────────────────────────
+  describe("S-1: ephemeral warning", () => {
+    it("warns when shield created without onChainSync", () => {
+      const warnings: string[] = [];
+      const origWarn = console.warn;
+      console.warn = (msg: string) => { warnings.push(msg); };
+      try {
+        shield();
+        expect(warnings.some((w) => w.includes("[Shield] No onChainSync"))).to.be.true;
+      } finally {
+        console.warn = origWarn;
+      }
+    });
+
+    it("does not warn when onChainSync is configured", () => {
+      const warnings: string[] = [];
+      const origWarn = console.warn;
+      console.warn = (msg: string) => { warnings.push(msg); };
+      try {
+        shield(undefined, {
+          onChainSync: {
+            rpc: {} as any,
+            vaultAddress: "Vault111111111111111111111111111111111111111" as Address,
+            agentAddress: SIGNER,
+            network: "mainnet-beta",
+          },
+        });
+        expect(warnings.some((w) => w.includes("[Shield] No onChainSync"))).to.be.false;
+      } finally {
+        console.warn = origWarn;
+      }
+    });
+  });
+
+  // ─── S-2: Staleness warning ──────────────────────────────────────────────
+  describe("S-2: staleness warning", () => {
+    function mockResolvedState(overrides: Partial<ResolvedVaultState> = {}): ResolvedVaultState {
+      return {
+        vault: {} as any,
+        policy: {} as any,
+        tracker: null,
+        overlay: null,
+        constraints: null,
+        globalBudget: { spent24h: 0n, cap: 1_000_000_000n, remaining: 1_000_000_000n },
+        agentBudget: null,
+        protocolBudgets: [],
+        maxTransactionUsd: 500_000_000n,
+        resolvedAtTimestamp: BigInt(Math.floor(Date.now() / 1000)),
+        ...overrides,
+      };
+    }
+
+    it("warns when resolved state is older than threshold", () => {
+      const warnings: string[] = [];
+      const origWarn = console.warn;
+      console.warn = (msg: string) => { warnings.push(msg); };
+      try {
+        const ctx = shield(undefined, {
+          onChainSync: {
+            rpc: {} as any,
+            vaultAddress: "Vault111111111111111111111111111111111111111" as Address,
+            agentAddress: SIGNER,
+            network: "mainnet-beta",
+          },
+          stalenessWarnThresholdSec: 60,
+        });
+        // Set state to 120 seconds ago
+        ctx.state.syncFromOnChain(mockResolvedState({
+          resolvedAtTimestamp: BigInt(Math.floor(Date.now() / 1000) - 120),
+        }));
+        ctx.check([noopIx("11111111111111111111111111111111" as Address)], SIGNER);
+        expect(warnings.some((w) => w.includes("Resolved state is") && w.includes("old"))).to.be.true;
+      } finally {
+        console.warn = origWarn;
+      }
+    });
+
+    it("does not warn when state is fresh", () => {
+      const warnings: string[] = [];
+      const origWarn = console.warn;
+      console.warn = (msg: string) => { warnings.push(msg); };
+      try {
+        const ctx = shield(undefined, {
+          onChainSync: {
+            rpc: {} as any,
+            vaultAddress: "Vault111111111111111111111111111111111111111" as Address,
+            agentAddress: SIGNER,
+            network: "mainnet-beta",
+          },
+          stalenessWarnThresholdSec: 300,
+        });
+        ctx.state.syncFromOnChain(mockResolvedState());
+        ctx.check([noopIx("11111111111111111111111111111111" as Address)], SIGNER);
+        expect(warnings.some((w) => w.includes("Resolved state is") && w.includes("old"))).to.be.false;
+      } finally {
+        console.warn = origWarn;
+      }
+    });
+
+    it("custom threshold works", () => {
+      const warnings: string[] = [];
+      const origWarn = console.warn;
+      console.warn = (msg: string) => { warnings.push(msg); };
+      try {
+        const ctx = shield(undefined, {
+          onChainSync: {
+            rpc: {} as any,
+            vaultAddress: "Vault111111111111111111111111111111111111111" as Address,
+            agentAddress: SIGNER,
+            network: "mainnet-beta",
+          },
+          stalenessWarnThresholdSec: 10,
+        });
+        // 15 seconds old, threshold 10 → should warn
+        ctx.state.syncFromOnChain(mockResolvedState({
+          resolvedAtTimestamp: BigInt(Math.floor(Date.now() / 1000) - 15),
+        }));
+        ctx.check([noopIx("11111111111111111111111111111111" as Address)], SIGNER);
+        expect(warnings.some((w) => w.includes("threshold: 10s"))).to.be.true;
+      } finally {
+        console.warn = origWarn;
+      }
+    });
+  });
+
+  // ─── S-3: ALT out-of-bounds ──────────────────────────────────────────────
+  describe("S-3: ALT out-of-bounds", () => {
+    const ALT_A = "ALTaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
+    const PROG = "Prog1111111111111111111111111111111111111111" as Address;
+    const ACCT_W1 = "Writabl1111111111111111111111111111111111" as Address;
+
+    function populateCache(cache: AltCache, altAddr: Address, addresses: Address[]) {
+      (cache as any).cache.set(altAddr as string, {
+        data: { [altAddr]: addresses },
+        expiresAt: Date.now() + 300_000,
+      });
+    }
+
+    it("warns and substitutes placeholder for out-of-bounds ALT index", () => {
+      const warnings: string[] = [];
+      const origWarn = console.warn;
+      console.warn = (msg: string) => { warnings.push(msg); };
+      try {
+        const cache = new AltCache();
+        // Only 1 address in cache, but reference index 5
+        populateCache(cache, ALT_A, [ACCT_W1]);
+
+        const tx = {
+          compiledMessage: {
+            staticAccounts: [PROG],
+            instructions: [
+              {
+                programAddressIndex: 0,
+                accountIndices: [1], // references the ALT-resolved entry
+                data: new Uint8Array([1]),
+              },
+            ],
+            addressTableLookups: [
+              {
+                lookupTableAddress: ALT_A,
+                writableIndexes: [5], // out of bounds!
+                readonlyIndexes: [],
+              },
+            ],
+          },
+        };
+
+        const ixs = _extractInstructionsFromCompiled(tx, cache);
+        expect(ixs).to.have.length(1);
+        // Should have warned about OOB
+        expect(warnings.some((w) => w.includes("ALT index 5 out of bounds"))).to.be.true;
+        // Placeholder address
+        expect(ixs[0].accounts![0].address).to.equal("11111111111111111111111111111111");
+      } finally {
+        console.warn = origWarn;
+      }
     });
   });
 });
