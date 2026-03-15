@@ -535,6 +535,7 @@ export class IntentEngine {
             remaining: p.remaining,
           })),
           maxTransactionUsd: state.maxTransactionUsd,
+          resolvedAt: state.resolvedAtTimestamp,
         },
         riskFlags,
       };

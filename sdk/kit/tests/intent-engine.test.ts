@@ -4,10 +4,13 @@ import { IntentEngine, type IntentEngineConfig, type ExplainResult } from "../sr
 import { ProtocolRegistry } from "../src/integrations/protocol-registry.js";
 import { JupiterHandler } from "../src/integrations/jupiter-handler.js";
 import { DriftHandler, FlashTradeHandler, KaminoHandler, SquadsHandler } from "../src/integrations/t2-handlers.js";
-import type { IntentAction } from "../src/intents.js";
+import type { IntentAction, PrecheckResult } from "../src/intents.js";
 import { isAgentError, type AgentError } from "../src/agent-errors.js";
 import { ACTION_TYPE_MAP } from "../src/intents.js";
 import { ActionType } from "../src/generated/types/actionType.js";
+import { VaultStatus } from "../src/generated/types/vaultStatus.js";
+import type { ResolvedVaultState } from "../src/state-resolver.js";
+import { FULL_PERMISSIONS } from "../src/types.js";
 
 // ─── Test Fixtures ──────────────────────────────────────────────────────────
 
@@ -399,6 +402,365 @@ describe("IntentEngine", () => {
         params: { tokenMint: USDC_MINT, amount: "500000", obligation: "obl111" },
       });
       expect(withdrawResult).to.equal("withdraw");
+    });
+  });
+
+  // ─── Precheck Spending/Position/Leverage Tests ────────────────────────────
+
+  describe("precheck() spending/position/leverage checks", () => {
+    const JUPITER_PROGRAM = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" as Address;
+
+    // Deep override type: pick specific fields for vault/policy partial overrides
+    type MockOverrides = Omit<Partial<ResolvedVaultState>, "vault" | "policy"> & {
+      vault?: Partial<ResolvedVaultState["vault"]>;
+      policy?: Partial<ResolvedVaultState["policy"]>;
+    };
+
+    function mockState(overrides: MockOverrides = {}): ResolvedVaultState {
+      const { vault: vaultOv, policy: policyOv, ...rest } = overrides;
+      return {
+        vault: {
+          discriminator: new Uint8Array(8),
+          owner: "Owner11111111111111111111111111111111111111" as Address,
+          vaultId: 1n,
+          agents: [
+            { pubkey: AGENT, permissions: FULL_PERMISSIONS, spendingLimitUsd: 0n, paused: false },
+          ],
+          feeDestination: "Fee111111111111111111111111111111111111111" as Address,
+          status: VaultStatus.Active,
+          bump: 255,
+          createdAt: 1000n,
+          totalTransactions: 0n,
+          totalVolume: 0n,
+          openPositions: 0,
+          activeEscrowCount: 0,
+          totalFeesCollected: 0n,
+          ...vaultOv,
+        } as ResolvedVaultState["vault"],
+        policy: {
+          discriminator: new Uint8Array(8),
+          vault: VAULT,
+          dailySpendingCapUsd: 1_000_000_000n,
+          maxTransactionSizeUsd: 500_000_000n,
+          protocolMode: 0,
+          protocols: [],
+          maxLeverageBps: 10000,
+          canOpenPositions: true,
+          maxConcurrentPositions: 5,
+          developerFeeRate: 0,
+          maxSlippageBps: 500,
+          timelockDuration: 0n,
+          allowedDestinations: [],
+          hasConstraints: false,
+          hasPendingPolicy: false,
+          hasProtocolCaps: false,
+          protocolCaps: [],
+          sessionExpirySlots: 0n,
+          bump: 255,
+          ...policyOv,
+        } as ResolvedVaultState["policy"],
+        tracker: null,
+        overlay: null,
+        constraints: null,
+        globalBudget: { spent24h: 0n, cap: 1_000_000_000n, remaining: 1_000_000_000n },
+        agentBudget: null,
+        protocolBudgets: [],
+        maxTransactionUsd: 500_000_000n,
+        resolvedAtTimestamp: BigInt(Math.floor(Date.now() / 1000)),
+        ...rest,
+      };
+    }
+
+    function buildPrecheckEngine(
+      stateOverrides: MockOverrides = {},
+      configOverrides?: Partial<IntentEngineConfig>,
+    ): IntentEngine {
+      const state = mockState(stateOverrides);
+      return buildEngine({
+        _stateResolver: async () => state,
+        ...configOverrides,
+      });
+    }
+
+    // Helper: USDC swap intent for spending tests
+    function usdcSwap(amount: string): IntentAction {
+      return { type: "swap", params: { inputMint: USDC_MINT, outputMint: SOL_MINT, amount } };
+    }
+
+    // Test 1: Spending exceeds vault cap
+    it("rejects when spending exceeds vault daily cap (6006)", async () => {
+      const engine = buildPrecheckEngine({
+        globalBudget: { spent24h: 900_000_000n, cap: 1_000_000_000n, remaining: 100_000_000n },
+      });
+      const result = await engine.precheck(usdcSwap("200000000"), VAULT);
+      expect(result.allowed).to.be.false;
+      expect(result.errorCode).to.equal(6006);
+      expect(result.reason).to.equal("DAILY_CAP_EXCEEDED");
+    });
+
+    // Test 2: Spending exceeds agent limit (within vault cap)
+    it("rejects when spending exceeds agent limit (6063)", async () => {
+      const engine = buildPrecheckEngine({
+        globalBudget: { spent24h: 0n, cap: 1_000_000_000n, remaining: 1_000_000_000n },
+        agentBudget: { spent24h: 90_000_000n, cap: 100_000_000n, remaining: 10_000_000n },
+        vault: {
+          agents: [{ pubkey: AGENT, permissions: FULL_PERMISSIONS, spendingLimitUsd: 100_000_000n, paused: false }],
+        },
+      });
+      const result = await engine.precheck(usdcSwap("20000000"), VAULT);
+      expect(result.allowed).to.be.false;
+      expect(result.errorCode).to.equal(6063);
+      expect(result.reason).to.equal("AGENT_SPEND_LIMIT_EXCEEDED");
+    });
+
+    // Test 3: Spending exceeds protocol cap
+    it("rejects when spending exceeds protocol cap (6069)", async () => {
+      const engine = buildPrecheckEngine({
+        protocolBudgets: [
+          { protocol: JUPITER_PROGRAM, spent24h: 90_000_000n, cap: 100_000_000n, remaining: 10_000_000n },
+        ],
+      });
+      const result = await engine.precheck(usdcSwap("20000000"), VAULT);
+      expect(result.allowed).to.be.false;
+      expect(result.errorCode).to.equal(6069);
+      expect(result.reason).to.equal("PROTOCOL_CAP_EXCEEDED");
+    });
+
+    // Test 4: Transaction too large
+    it("rejects when transaction exceeds max size (6005)", async () => {
+      const engine = buildPrecheckEngine({
+        maxTransactionUsd: 50_000_000n,
+      });
+      const result = await engine.precheck(usdcSwap("100000000"), VAULT);
+      expect(result.allowed).to.be.false;
+      expect(result.errorCode).to.equal(6005);
+      expect(result.reason).to.equal("TRANSACTION_TOO_LARGE");
+    });
+
+    // Test 5: All spending checks pass
+    it("allows when all spending checks pass with budget populated", async () => {
+      const engine = buildPrecheckEngine({
+        globalBudget: { spent24h: 100_000_000n, cap: 1_000_000_000n, remaining: 900_000_000n },
+      });
+      const result = await engine.precheck(usdcSwap("50000000"), VAULT);
+      expect(result.allowed).to.be.true;
+      expect(result.budget).to.exist;
+      expect(result.budget!.global.spent24h).to.equal(100_000_000n);
+    });
+
+    // Test 5b: Budget includes resolvedAt timestamp (G-3)
+    it("precheck budget includes resolvedAt (G-3)", async () => {
+      const engine = buildPrecheckEngine({
+        globalBudget: { spent24h: 0n, cap: 1_000_000_000n, remaining: 1_000_000_000n },
+      });
+      const result = await engine.precheck(usdcSwap("50000000"), VAULT);
+      expect(result.allowed).to.be.true;
+      expect(result.budget).to.exist;
+      expect(typeof result.budget!.resolvedAt).to.equal("bigint");
+      expect(result.budget!.resolvedAt! > 0n).to.be.true;
+    });
+
+    // Test 6: Non-stablecoin input defers spending
+    it("defers spending check for non-stablecoin input", async () => {
+      const engine = buildPrecheckEngine();
+      const result = await engine.precheck(
+        { type: "swap", params: { inputMint: SOL_MINT, outputMint: USDC_MINT, amount: "1000000000" } },
+        VAULT,
+      );
+      expect(result.allowed).to.be.true;
+      expect(result.details.spendingCap?.deferred).to.be.true;
+    });
+
+    // Test 7: Leverage too high
+    it("rejects when leverage exceeds max (6007)", async () => {
+      const engine = buildPrecheckEngine({
+        policy: { maxLeverageBps: 5000 },
+      });
+      const result = await engine.precheck(
+        { type: "openPosition", params: { market: "SOL-PERP", side: "long", collateral: "100", leverage: 100 } },
+        VAULT,
+      );
+      expect(result.allowed).to.be.false;
+      expect(result.errorCode).to.equal(6007);
+      expect(result.reason).to.equal("LEVERAGE_TOO_HIGH");
+    });
+
+    // Test 8: Leverage within limit
+    it("allows when leverage is within limit", async () => {
+      const engine = buildPrecheckEngine({
+        policy: { maxLeverageBps: 10000 },
+      });
+      const result = await engine.precheck(
+        { type: "openPosition", params: { market: "SOL-PERP", side: "long", collateral: "100", leverage: 5 } },
+        VAULT,
+      );
+      expect(result.allowed).to.be.true;
+    });
+
+    // Test 9: Positions at max
+    it("rejects when positions at max (6008)", async () => {
+      const engine = buildPrecheckEngine({
+        vault: { openPositions: 5 },
+        policy: { maxConcurrentPositions: 5 },
+      });
+      const result = await engine.precheck(
+        { type: "openPosition", params: { market: "SOL-PERP", side: "long", collateral: "100", leverage: 5 } },
+        VAULT,
+      );
+      expect(result.allowed).to.be.false;
+      expect(result.errorCode).to.equal(6008);
+      expect(result.reason).to.equal("TOO_MANY_POSITIONS");
+    });
+
+    // Test 10: Positions below max
+    it("allows when positions below max", async () => {
+      const engine = buildPrecheckEngine({
+        vault: { openPositions: 2 },
+        policy: { maxConcurrentPositions: 5 },
+      });
+      const result = await engine.precheck(
+        { type: "openPosition", params: { market: "SOL-PERP", side: "long", collateral: "100", leverage: 5 } },
+        VAULT,
+      );
+      expect(result.allowed).to.be.true;
+    });
+
+    // Test 11: Positions disallowed (canOpenPositions=false)
+    it("rejects when canOpenPositions is false (6009)", async () => {
+      const engine = buildPrecheckEngine({
+        policy: { canOpenPositions: false },
+      });
+      const result = await engine.precheck(
+        { type: "openPosition", params: { market: "SOL-PERP", side: "long", collateral: "100", leverage: 5 } },
+        VAULT,
+      );
+      expect(result.allowed).to.be.false;
+      expect(result.errorCode).to.equal(6009);
+      expect(result.reason).to.equal("POSITION_OPENING_DISALLOWED");
+    });
+
+    // Test 12: Non-spending action skips spending checks
+    it("skips spending checks for non-spending action", async () => {
+      // cancelTriggerOrder is non-spending AND has posEffect "none" (no position check)
+      const engine = buildPrecheckEngine();
+      const result = await engine.precheck(
+        { type: "cancelTriggerOrder", params: { market: "SOL-PERP", side: "long" as const, orderId: "1", isStopLoss: true } },
+        VAULT,
+      );
+      expect(result.allowed).to.be.true;
+      expect(result.details.spendingCap).to.be.undefined;
+    });
+
+    // Test 13: Budget field populated on success
+    it("populates budget field on success", async () => {
+      const engine = buildPrecheckEngine({
+        globalBudget: { spent24h: 50_000_000n, cap: 1_000_000_000n, remaining: 950_000_000n },
+        agentBudget: { spent24h: 10_000_000n, cap: 200_000_000n, remaining: 190_000_000n },
+        vault: {
+          agents: [{ pubkey: AGENT, permissions: FULL_PERMISSIONS, spendingLimitUsd: 200_000_000n, paused: false }],
+        },
+        protocolBudgets: [
+          { protocol: JUPITER_PROGRAM, spent24h: 5_000_000n, cap: 500_000_000n, remaining: 495_000_000n },
+        ],
+        maxTransactionUsd: 250_000_000n,
+      });
+      const result = await engine.precheck(usdcSwap("10000000"), VAULT);
+      expect(result.allowed).to.be.true;
+      expect(result.budget).to.exist;
+      expect(result.budget!.global.spent24h).to.equal(50_000_000n);
+      expect(result.budget!.global.cap).to.equal(1_000_000_000n);
+      expect(result.budget!.agent).to.not.be.null;
+      expect(result.budget!.agent!.spent24h).to.equal(10_000_000n);
+      expect(result.budget!.protocols).to.have.length(1);
+      expect(result.budget!.protocols[0].spent24h).to.equal(5_000_000n);
+      expect(result.budget!.maxTransactionUsd).to.equal(250_000_000n);
+    });
+
+    // Test 14: Zero-cap vault blocks all spending
+    it("rejects all spending on zero-cap vault (6006)", async () => {
+      const engine = buildPrecheckEngine({
+        globalBudget: { spent24h: 0n, cap: 0n, remaining: 0n },
+        policy: { dailySpendingCapUsd: 0n },
+        maxTransactionUsd: 0n,
+      });
+      const result = await engine.precheck(usdcSwap("1"), VAULT);
+      expect(result.allowed).to.be.false;
+      // Transaction size of 1 > max 0 → errorCode 6005 fires first
+      expect(result.errorCode).to.equal(6005);
+    });
+
+    // Test 15: No agent budget (spendingLimitUsd=0) skips agent check
+    it("skips agent cap check when spendingLimitUsd is 0", async () => {
+      const engine = buildPrecheckEngine({
+        globalBudget: { spent24h: 0n, cap: 1_000_000_000n, remaining: 1_000_000_000n },
+        agentBudget: null, // No per-agent budget
+      });
+      const result = await engine.precheck(usdcSwap("100000000"), VAULT);
+      expect(result.allowed).to.be.true;
+      expect(result.budget!.agent).to.be.null;
+    });
+
+    // Test 16: Escrow action rejected
+    it("rejects escrow action with errorCode 6011", async () => {
+      const engine = buildPrecheckEngine();
+      const result = await engine.precheck(
+        { type: "createEscrow", params: { destinationVault: DEST, amount: "100000", mint: USDC_MINT, expiresInSeconds: 3600 } },
+        VAULT,
+      );
+      expect(result.allowed).to.be.false;
+      expect(result.errorCode).to.equal(6011);
+      expect(result.reason).to.equal("InvalidSession");
+    });
+
+    // Test 17: First-failure ordering: tx size fails before vault cap
+    it("transaction size check fires before vault cap check", async () => {
+      const engine = buildPrecheckEngine({
+        // Both limits are low — amount exceeds both
+        maxTransactionUsd: 10_000_000n,
+        globalBudget: { spent24h: 990_000_000n, cap: 1_000_000_000n, remaining: 10_000_000n },
+      });
+      // 50M > maxTx 10M AND spent 990M + 50M > cap 1B
+      const result = await engine.precheck(usdcSwap("50000000"), VAULT);
+      expect(result.allowed).to.be.false;
+      // Must be 6005 (tx size) not 6006 (daily cap) — proves ordering
+      expect(result.errorCode).to.equal(6005);
+    });
+
+    // Test 18: Exact boundary: spent24h + amount === cap → allowed
+    it("allows when spent24h + amount exactly equals cap", async () => {
+      const engine = buildPrecheckEngine({
+        globalBudget: { spent24h: 900_000_000n, cap: 1_000_000_000n, remaining: 100_000_000n },
+      });
+      // 900M + 100M = 1B = cap. On-chain uses `>` not `>=`, so this passes.
+      const result = await engine.precheck(usdcSwap("100000000"), VAULT);
+      expect(result.allowed).to.be.true;
+    });
+
+    // Test 19: Position decrement with openPositions=0
+    it("rejects position decrement when no positions open (6033)", async () => {
+      const engine = buildPrecheckEngine({
+        vault: { openPositions: 0 },
+      });
+      const result = await engine.precheck(
+        { type: "closePosition", params: { market: "SOL-PERP" } },
+        VAULT,
+      );
+      expect(result.allowed).to.be.false;
+      expect(result.errorCode).to.equal(6033);
+      expect(result.reason).to.equal("NO_POSITIONS_TO_CLOSE");
+    });
+
+    // Test 20: Unresolvable token adds SPENDING_UNVERIFIED riskFlag
+    it("adds SPENDING_UNVERIFIED riskFlag for unresolvable token", async () => {
+      const engine = buildPrecheckEngine();
+      // Use a string that fails base58 validation (contains 'O' and '0' which are invalid)
+      const result = await engine.precheck(
+        { type: "swap", params: { inputMint: "INVALID", outputMint: SOL_MINT, amount: "1000" } },
+        VAULT,
+      );
+      expect(result.allowed).to.be.true;
+      expect(result.riskFlags).to.include("SPENDING_UNVERIFIED");
+      expect(result.details.spendingCap?.deferred).to.be.true;
     });
   });
 });

@@ -467,6 +467,8 @@ export interface PrecheckResult {
       remaining: bigint;
     }>;
     maxTransactionUsd: bigint;
+    /** Timestamp (unix seconds) when the on-chain state was resolved. */
+    resolvedAt?: bigint;
   };
   summary: string;
   riskFlags: string[];
