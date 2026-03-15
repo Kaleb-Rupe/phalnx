@@ -11,6 +11,17 @@ import type { Address } from "@solana/kit";
 import type { ShieldState } from "./shield.js";
 import { ShieldDeniedError, type PolicyViolation } from "./shield.js";
 
+// ─── Spend Status ────────────────────────────────────────────────────────────
+
+export interface SpendStatus {
+  globalSpent24h: bigint;
+  globalCap: bigint | null;
+  globalRemaining: bigint | null;
+  agentSpent24h: bigint | null;
+  agentCap: bigint | null;
+  source: "on-chain" | "client-side";
+}
+
 // ─── Configuration ──────────────────────────────────────────────────────────
 
 export interface VelocityConfig {
@@ -58,8 +69,12 @@ export class VelocityTracker {
 
   /**
    * Check velocity constraints. Throws ShieldDeniedError (code 7022) on breach.
+   *
+   * @param signerAddress - The signer to check
+   * @param dryRun - S-6: When true, checks without incrementing the rapid-fire counter.
+   *                 Useful for precheck queries that shouldn't pollute velocity state.
    */
-  check(signerAddress: Address): void {
+  check(signerAddress: Address, dryRun = false): void {
     const violations: PolicyViolation[] = [];
 
     // 0. Cooldown check
@@ -104,17 +119,31 @@ export class VelocityTracker {
       });
     }
 
+    // 3b. On-chain 24h cap check (when synced)
+    const rs = this.state.resolvedState;
+    if (rs) {
+      const effectiveSpent = this.state.getEffectiveGlobalSpent24h();
+      if (effectiveSpent >= rs.globalBudget.cap) {
+        violations.push({
+          rule: "velocity_on_chain_cap",
+          message: `On-chain daily cap reached: ${effectiveSpent} >= ${rs.globalBudget.cap}`,
+          suggestion: "Wait for the 24h rolling window to expire some spend",
+        });
+      }
+    }
+
     // 4. Rapid-fire detection
     const now = Date.now();
-    this.txTimestamps.push(now);
-    // Trim timestamps outside the rapid-fire window
+    // S-6: Filter existing timestamps regardless of dryRun
     const cutoff = now - this.config.rapidFireThreshold.windowMs;
     this.txTimestamps = this.txTimestamps.filter((t) => t >= cutoff);
 
-    if (this.txTimestamps.length >= this.config.rapidFireThreshold.count) {
+    // Compute what the count would be if we added this check
+    const wouldBeCount = this.txTimestamps.length + 1;
+    if (wouldBeCount >= this.config.rapidFireThreshold.count) {
       violations.push({
         rule: "velocity_rapid_fire",
-        message: `Rapid-fire detected: ${this.txTimestamps.length} transactions in ${this.config.rapidFireThreshold.windowMs}ms`,
+        message: `Rapid-fire detected: ${wouldBeCount} transactions in ${this.config.rapidFireThreshold.windowMs}ms`,
         suggestion: "Possible agent manipulation — transactions blocked",
       });
     }
@@ -123,6 +152,11 @@ export class VelocityTracker {
       // Trigger cooldown
       this.cooldownUntil = now + this.config.cooldownMs;
       throw new ShieldDeniedError(violations);
+    }
+
+    // S-6: Only push timestamp if not a dry run
+    if (!dryRun) {
+      this.txTimestamps.push(now);
     }
   }
 
@@ -157,6 +191,32 @@ export class VelocityTracker {
   reset(): void {
     this.cooldownUntil = 0;
     this.txTimestamps = [];
+  }
+
+  /**
+   * Get current spend status. Returns on-chain data when ShieldState is synced.
+   */
+  getSpendStatus(): SpendStatus {
+    const rs = this.state.resolvedState;
+    if (rs) {
+      return {
+        globalSpent24h: this.state.getEffectiveGlobalSpent24h(),
+        globalCap: rs.globalBudget.cap,
+        globalRemaining: this.state.getEffectiveGlobalRemaining(),
+        agentSpent24h: this.state.getEffectiveAgentSpent24h(),
+        agentCap: rs.agentBudget?.cap ?? null,
+        source: "on-chain",
+      };
+    }
+    const clientSpend = this.state.getTotalSpendInWindow(86_400_000);
+    return {
+      globalSpent24h: clientSpend,
+      globalCap: null,
+      globalRemaining: null,
+      agentSpent24h: null,
+      agentCap: null,
+      source: "client-side",
+    };
   }
 
   /**

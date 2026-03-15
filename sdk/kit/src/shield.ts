@@ -683,6 +683,8 @@ export interface ShieldedSignerOptions {
   /** AltCache for resolving ALT-compressed accounts in compiled transactions.
    *  Populated during compose, read synchronously during sign. */
   altCache?: AltCache;
+  /** S-4: Session binding severity. 'hard' throws on incomplete binding, 'soft' warns. Default: 'hard'. */
+  sessionBindingSeverity?: "soft" | "hard";
 }
 
 /**
@@ -757,9 +759,13 @@ export function createShieldedSigner(
           throw new ShieldDeniedError(checkResult.violations);
         }
 
-        // Property 5: Session binding (SOFT)
+        // Property 5: Session binding (severity controlled by S-4)
         if (options?.sessionContext) {
-          checkSessionBinding(tx, PHALNX_PROGRAM_ADDRESS);
+          checkSessionBinding(
+            tx,
+            PHALNX_PROGRAM_ADDRESS,
+            options?.sessionBindingSeverity ?? "hard",
+          );
         }
 
         // All checks passed — record spend and transaction in shared state
@@ -906,12 +912,21 @@ function checkVelocityCeiling(
 }
 
 /**
- * Property 5: Check session binding (validate+finalize sandwich). SOFT — warns.
+ * Property 5: Check session binding (validate+finalize sandwich).
+ * S-4: severity controls behavior — 'hard' throws, 'soft' warns.
  */
-function checkSessionBinding(tx: any, programAddress: Address): void {
+function checkSessionBinding(
+  tx: any,
+  programAddress: Address,
+  severity: "soft" | "hard" = "hard",
+): void {
   const msg = tx.compiledMessage;
   if (!msg?.staticAccounts?.length || !msg?.instructions?.length) {
-    console.warn("[ShieldedSigner] Cannot verify session binding: no compiled message");
+    const message = "[ShieldedSigner] Cannot verify session binding: no compiled message";
+    if (severity === "hard") {
+      throw new ShieldDeniedError([{ rule: "session_binding", message }]);
+    }
+    console.warn(message);
     return;
   }
 
@@ -920,7 +935,11 @@ function checkSessionBinding(tx: any, programAddress: Address): void {
   );
 
   if (phalnxIxs.length === 0) {
-    console.warn("[ShieldedSigner] No Phalnx instructions found in transaction");
+    const message = "[ShieldedSigner] No Phalnx instructions found in transaction";
+    if (severity === "hard") {
+      throw new ShieldDeniedError([{ rule: "session_binding", message }]);
+    }
+    console.warn(message);
     return;
   }
 
@@ -937,9 +956,11 @@ function checkSessionBinding(tx: any, programAddress: Address): void {
     matchesDiscriminator(lastData, FINALIZE_SESSION_DISCRIMINATOR);
 
   if (!hasValidate || !hasFinalize) {
-    console.warn(
-      `[ShieldedSigner] Session binding incomplete: validate=${!!hasValidate}, finalize=${!!hasFinalize}`,
-    );
+    const message = `[ShieldedSigner] Session binding incomplete: validate=${!!hasValidate}, finalize=${!!hasFinalize}`;
+    if (severity === "hard") {
+      throw new ShieldDeniedError([{ rule: "session_binding", message }]);
+    }
+    console.warn(message);
   }
 }
 

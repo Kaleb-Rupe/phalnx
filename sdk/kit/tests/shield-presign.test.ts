@@ -585,6 +585,7 @@ describe("createShieldedSigner", () => {
           sessionPda: "SessionPDA111111111111111111111111111111111" as Address,
           expirySlot: 1000n,
         },
+        sessionBindingSeverity: "soft",
       }) as any;
 
       // TX without Phalnx instructions — missing sandwich

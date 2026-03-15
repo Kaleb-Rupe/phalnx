@@ -5,6 +5,7 @@ import {
   ShieldDeniedError,
   evaluateInstructions,
   _extractInstructionsFromCompiled,
+  createShieldedSigner,
 } from "../src/shield.js";
 import type { InspectableInstruction } from "../src/inspector.js";
 import type { Address } from "@solana/kit";
@@ -814,6 +815,77 @@ describe("shield", () => {
         expect(warnings.some((w) => w.includes("threshold: 10s"))).to.be.true;
       } finally {
         console.warn = origWarn;
+      }
+    });
+  });
+
+  // ─── S-4: Session binding severity ──────────────────────────────────────
+  describe("S-4: session binding severity", () => {
+    const PHALNX_PROG = "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL" as Address;
+
+    function mockBaseSigner() {
+      return {
+        address: SIGNER,
+        signTransactions: async (txs: unknown[]) => txs,
+        modifyAndSignTransactions: async (txs: readonly any[]) => txs,
+      } as any;
+    }
+
+    function txWithNoPhalnx() {
+      return {
+        compiledMessage: {
+          staticAccounts: ["11111111111111111111111111111111" as Address],
+          instructions: [{ programAddressIndex: 0, accountIndices: [], data: new Uint8Array([1]) }],
+        },
+      };
+    }
+
+    it("hard mode throws on incomplete session binding", async () => {
+      const ctx = shield();
+      const signer = createShieldedSigner(mockBaseSigner(), ctx, {
+        sessionContext: { sessionPda: SIGNER, expirySlot: 999n },
+        sessionBindingSeverity: "hard",
+        skipSimulation: true,
+      });
+      try {
+        await (signer as any).modifyAndSignTransactions([txWithNoPhalnx()]);
+        expect.fail("should have thrown");
+      } catch (err) {
+        expect(err).to.be.instanceOf(ShieldDeniedError);
+        const denied = err as ShieldDeniedError;
+        expect(denied.violations.some((v) => v.rule === "session_binding")).to.be.true;
+      }
+    });
+
+    it("soft mode warns without throwing", async () => {
+      const warnings: string[] = [];
+      const origWarn = console.warn;
+      console.warn = (msg: string) => { warnings.push(msg); };
+      try {
+        const ctx = shield();
+        const signer = createShieldedSigner(mockBaseSigner(), ctx, {
+          sessionContext: { sessionPda: SIGNER, expirySlot: 999n },
+          sessionBindingSeverity: "soft",
+          skipSimulation: true,
+        });
+        await (signer as any).modifyAndSignTransactions([txWithNoPhalnx()]);
+        expect(warnings.some((w) => w.includes("No Phalnx instructions"))).to.be.true;
+      } finally {
+        console.warn = origWarn;
+      }
+    });
+
+    it("default severity is hard", async () => {
+      const ctx = shield();
+      const signer = createShieldedSigner(mockBaseSigner(), ctx, {
+        sessionContext: { sessionPda: SIGNER, expirySlot: 999n },
+        skipSimulation: true,
+      });
+      try {
+        await (signer as any).modifyAndSignTransactions([txWithNoPhalnx()]);
+        expect.fail("should have thrown");
+      } catch (err) {
+        expect(err).to.be.instanceOf(ShieldDeniedError);
       }
     });
   });
