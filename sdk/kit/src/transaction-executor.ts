@@ -22,7 +22,7 @@ import type {
 } from "@solana/kit";
 import { getBase64EncodedWireTransaction } from "@solana/kit";
 
-import { composePhalnxTransaction, measureTransactionSize } from "./composer.js";
+import { composePhalnxTransaction, measureTransactionSize, MAX_TX_SIZE } from "./composer.js";
 import { AltCache } from "./alt-loader.js";
 import {
   simulateBeforeSend,
@@ -127,6 +127,23 @@ export class TransactionExecutor {
       priorityFeeMicroLamports: params.priorityFeeMicroLamports,
       addressLookupTables: params.addressLookupTables,
     });
+
+    // Check wire size after compose (with or without ALTs)
+    const { byteLength, withinLimit } = measureTransactionSize(compiledTx);
+    if (!withinLimit) {
+      const altsApplied =
+        params.addressLookupTables != null &&
+        Object.keys(params.addressLookupTables).length > 0;
+
+      const err = new Error(
+        altsApplied
+          ? `Transaction ${byteLength}B exceeds ${MAX_TX_SIZE}B limit even with ALTs applied. Simplify the DeFi route.`
+          : `Transaction ${byteLength}B exceeds ${MAX_TX_SIZE}B limit. ALT fetch may have failed — retry, or simplify the route.`,
+      );
+      (err as any).code = 7033;
+      (err as any).context = { byteLength, limit: MAX_TX_SIZE, altsApplied };
+      throw err;
+    }
 
     return { compiledTx, computeUnits, blockhash };
   }
