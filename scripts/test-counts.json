@@ -96,6 +96,12 @@
       "count": 1176,
       "ciStepName": "Kit SDK tests",
       "claudePattern": "sdk/kit/tests/` (mocha + tsx, %d tests — types, resolve-accounts, composer, events, priority-fees, simulation, tokens, policies, tee-attestation, compat, rpc-helpers, transaction-executor, drift-compose, flash-compose, kamino-api, kamino-handler, e2e-execute, x402, velocity-tracker, intent-drift, agent-errors, jupiter-api, frozen-registry, tee, intent-engine, jupiter-handler, alt-loader, alt-integration)"
+    },
+    {
+      "name": "Kit SDK devnet tests (`@phalnx/kit` devnet)",
+      "count": 9,
+      "devnet": true,
+      "claudePattern": "sdk/kit/tests/devnet/` (mocha + tsx, %d tests — lifecycle, composed-tx)"
     }
   ]
 }
