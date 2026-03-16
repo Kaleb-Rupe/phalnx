@@ -23,8 +23,12 @@ export async function getKaminoYieldsResource(): Promise<string> {
     const primaryMarket = markets.find((m) => m.isPrimary);
     const [lendingYields, leverageYields] = primaryMarket
       ? await Promise.all([
-          fetchReserveMetrics(primaryMarket.lendingMarket).catch(() => [] as Awaited<ReturnType<typeof fetchReserveMetrics>>),
-          fetchLeverageMetrics(primaryMarket.lendingMarket).catch(() => [] as Awaited<ReturnType<typeof fetchLeverageMetrics>>),
+          fetchReserveMetrics(primaryMarket.lendingMarket).catch(
+            () => [] as Awaited<ReturnType<typeof fetchReserveMetrics>>,
+          ),
+          fetchLeverageMetrics(primaryMarket.lendingMarket).catch(
+            () => [] as Awaited<ReturnType<typeof fetchLeverageMetrics>>,
+          ),
         ])
       : [[], []];
 

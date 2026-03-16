@@ -1,6 +1,9 @@
 import { expect } from "chai";
 import type { Address } from "@solana/kit";
-import { VelocityTracker, type VelocityConfig } from "../src/velocity-tracker.js";
+import {
+  VelocityTracker,
+  type VelocityConfig,
+} from "../src/velocity-tracker.js";
 import { ShieldState, ShieldDeniedError } from "../src/shield.js";
 import type { ResolvedVaultState } from "../src/state-resolver.js";
 
@@ -52,7 +55,9 @@ describe("VelocityTracker", () => {
 
     it("allows when within USD/hour limit", () => {
       const state = new ShieldState();
-      const tracker = new VelocityTracker(state, { maxUsdPerHour: 500_000_000n });
+      const tracker = new VelocityTracker(state, {
+        maxUsdPerHour: 500_000_000n,
+      });
       state.recordSpend("", 100_000n);
       expect(() => tracker.check(SIGNER)).to.not.throw();
     });
@@ -170,9 +175,15 @@ describe("VelocityTracker", () => {
       const state = new ShieldState();
       const tracker = new VelocityTracker(state, { maxUsdPerHour: 500_000n });
       // DeFi records with actual mint key
-      state.recordSpend("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 300_000n);
+      state.recordSpend(
+        "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        300_000n,
+      );
       // x402 records with a different mint key
-      state.recordSpend("Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", 250_000n);
+      state.recordSpend(
+        "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+        250_000n,
+      );
       // Total = 550_000 > 500_000 limit
       expect(() => tracker.check(SIGNER)).to.throw(ShieldDeniedError);
     });
@@ -260,14 +271,20 @@ describe("VelocityTracker", () => {
   });
 
   describe("hybrid sync", () => {
-    function mockResolvedState(overrides: Partial<ResolvedVaultState> = {}): ResolvedVaultState {
+    function mockResolvedState(
+      overrides: Partial<ResolvedVaultState> = {},
+    ): ResolvedVaultState {
       return {
         vault: {} as any,
         policy: {} as any,
         tracker: null,
         overlay: null,
         constraints: null,
-        globalBudget: { spent24h: 0n, cap: 1_000_000_000n, remaining: 1_000_000_000n },
+        globalBudget: {
+          spent24h: 0n,
+          cap: 1_000_000_000n,
+          remaining: 1_000_000_000n,
+        },
         agentBudget: null,
         protocolBudgets: [],
         maxTransactionUsd: 500_000_000n,
@@ -287,9 +304,11 @@ describe("VelocityTracker", () => {
 
     it("getSpendStatus with synced state returns on-chain source", () => {
       const state = new ShieldState();
-      state.syncFromOnChain(mockResolvedState({
-        globalBudget: { spent24h: 200n, cap: 1000n, remaining: 800n },
-      }));
+      state.syncFromOnChain(
+        mockResolvedState({
+          globalBudget: { spent24h: 200n, cap: 1000n, remaining: 800n },
+        }),
+      );
       const tracker = new VelocityTracker(state);
       const status = tracker.getSpendStatus();
       expect(status.source).to.equal("on-chain");
@@ -299,9 +318,11 @@ describe("VelocityTracker", () => {
 
     it("getSpendStatus reflects local additions on top of baseline", () => {
       const state = new ShieldState();
-      state.syncFromOnChain(mockResolvedState({
-        globalBudget: { spent24h: 100n, cap: 1000n, remaining: 900n },
-      }));
+      state.syncFromOnChain(
+        mockResolvedState({
+          globalBudget: { spent24h: 100n, cap: 1000n, remaining: 900n },
+        }),
+      );
       state.recordUsdSpend(50n);
       const tracker = new VelocityTracker(state);
       const status = tracker.getSpendStatus();
@@ -310,9 +331,11 @@ describe("VelocityTracker", () => {
 
     it("getSpendStatus with agent budget returns agent fields", () => {
       const state = new ShieldState();
-      state.syncFromOnChain(mockResolvedState({
-        agentBudget: { spent24h: 300n, cap: 500n, remaining: 200n },
-      }));
+      state.syncFromOnChain(
+        mockResolvedState({
+          agentBudget: { spent24h: 300n, cap: 500n, remaining: 200n },
+        }),
+      );
       const tracker = new VelocityTracker(state);
       const status = tracker.getSpendStatus();
       expect(status.agentSpent24h).to.equal(300n);
@@ -321,9 +344,11 @@ describe("VelocityTracker", () => {
 
     it("check() with on-chain cap reached triggers violation", () => {
       const state = new ShieldState();
-      state.syncFromOnChain(mockResolvedState({
-        globalBudget: { spent24h: 1000n, cap: 1000n, remaining: 0n },
-      }));
+      state.syncFromOnChain(
+        mockResolvedState({
+          globalBudget: { spent24h: 1000n, cap: 1000n, remaining: 0n },
+        }),
+      );
       const tracker = new VelocityTracker(state, {
         maxTxPerMinute: 100,
         maxTxPerHour: 1000,
@@ -335,7 +360,9 @@ describe("VelocityTracker", () => {
       } catch (err) {
         expect(err).to.be.instanceOf(ShieldDeniedError);
         const denied = err as ShieldDeniedError;
-        expect(denied.violations.some((v) => v.rule === "velocity_on_chain_cap")).to.be.true;
+        expect(
+          denied.violations.some((v) => v.rule === "velocity_on_chain_cap"),
+        ).to.be.true;
       }
     });
 
@@ -350,7 +377,9 @@ describe("VelocityTracker", () => {
       } catch (err) {
         expect(err).to.be.instanceOf(ShieldDeniedError);
         const denied = err as ShieldDeniedError;
-        expect(denied.violations.some((v) => v.rule === "velocity_tx_per_minute")).to.be.true;
+        expect(
+          denied.violations.some((v) => v.rule === "velocity_tx_per_minute"),
+        ).to.be.true;
       }
     });
 

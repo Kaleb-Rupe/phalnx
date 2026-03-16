@@ -51,7 +51,9 @@ export function isTeeWallet(wallet: WalletLike): wallet is TeeWallet {
   return (
     "provider" in wallet &&
     typeof (wallet as Record<string, unknown>).provider === "string" &&
-    VALID_TEE_PROVIDERS.has((wallet as Record<string, unknown>).provider as string)
+    VALID_TEE_PROVIDERS.has(
+      (wallet as Record<string, unknown>).provider as string,
+    )
   );
 }
 

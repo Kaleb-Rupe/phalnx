@@ -1,5 +1,9 @@
 import { expect } from "chai";
-import type { Address, Instruction, AddressesByLookupTableAddress } from "@solana/kit";
+import type {
+  Address,
+  Instruction,
+  AddressesByLookupTableAddress,
+} from "@solana/kit";
 import {
   composePhalnxTransaction,
   validateTransactionSize,
@@ -115,11 +119,12 @@ describe("composer", () => {
 
     it("composer applies ALT compression when accounts match", () => {
       // Create instructions referencing an address that's in the ALT
-      const altAccount = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address;
+      const altAccount =
+        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address;
       const ixWithAltAccounts: Instruction = {
         programAddress: MOCK_PROGRAM,
         accounts: [
-          { address: altAccount, role: 1 },  // writable signer = 1
+          { address: altAccount, role: 1 }, // writable signer = 1
         ],
         data: new Uint8Array([1, 2, 3]),
       };

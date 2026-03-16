@@ -19,18 +19,15 @@ import {
 // ─── Phalnx ALT Addresses ────────────────────────────────────────────────────
 
 /** Devnet Phalnx ALT — placeholder until deployed */
-export const PHALNX_ALT_DEVNET =
-  "11111111111111111111111111111111" as Address;
+export const PHALNX_ALT_DEVNET = "11111111111111111111111111111111" as Address;
 
 /** Mainnet Phalnx ALT — placeholder until deployed */
-export const PHALNX_ALT_MAINNET =
-  "11111111111111111111111111111111" as Address;
+export const PHALNX_ALT_MAINNET = "11111111111111111111111111111111" as Address;
 
 /** Well-known sysvar addresses stored in the Phalnx ALT */
 const INSTRUCTIONS_SYSVAR =
   "Sysvar1nstructions1111111111111111111111111" as Address;
-const CLOCK_SYSVAR =
-  "SysvarC1ock11111111111111111111111111111111" as Address;
+const CLOCK_SYSVAR = "SysvarC1ock11111111111111111111111111111111" as Address;
 
 /**
  * Get the Phalnx ALT address for a given network.

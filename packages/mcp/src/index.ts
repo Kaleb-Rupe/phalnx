@@ -1313,17 +1313,24 @@ async function main() {
         configs: z
           .array(
             z.object({
-              protocolId: z.string().describe("Protocol ID (e.g., 'flash-trade', 'kamino')"),
+              protocolId: z
+                .string()
+                .describe("Protocol ID (e.g., 'flash-trade', 'kamino')"),
               actionRules: z
                 .array(
                   z.object({
                     actions: z.array(z.string()).describe("Instruction names"),
                     type: z.string().describe("Rule type"),
-                    params: z.record(z.string(), z.unknown()).describe("Rule-specific params"),
+                    params: z
+                      .record(z.string(), z.unknown())
+                      .describe("Rule-specific params"),
                   }),
                 )
                 .describe("Rules for this protocol"),
-              strictMode: z.boolean().optional().describe("If true, reject actions without any rule"),
+              strictMode: z
+                .boolean()
+                .optional()
+                .describe("If true, reject actions without any rule"),
             }),
           )
           .describe("Protocol constraint configurations"),
@@ -1338,10 +1345,14 @@ async function main() {
       "shield_get_constraint_rule_types",
       "Get available constraint rule types for a protocol. Returns rule types, parameters, and applicable actions. No wallet required.",
       {
-        protocolId: z.string().describe("Protocol ID (e.g., 'flash-trade', 'kamino')"),
+        protocolId: z
+          .string()
+          .describe("Protocol ID (e.g., 'flash-trade', 'kamino')"),
       },
       async (input) => ({
-        content: [{ type: "text", text: await getConstraintRuleTypes(null, input) }],
+        content: [
+          { type: "text", text: await getConstraintRuleTypes(null, input) },
+        ],
       }),
     );
 
@@ -1359,7 +1370,9 @@ async function main() {
                   z.object({
                     actions: z.array(z.string()).describe("Instruction names"),
                     type: z.string().describe("Rule type"),
-                    params: z.record(z.string(), z.unknown()).describe("Rule-specific params"),
+                    params: z
+                      .record(z.string(), z.unknown())
+                      .describe("Rule-specific params"),
                   }),
                 )
                 .describe("Rules for this protocol"),
@@ -1369,7 +1382,9 @@ async function main() {
           .describe("Protocol configs to estimate"),
       },
       async (input) => ({
-        content: [{ type: "text", text: await estimateConstraintBudget(null, input) }],
+        content: [
+          { type: "text", text: await estimateConstraintBudget(null, input) },
+        ],
       }),
     );
 
@@ -1879,7 +1894,9 @@ async function main() {
   (server as any).resource(
     "vault-agents",
     "shield://vault/{address}/agents",
-    { description: "Agent permissions, spending limits, and status for a vault" },
+    {
+      description: "Agent permissions, spending limits, and status for a vault",
+    },
     async (uri: URL) => {
       if (!client) {
         return {

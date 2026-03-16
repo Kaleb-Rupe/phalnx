@@ -62,7 +62,8 @@ export class VelocityTracker {
       maxTxPerMinute: config?.maxTxPerMinute ?? DEFAULT_CONFIG.maxTxPerMinute,
       maxTxPerHour: config?.maxTxPerHour ?? DEFAULT_CONFIG.maxTxPerHour,
       maxUsdPerHour: config?.maxUsdPerHour ?? DEFAULT_CONFIG.maxUsdPerHour,
-      rapidFireThreshold: config?.rapidFireThreshold ?? DEFAULT_CONFIG.rapidFireThreshold,
+      rapidFireThreshold:
+        config?.rapidFireThreshold ?? DEFAULT_CONFIG.rapidFireThreshold,
       cooldownMs: config?.cooldownMs ?? DEFAULT_CONFIG.cooldownMs,
     };
   }
@@ -115,7 +116,8 @@ export class VelocityTracker {
       violations.push({
         rule: "velocity_usd_per_hour",
         message: `Hourly USD spend ${usdPerHour} exceeds ceiling ${this.config.maxUsdPerHour}`,
-        suggestion: "Reduce transaction amounts or wait for the window to reset",
+        suggestion:
+          "Reduce transaction amounts or wait for the window to reset",
       });
     }
 

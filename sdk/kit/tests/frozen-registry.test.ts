@@ -51,7 +51,9 @@ describe("H-5: Frozen registry guard", () => {
       });
     });
     expect(warnings.length).to.equal(1);
-    expect(warnings[0]).to.include("[IntentEngine] Protocol registry is not frozen");
+    expect(warnings[0]).to.include(
+      "[IntentEngine] Protocol registry is not frozen",
+    );
     expect(warnings[0]).to.include("registry.freeze()");
   });
 
@@ -85,7 +87,7 @@ describe("H-5: Frozen registry guard", () => {
     reg.register(new JupiterHandler());
     reg.freeze();
     expect(() => reg.register(new JupiterHandler())).to.throw(
-      "Registry is frozen"
+      "Registry is frozen",
     );
   });
 });

@@ -22,17 +22,13 @@ import { FINALIZE_SESSION_DISCRIMINATOR } from "../src/generated/instructions/fi
 
 // ─── Test Constants ────────────────────────────────────────────────────────
 
-const SIGNER_ADDRESS =
-  "SignerAddr1111111111111111111111111111111" as Address;
-const TOKEN_PROGRAM =
-  "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address;
-const COMPUTE_BUDGET =
-  "ComputeBudget111111111111111111111111111111" as Address;
+const SIGNER_ADDRESS = "SignerAddr1111111111111111111111111111111" as Address;
+const TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address;
+const COMPUTE_BUDGET = "ComputeBudget111111111111111111111111111111" as Address;
 const SYSTEM_PROGRAM = "11111111111111111111111111111111" as Address;
 const JUPITER_PROGRAM =
   "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" as Address;
-const UNKNOWN_PROGRAM =
-  "UnknownProg111111111111111111111111111111" as Address;
+const UNKNOWN_PROGRAM = "UnknownProg111111111111111111111111111111" as Address;
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -104,9 +100,7 @@ function buildCompiledTx(
 /**
  * Build a compiled TX with Phalnx validate+finalize sandwich.
  */
-function buildSandwichTx(
-  defiIxs: InspectableInstruction[],
-): any {
+function buildSandwichTx(defiIxs: InspectableInstruction[]): any {
   // validate_and_authorize instruction
   const validateData = new Uint8Array(32);
   validateData.set(VALIDATE_AND_AUTHORIZE_DISCRIMINATOR, 0);
@@ -145,7 +139,9 @@ function createMockSigner(address: Address = SIGNER_ADDRESS): {
     signCalls,
     signer: {
       address,
-      async modifyAndSignTransactions(txs: readonly any[]): Promise<readonly any[]> {
+      async modifyAndSignTransactions(
+        txs: readonly any[],
+      ): Promise<readonly any[]> {
         signCalls.push([...txs]);
         return txs.map((tx: any) => ({
           ...tx,
@@ -168,7 +164,9 @@ function createMockPartialSigner(address: Address = SIGNER_ADDRESS): {
     signCalls,
     signer: {
       address,
-      async signTransactions(txs: readonly any[]): Promise<readonly Record<string, Uint8Array>[]> {
+      async signTransactions(
+        txs: readonly any[],
+      ): Promise<readonly Record<string, Uint8Array>[]> {
         signCalls.push([...txs]);
         return txs.map(() => ({ [address]: new Uint8Array(64).fill(0xdd) }));
       },
@@ -177,10 +175,8 @@ function createMockPartialSigner(address: Address = SIGNER_ADDRESS): {
 }
 
 // Valid Solana addresses for simulation tests (real base58 32-byte addresses)
-const SIM_SIGNER =
-  "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" as Address;
-const SIM_BLOCKHASH =
-  "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi" as any;
+const SIM_SIGNER = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" as Address;
+const SIM_BLOCKHASH = "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi" as any;
 
 /**
  * Build a real compiled transaction that getBase64EncodedWireTransaction can encode.
@@ -222,7 +218,10 @@ function createMockRpc(opts: { success: boolean; error?: string }) {
       send: async () => ({
         value: opts.success
           ? { err: null, logs: [], unitsConsumed: 200_000 }
-          : { err: opts.error ?? "SimError", logs: ["Error: custom program error: 0x1771"] },
+          : {
+              err: opts.error ?? "SimError",
+              logs: ["Error: custom program error: 0x1771"],
+            },
       }),
     }),
   } as any;
@@ -255,7 +254,9 @@ function captureWarns(fn: () => any): { warnings: string[]; result: any } {
   return { warnings, result };
 }
 
-async function captureWarnsAsync(fn: () => Promise<any>): Promise<{ warnings: string[]; result: any }> {
+async function captureWarnsAsync(
+  fn: () => Promise<any>,
+): Promise<{ warnings: string[]; result: any }> {
   const warnings: string[] = [];
   const origWarn = console.warn;
   console.warn = (...args: any[]) => warnings.push(args.join(" "));
@@ -332,12 +333,16 @@ describe("createShieldedSigner", () => {
       }) as any;
 
       // TX with only system programs — doesn't match swap intent
-      const tx = buildCompiledTx([noopIx(SYSTEM_PROGRAM), noopIx(COMPUTE_BUDGET)]);
+      const tx = buildCompiledTx([
+        noopIx(SYSTEM_PROGRAM),
+        noopIx(COMPUTE_BUDGET),
+      ]);
       const { warnings } = await captureWarnsAsync(() =>
         shielded.modifyAndSignTransactions([tx]),
       );
 
-      expect(warnings.some((w) => w.includes("no protocol programs found"))).to.be.true;
+      expect(warnings.some((w) => w.includes("no protocol programs found"))).to
+        .be.true;
     });
 
     it("passes silently when intent matches TX programs", async () => {
@@ -594,7 +599,8 @@ describe("createShieldedSigner", () => {
         shielded.modifyAndSignTransactions([tx]),
       );
 
-      expect(warnings.some((w) => w.includes("No Phalnx instructions"))).to.be.true;
+      expect(warnings.some((w) => w.includes("No Phalnx instructions"))).to.be
+        .true;
     });
 
     it("passes when validate+finalize sandwich present", async () => {
@@ -613,7 +619,9 @@ describe("createShieldedSigner", () => {
       );
 
       expect(signCalls).to.have.length(1);
-      expect(warnings.filter((w) => w.includes("Session binding"))).to.have.length(0);
+      expect(
+        warnings.filter((w) => w.includes("Session binding")),
+      ).to.have.length(0);
     });
   });
 

@@ -18,10 +18,7 @@ export function getPnlUsd(
   targetCustody: CustodyInfo,
   currentTimestamp: bigint,
 ): PnlResult {
-  if (
-    position.sizeUsd === 0n ||
-    position.entryPrice.price === 0n
-  ) {
+  if (position.sizeUsd === 0n || position.entryPrice.price === 0n) {
     return { profitUsd: 0n, lossUsd: 0n, priceImpactUsd: 0n };
   }
 
@@ -60,9 +57,7 @@ export function getPnlUsd(
     if (exitOraclePrice.price < positionEntryPrice.price) {
       if (delayExpired) {
         priceDiffProfit = positionEntryPrice.price - exitOraclePrice.price;
-      } else if (
-        positionEntryPrice.price > position.referencePrice.price
-      ) {
+      } else if (positionEntryPrice.price > position.referencePrice.price) {
         priceDiffProfit =
           positionEntryPrice.price - position.referencePrice.price;
       }

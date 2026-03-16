@@ -2136,7 +2136,9 @@ describe("wrapper — shieldWallet() & harden()", () => {
   describe("signAndSendTransaction", () => {
     it("is undefined when connection not provided", () => {
       const wallet = createMockWallet();
-      const shielded = shield(wallet, undefined, { storage: createMemoryStorage() });
+      const shielded = shield(wallet, undefined, {
+        storage: createMemoryStorage(),
+      });
       expect(shielded.signAndSendTransaction).to.be.undefined;
     });
 
@@ -2164,10 +2166,14 @@ describe("wrapper — shieldWallet() & harden()", () => {
         getAddressLookupTable: async () => ({ value: null }),
       } as unknown as Connection;
 
-      const shielded = shield(wallet, { maxSpend: "1000 USDC/day" }, {
-        connection: mockConnection,
-        storage: createMemoryStorage(),
-      });
+      const shielded = shield(
+        wallet,
+        { maxSpend: "1000 USDC/day" },
+        {
+          connection: mockConnection,
+          storage: createMemoryStorage(),
+        },
+      );
 
       const tx = buildSystemTx(wallet.publicKey);
       const result = await shielded.signAndSendTransaction!(tx);
@@ -2183,10 +2189,14 @@ describe("wrapper — shieldWallet() & harden()", () => {
         getAddressLookupTable: async () => ({ value: null }),
       } as unknown as Connection;
 
-      const shielded = shield(wallet, { maxSpend: "1000 USDC/day" }, {
-        connection: mockConnection,
-        storage: createMemoryStorage(),
-      });
+      const shielded = shield(
+        wallet,
+        { maxSpend: "1000 USDC/day" },
+        {
+          connection: mockConnection,
+          storage: createMemoryStorage(),
+        },
+      );
 
       const tx = buildSystemTx(wallet.publicKey);
       await shielded.signAndSendTransaction!(tx);
@@ -2234,16 +2244,22 @@ describe("wrapper — shieldWallet() & harden()", () => {
       } as unknown as Connection;
 
       // Block unknown programs, then send a tx with an unknown program
-      const shielded = shield(wallet, { blockUnknownPrograms: true }, {
-        connection: mockConnection,
-        storage: createMemoryStorage(),
-      });
+      const shielded = shield(
+        wallet,
+        { blockUnknownPrograms: true },
+        {
+          connection: mockConnection,
+          storage: createMemoryStorage(),
+        },
+      );
 
       const tx = new Transaction();
       tx.add(
         new TransactionInstruction({
           programId: UNKNOWN_PROGRAM,
-          keys: [{ pubkey: wallet.publicKey, isSigner: true, isWritable: false }],
+          keys: [
+            { pubkey: wallet.publicKey, isSigner: true, isWritable: false },
+          ],
           data: Buffer.alloc(0),
         }),
       );
@@ -2268,17 +2284,25 @@ describe("wrapper — shieldWallet() & harden()", () => {
       } as unknown as Connection;
 
       let deniedError: ShieldDeniedError | null = null;
-      const shielded = shield(wallet, { blockUnknownPrograms: true }, {
-        connection: mockConnection,
-        storage: createMemoryStorage(),
-        onDenied: (err) => { deniedError = err; },
-      });
+      const shielded = shield(
+        wallet,
+        { blockUnknownPrograms: true },
+        {
+          connection: mockConnection,
+          storage: createMemoryStorage(),
+          onDenied: (err) => {
+            deniedError = err;
+          },
+        },
+      );
 
       const tx = new Transaction();
       tx.add(
         new TransactionInstruction({
           programId: UNKNOWN_PROGRAM,
-          keys: [{ pubkey: wallet.publicKey, isSigner: true, isWritable: false }],
+          keys: [
+            { pubkey: wallet.publicKey, isSigner: true, isWritable: false },
+          ],
           data: Buffer.alloc(0),
         }),
       );
@@ -2287,7 +2311,9 @@ describe("wrapper — shieldWallet() & harden()", () => {
 
       try {
         await shielded.signAndSendTransaction!(tx);
-      } catch { /* expected */ }
+      } catch {
+        /* expected */
+      }
 
       expect(deniedError).to.be.instanceOf(ShieldDeniedError);
     });
@@ -2300,11 +2326,17 @@ describe("wrapper — shieldWallet() & harden()", () => {
       } as unknown as Connection;
 
       let approvedSig: string | null = null;
-      const shielded = shield(wallet, { maxSpend: "1000 USDC/day" }, {
-        connection: mockConnection,
-        storage: createMemoryStorage(),
-        onApproved: (sig) => { approvedSig = sig; },
-      });
+      const shielded = shield(
+        wallet,
+        { maxSpend: "1000 USDC/day" },
+        {
+          connection: mockConnection,
+          storage: createMemoryStorage(),
+          onApproved: (sig) => {
+            approvedSig = sig;
+          },
+        },
+      );
 
       const tx = buildSystemTx(wallet.publicKey);
       await shielded.signAndSendTransaction!(tx);
@@ -2346,7 +2378,9 @@ describe("wrapper — shieldWallet() & harden()", () => {
       const expectedSig = new Uint8Array([1, 2, 3, 4]);
       (wallet as any).signMessage = async () => expectedSig;
 
-      const shielded = shield(wallet, undefined, { storage: createMemoryStorage() });
+      const shielded = shield(wallet, undefined, {
+        storage: createMemoryStorage(),
+      });
       const result = await shielded.signMessage(new Uint8Array([0xde, 0xad]));
       expect(result).to.equal(expectedSig);
     });
@@ -2355,7 +2389,9 @@ describe("wrapper — shieldWallet() & harden()", () => {
       const wallet = createMockWallet();
       (wallet as any).signMessage = async () => new Uint8Array([1]);
 
-      const shielded = shield(wallet, undefined, { storage: createMemoryStorage() });
+      const shielded = shield(wallet, undefined, {
+        storage: createMemoryStorage(),
+      });
       shielded.pause();
 
       try {
@@ -2370,7 +2406,9 @@ describe("wrapper — shieldWallet() & harden()", () => {
       const wallet = createMockWallet();
       // No signMessage on wallet
 
-      const shielded = shield(wallet, undefined, { storage: createMemoryStorage() });
+      const shielded = shield(wallet, undefined, {
+        storage: createMemoryStorage(),
+      });
 
       try {
         await shielded.signMessage(new Uint8Array([0xde, 0xad]));
@@ -2384,9 +2422,13 @@ describe("wrapper — shieldWallet() & harden()", () => {
       const wallet = createMockWallet();
       (wallet as any).signMessage = async () => new Uint8Array([1]);
 
-      const shielded = shield(wallet, { maxSpend: "100 USDC/day" }, {
-        storage: createMemoryStorage(),
-      });
+      const shielded = shield(
+        wallet,
+        { maxSpend: "100 USDC/day" },
+        {
+          storage: createMemoryStorage(),
+        },
+      );
 
       await shielded.signMessage(new Uint8Array([0xde, 0xad]));
       const summary = shielded.getSpendingSummary();
@@ -2398,7 +2440,9 @@ describe("wrapper — shieldWallet() & harden()", () => {
       const expectedSig = new Uint8Array([5, 6, 7]);
       (wallet as any).signMessage = async () => expectedSig;
 
-      const shielded = shield(wallet, undefined, { storage: createMemoryStorage() });
+      const shielded = shield(wallet, undefined, {
+        storage: createMemoryStorage(),
+      });
       shielded.pause();
       shielded.resume();
 

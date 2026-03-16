@@ -43,7 +43,10 @@ describe("prompt: emergency-freeze", () => {
     });
     const content = JSON.parse(result.messages[0].content.text);
 
-    expect(content.auditFields).to.have.property("reason", "suspicious_activity");
+    expect(content.auditFields).to.have.property(
+      "reason",
+      "suspicious_activity",
+    );
     expect(content.auditFields).to.have.property("initiator", "agent");
   });
 

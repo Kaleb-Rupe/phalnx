@@ -10,7 +10,8 @@ export const COMPOSE_ERROR_CODES = Object.freeze({
   UNSUPPORTED_ACTION: "UNSUPPORTED_ACTION",
 } as const);
 
-export type ComposeErrorCode = typeof COMPOSE_ERROR_CODES[keyof typeof COMPOSE_ERROR_CODES];
+export type ComposeErrorCode =
+  (typeof COMPOSE_ERROR_CODES)[keyof typeof COMPOSE_ERROR_CODES];
 
 // ─── Error Classes ──────────────────────────────────────────────────────────
 
@@ -56,7 +57,10 @@ export function createSafeBigInt(
 export function createRequireField(
   makeError: (field: string) => Error,
 ): <T>(params: Record<string, unknown>, field: string) => T {
-  return function requireField<T>(params: Record<string, unknown>, field: string): T {
+  return function requireField<T>(
+    params: Record<string, unknown>,
+    field: string,
+  ): T {
     const val = params[field];
     if (val === undefined || val === null) {
       throw makeError(field);
@@ -72,6 +76,8 @@ export function createRequireField(
 export function addressAsSigner(address: Address): TransactionSigner {
   return {
     address,
-    signTransactions: async () => { throw new Error("addressAsSigner is for compose-time only"); },
+    signTransactions: async () => {
+      throw new Error("addressAsSigner is for compose-time only");
+    },
   } as unknown as TransactionSigner;
 }

@@ -69,17 +69,23 @@ export function decodePaymentRequiredHeader(header: string): PaymentRequired {
       throw new X402ParseError(`accepts[${i}].asset must be a string`);
     }
     if (typeof entry.amount !== "string" || entry.amount.length === 0) {
-      throw new X402ParseError(`accepts[${i}].amount must be a non-empty string`);
+      throw new X402ParseError(
+        `accepts[${i}].amount must be a non-empty string`,
+      );
     }
     // Validate amount is a valid non-negative integer string (BUG-7/BUG-15: use BigInt to avoid precision loss)
     try {
       const parsed = BigInt(entry.amount);
       if (parsed < 0n) {
-        throw new X402ParseError(`accepts[${i}].amount must be non-negative (got: "${entry.amount}")`);
+        throw new X402ParseError(
+          `accepts[${i}].amount must be non-negative (got: "${entry.amount}")`,
+        );
       }
     } catch (e) {
       if (e instanceof X402ParseError) throw e;
-      throw new X402ParseError(`accepts[${i}].amount must be a valid integer string (got: "${entry.amount}")`);
+      throw new X402ParseError(
+        `accepts[${i}].amount must be a valid integer string (got: "${entry.amount}")`,
+      );
     }
     if (typeof entry.payTo !== "string") {
       throw new X402ParseError(`accepts[${i}].payTo must be a string`);

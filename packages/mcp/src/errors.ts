@@ -77,7 +77,8 @@ const ERROR_MAP: Record<number, ErrorInfo> = {
     code: 6009,
     name: "PositionOpeningDisallowed",
     message: "Cannot open new positions (policy disallows)",
-    suggestion: "Use phalnx_manage action='updatePolicy' to set canOpenPositions to true.",
+    suggestion:
+      "Use phalnx_manage action='updatePolicy' to set canOpenPositions to true.",
   },
   6010: {
     code: 6010,
@@ -110,7 +111,8 @@ const ERROR_MAP: Record<number, ErrorInfo> = {
     code: 6014,
     name: "AgentAlreadyRegistered",
     message: "Agent already registered for this vault",
-    suggestion: "Use phalnx_manage action='revokeAgent' first, then register the new agent.",
+    suggestion:
+      "Use phalnx_manage action='revokeAgent' first, then register the new agent.",
   },
   6015: {
     code: 6015,

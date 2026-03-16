@@ -9,7 +9,10 @@
  */
 
 import type { Instruction } from "@solana/kit";
-import type { ProtocolContext, ProtocolComposeResult } from "./protocol-handler.js";
+import type {
+  ProtocolContext,
+  ProtocolComposeResult,
+} from "./protocol-handler.js";
 import { createRequireField } from "./compose-errors.js";
 import { toKitInstruction } from "../compat.js";
 
@@ -73,9 +76,7 @@ export function clearDriftClientCache(): void {
   _clientCache.clear();
 }
 
-async function getOrCreateDriftClient(
-  ctx: ProtocolContext,
-): Promise<any> {
+async function getOrCreateDriftClient(ctx: ProtocolContext): Promise<any> {
   const cacheKey = `${ctx.agent}:${ctx.network}`;
   const cached = _clientCache.get(cacheKey);
   if (cached) return cached;
@@ -100,9 +101,10 @@ async function getOrCreateDriftClient(
     );
   }
 
-  const endpoint = ctx.network === "devnet"
-    ? "https://api.devnet.solana.com"
-    : "https://api.mainnet-beta.solana.com";
+  const endpoint =
+    ctx.network === "devnet"
+      ? "https://api.devnet.solana.com"
+      : "https://api.mainnet-beta.solana.com";
 
   const connection = new Connection(endpoint);
   const env = ctx.network === "devnet" ? "devnet" : "mainnet-beta";
@@ -134,11 +136,16 @@ async function getOrCreateDriftClient(
 
 function buildDriftOrderType(sdk: any, type: string): any {
   switch (type) {
-    case "market": return sdk.OrderType.MARKET;
-    case "limit": return sdk.OrderType.LIMIT;
-    case "triggerMarket": return sdk.OrderType.TRIGGER_MARKET;
-    case "triggerLimit": return sdk.OrderType.TRIGGER_LIMIT;
-    default: throw new Error(`Unknown Drift order type: ${type}`);
+    case "market":
+      return sdk.OrderType.MARKET;
+    case "limit":
+      return sdk.OrderType.LIMIT;
+    case "triggerMarket":
+      return sdk.OrderType.TRIGGER_MARKET;
+    case "triggerLimit":
+      return sdk.OrderType.TRIGGER_LIMIT;
+    default:
+      throw new Error(`Unknown Drift order type: ${type}`);
   }
 }
 
@@ -258,7 +265,13 @@ async function composeDriftCancelOrder(
 
 // ─── Dispatcher ─────────────────────────────────────────────────────────────
 
-const SUPPORTED_ACTIONS = ["deposit", "withdraw", "placePerpOrder", "placeSpotOrder", "cancelOrder"];
+const SUPPORTED_ACTIONS = [
+  "deposit",
+  "withdraw",
+  "placePerpOrder",
+  "placeSpotOrder",
+  "cancelOrder",
+];
 
 /**
  * Dispatch a Drift action to the correct compose function.

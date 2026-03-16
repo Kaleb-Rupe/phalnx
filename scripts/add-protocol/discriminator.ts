@@ -49,7 +49,11 @@ export function computeDiscriminator(
   idlCase: "snake" | "camel",
 ): Uint8Array {
   // Source 1: IDL discriminator field (new-format)
-  if (idlFormat === "new" && idlIx.discriminator && Array.isArray(idlIx.discriminator)) {
+  if (
+    idlFormat === "new" &&
+    idlIx.discriminator &&
+    Array.isArray(idlIx.discriminator)
+  ) {
     return new Uint8Array(idlIx.discriminator);
   }
 
@@ -62,7 +66,9 @@ export function computeDiscriminator(
  * Extract discriminator bytes from a Codama-generated TypeScript file.
  * Looks for: _DISCRIMINATOR = new Uint8Array([ ... ])
  */
-export function extractDiscriminatorFromFile(filePath: string): Uint8Array | null {
+export function extractDiscriminatorFromFile(
+  filePath: string,
+): Uint8Array | null {
   if (!existsSync(filePath)) return null;
   const content = readFileSync(filePath, "utf-8");
   const match = content.match(
@@ -105,7 +111,11 @@ export function crossCheckDiscriminator(
 
   // Source 1: IDL field (if available)
   let idlDiscriminator: Uint8Array | null = null;
-  if (idlFormat === "new" && idlIx.discriminator && Array.isArray(idlIx.discriminator)) {
+  if (
+    idlFormat === "new" &&
+    idlIx.discriminator &&
+    Array.isArray(idlIx.discriminator)
+  ) {
     idlDiscriminator = new Uint8Array(idlIx.discriminator);
   }
 
@@ -116,7 +126,10 @@ export function crossCheckDiscriminator(
   const codamaDiscriminator = extractDiscriminatorFromFile(codamaFilePath);
 
   // Cross-check: IDL vs computed (if IDL available)
-  if (idlDiscriminator && !arraysEqual(idlDiscriminator, computedDiscriminator)) {
+  if (
+    idlDiscriminator &&
+    !arraysEqual(idlDiscriminator, computedDiscriminator)
+  ) {
     return (
       `Discriminator mismatch for ${idlName}: ` +
       `IDL=[${Array.from(idlDiscriminator)}] vs ` +

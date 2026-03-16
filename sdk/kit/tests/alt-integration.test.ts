@@ -17,10 +17,8 @@ import {
   EXPECTED_ALT_CONTENTS_MAINNET,
 } from "../src/alt-config.js";
 
-const MOCK_PAYER =
-  "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL" as Address;
-const MOCK_PROGRAM =
-  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" as Address;
+const MOCK_PAYER = "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL" as Address;
+const MOCK_PROGRAM = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" as Address;
 const MOCK_BLOCKHASH = {
   blockhash: "4NCYB3kRT8sCNodPNuCZo8VUh4xqpBQxsxed2wd9xaJ4",
   lastValidBlockHeight: 1000n,

@@ -42,13 +42,20 @@ const PRIMITIVE_SIZES: Record<string, number> = {
  */
 function borshToFieldType(size: number): string {
   switch (size) {
-    case 1: return "u8";
-    case 2: return "u16";
-    case 4: return "u32";
-    case 8: return "u64";
-    case 16: return "u128";
-    case 32: return "pubkey";
-    default: return `bytes${size}`;
+    case 1:
+      return "u8";
+    case 2:
+      return "u16";
+    case 4:
+      return "u32";
+    case 8:
+      return "u64";
+    case 16:
+      return "u128";
+    case 32:
+      return "pubkey";
+    default:
+      return `bytes${size}`;
   }
 }
 
@@ -144,7 +151,9 @@ export function parseIdl(
   const results: ParsedInstruction[] = [];
 
   for (const ixAnnotation of config.instructions) {
-    const idlIx = idl.instructions.find((ix) => ix.name === ixAnnotation.idlName);
+    const idlIx = idl.instructions.find(
+      (ix) => ix.name === ixAnnotation.idlName,
+    );
     if (!idlIx) {
       throw new Error(
         `IDL instruction "${ixAnnotation.idlName}" not found — should have been caught by validator`,
@@ -164,7 +173,10 @@ export function parseIdl(
       (ixAnnotation.constrainableFields ?? []).map((cf) => cf.idlFieldName),
     );
     const fieldNameToSchemaName = new Map(
-      (ixAnnotation.constrainableFields ?? []).map((cf) => [cf.idlFieldName, cf.schemaFieldName]),
+      (ixAnnotation.constrainableFields ?? []).map((cf) => [
+        cf.idlFieldName,
+        cf.schemaFieldName,
+      ]),
     );
 
     // Walk args and compute offsets
@@ -172,7 +184,12 @@ export function parseIdl(
     let hitVariableBoundary = false;
     const variableLengthAfter = ixAnnotation.variableLengthAfter;
     const parsedFields: ParsedField[] = [];
-    const allArgs: { name: string; offset: number; size: number; type: string }[] = [];
+    const allArgs: {
+      name: string;
+      offset: number;
+      size: number;
+      type: string;
+    }[] = [];
 
     for (const arg of idlIx.args) {
       const sizeResult = computeTypeSize(arg.type, typeMap);
@@ -206,7 +223,8 @@ export function parseIdl(
               if (constrainableFieldNames.has(subField.name)) {
                 parsedFields.push({
                   name: subField.name,
-                  schemaFieldName: fieldNameToSchemaName.get(subField.name) ?? subField.name,
+                  schemaFieldName:
+                    fieldNameToSchemaName.get(subField.name) ?? subField.name,
                   offset: subOffset,
                   size: subSize.size,
                   type: subType,
@@ -252,7 +270,7 @@ export function parseIdl(
       if (hitVariableBoundary && constrainableFieldNames.has(arg.name)) {
         throw new Error(
           `ABORT: Constrainable field "${arg.name}" in instruction "${ixAnnotation.idlName}" ` +
-          `appears after a variable-length boundary. Offsets cannot be computed reliably.`,
+            `appears after a variable-length boundary. Offsets cannot be computed reliably.`,
         );
       }
 

@@ -221,7 +221,9 @@ describe("phalnx_execute", () => {
           vault: TEST_VAULT_PDA.toBase58(),
         },
       );
-      expect(result, `${action} should succeed`).to.include("Transaction Executed Successfully");
+      expect(result, `${action} should succeed`).to.include(
+        "Transaction Executed Successfully",
+      );
     }
   });
 

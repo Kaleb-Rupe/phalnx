@@ -63,7 +63,8 @@ export function setupVaultPrompt(args: SetupVaultArgs) {
                   step: 3,
                   tool: "phalnx_setup",
                   input: { step: "discoverVault" },
-                  purpose: "Find existing vault or determine need to create one",
+                  purpose:
+                    "Find existing vault or determine need to create one",
                   onSuccess: "If vault found, skip to step 5",
                   onFailure: "Continue to step 4",
                 },

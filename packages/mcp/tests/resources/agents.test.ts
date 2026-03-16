@@ -1,11 +1,18 @@
 import { expect } from "chai";
 import { getAgentsResource } from "../../src/resources/agents";
-import { createMockClient, TEST_VAULT_PDA, TEST_AGENT } from "../helpers/mock-client";
+import {
+  createMockClient,
+  TEST_VAULT_PDA,
+  TEST_AGENT,
+} from "../helpers/mock-client";
 
 describe("resource: shield://vault/{address}/agents", () => {
   it("returns agent details with decoded permissions", async () => {
     const client = createMockClient();
-    const json = await getAgentsResource(client as any, TEST_VAULT_PDA.toBase58());
+    const json = await getAgentsResource(
+      client as any,
+      TEST_VAULT_PDA.toBase58(),
+    );
     const data = JSON.parse(json);
 
     expect(data.agentCount).to.equal(1);
@@ -20,7 +27,10 @@ describe("resource: shield://vault/{address}/agents", () => {
     const client = createMockClient({
       shouldThrow: new Error("Account does not exist"),
     });
-    const json = await getAgentsResource(client as any, TEST_VAULT_PDA.toBase58());
+    const json = await getAgentsResource(
+      client as any,
+      TEST_VAULT_PDA.toBase58(),
+    );
     const data = JSON.parse(json);
 
     expect(data.error).to.be.a("string");
@@ -30,7 +40,10 @@ describe("resource: shield://vault/{address}/agents", () => {
 
   it("returns well-formed JSON", async () => {
     const client = createMockClient();
-    const json = await getAgentsResource(client as any, TEST_VAULT_PDA.toBase58());
+    const json = await getAgentsResource(
+      client as any,
+      TEST_VAULT_PDA.toBase58(),
+    );
     expect(() => JSON.parse(json)).not.to.throw();
   });
 });

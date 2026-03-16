@@ -8,7 +8,10 @@
 import { z } from "zod";
 
 export const kaminoRebalanceArgsSchema = {
-  wallet: z.string().optional().describe("Wallet address (uses default if omitted)"),
+  wallet: z
+    .string()
+    .optional()
+    .describe("Wallet address (uses default if omitted)"),
   minApyDelta: z
     .number()
     .optional()
@@ -53,15 +56,18 @@ export function kaminoRebalancePrompt(args: KaminoRebalanceArgs) {
                 {
                   step: 3,
                   action: "compare",
-                  purpose: "Compare current deposit/borrow rates vs available alternatives",
+                  purpose:
+                    "Compare current deposit/borrow rates vs available alternatives",
                   criteria: `APY delta must exceed ${args.minApyDelta ?? 0.5}% to justify gas costs`,
                 },
                 {
                   step: 4,
                   action: "recommend",
                   purpose: "Present rebalance plan or confirm no action needed",
-                  ifBetter: "Show: withdraw from X, deposit to Y, expected APY improvement, estimated gas",
-                  ifOptimal: "Report: current allocation is optimal within threshold",
+                  ifBetter:
+                    "Show: withdraw from X, deposit to Y, expected APY improvement, estimated gas",
+                  ifOptimal:
+                    "Report: current allocation is optimal within threshold",
                 },
               ],
             },

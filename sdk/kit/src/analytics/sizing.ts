@@ -41,10 +41,9 @@ export function getSizeFromLeverageAndCollateral(
   // sizeUsd = collateralUsd * leverage / (1 + 2 * feeRate * leverage)
   // Using fixed-point: scale everything to avoid precision loss
   const SCALE = 10n ** BigInt(RATE_DECIMALS);
-  const leverageBn = BigInt(Math.round(leverage * 10000)) * SCALE / 10000n;
+  const leverageBn = (BigInt(Math.round(leverage * 10000)) * SCALE) / 10000n;
 
-  const denominator =
-    SCALE + (2n * openFeeRate * leverageBn) / SCALE;
+  const denominator = SCALE + (2n * openFeeRate * leverageBn) / SCALE;
 
   if (denominator === 0n) return 0n;
 
@@ -97,7 +96,7 @@ export function getRequiredCollateral(
 
   const openFeeRate = targetCustody.fees.openPosition;
   const SCALE = 10n ** BigInt(RATE_DECIMALS);
-  const leverageBn = BigInt(Math.round(leverage * 10000)) * SCALE / 10000n;
+  const leverageBn = (BigInt(Math.round(leverage * 10000)) * SCALE) / 10000n;
 
   if (leverageBn === 0n) return 0n;
 
@@ -126,8 +125,6 @@ export function getRequiredCollateral(
 /**
  * Get maximum position size in USD for a custody.
  */
-export function getMaxPositionSizeUsd(
-  custody: CustodyInfo,
-): bigint {
+export function getMaxPositionSizeUsd(custody: CustodyInfo): bigint {
   return custody.pricing.maxPositionSizeUsd;
 }

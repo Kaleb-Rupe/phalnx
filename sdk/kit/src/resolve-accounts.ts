@@ -6,10 +6,7 @@
  */
 
 import type { Address, ReadonlyUint8Array } from "@solana/kit";
-import {
-  getAddressEncoder,
-  getProgramDerivedAddress,
-} from "@solana/kit";
+import { getAddressEncoder, getProgramDerivedAddress } from "@solana/kit";
 import { PHALNX_PROGRAM_ADDRESS } from "./generated/programs/phalnx.js";
 
 // ─── PDA Derivation ──────────────────────────────────────────────────────────

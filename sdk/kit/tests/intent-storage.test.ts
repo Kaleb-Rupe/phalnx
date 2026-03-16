@@ -47,13 +47,17 @@ describe("intent-storage", () => {
 
     it("uses custom TTL when provided", () => {
       const customTtl = 5_000;
-      const intent = createIntent(SWAP_INTENT, VAULT, AGENT, { ttlMs: customTtl });
+      const intent = createIntent(SWAP_INTENT, VAULT, AGENT, {
+        ttlMs: customTtl,
+      });
       expect(intent.expiresAt - intent.createdAt).to.equal(customTtl);
     });
 
     it("defaults to DEFAULT_INTENT_TTL_MS", () => {
       const intent = createIntent(SWAP_INTENT, VAULT, AGENT);
-      expect(intent.expiresAt - intent.createdAt).to.equal(DEFAULT_INTENT_TTL_MS);
+      expect(intent.expiresAt - intent.createdAt).to.equal(
+        DEFAULT_INTENT_TTL_MS,
+      );
     });
   });
 
@@ -149,7 +153,9 @@ describe("intent-storage", () => {
       // Create an intent that is already expired (ttl = 0)
       const expired = createIntent(SWAP_INTENT, VAULT, AGENT, { ttlMs: 0 });
       // Create one that is still valid
-      const valid = createIntent(TRANSFER_INTENT, VAULT, AGENT, { ttlMs: 3_600_000 });
+      const valid = createIntent(TRANSFER_INTENT, VAULT, AGENT, {
+        ttlMs: 3_600_000,
+      });
       await storage.save(expired);
       await storage.save(valid);
 

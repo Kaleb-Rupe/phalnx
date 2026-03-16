@@ -10,7 +10,12 @@ import { z } from "zod";
 
 export const emergencyFreezeArgsSchema = {
   reason: z
-    .enum(["suspicious_activity", "compromised_key", "policy_violation", "manual"])
+    .enum([
+      "suspicious_activity",
+      "compromised_key",
+      "policy_violation",
+      "manual",
+    ])
     .describe("Why the freeze is being initiated"),
   vault: z
     .string()
@@ -70,7 +75,8 @@ export function emergencyFreezePrompt(args: EmergencyFreezeArgs) {
                     action: "freezeVault",
                     params: vaultParam,
                   },
-                  purpose: "FREEZE the vault — all agent operations blocked immediately",
+                  purpose:
+                    "FREEZE the vault — all agent operations blocked immediately",
                   critical: true,
                   onFailure: {
                     action: "ESCALATE",
@@ -99,8 +105,7 @@ export function emergencyFreezePrompt(args: EmergencyFreezeArgs) {
                     query: "activity",
                     params: vaultParam,
                   },
-                  purpose:
-                    "Review recent activity for suspicious transactions",
+                  purpose: "Review recent activity for suspicious transactions",
                   analyze: "Flag any unexpected transfers or position changes",
                 },
               ],

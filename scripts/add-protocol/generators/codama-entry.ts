@@ -27,9 +27,7 @@ export function generateCodamaEntry(
 
   lines.push(`  // ${protocol.displayName}`);
   lines.push(`  "${protocol.id}": {`);
-  lines.push(
-    `    idlPath: join(__dirname, "idls", "${idlFile}"),`,
-  );
+  lines.push(`    idlPath: join(__dirname, "idls", "${idlFile}"),`);
   lines.push(
     `    outputDir: join(__dirname, "src", "generated", "protocols", "${protocol.id}"),`,
   );

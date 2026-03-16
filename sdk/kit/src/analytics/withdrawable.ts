@@ -6,11 +6,7 @@ import { OraclePrice } from "./oracle-price.js";
 import { getPnlUsd } from "./pnl.js";
 import { getLockFeeAndUnsettledUsd, getExitFeeUsd } from "./fees.js";
 import { getMinAndMaxOraclePrice } from "./helpers.js";
-import type {
-  PositionInfo,
-  CustodyInfo,
-  WithdrawableResult,
-} from "./types.js";
+import type { PositionInfo, CustodyInfo, WithdrawableResult } from "./types.js";
 
 /**
  * Calculate maximum withdrawable collateral.
@@ -87,8 +83,7 @@ export function getMaxWithdrawable(
 
   // Max removable = available margin - required margin for max init leverage
   const maxRemovableCollateralUsd =
-    availableInitMarginUsd -
-    (position.sizeUsd * BPS_POWER) / MAX_INIT_LEVERAGE;
+    availableInitMarginUsd - (position.sizeUsd * BPS_POWER) / MAX_INIT_LEVERAGE;
 
   if (maxRemovableCollateralUsd < 0n) {
     return { maxWithdrawableAmount: 0n, maxWithdrawableAmountUsd: 0n };
@@ -102,11 +97,10 @@ export function getMaxWithdrawable(
     maxWithdrawableAmountUsd = maxRemovableCollateralUsd;
   }
 
-  const maxWithdrawableAmount =
-    collateralMinMaxPrice.max.getTokenAmount(
-      maxWithdrawableAmountUsd,
-      collateralCustody.decimals,
-    );
+  const maxWithdrawableAmount = collateralMinMaxPrice.max.getTokenAmount(
+    maxWithdrawableAmountUsd,
+    collateralCustody.decimals,
+  );
 
   return { maxWithdrawableAmount, maxWithdrawableAmountUsd };
 }

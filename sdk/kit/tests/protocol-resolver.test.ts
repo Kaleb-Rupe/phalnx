@@ -7,7 +7,10 @@ import {
 } from "../src/protocol-resolver.js";
 import { ProtocolRegistry } from "../src/integrations/protocol-registry.js";
 import { JupiterHandler } from "../src/integrations/jupiter-handler.js";
-import { DriftHandler, FlashTradeHandler } from "../src/integrations/t2-handlers.js";
+import {
+  DriftHandler,
+  FlashTradeHandler,
+} from "../src/integrations/t2-handlers.js";
 
 // ─── Test Fixtures ──────────────────────────────────────────────────────────
 
@@ -20,9 +23,11 @@ function buildRegistry(): ProtocolRegistry {
 }
 
 // Known program IDs from handlers
-const JUPITER_PROGRAM = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" as Address;
+const JUPITER_PROGRAM =
+  "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" as Address;
 const DRIFT_PROGRAM = "dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH" as Address;
-const UNKNOWN_PROGRAM = "Unknown1111111111111111111111111111111111111" as Address;
+const UNKNOWN_PROGRAM =
+  "Unknown1111111111111111111111111111111111111" as Address;
 
 describe("protocol-resolver", () => {
   describe("isProtocolAllowed()", () => {
@@ -145,7 +150,9 @@ describe("protocol-resolver", () => {
       );
       expect(result.tier).to.equal(ProtocolTier.NOT_SUPPORTED);
       expect(result.escalation).to.exist;
-      expect(result.escalation!.type).to.equal("not_in_allowlist_and_no_handler");
+      expect(result.escalation!.type).to.equal(
+        "not_in_allowlist_and_no_handler",
+      );
     });
 
     it("alternatives include correct tiers", () => {

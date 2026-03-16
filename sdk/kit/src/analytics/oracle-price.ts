@@ -2,11 +2,7 @@
 // Ported from flash-sdk/OraclePrice.ts
 
 import type { OraclePrice as CodamaOraclePrice } from "../generated/protocols/flash-trade/types/oraclePrice.js";
-import {
-  checkedDecimalMul,
-  checkedDecimalDiv,
-  abs,
-} from "./decimal-math.js";
+import { checkedDecimalMul, checkedDecimalDiv, abs } from "./decimal-math.js";
 import { BPS_DECIMALS, BPS_POWER, USD_DECIMALS } from "./constants.js";
 
 /**
@@ -24,9 +20,8 @@ export class OraclePrice {
     confidence?: bigint;
   }) {
     this.price = data.price;
-    this.exponent = typeof data.exponent === "number"
-      ? BigInt(data.exponent)
-      : data.exponent;
+    this.exponent =
+      typeof data.exponent === "number" ? BigInt(data.exponent) : data.exponent;
     this.confidence = data.confidence ?? 0n;
   }
 
@@ -51,9 +46,9 @@ export class OraclePrice {
       });
     }
     return new OraclePrice({
-      price: this.price * 10n ** (-delta),
+      price: this.price * 10n ** -delta,
       exponent: targetExponent,
-      confidence: this.confidence * 10n ** (-delta),
+      confidence: this.confidence * 10n ** -delta,
     });
   }
 

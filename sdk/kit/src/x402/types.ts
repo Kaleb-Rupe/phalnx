@@ -5,7 +5,12 @@
  * Zero dependency on @solana/web3.js. Uses Kit's Address type.
  */
 
-import type { Address, Rpc, SolanaRpcApi, TransactionSigner } from "@solana/kit";
+import type {
+  Address,
+  Rpc,
+  SolanaRpcApi,
+  TransactionSigner,
+} from "@solana/kit";
 import type { ShieldedContext } from "../shield.js";
 
 // ─── x402 Protocol Types ────────────────────────────────────────────────────

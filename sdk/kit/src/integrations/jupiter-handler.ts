@@ -14,10 +14,7 @@ import type {
   ProtocolComposeResult,
   ProtocolContext,
 } from "./protocol-handler.js";
-import {
-  jupiterFetch,
-  JupiterApiError,
-} from "./jupiter-api.js";
+import { jupiterFetch, JupiterApiError } from "./jupiter-api.js";
 import { JUPITER_PROGRAM_ADDRESS } from "../types.js";
 import { ActionType } from "../generated/types/actionType.js";
 
@@ -89,13 +86,14 @@ export function deserializeJupiterInstruction(
     programAddress: ix.programId as Address,
     accounts: ix.accounts.map((acc) => ({
       address: acc.pubkey as Address,
-      role: acc.isSigner && acc.isWritable
-        ? AccountRole.WRITABLE_SIGNER
-        : acc.isSigner
-          ? AccountRole.READONLY_SIGNER
-          : acc.isWritable
-            ? AccountRole.WRITABLE
-            : AccountRole.READONLY,
+      role:
+        acc.isSigner && acc.isWritable
+          ? AccountRole.WRITABLE_SIGNER
+          : acc.isSigner
+            ? AccountRole.READONLY_SIGNER
+            : acc.isWritable
+              ? AccountRole.WRITABLE
+              : AccountRole.READONLY,
     })),
     data: base64ToUint8Array(ix.data),
   };
@@ -124,9 +122,12 @@ export async function fetchJupiterQuote(
     ...params.extraParams,
   });
 
-  const response = await jupiterFetch<JupiterQuoteResponse>(`/v6/quote?${qs.toString()}`, {
-    timeoutMs: 5_000,
-  });
+  const response = await jupiterFetch<JupiterQuoteResponse>(
+    `/v6/quote?${qs.toString()}`,
+    {
+      timeoutMs: 5_000,
+    },
+  );
 
   if (
     !response ||
@@ -210,19 +211,22 @@ export class JupiterHandler implements ProtocolHandler {
 
     const inputMint = params.inputMint as Address;
     const outputMint = params.outputMint as Address;
-    const amount = typeof params.amount === "bigint"
-      ? params.amount
-      : BigInt(params.amount as string);
+    const amount =
+      typeof params.amount === "bigint"
+        ? params.amount
+        : BigInt(params.amount as string);
     const slippageBps = params.slippageBps as number | undefined;
     const preQuote = params.quote as JupiterQuoteResponse | undefined;
 
     // 1. Get quote
-    const quote = preQuote ?? await fetchJupiterQuote({
-      inputMint,
-      outputMint,
-      amount,
-      slippageBps,
-    });
+    const quote =
+      preQuote ??
+      (await fetchJupiterQuote({
+        inputMint,
+        outputMint,
+        amount,
+        slippageBps,
+      }));
 
     // 2. Get swap instructions from Jupiter with vault as the user
     const swapResponse = await fetchJupiterSwapInstructions(quote, ctx.vault);
@@ -233,14 +237,19 @@ export class JupiterHandler implements ProtocolHandler {
     for (const ix of swapResponse.setupInstructions) {
       instructions.push(deserializeJupiterInstruction(ix));
     }
-    instructions.push(deserializeJupiterInstruction(swapResponse.swapInstruction));
+    instructions.push(
+      deserializeJupiterInstruction(swapResponse.swapInstruction),
+    );
     if (swapResponse.cleanupInstruction) {
-      instructions.push(deserializeJupiterInstruction(swapResponse.cleanupInstruction));
+      instructions.push(
+        deserializeJupiterInstruction(swapResponse.cleanupInstruction),
+      );
     }
 
     return {
       instructions,
-      addressLookupTables: swapResponse.addressLookupTableAddresses as Address[],
+      addressLookupTables:
+        swapResponse.addressLookupTableAddresses as Address[],
     };
   }
 

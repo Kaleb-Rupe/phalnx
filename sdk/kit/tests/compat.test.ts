@@ -48,31 +48,28 @@ describe("compat", () => {
     });
 
     it("maps keys to accounts with correct AccountRole", () => {
-      const ix = mockInstruction(
-        "11111111111111111111111111111111",
-        [
-          {
-            pubkey: "22222222222222222222222222222222",
-            isSigner: true,
-            isWritable: true,
-          },
-          {
-            pubkey: "33333333333333333333333333333333",
-            isSigner: true,
-            isWritable: false,
-          },
-          {
-            pubkey: "44444444444444444444444444444444",
-            isSigner: false,
-            isWritable: true,
-          },
-          {
-            pubkey: "55555555555555555555555555555555",
-            isSigner: false,
-            isWritable: false,
-          },
-        ],
-      );
+      const ix = mockInstruction("11111111111111111111111111111111", [
+        {
+          pubkey: "22222222222222222222222222222222",
+          isSigner: true,
+          isWritable: true,
+        },
+        {
+          pubkey: "33333333333333333333333333333333",
+          isSigner: true,
+          isWritable: false,
+        },
+        {
+          pubkey: "44444444444444444444444444444444",
+          isSigner: false,
+          isWritable: true,
+        },
+        {
+          pubkey: "55555555555555555555555555555555",
+          isSigner: false,
+          isWritable: false,
+        },
+      ]);
       const kitIx = toKitInstruction(ix);
       expect(kitIx.accounts).to.have.length(4);
       expect(kitIx.accounts![0].role).to.equal(AccountRole.WRITABLE_SIGNER);
@@ -89,7 +86,9 @@ describe("compat", () => {
       );
       const kitIx = toKitInstruction(ix);
       expect(kitIx.data).to.be.instanceOf(Uint8Array);
-      expect(Array.from(kitIx.data as Uint8Array)).to.deep.equal([0xaa, 0xbb, 0xcc]);
+      expect(Array.from(kitIx.data as Uint8Array)).to.deep.equal([
+        0xaa, 0xbb, 0xcc,
+      ]);
     });
   });
 
@@ -103,9 +102,7 @@ describe("compat", () => {
     });
 
     it("returns string", () => {
-      const addr = toKitAddress(
-        mockPubkey("11111111111111111111111111111111"),
-      );
+      const addr = toKitAddress(mockPubkey("11111111111111111111111111111111"));
       expect(addr).to.be.a("string");
     });
   });
@@ -125,8 +122,7 @@ describe("compat", () => {
 
   describe("fromKitAddress", () => {
     it("returns Address as string (identity)", () => {
-      const address =
-        "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" as Address;
+      const address = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" as Address;
       const result = fromKitAddress(address);
       expect(result).to.equal("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
       expect(typeof result).to.equal("string");

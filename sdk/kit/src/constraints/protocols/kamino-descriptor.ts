@@ -26,7 +26,11 @@ import {
   KAMINO_SPENDING_ACTIONS,
 } from "./kamino-schema.js";
 import { KAMINO_RESERVES } from "../../integrations/config/kamino-markets.js";
-import { getSchema as getSchemaGeneric, makeDiscriminatorConstraint, makeLteConstraint } from "./constraint-helpers.js";
+import {
+  getSchema as getSchemaGeneric,
+  makeDiscriminatorConstraint,
+  makeLteConstraint,
+} from "./constraint-helpers.js";
 
 // ─── Amount Field Mapping ────────────────────────────────────────────────────
 
@@ -119,7 +123,10 @@ function compileAllowedReserves(rule: ActionRule): CompiledConstraint[] {
 
 // ─── Descriptor ─────────────────────────────────────────────────────────────
 
-const RULE_COMPILERS: Record<string, (rule: ActionRule) => CompiledConstraint[]> = {
+const RULE_COMPILERS: Record<
+  string,
+  (rule: ActionRule) => CompiledConstraint[]
+> = {
   allowAll: compileAllowAll,
   maxAmount: compileMaxAmount,
   allowedReserves: compileAllowedReserves,
@@ -134,7 +141,8 @@ const RULE_TYPE_METADATA: RuleTypeMetadata[] = [
   {
     type: "allowAll",
     displayName: "Allow All Parameters",
-    description: "Allow the action with any parameters (discriminator-only constraint).",
+    description:
+      "Allow the action with any parameters (discriminator-only constraint).",
     applicableActions: [...Array.from(KAMINO_SCHEMA.instructions.keys())],
     params: [],
   },
@@ -257,7 +265,7 @@ export const KaminoDescriptor: ProtocolDescriptor = {
     if (missingRiskReducing.length > 0) {
       warnings.push(
         `strict_mode is ON but these risk-reducing actions have no rules (agent cannot execute them): ${missingRiskReducing.join(", ")}. ` +
-        `Add an "allowAll" rule for these actions to prevent the agent from being unable to withdraw.`,
+          `Add an "allowAll" rule for these actions to prevent the agent from being unable to withdraw.`,
       );
     }
 

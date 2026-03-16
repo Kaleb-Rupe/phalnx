@@ -34,7 +34,7 @@ export function checkedDecimalMul(
   if (targetPower > 0n) {
     return product * 10n ** targetPower;
   }
-  return product / 10n ** (-targetPower);
+  return product / 10n ** -targetPower;
 }
 
 /**
@@ -55,7 +55,7 @@ export function checkedDecimalCeilMul(
   if (targetPower > 0n) {
     return product * 10n ** targetPower;
   }
-  return checkedCeilDiv(product, 10n ** (-targetPower));
+  return checkedCeilDiv(product, 10n ** -targetPower);
 }
 
 /**
@@ -73,7 +73,7 @@ export function checkedDecimalDiv(
   if (coefficient1 === 0n) return 0n;
 
   let scaleFactor = 0n;
-  let targetPower = (exponent1 - exponent2) - targetExponent;
+  let targetPower = exponent1 - exponent2 - targetExponent;
 
   if (exponent1 > 0n) {
     scaleFactor += exponent1;
@@ -87,14 +87,13 @@ export function checkedDecimalDiv(
     targetPower += targetExponent;
   }
 
-  const scaledCoeff1 = scaleFactor > 0n
-    ? coefficient1 * 10n ** scaleFactor
-    : coefficient1;
+  const scaledCoeff1 =
+    scaleFactor > 0n ? coefficient1 * 10n ** scaleFactor : coefficient1;
 
   if (targetPower >= 0n) {
     return (scaledCoeff1 / coefficient2) * 10n ** targetPower;
   }
-  return (scaledCoeff1 / coefficient2) / 10n ** (-targetPower);
+  return scaledCoeff1 / coefficient2 / 10n ** -targetPower;
 }
 
 /**
@@ -112,7 +111,7 @@ export function scaleToExponent(
   if (delta > 0n) {
     return value / 10n ** delta;
   }
-  return value * 10n ** (-delta);
+  return value * 10n ** -delta;
 }
 
 /**

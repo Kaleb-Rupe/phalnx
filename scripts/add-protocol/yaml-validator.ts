@@ -37,17 +37,24 @@ export function validateAnnotation(
   if (!config.protocol.id || typeof config.protocol.id !== "string") {
     errors.push("protocol.id is required and must be a string");
   }
-  if (!config.protocol.programAddress || typeof config.protocol.programAddress !== "string") {
+  if (
+    !config.protocol.programAddress ||
+    typeof config.protocol.programAddress !== "string"
+  ) {
     errors.push("protocol.programAddress is required and must be a string");
   }
   if (!config.protocol.idlFile || typeof config.protocol.idlFile !== "string") {
     errors.push("protocol.idlFile is required and must be a string");
   }
   if (!["snake", "camel"].includes(config.protocol.idlCase)) {
-    errors.push(`protocol.idlCase must be "snake" or "camel", got "${config.protocol.idlCase}"`);
+    errors.push(
+      `protocol.idlCase must be "snake" or "camel", got "${config.protocol.idlCase}"`,
+    );
   }
   if (!["new", "old"].includes(config.protocol.idlFormat)) {
-    errors.push(`protocol.idlFormat must be "new" or "old", got "${config.protocol.idlFormat}"`);
+    errors.push(
+      `protocol.idlFormat must be "new" or "old", got "${config.protocol.idlFormat}"`,
+    );
   }
 
   // ── Build IDL lookups ─────────────────────────────────────────────────
@@ -86,7 +93,11 @@ export function validateAnnotation(
     sdkNames.add(ix.sdkName);
 
     // Check actionType is valid
-    if (!VALID_ACTION_TYPES.includes(ix.actionType as typeof VALID_ACTION_TYPES[number])) {
+    if (
+      !VALID_ACTION_TYPES.includes(
+        ix.actionType as (typeof VALID_ACTION_TYPES)[number],
+      )
+    ) {
       errors.push(
         `${prefix}: actionType "${ix.actionType}" is not valid. Must be one of: ${VALID_ACTION_TYPES.join(", ")}`,
       );
@@ -98,7 +109,11 @@ export function validateAnnotation(
     // Check constrainableFields exist in IDL args
     if (ix.constrainableFields) {
       for (const cf of ix.constrainableFields) {
-        const argExists = findArgInInstruction(idlIx, cf.idlFieldName, idlTypes);
+        const argExists = findArgInInstruction(
+          idlIx,
+          cf.idlFieldName,
+          idlTypes,
+        );
         if (!argExists) {
           errors.push(
             `${prefix}: constrainableFields "${cf.idlFieldName}" not found in IDL instruction args. Available: ${idlIx.args.map((a) => a.name).join(", ")}`,
@@ -120,7 +135,10 @@ export function validateAnnotation(
     }
 
     // Check variableLengthAfter references a real arg
-    if (ix.variableLengthAfter !== null && ix.variableLengthAfter !== undefined) {
+    if (
+      ix.variableLengthAfter !== null &&
+      ix.variableLengthAfter !== undefined
+    ) {
       const vlArg = idlIx.args.find((a) => a.name === ix.variableLengthAfter);
       if (!vlArg) {
         errors.push(
@@ -140,7 +158,11 @@ export function validateAnnotation(
       const prefix = `ruleTypes[${rt.type}]`;
 
       // Check operator validity
-      if (!VALID_OPERATORS.includes(rt.operator as typeof VALID_OPERATORS[number])) {
+      if (
+        !VALID_OPERATORS.includes(
+          rt.operator as (typeof VALID_OPERATORS)[number],
+        )
+      ) {
         errors.push(
           `${prefix}: operator "${rt.operator}" is not valid. Must be one of: ${VALID_OPERATORS.join(", ")}`,
         );
@@ -192,7 +214,10 @@ export function validateAnnotation(
 function findArgInInstruction(
   ix: IdlInstruction,
   fieldName: string,
-  typeMap: Map<string, { kind: string; fields?: { name: string; type: IdlType }[] }>,
+  typeMap: Map<
+    string,
+    { kind: string; fields?: { name: string; type: IdlType }[] }
+  >,
 ): boolean {
   for (const arg of ix.args) {
     if (arg.name === fieldName) return true;

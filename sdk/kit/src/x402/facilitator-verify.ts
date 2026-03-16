@@ -31,7 +31,9 @@ export function validateSettlement(
 
   // 1. Successful settlement must include tx signature
   if (settlement.success && !settlement.transaction) {
-    warnings.push("Settlement reports success but has no transaction signature");
+    warnings.push(
+      "Settlement reports success but has no transaction signature",
+    );
     return { valid: false, warnings };
   }
 
@@ -44,7 +46,11 @@ export function validateSettlement(
   }
 
   // 3. Network mismatch check
-  if (expectedNetwork && settlement.network && settlement.network !== expectedNetwork) {
+  if (
+    expectedNetwork &&
+    settlement.network &&
+    settlement.network !== expectedNetwork
+  ) {
     warnings.push(
       `Settlement network "${settlement.network}" does not match expected "${expectedNetwork}"`,
     );

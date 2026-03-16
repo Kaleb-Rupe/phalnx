@@ -40,8 +40,7 @@ export function getCurrentLeverage(
 
   const unsettledFeesUsd = exitFee + lockFeeUsd;
   const lossUsd = pnl.lossUsd + unsettledFeesUsd;
-  const currentMarginUsd =
-    position.collateralUsd + pnl.profitUsd - lossUsd;
+  const currentMarginUsd = position.collateralUsd + pnl.profitUsd - lossUsd;
 
   if (currentMarginUsd > 0n) {
     return (position.sizeUsd * BPS_POWER) / currentMarginUsd;

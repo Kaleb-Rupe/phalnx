@@ -13,11 +13,16 @@ import {
   fetchUserRewards,
 } from "@phalnx/kit";
 
-export async function getKaminoPositionsResource(wallet: string): Promise<string> {
+export async function getKaminoPositionsResource(
+  wallet: string,
+): Promise<string> {
   try {
     const [markets, rewards] = await Promise.all([
       fetchKaminoMarkets(),
-      fetchUserRewards(wallet).catch(() => ({ lending: { pending: 0, tokens: [] }, vault: { pending: 0, tokens: [] } })),
+      fetchUserRewards(wallet).catch(() => ({
+        lending: { pending: 0, tokens: [] },
+        vault: { pending: 0, tokens: [] },
+      })),
     ]);
 
     // Fetch obligations from all markets
@@ -28,8 +33,12 @@ export async function getKaminoPositionsResource(wallet: string): Promise<string
           return Promise.all(
             obligations.map(async (o) => {
               const [loanInfo, pnl] = await Promise.all([
-                fetchLoanInfo(m.lendingMarket, o.obligationAddress).catch(() => null),
-                fetchObligationPnl(m.lendingMarket, o.obligationAddress).catch(() => null),
+                fetchLoanInfo(m.lendingMarket, o.obligationAddress).catch(
+                  () => null,
+                ),
+                fetchObligationPnl(m.lendingMarket, o.obligationAddress).catch(
+                  () => null,
+                ),
               ]);
               return {
                 address: o.obligationAddress,

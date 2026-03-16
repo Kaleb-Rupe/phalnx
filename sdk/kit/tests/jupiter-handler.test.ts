@@ -35,10 +35,26 @@ describe("jupiter-handler", () => {
       const raw: JupiterSerializedInstruction = {
         programId: "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",
         accounts: [
-          { pubkey: "Acct1111111111111111111111111111111111111111", isSigner: true, isWritable: true },
-          { pubkey: "Acct2222222222222222222222222222222222222222", isSigner: true, isWritable: false },
-          { pubkey: "Acct3333333333333333333333333333333333333333", isSigner: false, isWritable: true },
-          { pubkey: "Acct4444444444444444444444444444444444444444", isSigner: false, isWritable: false },
+          {
+            pubkey: "Acct1111111111111111111111111111111111111111",
+            isSigner: true,
+            isWritable: true,
+          },
+          {
+            pubkey: "Acct2222222222222222222222222222222222222222",
+            isSigner: true,
+            isWritable: false,
+          },
+          {
+            pubkey: "Acct3333333333333333333333333333333333333333",
+            isSigner: false,
+            isWritable: true,
+          },
+          {
+            pubkey: "Acct4444444444444444444444444444444444444444",
+            isSigner: false,
+            isWritable: false,
+          },
         ],
         data: btoa(""),
       };

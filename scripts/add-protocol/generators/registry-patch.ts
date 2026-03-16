@@ -25,7 +25,9 @@ export function generateRegistryPatches(config: AnnotationConfig): string {
   sections.push(``);
   sections.push(`--- 1. sdk/kit/src/client.ts ---`);
   sections.push(``);
-  sections.push(`Add import at the top with the other protocol handler imports:`);
+  sections.push(
+    `Add import at the top with the other protocol handler imports:`,
+  );
   sections.push(``);
   sections.push(
     `  import { ${pascal}Handler } from "./integrations/${protocol.id}-handler.js";`,
@@ -43,9 +45,7 @@ export function generateRegistryPatches(config: AnnotationConfig): string {
   sections.push(``);
   sections.push(`Add exports for the protocol schema and descriptor:`);
   sections.push(``);
-  sections.push(
-    `  // ${protocol.displayName}`,
-  );
+  sections.push(`  // ${protocol.displayName}`);
   sections.push(
     `  export { ${upper}_SCHEMA, ${upper}_PROGRAM } from "./protocols/${protocol.id}-schema.js";`,
   );
@@ -89,12 +89,13 @@ export function generateRegistryPatches(config: AnnotationConfig): string {
   sections.push(`  // In the intent type mapping switch/object:`);
 
   // Derive intent entries from actionCategories if available
-  if (config.actionCategories && Object.keys(config.actionCategories).length > 0) {
+  if (
+    config.actionCategories &&
+    Object.keys(config.actionCategories).length > 0
+  ) {
     for (const category of Object.keys(config.actionCategories)) {
       const actions = config.actionCategories[category];
-      sections.push(
-        `  // Category "${category}": ${actions.join(", ")}`,
-      );
+      sections.push(`  // Category "${category}": ${actions.join(", ")}`);
     }
     sections.push(``);
     sections.push(

@@ -2,10 +2,16 @@ import { z } from "zod";
 import { getDescriptors } from "./constraint-shared";
 
 export const getConstraintRuleTypesSchema = z.object({
-  protocolId: z.string().describe("Protocol ID to get rule types for (e.g., 'flash-trade', 'kamino')"),
+  protocolId: z
+    .string()
+    .describe(
+      "Protocol ID to get rule types for (e.g., 'flash-trade', 'kamino')",
+    ),
 });
 
-export type GetConstraintRuleTypesInput = z.infer<typeof getConstraintRuleTypesSchema>;
+export type GetConstraintRuleTypesInput = z.infer<
+  typeof getConstraintRuleTypesSchema
+>;
 
 export async function getConstraintRuleTypes(
   _client: unknown,
@@ -27,9 +33,15 @@ export async function getConstraintRuleTypes(
   ];
 
   for (const rt of ruleTypes) {
-    const params = rt.params.length > 0
-      ? rt.params.map((p: any) => `${p.name}: ${p.type}${p.required ? " (required)" : ""}`).join(", ")
-      : "none";
+    const params =
+      rt.params.length > 0
+        ? rt.params
+            .map(
+              (p: any) =>
+                `${p.name}: ${p.type}${p.required ? " (required)" : ""}`,
+            )
+            .join(", ")
+        : "none";
     lines.push(
       `| \`${rt.type}\` | ${rt.displayName} | ${rt.description} | ${rt.applicableActions.join(", ")} | ${params} |`,
     );

@@ -5,11 +5,7 @@
  * - sendAndConfirmTransaction: Send + poll getSignatureStatuses
  */
 
-import type {
-  Rpc,
-  SolanaRpcApi,
-  Commitment,
-} from "@solana/kit";
+import type { Rpc, SolanaRpcApi, Commitment } from "@solana/kit";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -64,7 +60,10 @@ export class BlockhashCache {
       .getLatestBlockhash({ commitment: "confirmed" })
       .send();
 
-    const value = result.value as { blockhash: string; lastValidBlockHeight: bigint };
+    const value = result.value as {
+      blockhash: string;
+      lastValidBlockHeight: bigint;
+    };
     this.cached = {
       blockhash: value.blockhash,
       lastValidBlockHeight: value.lastValidBlockHeight,
@@ -91,11 +90,14 @@ export async function sendAndConfirmTransaction(
 
   // Send the transaction
   const signature = await rpc
-    .sendTransaction(encodedTransaction as any, {
-      encoding: "base64",
-      skipPreflight: false,
-      preflightCommitment: commitment,
-    } as any)
+    .sendTransaction(
+      encodedTransaction as any,
+      {
+        encoding: "base64",
+        skipPreflight: false,
+        preflightCommitment: commitment,
+      } as any,
+    )
     .send();
 
   // Poll for confirmation

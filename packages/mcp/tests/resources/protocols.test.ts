@@ -17,8 +17,8 @@ describe("resource: shield://protocols", () => {
     const json = await getProtocolsResource();
     const data = JSON.parse(json);
 
-    const jupiter = data.protocols.find(
-      (p: any) => p.displayName.toLowerCase().includes("jupiter"),
+    const jupiter = data.protocols.find((p: any) =>
+      p.displayName.toLowerCase().includes("jupiter"),
     );
     expect(jupiter).to.not.be.undefined;
   });

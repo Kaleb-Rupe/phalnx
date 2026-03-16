@@ -32,13 +32,20 @@ export function numberToLeBytes(value: number, byteLength: number): Uint8Array {
 /** Map string operator names to ConstraintOperator enum values. */
 export function mapOperator(op: string): ConstraintOperator {
   switch (op) {
-    case "eq": return ConstraintOperator.Eq;
-    case "ne": return ConstraintOperator.Ne;
-    case "gte": return ConstraintOperator.Gte;
-    case "lte": return ConstraintOperator.Lte;
-    case "gteSigned": return ConstraintOperator.GteSigned;
-    case "lteSigned": return ConstraintOperator.LteSigned;
-    case "bitmask": return ConstraintOperator.Bitmask;
+    case "eq":
+      return ConstraintOperator.Eq;
+    case "ne":
+      return ConstraintOperator.Ne;
+    case "gte":
+      return ConstraintOperator.Gte;
+    case "lte":
+      return ConstraintOperator.Lte;
+    case "gteSigned":
+      return ConstraintOperator.GteSigned;
+    case "lteSigned":
+      return ConstraintOperator.LteSigned;
+    case "bitmask":
+      return ConstraintOperator.Bitmask;
     default:
       throw new Error(`Unknown constraint operator: ${op}`);
   }

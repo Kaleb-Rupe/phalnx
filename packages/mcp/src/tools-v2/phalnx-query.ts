@@ -264,12 +264,14 @@ export async function phalnxQuery(
       }
 
       case "kaminoMarkets": {
-        const { getKaminoMarketsResource } = await import("../resources/kamino-markets");
+        const { getKaminoMarketsResource } =
+          await import("../resources/kamino-markets");
         return getKaminoMarketsResource();
       }
 
       case "kaminoYields": {
-        const { getKaminoYieldsResource } = await import("../resources/kamino-yields");
+        const { getKaminoYieldsResource } =
+          await import("../resources/kamino-yields");
         return getKaminoYieldsResource();
       }
 
@@ -277,7 +279,8 @@ export async function phalnxQuery(
         const walletAddr =
           (params.wallet as string) ??
           client.provider.wallet.publicKey.toBase58();
-        const { getKaminoPositionsResource } = await import("../resources/kamino-positions");
+        const { getKaminoPositionsResource } =
+          await import("../resources/kamino-positions");
         return getKaminoPositionsResource(walletAddr);
       }
 

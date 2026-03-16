@@ -11,7 +11,12 @@ import { IntentEngine, type IntentEngineConfig } from "../src/intent-engine.js";
 import { TransactionExecutor } from "../src/transaction-executor.js";
 import { ProtocolRegistry } from "../src/integrations/protocol-registry.js";
 import { JupiterHandler } from "../src/integrations/jupiter-handler.js";
-import { DriftHandler, FlashTradeHandler, KaminoHandler, SquadsHandler } from "../src/integrations/t2-handlers.js";
+import {
+  DriftHandler,
+  FlashTradeHandler,
+  KaminoHandler,
+  SquadsHandler,
+} from "../src/integrations/t2-handlers.js";
 import { isAgentError, type AgentError } from "../src/agent-errors.js";
 import type { IntentAction, ExecuteResult } from "../src/intents.js";
 import {
@@ -80,7 +85,14 @@ describe("E2E Execute Pipeline", () => {
       // precheck will fail because mock RPC returns null for getAccountInfo
       const engine = buildEngineWithExecutor();
       const result = await engine.run(
-        { type: "swap", params: { inputMint: USDC_MINT, outputMint: SOL_MINT, amount: "1000000" } },
+        {
+          type: "swap",
+          params: {
+            inputMint: USDC_MINT,
+            outputMint: SOL_MINT,
+            amount: "1000000",
+          },
+        },
         MOCK_VAULT,
       );
       // Should fail at precheck (can't fetch vault data from mock)
@@ -90,7 +102,14 @@ describe("E2E Execute Pipeline", () => {
     it("skipPrecheck bypasses precheck stage", async () => {
       const engine = buildEngineWithExecutor();
       const result = await engine.run(
-        { type: "swap", params: { inputMint: USDC_MINT, outputMint: SOL_MINT, amount: "1000000" } },
+        {
+          type: "swap",
+          params: {
+            inputMint: USDC_MINT,
+            outputMint: SOL_MINT,
+            amount: "1000000",
+          },
+        },
         MOCK_VAULT,
         { skipPrecheck: true },
       );
@@ -131,7 +150,9 @@ describe("E2E Execute Pipeline", () => {
         simulateResult: {
           value: {
             err: { InstructionError: [0, "Custom"] },
-            logs: ["Program log: Error Code: VaultNotActive. Error Number: 6000"],
+            logs: [
+              "Program log: Error Code: VaultNotActive. Error Number: 6000",
+            ],
             unitsConsumed: 50_000,
           },
         },
@@ -232,7 +253,14 @@ describe("E2E Execute Pipeline", () => {
       const engine = buildEngineWithoutExecutor();
       try {
         await engine.execute(
-          { type: "swap", params: { inputMint: USDC_MINT, outputMint: SOL_MINT, amount: "1000000" } },
+          {
+            type: "swap",
+            params: {
+              inputMint: USDC_MINT,
+              outputMint: SOL_MINT,
+              amount: "1000000",
+            },
+          },
           MOCK_VAULT,
         );
         expect.fail("Should have thrown");

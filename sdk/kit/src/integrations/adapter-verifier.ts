@@ -73,10 +73,7 @@ export function verifyAdapterOutput(
     const programId = ix.programAddress;
 
     // Check 1: programAddress must be in allowed list or infrastructure
-    if (
-      !allowedSet.has(programId) &&
-      !INFRASTRUCTURE_PROGRAMS.has(programId)
-    ) {
+    if (!allowedSet.has(programId) && !INFRASTRUCTURE_PROGRAMS.has(programId)) {
       violations.push(
         `Instruction ${i}: program ${programId} not in handler's programIds or infrastructure whitelist`,
       );

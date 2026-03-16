@@ -23,11 +23,18 @@ const UNKNOWN_PROGRAM = "UnknownProgram1111111111111111111111111111" as Address;
 const DEST = "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM" as Address;
 
 // Helper to create IntentAction without full param shapes (drift detection reads params loosely)
-function intent(type: string, params: Record<string, unknown> = {}): IntentAction {
+function intent(
+  type: string,
+  params: Record<string, unknown> = {},
+): IntentAction {
   return { type, params } as unknown as IntentAction;
 }
 
-function makeIx(programAddress: Address, data?: Uint8Array, accounts?: Array<{ address: Address; role?: AccountRole }>): InspectableInstruction {
+function makeIx(
+  programAddress: Address,
+  data?: Uint8Array,
+  accounts?: Array<{ address: Address; role?: AccountRole }>,
+): InspectableInstruction {
   return {
     programAddress,
     data,
@@ -35,13 +42,17 @@ function makeIx(programAddress: Address, data?: Uint8Array, accounts?: Array<{ a
   };
 }
 
-function makeSplTransfer(authority: Address, dest: Address, amount: bigint): InspectableInstruction {
+function makeSplTransfer(
+  authority: Address,
+  dest: Address,
+  amount: bigint,
+): InspectableInstruction {
   // SPL Transfer discriminator = 3, amount = 8 bytes LE
   const data = new Uint8Array(9);
   data[0] = 3; // Transfer discriminator
   let a = amount;
   for (let i = 1; i <= 8; i++) {
-    data[i] = Number(a & 0xFFn);
+    data[i] = Number(a & 0xffn);
     a >>= 8n;
   }
   return {
@@ -66,7 +77,11 @@ describe("intent-drift", () => {
         makeIx(JUPITER),
         makeIx(PHALNX),
       ];
-      const result = detectIntentDrift(intent("swap", { amount: "1000000" }), instructions, SIGNER);
+      const result = detectIntentDrift(
+        intent("swap", { amount: "1000000" }),
+        instructions,
+        SIGNER,
+      );
       expect(result.drifted).to.equal(false);
       expect(result.violations).to.have.lengthOf(0);
       expect(result.severity).to.equal("none");
@@ -84,7 +99,9 @@ describe("intent-drift", () => {
       ];
       const result = detectIntentDrift(intent("swap"), instructions, SIGNER);
       expect(result.drifted).to.equal(true);
-      expect(result.violations.some(v => v.type === "program_mismatch")).to.equal(true);
+      expect(
+        result.violations.some((v) => v.type === "program_mismatch"),
+      ).to.equal(true);
       expect(result.severity).to.equal("high");
     });
 
@@ -96,7 +113,9 @@ describe("intent-drift", () => {
         makeIx(JUPITER),
       ];
       const result = detectIntentDrift(intent("swap"), instructions, SIGNER);
-      const programViolations = result.violations.filter(v => v.type === "program_mismatch");
+      const programViolations = result.violations.filter(
+        (v) => v.type === "program_mismatch",
+      );
       expect(programViolations).to.have.lengthOf(0);
     });
   });
@@ -104,8 +123,12 @@ describe("intent-drift", () => {
   describe("instruction count", () => {
     it("flags excessive instruction count", () => {
       const instructions = Array(12).fill(makeIx(JUPITER));
-      const result = detectIntentDrift(intent("swap"), instructions, SIGNER, { maxExtraInstructions: 3 });
-      expect(result.violations.some(v => v.type === "instruction_count")).to.equal(true);
+      const result = detectIntentDrift(intent("swap"), instructions, SIGNER, {
+        maxExtraInstructions: 3,
+      });
+      expect(
+        result.violations.some((v) => v.type === "instruction_count"),
+      ).to.equal(true);
     });
 
     it("allows normal instruction count", () => {
@@ -116,7 +139,9 @@ describe("intent-drift", () => {
         makeIx(PHALNX),
       ];
       const result = detectIntentDrift(intent("swap"), instructions, SIGNER);
-      const countViolations = result.violations.filter(v => v.type === "instruction_count");
+      const countViolations = result.violations.filter(
+        (v) => v.type === "instruction_count",
+      );
       expect(countViolations).to.have.lengthOf(0);
     });
   });
@@ -130,7 +155,9 @@ describe("intent-drift", () => {
         makeSplTransfer(SIGNER, DEST, 500_000n), // phantom
       ];
       const result = detectIntentDrift(intent("swap"), instructions, SIGNER);
-      expect(result.violations.some(v => v.type === "phantom_transfer")).to.equal(true);
+      expect(
+        result.violations.some((v) => v.type === "phantom_transfer"),
+      ).to.equal(true);
       expect(result.severity).to.equal("high");
     });
 
@@ -139,8 +166,14 @@ describe("intent-drift", () => {
         makeIx(PHALNX),
         makeSplTransfer(SIGNER, DEST, 1_000_000n),
       ];
-      const result = detectIntentDrift(intent("transfer", { destination: DEST, amount: "1000000" }), instructions, SIGNER);
-      const phantomViolations = result.violations.filter(v => v.type === "phantom_transfer");
+      const result = detectIntentDrift(
+        intent("transfer", { destination: DEST, amount: "1000000" }),
+        instructions,
+        SIGNER,
+      );
+      const phantomViolations = result.violations.filter(
+        (v) => v.type === "phantom_transfer",
+      );
       expect(phantomViolations).to.have.lengthOf(0);
     });
 
@@ -153,7 +186,9 @@ describe("intent-drift", () => {
         makeSplTransfer(OTHER, DEST, 500_000n),
       ];
       const result = detectIntentDrift(intent("swap"), instructions, SIGNER);
-      const phantomViolations = result.violations.filter(v => v.type === "phantom_transfer");
+      const phantomViolations = result.violations.filter(
+        (v) => v.type === "phantom_transfer",
+      );
       expect(phantomViolations).to.have.lengthOf(0);
     });
   });
@@ -167,9 +202,13 @@ describe("intent-drift", () => {
       ];
       const result = detectIntentDrift(
         intent("transfer", { destination: DEST, amount: "1000000" }),
-        instructions, SIGNER, { amountTolerancePct: 5 },
+        instructions,
+        SIGNER,
+        { amountTolerancePct: 5 },
       );
-      expect(result.violations.some(v => v.type === "amount_mismatch")).to.equal(true);
+      expect(
+        result.violations.some((v) => v.type === "amount_mismatch"),
+      ).to.equal(true);
     });
 
     it("allows amount within tolerance", () => {
@@ -179,25 +218,33 @@ describe("intent-drift", () => {
       ];
       const result = detectIntentDrift(
         intent("transfer", { destination: DEST, amount: "1000000" }),
-        instructions, SIGNER, { amountTolerancePct: 5 },
+        instructions,
+        SIGNER,
+        { amountTolerancePct: 5 },
       );
-      const amountViolations = result.violations.filter(v => v.type === "amount_mismatch");
+      const amountViolations = result.violations.filter(
+        (v) => v.type === "amount_mismatch",
+      );
       expect(amountViolations).to.have.lengthOf(0);
     });
   });
 
   describe("recipient mismatch", () => {
     it("detects transfer to unexpected destination", () => {
-      const WRONG_DEST = "WrongDest111111111111111111111111111111111" as Address;
+      const WRONG_DEST =
+        "WrongDest111111111111111111111111111111111" as Address;
       const instructions = [
         makeIx(PHALNX),
         makeSplTransfer(SIGNER, WRONG_DEST, 1_000_000n),
       ];
       const result = detectIntentDrift(
         intent("transfer", { destination: DEST, amount: "1000000" }),
-        instructions, SIGNER,
+        instructions,
+        SIGNER,
       );
-      expect(result.violations.some(v => v.type === "recipient_mismatch")).to.equal(true);
+      expect(
+        result.violations.some((v) => v.type === "recipient_mismatch"),
+      ).to.equal(true);
       expect(result.severity).to.equal("medium");
     });
   });
@@ -212,8 +259,15 @@ describe("intent-drift", () => {
     it("instruction_count only → low", () => {
       // Many instructions but all expected programs (phalnx is always expected)
       const instructions = Array(15).fill(makeIx(PHALNX));
-      const result = detectIntentDrift(intent("transfer"), instructions, SIGNER, { maxExtraInstructions: 3 });
-      const countViolations = result.violations.filter(v => v.type === "instruction_count");
+      const result = detectIntentDrift(
+        intent("transfer"),
+        instructions,
+        SIGNER,
+        { maxExtraInstructions: 3 },
+      );
+      const countViolations = result.violations.filter(
+        (v) => v.type === "instruction_count",
+      );
       expect(countViolations.length).to.be.greaterThan(0);
     });
   });
@@ -221,7 +275,9 @@ describe("intent-drift", () => {
   describe("enforceIntentDrift", () => {
     it("throws ShieldDeniedError on high severity", () => {
       const instructions = [makeIx(UNKNOWN_PROGRAM)];
-      expect(() => enforceIntentDrift(intent("swap"), instructions, SIGNER)).to.throw(ShieldDeniedError);
+      expect(() =>
+        enforceIntentDrift(intent("swap"), instructions, SIGNER),
+      ).to.throw(ShieldDeniedError);
     });
 
     it("returns result without throwing on low severity", () => {
@@ -235,14 +291,16 @@ describe("intent-drift", () => {
     });
 
     it("warns on medium severity without throwing", () => {
-      const WRONG_DEST = "WrongDest111111111111111111111111111111111" as Address;
+      const WRONG_DEST =
+        "WrongDest111111111111111111111111111111111" as Address;
       const instructions = [
         makeIx(PHALNX),
         makeSplTransfer(SIGNER, WRONG_DEST, 1_000_000n),
       ];
       const result = enforceIntentDrift(
         intent("transfer", { destination: DEST, amount: "1000000" }),
-        instructions, SIGNER,
+        instructions,
+        SIGNER,
       );
       expect(result.severity).to.equal("medium");
       expect(result.drifted).to.equal(true);
@@ -250,13 +308,17 @@ describe("intent-drift", () => {
   });
 
   describe("TransferChecked destination index (BUG-2)", () => {
-    function makeSplTransferChecked(authority: Address, dest: Address, amount: bigint): InspectableInstruction {
+    function makeSplTransferChecked(
+      authority: Address,
+      dest: Address,
+      amount: bigint,
+    ): InspectableInstruction {
       // SPL TransferChecked discriminator = 12, amount = 8 bytes LE, decimals = 1 byte
       const data = new Uint8Array(10);
       data[0] = 12; // TransferChecked discriminator
       let a = amount;
       for (let i = 1; i <= 8; i++) {
-        data[i] = Number(a & 0xFFn);
+        data[i] = Number(a & 0xffn);
         a >>= 8n;
       }
       data[9] = 6; // decimals
@@ -266,23 +328,27 @@ describe("intent-drift", () => {
         accounts: [
           { address: "source1111111111111111111111111111111111111" as Address }, // source
           { address: "mint111111111111111111111111111111111111111" as Address }, // mint
-          { address: dest },       // destination at index 2
-          { address: authority },   // authority at index 3
+          { address: dest }, // destination at index 2
+          { address: authority }, // authority at index 3
         ],
       };
     }
 
     it("detects recipient mismatch using correct index for TransferChecked", () => {
-      const WRONG_DEST = "WrongDest111111111111111111111111111111111" as Address;
+      const WRONG_DEST =
+        "WrongDest111111111111111111111111111111111" as Address;
       const instructions = [
         makeIx(PHALNX),
         makeSplTransferChecked(SIGNER, WRONG_DEST, 1_000_000n),
       ];
       const result = detectIntentDrift(
         intent("transfer", { destination: DEST, amount: "1000000" }),
-        instructions, SIGNER,
+        instructions,
+        SIGNER,
       );
-      expect(result.violations.some(v => v.type === "recipient_mismatch")).to.equal(true);
+      expect(
+        result.violations.some((v) => v.type === "recipient_mismatch"),
+      ).to.equal(true);
     });
 
     it("passes when TransferChecked destination matches declared", () => {
@@ -292,9 +358,12 @@ describe("intent-drift", () => {
       ];
       const result = detectIntentDrift(
         intent("transfer", { destination: DEST, amount: "1000000" }),
-        instructions, SIGNER,
+        instructions,
+        SIGNER,
       );
-      const recipientViolations = result.violations.filter(v => v.type === "recipient_mismatch");
+      const recipientViolations = result.violations.filter(
+        (v) => v.type === "recipient_mismatch",
+      );
       expect(recipientViolations).to.have.lengthOf(0);
     });
   });
@@ -309,22 +378,40 @@ describe("intent-drift", () => {
         makeIx(DRIFT),
         makeIx(PHALNX),
       ];
-      const result = detectIntentDrift(intent("driftPerpOrder"), instructions, SIGNER);
-      const programViolations = result.violations.filter(v => v.type === "program_mismatch");
+      const result = detectIntentDrift(
+        intent("driftPerpOrder"),
+        instructions,
+        SIGNER,
+      );
+      const programViolations = result.violations.filter(
+        (v) => v.type === "program_mismatch",
+      );
       expect(programViolations).to.have.lengthOf(0);
     });
 
     it("driftDeposit does not trigger program mismatch", () => {
       const instructions = [makeIx(PHALNX), makeIx(DRIFT)];
-      const result = detectIntentDrift(intent("driftDeposit"), instructions, SIGNER);
-      const programViolations = result.violations.filter(v => v.type === "program_mismatch");
+      const result = detectIntentDrift(
+        intent("driftDeposit"),
+        instructions,
+        SIGNER,
+      );
+      const programViolations = result.violations.filter(
+        (v) => v.type === "program_mismatch",
+      );
       expect(programViolations).to.have.lengthOf(0);
     });
 
     it("driftSpotOrder does not trigger program mismatch", () => {
       const instructions = [makeIx(PHALNX), makeIx(DRIFT)];
-      const result = detectIntentDrift(intent("driftSpotOrder"), instructions, SIGNER);
-      const programViolations = result.violations.filter(v => v.type === "program_mismatch");
+      const result = detectIntentDrift(
+        intent("driftSpotOrder"),
+        instructions,
+        SIGNER,
+      );
+      const programViolations = result.violations.filter(
+        (v) => v.type === "program_mismatch",
+      );
       expect(programViolations).to.have.lengthOf(0);
     });
   });
@@ -350,52 +437,71 @@ describe("intent-drift", () => {
       ];
       const result = detectIntentDrift(
         intent("transfer", { destination: DEST, amount: "0" }),
-        instructions, SIGNER,
+        instructions,
+        SIGNER,
       );
-      expect(result.violations.some(v => v.type === "amount_mismatch")).to.equal(true);
-      expect(result.violations.some(v => v.message.includes("Declared amount is 0"))).to.equal(true);
+      expect(
+        result.violations.some((v) => v.type === "amount_mismatch"),
+      ).to.equal(true);
+      expect(
+        result.violations.some((v) =>
+          v.message.includes("Declared amount is 0"),
+        ),
+      ).to.equal(true);
     });
 
     it("no violation when declared=0 and no transfers", () => {
       const instructions = [makeIx(PHALNX)];
       const result = detectIntentDrift(
         intent("transfer", { amount: "0" }),
-        instructions, SIGNER,
+        instructions,
+        SIGNER,
       );
-      const amountViolations = result.violations.filter(v => v.type === "amount_mismatch");
+      const amountViolations = result.violations.filter(
+        (v) => v.type === "amount_mismatch",
+      );
       expect(amountViolations).to.have.lengthOf(0);
     });
   });
 
   describe("recipient check for deposit types (BUG-10)", () => {
     it("checks recipient for deposit intent", () => {
-      const WRONG_DEST = "WrongDest111111111111111111111111111111111" as Address;
+      const WRONG_DEST =
+        "WrongDest111111111111111111111111111111111" as Address;
       const instructions = [
         makeIx(PHALNX),
         makeSplTransfer(SIGNER, WRONG_DEST, 1_000_000n),
       ];
       const result = detectIntentDrift(
         intent("deposit", { destination: DEST, amount: "1000000" }),
-        instructions, SIGNER,
+        instructions,
+        SIGNER,
       );
-      expect(result.violations.some(v => v.type === "recipient_mismatch")).to.equal(true);
+      expect(
+        result.violations.some((v) => v.type === "recipient_mismatch"),
+      ).to.equal(true);
     });
 
     it("checks recipient for kaminoDeposit intent", () => {
-      const WRONG_DEST = "WrongDest111111111111111111111111111111111" as Address;
+      const WRONG_DEST =
+        "WrongDest111111111111111111111111111111111" as Address;
       const instructions = [
         makeIx(PHALNX),
         makeSplTransfer(SIGNER, WRONG_DEST, 1_000_000n),
       ];
       const result = detectIntentDrift(
         intent("kaminoDeposit", { destination: DEST, amount: "1000000" }),
-        instructions, SIGNER,
+        instructions,
+        SIGNER,
       );
-      expect(result.violations.some(v => v.type === "recipient_mismatch")).to.equal(true);
+      expect(
+        result.violations.some((v) => v.type === "recipient_mismatch"),
+      ).to.equal(true);
     });
 
     it("does not check recipient for swap intent", () => {
-      const WRONG_DEST = "WrongDest111111111111111111111111111111111" as Address;
+      const WRONG_DEST =
+        "WrongDest111111111111111111111111111111111" as Address;
       const instructions = [
         makeIx(PHALNX),
         makeIx(JUPITER),
@@ -403,9 +509,12 @@ describe("intent-drift", () => {
       ];
       const result = detectIntentDrift(
         intent("swap", { destination: DEST, amount: "1000000" }),
-        instructions, SIGNER,
+        instructions,
+        SIGNER,
       );
-      const recipientViolations = result.violations.filter(v => v.type === "recipient_mismatch");
+      const recipientViolations = result.violations.filter(
+        (v) => v.type === "recipient_mismatch",
+      );
       expect(recipientViolations).to.have.lengthOf(0);
     });
   });
@@ -419,16 +528,27 @@ describe("intent-drift", () => {
       ];
       const result = detectIntentDrift(
         intent("transfer", { destination: DEST, amount: "1000000" }),
-        instructions, SIGNER, { amountTolerancePct: 25 },
+        instructions,
+        SIGNER,
+        { amountTolerancePct: 25 },
       );
-      const amountViolations = result.violations.filter(v => v.type === "amount_mismatch");
+      const amountViolations = result.violations.filter(
+        (v) => v.type === "amount_mismatch",
+      );
       expect(amountViolations).to.have.lengthOf(0);
     });
 
     it("custom maxExtraInstructions", () => {
       const instructions = Array(20).fill(makeIx(PHALNX));
-      const result = detectIntentDrift(intent("transfer"), instructions, SIGNER, { maxExtraInstructions: 20 });
-      const countViolations = result.violations.filter(v => v.type === "instruction_count");
+      const result = detectIntentDrift(
+        intent("transfer"),
+        instructions,
+        SIGNER,
+        { maxExtraInstructions: 20 },
+      );
+      const countViolations = result.violations.filter(
+        (v) => v.type === "instruction_count",
+      );
       // 20 instructions <= 6 + 20 = 26 threshold
       expect(countViolations).to.have.lengthOf(0);
     });

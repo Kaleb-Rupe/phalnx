@@ -43,9 +43,7 @@ const closePosition: InstructionSchema = {
 const increaseSize: InstructionSchema = {
   name: "increaseSize",
   discriminator: new Uint8Array([107, 13, 141, 238, 152, 165, 96, 87]),
-  fields: [
-    { name: "sizeDelta", offset: 20, type: "u64", size: 8 },
-  ],
+  fields: [{ name: "sizeDelta", offset: 20, type: "u64", size: 8 }],
   accounts: { market: 5, targetCustody: 6 },
   dataSize: 29, // 8+12+8+1
 };
@@ -53,9 +51,7 @@ const increaseSize: InstructionSchema = {
 const decreaseSize: InstructionSchema = {
   name: "decreaseSize",
   discriminator: new Uint8Array([171, 28, 203, 29, 118, 16, 214, 169]),
-  fields: [
-    { name: "sizeDelta", offset: 20, type: "u64", size: 8 },
-  ],
+  fields: [{ name: "sizeDelta", offset: 20, type: "u64", size: 8 }],
   accounts: { market: 5, targetCustody: 6 },
   dataSize: 29, // 8+12+8+1
 };
@@ -63,9 +59,7 @@ const decreaseSize: InstructionSchema = {
 const addCollateral: InstructionSchema = {
   name: "addCollateral",
   discriminator: new Uint8Array([127, 82, 121, 42, 161, 176, 249, 206]),
-  fields: [
-    { name: "collateralDelta", offset: 8, type: "u64", size: 8 },
-  ],
+  fields: [{ name: "collateralDelta", offset: 8, type: "u64", size: 8 }],
   accounts: { market: 5 },
   dataSize: 16, // 8+8
 };
@@ -73,9 +67,7 @@ const addCollateral: InstructionSchema = {
 const removeCollateral: InstructionSchema = {
   name: "removeCollateral",
   discriminator: new Uint8Array([86, 222, 130, 86, 92, 20, 72, 65]),
-  fields: [
-    { name: "collateralDeltaUsd", offset: 8, type: "u64", size: 8 },
-  ],
+  fields: [{ name: "collateralDeltaUsd", offset: 8, type: "u64", size: 8 }],
   accounts: { market: 6 },
   dataSize: 16, // 8+8
 };
@@ -83,9 +75,7 @@ const removeCollateral: InstructionSchema = {
 const placeTriggerOrder: InstructionSchema = {
   name: "placeTriggerOrder",
   discriminator: new Uint8Array([32, 156, 50, 188, 232, 159, 112, 236]),
-  fields: [
-    { name: "deltaSizeAmount", offset: 20, type: "u64", size: 8 },
-  ],
+  fields: [{ name: "deltaSizeAmount", offset: 20, type: "u64", size: 8 }],
   accounts: { market: 6 },
   dataSize: 29, // 8+12+8+1
 };
@@ -93,9 +83,7 @@ const placeTriggerOrder: InstructionSchema = {
 const editTriggerOrder: InstructionSchema = {
   name: "editTriggerOrder",
   discriminator: new Uint8Array([180, 43, 215, 112, 254, 116, 20, 133]),
-  fields: [
-    { name: "deltaSizeAmount", offset: 21, type: "u64", size: 8 },
-  ],
+  fields: [{ name: "deltaSizeAmount", offset: 21, type: "u64", size: 8 }],
   accounts: { market: 5 },
   dataSize: 30, // 8+1(bool)+12+8+1
 };
@@ -122,9 +110,7 @@ const placeLimitOrder: InstructionSchema = {
 const editLimitOrder: InstructionSchema = {
   name: "editLimitOrder",
   discriminator: new Uint8Array([42, 114, 3, 11, 137, 245, 206, 50]),
-  fields: [
-    { name: "sizeAmount", offset: 21, type: "u64", size: 8 },
-  ],
+  fields: [{ name: "sizeAmount", offset: 21, type: "u64", size: 8 }],
   accounts: { market: 8 },
   dataSize: 30, // 8+1(bool)+12+8+1
 };
@@ -159,9 +145,7 @@ const closeAndSwap: InstructionSchema = {
 const swapAndAddCollateral: InstructionSchema = {
   name: "swapAndAddCollateral",
   discriminator: new Uint8Array([135, 207, 228, 112, 247, 15, 29, 150]),
-  fields: [
-    { name: "amountIn", offset: 8, type: "u64", size: 8 },
-  ],
+  fields: [{ name: "amountIn", offset: 8, type: "u64", size: 8 }],
   accounts: { market: 10 },
   dataSize: 24, // 8+8+8
 };
@@ -169,9 +153,7 @@ const swapAndAddCollateral: InstructionSchema = {
 const removeCollateralAndSwap: InstructionSchema = {
   name: "removeCollateralAndSwap",
   discriminator: new Uint8Array([197, 216, 82, 134, 173, 128, 23, 62]),
-  fields: [
-    { name: "collateralDeltaUsd", offset: 8, type: "u64", size: 8 },
-  ],
+  fields: [{ name: "collateralDeltaUsd", offset: 8, type: "u64", size: 8 }],
   accounts: { market: 8 },
   dataSize: 24, // 8+8+8
 };

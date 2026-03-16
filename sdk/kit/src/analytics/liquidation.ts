@@ -58,13 +58,12 @@ export function getLiquidationPriceFromEntry(
   if (position.sizeAmount === 0n) return ZERO_ORACLE_PRICE;
 
   const exitFeeUsd =
-    position.sizeUsd * targetCustody.fees.closePosition / RATE_POWER;
+    (position.sizeUsd * targetCustody.fees.closePosition) / RATE_POWER;
   const unsettledLossUsd = exitFeeUsd + lockAndUnsettledFeeUsd;
 
   // liabilities = margin requirement + fees
   const liabilitiesUsd =
-    (position.sizeUsd * BPS_POWER) /
-      BigInt(targetCustody.pricing.maxLeverage) +
+    (position.sizeUsd * BPS_POWER) / BigInt(targetCustody.pricing.maxLeverage) +
     unsettledLossUsd;
 
   const sizeDecimalsPlusFactor = BigInt(position.sizeDecimals + 3);
@@ -86,7 +85,10 @@ export function getLiquidationPriceFromEntry(
       const liqPrice = entryOraclePrice.price - priceDiffOracle.price;
       return liqPrice < 0n
         ? ZERO_ORACLE_PRICE
-        : new OraclePrice({ price: liqPrice, exponent: entryOraclePrice.exponent });
+        : new OraclePrice({
+            price: liqPrice,
+            exponent: entryOraclePrice.exponent,
+          });
     }
     // Short: liquidation is above entry
     return new OraclePrice({

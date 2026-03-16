@@ -1,9 +1,6 @@
 import { expect } from "chai";
 import type { Address } from "@solana/kit";
-import {
-  isTeeWallet,
-  VALID_TEE_PROVIDERS,
-} from "../src/tee/wallet-types.js";
+import { isTeeWallet, VALID_TEE_PROVIDERS } from "../src/tee/wallet-types.js";
 import type { WalletLike, TeeWallet } from "../src/tee/wallet-types.js";
 
 const MOCK_ADDRESS = "11111111111111111111111111111111" as Address;

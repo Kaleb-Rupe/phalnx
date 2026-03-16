@@ -59,9 +59,7 @@ export class NonceTracker {
    */
   checkOrThrow(url: string, payTo: string, amount: string): void {
     if (this.isDuplicate(url, payTo, amount)) {
-      throw new X402ReplayError(
-        NonceTracker.buildKey(url, payTo, amount),
-      );
+      throw new X402ReplayError(NonceTracker.buildKey(url, payTo, amount));
     }
   }
 

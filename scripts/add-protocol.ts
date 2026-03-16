@@ -17,7 +17,11 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join, dirname, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
-import type { AnnotationConfig, AnchorIdl, PipelineOptions } from "./add-protocol/types.js";
+import type {
+  AnnotationConfig,
+  AnchorIdl,
+  PipelineOptions,
+} from "./add-protocol/types.js";
 import { validateAnnotation } from "./add-protocol/yaml-validator.js";
 import { parseIdl } from "./add-protocol/idl-parser.js";
 import { generateSchema } from "./add-protocol/generators/schema.js";
@@ -27,14 +31,19 @@ import { generateComposer } from "./add-protocol/generators/composer.js";
 import { generateMarkets } from "./add-protocol/generators/markets.js";
 import { generateCodamaEntry } from "./add-protocol/generators/codama-entry.js";
 import { generateRegistryPatches } from "./add-protocol/generators/registry-patch.js";
-import { runVerification, formatVerificationResult } from "./add-protocol/verify.js";
+import {
+  runVerification,
+  formatVerificationResult,
+} from "./add-protocol/verify.js";
 
 // ─── CLI Parsing ────────────────────────────────────────────────────────────
 
 function parseArgs(): PipelineOptions {
   const args = process.argv.slice(2);
 
-  const yamlArg = args.find((a) => a.startsWith("--yaml=") || a.startsWith("--yaml "));
+  const yamlArg = args.find(
+    (a) => a.startsWith("--yaml=") || a.startsWith("--yaml "),
+  );
   let yamlPath = "";
 
   const yamlIndex = args.indexOf("--yaml");
@@ -48,7 +57,9 @@ function parseArgs(): PipelineOptions {
   }
 
   if (!yamlPath) {
-    console.error("Usage: npx tsx scripts/add-protocol.ts --yaml <path-to-annotation.yaml>");
+    console.error(
+      "Usage: npx tsx scripts/add-protocol.ts --yaml <path-to-annotation.yaml>",
+    );
     console.error("");
     console.error("Flags:");
     console.error("  --verify-only   Run verification without generating");
@@ -130,18 +141,61 @@ async function main(): Promise<void> {
   const sdkKitRoot = join(process.cwd(), "sdk", "kit");
 
   const GENERATORS = [
-    { name: "schema", path: join(sdkKitRoot, "src", "constraints", "protocols", `${protoId}-schema.ts`), generate: () => generateSchema(config, parsed), schemaOnly: false },
-    { name: "descriptor", path: join(sdkKitRoot, "src", "constraints", "protocols", `${protoId}-descriptor.ts`), generate: () => generateDescriptor(config, parsed), schemaOnly: true },
-    { name: "handler", path: join(sdkKitRoot, "src", "integrations", `${protoId}-handler.ts`), generate: () => generateHandler(config, parsed), schemaOnly: true },
-    { name: "composer", path: join(sdkKitRoot, "src", "integrations", `${protoId}-compose.ts`), generate: () => generateComposer(config, parsed), schemaOnly: true },
-    { name: "markets", path: join(sdkKitRoot, "src", "integrations", "config", `${protoId}-markets.ts`), generate: () => generateMarkets(config), schemaOnly: true },
+    {
+      name: "schema",
+      path: join(
+        sdkKitRoot,
+        "src",
+        "constraints",
+        "protocols",
+        `${protoId}-schema.ts`,
+      ),
+      generate: () => generateSchema(config, parsed),
+      schemaOnly: false,
+    },
+    {
+      name: "descriptor",
+      path: join(
+        sdkKitRoot,
+        "src",
+        "constraints",
+        "protocols",
+        `${protoId}-descriptor.ts`,
+      ),
+      generate: () => generateDescriptor(config, parsed),
+      schemaOnly: true,
+    },
+    {
+      name: "handler",
+      path: join(sdkKitRoot, "src", "integrations", `${protoId}-handler.ts`),
+      generate: () => generateHandler(config, parsed),
+      schemaOnly: true,
+    },
+    {
+      name: "composer",
+      path: join(sdkKitRoot, "src", "integrations", `${protoId}-compose.ts`),
+      generate: () => generateComposer(config, parsed),
+      schemaOnly: true,
+    },
+    {
+      name: "markets",
+      path: join(
+        sdkKitRoot,
+        "src",
+        "integrations",
+        "config",
+        `${protoId}-markets.ts`,
+      ),
+      generate: () => generateMarkets(config),
+      schemaOnly: true,
+    },
   ];
 
   // Check for existing files
   if (!opts.force && !opts.dryRun && !opts.verifyOnly) {
-    const existing = GENERATORS
-      .filter((gen) => existsSync(gen.path))
-      .map((gen) => `  ${gen.name}: ${gen.path}`);
+    const existing = GENERATORS.filter((gen) => existsSync(gen.path)).map(
+      (gen) => `  ${gen.name}: ${gen.path}`,
+    );
 
     if (existing.length > 0) {
       console.error("\n❌ Files already exist (use --force to overwrite):");
@@ -158,19 +212,21 @@ async function main(): Promise<void> {
   for (const gen of GENERATORS) {
     if (opts.schemaOnly && gen.schemaOnly) continue;
     generated.set(gen.name, gen.generate());
-    console.log(`  ✅ ${gen.name[0].toUpperCase() + gen.name.slice(1)}: ${gen.path}`);
+    console.log(
+      `  ✅ ${gen.name[0].toUpperCase() + gen.name.slice(1)}: ${gen.path}`,
+    );
   }
 
   // ── Step 7: Codama entry ──────────────────────────────────────────────
   const codamaEntry = generateCodamaEntry(config, idlHash);
-  console.log("\n── Codama Registry Entry (paste into sdk/kit/codama.mjs PROTOCOLS) ──");
+  console.log(
+    "\n── Codama Registry Entry (paste into sdk/kit/codama.mjs PROTOCOLS) ──",
+  );
   console.log(codamaEntry);
 
   // ── Step 8: Verification gate ─────────────────────────────────────────
   console.log("\n── Verification Gate ──");
-  const codamaDir = join(
-    sdkKitRoot, "src", "generated", "protocols", protoId,
-  );
+  const codamaDir = join(sdkKitRoot, "src", "generated", "protocols", protoId);
   const codamaDirExists = existsSync(codamaDir);
 
   const verifyResult = runVerification(
@@ -232,7 +288,9 @@ async function main(): Promise<void> {
   }
 
   console.log(`\n═══ Done ═══`);
-  console.log(`  Generated ${fileCount} files (${lineCount} total lines) for ${config.protocol.displayName}`);
+  console.log(
+    `  Generated ${fileCount} files (${lineCount} total lines) for ${config.protocol.displayName}`,
+  );
   console.log(`  Protocol: ${config.protocol.id}`);
   console.log(`  Instructions: ${parsed.length}`);
   console.log(`  IDL hash: ${idlHash.substring(0, 16)}...`);
@@ -241,7 +299,9 @@ async function main(): Promise<void> {
   console.log(`  2. Run: node sdk/kit/codama.mjs --protocol=${protoId}`);
   console.log(`  3. Apply registry patches (printed above)`);
   console.log(`  4. Implement TODO stubs in ${protoId}-compose.ts`);
-  console.log(`  5. Run: npx tsx scripts/add-protocol.ts --yaml ${opts.yamlPath} --verify-only`);
+  console.log(
+    `  5. Run: npx tsx scripts/add-protocol.ts --yaml ${opts.yamlPath} --verify-only`,
+  );
 }
 
 main().catch((err) => {

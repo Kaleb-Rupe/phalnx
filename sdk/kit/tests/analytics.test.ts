@@ -373,10 +373,7 @@ describe("analytics/fees", () => {
     });
 
     it("returns snapshot when timestamp <= lastUpdate", () => {
-      const result = getCumulativeLockFee(
-        custody.borrowRateState,
-        500n,
-      );
+      const result = getCumulativeLockFee(custody.borrowRateState, 500n);
       expect(result).to.equal(100_000_000n);
     });
   });
@@ -591,23 +588,27 @@ describe("analytics/pnl", () => {
 
   describe("getNetPnlUsd", () => {
     it("returns positive for profit", () => {
-      expect(getNetPnlUsd({ profitUsd: 100n, lossUsd: 0n, priceImpactUsd: 0n }))
-        .to.equal(100n);
+      expect(
+        getNetPnlUsd({ profitUsd: 100n, lossUsd: 0n, priceImpactUsd: 0n }),
+      ).to.equal(100n);
     });
 
     it("returns negative for loss", () => {
-      expect(getNetPnlUsd({ profitUsd: 0n, lossUsd: 50n, priceImpactUsd: 0n }))
-        .to.equal(-50n);
+      expect(
+        getNetPnlUsd({ profitUsd: 0n, lossUsd: 50n, priceImpactUsd: 0n }),
+      ).to.equal(-50n);
     });
   });
 
   describe("hasProfit", () => {
     it("returns true when profit > loss", () => {
-      expect(hasProfit({ profitUsd: 100n, lossUsd: 0n, priceImpactUsd: 0n })).to.be.true;
+      expect(hasProfit({ profitUsd: 100n, lossUsd: 0n, priceImpactUsd: 0n })).to
+        .be.true;
     });
 
     it("returns false when loss >= profit", () => {
-      expect(hasProfit({ profitUsd: 0n, lossUsd: 100n, priceImpactUsd: 0n })).to.be.false;
+      expect(hasProfit({ profitUsd: 0n, lossUsd: 100n, priceImpactUsd: 0n })).to
+        .be.false;
     });
   });
 });

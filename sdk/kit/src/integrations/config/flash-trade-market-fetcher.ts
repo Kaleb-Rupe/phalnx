@@ -9,8 +9,14 @@
  */
 
 import type { Address, Rpc, SolanaRpcApi } from "@solana/kit";
-import { fetchPool, type Pool } from "../../generated/protocols/flash-trade/accounts/pool.js";
-import { fetchMarket, type Market } from "../../generated/protocols/flash-trade/accounts/market.js";
+import {
+  fetchPool,
+  type Pool,
+} from "../../generated/protocols/flash-trade/accounts/pool.js";
+import {
+  fetchMarket,
+  type Market,
+} from "../../generated/protocols/flash-trade/accounts/market.js";
 import type { FlashMarketConfig } from "./flash-trade-markets.js";
 import { FLASH_POOL } from "./flash-trade-markets.js";
 

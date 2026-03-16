@@ -29,10 +29,7 @@ function createMockHandler(
       displayName,
       programIds,
       supportedActions: new Map([
-        [
-          "swap",
-          { actionType: ActionType.Swap, isSpending: true },
-        ],
+        ["swap", { actionType: ActionType.Swap, isSpending: true }],
       ]),
     },
     async compose(
@@ -90,12 +87,8 @@ describe("ProtocolRegistry", () => {
   });
 
   it("duplicate protocolId throws", () => {
-    const handler1 = createMockHandler("dup-proto", "Dup 1", [
-      FAKE_PROGRAM_A,
-    ]);
-    const handler2 = createMockHandler("dup-proto", "Dup 2", [
-      FAKE_PROGRAM_B,
-    ]);
+    const handler1 = createMockHandler("dup-proto", "Dup 1", [FAKE_PROGRAM_A]);
+    const handler2 = createMockHandler("dup-proto", "Dup 2", [FAKE_PROGRAM_B]);
     registry.register(handler1);
     expect(() => registry.register(handler2)).to.throw(
       "Protocol handler already registered: dup-proto",
@@ -135,9 +128,7 @@ describe("ProtocolRegistry", () => {
   });
 
   it("has() returns true for registered, false for unknown", () => {
-    const handler = createMockHandler("has-test", "Has Test", [
-      FAKE_PROGRAM_A,
-    ]);
+    const handler = createMockHandler("has-test", "Has Test", [FAKE_PROGRAM_A]);
     registry.register(handler);
     expect(registry.has("has-test")).to.be.true;
     expect(registry.has("nonexistent")).to.be.false;
@@ -145,13 +136,9 @@ describe("ProtocolRegistry", () => {
 
   it("size reflects registered handler count", () => {
     expect(registry.size).to.equal(0);
-    registry.register(
-      createMockHandler("s1", "S1", [FAKE_PROGRAM_A]),
-    );
+    registry.register(createMockHandler("s1", "S1", [FAKE_PROGRAM_A]));
     expect(registry.size).to.equal(1);
-    registry.register(
-      createMockHandler("s2", "S2", [FAKE_PROGRAM_B]),
-    );
+    registry.register(createMockHandler("s2", "S2", [FAKE_PROGRAM_B]));
     expect(registry.size).to.equal(2);
     registry.deregister("s1");
     expect(registry.size).to.equal(1);

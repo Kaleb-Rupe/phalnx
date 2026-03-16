@@ -17,33 +17,72 @@ import type {
   SolanaRpcApi,
   TransactionSigner,
 } from "@solana/kit";
-import type { IntentAction, IntentActionType, PrecheckResult, ExecuteResult } from "./intents.js";
+import type {
+  IntentAction,
+  IntentActionType,
+  PrecheckResult,
+  ExecuteResult,
+} from "./intents.js";
 import type { AgentError } from "./agent-errors.js";
-import type { ProtocolHandlerMetadata, ProtocolActionDescriptor } from "./integrations/protocol-handler.js";
+import type {
+  ProtocolHandlerMetadata,
+  ProtocolActionDescriptor,
+} from "./integrations/protocol-handler.js";
 import type { ProtocolRegistry } from "./integrations/protocol-registry.js";
 import type { ResolvedToken } from "./tokens.js";
 
-import { validateIntentInput, type ValidationResult } from "./intent-validator.js";
+import {
+  validateIntentInput,
+  type ValidationResult,
+} from "./intent-validator.js";
 import type { TransactionExecutor } from "./transaction-executor.js";
 import { toAgentError, protocolEscalationError } from "./agent-errors.js";
 import { getPhalnxAltAddress } from "./alt-config.js";
 import { mergeAltAddresses } from "./alt-loader.js";
-import { resolveProtocol, isProtocolAllowed, ProtocolTier } from "./protocol-resolver.js";
-import { ACTION_TYPE_MAP, summarizeAction, resolveProtocolActionType } from "./intents.js";
+import {
+  resolveProtocol,
+  isProtocolAllowed,
+  ProtocolTier,
+} from "./protocol-resolver.js";
+import {
+  ACTION_TYPE_MAP,
+  summarizeAction,
+  resolveProtocolActionType,
+} from "./intents.js";
 import { resolveToken } from "./tokens.js";
-import { hasPermission, isSpendingAction, getPositionEffect, isStablecoinMint, type Network } from "./types.js";
-import { resolveVaultState, type ResolvedVaultState } from "./state-resolver.js";
+import {
+  hasPermission,
+  isSpendingAction,
+  getPositionEffect,
+  isStablecoinMint,
+  type Network,
+} from "./types.js";
+import {
+  resolveVaultState,
+  type ResolvedVaultState,
+} from "./state-resolver.js";
 import { VaultStatus } from "./generated/types/vaultStatus.js";
 import { resolveAccounts } from "./resolve-accounts.js";
-import { verifyAdapterOutput, type VerifiableInstruction } from "./integrations/adapter-verifier.js";
+import {
+  verifyAdapterOutput,
+  type VerifiableInstruction,
+} from "./integrations/adapter-verifier.js";
 import { fetchAgentVault } from "./generated/accounts/agentVault.js";
 import { fetchPolicyConfig } from "./generated/accounts/policyConfig.js";
-import { getPolicyPDA, getTrackerPDA, getAgentOverlayPDA } from "./resolve-accounts.js";
+import {
+  getPolicyPDA,
+  getTrackerPDA,
+  getAgentOverlayPDA,
+} from "./resolve-accounts.js";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 /** Escrow actions use standalone instructions, not the composition flow */
-const ESCROW_ACTIONS = new Set(["createEscrow", "settleEscrow", "refundEscrow"]);
+const ESCROW_ACTIONS = new Set([
+  "createEscrow",
+  "settleEscrow",
+  "refundEscrow",
+]);
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -108,7 +147,7 @@ export class IntentEngine {
     if (!config.protocolRegistry.isFrozen) {
       console.warn(
         "[IntentEngine] Protocol registry is not frozen. " +
-        "Call registry.freeze() after registering all handlers to prevent runtime mutation."
+          "Call registry.freeze() after registering all handlers to prevent runtime mutation.",
       );
     }
   }
@@ -197,7 +236,11 @@ export class IntentEngine {
   ): Promise<PrecheckResult> {
     try {
       // Single batched RPC call fetches vault + policy + tracker + overlay + constraints.
-      const state = await this._stateResolver(this.rpc, vault, this.agent.address);
+      const state = await this._stateResolver(
+        this.rpc,
+        vault,
+        this.agent.address,
+      );
       const vaultData = state.vault;
       const policyData = state.policy;
       const riskFlags: string[] = [];
@@ -221,7 +264,11 @@ export class IntentEngine {
           "Agent not registered in vault",
           `Agent ${agentAddress} is not registered in vault ${vault}`,
           {
-            permission: { passed: false, requiredBit: baseActionType, agentHas: false },
+            permission: {
+              passed: false,
+              requiredBit: baseActionType,
+              agentHas: false,
+            },
             protocol: { passed: true, inAllowlist: true },
           },
         );
@@ -232,7 +279,11 @@ export class IntentEngine {
           "Agent is paused",
           `Agent ${agentAddress} is paused in vault ${vault}`,
           {
-            permission: { passed: false, requiredBit: baseActionType, agentHas: false },
+            permission: {
+              passed: false,
+              requiredBit: baseActionType,
+              agentHas: false,
+            },
             protocol: { passed: true, inAllowlist: true },
           },
         );
@@ -244,7 +295,11 @@ export class IntentEngine {
           `Vault is ${VaultStatus[vaultData.status] ?? "unknown"}`,
           `Vault ${vault} is not active`,
           {
-            permission: { passed: false, requiredBit: baseActionType, agentHas: false },
+            permission: {
+              passed: false,
+              requiredBit: baseActionType,
+              agentHas: false,
+            },
             protocol: { passed: true, inAllowlist: true },
           },
         );
@@ -255,7 +310,11 @@ export class IntentEngine {
           `Missing permission for ${baseActionType}`,
           `Agent lacks permission bit for ${baseActionType}`,
           {
-            permission: { passed: false, requiredBit: baseActionType, agentHas: false },
+            permission: {
+              passed: false,
+              requiredBit: baseActionType,
+              agentHas: false,
+            },
             protocol: { passed: true, inAllowlist: true },
           },
         );
@@ -267,7 +326,11 @@ export class IntentEngine {
           "Escrow actions use standalone instructions, not the composition flow",
           "InvalidSession",
           {
-            permission: { passed: true, requiredBit: baseActionType, agentHas: true },
+            permission: {
+              passed: true,
+              requiredBit: baseActionType,
+              agentHas: true,
+            },
             protocol: { passed: true, inAllowlist: true },
           },
           6011,
@@ -278,13 +341,17 @@ export class IntentEngine {
       let protocolPassed = true;
       let protocolInAllowlist = true;
       if (intent.type === "protocol") {
-        const protocolId = (intent.params as Record<string, unknown>).protocolId as string | undefined;
+        const protocolId = (intent.params as Record<string, unknown>)
+          .protocolId as string | undefined;
         if (protocolId) {
           const handler = this.registry.getByProtocolId(protocolId);
           if (handler?.metadata.programIds[0]) {
             protocolInAllowlist = isProtocolAllowed(
               handler.metadata.programIds[0] as Address,
-              { protocolMode: policyData.protocolMode, protocols: policyData.protocols },
+              {
+                protocolMode: policyData.protocolMode,
+                protocols: policyData.protocols,
+              },
             );
             protocolPassed = protocolInAllowlist;
           }
@@ -296,7 +363,11 @@ export class IntentEngine {
           "Protocol not in allowlist",
           "Protocol not allowed by vault policy",
           {
-            permission: { passed: true, requiredBit: baseActionType, agentHas: true },
+            permission: {
+              passed: true,
+              requiredBit: baseActionType,
+              agentHas: true,
+            },
             protocol: { passed: false, inAllowlist: false },
           },
         );
@@ -305,7 +376,8 @@ export class IntentEngine {
       // Slippage check (swaps only)
       let slippageDetails: PrecheckResult["details"]["slippage"];
       if (intent.type === "swap" && intent.params.slippageBps !== undefined) {
-        const slippagePassed = intent.params.slippageBps <= policyData.maxSlippageBps;
+        const slippagePassed =
+          intent.params.slippageBps <= policyData.maxSlippageBps;
         slippageDetails = {
           passed: slippagePassed,
           intentBps: intent.params.slippageBps,
@@ -316,7 +388,11 @@ export class IntentEngine {
             `Slippage ${intent.params.slippageBps} BPS > max ${policyData.maxSlippageBps} BPS`,
             "Intent slippage exceeds vault max",
             {
-              permission: { passed: true, requiredBit: baseActionType, agentHas: true },
+              permission: {
+                passed: true,
+                requiredBit: baseActionType,
+                agentHas: true,
+              },
               protocol: { passed: true, inAllowlist: true },
               slippage: slippageDetails,
             },
@@ -361,9 +437,17 @@ export class IntentEngine {
                 `Transaction $${amountUsd} exceeds max $${state.maxTransactionUsd}`,
                 "TRANSACTION_TOO_LARGE",
                 {
-                  permission: { passed: true, requiredBit: baseActionType, agentHas: true },
+                  permission: {
+                    passed: true,
+                    requiredBit: baseActionType,
+                    agentHas: true,
+                  },
                   protocol: { passed: true, inAllowlist: protocolInAllowlist },
-                  transactionSize: { passed: false, maxUsd: state.maxTransactionUsd, intentUsd: amountUsd },
+                  transactionSize: {
+                    passed: false,
+                    maxUsd: state.maxTransactionUsd,
+                    intentUsd: amountUsd,
+                  },
                 },
                 6005,
               );
@@ -376,7 +460,11 @@ export class IntentEngine {
                 `Daily cap exceeded: ${newGlobalTotal} > ${state.globalBudget.cap}`,
                 "DAILY_CAP_EXCEEDED",
                 {
-                  permission: { passed: true, requiredBit: baseActionType, agentHas: true },
+                  permission: {
+                    passed: true,
+                    requiredBit: baseActionType,
+                    agentHas: true,
+                  },
                   spendingCap: {
                     passed: false,
                     spent24h: state.globalBudget.spent24h,
@@ -398,7 +486,11 @@ export class IntentEngine {
                   `Agent spend limit exceeded: ${newAgentTotal} > ${state.agentBudget.cap}`,
                   "AGENT_SPEND_LIMIT_EXCEEDED",
                   {
-                    permission: { passed: true, requiredBit: baseActionType, agentHas: true },
+                    permission: {
+                      passed: true,
+                      requiredBit: baseActionType,
+                      agentHas: true,
+                    },
                     spendingCap: {
                       passed: false,
                       spent24h: state.agentBudget.spent24h,
@@ -406,7 +498,10 @@ export class IntentEngine {
                       remaining: state.agentBudget.remaining,
                       intentAmount: amountUsd,
                     },
-                    protocol: { passed: true, inAllowlist: protocolInAllowlist },
+                    protocol: {
+                      passed: true,
+                      inAllowlist: protocolInAllowlist,
+                    },
                   },
                   6063,
                 );
@@ -426,7 +521,11 @@ export class IntentEngine {
                     `Protocol cap exceeded: ${newProtoTotal} > ${protocolBudget.cap}`,
                     "PROTOCOL_CAP_EXCEEDED",
                     {
-                      permission: { passed: true, requiredBit: baseActionType, agentHas: true },
+                      permission: {
+                        passed: true,
+                        requiredBit: baseActionType,
+                        agentHas: true,
+                      },
                       spendingCap: {
                         passed: false,
                         spent24h: protocolBudget.spent24h,
@@ -434,7 +533,10 @@ export class IntentEngine {
                         remaining: protocolBudget.remaining,
                         intentAmount: amountUsd,
                       },
-                      protocol: { passed: true, inAllowlist: protocolInAllowlist },
+                      protocol: {
+                        passed: true,
+                        inAllowlist: protocolInAllowlist,
+                      },
                     },
                     6069,
                   );
@@ -464,9 +566,17 @@ export class IntentEngine {
             `Leverage ${intentLeverageBps} BPS > max ${policyData.maxLeverageBps} BPS`,
             "LEVERAGE_TOO_HIGH",
             {
-              permission: { passed: true, requiredBit: baseActionType, agentHas: true },
+              permission: {
+                passed: true,
+                requiredBit: baseActionType,
+                agentHas: true,
+              },
               protocol: { passed: true, inAllowlist: protocolInAllowlist },
-              leverage: { passed: false, maxBps: policyData.maxLeverageBps, intentBps: intentLeverageBps },
+              leverage: {
+                passed: false,
+                maxBps: policyData.maxLeverageBps,
+                intentBps: intentLeverageBps,
+              },
             },
             6007,
           );
@@ -482,9 +592,18 @@ export class IntentEngine {
             "Vault does not allow opening positions",
             "POSITION_OPENING_DISALLOWED",
             {
-              permission: { passed: true, requiredBit: baseActionType, agentHas: true },
+              permission: {
+                passed: true,
+                requiredBit: baseActionType,
+                agentHas: true,
+              },
               protocol: { passed: true, inAllowlist: protocolInAllowlist },
-              positions: { passed: false, max: policyData.maxConcurrentPositions, current: vaultData.openPositions, canOpen: false },
+              positions: {
+                passed: false,
+                max: policyData.maxConcurrentPositions,
+                current: vaultData.openPositions,
+                canOpen: false,
+              },
             },
             6009,
           );
@@ -494,9 +613,18 @@ export class IntentEngine {
             `Positions at max: ${vaultData.openPositions} >= ${policyData.maxConcurrentPositions}`,
             "TOO_MANY_POSITIONS",
             {
-              permission: { passed: true, requiredBit: baseActionType, agentHas: true },
+              permission: {
+                passed: true,
+                requiredBit: baseActionType,
+                agentHas: true,
+              },
               protocol: { passed: true, inAllowlist: protocolInAllowlist },
-              positions: { passed: false, max: policyData.maxConcurrentPositions, current: vaultData.openPositions, canOpen: true },
+              positions: {
+                passed: false,
+                max: policyData.maxConcurrentPositions,
+                current: vaultData.openPositions,
+                canOpen: true,
+              },
             },
             6008,
           );
@@ -507,9 +635,18 @@ export class IntentEngine {
             "No positions to close",
             "NO_POSITIONS_TO_CLOSE",
             {
-              permission: { passed: true, requiredBit: baseActionType, agentHas: true },
+              permission: {
+                passed: true,
+                requiredBit: baseActionType,
+                agentHas: true,
+              },
               protocol: { passed: true, inAllowlist: protocolInAllowlist },
-              positions: { passed: false, max: policyData.maxConcurrentPositions, current: 0, canOpen: policyData.canOpenPositions },
+              positions: {
+                passed: false,
+                max: policyData.maxConcurrentPositions,
+                current: 0,
+                canOpen: policyData.canOpenPositions,
+              },
             },
             6033,
           );
@@ -520,14 +657,28 @@ export class IntentEngine {
         allowed: true,
         summary: `Precheck passed for ${intent.type}`,
         details: {
-          permission: { passed: true, requiredBit: baseActionType, agentHas: true },
+          permission: {
+            passed: true,
+            requiredBit: baseActionType,
+            agentHas: true,
+          },
           spendingCap: spendingDetails,
           protocol: { passed: true, inAllowlist: protocolInAllowlist },
           slippage: slippageDetails,
         },
         budget: {
-          global: { spent24h: state.globalBudget.spent24h, cap: state.globalBudget.cap, remaining: state.globalBudget.remaining },
-          agent: state.agentBudget ? { spent24h: state.agentBudget.spent24h, cap: state.agentBudget.cap, remaining: state.agentBudget.remaining } : null,
+          global: {
+            spent24h: state.globalBudget.spent24h,
+            cap: state.globalBudget.cap,
+            remaining: state.globalBudget.remaining,
+          },
+          agent: state.agentBudget
+            ? {
+                spent24h: state.agentBudget.spent24h,
+                cap: state.agentBudget.cap,
+                remaining: state.agentBudget.remaining,
+              }
+            : null,
           protocols: state.protocolBudgets.map((p) => ({
             protocol: p.protocol as string,
             spent24h: p.spent24h,
@@ -544,7 +695,11 @@ export class IntentEngine {
         "Precheck failed",
         err instanceof Error ? err.message : String(err),
         {
-          permission: { passed: false, requiredBit: intent.type, agentHas: false },
+          permission: {
+            passed: false,
+            requiredBit: intent.type,
+            agentHas: false,
+          },
           protocol: { passed: false, inAllowlist: false },
         },
       );
@@ -577,9 +732,11 @@ export class IntentEngine {
     const token = this._resolveIntentToken(intent);
 
     // Step 4: Precheck (reuse cached result from run() if available)
-    const precheck = _cachedPrecheck ?? await this.precheck(intent, vault);
+    const precheck = _cachedPrecheck ?? (await this.precheck(intent, vault));
     if (!precheck.allowed) {
-      throw new Error(`Precheck failed: ${precheck.reason ?? precheck.summary}`);
+      throw new Error(
+        `Precheck failed: ${precheck.reason ?? precheck.summary}`,
+      );
     }
 
     // Step 5: handler.compose()
@@ -611,7 +768,10 @@ export class IntentEngine {
         intent.params as Record<string, unknown>,
       );
     } catch (err) {
-      throw toAgentError(err, { phase: "compose", protocol: handler.metadata.protocolId });
+      throw toAgentError(err, {
+        phase: "compose",
+        protocol: handler.metadata.protocolId,
+      });
     }
 
     // Step 6: Verify adapter output
@@ -627,7 +787,8 @@ export class IntentEngine {
     }
 
     // Step 7: Resolve all PDAs
-    const tokenMint = token?.mint ?? ("11111111111111111111111111111111" as Address);
+    const tokenMint =
+      token?.mint ?? ("11111111111111111111111111111111" as Address);
     let accounts;
     try {
       accounts = await resolveAccounts({
@@ -641,18 +802,17 @@ export class IntentEngine {
     }
 
     // Step 8: Build sandwich instructions (validate + DeFi + finalize)
-    const { getValidateAndAuthorizeInstructionAsync } = await import(
-      "./generated/instructions/validateAndAuthorize.js"
-    );
-    const { getFinalizeSessionInstructionAsync } = await import(
-      "./generated/instructions/finalizeSession.js"
-    );
+    const { getValidateAndAuthorizeInstructionAsync } =
+      await import("./generated/instructions/validateAndAuthorize.js");
+    const { getFinalizeSessionInstructionAsync } =
+      await import("./generated/instructions/finalizeSession.js");
 
-    const agentOverlayPda = accounts.agentOverlayPda ??
-      (await getAgentOverlayPDA(vault))[0];
+    const agentOverlayPda =
+      accounts.agentOverlayPda ?? (await getAgentOverlayPDA(vault))[0];
     const [trackerPda] = await getTrackerPDA(vault);
 
-    const mapping = ACTION_TYPE_MAP[baseActionType as keyof typeof ACTION_TYPE_MAP];
+    const mapping =
+      ACTION_TYPE_MAP[baseActionType as keyof typeof ACTION_TYPE_MAP];
     if (!mapping) {
       throw new Error(`Unknown action type: ${baseActionType}`);
     }
@@ -690,7 +850,7 @@ export class IntentEngine {
     if (!this.executor) {
       throw new Error(
         "IntentEngine.execute() steps 9-12 require a TransactionExecutor. " +
-        "Pass executor in IntentEngineConfig, or use composePhalnxTransaction() directly.",
+          "Pass executor in IntentEngineConfig, or use composePhalnxTransaction() directly.",
       );
     }
 
@@ -804,7 +964,11 @@ export class IntentEngine {
       const protocolId = params.protocolId as string | undefined;
       const action = params.action as string | undefined;
       if (protocolId && action) {
-        const resolved = resolveProtocolActionType(this.registry, protocolId, action);
+        const resolved = resolveProtocolActionType(
+          this.registry,
+          protocolId,
+          action,
+        );
         // Return the ActionType key name for permission checking
         // e.g. ActionType.Swap -> "swap"
         const typeStr = Object.entries(ACTION_TYPE_MAP).find(
@@ -845,14 +1009,12 @@ export class IntentEngine {
     return intent.type;
   }
 
-  private async _resolveProtocolTier(
-    intent: IntentAction,
-    vault: Address,
-  ) {
+  private async _resolveProtocolTier(intent: IntentAction, vault: Address) {
     let programAddress: Address | null = null;
 
     if (intent.type === "protocol") {
-      const protocolId = (intent.params as Record<string, unknown>).protocolId as string | undefined;
+      const protocolId = (intent.params as Record<string, unknown>)
+        .protocolId as string | undefined;
       if (protocolId) {
         const handler = this.registry.getByProtocolId(protocolId);
         if (handler?.metadata.programIds[0]) {
@@ -860,7 +1022,9 @@ export class IntentEngine {
         }
       }
     } else if (intent.type === "passthrough") {
-      const pid = (intent.params as Record<string, unknown>).programId as string | undefined;
+      const pid = (intent.params as Record<string, unknown>).programId as
+        | string
+        | undefined;
       if (pid) {
         programAddress = pid as Address;
       }
@@ -884,10 +1048,15 @@ export class IntentEngine {
 
   private _resolveProtocolAddress(intent: IntentAction): Address | null {
     const handler = this._resolveHandler(intent);
-    if (handler?.metadata.programIds[0]) return handler.metadata.programIds[0] as Address;
+    if (handler?.metadata.programIds[0])
+      return handler.metadata.programIds[0] as Address;
     if (intent.type === "passthrough") {
       // Advisory only — on-chain validates actual instruction program IDs
-      return (intent.params as Record<string, unknown>).programId as Address | undefined ?? null;
+      return (
+        ((intent.params as Record<string, unknown>).programId as
+          | Address
+          | undefined) ?? null
+      );
     }
     return null;
   }
@@ -923,7 +1092,8 @@ export class IntentEngine {
       return this.registry.getByProtocolId("kamino-lending");
     }
     if (intent.type === "protocol") {
-      const protocolId = (intent.params as Record<string, unknown>).protocolId as string | undefined;
+      const protocolId = (intent.params as Record<string, unknown>)
+        .protocolId as string | undefined;
       if (protocolId) {
         return this.registry.getByProtocolId(protocolId);
       }

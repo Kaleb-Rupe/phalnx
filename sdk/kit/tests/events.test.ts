@@ -49,9 +49,7 @@ describe("events", () => {
 
     it("each discriminator matches SHA256('event:<Name>')[0..8]", () => {
       for (const [disc, name] of Object.entries(EVENT_DISCRIMINATOR_MAP)) {
-        const hash = createHash("sha256")
-          .update(`event:${name}`)
-          .digest();
+        const hash = createHash("sha256").update(`event:${name}`).digest();
         const expected = hash.subarray(0, 8).toString("hex");
         expect(disc, `Discriminator for ${name}`).to.equal(expected);
       }

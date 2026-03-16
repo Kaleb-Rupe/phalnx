@@ -30,9 +30,7 @@ export function getMinAndMaxOraclePrice(
         new OraclePrice({
           price:
             10n **
-            (maxPrice.exponent < 0n
-              ? -maxPrice.exponent
-              : maxPrice.exponent),
+            (maxPrice.exponent < 0n ? -maxPrice.exponent : maxPrice.exponent),
           exponent: maxPrice.exponent,
           confidence: maxPrice.confidence,
         }),

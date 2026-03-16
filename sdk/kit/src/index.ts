@@ -109,11 +109,7 @@ export {
 export type { ComposeTransactionParams } from "./composer.js";
 
 // ─── Event Parser ─────────────────────────────────────────────────────────────
-export {
-  parsePhalnxEvents,
-  filterEvents,
-  getEventNames,
-} from "./events.js";
+export { parsePhalnxEvents, filterEvents, getEventNames } from "./events.js";
 export type { PhalnxEvent, PhalnxEventName } from "./events.js";
 
 // ─── Priority Fees ────────────────────────────────────────────────────────────
@@ -249,10 +245,7 @@ export { validateIntentInput } from "./intent-validator.js";
 export type { ValidationResult } from "./intent-validator.js";
 
 // ─── Intent Storage ──────────────────────────────────────────────────────────
-export {
-  createIntent,
-  MemoryIntentStorage,
-} from "./intent-storage.js";
+export { createIntent, MemoryIntentStorage } from "./intent-storage.js";
 
 // ─── Protocol Handler Interface ──────────────────────────────────────────────
 export type {
@@ -364,14 +357,8 @@ export type {
 } from "./transaction-executor.js";
 
 // ─── RPC Helpers ───────────────────────────────────────────────────────────
-export {
-  BlockhashCache,
-  sendAndConfirmTransaction,
-} from "./rpc-helpers.js";
-export type {
-  Blockhash,
-  SendAndConfirmOptions,
-} from "./rpc-helpers.js";
+export { BlockhashCache, sendAndConfirmTransaction } from "./rpc-helpers.js";
+export type { Blockhash, SendAndConfirmOptions } from "./rpc-helpers.js";
 
 // ─── Constraint Builder ──────────────────────────────────────────────────
 export {

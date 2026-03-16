@@ -143,7 +143,9 @@ describe("Constraint Encoding", () => {
     });
 
     it("throws on unknown operator", () => {
-      expect(() => mapOperator("invalid")).to.throw("Unknown constraint operator");
+      expect(() => mapOperator("invalid")).to.throw(
+        "Unknown constraint operator",
+      );
     });
   });
 
@@ -169,7 +171,9 @@ describe("Flash Trade Schema", () => {
 
   it("has correct program address", () => {
     expect(FLASH_TRADE_SCHEMA.programAddress).to.equal(FLASH_TRADE_PROGRAM);
-    expect(FLASH_TRADE_PROGRAM).to.equal("FLASH6Lo6h3iasJKWDs2F8TkW2UKf3s15C8PMGuVfgBn");
+    expect(FLASH_TRADE_PROGRAM).to.equal(
+      "FLASH6Lo6h3iasJKWDs2F8TkW2UKf3s15C8PMGuVfgBn",
+    );
   });
 
   describe("discriminators match Codama-generated code", () => {
@@ -196,70 +200,108 @@ describe("Flash Trade Schema", () => {
       it(`${name} discriminator matches Codama`, () => {
         const schema = FLASH_TRADE_SCHEMA.instructions.get(name);
         expect(schema).to.not.be.undefined;
-        expect(Array.from(schema!.discriminator)).to.deep.equal(Array.from(codamaDisc));
+        expect(Array.from(schema!.discriminator)).to.deep.equal(
+          Array.from(codamaDisc),
+        );
       });
     }
   });
 
   describe("account indices", () => {
     it("openPosition market index = 7", () => {
-      expect(FLASH_TRADE_SCHEMA.instructions.get("openPosition")!.accounts.market).to.equal(7);
+      expect(
+        FLASH_TRADE_SCHEMA.instructions.get("openPosition")!.accounts.market,
+      ).to.equal(7);
     });
 
     it("increaseSize market index = 5", () => {
-      expect(FLASH_TRADE_SCHEMA.instructions.get("increaseSize")!.accounts.market).to.equal(5);
+      expect(
+        FLASH_TRADE_SCHEMA.instructions.get("increaseSize")!.accounts.market,
+      ).to.equal(5);
     });
 
     it("decreaseSize market index = 5", () => {
-      expect(FLASH_TRADE_SCHEMA.instructions.get("decreaseSize")!.accounts.market).to.equal(5);
+      expect(
+        FLASH_TRADE_SCHEMA.instructions.get("decreaseSize")!.accounts.market,
+      ).to.equal(5);
     });
 
     it("addCollateral market index = 5", () => {
-      expect(FLASH_TRADE_SCHEMA.instructions.get("addCollateral")!.accounts.market).to.equal(5);
+      expect(
+        FLASH_TRADE_SCHEMA.instructions.get("addCollateral")!.accounts.market,
+      ).to.equal(5);
     });
 
     it("removeCollateral market index = 6", () => {
-      expect(FLASH_TRADE_SCHEMA.instructions.get("removeCollateral")!.accounts.market).to.equal(6);
+      expect(
+        FLASH_TRADE_SCHEMA.instructions.get("removeCollateral")!.accounts
+          .market,
+      ).to.equal(6);
     });
 
     it("placeTriggerOrder market index = 6", () => {
-      expect(FLASH_TRADE_SCHEMA.instructions.get("placeTriggerOrder")!.accounts.market).to.equal(6);
+      expect(
+        FLASH_TRADE_SCHEMA.instructions.get("placeTriggerOrder")!.accounts
+          .market,
+      ).to.equal(6);
     });
 
     it("editTriggerOrder market index = 5", () => {
-      expect(FLASH_TRADE_SCHEMA.instructions.get("editTriggerOrder")!.accounts.market).to.equal(5);
+      expect(
+        FLASH_TRADE_SCHEMA.instructions.get("editTriggerOrder")!.accounts
+          .market,
+      ).to.equal(5);
     });
 
     it("placeLimitOrder market index = 7", () => {
-      expect(FLASH_TRADE_SCHEMA.instructions.get("placeLimitOrder")!.accounts.market).to.equal(7);
+      expect(
+        FLASH_TRADE_SCHEMA.instructions.get("placeLimitOrder")!.accounts.market,
+      ).to.equal(7);
     });
 
     it("editLimitOrder market index = 8", () => {
-      expect(FLASH_TRADE_SCHEMA.instructions.get("editLimitOrder")!.accounts.market).to.equal(8);
+      expect(
+        FLASH_TRADE_SCHEMA.instructions.get("editLimitOrder")!.accounts.market,
+      ).to.equal(8);
     });
 
     it("closePosition market index = 7", () => {
-      expect(FLASH_TRADE_SCHEMA.instructions.get("closePosition")!.accounts.market).to.equal(7);
+      expect(
+        FLASH_TRADE_SCHEMA.instructions.get("closePosition")!.accounts.market,
+      ).to.equal(7);
     });
 
     it("closeAndSwap market index = 8", () => {
-      expect(FLASH_TRADE_SCHEMA.instructions.get("closeAndSwap")!.accounts.market).to.equal(8);
+      expect(
+        FLASH_TRADE_SCHEMA.instructions.get("closeAndSwap")!.accounts.market,
+      ).to.equal(8);
     });
 
     it("swapAndOpen market index = 10", () => {
-      expect(FLASH_TRADE_SCHEMA.instructions.get("swapAndOpen")!.accounts.market).to.equal(10);
+      expect(
+        FLASH_TRADE_SCHEMA.instructions.get("swapAndOpen")!.accounts.market,
+      ).to.equal(10);
     });
 
     it("swapAndAddCollateral market index = 10", () => {
-      expect(FLASH_TRADE_SCHEMA.instructions.get("swapAndAddCollateral")!.accounts.market).to.equal(10);
+      expect(
+        FLASH_TRADE_SCHEMA.instructions.get("swapAndAddCollateral")!.accounts
+          .market,
+      ).to.equal(10);
     });
 
     it("cancelTriggerOrder has no market account", () => {
-      expect(FLASH_TRADE_SCHEMA.instructions.get("cancelTriggerOrder")!.accounts.market).to.be.undefined;
+      expect(
+        FLASH_TRADE_SCHEMA.instructions.get("cancelTriggerOrder")!.accounts
+          .market,
+      ).to.be.undefined;
     });
 
     it("cancelLimitOrder has no market account", () => {
-      expect(FLASH_TRADE_SCHEMA.instructions.get("cancelLimitOrder")!.accounts.market).to.be.undefined;
+      expect(
+        FLASH_TRADE_SCHEMA.instructions.get("cancelLimitOrder")!.accounts
+          .market,
+      ).to.be.undefined;
     });
   });
 
@@ -274,22 +316,30 @@ describe("Flash Trade Schema", () => {
 
     it("increaseSize: sizeDelta at 20", () => {
       const ix = FLASH_TRADE_SCHEMA.instructions.get("increaseSize")!;
-      expect(ix.fields.find((f) => f.name === "sizeDelta")!.offset).to.equal(20);
+      expect(ix.fields.find((f) => f.name === "sizeDelta")!.offset).to.equal(
+        20,
+      );
     });
 
     it("addCollateral: collateralDelta at 8", () => {
       const ix = FLASH_TRADE_SCHEMA.instructions.get("addCollateral")!;
-      expect(ix.fields.find((f) => f.name === "collateralDelta")!.offset).to.equal(8);
+      expect(
+        ix.fields.find((f) => f.name === "collateralDelta")!.offset,
+      ).to.equal(8);
     });
 
     it("editTriggerOrder: deltaSizeAmount at 21", () => {
       const ix = FLASH_TRADE_SCHEMA.instructions.get("editTriggerOrder")!;
-      expect(ix.fields.find((f) => f.name === "deltaSizeAmount")!.offset).to.equal(21);
+      expect(
+        ix.fields.find((f) => f.name === "deltaSizeAmount")!.offset,
+      ).to.equal(21);
     });
 
     it("editLimitOrder: sizeAmount at 21", () => {
       const ix = FLASH_TRADE_SCHEMA.instructions.get("editLimitOrder")!;
-      expect(ix.fields.find((f) => f.name === "sizeAmount")!.offset).to.equal(21);
+      expect(ix.fields.find((f) => f.name === "sizeAmount")!.offset).to.equal(
+        21,
+      );
     });
   });
 
@@ -350,9 +400,9 @@ describe("Flash Trade Descriptor", () => {
       };
       const result = FlashTradeDescriptor.compileRule(rule);
       expect(result).to.have.length(1);
-      expect(Array.from(result[0].dataConstraints[0].value as Uint8Array)).to.deep.equal(
-        Array.from(CANCEL_TRIGGER_ORDER_DISCRIMINATOR),
-      );
+      expect(
+        Array.from(result[0].dataConstraints[0].value as Uint8Array),
+      ).to.deep.equal(Array.from(CANCEL_TRIGGER_ORDER_DISCRIMINATOR));
     });
   });
 
@@ -504,7 +554,9 @@ describe("Flash Trade Descriptor", () => {
         type: "allowedMarkets",
         params: { markets: ["DOGE-USDC-long"] },
       };
-      expect(() => FlashTradeDescriptor.compileRule(rule)).to.throw("Unknown Flash Trade market");
+      expect(() => FlashTradeDescriptor.compileRule(rule)).to.throw(
+        "Unknown Flash Trade market",
+      );
     });
   });
 
@@ -618,7 +670,11 @@ describe("Flash Trade Descriptor", () => {
     it("warns when strict_mode has spending but no risk-reducing actions", () => {
       const warnings = checkStrictModeWarnings({
         actionRules: [
-          { actions: ["openPosition"], type: "maxPositionSize", params: { maxSize: "1000" } },
+          {
+            actions: ["openPosition"],
+            type: "maxPositionSize",
+            params: { maxSize: "1000" },
+          },
         ],
         strictMode: true,
       });
@@ -630,7 +686,11 @@ describe("Flash Trade Descriptor", () => {
     it("no warnings when strict_mode is off", () => {
       const warnings = checkStrictModeWarnings({
         actionRules: [
-          { actions: ["openPosition"], type: "maxPositionSize", params: { maxSize: "1000" } },
+          {
+            actions: ["openPosition"],
+            type: "maxPositionSize",
+            params: { maxSize: "1000" },
+          },
         ],
         strictMode: false,
       });
@@ -640,13 +700,22 @@ describe("Flash Trade Descriptor", () => {
     it("no warnings when all risk-reducing actions covered", () => {
       const warnings = checkStrictModeWarnings({
         actionRules: [
-          { actions: ["openPosition"], type: "maxPositionSize", params: { maxSize: "1000" } },
+          {
+            actions: ["openPosition"],
+            type: "maxPositionSize",
+            params: { maxSize: "1000" },
+          },
           {
             actions: [
-              "closePosition", "decreaseSize", "removeCollateral",
-              "removeCollateralAndSwap", "closeAndSwap",
-              "cancelTriggerOrder", "cancelLimitOrder",
-              "editTriggerOrder", "editLimitOrder",
+              "closePosition",
+              "decreaseSize",
+              "removeCollateral",
+              "removeCollateralAndSwap",
+              "closeAndSwap",
+              "cancelTriggerOrder",
+              "cancelLimitOrder",
+              "editTriggerOrder",
+              "editLimitOrder",
             ],
             type: "allowAll",
             params: {},
@@ -887,10 +956,15 @@ describe("ConstraintBuilder", () => {
             },
             {
               actions: [
-                "closePosition", "decreaseSize", "removeCollateral",
-                "removeCollateralAndSwap", "closeAndSwap",
-                "cancelTriggerOrder", "cancelLimitOrder",
-                "editTriggerOrder", "editLimitOrder",
+                "closePosition",
+                "decreaseSize",
+                "removeCollateral",
+                "removeCollateralAndSwap",
+                "closeAndSwap",
+                "cancelTriggerOrder",
+                "cancelLimitOrder",
+                "editTriggerOrder",
+                "editLimitOrder",
               ],
               type: "allowAll",
               params: {},
@@ -943,7 +1017,11 @@ describe("ConstraintBuilder", () => {
           {
             protocolId: "flash-trade",
             actionRules: [
-              { actions: ["openPosition"], type: "maxPositionSize", params: {} },
+              {
+                actions: ["openPosition"],
+                type: "maxPositionSize",
+                params: {},
+              },
             ],
           },
         ]),
@@ -1031,8 +1109,11 @@ describe("ConstraintBuilder", () => {
             },
             {
               actions: [
-                "closePosition", "decreaseSize", "addCollateral",
-                "removeCollateral", "cancelTriggerOrder",
+                "closePosition",
+                "decreaseSize",
+                "addCollateral",
+                "removeCollateral",
+                "cancelTriggerOrder",
               ],
               type: "allowAll",
               params: {},
@@ -1068,7 +1149,9 @@ describe("Kamino Schema", () => {
 
   it("has correct program address", () => {
     expect(KAMINO_SCHEMA.programAddress).to.equal(KAMINO_LENDING_PROGRAM);
-    expect(KAMINO_LENDING_PROGRAM).to.equal("KLend2g3cP87ber8CzRaqeECGwNvLFM9acPVcRkRHvM");
+    expect(KAMINO_LENDING_PROGRAM).to.equal(
+      "KLend2g3cP87ber8CzRaqeECGwNvLFM9acPVcRkRHvM",
+    );
   });
 
   describe("discriminators match Codama-generated code", () => {
@@ -1076,33 +1159,47 @@ describe("Kamino Schema", () => {
       depositCollateral: DEPOSIT_OBLIGATION_COLLATERAL_DISCRIMINATOR,
       borrowLiquidity: BORROW_OBLIGATION_LIQUIDITY_DISCRIMINATOR,
       repayLiquidity: REPAY_OBLIGATION_LIQUIDITY_DISCRIMINATOR,
-      withdrawCollateral: WITHDRAW_OBLIGATION_COLLATERAL_AND_REDEEM_RESERVE_COLLATERAL_DISCRIMINATOR,
+      withdrawCollateral:
+        WITHDRAW_OBLIGATION_COLLATERAL_AND_REDEEM_RESERVE_COLLATERAL_DISCRIMINATOR,
     };
 
     for (const [name, codamaDisc] of Object.entries(codamaDiscriminators)) {
       it(`${name} discriminator matches Codama`, () => {
         const schema = KAMINO_SCHEMA.instructions.get(name);
         expect(schema).to.not.be.undefined;
-        expect(Array.from(schema!.discriminator)).to.deep.equal(Array.from(codamaDisc));
+        expect(Array.from(schema!.discriminator)).to.deep.equal(
+          Array.from(codamaDisc),
+        );
       });
     }
   });
 
   describe("account indices", () => {
     it("depositCollateral depositReserve index = 3", () => {
-      expect(KAMINO_SCHEMA.instructions.get("depositCollateral")!.accounts.depositReserve).to.equal(3);
+      expect(
+        KAMINO_SCHEMA.instructions.get("depositCollateral")!.accounts
+          .depositReserve,
+      ).to.equal(3);
     });
 
     it("borrowLiquidity borrowReserve index = 4", () => {
-      expect(KAMINO_SCHEMA.instructions.get("borrowLiquidity")!.accounts.borrowReserve).to.equal(4);
+      expect(
+        KAMINO_SCHEMA.instructions.get("borrowLiquidity")!.accounts
+          .borrowReserve,
+      ).to.equal(4);
     });
 
     it("repayLiquidity repayReserve index = 3", () => {
-      expect(KAMINO_SCHEMA.instructions.get("repayLiquidity")!.accounts.repayReserve).to.equal(3);
+      expect(
+        KAMINO_SCHEMA.instructions.get("repayLiquidity")!.accounts.repayReserve,
+      ).to.equal(3);
     });
 
     it("withdrawCollateral withdrawReserve index = 4", () => {
-      expect(KAMINO_SCHEMA.instructions.get("withdrawCollateral")!.accounts.withdrawReserve).to.equal(4);
+      expect(
+        KAMINO_SCHEMA.instructions.get("withdrawCollateral")!.accounts
+          .withdrawReserve,
+      ).to.equal(4);
     });
   });
 
@@ -1149,7 +1246,11 @@ describe("Kamino Schema", () => {
 describe("Kamino Descriptor", () => {
   describe("compileRule — allowAll", () => {
     it("produces discriminator-only entries", () => {
-      const rule = { actions: ["depositCollateral", "borrowLiquidity"], type: "allowAll", params: {} };
+      const rule = {
+        actions: ["depositCollateral", "borrowLiquidity"],
+        type: "allowAll",
+        params: {},
+      };
       const result = KaminoDescriptor.compileRule(rule);
       expect(result).to.have.length(2);
       for (const c of result) {
@@ -1164,7 +1265,12 @@ describe("Kamino Descriptor", () => {
   describe("compileRule — maxAmount", () => {
     it("produces Lte constraints for all amount-constrained actions", () => {
       const rule = {
-        actions: ["depositCollateral", "borrowLiquidity", "repayLiquidity", "withdrawCollateral"],
+        actions: [
+          "depositCollateral",
+          "borrowLiquidity",
+          "repayLiquidity",
+          "withdrawCollateral",
+        ],
         type: "maxAmount",
         params: { maxAmount: "1000000000" },
       };
@@ -1207,7 +1313,9 @@ describe("Kamino Descriptor", () => {
       expect(result).to.have.length(1);
       expect(result[0].accountConstraints).to.have.length(1);
       expect(result[0].accountConstraints[0].index).to.equal(3); // depositReserve index
-      expect(result[0].accountConstraints[0].expected).to.equal(KAMINO_RESERVES.USDC.reserve);
+      expect(result[0].accountConstraints[0].expected).to.equal(
+        KAMINO_RESERVES.USDC.reserve,
+      );
     });
 
     it("creates one entry per (instruction x reserve)", () => {
@@ -1230,12 +1338,18 @@ describe("Kamino Descriptor", () => {
       const result = KaminoDescriptor.compileRule(rule);
       // depositCollateral: depositReserve at index 3
       const depositResult = result.find((c) =>
-        arraysEqual(c.discriminators[0], DEPOSIT_OBLIGATION_COLLATERAL_DISCRIMINATOR),
+        arraysEqual(
+          c.discriminators[0],
+          DEPOSIT_OBLIGATION_COLLATERAL_DISCRIMINATOR,
+        ),
       );
       expect(depositResult!.accountConstraints[0].index).to.equal(3);
       // borrowLiquidity: borrowReserve at index 4
       const borrowResult = result.find((c) =>
-        arraysEqual(c.discriminators[0], BORROW_OBLIGATION_LIQUIDITY_DISCRIMINATOR),
+        arraysEqual(
+          c.discriminators[0],
+          BORROW_OBLIGATION_LIQUIDITY_DISCRIMINATOR,
+        ),
       );
       expect(borrowResult!.accountConstraints[0].index).to.equal(4);
     });
@@ -1246,7 +1360,9 @@ describe("Kamino Descriptor", () => {
         type: "allowedReserves",
         params: { reserves: ["BONK"] },
       };
-      expect(() => KaminoDescriptor.compileRule(rule)).to.throw("Unknown Kamino reserve");
+      expect(() => KaminoDescriptor.compileRule(rule)).to.throw(
+        "Unknown Kamino reserve",
+      );
     });
   });
 
@@ -1259,7 +1375,11 @@ describe("Kamino Descriptor", () => {
     it("includes all expected types", () => {
       const types = KaminoDescriptor.getRuleTypes();
       const names = types.map((t) => t.type);
-      expect(names).to.include.members(["allowAll", "maxAmount", "allowedReserves"]);
+      expect(names).to.include.members([
+        "allowAll",
+        "maxAmount",
+        "allowedReserves",
+      ]);
     });
   });
 
@@ -1325,7 +1445,11 @@ describe("Kamino Descriptor", () => {
     it("warns when strict_mode has spending but no risk-reducing", () => {
       const warnings = KaminoDescriptor.checkStrictModeWarnings!({
         actionRules: [
-          { actions: ["depositCollateral"], type: "maxAmount", params: { maxAmount: "1000" } },
+          {
+            actions: ["depositCollateral"],
+            type: "maxAmount",
+            params: { maxAmount: "1000" },
+          },
         ],
         strictMode: true,
       });
@@ -1338,7 +1462,11 @@ describe("Kamino Descriptor", () => {
     it("no warnings when strict_mode is off", () => {
       const warnings = KaminoDescriptor.checkStrictModeWarnings!({
         actionRules: [
-          { actions: ["depositCollateral"], type: "maxAmount", params: { maxAmount: "1000" } },
+          {
+            actions: ["depositCollateral"],
+            type: "maxAmount",
+            params: { maxAmount: "1000" },
+          },
         ],
         strictMode: false,
       });
@@ -1348,8 +1476,16 @@ describe("Kamino Descriptor", () => {
     it("no warnings when all risk-reducing covered", () => {
       const warnings = KaminoDescriptor.checkStrictModeWarnings!({
         actionRules: [
-          { actions: ["depositCollateral"], type: "maxAmount", params: { maxAmount: "1000" } },
-          { actions: ["borrowLiquidity", "withdrawCollateral"], type: "allowAll", params: {} },
+          {
+            actions: ["depositCollateral"],
+            type: "maxAmount",
+            params: { maxAmount: "1000" },
+          },
+          {
+            actions: ["borrowLiquidity", "withdrawCollateral"],
+            type: "allowAll",
+            params: {},
+          },
         ],
         strictMode: true,
       });
@@ -1394,13 +1530,21 @@ describe("ConstraintBuilder — Multi-Protocol", () => {
       {
         protocolId: "flash-trade",
         actionRules: [
-          { actions: ["openPosition", "closePosition", "increaseSize"], type: "allowAll", params: {} },
+          {
+            actions: ["openPosition", "closePosition", "increaseSize"],
+            type: "allowAll",
+            params: {},
+          },
         ],
       },
       {
         protocolId: "kamino",
         actionRules: [
-          { actions: ["depositCollateral", "borrowLiquidity"], type: "allowAll", params: {} },
+          {
+            actions: ["depositCollateral", "borrowLiquidity"],
+            type: "allowAll",
+            params: {},
+          },
         ],
       },
     ]);
@@ -1414,15 +1558,23 @@ describe("ConstraintBuilder — Multi-Protocol", () => {
     const result = builder.compile([
       {
         protocolId: "flash-trade",
-        actionRules: [{ actions: ["openPosition"], type: "allowAll", params: {} }],
+        actionRules: [
+          { actions: ["openPosition"], type: "allowAll", params: {} },
+        ],
       },
       {
         protocolId: "kamino",
-        actionRules: [{ actions: ["depositCollateral"], type: "allowAll", params: {} }],
+        actionRules: [
+          { actions: ["depositCollateral"], type: "allowAll", params: {} },
+        ],
       },
     ]);
-    const flashEntry = result.entries.find((e) => e.programId === "FLASH6Lo6h3iasJKWDs2F8TkW2UKf3s15C8PMGuVfgBn");
-    const kaminoEntry = result.entries.find((e) => e.programId === "KLend2g3cP87ber8CzRaqeECGwNvLFM9acPVcRkRHvM");
+    const flashEntry = result.entries.find(
+      (e) => e.programId === "FLASH6Lo6h3iasJKWDs2F8TkW2UKf3s15C8PMGuVfgBn",
+    );
+    const kaminoEntry = result.entries.find(
+      (e) => e.programId === "KLend2g3cP87ber8CzRaqeECGwNvLFM9acPVcRkRHvM",
+    );
     expect(flashEntry).to.not.be.undefined;
     expect(kaminoEntry).to.not.be.undefined;
   });
@@ -1433,14 +1585,22 @@ describe("ConstraintBuilder — Multi-Protocol", () => {
       {
         protocolId: "flash-trade",
         actionRules: [
-          { actions: ["openPosition"], type: "maxPositionSize", params: { maxSize: "1000" } },
+          {
+            actions: ["openPosition"],
+            type: "maxPositionSize",
+            params: { maxSize: "1000" },
+          },
         ],
         strictMode: true,
       },
       {
         protocolId: "kamino",
         actionRules: [
-          { actions: ["depositCollateral"], type: "maxAmount", params: { maxAmount: "1000" } },
+          {
+            actions: ["depositCollateral"],
+            type: "maxAmount",
+            params: { maxAmount: "1000" },
+          },
         ],
         strictMode: true,
       },
@@ -1448,7 +1608,8 @@ describe("ConstraintBuilder — Multi-Protocol", () => {
     // Both should have warnings about missing risk-reducing actions
     expect(result.warnings.length).to.be.greaterThanOrEqual(2);
     expect(result.warnings.some((w) => w.includes("closePosition"))).to.be.true;
-    expect(result.warnings.some((w) => w.includes("borrowLiquidity"))).to.be.true;
+    expect(result.warnings.some((w) => w.includes("borrowLiquidity"))).to.be
+      .true;
   });
 
   it("estimateEntryCount matches compile for multi-protocol", () => {
@@ -1457,13 +1618,21 @@ describe("ConstraintBuilder — Multi-Protocol", () => {
       {
         protocolId: "flash-trade",
         actionRules: [
-          { actions: ["openPosition", "increaseSize"], type: "maxPositionSize", params: { maxSize: "10000000000" } },
+          {
+            actions: ["openPosition", "increaseSize"],
+            type: "maxPositionSize",
+            params: { maxSize: "10000000000" },
+          },
         ],
       },
       {
         protocolId: "kamino",
         actionRules: [
-          { actions: ["depositCollateral", "repayLiquidity"], type: "maxAmount", params: { maxAmount: "5000000000" } },
+          {
+            actions: ["depositCollateral", "repayLiquidity"],
+            type: "maxAmount",
+            params: { maxAmount: "5000000000" },
+          },
         ],
       },
     ];
@@ -1478,13 +1647,21 @@ describe("ConstraintBuilder — Multi-Protocol", () => {
       {
         protocolId: "flash-trade",
         actionRules: [
-          { actions: ["openPosition"], type: "allowedMarkets", params: { markets: ["SOL-SOL-long", "BTC-BTC-long"] } },
+          {
+            actions: ["openPosition"],
+            type: "allowedMarkets",
+            params: { markets: ["SOL-SOL-long", "BTC-BTC-long"] },
+          },
         ],
       },
       {
         protocolId: "kamino",
         actionRules: [
-          { actions: ["depositCollateral"], type: "allowedReserves", params: { reserves: ["USDC", "SOL"] } },
+          {
+            actions: ["depositCollateral"],
+            type: "allowedReserves",
+            params: { reserves: ["USDC", "SOL"] },
+          },
         ],
       },
     ]);
@@ -1500,14 +1677,27 @@ describe("ConstraintBuilder — Multi-Protocol", () => {
       {
         protocolId: "flash-trade",
         actionRules: [
-          { actions: ["openPosition", "increaseSize"], type: "maxPositionSize", params: { maxSize: "10000000000" } },
-          { actions: ["openPosition", "increaseSize"], type: "allowedMarkets", params: { markets: ["SOL-SOL-long"] } },
+          {
+            actions: ["openPosition", "increaseSize"],
+            type: "maxPositionSize",
+            params: { maxSize: "10000000000" },
+          },
+          {
+            actions: ["openPosition", "increaseSize"],
+            type: "allowedMarkets",
+            params: { markets: ["SOL-SOL-long"] },
+          },
           {
             actions: [
-              "closePosition", "decreaseSize", "removeCollateral",
-              "removeCollateralAndSwap", "closeAndSwap",
-              "cancelTriggerOrder", "cancelLimitOrder",
-              "editTriggerOrder", "editLimitOrder",
+              "closePosition",
+              "decreaseSize",
+              "removeCollateral",
+              "removeCollateralAndSwap",
+              "closeAndSwap",
+              "cancelTriggerOrder",
+              "cancelLimitOrder",
+              "editTriggerOrder",
+              "editLimitOrder",
             ],
             type: "allowAll",
             params: {},
@@ -1518,9 +1708,21 @@ describe("ConstraintBuilder — Multi-Protocol", () => {
       {
         protocolId: "kamino",
         actionRules: [
-          { actions: ["depositCollateral", "repayLiquidity"], type: "maxAmount", params: { maxAmount: "5000000000" } },
-          { actions: ["depositCollateral"], type: "allowedReserves", params: { reserves: ["USDC"] } },
-          { actions: ["borrowLiquidity", "withdrawCollateral"], type: "allowAll", params: {} },
+          {
+            actions: ["depositCollateral", "repayLiquidity"],
+            type: "maxAmount",
+            params: { maxAmount: "5000000000" },
+          },
+          {
+            actions: ["depositCollateral"],
+            type: "allowedReserves",
+            params: { reserves: ["USDC"] },
+          },
+          {
+            actions: ["borrowLiquidity", "withdrawCollateral"],
+            type: "allowAll",
+            params: {},
+          },
         ],
         strictMode: true,
       },
@@ -1551,11 +1753,13 @@ describe("Constraint Builder Edge Cases", () => {
   it("handles empty rules list", () => {
     const builder = new ConstraintBuilder();
     builder.register(FlashTradeDescriptor);
-    const result = builder.compile([{
-      protocolId: "flash-trade",
-      actionRules: [],
-      strictMode: false,
-    }]);
+    const result = builder.compile([
+      {
+        protocolId: "flash-trade",
+        actionRules: [],
+        strictMode: false,
+      },
+    ]);
     expect(result.entries).to.have.length(0);
     expect(result.budget.used).to.equal(0);
   });
@@ -1566,7 +1770,11 @@ describe("Constraint Builder Edge Cases", () => {
     const config: ProtocolRuleConfig = {
       protocolId: "flash-trade",
       actionRules: [
-        { actions: ["openPosition"], type: "maxPositionSize", params: { maxSize: "10000000000" } },
+        {
+          actions: ["openPosition"],
+          type: "maxPositionSize",
+          params: { maxSize: "10000000000" },
+        },
       ],
       strictMode: false,
     };
@@ -1597,11 +1805,13 @@ describe("Constraint Builder Edge Cases", () => {
       });
     }
     try {
-      builder.compile([{
-        protocolId: "flash-trade",
-        actionRules: manyRules,
-        strictMode: false,
-      }]);
+      builder.compile([
+        {
+          protocolId: "flash-trade",
+          actionRules: manyRules,
+          strictMode: false,
+        },
+      ]);
       expect.fail("should have thrown ConstraintBudgetExceededError");
     } catch (e: any) {
       expect(e).to.be.instanceOf(ConstraintBudgetExceededError);
@@ -1614,11 +1824,13 @@ describe("Constraint Builder Edge Cases", () => {
   it("rejects unregistered protocol", () => {
     const builder = new ConstraintBuilder();
     try {
-      builder.compile([{
-        protocolId: "unknown-protocol",
-        actionRules: [],
-        strictMode: false,
-      }]);
+      builder.compile([
+        {
+          protocolId: "unknown-protocol",
+          actionRules: [],
+          strictMode: false,
+        },
+      ]);
       expect.fail("should have thrown");
     } catch (e: any) {
       expect(e.message).to.include("No descriptor registered");

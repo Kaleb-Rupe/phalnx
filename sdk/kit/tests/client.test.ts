@@ -13,7 +13,9 @@ function mockAgent() {
   } as any;
 }
 
-function buildClient(overrides?: Partial<PhalnxKitClientConfig>): PhalnxKitClient {
+function buildClient(
+  overrides?: Partial<PhalnxKitClientConfig>,
+): PhalnxKitClient {
   return new PhalnxKitClient({
     rpc: {} as any,
     network: "devnet",
@@ -56,11 +58,17 @@ describe("PhalnxKitClient", () => {
         metadata: {
           protocolId: "custom",
           displayName: "Custom",
-          programIds: ["Custom1111111111111111111111111111111111111" as Address],
+          programIds: [
+            "Custom1111111111111111111111111111111111111" as Address,
+          ],
           supportedActions: new Map(),
         },
-        async compose() { return { instructions: [] }; },
-        summarize() { return "custom"; },
+        async compose() {
+          return { instructions: [] };
+        },
+        summarize() {
+          return "custom";
+        },
       });
       expect(customReg.size).to.equal(1);
     });
@@ -138,7 +146,9 @@ describe("PhalnxKitClient", () => {
     it("returns failure when RPC unavailable", async () => {
       const client = buildClient({
         rpc: {
-          getAccountInfo: () => { throw new Error("connection refused"); },
+          getAccountInfo: () => {
+            throw new Error("connection refused");
+          },
         } as any,
       });
       const result = await client.precheck(
@@ -173,7 +183,10 @@ describe("PhalnxKitClient", () => {
       const client = buildClient();
       try {
         await client.execute(
-          { type: "swap", params: { inputMint: "", outputMint: "", amount: "" } },
+          {
+            type: "swap",
+            params: { inputMint: "", outputMint: "", amount: "" },
+          },
           "Vault111111111111111111111111111111111111111" as Address,
         );
         expect.fail("Should have thrown");
@@ -210,11 +223,15 @@ describe("PhalnxKitClient", () => {
     it("throws on RPC failure", async () => {
       const client = buildClient({
         rpc: {
-          getAccountInfo: () => { throw new Error("connection refused"); },
+          getAccountInfo: () => {
+            throw new Error("connection refused");
+          },
         } as any,
       });
       try {
-        await client.fetchVault("Vault111111111111111111111111111111111111111" as Address);
+        await client.fetchVault(
+          "Vault111111111111111111111111111111111111111" as Address,
+        );
         expect.fail("Should have thrown");
       } catch (err: any) {
         expect(err.message).to.include("connection refused");

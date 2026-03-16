@@ -19,10 +19,10 @@ import { KaminoApiError } from "./kamino-api.js";
 
 const ALLOWED_PROGRAMS = new Set<string>([
   KAMINO_LENDING_PROGRAM,
-  "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",  // Token Program
-  "11111111111111111111111111111111",                 // System Program
-  "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",  // ATA Program
-  "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",   // Token-2022
+  "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", // Token Program
+  "11111111111111111111111111111111", // System Program
+  "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL", // ATA Program
+  "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb", // Token-2022
 ]);
 
 /** Map Kamino handler action names to schema instruction names */
@@ -98,12 +98,16 @@ export function verifyKaminoInstructions(
   verifySigner(instructions, vaultAddress);
 }
 
-function verifySigner(instructions: Instruction[], vaultAddress: Address): void {
+function verifySigner(
+  instructions: Instruction[],
+  vaultAddress: Address,
+): void {
   const hasSigner = instructions.some((ix) =>
     ix.accounts?.some(
       (acc) =>
         acc.address === vaultAddress &&
-        (acc.role === AccountRole.WRITABLE_SIGNER || acc.role === AccountRole.READONLY_SIGNER),
+        (acc.role === AccountRole.WRITABLE_SIGNER ||
+          acc.role === AccountRole.READONLY_SIGNER),
     ),
   );
   if (!hasSigner) {
@@ -114,7 +118,10 @@ function verifySigner(instructions: Instruction[], vaultAddress: Address): void 
   }
 }
 
-function arraysEqual(a: Uint8Array | ReadonlyArray<number>, b: Uint8Array | ReadonlyArray<number>): boolean {
+function arraysEqual(
+  a: Uint8Array | ReadonlyArray<number>,
+  b: Uint8Array | ReadonlyArray<number>,
+): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
     if (a[i] !== b[i]) return false;
@@ -122,7 +129,10 @@ function arraysEqual(a: Uint8Array | ReadonlyArray<number>, b: Uint8Array | Read
   return true;
 }
 
-function readU64LE(data: { readonly [index: number]: number; readonly length: number }, offset: number): bigint {
+function readU64LE(
+  data: { readonly [index: number]: number; readonly length: number },
+  offset: number,
+): bigint {
   let value = 0n;
   for (let i = 0; i < 8; i++) {
     value |= BigInt(data[offset + i]) << BigInt(i * 8);
@@ -131,5 +141,7 @@ function readU64LE(data: { readonly [index: number]: number; readonly length: nu
 }
 
 function arrayToHex(arr: Uint8Array): string {
-  return Array.from(arr).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(arr)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }

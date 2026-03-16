@@ -9,7 +9,8 @@ import {
 
 const MOCK_PAYER = "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL" as Address;
 const MOCK_PROGRAM = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" as Address;
-const MOCK_SIGNATURE = "5wHu1qwD7y5B7TFDx5UKo2KRDwfJpJdHnnRr8KeUQBJGG2ZxVjktjDqfUzE6jR2Kv8Zj";
+const MOCK_SIGNATURE =
+  "5wHu1qwD7y5B7TFDx5UKo2KRDwfJpJdHnnRr8KeUQBJGG2ZxVjktjDqfUzE6jR2Kv8Zj";
 
 const MOCK_BLOCKHASH = {
   blockhash: "4NCYB3kRT8sCNodPNuCZo8VUh4xqpBQxsxed2wd9xaJ4",
@@ -20,7 +21,9 @@ function mockIx(programAddress: Address = MOCK_PROGRAM): Instruction {
   return { programAddress, accounts: [], data: new Uint8Array([1, 2, 3]) };
 }
 
-function baseParams(overrides?: Partial<ExecuteTransactionParams>): ExecuteTransactionParams {
+function baseParams(
+  overrides?: Partial<ExecuteTransactionParams>,
+): ExecuteTransactionParams {
   return {
     feePayer: MOCK_PAYER,
     validateIx: mockIx(),
@@ -93,8 +96,14 @@ describe("TransactionExecutor", () => {
   describe("simulate", () => {
     it("returns success when simulation succeeds", async () => {
       const executor = new TransactionExecutor(createMockRpc(), mockAgent());
-      const { compiledTx, computeUnits } = await executor.composeTransaction(baseParams());
-      const { simulation } = await executor.simulate(baseParams(), compiledTx, computeUnits, MOCK_BLOCKHASH);
+      const { compiledTx, computeUnits } =
+        await executor.composeTransaction(baseParams());
+      const { simulation } = await executor.simulate(
+        baseParams(),
+        compiledTx,
+        computeUnits,
+        MOCK_BLOCKHASH,
+      );
       expect(simulation.success).to.be.true;
     });
 
@@ -103,14 +112,22 @@ describe("TransactionExecutor", () => {
         simulateResult: {
           value: {
             err: { InstructionError: [0, "Custom"] },
-            logs: ["Program log: Error Code: VaultNotActive. Error Number: 6000"],
+            logs: [
+              "Program log: Error Code: VaultNotActive. Error Number: 6000",
+            ],
             unitsConsumed: 50_000,
           },
         },
       });
       const executor = new TransactionExecutor(rpc, mockAgent());
-      const { compiledTx, computeUnits } = await executor.composeTransaction(baseParams());
-      const { simulation } = await executor.simulate(baseParams(), compiledTx, computeUnits, MOCK_BLOCKHASH);
+      const { compiledTx, computeUnits } =
+        await executor.composeTransaction(baseParams());
+      const { simulation } = await executor.simulate(
+        baseParams(),
+        compiledTx,
+        computeUnits,
+        MOCK_BLOCKHASH,
+      );
       expect(simulation.success).to.be.false;
       expect(simulation.error?.anchorCode).to.equal(6000);
     });
@@ -120,14 +137,22 @@ describe("TransactionExecutor", () => {
         simulateResult: {
           value: {
             err: "error",
-            logs: ["Program log: Error Code: DailyCapExceeded. Error Number: 6006"],
+            logs: [
+              "Program log: Error Code: DailyCapExceeded. Error Number: 6006",
+            ],
             unitsConsumed: 100_000,
           },
         },
       });
       const executor = new TransactionExecutor(rpc, mockAgent());
-      const { compiledTx, computeUnits } = await executor.composeTransaction(baseParams());
-      const { simulation } = await executor.simulate(baseParams(), compiledTx, computeUnits, MOCK_BLOCKHASH);
+      const { compiledTx, computeUnits } =
+        await executor.composeTransaction(baseParams());
+      const { simulation } = await executor.simulate(
+        baseParams(),
+        compiledTx,
+        computeUnits,
+        MOCK_BLOCKHASH,
+      );
       expect(simulation.error?.anchorName).to.equal("DailyCapExceeded");
       expect(simulation.error?.suggestion).to.include("spending cap");
     });
@@ -141,8 +166,14 @@ describe("TransactionExecutor", () => {
         },
       });
       const executor = new TransactionExecutor(rpc, mockAgent());
-      const { compiledTx, computeUnits } = await executor.composeTransaction(baseParams());
-      const { recomposedTx } = await executor.simulate(baseParams(), compiledTx, computeUnits, MOCK_BLOCKHASH);
+      const { compiledTx, computeUnits } =
+        await executor.composeTransaction(baseParams());
+      const { recomposedTx } = await executor.simulate(
+        baseParams(),
+        compiledTx,
+        computeUnits,
+        MOCK_BLOCKHASH,
+      );
       expect(recomposedTx).to.be.undefined;
     });
 
@@ -154,7 +185,8 @@ describe("TransactionExecutor", () => {
         },
       });
       const executor = new TransactionExecutor(rpc, mockAgent());
-      const { compiledTx, computeUnits } = await executor.composeTransaction(baseParams());
+      const { compiledTx, computeUnits } =
+        await executor.composeTransaction(baseParams());
       const { recomposedTx, finalCU } = await executor.simulate(
         baseParams(),
         compiledTx,
@@ -178,7 +210,10 @@ describe("TransactionExecutor", () => {
       const rpc = createMockRpc({
         statusResult: {
           value: [
-            { confirmationStatus: "confirmed", err: { InstructionError: [0, "Custom"] } },
+            {
+              confirmationStatus: "confirmed",
+              err: { InstructionError: [0, "Custom"] },
+            },
           ],
         },
       });
@@ -207,7 +242,9 @@ describe("TransactionExecutor", () => {
         simulateResult: {
           value: {
             err: "error",
-            logs: ["Program log: Error Code: VaultNotActive. Error Number: 6000"],
+            logs: [
+              "Program log: Error Code: VaultNotActive. Error Number: 6000",
+            ],
             unitsConsumed: 50_000,
           },
         },

@@ -112,9 +112,7 @@ describe("shield", () => {
 
   describe("ShieldDeniedError", () => {
     it("includes violations in message", () => {
-      const err = new ShieldDeniedError([
-        { rule: "test", message: "blocked" },
-      ]);
+      const err = new ShieldDeniedError([{ rule: "test", message: "blocked" }]);
       expect(err.message).to.include("blocked");
       expect(err.violations).to.have.length(1);
       expect(err.name).to.equal("ShieldDeniedError");
@@ -197,17 +195,23 @@ describe("shield", () => {
     it("callbacks fire on deny", () => {
       let deniedError: ShieldDeniedError | null = null;
       const ctx = shield(undefined, {
-        onDenied: (err) => { deniedError = err; },
+        onDenied: (err) => {
+          deniedError = err;
+        },
       });
       ctx.pause();
-      try { ctx.enforce([], SIGNER); } catch {}
+      try {
+        ctx.enforce([], SIGNER);
+      } catch {}
       expect(deniedError).to.be.instanceOf(ShieldDeniedError);
     });
 
     it("callbacks fire on approve", () => {
       let approved = false;
       const ctx = shield(undefined, {
-        onApproved: () => { approved = true; },
+        onApproved: () => {
+          approved = true;
+        },
       });
       ctx.enforce(
         [noopIx("11111111111111111111111111111111" as Address)],
@@ -229,12 +233,10 @@ describe("shield", () => {
       const ctx = shield({
         maxSpend: { mint: USDC_MINT, amount: 1_000_000n },
       });
-      const result = ctx.check(
-        [buildTransferIx(2_000_000n, SIGNER)],
-        SIGNER,
-      );
+      const result = ctx.check([buildTransferIx(2_000_000n, SIGNER)], SIGNER);
       expect(result.allowed).to.be.false;
-      expect(result.violations.some((v) => v.rule === "spend_limit")).to.be.true;
+      expect(result.violations.some((v) => v.rule === "spend_limit")).to.be
+        .true;
     });
 
     it("tracks spend accumulation across enforce() calls", () => {
@@ -245,12 +247,10 @@ describe("shield", () => {
       ctx.enforce([buildTransferIx(600_000n, SIGNER)], SIGNER);
 
       // Second check: another 600k (total 1.2M > 1M limit)
-      const result = ctx.check(
-        [buildTransferIx(600_000n, SIGNER)],
-        SIGNER,
-      );
+      const result = ctx.check([buildTransferIx(600_000n, SIGNER)], SIGNER);
       expect(result.allowed).to.be.false;
-      expect(result.violations.some((v) => v.rule === "spend_limit")).to.be.true;
+      expect(result.violations.some((v) => v.rule === "spend_limit")).to.be
+        .true;
     });
   });
 
@@ -350,7 +350,11 @@ describe("shield", () => {
     const ACCT_R1 = "Readonl1111111111111111111111111111111111" as Address;
     const ACCT_R2 = "Readonl2222222222222222222222222222222222" as Address;
 
-    function populateCache(cache: AltCache, altAddr: Address, addresses: Address[]) {
+    function populateCache(
+      cache: AltCache,
+      altAddr: Address,
+      addresses: Address[],
+    ) {
       (cache as any).cache.set(altAddr as string, {
         data: { [altAddr]: addresses },
         expiresAt: Date.now() + 300_000,
@@ -436,13 +440,13 @@ describe("shield", () => {
           addressTableLookups: [
             {
               lookupTableAddress: ALT_A,
-              writableIndexes: [0],  // ACCT_W1
-              readonlyIndexes: [1],  // ACCT_R1
+              writableIndexes: [0], // ACCT_W1
+              readonlyIndexes: [1], // ACCT_R1
             },
             {
               lookupTableAddress: ALT_B,
-              writableIndexes: [0],  // ACCT_W2
-              readonlyIndexes: [1],  // ACCT_R2
+              writableIndexes: [0], // ACCT_W2
+              readonlyIndexes: [1], // ACCT_R2
             },
           ],
         },
@@ -476,7 +480,9 @@ describe("shield", () => {
       return {
         programAddress: TOKEN_PROGRAM,
         accounts: [
-          { address: "Source11111111111111111111111111111111111111" as Address },
+          {
+            address: "Source11111111111111111111111111111111111111" as Address,
+          },
           { address: mint },
           { address: destination },
           { address: authority },
@@ -485,14 +491,20 @@ describe("shield", () => {
       };
     }
 
-    function mockResolvedState(overrides: Partial<ResolvedVaultState> = {}): ResolvedVaultState {
+    function mockResolvedState(
+      overrides: Partial<ResolvedVaultState> = {},
+    ): ResolvedVaultState {
       return {
         vault: {} as any,
         policy: {} as any,
         tracker: null,
         overlay: null,
         constraints: null,
-        globalBudget: { spent24h: 0n, cap: 1_000_000_000n, remaining: 1_000_000_000n },
+        globalBudget: {
+          spent24h: 0n,
+          cap: 1_000_000_000n,
+          remaining: 1_000_000_000n,
+        },
         agentBudget: null,
         protocolBudgets: [],
         maxTransactionUsd: 500_000_000n,
@@ -505,7 +517,9 @@ describe("shield", () => {
 
     it("syncFromOnChain sets baseline", () => {
       const state = new ShieldState();
-      const resolved = mockResolvedState({ globalBudget: { spent24h: 500n, cap: 1000n, remaining: 500n } });
+      const resolved = mockResolvedState({
+        globalBudget: { spent24h: 500n, cap: 1000n, remaining: 500n },
+      });
       state.syncFromOnChain(resolved);
       expect(state.getEffectiveGlobalSpent24h()).to.equal(500n);
       expect(state.resolvedState).to.equal(resolved);
@@ -513,14 +527,22 @@ describe("shield", () => {
 
     it("recordUsdSpend adds to baseline", () => {
       const state = new ShieldState();
-      state.syncFromOnChain(mockResolvedState({ globalBudget: { spent24h: 100n, cap: 1000n, remaining: 900n } }));
+      state.syncFromOnChain(
+        mockResolvedState({
+          globalBudget: { spent24h: 100n, cap: 1000n, remaining: 900n },
+        }),
+      );
       state.recordUsdSpend(50n);
       expect(state.getEffectiveGlobalSpent24h()).to.equal(150n);
     });
 
     it("getEffectiveGlobalRemaining decrements", () => {
       const state = new ShieldState();
-      state.syncFromOnChain(mockResolvedState({ globalBudget: { spent24h: 0n, cap: 1000n, remaining: 1000n } }));
+      state.syncFromOnChain(
+        mockResolvedState({
+          globalBudget: { spent24h: 0n, cap: 1000n, remaining: 1000n },
+        }),
+      );
       state.recordUsdSpend(300n);
       expect(state.getEffectiveGlobalRemaining()).to.equal(700n);
     });
@@ -562,7 +584,8 @@ describe("shield", () => {
       const ctx = shield(undefined, {
         onChainSync: {
           rpc: {} as any,
-          vaultAddress: "Vault111111111111111111111111111111111111111" as Address,
+          vaultAddress:
+            "Vault111111111111111111111111111111111111111" as Address,
           agentAddress: SIGNER,
           network: "mainnet-beta",
         },
@@ -587,47 +610,79 @@ describe("shield", () => {
 
     it("evaluateInstructions blocks when on-chain vault cap exceeded", () => {
       const state = new ShieldState();
-      state.syncFromOnChain(mockResolvedState({
-        globalBudget: { spent24h: 900_000_000n, cap: 1_000_000_000n, remaining: 100_000_000n },
-      }));
+      state.syncFromOnChain(
+        mockResolvedState({
+          globalBudget: {
+            spent24h: 900_000_000n,
+            cap: 1_000_000_000n,
+            remaining: 100_000_000n,
+          },
+        }),
+      );
 
       const { violations } = evaluateInstructions(
         [buildTransferCheckedIx(200_000_000n, SIGNER, USDC_MINT)],
         SIGNER,
-        { blockUnknownPrograms: false, spendLimits: [], rateLimit: { maxTransactions: 100, windowMs: 3_600_000 } } as any,
+        {
+          blockUnknownPrograms: false,
+          spendLimits: [],
+          rateLimit: { maxTransactions: 100, windowMs: 3_600_000 },
+        } as any,
         state,
         "mainnet-beta",
       );
-      expect(violations.some((v) => v.rule === "on_chain_vault_cap")).to.be.true;
+      expect(violations.some((v) => v.rule === "on_chain_vault_cap")).to.be
+        .true;
     });
 
     it("evaluateInstructions blocks when on-chain agent cap exceeded", () => {
       const state = new ShieldState();
-      state.syncFromOnChain(mockResolvedState({
-        globalBudget: { spent24h: 0n, cap: 10_000_000_000n, remaining: 10_000_000_000n },
-        agentBudget: { spent24h: 450_000_000n, cap: 500_000_000n, remaining: 50_000_000n },
-      }));
+      state.syncFromOnChain(
+        mockResolvedState({
+          globalBudget: {
+            spent24h: 0n,
+            cap: 10_000_000_000n,
+            remaining: 10_000_000_000n,
+          },
+          agentBudget: {
+            spent24h: 450_000_000n,
+            cap: 500_000_000n,
+            remaining: 50_000_000n,
+          },
+        }),
+      );
 
       const { violations } = evaluateInstructions(
         [buildTransferCheckedIx(100_000_000n, SIGNER, USDC_MINT)],
         SIGNER,
-        { blockUnknownPrograms: false, spendLimits: [], rateLimit: { maxTransactions: 100, windowMs: 3_600_000 } } as any,
+        {
+          blockUnknownPrograms: false,
+          spendLimits: [],
+          rateLimit: { maxTransactions: 100, windowMs: 3_600_000 },
+        } as any,
         state,
         "mainnet-beta",
       );
-      expect(violations.some((v) => v.rule === "on_chain_agent_cap")).to.be.true;
+      expect(violations.some((v) => v.rule === "on_chain_agent_cap")).to.be
+        .true;
     });
 
     it("evaluateInstructions blocks when on-chain tx size exceeded", () => {
       const state = new ShieldState();
-      state.syncFromOnChain(mockResolvedState({
-        maxTransactionUsd: 100_000_000n, // $100
-      }));
+      state.syncFromOnChain(
+        mockResolvedState({
+          maxTransactionUsd: 100_000_000n, // $100
+        }),
+      );
 
       const { violations } = evaluateInstructions(
         [buildTransferCheckedIx(200_000_000n, SIGNER, USDC_MINT)],
         SIGNER,
-        { blockUnknownPrograms: false, spendLimits: [], rateLimit: { maxTransactions: 100, windowMs: 3_600_000 } } as any,
+        {
+          blockUnknownPrograms: false,
+          spendLimits: [],
+          rateLimit: { maxTransactions: 100, windowMs: 3_600_000 },
+        } as any,
         state,
         "mainnet-beta",
       );
@@ -636,20 +691,27 @@ describe("shield", () => {
 
     it("ignores non-stablecoin transfers (F-2)", () => {
       const state = new ShieldState();
-      state.syncFromOnChain(mockResolvedState({
-        globalBudget: { spent24h: 0n, cap: 100n, remaining: 100n },
-        maxTransactionUsd: 100n,
-      }));
+      state.syncFromOnChain(
+        mockResolvedState({
+          globalBudget: { spent24h: 0n, cap: 100n, remaining: 100n },
+          maxTransactionUsd: 100n,
+        }),
+      );
 
       // SOL_MINT transfer with huge amount — NOT a stablecoin
       const { violations } = evaluateInstructions(
         [buildTransferCheckedIx(1_000_000_000n, SIGNER, SOL_MINT)],
         SIGNER,
-        { blockUnknownPrograms: false, spendLimits: [], rateLimit: { maxTransactions: 100, windowMs: 3_600_000 } } as any,
+        {
+          blockUnknownPrograms: false,
+          spendLimits: [],
+          rateLimit: { maxTransactions: 100, windowMs: 3_600_000 },
+        } as any,
         state,
         "mainnet-beta",
       );
-      expect(violations.some((v) => v.rule === "on_chain_vault_cap")).to.be.false;
+      expect(violations.some((v) => v.rule === "on_chain_vault_cap")).to.be
+        .false;
       expect(violations.some((v) => v.rule === "on_chain_tx_size")).to.be.false;
     });
 
@@ -657,7 +719,8 @@ describe("shield", () => {
       const ctx = shield(undefined, {
         onChainSync: {
           rpc: {} as any,
-          vaultAddress: "Vault111111111111111111111111111111111111111" as Address,
+          vaultAddress:
+            "Vault111111111111111111111111111111111111111" as Address,
           agentAddress: SIGNER,
           network: "mainnet-beta",
         },
@@ -676,15 +739,18 @@ describe("shield", () => {
       const ctx = shield(undefined, {
         onChainSync: {
           rpc: {} as any,
-          vaultAddress: "Vault111111111111111111111111111111111111111" as Address,
+          vaultAddress:
+            "Vault111111111111111111111111111111111111111" as Address,
           agentAddress: SIGNER,
           network: "mainnet-beta",
         },
       });
-      ctx.state.syncFromOnChain(mockResolvedState({
-        globalBudget: { spent24h: 100n, cap: 1000n, remaining: 900n },
-        maxTransactionUsd: 500n,
-      }));
+      ctx.state.syncFromOnChain(
+        mockResolvedState({
+          globalBudget: { spent24h: 100n, cap: 1000n, remaining: 900n },
+          maxTransactionUsd: 500n,
+        }),
+      );
 
       const summary = ctx.getSpendingSummary();
       expect(summary.onChain).to.exist;
@@ -699,11 +765,16 @@ describe("shield", () => {
     it("enforce() sets enforceUsed flag", () => {
       const warnings: string[] = [];
       const origWarn = console.warn;
-      console.warn = (msg: string) => { warnings.push(msg); };
+      console.warn = (msg: string) => {
+        warnings.push(msg);
+      };
       try {
         const ctx = shield();
         expect(ctx.state.enforceUsed).to.be.false;
-        ctx.enforce([noopIx("11111111111111111111111111111111" as Address)], SIGNER);
+        ctx.enforce(
+          [noopIx("11111111111111111111111111111111" as Address)],
+          SIGNER,
+        );
         expect(ctx.state.enforceUsed).to.be.true;
       } finally {
         console.warn = origWarn;
@@ -713,27 +784,41 @@ describe("shield", () => {
     it("ShieldedSigner warns when enforce was already used", async () => {
       const warnings: string[] = [];
       const origWarn = console.warn;
-      console.warn = (msg: string) => { warnings.push(msg); };
+      console.warn = (msg: string) => {
+        warnings.push(msg);
+      };
       try {
         const ctx = shield();
         // First enforce
-        ctx.enforce([noopIx("11111111111111111111111111111111" as Address)], SIGNER);
+        ctx.enforce(
+          [noopIx("11111111111111111111111111111111" as Address)],
+          SIGNER,
+        );
 
         // Then ShieldedSigner
         const baseSigner = {
           address: SIGNER,
           modifyAndSignTransactions: async (txs: readonly any[]) => txs,
         } as any;
-        const signer = createShieldedSigner(baseSigner, ctx, { skipSimulation: true });
+        const signer = createShieldedSigner(baseSigner, ctx, {
+          skipSimulation: true,
+        });
 
         const tx = {
           compiledMessage: {
             staticAccounts: ["11111111111111111111111111111111" as Address],
-            instructions: [{ programAddressIndex: 0, accountIndices: [], data: new Uint8Array([1]) }],
+            instructions: [
+              {
+                programAddressIndex: 0,
+                accountIndices: [],
+                data: new Uint8Array([1]),
+              },
+            ],
           },
         };
         await (signer as any).modifyAndSignTransactions([tx]);
-        expect(warnings.some((w) => w.includes("double-count spending"))).to.be.true;
+        expect(warnings.some((w) => w.includes("double-count spending"))).to.be
+          .true;
       } finally {
         console.warn = origWarn;
       }
@@ -742,10 +827,15 @@ describe("shield", () => {
     it("reset() clears enforceUsed flag", () => {
       const warnings: string[] = [];
       const origWarn = console.warn;
-      console.warn = (msg: string) => { warnings.push(msg); };
+      console.warn = (msg: string) => {
+        warnings.push(msg);
+      };
       try {
         const ctx = shield();
-        ctx.enforce([noopIx("11111111111111111111111111111111" as Address)], SIGNER);
+        ctx.enforce(
+          [noopIx("11111111111111111111111111111111" as Address)],
+          SIGNER,
+        );
         expect(ctx.state.enforceUsed).to.be.true;
         ctx.resetState();
         expect(ctx.state.enforceUsed).to.be.false;
@@ -760,10 +850,13 @@ describe("shield", () => {
     it("warns when shield created without onChainSync", () => {
       const warnings: string[] = [];
       const origWarn = console.warn;
-      console.warn = (msg: string) => { warnings.push(msg); };
+      console.warn = (msg: string) => {
+        warnings.push(msg);
+      };
       try {
         shield();
-        expect(warnings.some((w) => w.includes("[Shield] No onChainSync"))).to.be.true;
+        expect(warnings.some((w) => w.includes("[Shield] No onChainSync"))).to
+          .be.true;
       } finally {
         console.warn = origWarn;
       }
@@ -772,17 +865,21 @@ describe("shield", () => {
     it("does not warn when onChainSync is configured", () => {
       const warnings: string[] = [];
       const origWarn = console.warn;
-      console.warn = (msg: string) => { warnings.push(msg); };
+      console.warn = (msg: string) => {
+        warnings.push(msg);
+      };
       try {
         shield(undefined, {
           onChainSync: {
             rpc: {} as any,
-            vaultAddress: "Vault111111111111111111111111111111111111111" as Address,
+            vaultAddress:
+              "Vault111111111111111111111111111111111111111" as Address,
             agentAddress: SIGNER,
             network: "mainnet-beta",
           },
         });
-        expect(warnings.some((w) => w.includes("[Shield] No onChainSync"))).to.be.false;
+        expect(warnings.some((w) => w.includes("[Shield] No onChainSync"))).to
+          .be.false;
       } finally {
         console.warn = origWarn;
       }
@@ -791,14 +888,20 @@ describe("shield", () => {
 
   // ─── S-2: Staleness warning ──────────────────────────────────────────────
   describe("S-2: staleness warning", () => {
-    function mockResolvedState(overrides: Partial<ResolvedVaultState> = {}): ResolvedVaultState {
+    function mockResolvedState(
+      overrides: Partial<ResolvedVaultState> = {},
+    ): ResolvedVaultState {
       return {
         vault: {} as any,
         policy: {} as any,
         tracker: null,
         overlay: null,
         constraints: null,
-        globalBudget: { spent24h: 0n, cap: 1_000_000_000n, remaining: 1_000_000_000n },
+        globalBudget: {
+          spent24h: 0n,
+          cap: 1_000_000_000n,
+          remaining: 1_000_000_000n,
+        },
         agentBudget: null,
         protocolBudgets: [],
         maxTransactionUsd: 500_000_000n,
@@ -810,23 +913,35 @@ describe("shield", () => {
     it("warns when resolved state is older than threshold", () => {
       const warnings: string[] = [];
       const origWarn = console.warn;
-      console.warn = (msg: string) => { warnings.push(msg); };
+      console.warn = (msg: string) => {
+        warnings.push(msg);
+      };
       try {
         const ctx = shield(undefined, {
           onChainSync: {
             rpc: {} as any,
-            vaultAddress: "Vault111111111111111111111111111111111111111" as Address,
+            vaultAddress:
+              "Vault111111111111111111111111111111111111111" as Address,
             agentAddress: SIGNER,
             network: "mainnet-beta",
           },
           stalenessWarnThresholdSec: 60,
         });
         // Set state to 120 seconds ago
-        ctx.state.syncFromOnChain(mockResolvedState({
-          resolvedAtTimestamp: BigInt(Math.floor(Date.now() / 1000) - 120),
-        }));
-        ctx.check([noopIx("11111111111111111111111111111111" as Address)], SIGNER);
-        expect(warnings.some((w) => w.includes("Resolved state is") && w.includes("old"))).to.be.true;
+        ctx.state.syncFromOnChain(
+          mockResolvedState({
+            resolvedAtTimestamp: BigInt(Math.floor(Date.now() / 1000) - 120),
+          }),
+        );
+        ctx.check(
+          [noopIx("11111111111111111111111111111111" as Address)],
+          SIGNER,
+        );
+        expect(
+          warnings.some(
+            (w) => w.includes("Resolved state is") && w.includes("old"),
+          ),
+        ).to.be.true;
       } finally {
         console.warn = origWarn;
       }
@@ -835,20 +950,30 @@ describe("shield", () => {
     it("does not warn when state is fresh", () => {
       const warnings: string[] = [];
       const origWarn = console.warn;
-      console.warn = (msg: string) => { warnings.push(msg); };
+      console.warn = (msg: string) => {
+        warnings.push(msg);
+      };
       try {
         const ctx = shield(undefined, {
           onChainSync: {
             rpc: {} as any,
-            vaultAddress: "Vault111111111111111111111111111111111111111" as Address,
+            vaultAddress:
+              "Vault111111111111111111111111111111111111111" as Address,
             agentAddress: SIGNER,
             network: "mainnet-beta",
           },
           stalenessWarnThresholdSec: 300,
         });
         ctx.state.syncFromOnChain(mockResolvedState());
-        ctx.check([noopIx("11111111111111111111111111111111" as Address)], SIGNER);
-        expect(warnings.some((w) => w.includes("Resolved state is") && w.includes("old"))).to.be.false;
+        ctx.check(
+          [noopIx("11111111111111111111111111111111" as Address)],
+          SIGNER,
+        );
+        expect(
+          warnings.some(
+            (w) => w.includes("Resolved state is") && w.includes("old"),
+          ),
+        ).to.be.false;
       } finally {
         console.warn = origWarn;
       }
@@ -857,22 +982,30 @@ describe("shield", () => {
     it("custom threshold works", () => {
       const warnings: string[] = [];
       const origWarn = console.warn;
-      console.warn = (msg: string) => { warnings.push(msg); };
+      console.warn = (msg: string) => {
+        warnings.push(msg);
+      };
       try {
         const ctx = shield(undefined, {
           onChainSync: {
             rpc: {} as any,
-            vaultAddress: "Vault111111111111111111111111111111111111111" as Address,
+            vaultAddress:
+              "Vault111111111111111111111111111111111111111" as Address,
             agentAddress: SIGNER,
             network: "mainnet-beta",
           },
           stalenessWarnThresholdSec: 10,
         });
         // 15 seconds old, threshold 10 → should warn
-        ctx.state.syncFromOnChain(mockResolvedState({
-          resolvedAtTimestamp: BigInt(Math.floor(Date.now() / 1000) - 15),
-        }));
-        ctx.check([noopIx("11111111111111111111111111111111" as Address)], SIGNER);
+        ctx.state.syncFromOnChain(
+          mockResolvedState({
+            resolvedAtTimestamp: BigInt(Math.floor(Date.now() / 1000) - 15),
+          }),
+        );
+        ctx.check(
+          [noopIx("11111111111111111111111111111111" as Address)],
+          SIGNER,
+        );
         expect(warnings.some((w) => w.includes("threshold: 10s"))).to.be.true;
       } finally {
         console.warn = origWarn;
@@ -882,7 +1015,8 @@ describe("shield", () => {
 
   // ─── S-4: Session binding severity ──────────────────────────────────────
   describe("S-4: session binding severity", () => {
-    const PHALNX_PROG = "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL" as Address;
+    const PHALNX_PROG =
+      "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL" as Address;
 
     function mockBaseSigner() {
       return {
@@ -896,7 +1030,13 @@ describe("shield", () => {
       return {
         compiledMessage: {
           staticAccounts: ["11111111111111111111111111111111" as Address],
-          instructions: [{ programAddressIndex: 0, accountIndices: [], data: new Uint8Array([1]) }],
+          instructions: [
+            {
+              programAddressIndex: 0,
+              accountIndices: [],
+              data: new Uint8Array([1]),
+            },
+          ],
         },
       };
     }
@@ -914,14 +1054,17 @@ describe("shield", () => {
       } catch (err) {
         expect(err).to.be.instanceOf(ShieldDeniedError);
         const denied = err as ShieldDeniedError;
-        expect(denied.violations.some((v) => v.rule === "session_binding")).to.be.true;
+        expect(denied.violations.some((v) => v.rule === "session_binding")).to
+          .be.true;
       }
     });
 
     it("soft mode warns without throwing", async () => {
       const warnings: string[] = [];
       const origWarn = console.warn;
-      console.warn = (msg: string) => { warnings.push(msg); };
+      console.warn = (msg: string) => {
+        warnings.push(msg);
+      };
       try {
         const ctx = shield();
         const signer = createShieldedSigner(mockBaseSigner(), ctx, {
@@ -930,7 +1073,8 @@ describe("shield", () => {
           skipSimulation: true,
         });
         await (signer as any).modifyAndSignTransactions([txWithNoPhalnx()]);
-        expect(warnings.some((w) => w.includes("No Phalnx instructions"))).to.be.true;
+        expect(warnings.some((w) => w.includes("No Phalnx instructions"))).to.be
+          .true;
       } finally {
         console.warn = origWarn;
       }
@@ -957,7 +1101,11 @@ describe("shield", () => {
     const PROG = "Prog1111111111111111111111111111111111111111" as Address;
     const ACCT_W1 = "Writabl1111111111111111111111111111111111" as Address;
 
-    function populateCache(cache: AltCache, altAddr: Address, addresses: Address[]) {
+    function populateCache(
+      cache: AltCache,
+      altAddr: Address,
+      addresses: Address[],
+    ) {
       (cache as any).cache.set(altAddr as string, {
         data: { [altAddr]: addresses },
         expiresAt: Date.now() + 300_000,
@@ -967,7 +1115,9 @@ describe("shield", () => {
     it("warns and substitutes placeholder for out-of-bounds ALT index", () => {
       const warnings: string[] = [];
       const origWarn = console.warn;
-      console.warn = (msg: string) => { warnings.push(msg); };
+      console.warn = (msg: string) => {
+        warnings.push(msg);
+      };
       try {
         const cache = new AltCache();
         // Only 1 address in cache, but reference index 5
@@ -996,9 +1146,12 @@ describe("shield", () => {
         const ixs = _extractInstructionsFromCompiled(tx, cache);
         expect(ixs).to.have.length(1);
         // Should have warned about OOB
-        expect(warnings.some((w) => w.includes("ALT index 5 out of bounds"))).to.be.true;
+        expect(warnings.some((w) => w.includes("ALT index 5 out of bounds"))).to
+          .be.true;
         // Placeholder address
-        expect(ixs[0].accounts![0].address).to.equal("11111111111111111111111111111111");
+        expect(ixs[0].accounts![0].address).to.equal(
+          "11111111111111111111111111111111",
+        );
       } finally {
         console.warn = origWarn;
       }

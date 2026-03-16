@@ -11,9 +11,7 @@ import {
   summarizeAction,
   type IntentAction,
 } from "../src/intent-storage.js";
-import {
-  ProtocolRegistry,
-} from "../src/integrations/protocol-registry.js";
+import { ProtocolRegistry } from "../src/integrations/protocol-registry.js";
 import {
   isProtocolAllowed,
   resolveProtocol,
@@ -30,20 +28,15 @@ import { ActionType } from "../src/generated/types/actionType.js";
 
 const TOKEN_PROGRAM_ID =
   "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address;
-const COMPUTE_BUDGET =
-  "ComputeBudget111111111111111111111111111111" as Address;
+const COMPUTE_BUDGET = "ComputeBudget111111111111111111111111111111" as Address;
 const SYSTEM_PROGRAM = "11111111111111111111111111111111" as Address;
 
-const VAULT_ADDRESS =
-  "VaultXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" as Address;
-const AGENT_ADDRESS =
-  "AgentYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY" as Address;
-const FAKE_PROGRAM =
-  "FakeProgramAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" as Address;
+const VAULT_ADDRESS = "VaultXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" as Address;
+const AGENT_ADDRESS = "AgentYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY" as Address;
+const FAKE_PROGRAM = "FakeProgramAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" as Address;
 const JUPITER_PROGRAM =
   "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" as Address;
-const DRIFT_PROGRAM =
-  "dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH" as Address;
+const DRIFT_PROGRAM = "dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH" as Address;
 const UNKNOWN_PROGRAM =
   "UnknownProgramZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ" as Address;
 const ANOTHER_UNKNOWN =
@@ -191,7 +184,11 @@ describe("adapter-verifier", () => {
       },
     ];
     // TOKEN_PROGRAM_ID not in allowed list, but that's expected
-    const result = verifyAdapterOutput(instructions, [TOKEN_PROGRAM_ID], VAULT_ADDRESS);
+    const result = verifyAdapterOutput(
+      instructions,
+      [TOKEN_PROGRAM_ID],
+      VAULT_ADDRESS,
+    );
     expect(result.valid).to.be.true;
     // Should not have any drain violation
     const drainViolation = result.violations.find((v) =>
@@ -223,8 +220,7 @@ describe("adapter-verifier", () => {
   });
 
   it("Token-2022 Transfer referencing vault detected as drain", () => {
-    const TOKEN_2022 =
-      "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb" as Address;
+    const TOKEN_2022 = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb" as Address;
     const data = new Uint8Array(9);
     data[0] = 3; // Transfer discriminator
     const instructions: VerifiableInstruction[] = [
@@ -276,9 +272,7 @@ describe("intent-storage", () => {
     expect(intent.status).to.equal("pending");
     expect(intent.vault).to.equal(VAULT_ADDRESS);
     expect(intent.agent).to.equal(AGENT_ADDRESS);
-    expect(intent.expiresAt).to.equal(
-      intent.createdAt + DEFAULT_INTENT_TTL_MS,
-    );
+    expect(intent.expiresAt).to.equal(intent.createdAt + DEFAULT_INTENT_TTL_MS);
     expect(intent.summary).to.be.a("string");
     expect(intent.summary.length).to.be.gt(0);
   });
@@ -317,8 +311,7 @@ describe("intent-storage", () => {
 
   it("MemoryIntentStorage list with vault filter", async () => {
     const storage = new MemoryIntentStorage();
-    const otherVault =
-      "OtherVaultZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ" as Address;
+    const otherVault = "OtherVaultZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ" as Address;
     const i1 = createIntent(swapAction, VAULT_ADDRESS, AGENT_ADDRESS);
     const i2 = createIntent(swapAction, otherVault, AGENT_ADDRESS);
     await storage.save(i1);
@@ -358,7 +351,9 @@ describe("intent-storage", () => {
 
     const retrieved = await storage.get(intent.id);
     expect(retrieved!.status).to.equal("pending");
-    expect((retrieved!.action.params as Record<string, unknown>).inputMint).to.equal("USDC");
+    expect(
+      (retrieved!.action.params as Record<string, unknown>).inputMint,
+    ).to.equal("USDC");
   });
 
   it("summarizeAction produces readable output", () => {
@@ -386,9 +381,8 @@ describe("protocol-resolver", () => {
   // --- isProtocolAllowed ---
 
   it("isProtocolAllowed mode=0 always true", () => {
-    expect(
-      isProtocolAllowed(FAKE_PROGRAM, { protocolMode: 0, protocols: [] }),
-    ).to.be.true;
+    expect(isProtocolAllowed(FAKE_PROGRAM, { protocolMode: 0, protocols: [] }))
+      .to.be.true;
   });
 
   it("isProtocolAllowed mode=1 allowlist check — in list", () => {
@@ -430,9 +424,7 @@ describe("protocol-resolver", () => {
   // --- resolveProtocol ---
 
   it("resolveProtocol with registered T1 handler (jupiter)", () => {
-    const handler = createMockHandler("jupiter", "Jupiter", [
-      JUPITER_PROGRAM,
-    ]);
+    const handler = createMockHandler("jupiter", "Jupiter", [JUPITER_PROGRAM]);
     registry.register(handler);
 
     const resolution = resolveProtocol(

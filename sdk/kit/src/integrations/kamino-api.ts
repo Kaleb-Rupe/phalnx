@@ -9,7 +9,10 @@
 
 import type { Address, Instruction } from "@solana/kit";
 import { AccountRole } from "@solana/kit";
-import type { ProtocolComposeResult, ProtocolContext } from "./protocol-handler.js";
+import type {
+  ProtocolComposeResult,
+  ProtocolContext,
+} from "./protocol-handler.js";
 import {
   COMPOSE_ERROR_CODES,
   KaminoComposeError,
@@ -48,7 +51,9 @@ const DEFAULT_CONFIG: Required<KaminoApiConfig> = {
   env: "mainnet-beta",
 };
 
-let currentConfig: Readonly<Required<KaminoApiConfig>> = Object.freeze({ ...DEFAULT_CONFIG });
+let currentConfig: Readonly<Required<KaminoApiConfig>> = Object.freeze({
+  ...DEFAULT_CONFIG,
+});
 
 // Circuit breaker state
 let consecutiveFailures = 0;
@@ -57,15 +62,19 @@ const CIRCUIT_BREAKER_THRESHOLD = 5;
 const CIRCUIT_BREAKER_COOLDOWN_MS = 60_000;
 
 export function configureKaminoApi(config: KaminoApiConfig): void {
-  const normalizedUrl = (config.baseUrl ?? DEFAULT_CONFIG.baseUrl).replace(/\/$/, "");
+  const normalizedUrl = (config.baseUrl ?? DEFAULT_CONFIG.baseUrl).replace(
+    /\/$/,
+    "",
+  );
   if (normalizedUrl) {
     try {
       const parsed = new URL(normalizedUrl);
-      const isLocalhost = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+      const isLocalhost =
+        parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
       if (parsed.protocol !== "https:" && !isLocalhost) {
         throw new Error(
           `Kamino API base URL must use HTTPS (got: ${normalizedUrl}). ` +
-          "Use http://localhost only for local development/testing."
+            "Use http://localhost only for local development/testing.",
         );
       }
     } catch (e) {
@@ -296,13 +305,14 @@ export function deserializeKaminoInstruction(
     programAddress: ix.programId as Address,
     accounts: ix.accounts.map((acc) => ({
       address: acc.pubkey as Address,
-      role: acc.isSigner && acc.isWritable
-        ? AccountRole.WRITABLE_SIGNER
-        : acc.isSigner
-          ? AccountRole.READONLY_SIGNER
-          : acc.isWritable
-            ? AccountRole.WRITABLE
-            : AccountRole.READONLY,
+      role:
+        acc.isSigner && acc.isWritable
+          ? AccountRole.WRITABLE_SIGNER
+          : acc.isSigner
+            ? AccountRole.READONLY_SIGNER
+            : acc.isWritable
+              ? AccountRole.WRITABLE
+              : AccountRole.READONLY,
     })),
     data: base64ToUint8Array(ix.data),
   };
@@ -365,49 +375,84 @@ export async function fetchKvaultWithdrawInstructions(
 
 // ─── Data Queries (Agent Context) ────────────────────────────────────────────
 
-export async function fetchKaminoMarkets(env?: string): Promise<KaminoMarketInfo[]> {
+export async function fetchKaminoMarkets(
+  env?: string,
+): Promise<KaminoMarketInfo[]> {
   const config = currentConfig;
   const envParam = env ?? config.env;
   return kaminoFetch<KaminoMarketInfo[]>(`/kamino-market/all?env=${envParam}`);
 }
 
-export async function fetchReserveMetrics(market: string, env?: string): Promise<KaminoReserveMetrics[]> {
+export async function fetchReserveMetrics(
+  market: string,
+  env?: string,
+): Promise<KaminoReserveMetrics[]> {
   const config = currentConfig;
   const envParam = env ?? config.env;
-  return kaminoFetch<KaminoReserveMetrics[]>(`/kamino-market/${market}/reserves?env=${envParam}`);
+  return kaminoFetch<KaminoReserveMetrics[]>(
+    `/kamino-market/${market}/reserves?env=${envParam}`,
+  );
 }
 
-export async function fetchLeverageMetrics(market: string, env?: string): Promise<KaminoLeverageMetrics[]> {
+export async function fetchLeverageMetrics(
+  market: string,
+  env?: string,
+): Promise<KaminoLeverageMetrics[]> {
   const config = currentConfig;
   const envParam = env ?? config.env;
-  return kaminoFetch<KaminoLeverageMetrics[]>(`/kamino-market/${market}/leverage?env=${envParam}`);
+  return kaminoFetch<KaminoLeverageMetrics[]>(
+    `/kamino-market/${market}/leverage?env=${envParam}`,
+  );
 }
 
-export async function fetchObligations(market: string, wallet: string, env?: string): Promise<KaminoObligation[]> {
+export async function fetchObligations(
+  market: string,
+  wallet: string,
+  env?: string,
+): Promise<KaminoObligation[]> {
   const config = currentConfig;
   const envParam = env ?? config.env;
-  return kaminoFetch<KaminoObligation[]>(`/kamino-market/${market}/obligations?wallet=${wallet}&env=${envParam}`);
+  return kaminoFetch<KaminoObligation[]>(
+    `/kamino-market/${market}/obligations?wallet=${wallet}&env=${envParam}`,
+  );
 }
 
-export async function fetchLoanInfo(market: string, obligation: string, env?: string): Promise<KaminoLoanInfo> {
+export async function fetchLoanInfo(
+  market: string,
+  obligation: string,
+  env?: string,
+): Promise<KaminoLoanInfo> {
   const config = currentConfig;
   const envParam = env ?? config.env;
-  return kaminoFetch<KaminoLoanInfo>(`/kamino-market/${market}/loan/${obligation}?env=${envParam}`);
+  return kaminoFetch<KaminoLoanInfo>(
+    `/kamino-market/${market}/loan/${obligation}?env=${envParam}`,
+  );
 }
 
-export async function fetchObligationPnl(market: string, obligation: string, env?: string): Promise<KaminoPnl> {
+export async function fetchObligationPnl(
+  market: string,
+  obligation: string,
+  env?: string,
+): Promise<KaminoPnl> {
   const config = currentConfig;
   const envParam = env ?? config.env;
-  return kaminoFetch<KaminoPnl>(`/kamino-market/${market}/obligation/${obligation}/pnl?env=${envParam}`);
+  return kaminoFetch<KaminoPnl>(
+    `/kamino-market/${market}/obligation/${obligation}/pnl?env=${envParam}`,
+  );
 }
 
-export async function fetchStakingYields(env?: string): Promise<StakingYield[]> {
+export async function fetchStakingYields(
+  env?: string,
+): Promise<StakingYield[]> {
   const config = currentConfig;
   const envParam = env ?? config.env;
   return kaminoFetch<StakingYield[]>(`/staking/yields?env=${envParam}`);
 }
 
-export async function fetchUserRewards(wallet: string, env?: string): Promise<KaminoRewards> {
+export async function fetchUserRewards(
+  wallet: string,
+  env?: string,
+): Promise<KaminoRewards> {
   const config = currentConfig;
   const envParam = env ?? config.env;
   return kaminoFetch<KaminoRewards>(`/rewards/${wallet}?env=${envParam}`);
@@ -416,11 +461,19 @@ export async function fetchUserRewards(wallet: string, env?: string): Promise<Ka
 // ─── Compose Dispatcher (backward compat with t2-handlers) ───────────────────
 
 const requireField = createRequireField(
-  (field) => new KaminoComposeError(COMPOSE_ERROR_CODES.MISSING_PARAM, `Missing required parameter: ${field}`),
+  (field) =>
+    new KaminoComposeError(
+      COMPOSE_ERROR_CODES.MISSING_PARAM,
+      `Missing required parameter: ${field}`,
+    ),
 );
 
 const safeBigInt = createSafeBigInt(
-  (field, value) => new KaminoComposeError(COMPOSE_ERROR_CODES.INVALID_BIGINT, `Invalid numeric value for ${field}: ${String(value)}`),
+  (field, value) =>
+    new KaminoComposeError(
+      COMPOSE_ERROR_CODES.INVALID_BIGINT,
+      `Invalid numeric value for ${field}: ${String(value)}`,
+    ),
 );
 
 /**
@@ -460,7 +513,11 @@ export async function dispatchKaminoCompose(
 // ─── Internal Compose Functions ──────────────────────────────────────────────
 
 /** Reserve metrics cache — avoids repeated API calls for token resolution */
-let reserveMetricsCache: { market: string; data: KaminoReserveMetrics[]; expiresAt: number } | null = null;
+let reserveMetricsCache: {
+  market: string;
+  data: KaminoReserveMetrics[];
+  expiresAt: number;
+} | null = null;
 const CACHE_TTL_MS = 60_000;
 
 async function resolveReserveBySymbol(
@@ -469,7 +526,11 @@ async function resolveReserveBySymbol(
   env: string,
 ): Promise<string> {
   // Check cache
-  if (reserveMetricsCache && reserveMetricsCache.market === market && Date.now() < reserveMetricsCache.expiresAt) {
+  if (
+    reserveMetricsCache &&
+    reserveMetricsCache.market === market &&
+    Date.now() < reserveMetricsCache.expiresAt
+  ) {
     const match = reserveMetricsCache.data.find(
       (r) => r.liquidityToken.toUpperCase() === tokenSymbol.toUpperCase(),
     );
@@ -478,7 +539,11 @@ async function resolveReserveBySymbol(
 
   // Fetch fresh
   const metrics = await fetchReserveMetrics(market, env);
-  reserveMetricsCache = { market, data: metrics, expiresAt: Date.now() + CACHE_TTL_MS };
+  reserveMetricsCache = {
+    market,
+    data: metrics,
+    expiresAt: Date.now() + CACHE_TTL_MS,
+  };
 
   const match = metrics.find(
     (r) => r.liquidityToken.toUpperCase() === tokenSymbol.toUpperCase(),
@@ -512,23 +577,31 @@ async function composeKlend(
   env: string,
 ): Promise<ProtocolComposeResult> {
   const validActions = ["deposit", "withdraw", "borrow", "repay"] as const;
-  if (!validActions.includes(action as typeof validActions[number])) {
-    throw new KaminoComposeError(COMPOSE_ERROR_CODES.UNSUPPORTED_ACTION, `Unknown klend action: ${action}`);
+  if (!validActions.includes(action as (typeof validActions)[number])) {
+    throw new KaminoComposeError(
+      COMPOSE_ERROR_CODES.UNSUPPORTED_ACTION,
+      `Unknown klend action: ${action}`,
+    );
   }
 
   const tokenMint = requireField<string>(params, "tokenMint");
   const amountBigInt = safeBigInt(requireField(params, "amount"), "amount");
   const amount = String(amountBigInt);
-  const market = (params.market as string) ?? await resolvePrimaryMarket(env);
+  const market = (params.market as string) ?? (await resolvePrimaryMarket(env));
   const reserve = await resolveReserveBySymbol(tokenMint, market, env);
 
   const response = await fetchKlendInstructions(
-    action as typeof validActions[number],
-    ctx.vault, market, reserve, amount, env,
+    action as (typeof validActions)[number],
+    ctx.vault,
+    market,
+    reserve,
+    amount,
+    env,
   );
 
   const instructions = response.instructions.map(deserializeKaminoInstruction);
-  const addressLookupTables = (response.addressLookupTableAddresses ?? []) as Address[];
+  const addressLookupTables = (response.addressLookupTableAddresses ??
+    []) as Address[];
 
   // Pre-submit verification: program ID, discriminator, amount, signer
   verifyKaminoInstructions(instructions, action, amountBigInt, ctx.vault);
@@ -547,13 +620,24 @@ async function composeKvault(
 
   let response: KaminoTxResponse;
   if (action === "deposit") {
-    response = await fetchKvaultDepositInstructions(ctx.vault, kvault, amount, env);
+    response = await fetchKvaultDepositInstructions(
+      ctx.vault,
+      kvault,
+      amount,
+      env,
+    );
   } else {
-    response = await fetchKvaultWithdrawInstructions(ctx.vault, kvault, amount, env);
+    response = await fetchKvaultWithdrawInstructions(
+      ctx.vault,
+      kvault,
+      amount,
+      env,
+    );
   }
 
   const instructions = response.instructions.map(deserializeKaminoInstruction);
-  const addressLookupTables = (response.addressLookupTableAddresses ?? []) as Address[];
+  const addressLookupTables = (response.addressLookupTableAddresses ??
+    []) as Address[];
 
   return { instructions, addressLookupTables };
 }
@@ -565,10 +649,12 @@ async function composeMultiply(
 ): Promise<ProtocolComposeResult> {
   const depositToken = requireField<string>(params, "depositToken");
   const borrowToken = requireField<string>(params, "borrowToken");
-  const initialAmount = String(safeBigInt(requireField(params, "amount"), "amount"));
+  const initialAmount = String(
+    safeBigInt(requireField(params, "amount"), "amount"),
+  );
   const targetLeverage = (params.targetLeverage as number) ?? 2;
   const maxLoops = Math.min((params.maxLoops as number) ?? 3, 5);
-  const market = (params.market as string) ?? await resolvePrimaryMarket(env);
+  const market = (params.market as string) ?? (await resolvePrimaryMarket(env));
 
   const allInstructions: Instruction[] = [];
   const allAlts: Address[] = [];
@@ -591,13 +677,25 @@ async function composeMultiply(
 
   for (let i = 0; i < maxLoops && remainingLeverage > 0.1; i++) {
     // BigInt-safe multiplication: (currentAmount * ratio_bps) / 10000
-    const ratioBps = BigInt(Math.min(Math.round(Math.min(remainingLeverage, 1) * 9500), 10000));
+    const ratioBps = BigInt(
+      Math.min(Math.round(Math.min(remainingLeverage, 1) * 9500), 10000),
+    );
     const borrowAmount = String((currentAmount * ratioBps) / 10000n);
 
     // Borrow and re-deposit are independent — run in parallel
     const [borrowResult, reDepositResult] = await Promise.all([
-      composeKlend(ctx, "borrow", { tokenMint: borrowToken, amount: borrowAmount, market }, env),
-      composeKlend(ctx, "deposit", { tokenMint: depositToken, amount: borrowAmount, market }, env),
+      composeKlend(
+        ctx,
+        "borrow",
+        { tokenMint: borrowToken, amount: borrowAmount, market },
+        env,
+      ),
+      composeKlend(
+        ctx,
+        "deposit",
+        { tokenMint: depositToken, amount: borrowAmount, market },
+        env,
+      ),
     ]);
 
     // Order matters: borrow instructions must precede deposit

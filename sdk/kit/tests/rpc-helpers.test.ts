@@ -1,5 +1,8 @@
 import { expect } from "chai";
-import { BlockhashCache, sendAndConfirmTransaction } from "../src/rpc-helpers.js";
+import {
+  BlockhashCache,
+  sendAndConfirmTransaction,
+} from "../src/rpc-helpers.js";
 import type { Rpc, SolanaRpcApi } from "@solana/kit";
 
 // ─── Mock RPC Factory ───────────────────────────────────────────────────────
@@ -123,13 +126,18 @@ describe("rpc-helpers", () => {
       const rpc = createMockRpc({
         getSignatureStatuses: () => ({
           value: [
-            { confirmationStatus: "confirmed", err: { InstructionError: [0, "Custom"] } },
+            {
+              confirmationStatus: "confirmed",
+              err: { InstructionError: [0, "Custom"] },
+            },
           ],
         }),
       });
 
       try {
-        await sendAndConfirmTransaction(rpc, "base64encodedtx", { timeoutMs: 2_000 });
+        await sendAndConfirmTransaction(rpc, "base64encodedtx", {
+          timeoutMs: 2_000,
+        });
         expect.fail("Should have thrown");
       } catch (e: any) {
         expect(e.message).to.include("failed");

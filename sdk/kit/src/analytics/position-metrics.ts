@@ -23,10 +23,7 @@ export function getPositionMetrics(
   collateralCustody: CustodyInfo,
   currentTimestamp: bigint,
 ): PositionMetrics {
-  if (
-    position.sizeUsd === 0n ||
-    position.entryPrice.price === 0n
-  ) {
+  if (position.sizeUsd === 0n || position.entryPrice.price === 0n) {
     return {
       pnl: { profitUsd: 0n, lossUsd: 0n, priceImpactUsd: 0n },
       leverage: 0n,
@@ -69,8 +66,7 @@ export function getPositionMetrics(
   // Calculate leverage
   const unsettledFeesUsd = exitFeeUsd + lockAndUnsettledFeeUsd;
   const lossUsd = pnl.lossUsd + unsettledFeesUsd;
-  const currentMarginUsd =
-    position.collateralUsd + pnl.profitUsd - lossUsd;
+  const currentMarginUsd = position.collateralUsd + pnl.profitUsd - lossUsd;
 
   const leverage =
     currentMarginUsd > 0n

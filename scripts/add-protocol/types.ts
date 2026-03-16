@@ -30,7 +30,12 @@ export interface InstructionAnnotation {
   sdkName: string;
   actionType: string;
   isSpending: boolean;
-  category: "spending" | "riskReducing" | "sizeConstrained" | "collateralConstrained" | "orderSize";
+  category:
+    | "spending"
+    | "riskReducing"
+    | "sizeConstrained"
+    | "collateralConstrained"
+    | "orderSize";
   variableLengthAfter: string | null;
   constrainableFields: ConstrainableFieldAnnotation[];
   constrainableAccounts: ConstrainableAccountAnnotation[];
@@ -96,10 +101,22 @@ export interface IdlField {
 }
 
 export type IdlType =
-  | "u8" | "u16" | "u32" | "u64" | "u128"
-  | "i8" | "i16" | "i32" | "i64" | "i128"
-  | "bool" | "publicKey" | "f32" | "f64"
-  | "string" | "bytes"
+  | "u8"
+  | "u16"
+  | "u32"
+  | "u64"
+  | "u128"
+  | "i8"
+  | "i16"
+  | "i32"
+  | "i64"
+  | "i128"
+  | "bool"
+  | "publicKey"
+  | "f32"
+  | "f64"
+  | "string"
+  | "bytes"
   | { defined: { name: string } }
   | { option: IdlType }
   | { vec: IdlType }
@@ -166,10 +183,16 @@ export interface PipelineOptions {
 // ─── Valid Operators ────────────────────────────────────────────────────────
 
 export const VALID_OPERATORS = [
-  "eq", "ne", "gte", "lte", "gteSigned", "lteSigned", "bitmask",
+  "eq",
+  "ne",
+  "gte",
+  "lte",
+  "gteSigned",
+  "lteSigned",
+  "bitmask",
 ] as const;
 
-export type ValidOperator = typeof VALID_OPERATORS[number];
+export type ValidOperator = (typeof VALID_OPERATORS)[number];
 
 // ─── Valid ActionType names (from Codama-generated enum) ────────────────────
 
@@ -197,4 +220,4 @@ export const VALID_ACTION_TYPES = [
   "RefundEscrow",
 ] as const;
 
-export type ValidActionType = typeof VALID_ACTION_TYPES[number];
+export type ValidActionType = (typeof VALID_ACTION_TYPES)[number];

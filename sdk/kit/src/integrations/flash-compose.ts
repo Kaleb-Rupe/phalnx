@@ -14,7 +14,10 @@
 import type { Address, Instruction } from "@solana/kit";
 import { generateKeyPairSigner } from "@solana/kit";
 import { JUPITER_PROGRAM_ADDRESS } from "../types.js";
-import type { ProtocolContext, ProtocolComposeResult } from "./protocol-handler.js";
+import type {
+  ProtocolContext,
+  ProtocolComposeResult,
+} from "./protocol-handler.js";
 import {
   COMPOSE_ERROR_CODES,
   FlashTradeComposeError,
@@ -56,22 +59,39 @@ import { getCloseAndSwapInstruction } from "../generated/protocols/flash-trade/i
 // ─── Param Validation ────────────────────────────────────────────────────────
 
 const requireField = createRequireField(
-  (field) => new FlashTradeComposeError(COMPOSE_ERROR_CODES.MISSING_PARAM, `Missing required parameter: ${field}`),
+  (field) =>
+    new FlashTradeComposeError(
+      COMPOSE_ERROR_CODES.MISSING_PARAM,
+      `Missing required parameter: ${field}`,
+    ),
 );
 
-function parseOraclePrice(price: { price: string; exponent: number }): OraclePriceArgs {
-  return { price: safeBigInt(price.price, "oraclePrice.price"), exponent: price.exponent };
+function parseOraclePrice(price: {
+  price: string;
+  exponent: number;
+}): OraclePriceArgs {
+  return {
+    price: safeBigInt(price.price, "oraclePrice.price"),
+    exponent: price.exponent,
+  };
 }
 
 function parseSide(side: string): "long" | "short" {
   if (side !== "long" && side !== "short") {
-    throw new FlashTradeComposeError(COMPOSE_ERROR_CODES.INVALID_SIDE, `Invalid side: ${side}. Must be "long" or "short".`);
+    throw new FlashTradeComposeError(
+      COMPOSE_ERROR_CODES.INVALID_SIDE,
+      `Invalid side: ${side}. Must be "long" or "short".`,
+    );
   }
   return side;
 }
 
 const safeBigInt = createSafeBigInt(
-  (field, value) => new FlashTradeComposeError(COMPOSE_ERROR_CODES.INVALID_BIGINT, `Invalid numeric value for ${field}: ${String(value)}`),
+  (field, value) =>
+    new FlashTradeComposeError(
+      COMPOSE_ERROR_CODES.INVALID_BIGINT,
+      `Invalid numeric value for ${field}: ${String(value)}`,
+    ),
 );
 
 function validateSwapInstructions(instructions: Instruction[]): void {
@@ -95,7 +115,10 @@ async function composeOpenPosition(
   const targetSymbol = requireField<string>(params, "targetSymbol");
   const collateralSymbol = requireField<string>(params, "collateralSymbol");
   const side = parseSide(requireField<string>(params, "side"));
-  const priceWithSlippage = requireField<{ price: string; exponent: number }>(params, "priceWithSlippage");
+  const priceWithSlippage = requireField<{ price: string; exponent: number }>(
+    params,
+    "priceWithSlippage",
+  );
   const collateralAmount = requireField<string>(params, "collateralAmount");
   const sizeAmount = requireField<string>(params, "sizeAmount");
 
@@ -138,7 +161,10 @@ async function composeClosePosition(
   const targetSymbol = requireField<string>(params, "targetSymbol");
   const collateralSymbol = requireField<string>(params, "collateralSymbol");
   const side = parseSide(requireField<string>(params, "side"));
-  const priceWithSlippage = requireField<{ price: string; exponent: number }>(params, "priceWithSlippage");
+  const priceWithSlippage = requireField<{ price: string; exponent: number }>(
+    params,
+    "priceWithSlippage",
+  );
 
   const accts = resolveFlashAccounts(targetSymbol, collateralSymbol, side);
 
@@ -175,7 +201,10 @@ async function composeIncreasePosition(
   const targetSymbol = requireField<string>(params, "targetSymbol");
   const collateralSymbol = requireField<string>(params, "collateralSymbol");
   const side = parseSide(requireField<string>(params, "side"));
-  const priceWithSlippage = requireField<{ price: string; exponent: number }>(params, "priceWithSlippage");
+  const priceWithSlippage = requireField<{ price: string; exponent: number }>(
+    params,
+    "priceWithSlippage",
+  );
   const sizeDelta = requireField<string>(params, "sizeDelta");
 
   const accts = resolveFlashAccounts(targetSymbol, collateralSymbol, side);
@@ -212,7 +241,10 @@ async function composeDecreasePosition(
   const targetSymbol = requireField<string>(params, "targetSymbol");
   const collateralSymbol = requireField<string>(params, "collateralSymbol");
   const side = parseSide(requireField<string>(params, "side"));
-  const priceWithSlippage = requireField<{ price: string; exponent: number }>(params, "priceWithSlippage");
+  const priceWithSlippage = requireField<{ price: string; exponent: number }>(
+    params,
+    "priceWithSlippage",
+  );
   const sizeDelta = requireField<string>(params, "sizeDelta");
 
   const accts = resolveFlashAccounts(targetSymbol, collateralSymbol, side);
@@ -321,7 +353,10 @@ async function composePlaceTriggerOrder(
   const collateralSymbol = requireField<string>(params, "collateralSymbol");
   const receiveSymbol = requireField<string>(params, "receiveSymbol");
   const side = parseSide(requireField<string>(params, "side"));
-  const triggerPrice = requireField<{ price: string; exponent: number }>(params, "triggerPrice");
+  const triggerPrice = requireField<{ price: string; exponent: number }>(
+    params,
+    "triggerPrice",
+  );
   const triggerPriceVal = safeBigInt(triggerPrice.price, "triggerPrice.price");
   if (triggerPriceVal <= 0n) {
     throw new FlashTradeComposeError(
@@ -334,7 +369,8 @@ async function composePlaceTriggerOrder(
 
   const accts = resolveFlashAccounts(targetSymbol, collateralSymbol, side);
   const receiveCustody = FLASH_CUSTODY_MAP[receiveSymbol];
-  if (!receiveCustody) throw new Error(`Unknown receive symbol: ${receiveSymbol}`);
+  if (!receiveCustody)
+    throw new Error(`Unknown receive symbol: ${receiveSymbol}`);
 
   const orderKp = await generateKeyPairSigner();
 
@@ -372,7 +408,10 @@ async function composeEditTriggerOrder(
   const receiveSymbol = requireField<string>(params, "receiveSymbol");
   const side = parseSide(requireField<string>(params, "side"));
   const orderId = requireField<number>(params, "orderId");
-  const triggerPrice = requireField<{ price: string; exponent: number }>(params, "triggerPrice");
+  const triggerPrice = requireField<{ price: string; exponent: number }>(
+    params,
+    "triggerPrice",
+  );
   const triggerPriceVal = safeBigInt(triggerPrice.price, "triggerPrice.price");
   if (triggerPriceVal <= 0n) {
     throw new FlashTradeComposeError(
@@ -385,7 +424,8 @@ async function composeEditTriggerOrder(
 
   const accts = resolveFlashAccounts(targetSymbol, collateralSymbol, side);
   const receiveCustody = FLASH_CUSTODY_MAP[receiveSymbol];
-  if (!receiveCustody) throw new Error(`Unknown receive symbol: ${receiveSymbol}`);
+  if (!receiveCustody)
+    throw new Error(`Unknown receive symbol: ${receiveSymbol}`);
 
   const ix = getEditTriggerOrderInstruction({
     owner: addressAsSigner(ctx.vault),
@@ -442,17 +482,28 @@ async function composePlaceLimitOrder(
   const reserveSymbol = requireField<string>(params, "reserveSymbol");
   const receiveSymbol = requireField<string>(params, "receiveSymbol");
   const side = parseSide(requireField<string>(params, "side"));
-  const limitPrice = requireField<{ price: string; exponent: number }>(params, "limitPrice");
+  const limitPrice = requireField<{ price: string; exponent: number }>(
+    params,
+    "limitPrice",
+  );
   const reserveAmount = requireField<string>(params, "reserveAmount");
   const sizeAmount = requireField<string>(params, "sizeAmount");
-  const stopLossPrice = requireField<{ price: string; exponent: number }>(params, "stopLossPrice");
-  const takeProfitPrice = requireField<{ price: string; exponent: number }>(params, "takeProfitPrice");
+  const stopLossPrice = requireField<{ price: string; exponent: number }>(
+    params,
+    "stopLossPrice",
+  );
+  const takeProfitPrice = requireField<{ price: string; exponent: number }>(
+    params,
+    "takeProfitPrice",
+  );
 
   const accts = resolveFlashAccounts(targetSymbol, collateralSymbol, side);
   const reserveCustody = FLASH_CUSTODY_MAP[reserveSymbol];
-  if (!reserveCustody) throw new Error(`Unknown reserve symbol: ${reserveSymbol}`);
+  if (!reserveCustody)
+    throw new Error(`Unknown reserve symbol: ${reserveSymbol}`);
   const receiveCustody = FLASH_CUSTODY_MAP[receiveSymbol];
-  if (!receiveCustody) throw new Error(`Unknown receive symbol: ${receiveSymbol}`);
+  if (!receiveCustody)
+    throw new Error(`Unknown receive symbol: ${receiveSymbol}`);
 
   const orderKp = await generateKeyPairSigner();
   const positionKp = await generateKeyPairSigner();
@@ -485,7 +536,10 @@ async function composePlaceLimitOrder(
     takeProfitPrice: parseOraclePrice(takeProfitPrice),
   });
 
-  return { instructions: [ix as Instruction], additionalSigners: [positionKp, orderKp] };
+  return {
+    instructions: [ix as Instruction],
+    additionalSigners: [positionKp, orderKp],
+  };
 }
 
 async function composeEditLimitOrder(
@@ -498,16 +552,27 @@ async function composeEditLimitOrder(
   const receiveSymbol = requireField<string>(params, "receiveSymbol");
   const side = parseSide(requireField<string>(params, "side"));
   const orderId = requireField<number>(params, "orderId");
-  const limitPrice = requireField<{ price: string; exponent: number }>(params, "limitPrice");
+  const limitPrice = requireField<{ price: string; exponent: number }>(
+    params,
+    "limitPrice",
+  );
   const sizeAmount = requireField<string>(params, "sizeAmount");
-  const stopLossPrice = requireField<{ price: string; exponent: number }>(params, "stopLossPrice");
-  const takeProfitPrice = requireField<{ price: string; exponent: number }>(params, "takeProfitPrice");
+  const stopLossPrice = requireField<{ price: string; exponent: number }>(
+    params,
+    "stopLossPrice",
+  );
+  const takeProfitPrice = requireField<{ price: string; exponent: number }>(
+    params,
+    "takeProfitPrice",
+  );
 
   const accts = resolveFlashAccounts(targetSymbol, collateralSymbol, side);
   const reserveCustody = FLASH_CUSTODY_MAP[reserveSymbol];
-  if (!reserveCustody) throw new Error(`Unknown reserve symbol: ${reserveSymbol}`);
+  if (!reserveCustody)
+    throw new Error(`Unknown reserve symbol: ${reserveSymbol}`);
   const receiveCustody = FLASH_CUSTODY_MAP[receiveSymbol];
-  if (!receiveCustody) throw new Error(`Unknown receive symbol: ${receiveSymbol}`);
+  if (!receiveCustody)
+    throw new Error(`Unknown receive symbol: ${receiveSymbol}`);
 
   const ix = getEditLimitOrderInstruction({
     owner: addressAsSigner(ctx.vault),
@@ -567,7 +632,10 @@ async function composeSwapAndOpen(
   const targetSymbol = requireField<string>(params, "targetSymbol");
   const collateralSymbol = requireField<string>(params, "collateralSymbol");
   const side = parseSide(requireField<string>(params, "side"));
-  const priceWithSlippage = requireField<{ price: string; exponent: number }>(params, "priceWithSlippage");
+  const priceWithSlippage = requireField<{ price: string; exponent: number }>(
+    params,
+    "priceWithSlippage",
+  );
   const collateralAmount = requireField<string>(params, "collateralAmount");
   const sizeAmount = requireField<string>(params, "sizeAmount");
   const swapInstructions = (params.swapInstructions ?? []) as Instruction[];
@@ -578,7 +646,8 @@ async function composeSwapAndOpen(
   const accts = resolveFlashAccounts(targetSymbol, collateralSymbol, side);
   // For swapAndOpen: receivingCustody = the custody that receives the swap output
   const receivingCustody = FLASH_CUSTODY_MAP[collateralSymbol];
-  if (!receivingCustody) throw new Error(`Unknown collateral symbol: ${collateralSymbol}`);
+  if (!receivingCustody)
+    throw new Error(`Unknown collateral symbol: ${collateralSymbol}`);
 
   const positionKp = await generateKeyPairSigner();
 
@@ -626,7 +695,10 @@ async function composeCloseAndSwap(
   const targetSymbol = requireField<string>(params, "targetSymbol");
   const collateralSymbol = requireField<string>(params, "collateralSymbol");
   const side = parseSide(requireField<string>(params, "side"));
-  const priceWithSlippage = requireField<{ price: string; exponent: number }>(params, "priceWithSlippage");
+  const priceWithSlippage = requireField<{ price: string; exponent: number }>(
+    params,
+    "priceWithSlippage",
+  );
   const swapInstructions = (params.swapInstructions ?? []) as Instruction[];
   if (swapInstructions.length > 0) {
     validateSwapInstructions(swapInstructions);
@@ -635,7 +707,8 @@ async function composeCloseAndSwap(
   const accts = resolveFlashAccounts(targetSymbol, collateralSymbol, side);
   // For closeAndSwap: dispensingCustody = what gets dispensed after close
   const dispensingCustody = FLASH_CUSTODY_MAP[collateralSymbol];
-  if (!dispensingCustody) throw new Error(`Unknown collateral symbol: ${collateralSymbol}`);
+  if (!dispensingCustody)
+    throw new Error(`Unknown collateral symbol: ${collateralSymbol}`);
 
   const ix = getCloseAndSwapInstruction({
     owner: addressAsSigner(ctx.vault),
@@ -679,22 +752,23 @@ type FlashActionHandler = (
   params: Record<string, unknown>,
 ) => Promise<ProtocolComposeResult>;
 
-const FLASH_ACTIONS: Readonly<Record<string, FlashActionHandler>> = Object.freeze({
-  openPosition: composeOpenPosition,
-  closePosition: composeClosePosition,
-  increasePosition: composeIncreasePosition,
-  decreasePosition: composeDecreasePosition,
-  addCollateral: composeAddCollateral,
-  removeCollateral: composeRemoveCollateral,
-  placeTriggerOrder: composePlaceTriggerOrder,
-  editTriggerOrder: composeEditTriggerOrder,
-  cancelTriggerOrder: composeCancelTriggerOrder,
-  placeLimitOrder: composePlaceLimitOrder,
-  editLimitOrder: composeEditLimitOrder,
-  cancelLimitOrder: composeCancelLimitOrder,
-  swapAndOpen: composeSwapAndOpen,
-  closeAndSwap: composeCloseAndSwap,
-});
+const FLASH_ACTIONS: Readonly<Record<string, FlashActionHandler>> =
+  Object.freeze({
+    openPosition: composeOpenPosition,
+    closePosition: composeClosePosition,
+    increasePosition: composeIncreasePosition,
+    decreasePosition: composeDecreasePosition,
+    addCollateral: composeAddCollateral,
+    removeCollateral: composeRemoveCollateral,
+    placeTriggerOrder: composePlaceTriggerOrder,
+    editTriggerOrder: composeEditTriggerOrder,
+    cancelTriggerOrder: composeCancelTriggerOrder,
+    placeLimitOrder: composePlaceLimitOrder,
+    editLimitOrder: composeEditLimitOrder,
+    cancelLimitOrder: composeCancelLimitOrder,
+    swapAndOpen: composeSwapAndOpen,
+    closeAndSwap: composeCloseAndSwap,
+  });
 
 /**
  * Dispatch a Flash Trade action to the correct compose function.

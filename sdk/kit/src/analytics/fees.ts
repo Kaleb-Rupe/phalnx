@@ -3,11 +3,7 @@
 
 import { RATE_POWER, HOUR_SECONDS, BPS_POWER } from "./constants.js";
 import { OraclePrice } from "./oracle-price.js";
-import type {
-  PositionInfo,
-  CustodyInfo,
-  BorrowRateState,
-} from "./types.js";
+import type { PositionInfo, CustodyInfo, BorrowRateState } from "./types.js";
 
 /**
  * Get cumulative lock fee up to current timestamp.
@@ -19,8 +15,8 @@ export function getCumulativeLockFee(
 ): bigint {
   if (currentTimestamp > borrowRateState.lastUpdate) {
     return (
-      (currentTimestamp - borrowRateState.lastUpdate) *
-        borrowRateState.currentRate /
+      ((currentTimestamp - borrowRateState.lastUpdate) *
+        borrowRateState.currentRate) /
         HOUR_SECONDS +
       borrowRateState.cumulativeLockFee
     );
@@ -45,9 +41,9 @@ export function getLockFeeAndUnsettledUsd(
   let lockFeeUsd = 0n;
   if (cumulativeLockFee > position.cumulativeLockFeeSnapshot) {
     lockFeeUsd =
-      (cumulativeLockFee - position.cumulativeLockFeeSnapshot) *
-        position.sizeUsd /
-        RATE_POWER;
+      ((cumulativeLockFee - position.cumulativeLockFeeSnapshot) *
+        position.sizeUsd) /
+      RATE_POWER;
   }
 
   return lockFeeUsd + position.unsettledFeesUsd;
@@ -61,7 +57,7 @@ export function getExitFeeUsd(
   position: PositionInfo,
   targetCustody: CustodyInfo,
 ): bigint {
-  return position.sizeUsd * targetCustody.fees.closePosition / RATE_POWER;
+  return (position.sizeUsd * targetCustody.fees.closePosition) / RATE_POWER;
 }
 
 /**
@@ -74,7 +70,7 @@ export function getExitFeeUsdWithDiscount(
 ): bigint {
   let fee = getExitFeeUsd(position, targetCustody);
   if (discountBps > 0n) {
-    const discount = fee * discountBps / BPS_POWER;
+    const discount = (fee * discountBps) / BPS_POWER;
     fee = fee - discount;
   }
   return fee;
@@ -94,10 +90,10 @@ export function getExitFee(
   let closePositionFeeRate = targetCustody.fees.closePosition;
   if (discountBps > 0n) {
     closePositionFeeRate =
-      closePositionFeeRate * (RATE_POWER - discountBps) / RATE_POWER;
+      (closePositionFeeRate * (RATE_POWER - discountBps)) / RATE_POWER;
   }
 
-  const exitFeeUsd = position.sizeUsd * closePositionFeeRate / RATE_POWER;
+  const exitFeeUsd = (position.sizeUsd * closePositionFeeRate) / RATE_POWER;
   const minPrice = getMinOraclePrice(
     collateralPrice,
     collateralEmaPrice,
@@ -119,7 +115,7 @@ export function getOpenFeeUsd(
   sizeUsd: bigint,
   targetCustody: CustodyInfo,
 ): bigint {
-  return sizeUsd * targetCustody.fees.openPosition / RATE_POWER;
+  return (sizeUsd * targetCustody.fees.openPosition) / RATE_POWER;
 }
 
 /**
@@ -137,17 +133,16 @@ export function getBorrowRate(
     borrowRate.optimalUtilization >= RATE_POWER
   ) {
     return (
-      currentUtilization * borrowRate.slope1 / borrowRate.optimalUtilization
+      (currentUtilization * borrowRate.slope1) / borrowRate.optimalUtilization
     );
   }
 
   if (currentUtilization < BigInt(custody.pricing.maxUtilization)) {
     return (
       borrowRate.slope1 +
-      (currentUtilization - borrowRate.optimalUtilization) *
-        borrowRate.slope2 /
-        (BigInt(custody.pricing.maxUtilization) -
-          borrowRate.optimalUtilization)
+      ((currentUtilization - borrowRate.optimalUtilization) *
+        borrowRate.slope2) /
+        (BigInt(custody.pricing.maxUtilization) - borrowRate.optimalUtilization)
     );
   }
 
@@ -165,7 +160,8 @@ function getMinOraclePrice(
   const divergenceBps = custody.isStable
     ? price.getDivergenceFactor(
         new OraclePrice({
-          price: 10n ** (price.exponent < 0n ? -price.exponent : price.exponent),
+          price:
+            10n ** (price.exponent < 0n ? -price.exponent : price.exponent),
           exponent: price.exponent,
         }),
       )
@@ -173,9 +169,7 @@ function getMinOraclePrice(
 
   if (divergenceBps >= custody.oracle.maxDivergenceBps) {
     const confBps =
-      price.price !== 0n
-        ? (price.confidence * BPS_POWER) / price.price
-        : 0n;
+      price.price !== 0n ? (price.confidence * BPS_POWER) / price.price : 0n;
     if (confBps < custody.oracle.maxConfBps) {
       return new OraclePrice({
         price: price.price - price.confidence,

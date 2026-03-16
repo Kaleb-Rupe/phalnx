@@ -88,10 +88,7 @@ export interface ResolvedVaultState {
 const addressEncoder = getAddressEncoder();
 const addressDecoder = getAddressDecoder();
 
-function bytesMatchAddress(
-  bytes: ReadonlyUint8Array,
-  addr: Address,
-): boolean {
+function bytesMatchAddress(bytes: ReadonlyUint8Array, addr: Address): boolean {
   const encoded = addressEncoder.encode(addr);
   if (bytes.length !== encoded.length) return false;
   for (let i = 0; i < 32; i++) {
@@ -131,9 +128,10 @@ export function getRolling24hUsd(
   if (currentEpoch - tracker.lastWriteEpoch > numEpochs) return 0n;
 
   // G-2: Saturating subtraction — avoid negative windowStart when nowUnix < 86400
-  const windowStart = nowUnix > BigInt(ROLLING_WINDOW_SECONDS)
-    ? nowUnix - BigInt(ROLLING_WINDOW_SECONDS)
-    : 0n;
+  const windowStart =
+    nowUnix > BigInt(ROLLING_WINDOW_SECONDS)
+      ? nowUnix - BigInt(ROLLING_WINDOW_SECONDS)
+      : 0n;
   let total = 0n;
 
   for (const bucket of tracker.buckets) {
@@ -180,9 +178,10 @@ export function getAgentRolling24hUsd(
   if (currentEpoch - entry.lastWriteEpoch > numEpochs) return 0n;
 
   // G-2: Saturating subtraction — avoid negative windowStart when nowUnix < 86400
-  const windowStart = nowUnix > BigInt(ROLLING_WINDOW_SECONDS)
-    ? nowUnix - BigInt(ROLLING_WINDOW_SECONDS)
-    : 0n;
+  const windowStart =
+    nowUnix > BigInt(ROLLING_WINDOW_SECONDS)
+      ? nowUnix - BigInt(ROLLING_WINDOW_SECONDS)
+      : 0n;
   let total = 0n;
 
   // Iterate backward from lastWriteEpoch (most recent data)
@@ -312,7 +311,8 @@ export async function resolveVaultState(
   // 5. Global budget
   const globalSpent = tracker ? getRolling24hUsd(tracker, timestamp) : 0n;
   const globalCap = decodedPolicy.data.dailySpendingCapUsd;
-  const globalRemaining = globalCap > globalSpent ? globalCap - globalSpent : 0n;
+  const globalRemaining =
+    globalCap > globalSpent ? globalCap - globalSpent : 0n;
   const globalBudget: EffectiveBudget = {
     spent24h: globalSpent,
     cap: globalCap,
@@ -321,9 +321,7 @@ export async function resolveVaultState(
 
   // 6. Agent budget
   let agentBudget: EffectiveBudget | null = null;
-  const agentEntry = decodedVault.data.agents.find(
-    (a) => a.pubkey === agent,
-  );
+  const agentEntry = decodedVault.data.agents.find((a) => a.pubkey === agent);
 
   if (agentEntry && agentEntry.spendingLimitUsd > 0n) {
     const agentCap = agentEntry.spendingLimitUsd;

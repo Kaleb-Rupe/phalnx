@@ -80,7 +80,10 @@ export class AltCache {
       } catch (e) {
         // S-4: Graceful degradation — return whatever we have from cache
         // The composer works without ALTs; transactions just may be larger
-        console.warn("[AltCache] ALT fetch failed, proceeding without:", e instanceof Error ? e.message : e);
+        console.warn(
+          "[AltCache] ALT fetch failed, proceeding without:",
+          e instanceof Error ? e.message : e,
+        );
       }
     }
 

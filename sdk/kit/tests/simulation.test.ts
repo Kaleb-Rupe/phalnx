@@ -11,11 +11,7 @@ import {
 } from "../src/simulation.js";
 import type { BalanceDelta, DrainDetectionInput } from "../src/simulation.js";
 
-function makeDelta(
-  account: string,
-  pre: bigint,
-  post: bigint,
-): BalanceDelta {
+function makeDelta(account: string, pre: bigint, post: bigint): BalanceDelta {
   return { account, preBalance: pre, postBalance: post, delta: post - pre };
 }
 

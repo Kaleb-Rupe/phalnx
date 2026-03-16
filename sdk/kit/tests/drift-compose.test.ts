@@ -45,7 +45,10 @@ describe("drift-compose", () => {
     it("compose() dispatches to deposit action", async () => {
       // Verifies the dispatch path exists (will throw at SDK import, not dispatch)
       try {
-        await handler.compose(mockCtx(), "deposit", { amount: "1000000", marketIndex: 0 });
+        await handler.compose(mockCtx(), "deposit", {
+          amount: "1000000",
+          marketIndex: 0,
+        });
         expect.fail("Should have thrown");
       } catch (e: any) {
         // Should fail at SDK import, not at "unsupported action"
@@ -56,7 +59,10 @@ describe("drift-compose", () => {
 
     it("compose() dispatches to withdraw action", async () => {
       try {
-        await handler.compose(mockCtx(), "withdraw", { amount: "500000", marketIndex: 0 });
+        await handler.compose(mockCtx(), "withdraw", {
+          amount: "500000",
+          marketIndex: 0,
+        });
         expect.fail("Should have thrown");
       } catch (e: any) {
         expect(e.message).to.not.include("Unsupported");
@@ -130,24 +136,36 @@ describe("drift-compose", () => {
     const handler = new DriftHandler();
 
     it("deposit summary", () => {
-      const s = handler.summarize("deposit", { amount: "1000000", mint: "USDC" });
+      const s = handler.summarize("deposit", {
+        amount: "1000000",
+        mint: "USDC",
+      });
       expect(s).to.include("Drift deposit");
       expect(s).to.include("USDC");
     });
 
     it("withdraw summary", () => {
-      const s = handler.summarize("withdraw", { amount: "500000", mint: "USDC" });
+      const s = handler.summarize("withdraw", {
+        amount: "500000",
+        mint: "USDC",
+      });
       expect(s).to.include("Drift withdraw");
     });
 
     it("placePerpOrder summary", () => {
-      const s = handler.summarize("placePerpOrder", { side: "long", marketIndex: 0 });
+      const s = handler.summarize("placePerpOrder", {
+        side: "long",
+        marketIndex: 0,
+      });
       expect(s).to.include("Drift perp");
       expect(s).to.include("long");
     });
 
     it("placeSpotOrder summary", () => {
-      const s = handler.summarize("placeSpotOrder", { side: "short", marketIndex: 1 });
+      const s = handler.summarize("placeSpotOrder", {
+        side: "short",
+        marketIndex: 1,
+      });
       expect(s).to.include("Drift spot");
       expect(s).to.include("short");
     });
@@ -187,13 +205,19 @@ describe("drift-compose", () => {
       let errorB: Error | null = null;
 
       try {
-        await dispatchDriftCompose(ctxA, "deposit", { amount: "1000000", marketIndex: 0 });
+        await dispatchDriftCompose(ctxA, "deposit", {
+          amount: "1000000",
+          marketIndex: 0,
+        });
       } catch (e: any) {
         errorA = e;
       }
 
       try {
-        await dispatchDriftCompose(ctxB, "deposit", { amount: "1000000", marketIndex: 0 });
+        await dispatchDriftCompose(ctxB, "deposit", {
+          amount: "1000000",
+          marketIndex: 0,
+        });
       } catch (e: any) {
         errorB = e;
       }

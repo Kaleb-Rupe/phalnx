@@ -90,12 +90,7 @@ describe("protocol-resolver", () => {
         protocolMode: 1,
         protocols: [jupiterProgramId], // drift NOT in list
       };
-      const result = resolveProtocol(
-        driftProgramId,
-        registry,
-        policy,
-        false,
-      );
+      const result = resolveProtocol(driftProgramId, registry, policy, false);
       expect(result.tier).to.equal(ProtocolTier.NOT_SUPPORTED);
       expect(result.escalation).to.not.be.undefined;
       expect(result.escalation!.type).to.equal("not_in_allowlist");
@@ -138,12 +133,7 @@ describe("protocol-resolver", () => {
         protocolMode: 1,
         protocols: [jupiterProgramId], // unknownProgramId NOT in list
       };
-      const result = resolveProtocol(
-        unknownProgramId,
-        registry,
-        policy,
-        false,
-      );
+      const result = resolveProtocol(unknownProgramId, registry, policy, false);
       expect(result.tier).to.equal(ProtocolTier.NOT_SUPPORTED);
       expect(result.escalation).to.not.be.undefined;
       expect(result.escalation!.type).to.equal(
@@ -156,23 +146,15 @@ describe("protocol-resolver", () => {
         protocolMode: 1,
         protocols: [jupiterProgramId],
       };
-      const result = resolveProtocol(
-        unknownProgramId,
-        registry,
-        policy,
-        false,
-      );
+      const result = resolveProtocol(unknownProgramId, registry, policy, false);
       expect(result.escalation).to.not.be.undefined;
       // Alternatives should suggest registered protocols
       if (result.escalation!.alternatives) {
         expect(result.escalation!.alternatives.length).to.be.greaterThan(0);
-        const altIds = result.escalation!.alternatives.map(
-          (a) => a.protocolId,
-        );
+        const altIds = result.escalation!.alternatives.map((a) => a.protocolId);
         // At least one of our registered protocols should appear
-        expect(
-          altIds.includes("jupiter") || altIds.includes("drift"),
-        ).to.be.true;
+        expect(altIds.includes("jupiter") || altIds.includes("drift")).to.be
+          .true;
       }
     });
 
@@ -181,12 +163,7 @@ describe("protocol-resolver", () => {
         protocolMode: 0,
         protocols: [],
       };
-      const result = resolveProtocol(
-        jupiterProgramId,
-        registry,
-        policy,
-        false,
-      );
+      const result = resolveProtocol(jupiterProgramId, registry, policy, false);
       expect(result.tier).to.equal(ProtocolTier.T1_API);
       expect(result.protocolId).to.equal("jupiter");
     });
@@ -196,12 +173,7 @@ describe("protocol-resolver", () => {
         protocolMode: 1,
         protocols: [],
       };
-      const result = resolveProtocol(
-        jupiterProgramId,
-        registry,
-        policy,
-        false,
-      );
+      const result = resolveProtocol(jupiterProgramId, registry, policy, false);
       expect(result.escalation).to.not.be.undefined;
       expect(result.escalation!.message).to.be.a("string");
       expect(result.escalation!.message.length).to.be.greaterThan(0);

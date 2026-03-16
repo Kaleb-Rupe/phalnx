@@ -40,8 +40,8 @@ export class ConstraintBudgetExceededError extends Error {
   ) {
     super(
       `Constraint budget exceeded: ${used}/${total} entries. ` +
-      `Per protocol: ${JSON.stringify(perProtocol)}. ` +
-      `Remove market restrictions or use fewer constrained actions.`,
+        `Per protocol: ${JSON.stringify(perProtocol)}. ` +
+        `Remove market restrictions or use fewer constrained actions.`,
     );
     this.name = "ConstraintBudgetExceededError";
   }
@@ -84,7 +84,7 @@ export class ConstraintBuilder {
       if (!descriptor) {
         throw new Error(
           `No descriptor registered for protocol: ${config.protocolId}. ` +
-          `Register with builder.register(descriptor) first.`,
+            `Register with builder.register(descriptor) first.`,
         );
       }
 
@@ -109,10 +109,7 @@ export class ConstraintBuilder {
       }
 
       // Merge compiled constraints into entries
-      const entries = mergeConstraints(
-        compiled,
-        descriptor.programAddress,
-      );
+      const entries = mergeConstraints(compiled, descriptor.programAddress);
 
       // Check strict_mode warnings (protocol-agnostic via descriptor)
       if (descriptor.checkStrictModeWarnings) {
@@ -155,7 +152,9 @@ export class ConstraintBuilder {
     for (const config of configs) {
       const descriptor = this.descriptors.get(config.protocolId);
       if (!descriptor) {
-        throw new Error(`No descriptor registered for protocol: ${config.protocolId}`);
+        throw new Error(
+          `No descriptor registered for protocol: ${config.protocolId}`,
+        );
       }
 
       const compiled: CompiledConstraint[] = [];
@@ -263,7 +262,7 @@ function mergeConstraints(
     if (mergedData.length > MAX_DATA_CONSTRAINTS_PER_ENTRY) {
       throw new Error(
         `Too many data constraints for a single entry: ${mergedData.length}/${MAX_DATA_CONSTRAINTS_PER_ENTRY}. ` +
-        `Reduce rule complexity or split across multiple entries.`,
+          `Reduce rule complexity or split across multiple entries.`,
       );
     }
 
@@ -329,7 +328,9 @@ function describeEntry(
   }
 
   // Describe data constraints (skip discriminator)
-  const fieldConstraints = entry.dataConstraints.filter((dc) => dc.offset !== 0);
+  const fieldConstraints = entry.dataConstraints.filter(
+    (dc) => dc.offset !== 0,
+  );
   if (fieldConstraints.length > 0) {
     parts.push(`${fieldConstraints.length} field constraint(s)`);
   }
@@ -342,7 +343,10 @@ function describeEntry(
   return parts.join(": ") || "unknown entry";
 }
 
-function arraysEqual(a: Uint8Array, b: Uint8Array | ReadonlyUint8Array): boolean {
+function arraysEqual(
+  a: Uint8Array,
+  b: Uint8Array | ReadonlyUint8Array,
+): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
     if (a[i] !== b[i]) return false;

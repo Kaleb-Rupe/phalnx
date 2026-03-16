@@ -16,19 +16,24 @@ export const KAMINO_LENDING_PROGRAM: Address =
 
 // ─── Discriminator Constants ────────────────────────────────────────────────
 
-export const DEPOSIT_OBLIGATION_COLLATERAL_DISCRIMINATOR = new Uint8Array([108, 209, 4, 72, 21, 22, 118, 133]);
-export const BORROW_OBLIGATION_LIQUIDITY_DISCRIMINATOR = new Uint8Array([121, 127, 18, 204, 73, 245, 225, 65]);
-export const REPAY_OBLIGATION_LIQUIDITY_DISCRIMINATOR = new Uint8Array([145, 178, 13, 225, 76, 240, 147, 72]);
-export const WITHDRAW_OBLIGATION_COLLATERAL_AND_REDEEM_RESERVE_COLLATERAL_DISCRIMINATOR = new Uint8Array([75, 93, 93, 220, 34, 150, 218, 196]);
+export const DEPOSIT_OBLIGATION_COLLATERAL_DISCRIMINATOR = new Uint8Array([
+  108, 209, 4, 72, 21, 22, 118, 133,
+]);
+export const BORROW_OBLIGATION_LIQUIDITY_DISCRIMINATOR = new Uint8Array([
+  121, 127, 18, 204, 73, 245, 225, 65,
+]);
+export const REPAY_OBLIGATION_LIQUIDITY_DISCRIMINATOR = new Uint8Array([
+  145, 178, 13, 225, 76, 240, 147, 72,
+]);
+export const WITHDRAW_OBLIGATION_COLLATERAL_AND_REDEEM_RESERVE_COLLATERAL_DISCRIMINATOR =
+  new Uint8Array([75, 93, 93, 220, 34, 150, 218, 196]);
 
 // ─── Instruction Schemas ────────────────────────────────────────────────────
 
 const depositCollateral: InstructionSchema = {
   name: "depositCollateral",
   discriminator: DEPOSIT_OBLIGATION_COLLATERAL_DISCRIMINATOR,
-  fields: [
-    { name: "collateralAmount", offset: 8, type: "u64", size: 8 },
-  ],
+  fields: [{ name: "collateralAmount", offset: 8, type: "u64", size: 8 }],
   accounts: { depositReserve: 3 },
   dataSize: 16, // 8+8
 };
@@ -36,9 +41,7 @@ const depositCollateral: InstructionSchema = {
 const borrowLiquidity: InstructionSchema = {
   name: "borrowLiquidity",
   discriminator: BORROW_OBLIGATION_LIQUIDITY_DISCRIMINATOR,
-  fields: [
-    { name: "liquidityAmount", offset: 8, type: "u64", size: 8 },
-  ],
+  fields: [{ name: "liquidityAmount", offset: 8, type: "u64", size: 8 }],
   accounts: { borrowReserve: 4 },
   dataSize: 16, // 8+8
 };
@@ -46,19 +49,16 @@ const borrowLiquidity: InstructionSchema = {
 const repayLiquidity: InstructionSchema = {
   name: "repayLiquidity",
   discriminator: REPAY_OBLIGATION_LIQUIDITY_DISCRIMINATOR,
-  fields: [
-    { name: "liquidityAmount", offset: 8, type: "u64", size: 8 },
-  ],
+  fields: [{ name: "liquidityAmount", offset: 8, type: "u64", size: 8 }],
   accounts: { repayReserve: 3 },
   dataSize: 16, // 8+8
 };
 
 const withdrawCollateral: InstructionSchema = {
   name: "withdrawCollateral",
-  discriminator: WITHDRAW_OBLIGATION_COLLATERAL_AND_REDEEM_RESERVE_COLLATERAL_DISCRIMINATOR,
-  fields: [
-    { name: "collateralAmount", offset: 8, type: "u64", size: 8 },
-  ],
+  discriminator:
+    WITHDRAW_OBLIGATION_COLLATERAL_AND_REDEEM_RESERVE_COLLATERAL_DISCRIMINATOR,
+  fields: [{ name: "collateralAmount", offset: 8, type: "u64", size: 8 }],
   accounts: { withdrawReserve: 4 },
   dataSize: 16, // 8+8
 };

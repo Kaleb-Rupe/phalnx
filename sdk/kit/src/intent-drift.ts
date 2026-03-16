@@ -285,9 +285,8 @@ function checkAmountMismatch(
     if (ixAmount === 0n) continue;
 
     // Check if amount deviates beyond tolerance
-    const diff = ixAmount > declared
-      ? ixAmount - declared
-      : declared - ixAmount;
+    const diff =
+      ixAmount > declared ? ixAmount - declared : declared - ixAmount;
     const toleranceAmount = (declared * BigInt(tolerancePct)) / 100n;
 
     if (diff > toleranceAmount) {
@@ -310,7 +309,12 @@ function checkRecipientMismatch(
   const declaredDest = params.destination as string | undefined;
 
   // BUG-10 fix: extend recipient check beyond just "transfer"
-  const RECIPIENT_CHECK_TYPES = new Set(["transfer", "deposit", "kaminoDeposit", "driftDeposit"]);
+  const RECIPIENT_CHECK_TYPES = new Set([
+    "transfer",
+    "deposit",
+    "kaminoDeposit",
+    "driftDeposit",
+  ]);
   if (!declaredDest || !RECIPIENT_CHECK_TYPES.has(intent.type)) return;
 
   // Check that the transfer destination matches
@@ -394,7 +398,9 @@ function getExpectedPrograms(intent: IntentAction): Set<string> {
   return programs;
 }
 
-function computeSeverity(violations: DriftViolation[]): DriftCheckResult["severity"] {
+function computeSeverity(
+  violations: DriftViolation[],
+): DriftCheckResult["severity"] {
   if (violations.length === 0) return "none";
 
   // High severity: phantom transfers or program mismatches

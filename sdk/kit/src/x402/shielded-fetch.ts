@@ -145,7 +145,10 @@ export async function shieldedFetch(
   const parsedAmount = validatePaymentAmount(selected.amount, config);
 
   // Override maxPayment from fetch options
-  if (fetchOptions?.maxPayment !== undefined && parsedAmount > fetchOptions.maxPayment) {
+  if (
+    fetchOptions?.maxPayment !== undefined &&
+    parsedAmount > fetchOptions.maxPayment
+  ) {
     throw new X402PaymentError(
       `Server requires ${selected.amount} but maxPayment is ${fetchOptions.maxPayment}`,
     );
@@ -231,7 +234,8 @@ export async function shieldedFetch(
 
   // Sign using Kit's TransactionSigner interface
   const signerAny = signer as any;
-  const signFn = signerAny.modifyAndSignTransactions ?? signerAny.signTransactions;
+  const signFn =
+    signerAny.modifyAndSignTransactions ?? signerAny.signTransactions;
   if (!signFn) {
     throw new X402PaymentError(
       "Signer does not implement a signing method (modifyAndSignTransactions or signTransactions)",
@@ -365,20 +369,13 @@ export function createShieldedFetch(
 
 // ─── Internal Helpers ───────────────────────────────────────────────────────
 
-function hasPaymentSignatureHeader(
-  headers: RequestInit["headers"],
-): boolean {
+function hasPaymentSignatureHeader(headers: RequestInit["headers"]): boolean {
   if (!headers) return false;
   if (headers instanceof Headers) {
-    return (
-      headers.has("PAYMENT-SIGNATURE") ||
-      headers.has("payment-signature")
-    );
+    return headers.has("PAYMENT-SIGNATURE") || headers.has("payment-signature");
   }
   if (Array.isArray(headers)) {
-    return headers.some(
-      ([k]) => k.toLowerCase() === "payment-signature",
-    );
+    return headers.some(([k]) => k.toLowerCase() === "payment-signature");
   }
   const rec = headers as Record<string, string>;
   return Object.keys(rec).some((k) => k.toLowerCase() === "payment-signature");

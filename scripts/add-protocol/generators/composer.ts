@@ -65,7 +65,8 @@ export function generateComposer(
 
     let docComment = `/**\n * ${ix.sdkName} — ActionType.${ix.actionType} (${ix.isSpending ? "spending" : "non-spending"})`;
     if (fieldHints) docComment += `\n * Constrainable fields: ${fieldHints}`;
-    if (accountHints) docComment += `\n * Constrainable accounts: ${accountHints}`;
+    if (accountHints)
+      docComment += `\n * Constrainable accounts: ${accountHints}`;
     docComment += `\n * Data size: ${ix.dataSize} bytes\n */`;
 
     return `${docComment}

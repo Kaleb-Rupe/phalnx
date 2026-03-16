@@ -5,16 +5,10 @@ import { BPS_POWER, RATE_POWER } from "./constants.js";
 import { OraclePrice } from "./oracle-price.js";
 import { min } from "./decimal-math.js";
 import { getPnlUsd } from "./pnl.js";
-import {
-  getLockFeeAndUnsettledUsd,
-} from "./fees.js";
+import { getLockFeeAndUnsettledUsd } from "./fees.js";
 import { getLiquidationPriceFromEntry } from "./liquidation.js";
 import { getMinAndMaxOraclePrice } from "./helpers.js";
-import type {
-  PositionInfo,
-  CustodyInfo,
-  DecreaseSizeResult,
-} from "./types.js";
+import type { PositionInfo, CustodyInfo, DecreaseSizeResult } from "./types.js";
 
 /**
  * Calculate result of partially closing a position.
@@ -62,14 +56,12 @@ export function getDecreaseSizeResult(
   const deltaSizeUsd = (position.sizeUsd * closeRatio) / decimalPower;
   const deltaCollateralUsd =
     (position.collateralUsd * closeRatio) / decimalPower;
-  const deltaLockedAmount =
-    (position.lockedAmount * closeRatio) / decimalPower;
+  const deltaLockedAmount = (position.lockedAmount * closeRatio) / decimalPower;
   const deltaUnsettledFeesUsd =
     (position.unsettledFeesUsd * closeRatio) / decimalPower;
   const deltaPriceImpactUsd =
     (position.priceImpactUsd * closeRatio) / decimalPower;
-  const deltaDegenSizeUsd =
-    (position.degenSizeUsd * closeRatio) / decimalPower;
+  const deltaDegenSizeUsd = (position.degenSizeUsd * closeRatio) / decimalPower;
 
   // Build delta position for PnL calc
   const deltaPosition: PositionInfo = {
@@ -93,7 +85,7 @@ export function getDecreaseSizeResult(
   );
 
   const exitFeeUsd =
-    deltaSizeUsd * targetCustody.fees.closePosition / RATE_POWER;
+    (deltaSizeUsd * targetCustody.fees.closePosition) / RATE_POWER;
 
   const lockAndUnsettledFeeUsd = getLockFeeAndUnsettledUsd(
     deltaPosition,
@@ -159,7 +151,7 @@ export function getDecreaseSizeResult(
   );
 
   const newExitFee =
-    newSizeUsd * targetCustody.fees.closePosition / RATE_POWER;
+    (newSizeUsd * targetCustody.fees.closePosition) / RATE_POWER;
   const newUnsettledFees = newExitFee + newLockFee;
   const newPnl = getPnlUsd(
     newPosition,

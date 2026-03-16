@@ -9,7 +9,10 @@ import { expect } from "chai";
 import type { Address, Rpc, SolanaRpcApi } from "@solana/kit";
 import type { ProtocolContext } from "../src/integrations/protocol-handler.js";
 import { KaminoHandler } from "../src/integrations/t2-handlers.js";
-import { KaminoComposeError, COMPOSE_ERROR_CODES } from "../src/integrations/compose-errors.js";
+import {
+  KaminoComposeError,
+  COMPOSE_ERROR_CODES,
+} from "../src/integrations/compose-errors.js";
 import { dispatchKaminoCompose } from "../src/integrations/kamino-api.js";
 import { ActionType } from "../src/generated/types/actionType.js";
 
@@ -57,8 +60,13 @@ describe("Kamino Handler (API-backed)", () => {
     it("has correct action names", () => {
       const actions = [...handler.metadata.supportedActions.keys()];
       expect(actions).to.include.members([
-        "deposit", "withdraw", "borrow", "repay",
-        "vaultDeposit", "vaultWithdraw", "multiply",
+        "deposit",
+        "withdraw",
+        "borrow",
+        "repay",
+        "vaultDeposit",
+        "vaultWithdraw",
+        "multiply",
       ]);
     });
 
@@ -107,34 +115,52 @@ describe("Kamino Handler (API-backed)", () => {
 
   describe("summarize()", () => {
     it("deposit", () => {
-      const s = handler.summarize("deposit", { amount: "1000000", tokenMint: "USDC" });
+      const s = handler.summarize("deposit", {
+        amount: "1000000",
+        tokenMint: "USDC",
+      });
       expect(s).to.include("Kamino deposit");
       expect(s).to.include("1000000");
       expect(s).to.include("USDC");
     });
 
     it("borrow", () => {
-      const s = handler.summarize("borrow", { amount: "500000", tokenMint: "SOL" });
+      const s = handler.summarize("borrow", {
+        amount: "500000",
+        tokenMint: "SOL",
+      });
       expect(s).to.include("Kamino borrow");
     });
 
     it("repay", () => {
-      const s = handler.summarize("repay", { amount: "250000", tokenMint: "USDC" });
+      const s = handler.summarize("repay", {
+        amount: "250000",
+        tokenMint: "USDC",
+      });
       expect(s).to.include("Kamino repay");
     });
 
     it("withdraw", () => {
-      const s = handler.summarize("withdraw", { amount: "100000", tokenMint: "SOL" });
+      const s = handler.summarize("withdraw", {
+        amount: "100000",
+        tokenMint: "SOL",
+      });
       expect(s).to.include("Kamino withdraw");
     });
 
     it("vaultDeposit", () => {
-      const s = handler.summarize("vaultDeposit", { amount: "1000000", kvault: "ABC123" });
+      const s = handler.summarize("vaultDeposit", {
+        amount: "1000000",
+        kvault: "ABC123",
+      });
       expect(s).to.include("Kamino vault deposit");
     });
 
     it("vaultWithdraw", () => {
-      const s = handler.summarize("vaultWithdraw", { amount: "1000000", kvault: "ABC123" });
+      const s = handler.summarize("vaultWithdraw", {
+        amount: "1000000",
+        kvault: "ABC123",
+      });
       expect(s).to.include("Kamino vault withdraw");
     });
 

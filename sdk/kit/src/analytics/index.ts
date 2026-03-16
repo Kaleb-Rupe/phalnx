@@ -102,10 +102,7 @@ export {
 } from "./sizing.js";
 
 // ─── Slippage ───────────────────────────────────────────────────────────────
-export {
-  estimateSlippage,
-  getSwapPriceImpact,
-} from "./slippage.js";
+export { estimateSlippage, getSwapPriceImpact } from "./slippage.js";
 
 // ─── Swap Fees ──────────────────────────────────────────────────────────────
 export {
@@ -115,7 +112,4 @@ export {
 } from "./swap-fees.js";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-export {
-  getMinAndMaxOraclePrice,
-  getAveragePrice,
-} from "./helpers.js";
+export { getMinAndMaxOraclePrice, getAveragePrice } from "./helpers.js";

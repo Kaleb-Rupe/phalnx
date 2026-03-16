@@ -10,11 +10,16 @@ import { VaultStatus } from "../../src/generated/types/vaultStatus.js";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-export const MOCK_VAULT = "Vault111111111111111111111111111111111111111" as Address;
-export const MOCK_AGENT = "Agent111111111111111111111111111111111111111" as Address;
-export const MOCK_OWNER = "Owner111111111111111111111111111111111111111" as Address;
-export const MOCK_POLICY = "Policy11111111111111111111111111111111111111" as Address;
-export const MOCK_SIGNATURE = "5wHu1qwD7y5B7TFDx5UKo2KRDwfJpJdHnnRr8KeUQBJGG2ZxVjktjDqfUzE6jR2Kv8Zj";
+export const MOCK_VAULT =
+  "Vault111111111111111111111111111111111111111" as Address;
+export const MOCK_AGENT =
+  "Agent111111111111111111111111111111111111111" as Address;
+export const MOCK_OWNER =
+  "Owner111111111111111111111111111111111111111" as Address;
+export const MOCK_POLICY =
+  "Policy11111111111111111111111111111111111111" as Address;
+export const MOCK_SIGNATURE =
+  "5wHu1qwD7y5B7TFDx5UKo2KRDwfJpJdHnnRr8KeUQBJGG2ZxVjktjDqfUzE6jR2Kv8Zj";
 
 export const MOCK_BLOCKHASH = {
   blockhash: "4NCYB3kRT8sCNodPNuCZo8VUh4xqpBQxsxed2wd9xaJ4",

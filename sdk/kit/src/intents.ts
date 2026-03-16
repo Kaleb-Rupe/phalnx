@@ -596,9 +596,7 @@ export function summarizeAction(action: IntentAction): string {
  * in the integrations layer). Any object satisfying this shape can be passed.
  */
 export interface ProtocolRegistryLike {
-  getByProtocolId(
-    protocolId: string,
-  ):
+  getByProtocolId(protocolId: string):
     | {
         metadata: {
           supportedActions: Map<

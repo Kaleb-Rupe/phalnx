@@ -47,10 +47,16 @@ const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" as Address;
 const TRUSTED_PAYTO = "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM" as Address;
 const ATTACKER_PAYTO = "AttackerAttackerAttackerAttackerAttackerAtt" as Address;
 
-function makePaymentRequired(overrides?: Partial<PaymentRequirements>): PaymentRequired {
+function makePaymentRequired(
+  overrides?: Partial<PaymentRequirements>,
+): PaymentRequired {
   return {
     x402Version: 2,
-    resource: { url: "https://api.test.com/data", description: "Test", mimeType: "application/json" },
+    resource: {
+      url: "https://api.test.com/data",
+      description: "Test",
+      mimeType: "application/json",
+    },
     accepts: [
       {
         scheme: "exact",
@@ -83,29 +89,41 @@ describe("x402/codec", () => {
   });
 
   it("throws on invalid base64", () => {
-    expect(() => decodePaymentRequiredHeader("!!!invalid!!!")).to.throw(X402ParseError);
+    expect(() => decodePaymentRequiredHeader("!!!invalid!!!")).to.throw(
+      X402ParseError,
+    );
   });
 
   it("throws on missing accepts array", () => {
     const encoded = base64Encode(JSON.stringify({ x402Version: 2 }));
-    expect(() => decodePaymentRequiredHeader(encoded)).to.throw("non-empty array");
+    expect(() => decodePaymentRequiredHeader(encoded)).to.throw(
+      "non-empty array",
+    );
   });
 
   it("throws on non-number x402Version", () => {
-    const encoded = base64Encode(JSON.stringify({ x402Version: "2", accepts: [{}] }));
-    expect(() => decodePaymentRequiredHeader(encoded)).to.throw("must be a number");
+    const encoded = base64Encode(
+      JSON.stringify({ x402Version: "2", accepts: [{}] }),
+    );
+    expect(() => decodePaymentRequiredHeader(encoded)).to.throw(
+      "must be a number",
+    );
   });
 
   it("throws on invalid amount string", () => {
     const pr = makePaymentRequired({ amount: "not-a-number" });
     const encoded = encodeHeader(pr);
-    expect(() => decodePaymentRequiredHeader(encoded)).to.throw("valid integer string");
+    expect(() => decodePaymentRequiredHeader(encoded)).to.throw(
+      "valid integer string",
+    );
   });
 
   it("throws on empty string amount (BUG-7)", () => {
     const pr = makePaymentRequired({ amount: "" });
     const encoded = encodeHeader(pr);
-    expect(() => decodePaymentRequiredHeader(encoded)).to.throw("non-empty string");
+    expect(() => decodePaymentRequiredHeader(encoded)).to.throw(
+      "non-empty string",
+    );
   });
 
   it("accepts very large amount string without precision loss (BUG-15)", () => {
@@ -163,7 +181,9 @@ describe("x402/payment-selector", () => {
   it("rejects when token not in allowlist", () => {
     const pr = makePaymentRequired();
     const config: X402Config = { allowedTokens: new Set(["other" as Address]) };
-    expect(() => selectPaymentOption(pr, config)).to.throw(X402UnsupportedError);
+    expect(() => selectPaymentOption(pr, config)).to.throw(
+      X402UnsupportedError,
+    );
   });
 
   it("filters non-Solana networks", () => {
@@ -171,7 +191,15 @@ describe("x402/payment-selector", () => {
       x402Version: 2,
       resource: { url: "test", description: "test", mimeType: "text" },
       accepts: [
-        { scheme: "exact", network: "ethereum:1", asset: "0x...", amount: "100", payTo: "0x...", maxTimeoutSeconds: 30, extra: {} },
+        {
+          scheme: "exact",
+          network: "ethereum:1",
+          asset: "0x...",
+          amount: "100",
+          payTo: "0x...",
+          maxTimeoutSeconds: 30,
+          extra: {},
+        },
       ],
     };
     expect(() => selectPaymentOption(pr)).to.throw(X402UnsupportedError);
@@ -179,26 +207,36 @@ describe("x402/payment-selector", () => {
 
   it("passes payTo allowlist check with trusted destination", () => {
     const pr = makePaymentRequired();
-    const config: X402Config = { allowedDestinations: new Set([TRUSTED_PAYTO]) };
+    const config: X402Config = {
+      allowedDestinations: new Set([TRUSTED_PAYTO]),
+    };
     const selected = selectPaymentOption(pr, config);
     expect(selected.payTo).to.equal(TRUSTED_PAYTO);
   });
 
   it("blocks payTo not in allowlist", () => {
     const pr = makePaymentRequired({ payTo: ATTACKER_PAYTO });
-    const config: X402Config = { allowedDestinations: new Set([TRUSTED_PAYTO]) };
-    expect(() => selectPaymentOption(pr, config)).to.throw(X402DestinationBlockedError);
+    const config: X402Config = {
+      allowedDestinations: new Set([TRUSTED_PAYTO]),
+    };
+    expect(() => selectPaymentOption(pr, config)).to.throw(
+      X402DestinationBlockedError,
+    );
   });
 
   it("provides specific error when Solana options exist but all destinations blocked", () => {
     const pr = makePaymentRequired({ payTo: ATTACKER_PAYTO });
-    const config: X402Config = { allowedDestinations: new Set([TRUSTED_PAYTO]) };
+    const config: X402Config = {
+      allowedDestinations: new Set([TRUSTED_PAYTO]),
+    };
     try {
       selectPaymentOption(pr, config);
       expect.fail("should throw");
     } catch (err) {
       expect(err).to.be.instanceOf(X402DestinationBlockedError);
-      expect((err as X402DestinationBlockedError).payTo).to.equal(ATTACKER_PAYTO);
+      expect((err as X402DestinationBlockedError).payTo).to.equal(
+        ATTACKER_PAYTO,
+      );
     }
   });
 
@@ -213,7 +251,15 @@ describe("x402/payment-selector", () => {
       x402Version: 2,
       resource: { url: "test", description: "test", mimeType: "text" },
       accepts: [
-        { scheme: "exact", network: "ethereum:1", asset: "0x...", amount: "100", payTo: "0x...", maxTimeoutSeconds: 30, extra: {} },
+        {
+          scheme: "exact",
+          network: "ethereum:1",
+          asset: "0x...",
+          amount: "100",
+          payTo: "0x...",
+          maxTimeoutSeconds: 30,
+          extra: {},
+        },
       ],
     };
     expect(() => selectPaymentOption(pr)).to.throw(X402UnsupportedError);
@@ -294,9 +340,15 @@ describe("x402/policy-bridge", () => {
     const ctx = shield();
     const config: X402Config = { maxCumulativeSpend: 800_000n };
     // Record USDC spend from DeFi
-    ctx.state.recordSpend("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", 500_000n);
+    ctx.state.recordSpend(
+      "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      500_000n,
+    );
     // Now try USDT x402 payment of 500_000 (total = 1_000_000 > 800_000)
-    const selected = makePaymentRequired({ amount: "500000", asset: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB" as Address }).accepts[0];
+    const selected = makePaymentRequired({
+      amount: "500000",
+      asset: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB" as Address,
+    }).accepts[0];
     const violations = evaluateX402Payment(selected, ctx, config);
     expect(violations.length).to.be.greaterThan(0);
     expect(violations[0]).to.include("Cumulative");
@@ -368,7 +420,7 @@ describe("x402/transfer-builder", () => {
   });
 
   it("handles large amounts (max u64)", async () => {
-    const maxU64 = (2n ** 64n) - 1n;
+    const maxU64 = 2n ** 64n - 1n;
     const ix = await buildX402TransferInstruction({
       from: "11111111111111111111111111111111" as Address,
       payTo: TRUSTED_PAYTO,
@@ -394,12 +446,16 @@ describe("x402/nonce-tracker", () => {
   });
 
   it("first payment is not a duplicate", () => {
-    expect(tracker.isDuplicate("https://api.com", TRUSTED_PAYTO, "1000")).to.equal(false);
+    expect(
+      tracker.isDuplicate("https://api.com", TRUSTED_PAYTO, "1000"),
+    ).to.equal(false);
   });
 
   it("second identical payment is a duplicate", () => {
     tracker.record("https://api.com", TRUSTED_PAYTO, "1000");
-    expect(tracker.isDuplicate("https://api.com", TRUSTED_PAYTO, "1000")).to.equal(true);
+    expect(
+      tracker.isDuplicate("https://api.com", TRUSTED_PAYTO, "1000"),
+    ).to.equal(true);
   });
 
   it("throws X402ReplayError on duplicate via checkOrThrow", () => {
@@ -411,7 +467,9 @@ describe("x402/nonce-tracker", () => {
 
   it("different URL is not a duplicate", () => {
     tracker.record("https://api.com/a", TRUSTED_PAYTO, "1000");
-    expect(tracker.isDuplicate("https://api.com/b", TRUSTED_PAYTO, "1000")).to.equal(false);
+    expect(
+      tracker.isDuplicate("https://api.com/b", TRUSTED_PAYTO, "1000"),
+    ).to.equal(false);
   });
 
   it("builds deterministic nonce keys", () => {
@@ -420,21 +478,41 @@ describe("x402/nonce-tracker", () => {
   });
 
   it("normalizes trailing slash in nonce key (BUG-12)", () => {
-    const key1 = NonceTracker.buildKey("https://api.com/data", TRUSTED_PAYTO, "1000");
-    const key2 = NonceTracker.buildKey("https://api.com/data/", TRUSTED_PAYTO, "1000");
+    const key1 = NonceTracker.buildKey(
+      "https://api.com/data",
+      TRUSTED_PAYTO,
+      "1000",
+    );
+    const key2 = NonceTracker.buildKey(
+      "https://api.com/data/",
+      TRUSTED_PAYTO,
+      "1000",
+    );
     expect(key1).to.equal(key2);
   });
 
   it("strips query params in nonce key (BUG-12)", () => {
-    const key1 = NonceTracker.buildKey("https://api.com/data", TRUSTED_PAYTO, "1000");
-    const key2 = NonceTracker.buildKey("https://api.com/data?ts=123", TRUSTED_PAYTO, "1000");
+    const key1 = NonceTracker.buildKey(
+      "https://api.com/data",
+      TRUSTED_PAYTO,
+      "1000",
+    );
+    const key2 = NonceTracker.buildKey(
+      "https://api.com/data?ts=123",
+      TRUSTED_PAYTO,
+      "1000",
+    );
     expect(key1).to.equal(key2);
   });
 
   it("trailing slash + query normalized → same key detects replay", () => {
     tracker.record("https://api.com/data", TRUSTED_PAYTO, "1000");
-    expect(tracker.isDuplicate("https://api.com/data/", TRUSTED_PAYTO, "1000")).to.equal(true);
-    expect(tracker.isDuplicate("https://api.com/data?ts=456", TRUSTED_PAYTO, "1000")).to.equal(true);
+    expect(
+      tracker.isDuplicate("https://api.com/data/", TRUSTED_PAYTO, "1000"),
+    ).to.equal(true);
+    expect(
+      tracker.isDuplicate("https://api.com/data?ts=456", TRUSTED_PAYTO, "1000"),
+    ).to.equal(true);
   });
 });
 
@@ -464,7 +542,9 @@ describe("x402/amount-guard", () => {
 
   it("enforces per-request ceiling", () => {
     const config: X402Config = { maxPaymentPerRequest: 500_000n };
-    expect(() => validatePaymentAmount("1000000", config)).to.throw("per-request ceiling");
+    expect(() => validatePaymentAmount("1000000", config)).to.throw(
+      "per-request ceiling",
+    );
   });
 
   it("passes per-request ceiling when within limit", () => {
@@ -495,7 +575,8 @@ describe("x402/facilitator-verify", () => {
   it("validates successful settlement", () => {
     const result = validateSettlement({
       success: true,
-      transaction: "5vBrLZbzMTnYBwXxuoVGE1DVEtimHdRMkjJZYcBwdHE5GYzx3pMNGqyVLkRV4m7nFf6oHqf7Xy4LmJR84RPLNVR",
+      transaction:
+        "5vBrLZbzMTnYBwXxuoVGE1DVEtimHdRMkjJZYcBwdHE5GYzx3pMNGqyVLkRV4m7nFf6oHqf7Xy4LmJR84RPLNVR",
     });
     expect(result.valid).to.equal(true);
     expect(result.warnings).to.have.lengthOf(0);
@@ -520,7 +601,8 @@ describe("x402/facilitator-verify", () => {
     const result = validateSettlement(
       {
         success: true,
-        transaction: "5vBrLZbzMTnYBwXxuoVGE1DVEtimHdRMkjJZYcBwdHE5GYzx3pMNGqyVLkRV4m7nFf6oHqf7Xy4LmJR84RPLNVR",
+        transaction:
+          "5vBrLZbzMTnYBwXxuoVGE1DVEtimHdRMkjJZYcBwdHE5GYzx3pMNGqyVLkRV4m7nFf6oHqf7Xy4LmJR84RPLNVR",
         network: "devnet",
       },
       "mainnet",
@@ -573,8 +655,12 @@ describe("x402/security", () => {
   it("blocks payTo injection attack", () => {
     // Malicious API returns attacker's payTo
     const pr = makePaymentRequired({ payTo: ATTACKER_PAYTO });
-    const config: X402Config = { allowedDestinations: new Set([TRUSTED_PAYTO]) };
-    expect(() => selectPaymentOption(pr, config)).to.throw(X402DestinationBlockedError);
+    const config: X402Config = {
+      allowedDestinations: new Set([TRUSTED_PAYTO]),
+    };
+    expect(() => selectPaymentOption(pr, config)).to.throw(
+      X402DestinationBlockedError,
+    );
   });
 
   it("blocks replay of same payment", () => {
@@ -619,15 +705,17 @@ describe("x402/security", () => {
     // Missing payTo
     const pr = {
       x402Version: 2,
-      accepts: [{
-        scheme: "exact",
-        network: "solana:mainnet",
-        asset: USDC_MINT,
-        amount: "1000",
-        // payTo missing
-        maxTimeoutSeconds: 30,
-        extra: {},
-      }],
+      accepts: [
+        {
+          scheme: "exact",
+          network: "solana:mainnet",
+          asset: USDC_MINT,
+          amount: "1000",
+          // payTo missing
+          maxTimeoutSeconds: 30,
+          extra: {},
+        },
+      ],
     };
     const encoded = base64Encode(JSON.stringify(pr));
     expect(() => decodePaymentRequiredHeader(encoded)).to.throw("payTo");

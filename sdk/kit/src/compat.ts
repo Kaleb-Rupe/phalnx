@@ -15,17 +15,15 @@ import { AccountRole } from "@solana/kit";
  * Convert a web3.js TransactionInstruction to a Kit Instruction.
  * Used when wrapping T2 protocol SDKs that return web3.js types.
  */
-export function toKitInstruction(
-  ix: {
-    programId: { toBase58(): string };
-    keys: Array<{
-      pubkey: { toBase58(): string };
-      isSigner: boolean;
-      isWritable: boolean;
-    }>;
-    data: Buffer | Uint8Array;
-  },
-): Instruction {
+export function toKitInstruction(ix: {
+  programId: { toBase58(): string };
+  keys: Array<{
+    pubkey: { toBase58(): string };
+    isSigner: boolean;
+    isWritable: boolean;
+  }>;
+  data: Buffer | Uint8Array;
+}): Instruction {
   const accounts: AccountMeta[] = ix.keys.map((key) => {
     const address = key.pubkey.toBase58() as Address;
     if (key.isSigner && key.isWritable) {
@@ -50,18 +48,14 @@ export function toKitInstruction(
 /**
  * Convert a web3.js PublicKey to a Kit Address.
  */
-export function toKitAddress(
-  pubkey: { toBase58(): string },
-): Address {
+export function toKitAddress(pubkey: { toBase58(): string }): Address {
   return pubkey.toBase58() as Address;
 }
 
 /**
  * Convert a BN (from @coral-xyz/anchor) to a bigint.
  */
-export function toBigInt(
-  bn: { toString(base?: number): string },
-): bigint {
+export function toBigInt(bn: { toString(base?: number): string }): bigint {
   return BigInt(bn.toString());
 }
 

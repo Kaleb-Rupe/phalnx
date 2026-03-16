@@ -1442,7 +1442,8 @@ const SDK_ERRORS: Record<string, ErrorMapping> = {
     recovery_actions: [
       {
         action: "check_policy",
-        description: "Review shield policies to understand why the transaction was denied",
+        description:
+          "Review shield policies to understand why the transaction was denied",
       },
     ],
   },
@@ -1516,7 +1517,8 @@ const SDK_ERRORS: Record<string, ErrorMapping> = {
     recovery_actions: [
       {
         action: "review_transaction",
-        description: "The composed transaction does not match the stated intent — review instructions",
+        description:
+          "The composed transaction does not match the stated intent — review instructions",
       },
       {
         action: "rebuild",
@@ -1533,7 +1535,8 @@ const SDK_ERRORS: Record<string, ErrorMapping> = {
     recovery_actions: [
       {
         action: "wait",
-        description: "Wait for the cooldown period before submitting more transactions",
+        description:
+          "Wait for the cooldown period before submitting more transactions",
       },
     ],
   },
@@ -1545,7 +1548,8 @@ const SDK_ERRORS: Record<string, ErrorMapping> = {
     recovery_actions: [
       {
         action: "review_transaction",
-        description: "The transaction triggered agent defense — review for manipulation",
+        description:
+          "The transaction triggered agent defense — review for manipulation",
       },
       {
         action: "escalate_to_human",
@@ -1561,7 +1565,8 @@ const SDK_ERRORS: Record<string, ErrorMapping> = {
     recovery_actions: [
       {
         action: "check_server",
-        description: "The API server returned an invalid x402 header — contact the provider",
+        description:
+          "The API server returned an invalid x402 header — contact the provider",
       },
     ],
   },
@@ -1585,7 +1590,8 @@ const SDK_ERRORS: Record<string, ErrorMapping> = {
     recovery_actions: [
       {
         action: "check_accepts",
-        description: "The API does not accept any Solana-compatible payment — try a different endpoint",
+        description:
+          "The API does not accept any Solana-compatible payment — try a different endpoint",
       },
     ],
   },
@@ -1597,7 +1603,8 @@ const SDK_ERRORS: Record<string, ErrorMapping> = {
     recovery_actions: [
       {
         action: "check_allowlist",
-        description: "Add the payTo address to X402Config.allowedDestinations if trusted",
+        description:
+          "Add the payTo address to X402Config.allowedDestinations if trusted",
       },
     ],
   },
@@ -1609,7 +1616,8 @@ const SDK_ERRORS: Record<string, ErrorMapping> = {
     recovery_actions: [
       {
         action: "wait",
-        description: "A payment for this resource was already made — wait for the nonce window to expire",
+        description:
+          "A payment for this resource was already made — wait for the nonce window to expire",
       },
     ],
   },
@@ -1621,7 +1629,8 @@ const SDK_ERRORS: Record<string, ErrorMapping> = {
     recovery_actions: [
       {
         action: "review_amount",
-        description: "The requested amount is suspiciously high — verify with the API provider",
+        description:
+          "The requested amount is suspiciously high — verify with the API provider",
       },
     ],
   },
@@ -1645,7 +1654,8 @@ const SDK_ERRORS: Record<string, ErrorMapping> = {
     recovery_actions: [
       {
         action: "provide_rpc",
-        description: "Pass an RPC connection in ShieldedFetchOptions or X402Config",
+        description:
+          "Pass an RPC connection in ShieldedFetchOptions or X402Config",
       },
     ],
   },
@@ -1658,7 +1668,8 @@ const SDK_ERRORS: Record<string, ErrorMapping> = {
     recovery_actions: [
       {
         action: "retry",
-        description: "Retry the x402 payment — the facilitator may be temporarily unavailable",
+        description:
+          "Retry the x402 payment — the facilitator may be temporarily unavailable",
       },
     ],
   },

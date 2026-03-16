@@ -64,9 +64,7 @@ describe("resolveAccounts", () => {
         feeDestination,
       });
       const [expectedPolicy] = getPolicyPDA(vault, PROGRAM_ID);
-      expect(result.policyPda.toBase58()).to.equal(
-        expectedPolicy.toBase58(),
-      );
+      expect(result.policyPda.toBase58()).to.equal(expectedPolicy.toBase58());
     });
 
     it("derives trackerPda matching accounts.getTrackerPDA", async () => {
@@ -77,9 +75,7 @@ describe("resolveAccounts", () => {
         feeDestination,
       });
       const [expectedTracker] = getTrackerPDA(vault, PROGRAM_ID);
-      expect(result.trackerPda.toBase58()).to.equal(
-        expectedTracker.toBase58(),
-      );
+      expect(result.trackerPda.toBase58()).to.equal(expectedTracker.toBase58());
     });
 
     it("derives sessionPda matching accounts.getSessionPDA", async () => {
@@ -95,9 +91,7 @@ describe("resolveAccounts", () => {
         tokenMint,
         PROGRAM_ID,
       );
-      expect(result.sessionPda.toBase58()).to.equal(
-        expectedSession.toBase58(),
-      );
+      expect(result.sessionPda.toBase58()).to.equal(expectedSession.toBase58());
     });
   });
 

@@ -50,9 +50,7 @@ describe("policies", () => {
   describe("toCoreAnalysis", () => {
     it("programIds cast to strings", () => {
       const analysis: TransactionAnalysis = {
-        programIds: [
-          "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" as Address,
-        ],
+        programIds: ["JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" as Address],
         transfers: [],
         estimatedValueLamports: 0n,
       };
@@ -71,8 +69,7 @@ describe("policies", () => {
             mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" as Address,
             amount: 100n,
             direction: "outgoing",
-            destination:
-              "11111111111111111111111111111111" as Address,
+            destination: "11111111111111111111111111111111" as Address,
           },
         ],
         estimatedValueLamports: 100n,

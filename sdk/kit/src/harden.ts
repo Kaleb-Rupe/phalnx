@@ -18,7 +18,11 @@ import type {
 import type { ResolvedPolicies } from "./policies.js";
 import { shield, type ShieldedContext, type ShieldOptions } from "./shield.js";
 import type { ShieldPolicies } from "./policies.js";
-import { getVaultPDA, getPolicyPDA, getPendingPolicyPDA } from "./resolve-accounts.js";
+import {
+  getVaultPDA,
+  getPolicyPDA,
+  getPendingPolicyPDA,
+} from "./resolve-accounts.js";
 import { fetchMaybeAgentVault } from "./generated/accounts/agentVault.js";
 import { PHALNX_PROGRAM_ADDRESS } from "./generated/programs/phalnx.js";
 import type { Network } from "./types.js";
@@ -85,7 +89,11 @@ export interface HardenResult {
   /** Constraint build warnings */
   constraintWarnings?: string[];
   /** Constraint budget info */
-  constraintBudget?: { used: number; total: number; perProtocol: Record<string, number> };
+  constraintBudget?: {
+    used: number;
+    total: number;
+    perProtocol: Record<string, number>;
+  };
 }
 
 /** Configuration for withVault() convenience wrapper. */
@@ -214,21 +222,20 @@ export async function findNextVaultId(
  * - getRegisterAgentInstructionAsync()
  * - getUpdatePolicyInstructionAsync()
  */
-export async function harden(
-  options: HardenOptions,
-): Promise<HardenResult> {
+export async function harden(options: HardenOptions): Promise<HardenResult> {
   const { rpc, owner, agent } = options;
 
   // Validate owner ≠ agent
   if (owner.address === agent.address) {
     throw new Error(
       "Owner and agent must be different keys. " +
-      "The owner has full vault authority; the agent has constrained execution only.",
+        "The owner has full vault authority; the agent has constrained execution only.",
     );
   }
 
   // Resolve vault ID
-  const vaultId = options.vaultId ?? await findNextVaultId(rpc, owner.address);
+  const vaultId =
+    options.vaultId ?? (await findNextVaultId(rpc, owner.address));
 
   // Derive PDAs
   const [vaultAddress] = await getVaultPDA(owner.address, vaultId);
@@ -238,17 +245,21 @@ export async function harden(
   // Compile constraints if provided
   let constraintEntries: ConstraintEntryArgs[] | undefined;
   let constraintWarnings: string[] | undefined;
-  let constraintBudget: { used: number; total: number; perProtocol: Record<string, number> } | undefined;
+  let constraintBudget:
+    | { used: number; total: number; perProtocol: Record<string, number> }
+    | undefined;
 
   if (options.protocolConstraints && options.protocolConstraints.length > 0) {
     if (!options.constraintBuilder) {
       throw new Error(
         "protocolConstraints requires a constraintBuilder with registered descriptors. " +
-        "Create a ConstraintBuilder, register descriptors, and pass it via options.constraintBuilder.",
+          "Create a ConstraintBuilder, register descriptors, and pass it via options.constraintBuilder.",
       );
     }
 
-    const buildResult = options.constraintBuilder.compile(options.protocolConstraints);
+    const buildResult = options.constraintBuilder.compile(
+      options.protocolConstraints,
+    );
     constraintEntries = buildResult.entries;
     constraintWarnings = buildResult.warnings;
     constraintBudget = buildResult.budget;

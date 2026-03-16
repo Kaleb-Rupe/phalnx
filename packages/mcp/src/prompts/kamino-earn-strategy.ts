@@ -8,7 +8,10 @@
 import { z } from "zod";
 
 export const kaminoEarnStrategyArgsSchema = {
-  token: z.string().optional().describe("Token to earn with (e.g. 'USDC'). If omitted, shows all."),
+  token: z
+    .string()
+    .optional()
+    .describe("Token to earn with (e.g. 'USDC'). If omitted, shows all."),
   riskTolerance: z
     .enum(["low", "medium", "high"])
     .optional()
@@ -56,7 +59,8 @@ export function kaminoEarnStrategyPrompt(args: KaminoEarnStrategyArgs) {
                 {
                   step: 4,
                   action: "recommend",
-                  purpose: "Compare yields, factor in risk tolerance, recommend best option",
+                  purpose:
+                    "Compare yields, factor in risk tolerance, recommend best option",
                   criteria: {
                     low: "Supply-only lending, high TVL reserves, stablecoin pairs",
                     medium: "Lending + moderate leverage (2-3x), LST staking",

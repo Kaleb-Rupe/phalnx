@@ -1,11 +1,19 @@
 import { z } from "zod";
-import { protocolConfigSchema, loadKit, getDescriptors } from "./constraint-shared";
+import {
+  protocolConfigSchema,
+  loadKit,
+  getDescriptors,
+} from "./constraint-shared";
 
 export const estimateConstraintBudgetSchema = z.object({
-  configs: z.array(protocolConfigSchema).describe("Protocol configs to estimate"),
+  configs: z
+    .array(protocolConfigSchema)
+    .describe("Protocol configs to estimate"),
 });
 
-export type EstimateConstraintBudgetInput = z.infer<typeof estimateConstraintBudgetSchema>;
+export type EstimateConstraintBudgetInput = z.infer<
+  typeof estimateConstraintBudgetSchema
+>;
 
 export async function estimateConstraintBudget(
   _client: unknown,
@@ -40,10 +48,7 @@ export async function estimateConstraintBudget(
     }
 
     const remaining = estimate.total - estimate.used;
-    lines.push(
-      "",
-      `**Remaining budget:** ${Math.max(0, remaining)} entries`,
-    );
+    lines.push("", `**Remaining budget:** ${Math.max(0, remaining)} entries`);
 
     if (estimate.used > estimate.total) {
       lines.push(

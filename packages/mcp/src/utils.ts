@@ -49,12 +49,27 @@ export function formatTimestamp(ts: BN): string {
 
 // Permission bit names (21 base types matching on-chain ActionType enum)
 export const PERMISSION_NAMES = [
-  "swap", "openPosition", "closePosition", "increasePosition",
-  "decreasePosition", "deposit", "withdraw", "transfer",
-  "addCollateral", "removeCollateral", "placeTriggerOrder",
-  "editTriggerOrder", "cancelTriggerOrder", "placeLimitOrder",
-  "editLimitOrder", "cancelLimitOrder", "swapAndOpenPosition",
-  "closeAndSwapPosition", "createEscrow", "settleEscrow", "refundEscrow",
+  "swap",
+  "openPosition",
+  "closePosition",
+  "increasePosition",
+  "decreasePosition",
+  "deposit",
+  "withdraw",
+  "transfer",
+  "addCollateral",
+  "removeCollateral",
+  "placeTriggerOrder",
+  "editTriggerOrder",
+  "cancelTriggerOrder",
+  "placeLimitOrder",
+  "editLimitOrder",
+  "cancelLimitOrder",
+  "swapAndOpenPosition",
+  "closeAndSwapPosition",
+  "createEscrow",
+  "settleEscrow",
+  "refundEscrow",
 ] as const;
 
 export function permissionsToActions(bits: string): string[] {

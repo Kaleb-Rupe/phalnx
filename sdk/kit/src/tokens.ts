@@ -162,10 +162,7 @@ export function resolveToken(
  * Validates for NaN and negative values (H-6 fix by construction).
  * Example: toBaseUnits(100, 6) === 100_000_000n
  */
-export function toBaseUnits(
-  amount: number | string,
-  decimals: number,
-): bigint {
+export function toBaseUnits(amount: number | string, decimals: number): bigint {
   const num = typeof amount === "string" ? parseFloat(amount) : amount;
   if (!Number.isFinite(num) || num < 0) {
     throw new Error(

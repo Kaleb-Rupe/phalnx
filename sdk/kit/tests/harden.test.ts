@@ -198,12 +198,15 @@ describe("harden", () => {
         });
         expect.fail("should throw");
       } catch (e: any) {
-        expect(e.message).to.include("protocolConstraints requires a constraintBuilder");
+        expect(e.message).to.include(
+          "protocolConstraints requires a constraintBuilder",
+        );
       }
     });
 
     it("compiles constraints when builder and configs provided", async () => {
-      const { ConstraintBuilder, FlashTradeDescriptor } = await import("../src/constraints/index.js");
+      const { ConstraintBuilder, FlashTradeDescriptor } =
+        await import("../src/constraints/index.js");
       const builder = new ConstraintBuilder();
       builder.register(FlashTradeDescriptor);
 
@@ -229,7 +232,9 @@ describe("harden", () => {
       expect(result.constraintBudget).to.exist;
       expect(result.constraintBudget!.used).to.be.greaterThan(0);
       expect(result.constraintBudget!.total).to.equal(16);
-      expect(result.constraintBudget!.perProtocol["flash-trade"]).to.be.greaterThan(0);
+      expect(
+        result.constraintBudget!.perProtocol["flash-trade"],
+      ).to.be.greaterThan(0);
       expect(result.constraintWarnings).to.be.an("array");
     });
   });

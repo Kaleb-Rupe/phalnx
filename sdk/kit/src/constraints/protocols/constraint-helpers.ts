@@ -14,7 +14,10 @@ import type { InstructionSchema, ProtocolSchema } from "../types.js";
 /**
  * Look up an instruction schema by action name, throwing if not found.
  */
-export function getSchema(schema: ProtocolSchema, action: string): InstructionSchema {
+export function getSchema(
+  schema: ProtocolSchema,
+  action: string,
+): InstructionSchema {
   const ix = schema.instructions.get(action);
   if (!ix) {
     throw new Error(`Unknown ${schema.protocolId} action: ${action}`);
@@ -25,7 +28,9 @@ export function getSchema(schema: ProtocolSchema, action: string): InstructionSc
 /**
  * Build an Eq data constraint matching an 8-byte discriminator at offset 0.
  */
-export function makeDiscriminatorConstraint(disc: Uint8Array): DataConstraintArgs {
+export function makeDiscriminatorConstraint(
+  disc: Uint8Array,
+): DataConstraintArgs {
   return {
     offset: 0,
     operator: ConstraintOperator.Eq,

@@ -19,7 +19,12 @@ import type {
   TransactionSigner,
 } from "@solana/kit";
 import { getBase64EncodedWireTransaction } from "@solana/kit";
-import { analyzeInstructions, type InspectableInstruction, type InstructionAnalysis, type TokenTransferInfo } from "./inspector.js";
+import {
+  analyzeInstructions,
+  type InspectableInstruction,
+  type InstructionAnalysis,
+  type TokenTransferInfo,
+} from "./inspector.js";
 import {
   resolvePolicies,
   type ShieldPolicies,
@@ -32,7 +37,10 @@ import { VALIDATE_AND_AUTHORIZE_DISCRIMINATOR } from "./generated/instructions/v
 import { FINALIZE_SESSION_DISCRIMINATOR } from "./generated/instructions/finalizeSession.js";
 import { ACTION_TYPE_MAP, type IntentAction } from "./intents.js";
 import type { AltCache } from "./alt-loader.js";
-import { resolveVaultState, type ResolvedVaultState } from "./state-resolver.js";
+import {
+  resolveVaultState,
+  type ResolvedVaultState,
+} from "./state-resolver.js";
 import { isStablecoinMint, type Network } from "./types.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -45,7 +53,10 @@ export interface PolicyViolation {
 
 export class ShieldDeniedError extends Error {
   public code?: number;
-  constructor(public readonly violations: PolicyViolation[], code?: number) {
+  constructor(
+    public readonly violations: PolicyViolation[],
+    code?: number,
+  ) {
     const msgs = violations.map((v) => v.message).join("; ");
     super(`Shield denied: ${msgs}`);
     this.name = "ShieldDeniedError";
@@ -201,7 +212,8 @@ export class ShieldState {
   getEffectiveAgentRemaining(): bigint | null {
     if (!this._resolvedState?.agentBudget) return null;
     const cap = this._resolvedState.agentBudget.cap;
-    const spent = this._resolvedState.agentBudget.spent24h + this._localUsdAdditions;
+    const spent =
+      this._resolvedState.agentBudget.spent24h + this._localUsdAdditions;
     return spent < cap ? cap - spent : 0n;
   }
 
@@ -291,7 +303,8 @@ export function evaluateInstructions(
         violations.push({
           rule: "spend_limit",
           message: `Spend limit exceeded for ${limit.mint}: ${currentSpend + txSpend} > ${limit.amount}`,
-          suggestion: "Reduce the transaction amount or wait for the rolling window to reset",
+          suggestion:
+            "Reduce the transaction amount or wait for the rolling window to reset",
         });
       }
     }
@@ -299,7 +312,9 @@ export function evaluateInstructions(
 
   // 3. Rate limit check
   if (resolved.rateLimit) {
-    const count = state.getTransactionCountInWindow(resolved.rateLimit.windowMs);
+    const count = state.getTransactionCountInWindow(
+      resolved.rateLimit.windowMs,
+    );
     if (count >= resolved.rateLimit.maxTransactions) {
       violations.push({
         rule: "rate_limit",
@@ -338,7 +353,11 @@ export function evaluateInstructions(
   const effectiveNetwork = network ?? state.network;
   if (state.resolvedState && effectiveNetwork) {
     const rs = state.resolvedState;
-    const stablecoinUsdAmount = computeStablecoinUsd(analysis.tokenTransfers, signerAddress, effectiveNetwork);
+    const stablecoinUsdAmount = computeStablecoinUsd(
+      analysis.tokenTransfers,
+      signerAddress,
+      effectiveNetwork,
+    );
 
     if (stablecoinUsdAmount > 0n) {
       // Transaction size
@@ -430,10 +449,7 @@ export interface ShieldedContext {
   ): ShieldCheckResult;
 
   /** Check and record — throws ShieldDeniedError if denied */
-  enforce(
-    instructions: InspectableInstruction[],
-    signerAddress: Address,
-  ): void;
+  enforce(instructions: InspectableInstruction[], signerAddress: Address): void;
 
   /** Current resolved policies */
   readonly resolvedPolicies: ResolvedPolicies;
@@ -490,7 +506,7 @@ export function shield(
   if (!syncConfig) {
     console.warn(
       "[Shield] No onChainSync configured — spend tracking is client-side only " +
-      "and will reset on process restart.",
+        "and will reset on process restart.",
     );
   }
 
@@ -505,7 +521,8 @@ export function shield(
           violations: [
             {
               rule: "paused",
-              message: "Shield is paused — all operations blocked until resume()",
+              message:
+                "Shield is paused — all operations blocked until resume()",
               suggestion: "Call resume() to re-enable",
             },
           ],
@@ -569,7 +586,11 @@ export function shield(
 
       // Record aggregate stablecoin USD for on-chain cap tracking
       if (state.resolvedState && syncConfig) {
-        const stablecoinUsd = computeStablecoinUsd(analysis.tokenTransfers, signerAddress, syncConfig.network);
+        const stablecoinUsd = computeStablecoinUsd(
+          analysis.tokenTransfers,
+          signerAddress,
+          syncConfig.network,
+        );
         if (stablecoinUsd > 0n) {
           state.recordUsdSpend(stablecoinUsd);
         }
@@ -609,36 +630,39 @@ export function shield(
     },
 
     getSpendingSummary(): SpendingSummary {
-      const tokens = (resolved.spendLimits ?? []).map(
-        (limit: SpendLimit) => {
-          const windowMs = limit.windowMs ?? 86_400_000;
-          const spent = state.getSpendInWindow(limit.mint, windowMs);
-          const remaining = limit.amount > spent ? limit.amount - spent : 0n;
-          return {
-            mint: limit.mint as Address,
-            spent,
-            limit: limit.amount,
-            remaining,
-            windowMs,
-          };
-        },
-      );
+      const tokens = (resolved.spendLimits ?? []).map((limit: SpendLimit) => {
+        const windowMs = limit.windowMs ?? 86_400_000;
+        const spent = state.getSpendInWindow(limit.mint, windowMs);
+        const remaining = limit.amount > spent ? limit.amount - spent : 0n;
+        return {
+          mint: limit.mint as Address,
+          spent,
+          limit: limit.amount,
+          remaining,
+          windowMs,
+        };
+      });
 
-      const rl = resolved.rateLimit ?? { maxTransactions: 60, windowMs: 3_600_000 };
+      const rl = resolved.rateLimit ?? {
+        maxTransactions: 60,
+        windowMs: 3_600_000,
+      };
       const txCount = state.getTransactionCountInWindow(rl.windowMs);
 
       const rs = state.resolvedState;
-      const onChain = rs ? {
-        globalSpent24h: state.getEffectiveGlobalSpent24h(),
-        globalCap: rs.globalBudget.cap,
-        globalRemaining: state.getEffectiveGlobalRemaining() ?? 0n,
-        agentSpent24h: state.getEffectiveAgentSpent24h(),
-        agentCap: rs.agentBudget?.cap ?? null,
-        agentRemaining: state.getEffectiveAgentRemaining(),
-        maxTransactionUsd: rs.maxTransactionUsd,
-        localAdditions: state.localUsdAdditions,
-        syncedAt: rs.resolvedAtTimestamp,
-      } : undefined;
+      const onChain = rs
+        ? {
+            globalSpent24h: state.getEffectiveGlobalSpent24h(),
+            globalCap: rs.globalBudget.cap,
+            globalRemaining: state.getEffectiveGlobalRemaining() ?? 0n,
+            agentSpent24h: state.getEffectiveAgentSpent24h(),
+            agentCap: rs.agentBudget?.cap ?? null,
+            agentRemaining: state.getEffectiveAgentRemaining(),
+            maxTransactionUsd: rs.maxTransactionUsd,
+            localAdditions: state.localUsdAdditions,
+            syncedAt: rs.resolvedAtTimestamp,
+          }
+        : undefined;
 
       return {
         tokens,
@@ -655,7 +679,9 @@ export function shield(
 
     async sync(): Promise<void> {
       if (!syncConfig) {
-        throw new Error("Cannot sync: onChainSync not configured in ShieldOptions");
+        throw new Error(
+          "Cannot sync: onChainSync not configured in ShieldOptions",
+        );
       }
       const resolved = await resolveVaultState(
         syncConfig.rpc,
@@ -734,7 +760,10 @@ export function createShieldedSigner(
       txs: readonly any[],
     ): Promise<readonly any[]> {
       for (const tx of txs) {
-        const instructions = _extractInstructionsFromCompiled(tx, options?.altCache);
+        const instructions = _extractInstructionsFromCompiled(
+          tx,
+          options?.altCache,
+        );
 
         // Property 1: Intent-TX correspondence (SOFT)
         if (options?.intentContext) {
@@ -743,7 +772,12 @@ export function createShieldedSigner(
 
         // Property 2: Velocity ceiling (HARD)
         if (options?.velocityThresholds) {
-          checkVelocityCeiling(shieldCtx.state, instructions, baseSigner.address, options.velocityThresholds);
+          checkVelocityCeiling(
+            shieldCtx.state,
+            instructions,
+            baseSigner.address,
+            options.velocityThresholds,
+          );
         }
 
         // Property 3: Simulation liveness (HARD)
@@ -767,7 +801,8 @@ export function createShieldedSigner(
               {
                 rule: "simulation",
                 message: `Simulation failed: ${result.error?.message ?? "unknown error"}`,
-                suggestion: result.error?.suggestion ?? "Check transaction validity",
+                suggestion:
+                  result.error?.suggestion ?? "Check transaction validity",
               },
             ]);
           }
@@ -792,7 +827,7 @@ export function createShieldedSigner(
         if (shieldCtx.state.enforceUsed) {
           console.warn(
             "[ShieldedSigner] enforce() was already called on this ShieldState — " +
-            "using ShieldedSigner after enforce() may double-count spending",
+              "using ShieldedSigner after enforce() may double-count spending",
           );
         }
 
@@ -807,7 +842,11 @@ export function createShieldedSigner(
 
         // Record aggregate stablecoin USD for on-chain cap tracking
         if (shieldCtx.state.resolvedState && shieldCtx.state.network) {
-          const stablecoinUsd = computeStablecoinUsd(analysis.tokenTransfers, baseSigner.address, shieldCtx.state.network);
+          const stablecoinUsd = computeStablecoinUsd(
+            analysis.tokenTransfers,
+            baseSigner.address,
+            shieldCtx.state.network,
+          );
           if (stablecoinUsd > 0n) {
             shieldCtx.state.recordUsdSpend(stablecoinUsd);
           }
@@ -858,14 +897,18 @@ export function _extractInstructionsFromCompiled(
     // ALL lookups first, then ALL readonlys from ALL lookups.
     // Pass 1: ALL writables from ALL lookups (in lookup order)
     for (const lookup of msg.addressTableLookups) {
-      const resolved = altCache.getCachedAddresses(lookup.lookupTableAddress as Address);
+      const resolved = altCache.getCachedAddresses(
+        lookup.lookupTableAddress as Address,
+      );
       if (resolved) {
         for (const idx of lookup.writableIndexes ?? []) {
           // S-3: Bounds check before pushing ALT-resolved address
           if (idx < resolved.length) {
             accountTable.push(resolved[idx]);
           } else {
-            console.warn(`[Shield] ALT index ${idx} out of bounds (${resolved.length} entries)`);
+            console.warn(
+              `[Shield] ALT index ${idx} out of bounds (${resolved.length} entries)`,
+            );
             accountTable.push("11111111111111111111111111111111" as Address);
           }
         }
@@ -873,14 +916,18 @@ export function _extractInstructionsFromCompiled(
     }
     // Pass 2: ALL readonlys from ALL lookups
     for (const lookup of msg.addressTableLookups) {
-      const resolved = altCache.getCachedAddresses(lookup.lookupTableAddress as Address);
+      const resolved = altCache.getCachedAddresses(
+        lookup.lookupTableAddress as Address,
+      );
       if (resolved) {
         for (const idx of lookup.readonlyIndexes ?? []) {
           // S-3: Bounds check before pushing ALT-resolved address
           if (idx < resolved.length) {
             accountTable.push(resolved[idx]);
           } else {
-            console.warn(`[Shield] ALT index ${idx} out of bounds (${resolved.length} entries)`);
+            console.warn(
+              `[Shield] ALT index ${idx} out of bounds (${resolved.length} entries)`,
+            );
             accountTable.push("11111111111111111111111111111111" as Address);
           }
         }
@@ -932,7 +979,8 @@ function checkVelocityCeiling(
         {
           rule: "velocity_ceiling",
           message: `Hourly USD spend ${projectedSpend} exceeds ceiling ${thresholds.maxUsdPerHour}`,
-          suggestion: "Reduce transaction amounts or wait for the window to reset",
+          suggestion:
+            "Reduce transaction amounts or wait for the window to reset",
         },
       ]);
     }
@@ -950,7 +998,8 @@ function checkSessionBinding(
 ): void {
   const msg = tx.compiledMessage;
   if (!msg?.staticAccounts?.length || !msg?.instructions?.length) {
-    const message = "[ShieldedSigner] Cannot verify session binding: no compiled message";
+    const message =
+      "[ShieldedSigner] Cannot verify session binding: no compiled message";
     if (severity === "hard") {
       throw new ShieldDeniedError([{ rule: "session_binding", message }]);
     }
@@ -963,7 +1012,8 @@ function checkSessionBinding(
   );
 
   if (phalnxIxs.length === 0) {
-    const message = "[ShieldedSigner] No Phalnx instructions found in transaction";
+    const message =
+      "[ShieldedSigner] No Phalnx instructions found in transaction";
     if (severity === "hard") {
       throw new ShieldDeniedError([{ rule: "session_binding", message }]);
     }
@@ -1020,7 +1070,9 @@ function checkIntentCorrespondence(
  */
 function _warnIfStale(state: ShieldState, thresholdSec: number): void {
   if (!state.resolvedState) return;
-  const age = Math.floor(Date.now() / 1000) - Number(state.resolvedState.resolvedAtTimestamp);
+  const age =
+    Math.floor(Date.now() / 1000) -
+    Number(state.resolvedState.resolvedAtTimestamp);
   if (age > thresholdSec) {
     console.warn(
       `[Shield] Resolved state is ${age}s old (threshold: ${thresholdSec}s) — call sync() for fresh data`,
@@ -1032,8 +1084,12 @@ function _warnIfStale(state: ShieldState, thresholdSec: number): void {
  * Compare first N bytes of data against a discriminator.
  */
 function matchesDiscriminator(
-  data: Uint8Array | { readonly [index: number]: number; readonly length: number },
-  disc: Uint8Array | { readonly [index: number]: number; readonly length: number },
+  data:
+    | Uint8Array
+    | { readonly [index: number]: number; readonly length: number },
+  disc:
+    | Uint8Array
+    | { readonly [index: number]: number; readonly length: number },
 ): boolean {
   if (data.length < disc.length) return false;
   for (let i = 0; i < disc.length; i++) {

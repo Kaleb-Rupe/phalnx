@@ -12,8 +12,10 @@ import type { InspectableInstruction } from "../inspector.js";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-export const TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address;
-export const ATA_PROGRAM_ID = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" as Address;
+export const TOKEN_PROGRAM_ID =
+  "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address;
+export const ATA_PROGRAM_ID =
+  "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" as Address;
 
 /** SPL TransferChecked instruction discriminator */
 const TRANSFER_CHECKED_DISCRIMINATOR = 12;
@@ -120,7 +122,8 @@ export function transferToInspectable(ix: Instruction): InspectableInstruction {
 
 // ─── Base58 Decode ──────────────────────────────────────────────────────────
 
-const BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+const BASE58_ALPHABET =
+  "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
 function base58Decode(str: string): Uint8Array {
   const bytes: number[] = [0];

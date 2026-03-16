@@ -8,7 +8,10 @@
 import { z } from "zod";
 
 export const kaminoHealthMonitorArgsSchema = {
-  wallet: z.string().optional().describe("Wallet address to monitor (uses default if omitted)"),
+  wallet: z
+    .string()
+    .optional()
+    .describe("Wallet address to monitor (uses default if omitted)"),
   healthThreshold: z
     .number()
     .optional()
@@ -49,14 +52,16 @@ export function kaminoHealthMonitorPrompt(args: KaminoHealthMonitorArgs) {
                   action: "assess",
                   purpose: "Identify obligations below health threshold",
                   check: `healthFactor < ${args.healthThreshold ?? 1.2}`,
-                  onRisk: "Calculate repay amount needed to restore to safe level",
+                  onRisk:
+                    "Calculate repay amount needed to restore to safe level",
                 },
                 {
                   step: 3,
                   action: "plan",
                   purpose: "Present repay plan with exact amounts if at-risk",
                   ifSafe: "Report all positions healthy — no action needed",
-                  ifAtRisk: "Show: which token to repay, how much, estimated new health factor",
+                  ifAtRisk:
+                    "Show: which token to repay, how much, estimated new health factor",
                 },
               ],
             },

@@ -75,7 +75,12 @@ describe("t2-handlers", () => {
     });
 
     it("summarize produces readable output", () => {
-      expect(handler.summarize("openPosition", { side: "long", targetSymbol: "SOL" }))
+      expect(
+        handler.summarize("openPosition", {
+          side: "long",
+          targetSymbol: "SOL",
+        }),
+      )
         .to.include("Flash")
         .and.include("long")
         .and.include("SOL");

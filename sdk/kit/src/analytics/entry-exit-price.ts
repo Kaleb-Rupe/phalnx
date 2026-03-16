@@ -11,18 +11,15 @@ import { PositionSide as Side } from "./types.js";
  * Calculate trade spread based on position size.
  * Linear interpolation between tradeSpreadMin and tradeSpreadMax.
  */
-export function getTradeSpread(
-  custody: CustodyInfo,
-  sizeUsd: bigint,
-): bigint {
+export function getTradeSpread(custody: CustodyInfo, sizeUsd: bigint): bigint {
   const { pricing } = custody;
   const spreadRange = pricing.tradeSpreadMax - pricing.tradeSpreadMin;
 
   if (spreadRange === 0n || sizeUsd === 0n) return 0n;
 
   const scaleFactor = 10n ** BigInt(RATE_DECIMALS + 4); // BPS_DECIMALS = 4
-  const slope = spreadRange * scaleFactor / pricing.maxPositionSizeUsd;
-  const variable = slope * sizeUsd / scaleFactor;
+  const slope = (spreadRange * scaleFactor) / pricing.maxPositionSizeUsd;
+  const variable = (slope * sizeUsd) / scaleFactor;
 
   return pricing.tradeSpreadMin + variable;
 }
@@ -101,7 +98,7 @@ export function getPriceAfterSlippage(
   side: PositionSide,
 ): { price: bigint; exponent: number } {
   const currentPrice = targetPrice.price;
-  const scaledSlippage = currentPrice * slippageBps / BPS_POWER;
+  const scaledSlippage = (currentPrice * slippageBps) / BPS_POWER;
 
   if (isEntry) {
     if (side === Side.Long) {

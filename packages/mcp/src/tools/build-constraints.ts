@@ -1,8 +1,14 @@
 import { z } from "zod";
-import { protocolConfigSchema, loadKit, getDescriptors } from "./constraint-shared";
+import {
+  protocolConfigSchema,
+  loadKit,
+  getDescriptors,
+} from "./constraint-shared";
 
 export const buildConstraintsSchema = z.object({
-  configs: z.array(protocolConfigSchema).describe("Protocol constraint configurations"),
+  configs: z
+    .array(protocolConfigSchema)
+    .describe("Protocol constraint configurations"),
 });
 
 export type BuildConstraintsInput = z.infer<typeof buildConstraintsSchema>;
@@ -60,11 +66,17 @@ export async function buildConstraints(
       "### Raw Entries (for createInstructionConstraints)",
       `\`\`\`json`,
       JSON.stringify(
-        result.entries.map((e: { programId: string; dataConstraints: unknown[]; accountConstraints: unknown[] }) => ({
-          programId: e.programId,
-          dataConstraints: e.dataConstraints.length,
-          accountConstraints: e.accountConstraints.length,
-        })),
+        result.entries.map(
+          (e: {
+            programId: string;
+            dataConstraints: unknown[];
+            accountConstraints: unknown[];
+          }) => ({
+            programId: e.programId,
+            dataConstraints: e.dataConstraints.length,
+            accountConstraints: e.accountConstraints.length,
+          }),
+        ),
         null,
         2,
       ),

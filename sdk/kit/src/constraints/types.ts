@@ -16,7 +16,14 @@ import type {
 
 // ─── Instruction Schema (protocol-specific knowledge) ─────────────────────
 
-export type FieldType = "u8" | "u16" | "u32" | "u64" | "i64" | "bool" | "pubkey";
+export type FieldType =
+  | "u8"
+  | "u16"
+  | "u32"
+  | "u64"
+  | "i64"
+  | "bool"
+  | "pubkey";
 
 export interface InstructionFieldSchema {
   /** Field name, e.g. "sizeAmount" */
@@ -89,7 +96,10 @@ export interface ProtocolDescriptor {
   /** Validate a rule config, return error messages */
   validateRule(rule: ActionRule): string[];
   /** Check strict_mode coverage and return warnings (e.g. missing risk-reducing actions) */
-  checkStrictModeWarnings?(config: { actionRules: ActionRule[]; strictMode?: boolean }): string[];
+  checkStrictModeWarnings?(config: {
+    actionRules: ActionRule[];
+    strictMode?: boolean;
+  }): string[];
 }
 
 // ─── Build Result ─────────────────────────────────────────────────────────

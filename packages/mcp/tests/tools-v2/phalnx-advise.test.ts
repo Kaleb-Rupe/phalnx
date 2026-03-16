@@ -449,8 +449,8 @@ describe("phalnx_advise", () => {
                   ? { errorCode: 6000 }
                   : {},
         });
-        expect(() => JSON.parse(result), `${q} should return valid JSON`).not
-          .to.throw;
+        expect(() => JSON.parse(result), `${q} should return valid JSON`).not.to
+          .throw;
       }
     });
 

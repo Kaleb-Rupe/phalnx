@@ -10,7 +10,9 @@ import { z } from "zod";
 export const safeSwapArgsSchema = {
   inputToken: z.string().describe("Input token symbol or mint address"),
   outputToken: z.string().describe("Output token symbol or mint address"),
-  amount: z.string().describe("Amount in token-native units (e.g. '1000000' for 1 USDC)"),
+  amount: z
+    .string()
+    .describe("Amount in token-native units (e.g. '1000000' for 1 USDC)"),
   slippageBps: z
     .number()
     .optional()

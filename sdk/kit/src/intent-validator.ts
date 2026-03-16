@@ -483,7 +483,8 @@ function validateSide(
     errors.push(
       makeError(field, value, 'Side must be "long" or "short"', {
         action: "fix_side",
-        description: 'Use exactly "long" or "short" -- no other values accepted',
+        description:
+          'Use exactly "long" or "short" -- no other values accepted',
       }),
     );
   }

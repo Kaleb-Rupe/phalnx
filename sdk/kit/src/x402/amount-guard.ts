@@ -47,7 +47,10 @@ export function validatePaymentAmount(
   }
 
   // 3. Per-request ceiling
-  if (config?.maxPaymentPerRequest !== undefined && parsed > config.maxPaymentPerRequest) {
+  if (
+    config?.maxPaymentPerRequest !== undefined &&
+    parsed > config.maxPaymentPerRequest
+  ) {
     throw new X402PaymentError(
       `Payment amount ${amount} exceeds per-request ceiling ${config.maxPaymentPerRequest}`,
     );

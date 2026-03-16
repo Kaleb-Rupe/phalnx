@@ -8,10 +8,7 @@ import {
   bytesToAddress,
   resolveVaultState,
 } from "../src/state-resolver.js";
-import type {
-  EffectiveBudget,
-  ProtocolBudget,
-} from "../src/state-resolver.js";
+import type { EffectiveBudget, ProtocolBudget } from "../src/state-resolver.js";
 import type { SpendTracker } from "../src/generated/accounts/spendTracker.js";
 import type { AgentContributionEntry } from "../src/generated/types/agentContributionEntry.js";
 import type { EpochBucket } from "../src/generated/types/epochBucket.js";
@@ -55,8 +52,7 @@ function makeTracker(
     discriminator: new Uint8Array(8),
     vault: "Vault111111111111111111111111111111111111111" as Address,
     buckets: overrides.buckets ?? emptyBuckets(144),
-    protocolCounters:
-      overrides.protocolCounters ?? emptyProtocolCounters(10),
+    protocolCounters: overrides.protocolCounters ?? emptyProtocolCounters(10),
     lastWriteEpoch: overrides.lastWriteEpoch ?? 0n,
     bump: 255,
     padding: zeroBytes(7),
@@ -578,8 +574,7 @@ describe("G-2: saturating windowStart", () => {
 // ─── resolveVaultState ───────────────────────────────────────────────────────
 
 describe("resolveVaultState", () => {
-  const VAULT_ADDR =
-    "11111111111111111111111111111111" as Address;
+  const VAULT_ADDR = "11111111111111111111111111111111" as Address;
 
   it("throws when vault does not exist", async () => {
     const rpc = {
@@ -608,7 +603,8 @@ describe("resolveVaultState", () => {
     // This is covered by the pure function test, but this documents the integration
     // contract: resolveVaultState must never return negative remaining.
     const budget = { spent24h: 1_500_000_000n, cap: 1_000_000_000n } as any;
-    const remaining = budget.cap > budget.spent24h ? budget.cap - budget.spent24h : 0n;
+    const remaining =
+      budget.cap > budget.spent24h ? budget.cap - budget.spent24h : 0n;
     expect(remaining).to.equal(0n);
   });
 

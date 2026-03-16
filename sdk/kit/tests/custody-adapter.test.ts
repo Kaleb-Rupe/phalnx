@@ -8,8 +8,7 @@ import { AttestationStatus, type AttestationResult } from "../src/tee/types.js";
 
 // ─── Test Constants ────────────────────────────────────────────────────────
 
-const MOCK_ADDRESS =
-  "CustodyMockAddr1111111111111111111111111111" as Address;
+const MOCK_ADDRESS = "CustodyMockAddr1111111111111111111111111111" as Address;
 const MOCK_SIG = new Uint8Array(64).fill(0xab);
 const MOCK_MESSAGE = new Uint8Array([1, 2, 3, 4, 5]);
 

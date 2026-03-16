@@ -1,9 +1,18 @@
 import { expect } from "chai";
 import type { Address } from "@solana/kit";
-import { IntentEngine, type IntentEngineConfig, type ExplainResult } from "../src/intent-engine.js";
+import {
+  IntentEngine,
+  type IntentEngineConfig,
+  type ExplainResult,
+} from "../src/intent-engine.js";
 import { ProtocolRegistry } from "../src/integrations/protocol-registry.js";
 import { JupiterHandler } from "../src/integrations/jupiter-handler.js";
-import { DriftHandler, FlashTradeHandler, KaminoHandler, SquadsHandler } from "../src/integrations/t2-handlers.js";
+import {
+  DriftHandler,
+  FlashTradeHandler,
+  KaminoHandler,
+  SquadsHandler,
+} from "../src/integrations/t2-handlers.js";
 import type { IntentAction, PrecheckResult } from "../src/intents.js";
 import { isAgentError, type AgentError } from "../src/agent-errors.js";
 import { ACTION_TYPE_MAP } from "../src/intents.js";
@@ -55,7 +64,11 @@ describe("IntentEngine", () => {
       const engine = buildEngine();
       const result = engine.validate({
         type: "swap",
-        params: { inputMint: USDC_MINT, outputMint: SOL_MINT, amount: "1000000" },
+        params: {
+          inputMint: USDC_MINT,
+          outputMint: SOL_MINT,
+          amount: "1000000",
+        },
       });
       expect(result.valid).to.be.true;
     });
@@ -83,7 +96,11 @@ describe("IntentEngine", () => {
       const engine = buildEngine();
       const result = engine.validate({
         type: "swap",
-        params: { inputMint: USDC_MINT, outputMint: SOL_MINT, amount: "not_a_number" },
+        params: {
+          inputMint: USDC_MINT,
+          outputMint: SOL_MINT,
+          amount: "not_a_number",
+        },
       });
       expect(result.valid).to.be.false;
     });
@@ -105,7 +122,12 @@ describe("IntentEngine", () => {
       const engine = buildEngine();
       const result = engine.validate({
         type: "openPosition",
-        params: { market: "SOL-PERP", side: "long", collateral: "100", leverage: 5 },
+        params: {
+          market: "SOL-PERP",
+          side: "long",
+          collateral: "100",
+          leverage: 5,
+        },
       });
       expect(result.valid).to.be.true;
     });
@@ -114,7 +136,12 @@ describe("IntentEngine", () => {
       const engine = buildEngine();
       const result = engine.validate({
         type: "openPosition",
-        params: { market: "SOL-PERP", side: "long", collateral: "100", leverage: 0 },
+        params: {
+          market: "SOL-PERP",
+          side: "long",
+          collateral: "100",
+          leverage: 0,
+        },
       });
       expect(result.valid).to.be.false;
     });
@@ -199,7 +226,11 @@ describe("IntentEngine", () => {
         await engine.run(
           {
             type: "swap",
-            params: { inputMint: USDC_MINT, outputMint: SOL_MINT, amount: "1000000" },
+            params: {
+              inputMint: USDC_MINT,
+              outputMint: SOL_MINT,
+              amount: "1000000",
+            },
           },
           VAULT,
         );
@@ -219,7 +250,14 @@ describe("IntentEngine", () => {
         } as any,
       });
       const result = await engine.precheck(
-        { type: "swap", params: { inputMint: USDC_MINT, outputMint: SOL_MINT, amount: "1000000" } },
+        {
+          type: "swap",
+          params: {
+            inputMint: USDC_MINT,
+            outputMint: SOL_MINT,
+            amount: "1000000",
+          },
+        },
         VAULT,
       );
       expect(result.allowed).to.be.false;
@@ -245,9 +283,7 @@ describe("IntentEngine", () => {
     it("frozen registry rejects new registrations", () => {
       const reg = buildRegistry();
       reg.freeze();
-      expect(() =>
-        reg.register(new JupiterHandler()),
-      ).to.throw();
+      expect(() => reg.register(new JupiterHandler())).to.throw();
     });
 
     it("engine uses registry for protocol lookup", () => {
@@ -262,7 +298,14 @@ describe("IntentEngine", () => {
       const engine = buildEngine(); // no executor
       try {
         await engine.execute(
-          { type: "swap", params: { inputMint: USDC_MINT, outputMint: SOL_MINT, amount: "1000000" } },
+          {
+            type: "swap",
+            params: {
+              inputMint: USDC_MINT,
+              outputMint: SOL_MINT,
+              amount: "1000000",
+            },
+          },
           VAULT,
         );
         expect.fail("Should have thrown");
@@ -296,7 +339,10 @@ describe("IntentEngine", () => {
 
   describe("M-2: resolveProtocolActionType everywhere", () => {
     // Access the private method via type cast for direct unit testing
-    function getBaseActionType(engine: IntentEngine, intent: IntentAction): string {
+    function getBaseActionType(
+      engine: IntentEngine,
+      intent: IntentAction,
+    ): string {
       return (engine as any)._getBaseActionType(intent);
     }
 
@@ -304,7 +350,11 @@ describe("IntentEngine", () => {
       const engine = buildEngine();
       const result = getBaseActionType(engine, {
         type: "swap",
-        params: { inputMint: USDC_MINT, outputMint: SOL_MINT, amount: "1000000" },
+        params: {
+          inputMint: USDC_MINT,
+          outputMint: SOL_MINT,
+          amount: "1000000",
+        },
       });
       // Jupiter handler maps "swap" -> ActionType.Swap
       // ACTION_TYPE_MAP entry for "swap" also has ActionType.Swap
@@ -319,7 +369,12 @@ describe("IntentEngine", () => {
       const engine = buildEngine();
       const result = getBaseActionType(engine, {
         type: "openPosition",
-        params: { market: "SOL-PERP", side: "long", collateral: "100", leverage: 5 },
+        params: {
+          market: "SOL-PERP",
+          side: "long",
+          collateral: "100",
+          leverage: 5,
+        },
       });
       // Flash Trade handler maps "openPosition" -> ActionType.OpenPosition
       expect(result).to.equal("openPosition");
@@ -359,7 +414,11 @@ describe("IntentEngine", () => {
       const engine = buildEngine({ protocolRegistry: emptyRegistry });
       const result = getBaseActionType(engine, {
         type: "swap",
-        params: { inputMint: USDC_MINT, outputMint: SOL_MINT, amount: "1000000" },
+        params: {
+          inputMint: USDC_MINT,
+          outputMint: SOL_MINT,
+          amount: "1000000",
+        },
       });
       // No Jupiter handler in empty registry, so _resolveHandler returns null
       // Falls back to raw type string
@@ -373,33 +432,53 @@ describe("IntentEngine", () => {
       // Kamino handler maps "deposit" -> ActionType.Deposit
       const depositResult = getBaseActionType(engine, {
         type: "kaminoDeposit",
-        params: { tokenMint: USDC_MINT, amount: "1000000", obligation: "obl111" },
+        params: {
+          tokenMint: USDC_MINT,
+          amount: "1000000",
+          obligation: "obl111",
+        },
       });
       expect(depositResult).to.equal("deposit");
-      expect(ACTION_TYPE_MAP[depositResult as keyof typeof ACTION_TYPE_MAP].actionType)
-        .to.equal(ActionType.Deposit);
+      expect(
+        ACTION_TYPE_MAP[depositResult as keyof typeof ACTION_TYPE_MAP]
+          .actionType,
+      ).to.equal(ActionType.Deposit);
 
       // kaminoBorrow -> _getComposeAction strips "kamino" -> "borrow"
       // Kamino handler maps "borrow" -> ActionType.Withdraw
       const borrowResult = getBaseActionType(engine, {
         type: "kaminoBorrow",
-        params: { tokenMint: USDC_MINT, amount: "500000", obligation: "obl111" },
+        params: {
+          tokenMint: USDC_MINT,
+          amount: "500000",
+          obligation: "obl111",
+        },
       });
       expect(borrowResult).to.equal("withdraw");
-      expect(ACTION_TYPE_MAP[borrowResult as keyof typeof ACTION_TYPE_MAP].actionType)
-        .to.equal(ActionType.Withdraw);
+      expect(
+        ACTION_TYPE_MAP[borrowResult as keyof typeof ACTION_TYPE_MAP]
+          .actionType,
+      ).to.equal(ActionType.Withdraw);
 
       // kaminoRepay -> "repay" -> Kamino maps to ActionType.Deposit
       const repayResult = getBaseActionType(engine, {
         type: "kaminoRepay",
-        params: { tokenMint: USDC_MINT, amount: "500000", obligation: "obl111" },
+        params: {
+          tokenMint: USDC_MINT,
+          amount: "500000",
+          obligation: "obl111",
+        },
       });
       expect(repayResult).to.equal("deposit");
 
       // kaminoWithdraw -> "withdraw" -> Kamino maps to ActionType.Withdraw
       const withdrawResult = getBaseActionType(engine, {
         type: "kaminoWithdraw",
-        params: { tokenMint: USDC_MINT, amount: "500000", obligation: "obl111" },
+        params: {
+          tokenMint: USDC_MINT,
+          amount: "500000",
+          obligation: "obl111",
+        },
       });
       expect(withdrawResult).to.equal("withdraw");
     });
@@ -408,10 +487,14 @@ describe("IntentEngine", () => {
   // ─── Precheck Spending/Position/Leverage Tests ────────────────────────────
 
   describe("precheck() spending/position/leverage checks", () => {
-    const JUPITER_PROGRAM = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" as Address;
+    const JUPITER_PROGRAM =
+      "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" as Address;
 
     // Deep override type: pick specific fields for vault/policy partial overrides
-    type MockOverrides = Omit<Partial<ResolvedVaultState>, "vault" | "policy"> & {
+    type MockOverrides = Omit<
+      Partial<ResolvedVaultState>,
+      "vault" | "policy"
+    > & {
       vault?: Partial<ResolvedVaultState["vault"]>;
       policy?: Partial<ResolvedVaultState["policy"]>;
     };
@@ -424,9 +507,15 @@ describe("IntentEngine", () => {
           owner: "Owner11111111111111111111111111111111111111" as Address,
           vaultId: 1n,
           agents: [
-            { pubkey: AGENT, permissions: FULL_PERMISSIONS, spendingLimitUsd: 0n, paused: false },
+            {
+              pubkey: AGENT,
+              permissions: FULL_PERMISSIONS,
+              spendingLimitUsd: 0n,
+              paused: false,
+            },
           ],
-          feeDestination: "Fee111111111111111111111111111111111111111" as Address,
+          feeDestination:
+            "Fee111111111111111111111111111111111111111" as Address,
           status: VaultStatus.Active,
           bump: 255,
           createdAt: 1000n,
@@ -462,7 +551,11 @@ describe("IntentEngine", () => {
         tracker: null,
         overlay: null,
         constraints: null,
-        globalBudget: { spent24h: 0n, cap: 1_000_000_000n, remaining: 1_000_000_000n },
+        globalBudget: {
+          spent24h: 0n,
+          cap: 1_000_000_000n,
+          remaining: 1_000_000_000n,
+        },
         agentBudget: null,
         protocolBudgets: [],
         maxTransactionUsd: 500_000_000n,
@@ -484,13 +577,20 @@ describe("IntentEngine", () => {
 
     // Helper: USDC swap intent for spending tests
     function usdcSwap(amount: string): IntentAction {
-      return { type: "swap", params: { inputMint: USDC_MINT, outputMint: SOL_MINT, amount } };
+      return {
+        type: "swap",
+        params: { inputMint: USDC_MINT, outputMint: SOL_MINT, amount },
+      };
     }
 
     // Test 1: Spending exceeds vault cap
     it("rejects when spending exceeds vault daily cap (6006)", async () => {
       const engine = buildPrecheckEngine({
-        globalBudget: { spent24h: 900_000_000n, cap: 1_000_000_000n, remaining: 100_000_000n },
+        globalBudget: {
+          spent24h: 900_000_000n,
+          cap: 1_000_000_000n,
+          remaining: 100_000_000n,
+        },
       });
       const result = await engine.precheck(usdcSwap("200000000"), VAULT);
       expect(result.allowed).to.be.false;
@@ -501,10 +601,25 @@ describe("IntentEngine", () => {
     // Test 2: Spending exceeds agent limit (within vault cap)
     it("rejects when spending exceeds agent limit (6063)", async () => {
       const engine = buildPrecheckEngine({
-        globalBudget: { spent24h: 0n, cap: 1_000_000_000n, remaining: 1_000_000_000n },
-        agentBudget: { spent24h: 90_000_000n, cap: 100_000_000n, remaining: 10_000_000n },
+        globalBudget: {
+          spent24h: 0n,
+          cap: 1_000_000_000n,
+          remaining: 1_000_000_000n,
+        },
+        agentBudget: {
+          spent24h: 90_000_000n,
+          cap: 100_000_000n,
+          remaining: 10_000_000n,
+        },
         vault: {
-          agents: [{ pubkey: AGENT, permissions: FULL_PERMISSIONS, spendingLimitUsd: 100_000_000n, paused: false }],
+          agents: [
+            {
+              pubkey: AGENT,
+              permissions: FULL_PERMISSIONS,
+              spendingLimitUsd: 100_000_000n,
+              paused: false,
+            },
+          ],
         },
       });
       const result = await engine.precheck(usdcSwap("20000000"), VAULT);
@@ -517,7 +632,12 @@ describe("IntentEngine", () => {
     it("rejects when spending exceeds protocol cap (6069)", async () => {
       const engine = buildPrecheckEngine({
         protocolBudgets: [
-          { protocol: JUPITER_PROGRAM, spent24h: 90_000_000n, cap: 100_000_000n, remaining: 10_000_000n },
+          {
+            protocol: JUPITER_PROGRAM,
+            spent24h: 90_000_000n,
+            cap: 100_000_000n,
+            remaining: 10_000_000n,
+          },
         ],
       });
       const result = await engine.precheck(usdcSwap("20000000"), VAULT);
@@ -540,7 +660,11 @@ describe("IntentEngine", () => {
     // Test 5: All spending checks pass
     it("allows when all spending checks pass with budget populated", async () => {
       const engine = buildPrecheckEngine({
-        globalBudget: { spent24h: 100_000_000n, cap: 1_000_000_000n, remaining: 900_000_000n },
+        globalBudget: {
+          spent24h: 100_000_000n,
+          cap: 1_000_000_000n,
+          remaining: 900_000_000n,
+        },
       });
       const result = await engine.precheck(usdcSwap("50000000"), VAULT);
       expect(result.allowed).to.be.true;
@@ -551,7 +675,11 @@ describe("IntentEngine", () => {
     // Test 5b: Budget includes resolvedAt timestamp (G-3)
     it("precheck budget includes resolvedAt (G-3)", async () => {
       const engine = buildPrecheckEngine({
-        globalBudget: { spent24h: 0n, cap: 1_000_000_000n, remaining: 1_000_000_000n },
+        globalBudget: {
+          spent24h: 0n,
+          cap: 1_000_000_000n,
+          remaining: 1_000_000_000n,
+        },
       });
       const result = await engine.precheck(usdcSwap("50000000"), VAULT);
       expect(result.allowed).to.be.true;
@@ -564,7 +692,14 @@ describe("IntentEngine", () => {
     it("defers spending check for non-stablecoin input", async () => {
       const engine = buildPrecheckEngine();
       const result = await engine.precheck(
-        { type: "swap", params: { inputMint: SOL_MINT, outputMint: USDC_MINT, amount: "1000000000" } },
+        {
+          type: "swap",
+          params: {
+            inputMint: SOL_MINT,
+            outputMint: USDC_MINT,
+            amount: "1000000000",
+          },
+        },
         VAULT,
       );
       expect(result.allowed).to.be.true;
@@ -577,7 +712,15 @@ describe("IntentEngine", () => {
         policy: { maxLeverageBps: 5000 },
       });
       const result = await engine.precheck(
-        { type: "openPosition", params: { market: "SOL-PERP", side: "long", collateral: "100", leverage: 100 } },
+        {
+          type: "openPosition",
+          params: {
+            market: "SOL-PERP",
+            side: "long",
+            collateral: "100",
+            leverage: 100,
+          },
+        },
         VAULT,
       );
       expect(result.allowed).to.be.false;
@@ -591,7 +734,15 @@ describe("IntentEngine", () => {
         policy: { maxLeverageBps: 10000 },
       });
       const result = await engine.precheck(
-        { type: "openPosition", params: { market: "SOL-PERP", side: "long", collateral: "100", leverage: 5 } },
+        {
+          type: "openPosition",
+          params: {
+            market: "SOL-PERP",
+            side: "long",
+            collateral: "100",
+            leverage: 5,
+          },
+        },
         VAULT,
       );
       expect(result.allowed).to.be.true;
@@ -604,7 +755,15 @@ describe("IntentEngine", () => {
         policy: { maxConcurrentPositions: 5 },
       });
       const result = await engine.precheck(
-        { type: "openPosition", params: { market: "SOL-PERP", side: "long", collateral: "100", leverage: 5 } },
+        {
+          type: "openPosition",
+          params: {
+            market: "SOL-PERP",
+            side: "long",
+            collateral: "100",
+            leverage: 5,
+          },
+        },
         VAULT,
       );
       expect(result.allowed).to.be.false;
@@ -619,7 +778,15 @@ describe("IntentEngine", () => {
         policy: { maxConcurrentPositions: 5 },
       });
       const result = await engine.precheck(
-        { type: "openPosition", params: { market: "SOL-PERP", side: "long", collateral: "100", leverage: 5 } },
+        {
+          type: "openPosition",
+          params: {
+            market: "SOL-PERP",
+            side: "long",
+            collateral: "100",
+            leverage: 5,
+          },
+        },
         VAULT,
       );
       expect(result.allowed).to.be.true;
@@ -631,7 +798,15 @@ describe("IntentEngine", () => {
         policy: { canOpenPositions: false },
       });
       const result = await engine.precheck(
-        { type: "openPosition", params: { market: "SOL-PERP", side: "long", collateral: "100", leverage: 5 } },
+        {
+          type: "openPosition",
+          params: {
+            market: "SOL-PERP",
+            side: "long",
+            collateral: "100",
+            leverage: 5,
+          },
+        },
         VAULT,
       );
       expect(result.allowed).to.be.false;
@@ -644,7 +819,15 @@ describe("IntentEngine", () => {
       // cancelTriggerOrder is non-spending AND has posEffect "none" (no position check)
       const engine = buildPrecheckEngine();
       const result = await engine.precheck(
-        { type: "cancelTriggerOrder", params: { market: "SOL-PERP", side: "long" as const, orderId: "1", isStopLoss: true } },
+        {
+          type: "cancelTriggerOrder",
+          params: {
+            market: "SOL-PERP",
+            side: "long" as const,
+            orderId: "1",
+            isStopLoss: true,
+          },
+        },
         VAULT,
       );
       expect(result.allowed).to.be.true;
@@ -654,13 +837,33 @@ describe("IntentEngine", () => {
     // Test 13: Budget field populated on success
     it("populates budget field on success", async () => {
       const engine = buildPrecheckEngine({
-        globalBudget: { spent24h: 50_000_000n, cap: 1_000_000_000n, remaining: 950_000_000n },
-        agentBudget: { spent24h: 10_000_000n, cap: 200_000_000n, remaining: 190_000_000n },
+        globalBudget: {
+          spent24h: 50_000_000n,
+          cap: 1_000_000_000n,
+          remaining: 950_000_000n,
+        },
+        agentBudget: {
+          spent24h: 10_000_000n,
+          cap: 200_000_000n,
+          remaining: 190_000_000n,
+        },
         vault: {
-          agents: [{ pubkey: AGENT, permissions: FULL_PERMISSIONS, spendingLimitUsd: 200_000_000n, paused: false }],
+          agents: [
+            {
+              pubkey: AGENT,
+              permissions: FULL_PERMISSIONS,
+              spendingLimitUsd: 200_000_000n,
+              paused: false,
+            },
+          ],
         },
         protocolBudgets: [
-          { protocol: JUPITER_PROGRAM, spent24h: 5_000_000n, cap: 500_000_000n, remaining: 495_000_000n },
+          {
+            protocol: JUPITER_PROGRAM,
+            spent24h: 5_000_000n,
+            cap: 500_000_000n,
+            remaining: 495_000_000n,
+          },
         ],
         maxTransactionUsd: 250_000_000n,
       });
@@ -692,7 +895,11 @@ describe("IntentEngine", () => {
     // Test 15: No agent budget (spendingLimitUsd=0) skips agent check
     it("skips agent cap check when spendingLimitUsd is 0", async () => {
       const engine = buildPrecheckEngine({
-        globalBudget: { spent24h: 0n, cap: 1_000_000_000n, remaining: 1_000_000_000n },
+        globalBudget: {
+          spent24h: 0n,
+          cap: 1_000_000_000n,
+          remaining: 1_000_000_000n,
+        },
         agentBudget: null, // No per-agent budget
       });
       const result = await engine.precheck(usdcSwap("100000000"), VAULT);
@@ -704,7 +911,15 @@ describe("IntentEngine", () => {
     it("rejects escrow action with errorCode 6011", async () => {
       const engine = buildPrecheckEngine();
       const result = await engine.precheck(
-        { type: "createEscrow", params: { destinationVault: DEST, amount: "100000", mint: USDC_MINT, expiresInSeconds: 3600 } },
+        {
+          type: "createEscrow",
+          params: {
+            destinationVault: DEST,
+            amount: "100000",
+            mint: USDC_MINT,
+            expiresInSeconds: 3600,
+          },
+        },
         VAULT,
       );
       expect(result.allowed).to.be.false;
@@ -717,7 +932,11 @@ describe("IntentEngine", () => {
       const engine = buildPrecheckEngine({
         // Both limits are low — amount exceeds both
         maxTransactionUsd: 10_000_000n,
-        globalBudget: { spent24h: 990_000_000n, cap: 1_000_000_000n, remaining: 10_000_000n },
+        globalBudget: {
+          spent24h: 990_000_000n,
+          cap: 1_000_000_000n,
+          remaining: 10_000_000n,
+        },
       });
       // 50M > maxTx 10M AND spent 990M + 50M > cap 1B
       const result = await engine.precheck(usdcSwap("50000000"), VAULT);
@@ -729,7 +948,11 @@ describe("IntentEngine", () => {
     // Test 18: Exact boundary: spent24h + amount === cap → allowed
     it("allows when spent24h + amount exactly equals cap", async () => {
       const engine = buildPrecheckEngine({
-        globalBudget: { spent24h: 900_000_000n, cap: 1_000_000_000n, remaining: 100_000_000n },
+        globalBudget: {
+          spent24h: 900_000_000n,
+          cap: 1_000_000_000n,
+          remaining: 100_000_000n,
+        },
       });
       // 900M + 100M = 1B = cap. On-chain uses `>` not `>=`, so this passes.
       const result = await engine.precheck(usdcSwap("100000000"), VAULT);
@@ -755,7 +978,14 @@ describe("IntentEngine", () => {
       const engine = buildPrecheckEngine();
       // Use a string that fails base58 validation (contains 'O' and '0' which are invalid)
       const result = await engine.precheck(
-        { type: "swap", params: { inputMint: "INVALID", outputMint: SOL_MINT, amount: "1000" } },
+        {
+          type: "swap",
+          params: {
+            inputMint: "INVALID",
+            outputMint: SOL_MINT,
+            amount: "1000",
+          },
+        },
         VAULT,
       );
       expect(result.allowed).to.be.true;

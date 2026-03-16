@@ -31,7 +31,11 @@ import {
   SIZE_CONSTRAINED_ACTIONS,
 } from "./flash-trade-schema.js";
 import { FLASH_MARKET_MAP } from "../../integrations/config/flash-trade-markets.js";
-import { getSchema as getSchemaGeneric, makeDiscriminatorConstraint, makeLteConstraint } from "./constraint-helpers.js";
+import {
+  getSchema as getSchemaGeneric,
+  makeDiscriminatorConstraint,
+  makeLteConstraint,
+} from "./constraint-helpers.js";
 
 // ─── Size Field Mapping ─────────────────────────────────────────────────────
 
@@ -78,7 +82,11 @@ function compileAllowAll(rule: ActionRule): CompiledConstraint[] {
 function compileMaxPositionSize(rule: ActionRule): CompiledConstraint[] {
   const maxSize = BigInt(rule.params.maxSize as string | bigint);
   return rule.actions
-    .filter((a) => SIZE_CONSTRAINED_ACTIONS.includes(a as typeof SIZE_CONSTRAINED_ACTIONS[number]))
+    .filter((a) =>
+      SIZE_CONSTRAINED_ACTIONS.includes(
+        a as (typeof SIZE_CONSTRAINED_ACTIONS)[number],
+      ),
+    )
     .map((action) => {
       const schema = getSchema(action);
       const fieldName = SIZE_FIELD_MAP[action];
@@ -96,7 +104,11 @@ function compileMaxPositionSize(rule: ActionRule): CompiledConstraint[] {
 function compileMaxCollateral(rule: ActionRule): CompiledConstraint[] {
   const maxAmount = BigInt(rule.params.maxAmount as string | bigint);
   return rule.actions
-    .filter((a) => COLLATERAL_CONSTRAINED_ACTIONS.includes(a as typeof COLLATERAL_CONSTRAINED_ACTIONS[number]))
+    .filter((a) =>
+      COLLATERAL_CONSTRAINED_ACTIONS.includes(
+        a as (typeof COLLATERAL_CONSTRAINED_ACTIONS)[number],
+      ),
+    )
     .map((action) => {
       const schema = getSchema(action);
       const fieldName = COLLATERAL_FIELD_MAP[action];
@@ -159,7 +171,9 @@ function compileAllowedCollateral(rule: ActionRule): CompiledConstraint[] {
 function compileMaxOrderSize(rule: ActionRule): CompiledConstraint[] {
   const maxSize = BigInt(rule.params.maxSize as string | bigint);
   return rule.actions
-    .filter((a) => ORDER_SIZE_ACTIONS.includes(a as typeof ORDER_SIZE_ACTIONS[number]))
+    .filter((a) =>
+      ORDER_SIZE_ACTIONS.includes(a as (typeof ORDER_SIZE_ACTIONS)[number]),
+    )
     .map((action) => {
       const schema = getSchema(action);
       const fieldName = ORDER_SIZE_FIELD_MAP[action];
@@ -176,7 +190,10 @@ function compileMaxOrderSize(rule: ActionRule): CompiledConstraint[] {
 
 // ─── Descriptor ─────────────────────────────────────────────────────────────
 
-const RULE_COMPILERS: Record<string, (rule: ActionRule) => CompiledConstraint[]> = {
+const RULE_COMPILERS: Record<
+  string,
+  (rule: ActionRule) => CompiledConstraint[]
+> = {
   allowAll: compileAllowAll,
   maxPositionSize: compileMaxPositionSize,
   maxCollateral: compileMaxCollateral,
@@ -194,14 +211,16 @@ const RULE_TYPE_METADATA: RuleTypeMetadata[] = [
   {
     type: "allowAll",
     displayName: "Allow All Parameters",
-    description: "Allow the action with any parameters (discriminator-only constraint).",
+    description:
+      "Allow the action with any parameters (discriminator-only constraint).",
     applicableActions: [...Array.from(FLASH_TRADE_SCHEMA.instructions.keys())],
     params: [],
   },
   {
     type: "maxPositionSize",
     displayName: "Max Position Size",
-    description: "Cap position size per instruction (Lte on sizeAmount/sizeDelta).",
+    description:
+      "Cap position size per instruction (Lte on sizeAmount/sizeDelta).",
     applicableActions: [...SIZE_CONSTRAINED_ACTIONS],
     params: [
       {
@@ -390,7 +409,7 @@ export function checkStrictModeWarnings(config: {
   if (missingRiskReducing.length > 0) {
     warnings.push(
       `strict_mode is ON but these risk-reducing actions have no rules (agent cannot execute them): ${missingRiskReducing.join(", ")}. ` +
-      `Add an "allowAll" rule for these actions to prevent the agent from being unable to close positions.`,
+        `Add an "allowAll" rule for these actions to prevent the agent from being unable to close positions.`,
     );
   }
 

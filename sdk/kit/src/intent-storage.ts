@@ -98,9 +98,7 @@ export class MemoryIntentStorage implements IntentStorage {
 
   async update(
     id: string,
-    updates: Partial<
-      Pick<TransactionIntent, "status" | "updatedAt" | "error">
-    >,
+    updates: Partial<Pick<TransactionIntent, "status" | "updatedAt" | "error">>,
   ): Promise<void> {
     const existing = this._intents.get(id);
     if (!existing) {

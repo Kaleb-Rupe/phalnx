@@ -11,10 +11,7 @@ import type { CustodyInfo } from "./types.js";
  * In flash-sdk the fee model is complex (ratio-dependent).
  * This provides a simplified estimate using the open position fee as proxy.
  */
-export function getSwapFee(
-  amount: bigint,
-  custody: CustodyInfo,
-): bigint {
+export function getSwapFee(amount: bigint, custody: CustodyInfo): bigint {
   // Use openPosition fee rate as a reasonable swap fee estimate
   // The actual fee depends on pool ratios which require full pool state
   return (amount * custody.fees.openPosition) / RATE_POWER;

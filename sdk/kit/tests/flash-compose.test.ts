@@ -10,7 +10,10 @@ import type { Address, Rpc, SolanaRpcApi } from "@solana/kit";
 import type { ProtocolContext } from "../src/integrations/protocol-handler.js";
 import { dispatchFlashTradeCompose } from "../src/integrations/flash-compose.js";
 import { FlashTradeHandler } from "../src/integrations/t2-handlers.js";
-import { FlashTradeComposeError, COMPOSE_ERROR_CODES } from "../src/integrations/compose-errors.js";
+import {
+  FlashTradeComposeError,
+  COMPOSE_ERROR_CODES,
+} from "../src/integrations/compose-errors.js";
 import { PERPETUALS_PROGRAM } from "../src/integrations/config/flash-trade-markets.js";
 import { JUPITER_PROGRAM_ADDRESS } from "../src/types.js";
 import { OPEN_POSITION_DISCRIMINATOR } from "../src/generated/protocols/flash-trade/instructions/openPosition.js";
@@ -48,7 +51,10 @@ function makeCtx(): ProtocolContext {
 
 const DEFAULT_PRICE = { price: "150000000000", exponent: -9 };
 
-function matchDiscriminator(data: Uint8Array | ArrayLike<number>, expected: ArrayLike<number>): boolean {
+function matchDiscriminator(
+  data: Uint8Array | ArrayLike<number>,
+  expected: ArrayLike<number>,
+): boolean {
   for (let i = 0; i < 8; i++) {
     if (data[i] !== expected[i]) return false;
   }
@@ -71,7 +77,9 @@ describe("Flash Trade Compose (Codama)", () => {
         sizeAmount: "5000000000",
       });
       expect(result.instructions).to.have.length(1);
-      expect(result.instructions[0].programAddress).to.equal(PERPETUALS_PROGRAM);
+      expect(result.instructions[0].programAddress).to.equal(
+        PERPETUALS_PROGRAM,
+      );
     });
 
     it("returns additionalSigners (ephemeral position keypair)", async () => {
@@ -95,7 +103,12 @@ describe("Flash Trade Compose (Codama)", () => {
         collateralAmount: "1000000000",
         sizeAmount: "5000000000",
       });
-      expect(matchDiscriminator(result.instructions[0].data!, OPEN_POSITION_DISCRIMINATOR)).to.be.true;
+      expect(
+        matchDiscriminator(
+          result.instructions[0].data!,
+          OPEN_POSITION_DISCRIMINATOR,
+        ),
+      ).to.be.true;
     });
 
     it("has correct account count (19)", async () => {
@@ -121,8 +134,15 @@ describe("Flash Trade Compose (Codama)", () => {
         positionPubKey: FAKE_POSITION,
       });
       expect(result.instructions).to.have.length(1);
-      expect(result.instructions[0].programAddress).to.equal(PERPETUALS_PROGRAM);
-      expect(matchDiscriminator(result.instructions[0].data!, CLOSE_POSITION_DISCRIMINATOR)).to.be.true;
+      expect(result.instructions[0].programAddress).to.equal(
+        PERPETUALS_PROGRAM,
+      );
+      expect(
+        matchDiscriminator(
+          result.instructions[0].data!,
+          CLOSE_POSITION_DISCRIMINATOR,
+        ),
+      ).to.be.true;
       expect(result.additionalSigners).to.be.undefined;
     });
   });
@@ -138,7 +158,12 @@ describe("Flash Trade Compose (Codama)", () => {
         positionPubKey: FAKE_POSITION,
       });
       expect(result.instructions).to.have.length(1);
-      expect(matchDiscriminator(result.instructions[0].data!, INCREASE_SIZE_DISCRIMINATOR)).to.be.true;
+      expect(
+        matchDiscriminator(
+          result.instructions[0].data!,
+          INCREASE_SIZE_DISCRIMINATOR,
+        ),
+      ).to.be.true;
     });
   });
 
@@ -153,7 +178,12 @@ describe("Flash Trade Compose (Codama)", () => {
         positionPubKey: FAKE_POSITION,
       });
       expect(result.instructions).to.have.length(1);
-      expect(matchDiscriminator(result.instructions[0].data!, DECREASE_SIZE_DISCRIMINATOR)).to.be.true;
+      expect(
+        matchDiscriminator(
+          result.instructions[0].data!,
+          DECREASE_SIZE_DISCRIMINATOR,
+        ),
+      ).to.be.true;
       expect(result.additionalSigners).to.be.undefined;
     });
   });
@@ -168,7 +198,12 @@ describe("Flash Trade Compose (Codama)", () => {
         positionPubKey: FAKE_POSITION,
       });
       expect(result.instructions).to.have.length(1);
-      expect(matchDiscriminator(result.instructions[0].data!, ADD_COLLATERAL_DISCRIMINATOR)).to.be.true;
+      expect(
+        matchDiscriminator(
+          result.instructions[0].data!,
+          ADD_COLLATERAL_DISCRIMINATOR,
+        ),
+      ).to.be.true;
     });
   });
 
@@ -182,7 +217,12 @@ describe("Flash Trade Compose (Codama)", () => {
         positionPubKey: FAKE_POSITION,
       });
       expect(result.instructions).to.have.length(1);
-      expect(matchDiscriminator(result.instructions[0].data!, REMOVE_COLLATERAL_DISCRIMINATOR)).to.be.true;
+      expect(
+        matchDiscriminator(
+          result.instructions[0].data!,
+          REMOVE_COLLATERAL_DISCRIMINATOR,
+        ),
+      ).to.be.true;
       expect(result.additionalSigners).to.be.undefined;
     });
   });
@@ -200,7 +240,12 @@ describe("Flash Trade Compose (Codama)", () => {
         positionPubKey: FAKE_POSITION,
       });
       expect(result.additionalSigners).to.have.length(1);
-      expect(matchDiscriminator(result.instructions[0].data!, PLACE_TRIGGER_ORDER_DISCRIMINATOR)).to.be.true;
+      expect(
+        matchDiscriminator(
+          result.instructions[0].data!,
+          PLACE_TRIGGER_ORDER_DISCRIMINATOR,
+        ),
+      ).to.be.true;
     });
   });
 
@@ -219,20 +264,34 @@ describe("Flash Trade Compose (Codama)", () => {
         orderPubKey: FAKE_ORDER,
       });
       expect(result.instructions).to.have.length(1);
-      expect(matchDiscriminator(result.instructions[0].data!, EDIT_TRIGGER_ORDER_DISCRIMINATOR)).to.be.true;
+      expect(
+        matchDiscriminator(
+          result.instructions[0].data!,
+          EDIT_TRIGGER_ORDER_DISCRIMINATOR,
+        ),
+      ).to.be.true;
       expect(result.additionalSigners).to.be.undefined;
     });
   });
 
   describe("cancelTriggerOrder", () => {
     it("builds with minimal accounts", async () => {
-      const result = await dispatchFlashTradeCompose(ctx, "cancelTriggerOrder", {
-        orderId: 1,
-        isStopLoss: true,
-        orderPubKey: FAKE_ORDER,
-      });
+      const result = await dispatchFlashTradeCompose(
+        ctx,
+        "cancelTriggerOrder",
+        {
+          orderId: 1,
+          isStopLoss: true,
+          orderPubKey: FAKE_ORDER,
+        },
+      );
       expect(result.instructions).to.have.length(1);
-      expect(matchDiscriminator(result.instructions[0].data!, CANCEL_TRIGGER_ORDER_DISCRIMINATOR)).to.be.true;
+      expect(
+        matchDiscriminator(
+          result.instructions[0].data!,
+          CANCEL_TRIGGER_ORDER_DISCRIMINATOR,
+        ),
+      ).to.be.true;
       expect(result.additionalSigners).to.be.undefined;
     });
   });
@@ -252,7 +311,12 @@ describe("Flash Trade Compose (Codama)", () => {
         takeProfitPrice: { price: "200000000000", exponent: -9 },
       });
       expect(result.additionalSigners).to.have.length(2);
-      expect(matchDiscriminator(result.instructions[0].data!, PLACE_LIMIT_ORDER_DISCRIMINATOR)).to.be.true;
+      expect(
+        matchDiscriminator(
+          result.instructions[0].data!,
+          PLACE_LIMIT_ORDER_DISCRIMINATOR,
+        ),
+      ).to.be.true;
     });
   });
 
@@ -273,7 +337,12 @@ describe("Flash Trade Compose (Codama)", () => {
         orderPubKey: FAKE_ORDER,
       });
       expect(result.instructions).to.have.length(1);
-      expect(matchDiscriminator(result.instructions[0].data!, EDIT_LIMIT_ORDER_DISCRIMINATOR)).to.be.true;
+      expect(
+        matchDiscriminator(
+          result.instructions[0].data!,
+          EDIT_LIMIT_ORDER_DISCRIMINATOR,
+        ),
+      ).to.be.true;
       expect(result.additionalSigners).to.be.undefined;
     });
   });
@@ -292,14 +361,20 @@ describe("Flash Trade Compose (Codama)", () => {
       });
       expect(result.instructions).to.have.length(1);
       // cancelLimitOrder reuses editLimitOrder
-      expect(matchDiscriminator(result.instructions[0].data!, EDIT_LIMIT_ORDER_DISCRIMINATOR)).to.be.true;
+      expect(
+        matchDiscriminator(
+          result.instructions[0].data!,
+          EDIT_LIMIT_ORDER_DISCRIMINATOR,
+        ),
+      ).to.be.true;
     });
   });
 
   describe("swapAndOpen", () => {
     it("returns additionalSigners and prepends swap instructions", async () => {
       const fakeSwapIx = {
-        programAddress: "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" as Address,
+        programAddress:
+          "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" as Address,
         accounts: [],
         data: new Uint8Array([1, 2, 3]),
       };
@@ -313,8 +388,15 @@ describe("Flash Trade Compose (Codama)", () => {
         swapInstructions: [fakeSwapIx],
       });
       expect(result.instructions).to.have.length(2); // swap + Flash open
-      expect(result.instructions[0].programAddress).to.equal("JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4");
-      expect(matchDiscriminator(result.instructions[1].data!, SWAP_AND_OPEN_DISCRIMINATOR)).to.be.true;
+      expect(result.instructions[0].programAddress).to.equal(
+        "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",
+      );
+      expect(
+        matchDiscriminator(
+          result.instructions[1].data!,
+          SWAP_AND_OPEN_DISCRIMINATOR,
+        ),
+      ).to.be.true;
       expect(result.additionalSigners).to.have.length(1);
     });
   });
@@ -322,7 +404,8 @@ describe("Flash Trade Compose (Codama)", () => {
   describe("closeAndSwap", () => {
     it("appends swap instructions after close", async () => {
       const fakeSwapIx = {
-        programAddress: "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" as Address,
+        programAddress:
+          "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" as Address,
         accounts: [],
         data: new Uint8Array([4, 5, 6]),
       };
@@ -335,8 +418,15 @@ describe("Flash Trade Compose (Codama)", () => {
         swapInstructions: [fakeSwapIx],
       });
       expect(result.instructions).to.have.length(2); // Flash close + swap
-      expect(matchDiscriminator(result.instructions[0].data!, CLOSE_AND_SWAP_DISCRIMINATOR)).to.be.true;
-      expect(result.instructions[1].programAddress).to.equal("JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4");
+      expect(
+        matchDiscriminator(
+          result.instructions[0].data!,
+          CLOSE_AND_SWAP_DISCRIMINATOR,
+        ),
+      ).to.be.true;
+      expect(result.instructions[1].programAddress).to.equal(
+        "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",
+      );
     });
   });
 
@@ -380,19 +470,43 @@ describe("Flash Trade Compose (Codama)", () => {
     const handler = new FlashTradeHandler();
 
     it("produces readable summaries", () => {
-      expect(handler.summarize("openPosition", { targetSymbol: "SOL", side: "long" })).to.include("Flash open");
-      expect(handler.summarize("closePosition", { targetSymbol: "BTC" })).to.include("Flash close");
-      expect(handler.summarize("placeLimitOrder", { targetSymbol: "ETH", side: "short" })).to.include("Flash limit");
-      expect(handler.summarize("cancelTriggerOrder", {})).to.include("Flash cancel trigger");
+      expect(
+        handler.summarize("openPosition", {
+          targetSymbol: "SOL",
+          side: "long",
+        }),
+      ).to.include("Flash open");
+      expect(
+        handler.summarize("closePosition", { targetSymbol: "BTC" }),
+      ).to.include("Flash close");
+      expect(
+        handler.summarize("placeLimitOrder", {
+          targetSymbol: "ETH",
+          side: "short",
+        }),
+      ).to.include("Flash limit");
+      expect(handler.summarize("cancelTriggerOrder", {})).to.include(
+        "Flash cancel trigger",
+      );
     });
   });
 
   describe("all 14 actions dispatch", () => {
     const actions = [
-      "openPosition", "closePosition", "increasePosition", "decreasePosition",
-      "addCollateral", "removeCollateral", "placeTriggerOrder", "editTriggerOrder",
-      "cancelTriggerOrder", "placeLimitOrder", "editLimitOrder", "cancelLimitOrder",
-      "swapAndOpen", "closeAndSwap",
+      "openPosition",
+      "closePosition",
+      "increasePosition",
+      "decreasePosition",
+      "addCollateral",
+      "removeCollateral",
+      "placeTriggerOrder",
+      "editTriggerOrder",
+      "cancelTriggerOrder",
+      "placeLimitOrder",
+      "editLimitOrder",
+      "cancelLimitOrder",
+      "swapAndOpen",
+      "closeAndSwap",
     ];
 
     for (const action of actions) {
@@ -505,7 +619,11 @@ describe("Flash Trade Compose (Codama)", () => {
 
       it("accepts valid BigInt string", async () => {
         // Should not throw — tests that valid BigInt strings work
-        const result = await dispatchFlashTradeCompose(ctx, "openPosition", openPositionParams());
+        const result = await dispatchFlashTradeCompose(
+          ctx,
+          "openPosition",
+          openPositionParams(),
+        );
         expect(result.instructions).to.have.length.gte(1);
       });
 
@@ -629,18 +747,24 @@ describe("Flash Trade Compose (Codama)", () => {
     }
 
     it("swapAndOpen accepts instructions with Jupiter V6 program", async () => {
-      const result = await dispatchFlashTradeCompose(ctx, "swapAndOpen", swapAndOpenParams([
-        makeSwapIx(JUPITER_PROGRAM_ADDRESS),
-      ]));
+      const result = await dispatchFlashTradeCompose(
+        ctx,
+        "swapAndOpen",
+        swapAndOpenParams([makeSwapIx(JUPITER_PROGRAM_ADDRESS)]),
+      );
       expect(result.instructions).to.have.length(2); // swap + Flash swapAndOpen
-      expect(result.instructions[0].programAddress).to.equal(JUPITER_PROGRAM_ADDRESS);
+      expect(result.instructions[0].programAddress).to.equal(
+        JUPITER_PROGRAM_ADDRESS,
+      );
     });
 
     it("swapAndOpen rejects instruction with wrong program", async () => {
       try {
-        await dispatchFlashTradeCompose(ctx, "swapAndOpen", swapAndOpenParams([
-          makeSwapIx(WRONG_PROGRAM),
-        ]));
+        await dispatchFlashTradeCompose(
+          ctx,
+          "swapAndOpen",
+          swapAndOpenParams([makeSwapIx(WRONG_PROGRAM)]),
+        );
         expect.fail("should have thrown");
       } catch (e: any) {
         expect(e).to.be.instanceOf(FlashTradeComposeError);
@@ -651,23 +775,33 @@ describe("Flash Trade Compose (Codama)", () => {
     });
 
     it("swapAndOpen accepts empty swapInstructions array", async () => {
-      const result = await dispatchFlashTradeCompose(ctx, "swapAndOpen", swapAndOpenParams([]));
+      const result = await dispatchFlashTradeCompose(
+        ctx,
+        "swapAndOpen",
+        swapAndOpenParams([]),
+      );
       expect(result.instructions).to.have.length(1); // Only Flash swapAndOpen, no swap ix
     });
 
     it("closeAndSwap accepts instructions with Jupiter V6 program", async () => {
-      const result = await dispatchFlashTradeCompose(ctx, "closeAndSwap", closeAndSwapParams([
-        makeSwapIx(JUPITER_PROGRAM_ADDRESS),
-      ]));
+      const result = await dispatchFlashTradeCompose(
+        ctx,
+        "closeAndSwap",
+        closeAndSwapParams([makeSwapIx(JUPITER_PROGRAM_ADDRESS)]),
+      );
       expect(result.instructions).to.have.length(2); // Flash closeAndSwap + swap
-      expect(result.instructions[1].programAddress).to.equal(JUPITER_PROGRAM_ADDRESS);
+      expect(result.instructions[1].programAddress).to.equal(
+        JUPITER_PROGRAM_ADDRESS,
+      );
     });
 
     it("closeAndSwap rejects instruction with wrong program", async () => {
       try {
-        await dispatchFlashTradeCompose(ctx, "closeAndSwap", closeAndSwapParams([
-          makeSwapIx(WRONG_PROGRAM),
-        ]));
+        await dispatchFlashTradeCompose(
+          ctx,
+          "closeAndSwap",
+          closeAndSwapParams([makeSwapIx(WRONG_PROGRAM)]),
+        );
         expect.fail("should have thrown");
       } catch (e: any) {
         expect(e).to.be.instanceOf(FlashTradeComposeError);
@@ -679,9 +813,11 @@ describe("Flash Trade Compose (Codama)", () => {
     it("error message includes the invalid program address", async () => {
       const badProgram = "BadProgramAddress111111111111111" as Address;
       try {
-        await dispatchFlashTradeCompose(ctx, "swapAndOpen", swapAndOpenParams([
-          makeSwapIx(badProgram),
-        ]));
+        await dispatchFlashTradeCompose(
+          ctx,
+          "swapAndOpen",
+          swapAndOpenParams([makeSwapIx(badProgram)]),
+        );
         expect.fail("should have thrown");
       } catch (e: any) {
         expect(e).to.be.instanceOf(FlashTradeComposeError);
@@ -693,7 +829,9 @@ describe("Flash Trade Compose (Codama)", () => {
   });
 
   describe("H-4: Trigger order validation", () => {
-    function placeTriggerParams(triggerPrice: { price: string; exponent: number } = DEFAULT_PRICE) {
+    function placeTriggerParams(
+      triggerPrice: { price: string; exponent: number } = DEFAULT_PRICE,
+    ) {
       return {
         targetSymbol: "SOL",
         collateralSymbol: "SOL",
@@ -706,7 +844,9 @@ describe("Flash Trade Compose (Codama)", () => {
       };
     }
 
-    function editTriggerParams(triggerPrice: { price: string; exponent: number } = DEFAULT_PRICE) {
+    function editTriggerParams(
+      triggerPrice: { price: string; exponent: number } = DEFAULT_PRICE,
+    ) {
       return {
         targetSymbol: "SOL",
         collateralSymbol: "SOL",
@@ -723,7 +863,11 @@ describe("Flash Trade Compose (Codama)", () => {
 
     it("placeTriggerOrder rejects triggerPrice.price = '0'", async () => {
       try {
-        await dispatchFlashTradeCompose(ctx, "placeTriggerOrder", placeTriggerParams({ price: "0", exponent: -9 }));
+        await dispatchFlashTradeCompose(
+          ctx,
+          "placeTriggerOrder",
+          placeTriggerParams({ price: "0", exponent: -9 }),
+        );
         expect.fail("should have thrown");
       } catch (e: any) {
         expect(e.name).to.equal("FlashTradeComposeError");
@@ -734,7 +878,11 @@ describe("Flash Trade Compose (Codama)", () => {
 
     it("placeTriggerOrder rejects negative triggerPrice", async () => {
       try {
-        await dispatchFlashTradeCompose(ctx, "placeTriggerOrder", placeTriggerParams({ price: "-100", exponent: -9 }));
+        await dispatchFlashTradeCompose(
+          ctx,
+          "placeTriggerOrder",
+          placeTriggerParams({ price: "-100", exponent: -9 }),
+        );
         expect.fail("should have thrown");
       } catch (e: any) {
         expect(e.name).to.equal("FlashTradeComposeError");
@@ -744,14 +892,22 @@ describe("Flash Trade Compose (Codama)", () => {
     });
 
     it("placeTriggerOrder accepts positive triggerPrice", async () => {
-      const result = await dispatchFlashTradeCompose(ctx, "placeTriggerOrder", placeTriggerParams({ price: "150000000000", exponent: -9 }));
+      const result = await dispatchFlashTradeCompose(
+        ctx,
+        "placeTriggerOrder",
+        placeTriggerParams({ price: "150000000000", exponent: -9 }),
+      );
       expect(result.instructions).to.have.length(1);
       expect(result.additionalSigners).to.have.length(1);
     });
 
     it("editTriggerOrder rejects triggerPrice.price = '0'", async () => {
       try {
-        await dispatchFlashTradeCompose(ctx, "editTriggerOrder", editTriggerParams({ price: "0", exponent: -9 }));
+        await dispatchFlashTradeCompose(
+          ctx,
+          "editTriggerOrder",
+          editTriggerParams({ price: "0", exponent: -9 }),
+        );
         expect.fail("should have thrown");
       } catch (e: any) {
         expect(e.name).to.equal("FlashTradeComposeError");
@@ -762,7 +918,11 @@ describe("Flash Trade Compose (Codama)", () => {
 
     it("editTriggerOrder rejects negative triggerPrice", async () => {
       try {
-        await dispatchFlashTradeCompose(ctx, "editTriggerOrder", editTriggerParams({ price: "-500", exponent: -9 }));
+        await dispatchFlashTradeCompose(
+          ctx,
+          "editTriggerOrder",
+          editTriggerParams({ price: "-500", exponent: -9 }),
+        );
         expect.fail("should have thrown");
       } catch (e: any) {
         expect(e.name).to.equal("FlashTradeComposeError");
@@ -772,20 +932,32 @@ describe("Flash Trade Compose (Codama)", () => {
     });
 
     it("editTriggerOrder accepts positive triggerPrice", async () => {
-      const result = await dispatchFlashTradeCompose(ctx, "editTriggerOrder", editTriggerParams({ price: "200000000000", exponent: -9 }));
+      const result = await dispatchFlashTradeCompose(
+        ctx,
+        "editTriggerOrder",
+        editTriggerParams({ price: "200000000000", exponent: -9 }),
+      );
       expect(result.instructions).to.have.length(1);
       expect(result.additionalSigners).to.be.undefined;
     });
 
     it("placeTriggerOrder with valid params does not throw on triggerPrice validation", async () => {
       // Use a small but positive price to verify boundary acceptance
-      const result = await dispatchFlashTradeCompose(ctx, "placeTriggerOrder", placeTriggerParams({ price: "1", exponent: 0 }));
+      const result = await dispatchFlashTradeCompose(
+        ctx,
+        "placeTriggerOrder",
+        placeTriggerParams({ price: "1", exponent: 0 }),
+      );
       expect(result.instructions).to.have.length(1);
     });
 
     it("verify error code is INVALID_BIGINT", async () => {
       try {
-        await dispatchFlashTradeCompose(ctx, "placeTriggerOrder", placeTriggerParams({ price: "0", exponent: -9 }));
+        await dispatchFlashTradeCompose(
+          ctx,
+          "placeTriggerOrder",
+          placeTriggerParams({ price: "0", exponent: -9 }),
+        );
         expect.fail("should have thrown");
       } catch (e: any) {
         expect(e).to.be.instanceOf(FlashTradeComposeError);

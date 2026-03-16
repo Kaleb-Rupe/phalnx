@@ -6,7 +6,11 @@
  */
 
 import type { Address } from "@solana/kit";
-import type { PaymentRequired, PaymentRequirements, X402Config } from "./types.js";
+import type {
+  PaymentRequired,
+  PaymentRequirements,
+  X402Config,
+} from "./types.js";
 import { X402UnsupportedError, X402DestinationBlockedError } from "./errors.js";
 
 /**
@@ -34,7 +38,10 @@ export function selectPaymentOption(
     }
 
     // 2. Token allowlist filter
-    if (config?.allowedTokens && !config.allowedTokens.has(option.asset as Address)) {
+    if (
+      config?.allowedTokens &&
+      !config.allowedTokens.has(option.asset as Address)
+    ) {
       continue;
     }
 
@@ -42,7 +49,10 @@ export function selectPaymentOption(
 
     // 3. payTo destination allowlist — SECURITY-CRITICAL
     // Defense against prompt injection: malicious API returns attacker's payTo
-    if (config?.allowedDestinations && !config.allowedDestinations.has(option.payTo as Address)) {
+    if (
+      config?.allowedDestinations &&
+      !config.allowedDestinations.has(option.payTo as Address)
+    ) {
       hasBlockedDestination = true;
       continue;
     }

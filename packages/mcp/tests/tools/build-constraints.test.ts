@@ -25,9 +25,7 @@ describe("shield_build_constraints", () => {
       configs: [
         {
           protocolId: "unknown-protocol",
-          actionRules: [
-            { actions: ["foo"], type: "allowAll", params: {} },
-          ],
+          actionRules: [{ actions: ["foo"], type: "allowAll", params: {} }],
         },
       ],
     });
@@ -110,7 +108,11 @@ describe("shield_estimate_constraint_budget", () => {
         {
           protocolId: "flash-trade",
           actionRules: [
-            { actions: ["openPosition", "closePosition"], type: "allowAll", params: {} },
+            {
+              actions: ["openPosition", "closePosition"],
+              type: "allowAll",
+              params: {},
+            },
           ],
         },
       ],
@@ -146,9 +148,7 @@ describe("shield_estimate_constraint_budget", () => {
       configs: [
         {
           protocolId: "nope",
-          actionRules: [
-            { actions: ["foo"], type: "allowAll", params: {} },
-          ],
+          actionRules: [{ actions: ["foo"], type: "allowAll", params: {} }],
         },
       ],
     });

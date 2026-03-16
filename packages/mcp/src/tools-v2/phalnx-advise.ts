@@ -26,21 +26,21 @@ export const phalnxAdviseSchema = z.object({
     ])
     .describe(
       "The type of guidance needed. " +
-      "whatCanIDo: list available actions for this agent. " +
-      "bestRouteFor: recommend protocol for a token pair. " +
-      "whyDidThisFail: explain error + recovery steps. " +
-      "shouldIRetry: decide whether to retry a failed tx. " +
-      "protocolComparison: compare two protocols for an action.",
+        "whatCanIDo: list available actions for this agent. " +
+        "bestRouteFor: recommend protocol for a token pair. " +
+        "whyDidThisFail: explain error + recovery steps. " +
+        "shouldIRetry: decide whether to retry a failed tx. " +
+        "protocolComparison: compare two protocols for an action.",
     ),
   context: z
     .record(z.string(), z.unknown())
     .optional()
     .describe(
       "Additional context. For whyDidThisFail: { errorCode: number }. " +
-      "For bestRouteFor: { inputToken, outputToken }. " +
-      "For shouldIRetry: { errorCode: number, attemptCount: number }. " +
-      "For protocolComparison: { action, protocols: string[] }. " +
-      "For whatCanIDo: { vault: string }.",
+        "For bestRouteFor: { inputToken, outputToken }. " +
+        "For shouldIRetry: { errorCode: number, attemptCount: number }. " +
+        "For protocolComparison: { action, protocols: string[] }. " +
+        "For whatCanIDo: { vault: string }.",
     ),
 });
 
@@ -124,9 +124,12 @@ async function handleWhatCanIDo(
       dailyCapUsd: formatBN(policy.dailySpendingCapUsd),
       maxSlippageBps: policy.maxSlippageBps,
       maxLeverageBps: policy.maxLeverageBps,
-      protocolMode: ["all", "allowlist", "denylist"][policy.protocolMode] ?? "unknown",
+      protocolMode:
+        ["all", "allowlist", "denylist"][policy.protocolMode] ?? "unknown",
       protocolCount: policy.protocols.length,
-      suggestedTool: actions.includes("swap") ? "phalnx_execute" : "phalnx_query",
+      suggestedTool: actions.includes("swap")
+        ? "phalnx_execute"
+        : "phalnx_query",
       suggestedAction: actions.includes("swap") ? "swap" : "vault",
     });
   } catch (err) {
@@ -261,14 +264,19 @@ function handleShouldIRetry(ctx: Record<string, unknown>): string {
 
 function handleProtocolComparison(ctx: Record<string, unknown>): string {
   const action = typeof ctx.action === "string" ? ctx.action : "";
-  const protocols = Array.isArray(ctx.protocols) ? ctx.protocols.filter((p): p is string => typeof p === "string") : [];
+  const protocols = Array.isArray(ctx.protocols)
+    ? ctx.protocols.filter((p): p is string => typeof p === "string")
+    : [];
 
-  const protocolInfo: Record<string, {
-    tier: string;
-    bestFor: string;
-    actions: string[];
-    tradeoffs: string;
-  }> = {
+  const protocolInfo: Record<
+    string,
+    {
+      tier: string;
+      bestFor: string;
+      actions: string[];
+      tradeoffs: string;
+    }
+  > = {
     jupiter: {
       tier: "T1_API",
       bestFor: "Token swaps, best price aggregation across 30+ DEXs",
@@ -279,28 +287,43 @@ function handleProtocolComparison(ctx: Record<string, unknown>): string {
       tier: "T2_SDK",
       bestFor: "Leveraged perpetual futures (up to 100x), pool-to-peer",
       actions: [
-        "openPosition", "closePosition", "increasePosition", "decreasePosition",
-        "addCollateral", "removeCollateral", "placeTriggerOrder", "placeLimitOrder",
+        "openPosition",
+        "closePosition",
+        "increasePosition",
+        "decreasePosition",
+        "addCollateral",
+        "removeCollateral",
+        "placeTriggerOrder",
+        "placeLimitOrder",
       ],
       tradeoffs: "Limited token pairs (SOL, BTC, ETH + stablecoins)",
     },
     drift: {
       tier: "T2_SDK",
       bestFor: "Perps + spot margin trading, deepest liquidity for BTC/ETH/SOL",
-      actions: ["driftDeposit", "driftWithdraw", "driftPerpOrder", "driftSpotOrder"],
+      actions: [
+        "driftDeposit",
+        "driftWithdraw",
+        "driftPerpOrder",
+        "driftSpotOrder",
+      ],
       tradeoffs: "More complex account setup, requires insurance fund",
     },
     kamino: {
       tier: "T2_SDK",
       bestFor: "Lending and borrowing, yield optimization",
-      actions: ["kaminoDeposit", "kaminoBorrow", "kaminoRepay", "kaminoWithdraw"],
+      actions: [
+        "kaminoDeposit",
+        "kaminoBorrow",
+        "kaminoRepay",
+        "kaminoWithdraw",
+      ],
       tradeoffs: "Lending-only — no trading, no perps",
     },
   };
 
-  const requested = protocols.length > 0
-    ? protocols
-    : Object.keys(protocolInfo);
+  const requested =
+    protocols.length > 0 ? protocols : Object.keys(protocolInfo);
 
   const comparison = requested.map((p) => {
     const info = protocolInfo[p];
@@ -318,7 +341,8 @@ function handleProtocolComparison(ctx: Record<string, unknown>): string {
     action: action || null,
     protocols: comparison,
     recommendation: action
-      ? comparison.find((c) => c.available && (c as any).supportsAction)?.protocol ?? null
+      ? (comparison.find((c) => c.available && (c as any).supportsAction)
+          ?.protocol ?? null)
       : null,
   });
 }
@@ -327,7 +351,8 @@ function handleProtocolComparison(ctx: Record<string, unknown>): string {
 
 function categorizeError(code: number): string {
   if (code >= 6000 && code <= 6002) return "PERMISSION";
-  if (code === 6003 || code === 6004 || code === 6005) return "INPUT_VALIDATION";
+  if (code === 6003 || code === 6004 || code === 6005)
+    return "INPUT_VALIDATION";
   if (code >= 6006 && code <= 6011) return "SPENDING_CAP";
   if (code === 6012 || code === 6013) return "RATE_LIMIT";
   if (code >= 6014 && code <= 6020) return "POLICY_VIOLATION";
@@ -374,22 +399,34 @@ function getRecoverySteps(category: string): string[] {
 
 function getRecoveryTool(category: string): string {
   switch (category) {
-    case "PERMISSION": return "phalnx_query";
-    case "SPENDING_CAP": return "phalnx_query";
-    case "INPUT_VALIDATION": return "phalnx_advise";
-    case "RATE_LIMIT": return "phalnx_execute";
-    case "POLICY_VIOLATION": return "phalnx_query";
-    default: return "phalnx_execute";
+    case "PERMISSION":
+      return "phalnx_query";
+    case "SPENDING_CAP":
+      return "phalnx_query";
+    case "INPUT_VALIDATION":
+      return "phalnx_advise";
+    case "RATE_LIMIT":
+      return "phalnx_execute";
+    case "POLICY_VIOLATION":
+      return "phalnx_query";
+    default:
+      return "phalnx_execute";
   }
 }
 
 function getRecoveryAction(category: string): string {
   switch (category) {
-    case "PERMISSION": return "vault";
-    case "SPENDING_CAP": return "spending";
-    case "INPUT_VALIDATION": return "whyDidThisFail";
-    case "RATE_LIMIT": return "retry";
-    case "POLICY_VIOLATION": return "policy";
-    default: return "retry";
+    case "PERMISSION":
+      return "vault";
+    case "SPENDING_CAP":
+      return "spending";
+    case "INPUT_VALIDATION":
+      return "whyDidThisFail";
+    case "RATE_LIMIT":
+      return "retry";
+    case "POLICY_VIOLATION":
+      return "policy";
+    default:
+      return "retry";
   }
 }

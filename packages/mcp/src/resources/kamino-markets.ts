@@ -5,10 +5,7 @@
  * and utilization to make informed deposit/borrow recommendations.
  */
 
-import {
-  fetchKaminoMarkets,
-  fetchReserveMetrics,
-} from "@phalnx/kit";
+import { fetchKaminoMarkets, fetchReserveMetrics } from "@phalnx/kit";
 
 export async function getKaminoMarketsResource(): Promise<string> {
   try {
@@ -31,9 +28,11 @@ export async function getKaminoMarketsResource(): Promise<string> {
               maxLtv: r.maxLtv,
               totalSupplyUsd: r.totalSupplyUsd,
               totalBorrowUsd: r.totalBorrowUsd,
-              utilization: r.totalSupplyUsd > 0
-                ? (r.totalBorrowUsd / r.totalSupplyUsd * 100).toFixed(1) + "%"
-                : "0%",
+              utilization:
+                r.totalSupplyUsd > 0
+                  ? ((r.totalBorrowUsd / r.totalSupplyUsd) * 100).toFixed(1) +
+                    "%"
+                  : "0%",
             })),
           };
         } catch {

@@ -7,8 +7,18 @@
  * ~70% auto-generated, with HAND-EDIT markers for protocol-specific logic.
  */
 
-import type { AnnotationConfig, ParsedInstruction, RuleTypeAnnotation } from "../types.js";
-import { pascalCase, upperSnake, camelToUpper, categoryToConstName, programConstName } from "../naming.js";
+import type {
+  AnnotationConfig,
+  ParsedInstruction,
+  RuleTypeAnnotation,
+} from "../types.js";
+import {
+  pascalCase,
+  upperSnake,
+  camelToUpper,
+  categoryToConstName,
+  programConstName,
+} from "../naming.js";
 
 // Field names written into generated constraint code — constants prevent typos in template strings
 const F_DISC = "discriminators";
@@ -34,20 +44,26 @@ export function generateDescriptor(
   lines.push(` * ${proto.displayName} Protocol Descriptor — Rule Compilation`);
   lines.push(` *`);
   lines.push(` * Auto-generated skeleton by scripts/add-protocol.ts`);
-  lines.push(` * Lines marked HAND-EDIT require protocol-specific implementation.`);
+  lines.push(
+    ` * Lines marked HAND-EDIT require protocol-specific implementation.`,
+  );
   lines.push(` */`);
   lines.push(``);
 
   // Imports
   lines.push(`import type { Address } from "@solana/kit";`);
-  lines.push(`import type { AccountConstraintArgs } from "../../generated/index.js";`);
+  lines.push(
+    `import type { AccountConstraintArgs } from "../../generated/index.js";`,
+  );
   lines.push(`import type {`);
   lines.push(`  ActionRule,`);
   lines.push(`  CompiledConstraint,`);
   lines.push(`  ProtocolDescriptor,`);
   lines.push(`  RuleTypeMetadata,`);
   lines.push(`} from "../types.js";`);
-  lines.push(`import { getSchema as getSchemaGeneric, makeDiscriminatorConstraint, makeLteConstraint } from "./constraint-helpers.js";`);
+  lines.push(
+    `import { getSchema as getSchemaGeneric, makeDiscriminatorConstraint, makeLteConstraint } from "./constraint-helpers.js";`,
+  );
 
   // Schema imports
   const schemaExports = buildSchemaImports(config);
@@ -59,15 +75,22 @@ export function generateDescriptor(
 
   // Market config import (if markets exist)
   if (config.markets && Object.keys(config.markets).length > 0) {
-    lines.push(`// HAND-EDIT: Import market config for account constraint resolution`);
-    lines.push(`// import { ${UPPER}_MARKET_MAP } from "../../integrations/config/${proto.id}-markets.js";`);
+    lines.push(
+      `// HAND-EDIT: Import market config for account constraint resolution`,
+    );
+    lines.push(
+      `// import { ${UPPER}_MARKET_MAP } from "../../integrations/config/${proto.id}-markets.js";`,
+    );
   }
   lines.push(``);
 
   // Field mapping tables from YAML ruleTypes
   if (config.ruleTypes) {
     for (const rt of config.ruleTypes) {
-      if (rt.constraintType === "data" && Object.keys(rt.fieldMapping).length > 0) {
+      if (
+        rt.constraintType === "data" &&
+        Object.keys(rt.fieldMapping).length > 0
+      ) {
         const mapName = `${camelToUpper(rt.type)}_FIELD_MAP`;
         lines.push(`/** Map instruction name to the field for ${rt.type} */`);
         lines.push(`const ${mapName}: Record<string, string> = {`);
@@ -81,7 +104,9 @@ export function generateDescriptor(
   }
 
   // Helpers
-  lines.push(`// ─── Helpers ────────────────────────────────────────────────────────────────`);
+  lines.push(
+    `// ─── Helpers ────────────────────────────────────────────────────────────────`,
+  );
   lines.push(``);
   lines.push(`function getSchema(action: string) {`);
   lines.push(`  return getSchemaGeneric(${UPPER}_SCHEMA, action);`);
@@ -89,16 +114,22 @@ export function generateDescriptor(
   lines.push(``);
 
   // Rule compilers
-  lines.push(`// ─── Rule Compilers ─────────────────────────────────────────────────────────`);
+  lines.push(
+    `// ─── Rule Compilers ─────────────────────────────────────────────────────────`,
+  );
   lines.push(``);
 
   // Always generate allowAll
-  lines.push(`function compileAllowAll(rule: ActionRule): CompiledConstraint[] {`);
+  lines.push(
+    `function compileAllowAll(rule: ActionRule): CompiledConstraint[] {`,
+  );
   lines.push(`  return rule.actions.map((action) => {`);
   lines.push(`    const schema = getSchema(action);`);
   lines.push(`    return {`);
   lines.push(`      ${F_DISC}: [schema.discriminator],`);
-  lines.push(`      ${F_DATA}: [makeDiscriminatorConstraint(schema.discriminator)],`);
+  lines.push(
+    `      ${F_DATA}: [makeDiscriminatorConstraint(schema.discriminator)],`,
+  );
   lines.push(`      ${F_ACCT}: [],`);
   lines.push(`    };`);
   lines.push(`  });`);
@@ -117,9 +148,13 @@ export function generateDescriptor(
   }
 
   // Rule compiler map
-  lines.push(`// ─── Descriptor ─────────────────────────────────────────────────────────────`);
+  lines.push(
+    `// ─── Descriptor ─────────────────────────────────────────────────────────────`,
+  );
   lines.push(``);
-  lines.push(`const RULE_COMPILERS: Record<string, (rule: ActionRule) => CompiledConstraint[]> = {`);
+  lines.push(
+    `const RULE_COMPILERS: Record<string, (rule: ActionRule) => CompiledConstraint[]> = {`,
+  );
   lines.push(`  allowAll: compileAllowAll,`);
   if (config.ruleTypes) {
     for (const rt of config.ruleTypes) {
@@ -136,8 +171,12 @@ export function generateDescriptor(
   lines.push(`  {`);
   lines.push(`    type: "allowAll",`);
   lines.push(`    displayName: "Allow All Parameters",`);
-  lines.push(`    description: "Allow the action with any parameters (discriminator-only constraint).",`);
-  lines.push(`    applicableActions: [...Array.from(${UPPER}_SCHEMA.instructions.keys())],`);
+  lines.push(
+    `    description: "Allow the action with any parameters (discriminator-only constraint).",`,
+  );
+  lines.push(
+    `    applicableActions: [...Array.from(${UPPER}_SCHEMA.instructions.keys())],`,
+  );
   lines.push(`    params: [],`);
   lines.push(`  },`);
   if (config.ruleTypes) {
@@ -146,7 +185,9 @@ export function generateDescriptor(
       lines.push(`    type: "${rt.type}",`);
       lines.push(`    displayName: "${rt.displayName}",`);
       lines.push(`    description: "${rt.description}",`);
-      lines.push(`    applicableActions: [${rt.applicableActions.map((a) => `"${a}"`).join(", ")}],`);
+      lines.push(
+        `    applicableActions: [${rt.applicableActions.map((a) => `"${a}"`).join(", ")}],`,
+      );
       lines.push(`    params: [`);
       for (const p of rt.params) {
         lines.push(`      {`);
@@ -157,7 +198,9 @@ export function generateDescriptor(
         if (p.options) {
           lines.push(`        options: [`);
           for (const opt of p.options) {
-            lines.push(`          { value: "${opt.value}", label: "${opt.label}" },`);
+            lines.push(
+              `          { value: "${opt.value}", label: "${opt.label}" },`,
+            );
           }
           lines.push(`        ],`);
         }
@@ -180,7 +223,9 @@ export function generateDescriptor(
   lines.push(`    const compiler = RULE_COMPILERS[rule.type];`);
   lines.push(`    if (!compiler) {`);
   lines.push(`      throw new Error(`);
-  lines.push(`        \`Unknown ${proto.displayName} rule type: \${rule.type}. Available: \${Object.keys(RULE_COMPILERS).join(", ")}\`,`);
+  lines.push(
+    `        \`Unknown ${proto.displayName} rule type: \${rule.type}. Available: \${Object.keys(RULE_COMPILERS).join(", ")}\`,`,
+  );
   lines.push(`      );`);
   lines.push(`    }`);
   lines.push(`    return compiler(rule);`);
@@ -215,11 +260,17 @@ export function generateDescriptor(
         lines.push(`      case "${rt.type}": {`);
         for (const p of requiredParams) {
           lines.push(`        if (rule.params.${p.name} === undefined) {`);
-          lines.push(`          errors.push(\`${rt.type} requires "${p.name}" param\`);`);
+          lines.push(
+            `          errors.push(\`${rt.type} requires "${p.name}" param\`);`,
+          );
           lines.push(`        }`);
           if (p.type === "multiselect") {
-            lines.push(`        if (!Array.isArray(rule.params.${p.name}) || (rule.params.${p.name} as unknown[]).length === 0) {`);
-            lines.push(`          errors.push(\`${rt.type} requires non-empty "${p.name}" array\`);`);
+            lines.push(
+              `        if (!Array.isArray(rule.params.${p.name}) || (rule.params.${p.name} as unknown[]).length === 0) {`,
+            );
+            lines.push(
+              `          errors.push(\`${rt.type} requires non-empty "${p.name}" array\`);`,
+            );
             lines.push(`        }`);
           }
         }
@@ -257,10 +308,14 @@ function buildSchemaImports(config: AnnotationConfig): string[] {
 
 function mapParamType(type: string): string {
   switch (type) {
-    case "bigint": return "bigint";
-    case "multiselect": return "multiselect";
-    case "string": return "select";
-    default: return "number";
+    case "bigint":
+      return "bigint";
+    case "multiselect":
+      return "multiselect";
+    case "string":
+      return "select";
+    default:
+      return "number";
   }
 }
 
@@ -279,10 +334,14 @@ function generateDataRuleCompiler(
   const paramName = valueParam?.name ?? "maxValue";
 
   lines.push(`function ${fnName}(rule: ActionRule): CompiledConstraint[] {`);
-  lines.push(`  const ${paramName} = BigInt(rule.params.${paramName} as string | bigint);`);
+  lines.push(
+    `  const ${paramName} = BigInt(rule.params.${paramName} as string | bigint);`,
+  );
   lines.push(`  return rule.actions`);
   if (categoryConst) {
-    lines.push(`    .filter((a) => ${categoryConst}.includes(a as typeof ${categoryConst}[number]))`);
+    lines.push(
+      `    .filter((a) => ${categoryConst}.includes(a as typeof ${categoryConst}[number]))`,
+    );
   }
   lines.push(`    .map((action) => {`);
   lines.push(`      const schema = getSchema(action);`);
@@ -308,18 +367,26 @@ function generateAccountRuleCompiler(
   const upper = upperSnake(config.protocol.id);
   const fnName = `compile${pascalCase(rt.type)}`;
 
-  lines.push(`// HAND-EDIT: Account constraint compiler requires protocol-specific market config`);
+  lines.push(
+    `// HAND-EDIT: Account constraint compiler requires protocol-specific market config`,
+  );
   lines.push(`function ${fnName}(rule: ActionRule): CompiledConstraint[] {`);
   lines.push(`  // TODO: Implement account constraint compilation`);
-  lines.push(`  // Pattern: iterate rule.actions, look up market addresses, create AccountConstraintArgs`);
-  lines.push(`  // See flash-trade-descriptor.ts compileAllowedMarkets() for reference.`);
+  lines.push(
+    `  // Pattern: iterate rule.actions, look up market addresses, create AccountConstraintArgs`,
+  );
+  lines.push(
+    `  // See flash-trade-descriptor.ts compileAllowedMarkets() for reference.`,
+  );
   lines.push(`  return rule.actions`);
   lines.push(`    .filter((a) => ${upper}_SCHEMA.instructions.has(a))`);
   lines.push(`    .map((action) => {`);
   lines.push(`      const schema = getSchema(action);`);
   lines.push(`      return {`);
   lines.push(`        ${F_DISC}: [schema.discriminator],`);
-  lines.push(`        ${F_DATA}: [makeDiscriminatorConstraint(schema.discriminator)],`);
+  lines.push(
+    `        ${F_DATA}: [makeDiscriminatorConstraint(schema.discriminator)],`,
+  );
   lines.push(`        ${F_ACCT}: [],`);
   lines.push(`      };`);
   lines.push(`    });`);
@@ -368,12 +435,18 @@ function generateStrictModeWarnings(
     lines.push(``);
     lines.push(`  if (missingRiskReducing.length > 0) {`);
     lines.push(`    warnings.push(`);
-    lines.push(`      \`strict_mode is ON but these risk-reducing actions have no rules (agent cannot execute them): \${missingRiskReducing.join(", ")}. \` +`);
-    lines.push(`      \`Add an "allowAll" rule for these actions to prevent the agent from being unable to close positions.\`,`);
+    lines.push(
+      `      \`strict_mode is ON but these risk-reducing actions have no rules (agent cannot execute them): \${missingRiskReducing.join(", ")}. \` +`,
+    );
+    lines.push(
+      `      \`Add an "allowAll" rule for these actions to prevent the agent from being unable to close positions.\`,`,
+    );
     lines.push(`    );`);
     lines.push(`  }`);
   } else {
-    lines.push(`  // No spending/riskReducing categories defined — add strict mode checks as needed`);
+    lines.push(
+      `  // No spending/riskReducing categories defined — add strict mode checks as needed`,
+    );
   }
 
   lines.push(``);
@@ -389,7 +462,10 @@ function findApplicableCategory(
   // Find which category's action list matches the rule's applicableActions
   for (const [category, actions] of Object.entries(config.actionCategories)) {
     const rtSet = new Set(rt.applicableActions);
-    if (actions.every((a) => rtSet.has(a)) && actions.length === rt.applicableActions.length) {
+    if (
+      actions.every((a) => rtSet.has(a)) &&
+      actions.length === rt.applicableActions.length
+    ) {
       return categoryToConstName(category, upperSnake(config.protocol.id));
     }
   }

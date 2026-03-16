@@ -7,7 +7,11 @@
 
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import type { AnnotationConfig, AnchorIdl, ParsedInstruction } from "./types.js";
+import type {
+  AnnotationConfig,
+  AnchorIdl,
+  ParsedInstruction,
+} from "./types.js";
 import { crossCheckDiscriminator } from "./discriminator.js";
 import { codamaInstructionPath } from "./idl-helpers.js";
 
@@ -47,7 +51,11 @@ export function runVerification(
 
     let codamaFilePath = "";
     if (codamaDir) {
-      codamaFilePath = codamaInstructionPath(codamaDir, ix.idlName, config.protocol.idlCase);
+      codamaFilePath = codamaInstructionPath(
+        codamaDir,
+        ix.idlName,
+        config.protocol.idlCase,
+      );
     }
 
     const error = crossCheckDiscriminator(
@@ -75,7 +83,7 @@ export function runVerification(
       if (field.offset + field.size > ix.dataSize) {
         errors.push(
           `[Check 2] ${ix.sdkName}.${field.schemaFieldName}: field extends beyond dataSize ` +
-          `(offset=${field.offset}, size=${field.size}, dataSize=${ix.dataSize})`,
+            `(offset=${field.offset}, size=${field.size}, dataSize=${ix.dataSize})`,
         );
       }
     }
@@ -91,7 +99,7 @@ export function runVerification(
       if (acct.index >= idlIx.accounts.length) {
         errors.push(
           `[Check 3] ${ix.sdkName}: account "${acct.name}" has index ${acct.index} ` +
-          `but IDL only has ${idlIx.accounts.length} accounts`,
+            `but IDL only has ${idlIx.accounts.length} accounts`,
         );
       }
     }
@@ -101,11 +109,15 @@ export function runVerification(
   if (codamaDir) {
     console.log("  Check 4: Codama output completeness...");
     for (const ix of parsed) {
-      const codamaFile = codamaInstructionPath(codamaDir, ix.idlName, config.protocol.idlCase);
+      const codamaFile = codamaInstructionPath(
+        codamaDir,
+        ix.idlName,
+        config.protocol.idlCase,
+      );
       if (!existsSync(codamaFile)) {
         errors.push(
           `[Check 4] Codama file missing: ${codamaFile}. ` +
-          `Run \`node codama.mjs --protocol=${config.protocol.id}\` first.`,
+            `Run \`node codama.mjs --protocol=${config.protocol.id}\` first.`,
         );
       }
     }

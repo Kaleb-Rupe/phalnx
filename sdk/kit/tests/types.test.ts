@@ -113,9 +113,7 @@ describe("types", () => {
     });
 
     it("ESCROW_ONLY has bits 18-20", () => {
-      expect(ESCROW_ONLY).to.equal(
-        (1n << 18n) | (1n << 19n) | (1n << 20n),
-      );
+      expect(ESCROW_ONLY).to.equal((1n << 18n) | (1n << 19n) | (1n << 20n));
       const names = permissionsToStrings(ESCROW_ONLY);
       expect(names).to.include("createEscrow");
       expect(names).to.include("settleEscrow");
@@ -301,10 +299,7 @@ describe("types", () => {
     });
 
     it("chained adds combine bits", () => {
-      const perms = new PermissionBuilder()
-        .add("swap")
-        .add("transfer")
-        .build();
+      const perms = new PermissionBuilder().add("swap").add("transfer").build();
       expect(perms).to.equal((1n << 0n) | (1n << 7n));
     });
 
@@ -319,9 +314,7 @@ describe("types", () => {
     });
 
     it("unknown action type silently ignored", () => {
-      const perms = new PermissionBuilder()
-        .add("nonexistent")
-        .build();
+      const perms = new PermissionBuilder().add("nonexistent").build();
       expect(perms).to.equal(0n);
     });
   });

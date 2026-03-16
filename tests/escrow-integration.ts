@@ -431,8 +431,10 @@ describe("escrow-integration", () => {
     // Calculate expected net amount (after protocol + developer fees)
     const grossAmount = 50_000_000n;
     const protocolFee =
-      (grossAmount * PROTOCOL_FEE_RATE + FEE_RATE_DENOMINATOR - 1n) / FEE_RATE_DENOMINATOR;
-    const developerFee = (grossAmount * 100n + FEE_RATE_DENOMINATOR - 1n) / FEE_RATE_DENOMINATOR; // dev_fee_rate = 100
+      (grossAmount * PROTOCOL_FEE_RATE + FEE_RATE_DENOMINATOR - 1n) /
+      FEE_RATE_DENOMINATOR;
+    const developerFee =
+      (grossAmount * 100n + FEE_RATE_DENOMINATOR - 1n) / FEE_RATE_DENOMINATOR; // dev_fee_rate = 100
     const netAmount = grossAmount - protocolFee - developerFee;
 
     // Verify escrow ATA received net amount
@@ -489,8 +491,10 @@ describe("escrow-integration", () => {
     // Calculate expected net
     const grossAmount = 30_000_000n;
     const protocolFee =
-      (grossAmount * PROTOCOL_FEE_RATE + FEE_RATE_DENOMINATOR - 1n) / FEE_RATE_DENOMINATOR;
-    const developerFee = (grossAmount * 100n + FEE_RATE_DENOMINATOR - 1n) / FEE_RATE_DENOMINATOR;
+      (grossAmount * PROTOCOL_FEE_RATE + FEE_RATE_DENOMINATOR - 1n) /
+      FEE_RATE_DENOMINATOR;
+    const developerFee =
+      (grossAmount * 100n + FEE_RATE_DENOMINATOR - 1n) / FEE_RATE_DENOMINATOR;
     const netAmount = grossAmount - protocolFee - developerFee;
 
     const destVaultBalanceBefore = getTokenBalance(svm, destVaultUsdcAta);
@@ -547,8 +551,10 @@ describe("escrow-integration", () => {
     // Calculate expected net
     const grossAmount = 20_000_000n;
     const protocolFee =
-      (grossAmount * PROTOCOL_FEE_RATE + FEE_RATE_DENOMINATOR - 1n) / FEE_RATE_DENOMINATOR;
-    const developerFee = (grossAmount * 100n + FEE_RATE_DENOMINATOR - 1n) / FEE_RATE_DENOMINATOR;
+      (grossAmount * PROTOCOL_FEE_RATE + FEE_RATE_DENOMINATOR - 1n) /
+      FEE_RATE_DENOMINATOR;
+    const developerFee =
+      (grossAmount * 100n + FEE_RATE_DENOMINATOR - 1n) / FEE_RATE_DENOMINATOR;
     const netAmount = grossAmount - protocolFee - developerFee;
 
     const sourceVaultBalanceBefore = getTokenBalance(svm, sourceVaultUsdcAta);

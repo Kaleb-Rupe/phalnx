@@ -44,8 +44,8 @@ describe("protocolEscalationError", () => {
         (a) => a.action === "required_vault_change",
       );
       expect(vaultChanges.length).to.be.greaterThan(0);
-      const hasConstraintRef = vaultChanges.some(
-        (a) => a.description.toLowerCase().includes("constraint"),
+      const hasConstraintRef = vaultChanges.some((a) =>
+        a.description.toLowerCase().includes("constraint"),
       );
       expect(hasConstraintRef).to.be.true;
     });

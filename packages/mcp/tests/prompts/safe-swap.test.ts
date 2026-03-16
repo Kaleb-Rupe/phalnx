@@ -47,9 +47,7 @@ describe("prompt: safe-swap", () => {
       amount: "1000000",
     });
     const content = JSON.parse(result.messages[0].content.text);
-    const execStep = content.steps.find(
-      (s: any) => s.input?.action === "swap",
-    );
+    const execStep = content.steps.find((s: any) => s.input?.action === "swap");
     expect(execStep.onFailure.tool).to.equal("phalnx_advise");
     expect(execStep.onFailure.input.question).to.equal("whyDidThisFail");
   });

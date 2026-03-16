@@ -97,7 +97,11 @@ describe("tee-attestation", () => {
     });
 
     it("message format includes values", () => {
-      const err = new AttestationPcrMismatchError(2, "expected_hash", "actual_hash");
+      const err = new AttestationPcrMismatchError(
+        2,
+        "expected_hash",
+        "actual_hash",
+      );
       expect(err.message).to.include("expected_hash");
       expect(err.message).to.include("actual_hash");
       expect(err.message).to.include("PCR2");
