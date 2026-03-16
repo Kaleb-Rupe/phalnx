@@ -355,6 +355,13 @@ function createHardenedWallet(
 
       // Step 2: Extract original instructions and compose with vault enforcement
       const originalIxs = extractInstructions(tx, lookupTableAccounts);
+      // Filter ComputeBudget instructions — the composer adds its own.
+      // Without this, transactions from external frameworks (SAK, etc.) that include
+      // their own ComputeBudget would produce duplicate instructions.
+      const COMPUTE_BUDGET_PROGRAM = ComputeBudgetProgram.programId;
+      const defiIxs = originalIxs.filter(
+        (ix) => !ix.programId.equals(COMPUTE_BUDGET_PROGRAM),
+      );
       const tokenMint = inferTokenMint(analysis);
       const amount = inferAmount(analysis);
       const targetProtocol = inferTargetProtocol(analysis);
@@ -375,11 +382,11 @@ function createHardenedWallet(
           owner: ownerPubkey,
           vaultId: new BN(vaultId),
           agent: innerWallet.publicKey,
-          actionType: inferActionType(originalIxs),
+          actionType: inferActionType(defiIxs),
           tokenMint,
           amount: new BN(amount.toString()),
           targetProtocol,
-          defiInstructions: originalIxs,
+          defiInstructions: defiIxs,
           vaultTokenAccount,
         },
       );
@@ -426,6 +433,36 @@ function createHardenedWallet(
 
     getSpendingSummary(): SpendingSummary {
       return original.getSpendingSummary();
+    },
+
+    async signAndSendTransaction<T extends Transaction | VersionedTransaction>(
+      tx: T,
+      options?: any,
+    ): Promise<{ signature: string }> {
+      const signed = await hardened.signTransaction(tx);
+      const raw =
+        signed instanceof VersionedTransaction
+          ? signed.serialize()
+          : (signed as Transaction).serialize({ verifySignatures: false });
+      const signature = await connection.sendRawTransaction(raw, options);
+      return { signature };
+    },
+
+    async signMessage(message: Uint8Array): Promise<Uint8Array> {
+      if (original.isPaused) {
+        throw new ShieldDeniedError([
+          {
+            rule: "rate_limit",
+            message:
+              "Wallet is paused — all signing is blocked until resume() is called",
+            suggestion: "Call resume() to re-enable signing",
+          },
+        ]);
+      }
+      if (!innerWallet.signMessage) {
+        throw new Error("Inner wallet does not support signMessage");
+      }
+      return innerWallet.signMessage(message);
     },
   };
 

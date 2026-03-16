@@ -20,6 +20,11 @@ export {
   type PhalnxManageInput,
 } from "./phalnx-manage";
 export {
+  phalnxAdviseSchema,
+  phalnxAdvise,
+  type PhalnxAdviseInput,
+} from "./phalnx-advise";
+export {
   formatAgentError,
   formatEscalation,
   formatExecuteResult,

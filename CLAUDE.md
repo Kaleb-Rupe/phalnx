@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**Read docs/PROJECT.md for full specification. Read docs/INSTRUCTIONS.md for all coding rules and guardrails. Read docs/TASKS.md for build progress.**
+**Read docs/PROJECT.md for full specification. Read docs/INSTRUCTIONS.md for all coding rules and guardrails. Read docs/ROADMAP.md for priorities and build progress.**
 
 ## Working Methodology
 
@@ -70,8 +70,6 @@ Load a skill only when you need specific API specs, integration patterns, or sec
 | **flash-trade** | 123KB | Flash Trade perps, position management, composability | `.claude/skills/flash-trade/` |
 | **solana-kit** | 114KB | @solana/kit modern SDK, tree-shakeable, zero-dependency | `.claude/skills/solana-kit/` |
 | **solana-kit-migration** | 94KB | Migrating @solana/web3.js v1.x → @solana/kit, API mappings | `.claude/skills/solana-kit-migration/` |
-| **elizaos** | 10KB | ElizaOS plugin dev: actions, providers, evaluators, services, hooks | `.claude/skills/elizaos/` |
-| **solana-agent-kit** | 10KB | SendAI Agent Kit: plugin interface, 18 DeFi protocols, custom actions | `.claude/skills/solana-agent-kit/` |
 
 ---
 
@@ -80,7 +78,7 @@ Load a skill only when you need specific API specs, integration patterns, or sec
 pnpm workspace with changesets for versioning. All packages publish to npm with OIDC provenance.
 
 ```
-pnpm-workspace.yaml → sdk/*, sdk/custody/*, plugins/*, packages/*, apps/*
+pnpm-workspace.yaml → sdk/*, sdk/custody/*, packages/*, apps/*
 ```
 
 ### Release Workflow
@@ -217,13 +215,13 @@ MCP server maps all 77 codes to human-readable suggestions in `packages/mcp/src/
 
 ## Current State
 
-Phases 1–5, A, B, C, D, E, F, F.5, G, G.3, H, I, J.1, K, Option C complete. Kit-native SDK Phases 0-5 complete. 29 instructions, 9 PDA types, ~2,828 tests passing. See MEMORY.md for details.
+Phases 1–5, A, B, C, D, E, F, F.5, G, G.3, H, I, J.1, K, Option C complete. Kit-native SDK Phases 0-5 complete. SAK & ElizaOS plugins removed. On-chain program feature-complete and frozen. See `docs/ROADMAP.md` for priorities and `scripts/test-counts.json` for current test counts.
 
 ---
 
 ## Testing
 
-~2,828 tests across 18 suites (2390 TS + 349 on-chain + 20 Surfpool + 69 devnet).
+Test counts are in `scripts/test-counts.json` (run `node scripts/update-test-counts.js` to refresh).
 
 | Tier | Tool | Speed | When to use |
 |------|------|-------|-------------|

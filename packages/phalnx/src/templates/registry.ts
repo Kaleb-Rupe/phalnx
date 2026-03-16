@@ -1,4 +1,4 @@
-export type TemplateName = "standalone" | "sak" | "elizaos" | "mcp";
+export type TemplateName = "standalone" | "mcp";
 export type TeeProvider = "crossmint" | "turnkey" | "privy" | "none";
 
 export interface ProjectConfig {
@@ -49,16 +49,6 @@ export const TEMPLATE_CHOICES: TemplateChoice[] = [
     name: "standalone",
     label: "Standalone Agent",
     description: "Minimal agent with on-chain vault protection",
-  },
-  {
-    name: "sak",
-    label: "Solana Agent Kit",
-    description: "Agent using @phalnx/plugin-solana-agent-kit",
-  },
-  {
-    name: "elizaos",
-    label: "ElizaOS Plugin",
-    description: "ElizaOS agent with @phalnx/elizaos plugin",
   },
   {
     name: "mcp",

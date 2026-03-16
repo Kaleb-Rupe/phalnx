@@ -89,10 +89,12 @@ export interface HardenResult {
 }
 
 /** Configuration for withVault() convenience wrapper. */
-export interface WithVaultOptions extends HardenOptions {
-  /** Shield policies (client-side enforcement) */
+export interface WithVaultOptions {
+  /** On-chain vault provisioning configuration. */
+  harden: HardenOptions;
+  /** Shield policies (client-side enforcement). */
   policies?: ShieldPolicies;
-  /** Shield event callbacks */
+  /** Shield event callbacks. */
   shieldCallbacks?: ShieldOptions;
 }
 
@@ -271,16 +273,27 @@ export async function harden(
  * Convenience: shield + harden in one call.
  *
  * Creates both client-side (shield) and on-chain (vault) enforcement.
+ * Auto-configures shield's on-chain sync using the derived vault address.
  * This is the primary entry point for the single-product model.
  */
 export async function withVault(
   options: WithVaultOptions,
 ): Promise<WithVaultResult> {
-  // Create client-side shield
-  const shieldCtx = shield(options.policies, options.shieldCallbacks);
+  // Provision on-chain vault first (derives vault address)
+  const hardenResult = await harden(options.harden);
 
-  // Create on-chain vault
-  const hardenResult = await harden(options);
+  // Auto-configure shield's on-chain sync using the derived vault address
+  const shieldOpts: ShieldOptions = {
+    ...options.shieldCallbacks,
+    onChainSync: {
+      rpc: options.harden.rpc,
+      vaultAddress: hardenResult.vaultAddress,
+      agentAddress: options.harden.agent.address,
+      network: options.harden.network,
+    },
+  };
+
+  const shieldCtx = shield(options.policies, shieldOpts);
 
   return {
     shield: shieldCtx,

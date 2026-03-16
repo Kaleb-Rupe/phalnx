@@ -8,7 +8,12 @@
  */
 
 import type { AnnotationConfig, ParsedInstruction, RuleTypeAnnotation } from "../types.js";
-import { pascalCase, upperSnake } from "../naming.js";
+import { pascalCase, upperSnake, camelToUpper, categoryToConstName, programConstName } from "../naming.js";
+
+// Field names written into generated constraint code — constants prevent typos in template strings
+const F_DISC = "discriminators";
+const F_DATA = "dataConstraints";
+const F_ACCT = "accountConstraints";
 
 /**
  * Generate a complete descriptor TypeScript file.
@@ -19,6 +24,7 @@ export function generateDescriptor(
 ): string {
   const proto = config.protocol;
   const UPPER = upperSnake(proto.id);
+  const PROGRAM_CONST = programConstName(proto.displayName);
   const Pascal = pascalCase(proto.id);
 
   const lines: string[] = [];
@@ -33,21 +39,18 @@ export function generateDescriptor(
   lines.push(``);
 
   // Imports
-  lines.push(`import type { Address, ReadonlyUint8Array } from "@solana/kit";`);
-  lines.push(`import { ConstraintOperator } from "../../generated/index.js";`);
-  lines.push(`import type { AccountConstraintArgs, DataConstraintArgs } from "../../generated/index.js";`);
-  lines.push(`import { bigintToLeBytes } from "../encoding.js";`);
+  lines.push(`import type { Address } from "@solana/kit";`);
+  lines.push(`import type { AccountConstraintArgs } from "../../generated/index.js";`);
   lines.push(`import type {`);
   lines.push(`  ActionRule,`);
   lines.push(`  CompiledConstraint,`);
-  lines.push(`  InstructionSchema,`);
   lines.push(`  ProtocolDescriptor,`);
-  lines.push(`  RuleParamMeta,`);
   lines.push(`  RuleTypeMetadata,`);
   lines.push(`} from "../types.js";`);
+  lines.push(`import { getSchema as getSchemaGeneric, makeDiscriminatorConstraint, makeLteConstraint } from "./constraint-helpers.js";`);
 
   // Schema imports
-  const schemaExports = buildSchemaImports(config, UPPER);
+  const schemaExports = buildSchemaImports(config);
   lines.push(`import {`);
   for (const exp of schemaExports) {
     lines.push(`  ${exp},`);
@@ -80,38 +83,8 @@ export function generateDescriptor(
   // Helpers
   lines.push(`// ─── Helpers ────────────────────────────────────────────────────────────────`);
   lines.push(``);
-  lines.push(`function getSchema(action: string): InstructionSchema {`);
-  lines.push(`  const schema = ${UPPER}_SCHEMA.instructions.get(action);`);
-  lines.push(`  if (!schema) {`);
-  lines.push(`    throw new Error(\`Unknown ${proto.displayName} action: \${action}\`);`);
-  lines.push(`  }`);
-  lines.push(`  return schema;`);
-  lines.push(`}`);
-  lines.push(``);
-  lines.push(`function makeDiscriminatorConstraint(disc: Uint8Array): DataConstraintArgs {`);
-  lines.push(`  return {`);
-  lines.push(`    offset: 0,`);
-  lines.push(`    operator: ConstraintOperator.Eq,`);
-  lines.push(`    value: disc as ReadonlyUint8Array,`);
-  lines.push(`  };`);
-  lines.push(`}`);
-  lines.push(``);
-  lines.push(`function makeLteConstraint(`);
-  lines.push(`  schema: InstructionSchema,`);
-  lines.push(`  fieldName: string,`);
-  lines.push(`  maxValue: bigint,`);
-  lines.push(`): DataConstraintArgs {`);
-  lines.push(`  const field = schema.fields.find((f) => f.name === fieldName);`);
-  lines.push(`  if (!field) {`);
-  lines.push(`    throw new Error(`);
-  lines.push(`      \`Field "\${fieldName}" not found in \${schema.name}. Available: \${schema.fields.map((f) => f.name).join(", ")}\`,`);
-  lines.push(`    );`);
-  lines.push(`  }`);
-  lines.push(`  return {`);
-  lines.push(`    offset: field.offset,`);
-  lines.push(`    operator: ConstraintOperator.Lte,`);
-  lines.push(`    value: bigintToLeBytes(maxValue, field.size) as ReadonlyUint8Array,`);
-  lines.push(`  };`);
+  lines.push(`function getSchema(action: string) {`);
+  lines.push(`  return getSchemaGeneric(${UPPER}_SCHEMA, action);`);
   lines.push(`}`);
   lines.push(``);
 
@@ -124,9 +97,9 @@ export function generateDescriptor(
   lines.push(`  return rule.actions.map((action) => {`);
   lines.push(`    const schema = getSchema(action);`);
   lines.push(`    return {`);
-  lines.push(`      discriminators: [schema.discriminator],`);
-  lines.push(`      dataConstraints: [makeDiscriminatorConstraint(schema.discriminator)],`);
-  lines.push(`      accountConstraints: [],`);
+  lines.push(`      ${F_DISC}: [schema.discriminator],`);
+  lines.push(`      ${F_DATA}: [makeDiscriminatorConstraint(schema.discriminator)],`);
+  lines.push(`      ${F_ACCT}: [],`);
   lines.push(`    };`);
   lines.push(`  });`);
   lines.push(`}`);
@@ -136,9 +109,9 @@ export function generateDescriptor(
   if (config.ruleTypes) {
     for (const rt of config.ruleTypes) {
       if (rt.constraintType === "data") {
-        generateDataRuleCompiler(lines, rt, config, UPPER);
+        generateDataRuleCompiler(lines, rt, config);
       } else if (rt.constraintType === "account") {
-        generateAccountRuleCompiler(lines, rt, config, UPPER);
+        generateAccountRuleCompiler(lines, rt, config);
       }
     }
   }
@@ -200,7 +173,7 @@ export function generateDescriptor(
   // Descriptor export
   lines.push(`export const ${Pascal}Descriptor: ProtocolDescriptor = {`);
   lines.push(`  protocolId: "${proto.id}",`);
-  lines.push(`  programAddress: ${UPPER}_PROGRAM,`);
+  lines.push(`  programAddress: ${PROGRAM_CONST},`);
   lines.push(`  schema: ${UPPER}_SCHEMA,`);
   lines.push(``);
   lines.push(`  compileRule(rule: ActionRule): CompiledConstraint[] {`);
@@ -263,30 +236,23 @@ export function generateDescriptor(
   lines.push(``);
 
   // checkStrictModeWarnings
-  generateStrictModeWarnings(lines, config, UPPER);
+  generateStrictModeWarnings(lines, config);
 
   return lines.join("\n");
 }
 
 // ─── Internal Helpers ──────────────────────────────────────────────────────
 
-function buildSchemaImports(config: AnnotationConfig, upper: string): string[] {
-  const imports: string[] = [`${upper}_SCHEMA`, `${upper}_PROGRAM`];
+function buildSchemaImports(config: AnnotationConfig): string[] {
+  const upper = upperSnake(config.protocol.id);
+  const progConst = programConstName(config.protocol.displayName);
+  const imports: string[] = [`${upper}_SCHEMA`, progConst];
   if (config.actionCategories) {
     for (const category of Object.keys(config.actionCategories)) {
       imports.push(categoryToConstName(category, upper));
     }
   }
   return imports;
-}
-
-function categoryToConstName(category: string, upper: string): string {
-  const catUpper = category.replace(/([A-Z])/g, "_$1").toUpperCase();
-  return `${upper}_${catUpper}_ACTIONS`;
-}
-
-function camelToUpper(camel: string): string {
-  return camel.replace(/([A-Z])/g, "_$1").toUpperCase();
 }
 
 function mapParamType(type: string): string {
@@ -302,11 +268,11 @@ function generateDataRuleCompiler(
   lines: string[],
   rt: RuleTypeAnnotation,
   config: AnnotationConfig,
-  upper: string,
 ): void {
+  const upper = upperSnake(config.protocol.id);
   const fnName = `compile${pascalCase(rt.type)}`;
   const fieldMapName = `${camelToUpper(rt.type)}_FIELD_MAP`;
-  const categoryConst = findApplicableCategory(rt, config, upper);
+  const categoryConst = findApplicableCategory(rt, config);
 
   // Determine the param name for the max value
   const valueParam = rt.params.find((p) => p.type === "bigint");
@@ -322,12 +288,12 @@ function generateDataRuleCompiler(
   lines.push(`      const schema = getSchema(action);`);
   lines.push(`      const fieldName = ${fieldMapName}[action];`);
   lines.push(`      return {`);
-  lines.push(`        discriminators: [schema.discriminator],`);
-  lines.push(`        dataConstraints: [`);
+  lines.push(`        ${F_DISC}: [schema.discriminator],`);
+  lines.push(`        ${F_DATA}: [`);
   lines.push(`          makeDiscriminatorConstraint(schema.discriminator),`);
   lines.push(`          makeLteConstraint(schema, fieldName, ${paramName}),`);
   lines.push(`        ],`);
-  lines.push(`        accountConstraints: [],`);
+  lines.push(`        ${F_ACCT}: [],`);
   lines.push(`      };`);
   lines.push(`    });`);
   lines.push(`}`);
@@ -338,8 +304,8 @@ function generateAccountRuleCompiler(
   lines: string[],
   rt: RuleTypeAnnotation,
   config: AnnotationConfig,
-  upper: string,
 ): void {
+  const upper = upperSnake(config.protocol.id);
   const fnName = `compile${pascalCase(rt.type)}`;
 
   lines.push(`// HAND-EDIT: Account constraint compiler requires protocol-specific market config`);
@@ -352,9 +318,9 @@ function generateAccountRuleCompiler(
   lines.push(`    .map((action) => {`);
   lines.push(`      const schema = getSchema(action);`);
   lines.push(`      return {`);
-  lines.push(`        discriminators: [schema.discriminator],`);
-  lines.push(`        dataConstraints: [makeDiscriminatorConstraint(schema.discriminator)],`);
-  lines.push(`        accountConstraints: [],`);
+  lines.push(`        ${F_DISC}: [schema.discriminator],`);
+  lines.push(`        ${F_DATA}: [makeDiscriminatorConstraint(schema.discriminator)],`);
+  lines.push(`        ${F_ACCT}: [],`);
   lines.push(`      };`);
   lines.push(`    });`);
   lines.push(`}`);
@@ -364,8 +330,8 @@ function generateAccountRuleCompiler(
 function generateStrictModeWarnings(
   lines: string[],
   config: AnnotationConfig,
-  upper: string,
 ): void {
+  const upper = upperSnake(config.protocol.id);
   const spendingConst = config.actionCategories?.spending
     ? categoryToConstName("spending", upper)
     : null;
@@ -418,14 +384,13 @@ function generateStrictModeWarnings(
 function findApplicableCategory(
   rt: RuleTypeAnnotation,
   config: AnnotationConfig,
-  upper: string,
 ): string | null {
   if (!config.actionCategories) return null;
   // Find which category's action list matches the rule's applicableActions
   for (const [category, actions] of Object.entries(config.actionCategories)) {
     const rtSet = new Set(rt.applicableActions);
     if (actions.every((a) => rtSet.has(a)) && actions.length === rt.applicableActions.length) {
-      return categoryToConstName(category, upper);
+      return categoryToConstName(category, upperSnake(config.protocol.id));
     }
   }
   return null;

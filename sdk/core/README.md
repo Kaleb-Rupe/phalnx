@@ -296,7 +296,7 @@ Used by:
 - Building a custom wallet wrapper for a chain not yet supported
 - Implementing server-side policy enforcement (e.g., in a signing service)
 - Testing policy logic in isolation
-- Building framework integrations beyond Solana Agent Kit and ElizaOS
+- Building framework integrations
 
 For Solana-specific integrations, use `@phalnx/sdk` which wraps this package with Solana transaction analysis and wallet signing.
 

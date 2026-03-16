@@ -79,8 +79,8 @@ describe("scaffolder", () => {
       ).to.throw("Unknown template");
     });
 
-    it("works with all 4 templates", () => {
-      const templates = ["standalone", "sak", "elizaos", "mcp"] as const;
+    it("works with all 2 templates", () => {
+      const templates = ["standalone", "mcp"] as const;
       for (const tmpl of templates) {
         const targetDir = path.join(tmpDir, `test-${tmpl}`);
         const result = scaffold(targetDir, {

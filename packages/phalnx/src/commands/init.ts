@@ -13,7 +13,7 @@ import {
   type ProjectConfig,
 } from "../templates/registry";
 
-const VALID_TEMPLATES: TemplateName[] = ["standalone", "sak", "elizaos", "mcp"];
+const VALID_TEMPLATES: TemplateName[] = ["standalone", "mcp"];
 const VALID_NETWORKS = ["devnet", "mainnet-beta"] as const;
 
 const DEFAULTS: ProjectConfig = {
@@ -32,7 +32,7 @@ export function registerInitCommand(program: Command): void {
     .command("init")
     .description("Scaffold a new phalnx-protected AI agent project")
     .option("--name <name>", "Project name")
-    .option("--template <template>", "Template (standalone|sak|elizaos|mcp)")
+    .option("--template <template>", "Template (standalone|mcp)")
     .option("--network <network>", "Network (devnet|mainnet-beta)")
     .option("-y, --yes", "Use defaults for all prompts")
     .option("--no-git", "Skip git init")

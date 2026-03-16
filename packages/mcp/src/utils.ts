@@ -47,6 +47,27 @@ export function formatTimestamp(ts: BN): string {
   return new Date(ms).toISOString();
 }
 
+// Permission bit names (21 base types matching on-chain ActionType enum)
+export const PERMISSION_NAMES = [
+  "swap", "openPosition", "closePosition", "increasePosition",
+  "decreasePosition", "deposit", "withdraw", "transfer",
+  "addCollateral", "removeCollateral", "placeTriggerOrder",
+  "editTriggerOrder", "cancelTriggerOrder", "placeLimitOrder",
+  "editLimitOrder", "cancelLimitOrder", "swapAndOpenPosition",
+  "closeAndSwapPosition", "createEscrow", "settleEscrow", "refundEscrow",
+] as const;
+
+export function permissionsToActions(bits: string): string[] {
+  const n = BigInt(bits);
+  const actions: string[] = [];
+  for (let i = 0; i < PERMISSION_NAMES.length; i++) {
+    if ((n & (1n << BigInt(i))) !== 0n) {
+      actions.push(PERMISSION_NAMES[i]);
+    }
+  }
+  return actions;
+}
+
 export function formatLamports(lamports: BN, decimals: number = 9): string {
   const str = lamports.toString().padStart(decimals + 1, "0");
   const whole = str.slice(0, str.length - decimals) || "0";

@@ -53,8 +53,8 @@ export function generateComposer(
 
   const composeFunctions = parsed.map((ix) => {
     const fnName = composeFnName(ix.sdkName);
-    const ctxPrefix = ix.isSpending ? "ctx" : "_ctx";
-    const paramsPrefix = ix.accounts.length > 0 || ix.fields.length > 0 ? "params" : "_params";
+    const ctxPrefix = "ctx";
+    const paramsPrefix = "params";
 
     // Build a list of notable fields as a comment hint
     const fieldHints = ix.fields

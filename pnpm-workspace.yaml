@@ -1,6 +1,5 @@
 packages:
   - "sdk/*"
   - "sdk/custody/*"
-  - "plugins/*"
   - "packages/*"
   - "apps/*"

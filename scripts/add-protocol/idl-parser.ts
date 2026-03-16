@@ -16,6 +16,7 @@ import type {
   ParsedInstruction,
 } from "./types.js";
 import { computeDiscriminator } from "./discriminator.js";
+import { buildIdlTypeMap } from "./idl-helpers.js";
 
 // ─── Borsh Type-to-Size Map (no padding) ────────────────────────────────────
 
@@ -138,12 +139,7 @@ export function parseIdl(
   idl: AnchorIdl,
 ): ParsedInstruction[] {
   // Build type lookup
-  const typeMap = new Map<string, { kind: string; fields?: IdlField[] }>();
-  if (idl.types) {
-    for (const t of idl.types) {
-      typeMap.set(t.name, t.type);
-    }
-  }
+  const typeMap = buildIdlTypeMap(idl);
 
   const results: ParsedInstruction[] = [];
 

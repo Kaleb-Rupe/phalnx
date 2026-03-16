@@ -73,8 +73,6 @@ async function resolveWizardConfig(): Promise<ProjectConfig | null> {
   prompts.note(
     "Templates determine your project structure:\n" +
       "- Standalone: Direct SDK usage with withVault()\n" +
-      "- SAK: Solana Agent Kit plugin integration\n" +
-      "- ElizaOS: ElizaOS runtime plugin\n" +
       "- MCP: Claude Desktop MCP server config",
     "Step 2: Template",
   );

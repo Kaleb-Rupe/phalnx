@@ -56,7 +56,7 @@ jobs:
           # Check if any local package version is ahead of npm (unpublished).
           # This catches version packages merges regardless of commit depth.
           UNPUBLISHED=false
-          for pkg_json in packages/*/package.json sdk/*/package.json sdk/custody/*/package.json plugins/*/package.json; do
+          for pkg_json in packages/*/package.json sdk/*/package.json sdk/custody/*/package.json; do
             [ -f "$pkg_json" ] || continue
             PKG_NAME=$(node -p "require('./$pkg_json').name" 2>/dev/null) || continue
             LOCAL_VER=$(node -p "require('./$pkg_json').version" 2>/dev/null) || continue
@@ -132,19 +132,11 @@ jobs:
         working-directory: sdk/custody/crossmint
         run: pnpm test
 
-      - name: Run SAK plugin tests (34 tests)
-        working-directory: plugins/solana-agent-kit
-        run: pnpm test
-
-      - name: Run ElizaOS plugin tests (35 tests)
-        working-directory: plugins/elizaos
-        run: pnpm test
-
-      - name: Run MCP server tests (443 tests)
+      - name: Run MCP server tests (472 tests)
         working-directory: packages/mcp
         run: pnpm test
 
-      - name: Run Kit SDK tests (853 tests)
+      - name: Run Kit SDK tests (1176 tests)
         working-directory: sdk/kit
         run: pnpm test
 

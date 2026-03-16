@@ -9,7 +9,7 @@
  */
 
 import type { AnnotationConfig, ParsedInstruction } from "../types.js";
-import { pascalCase, upperSnake } from "../naming.js";
+import { pascalCase, upperSnake, categoryToConstName, programConstName } from "../naming.js";
 
 function formatDiscriminator(disc: Uint8Array): string {
   return `new Uint8Array([${Array.from(disc).join(", ")}])`;
@@ -24,6 +24,7 @@ export function generateSchema(
 ): string {
   const proto = config.protocol;
   const UPPER = upperSnake(proto.id);
+  const PROGRAM_CONST = programConstName(proto.displayName);
   const Pascal = pascalCase(proto.id);
 
   const lines: string[] = [];
@@ -44,7 +45,7 @@ export function generateSchema(
   lines.push(``);
 
   // Program constant
-  lines.push(`export const ${UPPER}_PROGRAM: Address =`);
+  lines.push(`export const ${PROGRAM_CONST}: Address =`);
   lines.push(`  "${proto.programAddress}" as Address;`);
   lines.push(``);
 
@@ -102,7 +103,7 @@ export function generateSchema(
   lines.push(``);
   lines.push(`export const ${UPPER}_SCHEMA: ProtocolSchema = {`);
   lines.push(`  protocolId: "${proto.id}",`);
-  lines.push(`  programAddress: ${UPPER}_PROGRAM,`);
+  lines.push(`  programAddress: ${PROGRAM_CONST},`);
   lines.push(`  instructions,`);
   lines.push(`};`);
   lines.push(``);
@@ -167,12 +168,6 @@ function computeSizeComment(ix: ParsedInstruction): string {
     return ` // ${parts.join("+")}`;
   }
   return "";
-}
-
-function categoryToConstName(category: string, upper: string): string {
-  // spending → {UPPER}_SPENDING_ACTIONS
-  const catUpper = category.replace(/([A-Z])/g, "_$1").toUpperCase();
-  return `${upper}_${catUpper}_ACTIONS`;
 }
 
 function categoryComment(category: string): string {

@@ -8,10 +8,8 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { AnnotationConfig, AnchorIdl, ParsedInstruction } from "./types.js";
-import {
-  crossCheckDiscriminator,
-  snakeToCamel,
-} from "./discriminator.js";
+import { crossCheckDiscriminator } from "./discriminator.js";
+import { codamaInstructionPath } from "./idl-helpers.js";
 
 export interface VerificationResult {
   passed: boolean;
@@ -49,11 +47,7 @@ export function runVerification(
 
     let codamaFilePath = "";
     if (codamaDir) {
-      const camelName =
-        config.protocol.idlCase === "snake"
-          ? snakeToCamel(ix.idlName)
-          : ix.idlName;
-      codamaFilePath = join(codamaDir, "instructions", `${camelName}.ts`);
+      codamaFilePath = codamaInstructionPath(codamaDir, ix.idlName, config.protocol.idlCase);
     }
 
     const error = crossCheckDiscriminator(
@@ -107,11 +101,7 @@ export function runVerification(
   if (codamaDir) {
     console.log("  Check 4: Codama output completeness...");
     for (const ix of parsed) {
-      const camelName =
-        config.protocol.idlCase === "snake"
-          ? snakeToCamel(ix.idlName)
-          : ix.idlName;
-      const codamaFile = join(codamaDir, "instructions", `${camelName}.ts`);
+      const codamaFile = codamaInstructionPath(codamaDir, ix.idlName, config.protocol.idlCase);
       if (!existsSync(codamaFile)) {
         errors.push(
           `[Check 4] Codama file missing: ${codamaFile}. ` +

@@ -25,6 +25,9 @@ import type { ResolvedToken } from "./tokens.js";
 import type { Account } from "@solana/kit";
 
 import { IntentEngine, type IntentEngineConfig, type ExplainResult, type ProtocolInfo } from "./intent-engine.js";
+import { resolveVaultState, type ResolvedVaultState } from "./state-resolver.js";
+import { fetchMaybeAgentSpendOverlay } from "./generated/accounts/agentSpendOverlay.js";
+import { fetchMaybeInstructionConstraints } from "./generated/accounts/instructionConstraints.js";
 import { TransactionExecutor } from "./transaction-executor.js";
 import { ProtocolRegistry, globalProtocolRegistry } from "./integrations/protocol-registry.js";
 import { JupiterHandler } from "./integrations/jupiter-handler.js";
@@ -33,7 +36,7 @@ import { resolveToken } from "./tokens.js";
 import { fetchAgentVault, fetchMaybeAgentVault } from "./generated/accounts/agentVault.js";
 import { fetchPolicyConfig, fetchMaybePolicyConfig } from "./generated/accounts/policyConfig.js";
 import { fetchSpendTracker, fetchMaybeSpendTracker } from "./generated/accounts/spendTracker.js";
-import { getPolicyPDA, getTrackerPDA, getVaultPDA } from "./resolve-accounts.js";
+import { getPolicyPDA, getTrackerPDA, getVaultPDA, getAgentOverlayPDA, getConstraintsPDA } from "./resolve-accounts.js";
 import type { Network } from "./types.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -151,6 +154,23 @@ export class PhalnxKitClient {
   ): Promise<Address> {
     const [pda] = await getVaultPDA(owner, vaultId);
     return pda;
+  }
+
+  /** Resolve complete vault state with pre-computed budgets (single batched RPC call) */
+  async resolveState(vault: Address): Promise<ResolvedVaultState> {
+    return resolveVaultState(this.rpc, vault, this.agent.address);
+  }
+
+  /** Fetch agent spend overlay for a vault */
+  async fetchOverlay(vault: Address) {
+    const [overlayPda] = await getAgentOverlayPDA(vault, 0);
+    return fetchMaybeAgentSpendOverlay(this.rpc, overlayPda);
+  }
+
+  /** Fetch instruction constraints for a vault */
+  async fetchConstraints(vault: Address) {
+    const [constraintsPda] = await getConstraintsPDA(vault);
+    return fetchMaybeInstructionConstraints(this.rpc, constraintsPda);
   }
 
   // ─── Token Resolution ──────────────────────────────────────────────────

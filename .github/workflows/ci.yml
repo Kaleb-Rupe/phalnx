@@ -3,7 +3,7 @@
 # Runs on every push to main and on pull requests.
 # Eight jobs (1 detection + 6 parallel + 1 gate):
 #   0. changes                — Detect which file groups changed (package-level path filtering)
-#   1. build-lint-test        — TypeScript builds, Prettier, 2232 TS tests (conditional: any-ts or push)
+#   1. build-lint-test        — TypeScript builds, Prettier, 2515 TS tests (conditional: any-ts or push)
 #   2. rust-checks            — cargo fmt + cargo clippy (conditional: rust changes or push)
 #   3. on-chain-tests         — Anchor build + LiteSVM 349 tests (conditional: rust changes or push)
 #  3b. build-verification     — Feature flag safety net (conditional: rust changes or push)
@@ -19,12 +19,11 @@
 #
 # Individual TS test steps also filter by package:
 #   sdk/core → core tests + SDK tests that depend on it
-#   plugins/ → SAK + ElizaOS tests
 #   packages/ → MCP tests
 #   apps/ → Actions server tests
 #   sdk/typescript → all downstream suites (everything depends on SDK)
 #
-# Total: ~2,670 tests across 18 suites (2232 TS + 349 on-chain + 20 Surfpool + 69 devnet)
+# Total: ~2,953 tests across 16 suites (2515 TS + 349 on-chain + 20 Surfpool + 69 devnet)
 # All security checks are BLOCKING — zero tolerance for known issues.
 
 name: CI
@@ -64,7 +63,6 @@ jobs:
       sdk-platform: ${{ steps.filter.outputs.sdk-platform }}
       sdk-crossmint: ${{ steps.filter.outputs.sdk-crossmint }}
       sdk-kit: ${{ steps.filter.outputs.sdk-kit }}
-      plugins: ${{ steps.filter.outputs.plugins }}
       packages: ${{ steps.filter.outputs.packages }}
       apps: ${{ steps.filter.outputs.apps }}
       any-ts: ${{ steps.filter.outputs.any-ts }}
@@ -90,8 +88,6 @@ jobs:
               - 'sdk/platform/**'
             sdk-crossmint:
               - 'sdk/custody/crossmint/**'
-            plugins:
-              - 'plugins/**'
             packages:
               - 'packages/**'
             apps:
@@ -100,7 +96,6 @@ jobs:
               - 'sdk/kit/**'
             any-ts:
               - 'sdk/**'
-              - 'plugins/**'
               - 'packages/**'
               - 'apps/**'
               - 'tests/**'
@@ -109,7 +104,7 @@ jobs:
               - 'tsconfig*.json'
 
   # ──────────────────────────────────────────────────────────────
-  # Job 1: TypeScript build, lint, and tests (9 suites, 2232 tests)
+  # Job 1: TypeScript build, lint, and tests (7 suites, 2515 tests)
   # ──────────────────────────────────────────────────────────────
   build-lint-test:
     name: Build, Lint & TS Tests
@@ -156,15 +151,13 @@ jobs:
       - name: Build all packages
         run: pnpm -r run build
 
-      - name: Lint (Prettier — 9 packages)
+      - name: Lint (Prettier — 7 packages)
         run: |
           npx prettier --check \
             "sdk/core/src/**/*.ts" \
             "sdk/typescript/src/**/*.ts" \
             "sdk/platform/src/**/*.ts" \
             "sdk/custody/crossmint/src/**/*.ts" \
-            "plugins/solana-agent-kit/src/**/*.ts" \
-            "plugins/elizaos/src/**/*.ts" \
             "packages/mcp/src/**/*.ts" \
             "packages/mcp/tests/**/*.ts" \
             "apps/actions-server/src/**/*.ts" \
@@ -201,23 +194,7 @@ jobs:
         working-directory: sdk/custody/crossmint
         run: pnpm test
 
-      - name: SAK plugin tests (34 tests)
-        if: >-
-          needs.changes.outputs.plugins == 'true' ||
-          needs.changes.outputs.sdk-typescript == 'true' ||
-          github.event_name == 'push'
-        working-directory: plugins/solana-agent-kit
-        run: pnpm test
-
-      - name: ElizaOS plugin tests (35 tests)
-        if: >-
-          needs.changes.outputs.plugins == 'true' ||
-          needs.changes.outputs.sdk-typescript == 'true' ||
-          github.event_name == 'push'
-        working-directory: plugins/elizaos
-        run: pnpm test
-
-      - name: MCP server tests (443 tests)
+      - name: MCP server tests (472 tests)
         if: >-
           needs.changes.outputs.packages == 'true' ||
           needs.changes.outputs.sdk-typescript == 'true' ||
@@ -225,7 +202,7 @@ jobs:
         working-directory: packages/mcp
         run: pnpm test
 
-      - name: Kit SDK tests (853 tests)
+      - name: Kit SDK tests (1176 tests)
         if: >-
           needs.changes.outputs.sdk-kit == 'true' ||
           needs.changes.outputs.sdk-typescript == 'true' ||

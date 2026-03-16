@@ -2,6 +2,7 @@ import {
   AddressLookupTableAccount,
   Connection,
   PublicKey,
+  SendOptions,
   Transaction,
   VersionedTransaction,
 } from "@solana/web3.js";
@@ -34,6 +35,7 @@ export interface WalletLike {
   signAllTransactions?<T extends Transaction | VersionedTransaction>(
     txs: T[],
   ): Promise<T[]>;
+  signMessage?(message: Uint8Array): Promise<Uint8Array>;
 }
 
 /**
@@ -84,6 +86,17 @@ export interface ShieldedWallet extends WalletLike {
   getSpendingSummary(): SpendingSummary;
   /** Dry-run a hypothetical action against policies without executing */
   dryRun(input: DryRunInput): DryRunResult;
+  /** Sign all transactions with policy enforcement */
+  signAllTransactions<T extends Transaction | VersionedTransaction>(
+    txs: T[],
+  ): Promise<T[]>;
+  /** Sign and send a transaction in one call — available when connection is provided */
+  signAndSendTransaction?<T extends Transaction | VersionedTransaction>(
+    tx: T,
+    options?: SendOptions,
+  ): Promise<{ signature: string }>;
+  /** Sign a message (SIWS/dApp auth) — delegates to inner wallet, blocks when paused */
+  signMessage(message: Uint8Array): Promise<Uint8Array>;
   /** Make an HTTP request with automatic x402 payment support */
   fetch?: (url: string | URL, init?: RequestInit) => Promise<Response>;
 }
@@ -346,7 +359,86 @@ export function shield(
 
       return { tokens, rateLimit, isPaused: paused };
     },
+
+    async signMessage(message: Uint8Array): Promise<Uint8Array> {
+      if (paused) {
+        throw new ShieldDeniedError([
+          {
+            rule: "rate_limit",
+            message:
+              "Wallet is paused — all signing is blocked until resume() is called",
+            suggestion: "Call resume() to re-enable signing",
+          },
+        ]);
+      }
+      if (!wallet.signMessage) {
+        throw new Error("Inner wallet does not support signMessage");
+      }
+      return wallet.signMessage(message);
+    },
   };
+
+  // Wire up signAndSendTransaction only when connection is available
+  if (connection) {
+    shielded.signAndSendTransaction = async <
+      T extends Transaction | VersionedTransaction,
+    >(
+      tx: T,
+      sendOptions?: SendOptions,
+    ): Promise<{ signature: string }> => {
+      if (paused) {
+        throw new ShieldDeniedError([
+          {
+            rule: "rate_limit",
+            message:
+              "Wallet is paused — all signing is blocked until resume() is called",
+            suggestion: "Call resume() to re-enable signing",
+          },
+        ]);
+      }
+
+      // Resolve ALTs for VersionedTransactions
+      let lookupTableAccounts: AddressLookupTableAccount[] | undefined;
+      if (
+        tx instanceof VersionedTransaction &&
+        tx.message.addressTableLookups.length > 0
+      ) {
+        lookupTableAccounts = await resolveTransactionAddressLookupTables(
+          tx,
+          connection,
+        );
+      }
+
+      const analysis = analyzeTransaction(
+        tx,
+        wallet.publicKey,
+        lookupTableAccounts,
+      );
+      const violations = evaluatePolicy(analysis, resolved, state);
+
+      if (violations.length > 0) {
+        const error = new ShieldDeniedError(violations);
+        onDenied?.(error);
+        throw error;
+      }
+
+      // Policy passed — sign with underlying wallet
+      const signed = await wallet.signTransaction(tx);
+
+      // Record the spend and transaction
+      recordTransaction(analysis, state);
+
+      // Send via connection — skip local sig verification (RPC node validates)
+      const raw =
+        signed instanceof VersionedTransaction
+          ? signed.serialize()
+          : signed.serialize({ verifySignatures: false });
+      const signature = await connection.sendRawTransaction(raw, sendOptions);
+      onApproved?.(signature);
+
+      return { signature };
+    };
+  }
 
   // Wire up x402 fetch support (lazy-loaded)
   shielded.fetch = async (url, init) => {

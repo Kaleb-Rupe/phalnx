@@ -13,6 +13,7 @@ import type {
   InstructionAnnotation,
 } from "./types.js";
 import { VALID_ACTION_TYPES, VALID_OPERATORS } from "./types.js";
+import { buildIdlTypeMap } from "./idl-helpers.js";
 
 export interface ValidationResult {
   valid: boolean;
@@ -56,12 +57,7 @@ export function validateAnnotation(
     idlInstructions.set(ix.name, ix);
   }
 
-  const idlTypes = new Map<string, { kind: string; fields?: { name: string; type: IdlType }[] }>();
-  if (idl.types) {
-    for (const t of idl.types) {
-      idlTypes.set(t.name, t.type);
-    }
-  }
+  const idlTypes = buildIdlTypeMap(idl);
 
   // ── Instructions ──────────────────────────────────────────────────────
 

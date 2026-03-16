@@ -322,7 +322,7 @@ async function composePlaceTriggerOrder(
   const receiveSymbol = requireField<string>(params, "receiveSymbol");
   const side = parseSide(requireField<string>(params, "side"));
   const triggerPrice = requireField<{ price: string; exponent: number }>(params, "triggerPrice");
-  const triggerPriceVal = BigInt(triggerPrice.price);
+  const triggerPriceVal = safeBigInt(triggerPrice.price, "triggerPrice.price");
   if (triggerPriceVal <= 0n) {
     throw new FlashTradeComposeError(
       COMPOSE_ERROR_CODES.INVALID_BIGINT,
@@ -373,7 +373,7 @@ async function composeEditTriggerOrder(
   const side = parseSide(requireField<string>(params, "side"));
   const orderId = requireField<number>(params, "orderId");
   const triggerPrice = requireField<{ price: string; exponent: number }>(params, "triggerPrice");
-  const triggerPriceVal = BigInt(triggerPrice.price);
+  const triggerPriceVal = safeBigInt(triggerPrice.price, "triggerPrice.price");
   if (triggerPriceVal <= 0n) {
     throw new FlashTradeComposeError(
       COMPOSE_ERROR_CODES.INVALID_BIGINT,

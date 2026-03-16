@@ -18,7 +18,7 @@
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",
-    "test": "NODE_OPTIONS='--no-experimental-strip-types' mocha --require ts-node/register 'tests/*.test.ts' 'tests/resources/*.test.ts' 'tests/tools/*.test.ts' 'tests/tools-v2/*.test.ts' --timeout 30000"
+    "test": "mocha --require tsx 'tests/*.test.ts' 'tests/resources/*.test.ts' 'tests/tools/*.test.ts' 'tests/tools-v2/*.test.ts' 'tests/prompts/*.test.ts' --timeout 30000"
   },
   "files": [
     "dist/**/*",
@@ -31,17 +31,21 @@
     "@modelcontextprotocol/sdk": "^1.27.1"
   },
   "peerDependencies": {
-    "@phalnx/custody-crossmint": ">=0.1.4",
-    "@phalnx/sdk": ">=0.5.4",
     "@coral-xyz/anchor": ">=0.32.1",
+    "@phalnx/custody-crossmint": ">=0.1.4",
+    "@phalnx/kit": ">=0.1.0",
+    "@phalnx/sdk": ">=0.5.4",
     "@solana/spl-token": ">=0.4.0",
     "@solana/web3.js": ">=1.95.0",
-    "zod": "^3.25.0 || ^4.0.0",
     "@sqds/multisig": ">=2.1.0",
-    "keytar": "^7.9.0"
+    "keytar": "^7.9.0",
+    "zod": "^3.25.0 || ^4.0.0"
   },
   "peerDependenciesMeta": {
     "@phalnx/custody-crossmint": {
+      "optional": true
+    },
+    "@phalnx/kit": {
       "optional": true
     },
     "@sqds/multisig": {
@@ -52,11 +56,13 @@
     }
   },
   "devDependencies": {
-    "@phalnx/custody-crossmint": "workspace:*",
-    "@phalnx/sdk": "workspace:*",
     "@coral-xyz/anchor": "^0.32.1",
+    "@phalnx/custody-crossmint": "workspace:*",
+    "@phalnx/kit": "workspace:*",
+    "@phalnx/sdk": "workspace:*",
     "@solana/spl-token": "^0.4.0",
     "@solana/web3.js": "^1.95.0",
+    "@sqds/multisig": "^2.1.4",
     "@types/chai": "^5.2.3",
     "@types/mocha": "^10.0.6",
     "@types/sinon": "^21.0.0",
@@ -64,8 +70,8 @@
     "mocha": "^11.7.5",
     "sinon": "^21.0.2",
     "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.3.3",
-    "@sqds/multisig": "^2.1.4",
     "zod": "^4.3.6"
   },
   "keywords": [

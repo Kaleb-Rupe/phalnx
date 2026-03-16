@@ -14,8 +14,6 @@ import {
 
 // Side-effect imports to register all templates
 import "./templates/standalone";
-import "./templates/sak";
-import "./templates/elizaos";
 import "./templates/mcp";
 
 export interface ScaffoldResult {

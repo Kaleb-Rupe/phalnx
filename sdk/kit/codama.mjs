@@ -127,45 +127,45 @@ for (const protocolName of protocolsToGenerate) {
 
   // Render to temp dir
   const tempDir = mkdtempSync(join(tmpdir(), `codama-${protocolName}-`));
-  await codama.accept(renderVisitor(tempDir));
-
-  // ─── Two-phase atomic generation (Step 6) ───────────────────────────────
-  const generatedSrc = join(tempDir, "src", "generated");
-  if (!existsSync(generatedSrc)) {
-    console.error(`Generation produced no output for ${protocolName}`);
-    rmSync(tempDir, { recursive: true, force: true });
-    process.exit(1);
-  }
-
-  const backupDir = `${config.outputDir}.bak`;
-  const parentDir = dirname(config.outputDir);
-  if (!existsSync(parentDir)) {
-    mkdirSync(parentDir, { recursive: true });
-  }
-
-  // Phase 1: backup existing
-  if (existsSync(config.outputDir)) {
-    renameSync(config.outputDir, backupDir);
-  }
 
   try {
-    // Phase 2: copy new
-    cpSync(generatedSrc, config.outputDir, { recursive: true });
-    // Success — remove backup
-    if (existsSync(backupDir)) {
-      rmSync(backupDir, { recursive: true, force: true });
+    await codama.accept(renderVisitor(tempDir));
+
+    // ─── Two-phase atomic generation (Step 6) ───────────────────────────────
+    const generatedSrc = join(tempDir, "src", "generated");
+    if (!existsSync(generatedSrc)) {
+      throw new Error(`Generation produced no output for ${protocolName}`);
     }
-  } catch (err) {
-    // Rollback — restore backup
-    console.error(`Generation failed for ${protocolName}, rolling back: ${err.message}`);
-    if (existsSync(backupDir)) {
-      if (existsSync(config.outputDir)) rmSync(config.outputDir, { recursive: true, force: true });
-      renameSync(backupDir, config.outputDir);
+
+    const backupDir = `${config.outputDir}.bak`;
+    const parentDir = dirname(config.outputDir);
+    if (!existsSync(parentDir)) {
+      mkdirSync(parentDir, { recursive: true });
     }
-    rmSync(tempDir, { recursive: true, force: true });
-    process.exit(1);
+
+    // Phase 1: backup existing
+    if (existsSync(config.outputDir)) {
+      renameSync(config.outputDir, backupDir);
+    }
+
+    try {
+      // Phase 2: copy new
+      cpSync(generatedSrc, config.outputDir, { recursive: true });
+      // Success — remove backup
+      if (existsSync(backupDir)) {
+        rmSync(backupDir, { recursive: true, force: true });
+      }
+    } catch (err) {
+      // Rollback — restore backup
+      if (existsSync(backupDir)) {
+        if (existsSync(config.outputDir)) rmSync(config.outputDir, { recursive: true, force: true });
+        renameSync(backupDir, config.outputDir);
+      }
+      throw new Error(`Generation failed for ${protocolName}, rolling back: ${err.message}`);
+    }
+  } finally {
+    try { rmSync(tempDir, { recursive: true, force: true }); } catch { /* ignore cleanup errors */ }
   }
-  rmSync(tempDir, { recursive: true, force: true });
 
   const ixCount = anchorIdl.instructions?.length ?? 0;
   const acctCount = anchorIdl.accounts?.length ?? 0;

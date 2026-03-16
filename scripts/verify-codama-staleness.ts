@@ -104,6 +104,18 @@ let totalPassed = 0;
 let totalFailed = 0;
 let totalMissing = 0;
 
+// Cache discriminators to avoid redundant file reads across Layer 1 and Layer 2
+const discriminatorCache = new Map<string, Uint8Array | null>();
+
+function cachedExtractDiscriminator(filePath: string): Uint8Array | null {
+  let cached = discriminatorCache.get(filePath);
+  if (cached === undefined) {
+    cached = extractDiscriminatorFromFile(filePath);
+    discriminatorCache.set(filePath, cached);
+  }
+  return cached;
+}
+
 console.log("═══ Layer 1: IDL → Generated Code Discriminator Check ═══\n");
 
 for (const proto of PROTOCOLS) {
@@ -131,7 +143,7 @@ for (const proto of PROTOCOLS) {
     const filePath = join(proto.generatedDir, `${camelName}.ts`);
 
     const expected = computeAnchorDiscriminator(snakeName);
-    const actual = extractDiscriminatorFromFile(filePath);
+    const actual = cachedExtractDiscriminator(filePath);
 
     totalChecked++;
 
@@ -179,7 +191,7 @@ const schemaChecks: SchemaCheck[] = [];
 for (const [name, schema] of FLASH_TRADE_SCHEMA.instructions) {
   const camelName = name; // Schema keys are already camelCase
   const filePath = join(PROTOCOLS[0].generatedDir, `${camelName}.ts`);
-  const generated = extractDiscriminatorFromFile(filePath);
+  const generated = cachedExtractDiscriminator(filePath);
   if (generated) {
     schemaChecks.push({
       protocol: "flash-trade",
@@ -201,7 +213,7 @@ for (const [name, schema] of KAMINO_SCHEMA.instructions) {
   };
   const generatedName = nameMap[name] ?? name;
   const filePath = join(PROTOCOLS[1].generatedDir, `${generatedName}.ts`);
-  const generated = extractDiscriminatorFromFile(filePath);
+  const generated = cachedExtractDiscriminator(filePath);
   if (generated) {
     schemaChecks.push({
       protocol: "kamino",

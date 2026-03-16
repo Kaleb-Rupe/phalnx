@@ -263,14 +263,6 @@ updateFile("CLAUDE.md", "CLAUDE.md", (content) => {
       suite: "Crossmint custody adapter",
     },
     {
-      match: /`plugins\/solana-agent-kit\/`[^)]*?(\d+) tests\)/,
-      suite: "SAK plugin (`@phalnx/plugin-solana-agent-kit`)",
-    },
-    {
-      match: /`plugins\/elizaos\/`[^)]*?(\d+) tests\)/,
-      suite: "ElizaOS plugin (`@phalnx/plugin-elizaos`)",
-    },
-    {
       match: /`packages\/mcp\/`[^)]*?(\d+) tests\)/,
       suite: "MCP server (`@phalnx/mcp`)",
     },

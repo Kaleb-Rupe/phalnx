@@ -301,8 +301,6 @@ const sig = await client.executeJupiterSwap({
 | Package                                                                                            | Description                   |
 | -------------------------------------------------------------------------------------------------- | ----------------------------- |
 | [`@phalnx/core`](https://www.npmjs.com/package/@phalnx/core)                                       | Pure TypeScript policy engine |
-| [`@phalnx/plugin-solana-agent-kit`](https://www.npmjs.com/package/@phalnx/plugin-solana-agent-kit) | Solana Agent Kit integration  |
-| [`@phalnx/plugin-elizaos`](https://www.npmjs.com/package/@phalnx/plugin-elizaos)                   | ElizaOS integration           |
 
 ## Support
 

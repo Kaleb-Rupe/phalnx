@@ -142,7 +142,6 @@ try {
 | [`@phalnx/sdk`](https://www.npmjs.com/package/@phalnx/sdk)                       | On-chain guardrails — `withVault()` primary API  |
 | [`@phalnx/core`](https://www.npmjs.com/package/@phalnx/core)                     | Pure TypeScript policy engine                    |
 | [`@phalnx/mcp`](https://www.npmjs.com/package/@phalnx/mcp)                       | MCP server for AI tools                          |
-| [`@phalnx/plugin-elizaos`](https://www.npmjs.com/package/@phalnx/plugin-elizaos) | ElizaOS integration (supports Crossmint custody) |
 
 ## Support
 

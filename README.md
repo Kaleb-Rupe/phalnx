@@ -1,7 +1,7 @@
 # Phalnx
 
 [![CI](https://github.com/Kaleb-Rupe/phalnx/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Kaleb-Rupe/phalnx/actions/workflows/ci.yml)
-![Tests](https://img.shields.io/badge/tests-2670-brightgreen)
+![Tests](https://img.shields.io/badge/tests-2953-brightgreen)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 
 On-chain guardrails for AI agents on Solana. Your policies are enforced by Solana validators, not software promises.
@@ -119,8 +119,6 @@ All instructions succeed or all revert atomically. The agent's signing key is va
 | [`@phalnx/platform`](./sdk/platform)                            | Platform client — request TEE wallet provisioning via Solana Actions | [![npm](https://img.shields.io/npm/v/@phalnx/platform)](https://www.npmjs.com/package/@phalnx/platform)                               |
 | [`@phalnx/custody-crossmint`](./sdk/custody/crossmint)          | Crossmint TEE custody adapter — hardware-enclave signing             | [![npm](https://img.shields.io/npm/v/@phalnx/custody-crossmint)](https://www.npmjs.com/package/@phalnx/custody-crossmint)             |
 | [`@phalnx/mcp`](./packages/mcp)                                 | MCP server — 49 tools, 3 resources for AI tool management            | [![npm](https://img.shields.io/npm/v/@phalnx/mcp)](https://www.npmjs.com/package/@phalnx/mcp)                                         |
-| [`@phalnx/plugin-solana-agent-kit`](./plugins/solana-agent-kit) | Solana Agent Kit plugin — 6 tools with factory                       | [![npm](https://img.shields.io/npm/v/@phalnx/plugin-solana-agent-kit)](https://www.npmjs.com/package/@phalnx/plugin-solana-agent-kit) |
-| [`@phalnx/plugin-elizaos`](./plugins/elizaos)                   | ElizaOS plugin — 6 actions, 2 providers, 1 evaluator                 | [![npm](https://img.shields.io/npm/v/@phalnx/plugin-elizaos)](https://www.npmjs.com/package/@phalnx/plugin-elizaos)                   |
 
 ## Quick Start
 
@@ -225,12 +223,10 @@ cargo fmt --check --manifest-path programs/phalnx/Cargo.toml
 | SDK tests (`@phalnx/sdk`)                            |     656 |
 | Platform client tests (`@phalnx/platform`)           |      17 |
 | Crossmint custody adapter                            |      29 |
-| SAK plugin (`@phalnx/plugin-solana-agent-kit`)       |      34 |
-| ElizaOS plugin (`@phalnx/plugin-elizaos`)            |      35 |
-| MCP server (`@phalnx/mcp`)                           |     443 |
+| MCP server (`@phalnx/mcp`)                           |     472 |
 | Actions server (`@phalnx/actions-server`)            |      99 |
-| Kit-native SDK (`@phalnx/kit`)                       |     853 |
-| **Total**                                            | **2670** |
+| Kit-native SDK (`@phalnx/kit`)                       |    1176 |
+| **Total**                                            | **2953** |
 
 ## Security
 

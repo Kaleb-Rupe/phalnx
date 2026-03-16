@@ -237,11 +237,13 @@ describe("harden", () => {
   describe("withVault()", () => {
     it("returns both shield and harden results", async () => {
       const result = await withVault({
-        rpc: {} as any,
-        network: "devnet",
-        owner: mockOwner(),
-        agent: mockAgentSigner(),
-        vaultId: 0n,
+        harden: {
+          rpc: {} as any,
+          network: "devnet",
+          owner: mockOwner(),
+          agent: mockAgentSigner(),
+          vaultId: 0n,
+        },
       });
       expect(result.shield).to.exist;
       expect(result.shield.isPaused).to.be.false;
@@ -250,14 +252,48 @@ describe("harden", () => {
 
     it("passes shield policies through", async () => {
       const result = await withVault({
+        harden: {
+          rpc: {} as any,
+          network: "devnet",
+          owner: mockOwner(),
+          agent: mockAgentSigner(),
+          vaultId: 0n,
+        },
+        policies: { blockUnknownPrograms: true },
+      });
+      expect(result.shield.resolvedPolicies.blockUnknownPrograms).to.be.true;
+    });
+
+    it("auto-configures onChainSync on shield", async () => {
+      const result = await withVault({
+        harden: {
+          rpc: {} as any,
+          network: "devnet",
+          owner: mockOwner(),
+          agent: mockAgentSigner(),
+          vaultId: 0n,
+        },
+        policies: {},
+      });
+      expect(result.shield.hasOnChainSync).to.be.true;
+    });
+
+    it("harden() still works independently with unchanged API", async () => {
+      const result = await harden({
         rpc: {} as any,
         network: "devnet",
         owner: mockOwner(),
         agent: mockAgentSigner(),
         vaultId: 0n,
-        policies: { blockUnknownPrograms: true },
       });
-      expect(result.shield.resolvedPolicies.blockUnknownPrograms).to.be.true;
+      expect(result.vaultAddress).to.be.a("string");
+      expect(result.agentAddress).to.equal(AGENT);
+    });
+
+    it("mapPoliciesToVaultParams still works (regression)", () => {
+      const resolved = resolvePolicies({});
+      const params = mapPoliciesToVaultParams(resolved, 0n, FEE_DEST);
+      expect(typeof params.dailySpendingCap).to.equal("bigint");
     });
   });
 });

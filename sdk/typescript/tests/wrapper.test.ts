@@ -2132,4 +2132,278 @@ describe("wrapper — shieldWallet() & harden()", () => {
       });
     });
   });
+
+  describe("signAndSendTransaction", () => {
+    it("is undefined when connection not provided", () => {
+      const wallet = createMockWallet();
+      const shielded = shield(wallet, undefined, { storage: createMemoryStorage() });
+      expect(shielded.signAndSendTransaction).to.be.undefined;
+    });
+
+    it("is defined when connection is provided", () => {
+      const wallet = createMockWallet();
+      const mockConnection = {
+        sendRawTransaction: async () => "fakeSig123",
+        getAddressLookupTable: async () => ({ value: null }),
+      } as unknown as Connection;
+      const shielded = shield(wallet, undefined, {
+        connection: mockConnection,
+        storage: createMemoryStorage(),
+      });
+      expect(shielded.signAndSendTransaction).to.be.a("function");
+    });
+
+    it("runs policy check before signing and sending", async () => {
+      const wallet = createMockWallet();
+      const sentTxs: Buffer[] = [];
+      const mockConnection = {
+        sendRawTransaction: async (raw: Buffer) => {
+          sentTxs.push(raw);
+          return "sig_approved";
+        },
+        getAddressLookupTable: async () => ({ value: null }),
+      } as unknown as Connection;
+
+      const shielded = shield(wallet, { maxSpend: "1000 USDC/day" }, {
+        connection: mockConnection,
+        storage: createMemoryStorage(),
+      });
+
+      const tx = buildSystemTx(wallet.publicKey);
+      const result = await shielded.signAndSendTransaction!(tx);
+      expect(result.signature).to.equal("sig_approved");
+      expect(wallet.signCount).to.equal(1);
+      expect(sentTxs).to.have.length(1);
+    });
+
+    it("records spending after successful send", async () => {
+      const wallet = createMockWallet();
+      const mockConnection = {
+        sendRawTransaction: async () => "sig_recorded",
+        getAddressLookupTable: async () => ({ value: null }),
+      } as unknown as Connection;
+
+      const shielded = shield(wallet, { maxSpend: "1000 USDC/day" }, {
+        connection: mockConnection,
+        storage: createMemoryStorage(),
+      });
+
+      const tx = buildSystemTx(wallet.publicKey);
+      await shielded.signAndSendTransaction!(tx);
+
+      const summary = shielded.getSpendingSummary();
+      expect(summary.rateLimit.count).to.equal(1);
+    });
+
+    it("blocks when paused — does not sign or send", async () => {
+      const wallet = createMockWallet();
+      let sendCalled = false;
+      const mockConnection = {
+        sendRawTransaction: async () => {
+          sendCalled = true;
+          return "sig_should_not_happen";
+        },
+        getAddressLookupTable: async () => ({ value: null }),
+      } as unknown as Connection;
+
+      const shielded = shield(wallet, undefined, {
+        connection: mockConnection,
+        storage: createMemoryStorage(),
+      });
+      shielded.pause();
+
+      try {
+        await shielded.signAndSendTransaction!(buildSystemTx(wallet.publicKey));
+        expect.fail("Should have thrown");
+      } catch (e) {
+        expect(e).to.be.instanceOf(ShieldDeniedError);
+        expect(wallet.signCount).to.equal(0);
+        expect(sendCalled).to.be.false;
+      }
+    });
+
+    it("blocks when policy violated — does not sign or send", async () => {
+      const wallet = createMockWallet();
+      let sendCalled = false;
+      const mockConnection = {
+        sendRawTransaction: async () => {
+          sendCalled = true;
+          return "sig_should_not_happen";
+        },
+        getAddressLookupTable: async () => ({ value: null }),
+      } as unknown as Connection;
+
+      // Block unknown programs, then send a tx with an unknown program
+      const shielded = shield(wallet, { blockUnknownPrograms: true }, {
+        connection: mockConnection,
+        storage: createMemoryStorage(),
+      });
+
+      const tx = new Transaction();
+      tx.add(
+        new TransactionInstruction({
+          programId: UNKNOWN_PROGRAM,
+          keys: [{ pubkey: wallet.publicKey, isSigner: true, isWritable: false }],
+          data: Buffer.alloc(0),
+        }),
+      );
+      tx.recentBlockhash = "EETubP5AKHgjPAhzPkA6E6Q25CUVpCzSEbNqhU7vBd8b";
+      tx.feePayer = wallet.publicKey;
+
+      try {
+        await shielded.signAndSendTransaction!(tx);
+        expect.fail("Should have thrown");
+      } catch (e) {
+        expect(e).to.be.instanceOf(ShieldDeniedError);
+        expect(wallet.signCount).to.equal(0);
+        expect(sendCalled).to.be.false;
+      }
+    });
+
+    it("fires onDenied callback on policy violation", async () => {
+      const wallet = createMockWallet();
+      const mockConnection = {
+        sendRawTransaction: async () => "sig",
+        getAddressLookupTable: async () => ({ value: null }),
+      } as unknown as Connection;
+
+      let deniedError: ShieldDeniedError | null = null;
+      const shielded = shield(wallet, { blockUnknownPrograms: true }, {
+        connection: mockConnection,
+        storage: createMemoryStorage(),
+        onDenied: (err) => { deniedError = err; },
+      });
+
+      const tx = new Transaction();
+      tx.add(
+        new TransactionInstruction({
+          programId: UNKNOWN_PROGRAM,
+          keys: [{ pubkey: wallet.publicKey, isSigner: true, isWritable: false }],
+          data: Buffer.alloc(0),
+        }),
+      );
+      tx.recentBlockhash = "EETubP5AKHgjPAhzPkA6E6Q25CUVpCzSEbNqhU7vBd8b";
+      tx.feePayer = wallet.publicKey;
+
+      try {
+        await shielded.signAndSendTransaction!(tx);
+      } catch { /* expected */ }
+
+      expect(deniedError).to.be.instanceOf(ShieldDeniedError);
+    });
+
+    it("fires onApproved callback with signature on success", async () => {
+      const wallet = createMockWallet();
+      const mockConnection = {
+        sendRawTransaction: async () => "sig_approved_cb",
+        getAddressLookupTable: async () => ({ value: null }),
+      } as unknown as Connection;
+
+      let approvedSig: string | null = null;
+      const shielded = shield(wallet, { maxSpend: "1000 USDC/day" }, {
+        connection: mockConnection,
+        storage: createMemoryStorage(),
+        onApproved: (sig) => { approvedSig = sig; },
+      });
+
+      const tx = buildSystemTx(wallet.publicKey);
+      await shielded.signAndSendTransaction!(tx);
+      expect(approvedSig).to.equal("sig_approved_cb");
+    });
+
+    it("passes SendOptions through to connection.sendRawTransaction", async () => {
+      const wallet = createMockWallet();
+      let receivedOptions: any = null;
+      const mockConnection = {
+        sendRawTransaction: async (_raw: Buffer, opts?: any) => {
+          receivedOptions = opts;
+          return "sig_opts";
+        },
+        getAddressLookupTable: async () => ({ value: null }),
+      } as unknown as Connection;
+
+      const shielded = shield(wallet, undefined, {
+        connection: mockConnection,
+        storage: createMemoryStorage(),
+      });
+
+      const tx = buildSystemTx(wallet.publicKey);
+      await shielded.signAndSendTransaction!(tx, {
+        skipPreflight: true,
+        preflightCommitment: "confirmed",
+      });
+
+      expect(receivedOptions).to.deep.equal({
+        skipPreflight: true,
+        preflightCommitment: "confirmed",
+      });
+    });
+  });
+
+  describe("signMessage", () => {
+    it("delegates to inner wallet signMessage", async () => {
+      const wallet = createMockWallet();
+      const expectedSig = new Uint8Array([1, 2, 3, 4]);
+      (wallet as any).signMessage = async () => expectedSig;
+
+      const shielded = shield(wallet, undefined, { storage: createMemoryStorage() });
+      const result = await shielded.signMessage(new Uint8Array([0xde, 0xad]));
+      expect(result).to.equal(expectedSig);
+    });
+
+    it("blocks when paused", async () => {
+      const wallet = createMockWallet();
+      (wallet as any).signMessage = async () => new Uint8Array([1]);
+
+      const shielded = shield(wallet, undefined, { storage: createMemoryStorage() });
+      shielded.pause();
+
+      try {
+        await shielded.signMessage(new Uint8Array([0xde, 0xad]));
+        expect.fail("Should have thrown");
+      } catch (e) {
+        expect(e).to.be.instanceOf(ShieldDeniedError);
+      }
+    });
+
+    it("throws if inner wallet does not support signMessage", async () => {
+      const wallet = createMockWallet();
+      // No signMessage on wallet
+
+      const shielded = shield(wallet, undefined, { storage: createMemoryStorage() });
+
+      try {
+        await shielded.signMessage(new Uint8Array([0xde, 0xad]));
+        expect.fail("Should have thrown");
+      } catch (e: any) {
+        expect(e.message).to.include("does not support signMessage");
+      }
+    });
+
+    it("does not record spending or evaluate policies", async () => {
+      const wallet = createMockWallet();
+      (wallet as any).signMessage = async () => new Uint8Array([1]);
+
+      const shielded = shield(wallet, { maxSpend: "100 USDC/day" }, {
+        storage: createMemoryStorage(),
+      });
+
+      await shielded.signMessage(new Uint8Array([0xde, 0xad]));
+      const summary = shielded.getSpendingSummary();
+      expect(summary.rateLimit.count).to.equal(0);
+    });
+
+    it("works after resume from pause", async () => {
+      const wallet = createMockWallet();
+      const expectedSig = new Uint8Array([5, 6, 7]);
+      (wallet as any).signMessage = async () => expectedSig;
+
+      const shielded = shield(wallet, undefined, { storage: createMemoryStorage() });
+      shielded.pause();
+      shielded.resume();
+
+      const result = await shielded.signMessage(new Uint8Array([0xca, 0xfe]));
+      expect(result).to.equal(expectedSig);
+    });
+  });
 });

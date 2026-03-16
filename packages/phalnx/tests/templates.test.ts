@@ -10,8 +10,6 @@ import {
 
 // Import templates to register them
 import "../src/templates/standalone";
-import "../src/templates/sak";
-import "../src/templates/elizaos";
 import "../src/templates/mcp";
 
 const baseConfig: ProjectConfig = {
@@ -27,15 +25,13 @@ const baseConfig: ProjectConfig = {
 
 describe("templates", () => {
   describe("registry", () => {
-    it("has all 4 templates registered", () => {
+    it("has all 2 templates registered", () => {
       const all = getAllTemplates();
-      expect(all).to.have.lengthOf(4);
+      expect(all).to.have.lengthOf(2);
     });
 
     it("retrieves templates by name", () => {
       expect(getTemplate("standalone")).to.not.be.undefined;
-      expect(getTemplate("sak")).to.not.be.undefined;
-      expect(getTemplate("elizaos")).to.not.be.undefined;
       expect(getTemplate("mcp")).to.not.be.undefined;
     });
 
@@ -43,12 +39,10 @@ describe("templates", () => {
       expect(getTemplate("unknown" as any)).to.be.undefined;
     });
 
-    it("TEMPLATE_CHOICES has 4 entries", () => {
-      expect(TEMPLATE_CHOICES).to.have.lengthOf(4);
+    it("TEMPLATE_CHOICES has 2 entries", () => {
+      expect(TEMPLATE_CHOICES).to.have.lengthOf(2);
       const names = TEMPLATE_CHOICES.map((c) => c.name);
       expect(names).to.include("standalone");
-      expect(names).to.include("sak");
-      expect(names).to.include("elizaos");
       expect(names).to.include("mcp");
     });
   });
@@ -113,71 +107,6 @@ describe("templates", () => {
       const indexFile = files.find((f) => f.path === "src/index.ts")!;
       expect(indexFile.content).to.include("100 USDC/day");
       expect(indexFile.content).to.include("maxSlippageBps: 100");
-    });
-  });
-
-  describe("sak template", () => {
-    it("generates required files", () => {
-      const tmpl = getTemplate("sak")!;
-      const files = tmpl.generate({ ...baseConfig, template: "sak" });
-      const paths = files.map((f) => f.path);
-      expect(paths).to.include("package.json");
-      expect(paths).to.include("src/index.ts");
-    });
-
-    it("includes SAK dependency", () => {
-      const tmpl = getTemplate("sak")!;
-      const files = tmpl.generate({ ...baseConfig, template: "sak" });
-      const pkg = files.find((f) => f.path === "package.json")!;
-      expect(pkg.content).to.include("plugin-solana-agent-kit");
-    });
-
-    it("imports createPhalnxPlugin", () => {
-      const tmpl = getTemplate("sak")!;
-      const files = tmpl.generate({ ...baseConfig, template: "sak" });
-      const indexFile = files.find((f) => f.path === "src/index.ts")!;
-      expect(indexFile.content).to.include("createPhalnxPlugin");
-    });
-  });
-
-  describe("elizaos template", () => {
-    it("generates required files", () => {
-      const tmpl = getTemplate("elizaos")!;
-      const files = tmpl.generate({ ...baseConfig, template: "elizaos" });
-      const paths = files.map((f) => f.path);
-      expect(paths).to.include("package.json");
-      expect(paths).to.include("src/index.ts");
-    });
-
-    it("includes ElizaOS dependency", () => {
-      const tmpl = getTemplate("elizaos")!;
-      const files = tmpl.generate({ ...baseConfig, template: "elizaos" });
-      const pkg = files.find((f) => f.path === "package.json")!;
-      expect(pkg.content).to.include("@phalnx/elizaos");
-    });
-
-    it("includes TEE env vars for turnkey", () => {
-      const tmpl = getTemplate("elizaos")!;
-      const files = tmpl.generate({
-        ...baseConfig,
-        template: "elizaos",
-        teeProvider: "turnkey",
-      });
-      const env = files.find((f) => f.path === ".env.example")!;
-      expect(env.content).to.include("TURNKEY_API_KEY");
-      expect(env.content).to.include("TURNKEY_ORGANIZATION_ID");
-    });
-
-    it("includes TEE env vars for privy", () => {
-      const tmpl = getTemplate("elizaos")!;
-      const files = tmpl.generate({
-        ...baseConfig,
-        template: "elizaos",
-        teeProvider: "privy",
-      });
-      const env = files.find((f) => f.path === ".env.example")!;
-      expect(env.content).to.include("PRIVY_APP_ID");
-      expect(env.content).to.include("PRIVY_APP_SECRET");
     });
   });
 

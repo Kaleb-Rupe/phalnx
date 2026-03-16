@@ -76,23 +76,25 @@ async function main(): Promise<void> {
 
   // ── Step 1: Load YAML annotation ────────────────────────────────────────
   console.log(`Loading annotation: ${opts.yamlPath}`);
-  if (!existsSync(opts.yamlPath)) {
+  let yamlContent: string;
+  try {
+    yamlContent = readFileSync(opts.yamlPath, "utf-8");
+  } catch {
     console.error(`❌ YAML file not found: ${opts.yamlPath}`);
     process.exit(1);
   }
-
-  const yamlContent = readFileSync(opts.yamlPath, "utf-8");
   const config: AnnotationConfig = parseYaml(yamlContent);
 
   // ── Step 2: Load IDL ──────────────────────────────────────────────────
   const idlPath = resolve(dirname(opts.yamlPath), config.protocol.idlFile);
   console.log(`Loading IDL: ${idlPath}`);
-  if (!existsSync(idlPath)) {
+  let idlContent: string;
+  try {
+    idlContent = readFileSync(idlPath, "utf-8");
+  } catch {
     console.error(`❌ IDL file not found: ${idlPath}`);
     process.exit(1);
   }
-
-  const idlContent = readFileSync(idlPath, "utf-8");
   const idl: AnchorIdl = JSON.parse(idlContent);
 
   // ── Step 3: Validate YAML against IDL ──────────────────────────────────
@@ -127,19 +129,19 @@ async function main(): Promise<void> {
   const protoId = config.protocol.id;
   const sdkKitRoot = join(process.cwd(), "sdk", "kit");
 
-  const outputPaths = {
-    schema: join(sdkKitRoot, "src", "constraints", "protocols", `${protoId}-schema.ts`),
-    descriptor: join(sdkKitRoot, "src", "constraints", "protocols", `${protoId}-descriptor.ts`),
-    handler: join(sdkKitRoot, "src", "integrations", `${protoId}-handler.ts`),
-    composer: join(sdkKitRoot, "src", "integrations", `${protoId}-compose.ts`),
-    markets: join(sdkKitRoot, "src", "integrations", "config", `${protoId}-markets.ts`),
-  };
+  const GENERATORS = [
+    { name: "schema", path: join(sdkKitRoot, "src", "constraints", "protocols", `${protoId}-schema.ts`), generate: () => generateSchema(config, parsed), schemaOnly: false },
+    { name: "descriptor", path: join(sdkKitRoot, "src", "constraints", "protocols", `${protoId}-descriptor.ts`), generate: () => generateDescriptor(config, parsed), schemaOnly: true },
+    { name: "handler", path: join(sdkKitRoot, "src", "integrations", `${protoId}-handler.ts`), generate: () => generateHandler(config, parsed), schemaOnly: true },
+    { name: "composer", path: join(sdkKitRoot, "src", "integrations", `${protoId}-compose.ts`), generate: () => generateComposer(config, parsed), schemaOnly: true },
+    { name: "markets", path: join(sdkKitRoot, "src", "integrations", "config", `${protoId}-markets.ts`), generate: () => generateMarkets(config), schemaOnly: true },
+  ];
 
   // Check for existing files
   if (!opts.force && !opts.dryRun && !opts.verifyOnly) {
-    const existing = Object.entries(outputPaths)
-      .filter(([_, path]) => existsSync(path))
-      .map(([name, path]) => `  ${name}: ${path}`);
+    const existing = GENERATORS
+      .filter((gen) => existsSync(gen.path))
+      .map((gen) => `  ${gen.name}: ${gen.path}`);
 
     if (existing.length > 0) {
       console.error("\n❌ Files already exist (use --force to overwrite):");
@@ -151,23 +153,12 @@ async function main(): Promise<void> {
   // Generate content
   console.log("\nGenerating files...");
 
-  const generated: Record<string, string> = {};
+  const generated = new Map<string, string>();
 
-  generated.schema = generateSchema(config, parsed);
-  console.log(`  ✅ Schema: ${outputPaths.schema}`);
-
-  if (!opts.schemaOnly) {
-    generated.descriptor = generateDescriptor(config, parsed);
-    console.log(`  ✅ Descriptor: ${outputPaths.descriptor}`);
-
-    generated.handler = generateHandler(config, parsed);
-    console.log(`  ✅ Handler: ${outputPaths.handler}`);
-
-    generated.composer = generateComposer(config, parsed);
-    console.log(`  ✅ Composer: ${outputPaths.composer}`);
-
-    generated.markets = generateMarkets(config);
-    console.log(`  ✅ Markets: ${outputPaths.markets}`);
+  for (const gen of GENERATORS) {
+    if (opts.schemaOnly && gen.schemaOnly) continue;
+    generated.set(gen.name, gen.generate());
+    console.log(`  ✅ ${gen.name[0].toUpperCase() + gen.name.slice(1)}: ${gen.path}`);
   }
 
   // ── Step 7: Codama entry ──────────────────────────────────────────────
@@ -205,9 +196,10 @@ async function main(): Promise<void> {
 
   if (opts.dryRun) {
     console.log("\n── Dry Run: would generate these files ──");
-    for (const [name, path] of Object.entries(outputPaths)) {
-      if (generated[name]) {
-        console.log(`  ${path} (${generated[name].split("\n").length} lines)`);
+    for (const gen of GENERATORS) {
+      const content = generated.get(gen.name);
+      if (content) {
+        console.log(`  ${gen.path} (${content.split("\n").length} lines)`);
       }
     }
     return;
@@ -215,16 +207,17 @@ async function main(): Promise<void> {
 
   // Write generated files
   console.log("\nWriting files...");
-  for (const [name, path] of Object.entries(outputPaths)) {
-    if (!generated[name]) continue;
+  for (const gen of GENERATORS) {
+    const content = generated.get(gen.name);
+    if (!content) continue;
 
-    const dir = dirname(path);
+    const dir = dirname(gen.path);
     if (!existsSync(dir)) {
       mkdirSync(dir, { recursive: true });
     }
 
-    writeFileSync(path, generated[name], "utf-8");
-    console.log(`  ✅ ${path}`);
+    writeFileSync(gen.path, content, "utf-8");
+    console.log(`  ✅ ${gen.path}`);
   }
 
   // ── Step 10: Registry patches ─────────────────────────────────────────
@@ -232,11 +225,11 @@ async function main(): Promise<void> {
   console.log(generateRegistryPatches(config));
 
   // ── Step 11: Summary ──────────────────────────────────────────────────
-  const fileCount = Object.keys(generated).length;
-  const lineCount = Object.values(generated).reduce(
-    (sum, content) => sum + content.split("\n").length,
-    0,
-  );
+  const fileCount = generated.size;
+  let lineCount = 0;
+  for (const content of generated.values()) {
+    lineCount += content.split("\n").length;
+  }
 
   console.log(`\n═══ Done ═══`);
   console.log(`  Generated ${fileCount} files (${lineCount} total lines) for ${config.protocol.displayName}`);
