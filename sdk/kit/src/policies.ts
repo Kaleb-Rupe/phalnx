@@ -1,9 +1,7 @@
 /**
  * Kit-native policy engine for Phalnx.
  *
- * Port of sdk/typescript/src/wrapper/policies.ts with Kit Address type
- * instead of web3.js PublicKey. Since Kit Address IS a string, the
- * conversion layer is simplified — no .toBase58() needed.
+ * Kit-native policy engine with Address types.
  */
 
 import type { Address } from "@solana/kit";
@@ -57,25 +55,6 @@ export interface TokenTransfer {
   direction: "outgoing" | "incoming" | "unknown";
   /** Destination account */
   destination?: Address;
-}
-
-/** Summary of current spending state relative to policy limits */
-export interface SpendingSummary {
-  tokens: Array<{
-    mint: string;
-    symbol: string | undefined;
-    spent: bigint;
-    limit: bigint;
-    remaining: bigint;
-    windowMs: number;
-  }>;
-  rateLimit: {
-    count: number;
-    limit: number;
-    remaining: number;
-    windowMs: number;
-  };
-  isPaused: boolean;
 }
 
 /** Internal resolved policy representation (extends core with customCheck) */

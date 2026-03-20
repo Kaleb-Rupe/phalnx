@@ -1,9 +1,5 @@
 /**
- * TransactionExecutor — Pipeline steps 9-12 for Kit SDK.
- *
- * Separated from IntentEngine for clean separation of concerns:
- * IntentEngine handles orchestration (steps 1-8),
- * TransactionExecutor handles network I/O (steps 9-12).
+ * TransactionExecutor — Kit-native transaction pipeline.
  *
  * Steps:
  *   9. Compose versioned transaction (blockhash + compile)

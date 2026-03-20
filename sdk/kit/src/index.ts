@@ -1,5 +1,5 @@
 // @phalnx/kit — Kit-native SDK for Phalnx
-// ESM-only, zero web3.js dependency (except internal compat.ts)
+// ESM-only, zero web3.js dependency
 
 // ─── Generated Client ─────────────────────────────────────────────────────────
 export * from "./generated/index.js";
@@ -166,7 +166,6 @@ export type {
   SpendLimit,
   TransactionAnalysis,
   TokenTransfer,
-  SpendingSummary,
   ResolvedPolicies,
   RateLimitConfig,
   PolicyCheckResult,
@@ -222,50 +221,6 @@ export type {
   AgentError,
 } from "./agent-errors.js";
 
-// ─── Intents ──────────────────────────────────────────────────────────────────
-export {
-  DEFAULT_INTENT_TTL_MS,
-  ACTION_TYPE_MAP,
-  summarizeAction,
-  resolveProtocolActionType,
-} from "./intents.js";
-export type {
-  IntentAction,
-  IntentActionType,
-  IntentStatus,
-  PrecheckResult,
-  ExecuteResult,
-  TransactionIntent,
-  IntentStorage,
-  ProtocolRegistryLike,
-} from "./intents.js";
-
-// ─── Intent Validator ─────────────────────────────────────────────────────────
-export { validateIntentInput } from "./intent-validator.js";
-export type { ValidationResult } from "./intent-validator.js";
-
-// ─── Intent Storage ──────────────────────────────────────────────────────────
-export { createIntent, MemoryIntentStorage } from "./intent-storage.js";
-
-// ─── Protocol Handler Interface ──────────────────────────────────────────────
-export type {
-  ProtocolComposeResult,
-  ProtocolContext,
-  ProtocolActionDescriptor,
-  ProtocolHandlerMetadata,
-  ProtocolHandler,
-} from "./integrations/protocol-handler.js";
-
-// ─── Protocol Registry ───────────────────────────────────────────────────────
-export {
-  ProtocolRegistry,
-  globalProtocolRegistry,
-} from "./integrations/protocol-registry.js";
-
-// ─── Adapter Verifier ────────────────────────────────────────────────────────
-export { verifyAdapterOutput } from "./integrations/adapter-verifier.js";
-export type { AdapterVerifyResult } from "./integrations/adapter-verifier.js";
-
 // ─── Protocol Resolver ───────────────────────────────────────────────────────
 export {
   ProtocolTier,
@@ -285,25 +240,6 @@ export type {
   InstructionAnalysis,
 } from "./inspector.js";
 
-// ─── Jupiter Handler (T1) ───────────────────────────────────────────────────
-export {
-  deserializeJupiterInstruction,
-  JupiterHandler,
-} from "./integrations/jupiter-handler.js";
-export type { JupiterSerializedInstruction } from "./integrations/jupiter-handler.js";
-
-// ─── T2 Protocol Handlers ───────────────────────────────────────────────────
-export {
-  DriftHandler,
-  FlashTradeHandler,
-  KaminoHandler,
-  SquadsHandler,
-  driftHandler,
-  flashTradeHandler,
-  kaminoHandler,
-  squadsHandler,
-} from "./integrations/t2-handlers.js";
-
 // ─── Shield ─────────────────────────────────────────────────────────────────
 export {
   ShieldState,
@@ -315,24 +251,11 @@ export {
 export type {
   PolicyViolation,
   ShieldCheckResult,
-  SpendingSummary as ShieldSpendingSummary,
+  SpendingSummary,
   ShieldOptions,
   ShieldedContext,
   ShieldedSignerOptions,
 } from "./shield.js";
-
-// ─── Intent Engine ──────────────────────────────────────────────────────────
-export { IntentEngine } from "./intent-engine.js";
-export type {
-  ExplainResult,
-  ProtocolInfo,
-  ActionInfo,
-  IntentEngineConfig,
-} from "./intent-engine.js";
-
-// ─── PhalnxKitClient ────────────────────────────────────────────────────────
-export { PhalnxKitClient } from "./client.js";
-export type { PhalnxKitClientConfig } from "./client.js";
 
 // ─── Harden / withVault ─────────────────────────────────────────────────────
 export {
@@ -359,100 +282,6 @@ export type {
 // ─── RPC Helpers ───────────────────────────────────────────────────────────
 export { BlockhashCache, sendAndConfirmTransaction } from "./rpc-helpers.js";
 export type { Blockhash, SendAndConfirmOptions } from "./rpc-helpers.js";
-
-// ─── Constraint Builder ──────────────────────────────────────────────────
-export {
-  // Builder
-  ConstraintBuilder,
-  ConstraintBudgetExceededError,
-  // Flash Trade
-  FlashTradeDescriptor,
-  FLASH_TRADE_SCHEMA,
-  FLASH_TRADE_PROGRAM,
-  checkStrictModeWarnings,
-  // Kamino
-  KaminoDescriptor,
-  KAMINO_SCHEMA,
-  KAMINO_LENDING_PROGRAM,
-  KAMINO_SPENDING_ACTIONS,
-  KAMINO_RISK_REDUCING_ACTIONS,
-  KAMINO_AMOUNT_CONSTRAINED_ACTIONS,
-  // Encoding
-  bigintToLeBytes,
-  numberToLeBytes,
-  mapOperator,
-  fieldTypeToSize,
-  // Schema constants
-  SPENDING_ACTIONS,
-  RISK_REDUCING_ACTIONS,
-  SIZE_CONSTRAINED_ACTIONS,
-  COLLATERAL_CONSTRAINED_ACTIONS,
-  ORDER_SIZE_ACTIONS,
-} from "./constraints/index.js";
-export type {
-  FieldType,
-  InstructionFieldSchema,
-  InstructionSchema,
-  ProtocolSchema,
-  ProtocolRuleConfig,
-  ActionRule,
-  CompiledConstraint,
-  ProtocolDescriptor,
-  ConstraintBuildResult,
-  RuleTypeMetadata,
-  RuleParamMeta,
-} from "./constraints/index.js";
-
-// ─── Flash Trade Analytics ──────────────────────────────────────────────────
-export * from "./analytics/index.js";
-
-// ─── Kamino API ──────────────────────────────────────────────────────────
-export {
-  // Config
-  configureKaminoApi,
-  getKaminoApiConfig,
-  resetKaminoApiConfig,
-  KaminoApiError,
-  // Data queries
-  fetchKaminoMarkets,
-  fetchReserveMetrics,
-  fetchLeverageMetrics,
-  fetchObligations,
-  fetchLoanInfo,
-  fetchObligationPnl,
-  fetchStakingYields,
-  fetchUserRewards,
-  // Deserialization
-  deserializeKaminoInstruction,
-} from "./integrations/kamino-api.js";
-export type {
-  KaminoApiConfig,
-  KaminoSerializedInstruction,
-  KaminoTxResponse,
-  KaminoMarketInfo,
-  KaminoReserveMetrics,
-  KaminoLeverageMetrics,
-  KaminoObligation,
-  KaminoLoanInfo,
-  KaminoPnl,
-  StakingYield,
-  KaminoRewards,
-} from "./integrations/kamino-api.js";
-
-// ─── Kamino Verification ──────────────────────────────────────────────────
-export { verifyKaminoInstructions } from "./integrations/kamino-verify.js";
-
-// ─── Compose Errors ──────────────────────────────────────────────────────
-export {
-  COMPOSE_ERROR_CODES,
-  ComposeError,
-  FlashTradeComposeError,
-  KaminoComposeError,
-  createSafeBigInt,
-  createRequireField,
-  addressAsSigner,
-} from "./integrations/compose-errors.js";
-export type { ComposeErrorCode } from "./integrations/compose-errors.js";
 
 // ─── x402 HTTP 402 Payment Required ───────────────────────────────────────
 export {
@@ -509,15 +338,3 @@ export type {
 // ─── VelocityTracker ──────────────────────────────────────────────────────
 export { VelocityTracker } from "./velocity-tracker.js";
 export type { VelocityConfig, SpendStatus } from "./velocity-tracker.js";
-
-// ─── Intent-Drift Detection ──────────────────────────────────────────────
-export { detectIntentDrift, enforceIntentDrift } from "./intent-drift.js";
-export type {
-  DriftViolationType,
-  DriftViolation,
-  DriftCheckResult,
-  DriftConfig,
-} from "./intent-drift.js";
-
-// NOTE: compat.ts is intentionally NOT exported.
-// It is for internal use only when bridging T2 protocol SDKs.

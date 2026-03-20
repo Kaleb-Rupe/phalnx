@@ -1,8 +1,8 @@
 /**
  * Kit SDK Devnet — Vault Lifecycle Tests
  *
- * Proves Codama-generated instruction builders, account decoders,
- * and PhalnxKitClient work against the real deployed program.
+ * Proves Codama-generated instruction builders and account decoders
+ * work against the real deployed program.
  */
 
 import { expect } from "chai";
@@ -19,13 +19,12 @@ import {
 } from "../helpers/devnet-setup.js";
 
 import { resolveVaultState } from "../../src/state-resolver.js";
-import { PhalnxKitClient } from "../../src/client.js";
+import { fetchMaybeAgentVault } from "../../src/generated/accounts/agentVault.js";
 import { getUpdatePolicyInstructionAsync } from "../../src/generated/instructions/updatePolicy.js";
 import {
   USDC_MINT_DEVNET,
   FULL_PERMISSIONS,
 } from "../../src/types.js";
-import type { IntentAction } from "../../src/intents.js";
 import type { Instruction } from "@solana/kit";
 
 // Skip entire file if no devnet env
@@ -92,56 +91,29 @@ describe("Kit SDK Devnet — Vault Lifecycle", function () {
     expect(Number(state.policy.dailySpendingCapUsd)).to.equal(500_000_000);
   });
 
-  it("PhalnxKitClient.fetchVault() returns decoded vault", async function () {
-    const client = new PhalnxKitClient({
-      rpc,
-      network: "devnet",
-      agent,
-    });
+  it("fetchMaybeAgentVault() returns decoded vault", async function () {
+    const fetchedVault = await fetchMaybeAgentVault(rpc, vault.vaultAddress);
+    expect(fetchedVault.exists).to.be.true;
+    if (fetchedVault.exists) {
+      expect(fetchedVault.data.owner).to.equal(owner.address);
 
-    const fetchedVault = await client.fetchVault(vault.vaultAddress);
-    expect(fetchedVault.data.owner).to.equal(owner.address);
-
-    const agentEntry = fetchedVault.data.agents.find(
-      (a) => a.pubkey === agent.address,
-    );
-    expect(agentEntry).to.exist;
+      const agentEntry = fetchedVault.data.agents.find(
+        (a) => a.pubkey === agent.address,
+      );
+      expect(agentEntry).to.exist;
+    }
   });
 
-  it("PhalnxKitClient.resolveState() returns budget info", async function () {
-    const client = new PhalnxKitClient({
+  it("resolveVaultState() returns budget info", async function () {
+    const state = await resolveVaultState(
       rpc,
-      network: "devnet",
-      agent,
-    });
-
-    const state = await client.resolveState(vault.vaultAddress);
+      vault.vaultAddress,
+      agent.address,
+    );
 
     expect(Number(state.globalBudget.cap)).to.be.greaterThan(0);
     expect(state.globalBudget.spent24h).to.equal(0n);
     expect(state.globalBudget.remaining).to.deep.equal(state.globalBudget.cap);
-  });
-
-  it("PhalnxKitClient.precheck() passes for valid swap", async function () {
-    const client = new PhalnxKitClient({
-      rpc,
-      network: "devnet",
-      agent,
-    });
-
-    const intent: IntentAction = {
-      type: "swap",
-      params: {
-        inputMint: USDC_MINT_DEVNET,
-        outputMint: "So11111111111111111111111111111111111111112",
-        amount: "1000000",
-      },
-    };
-
-    const result = await client.precheck(intent, vault.vaultAddress);
-
-    expect(result.allowed).to.be.true;
-    expect(result.details.permission.passed).to.be.true;
   });
 
   it("updatePolicy via Codama builder", async function () {

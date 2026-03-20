@@ -6,12 +6,6 @@
  *   - SPL Token transfers (Transfer and TransferChecked)
  *   - Estimated USD value of outgoing transfers
  *
- * Kit differences from web3.js version:
- *   - Works on Instruction[] not compiled transactions
- *   - Uses ix.programAddress instead of ix.programId
- *   - Uses ix.accounts[].address instead of ix.keys[].pubkey
- *   - Uses ix.data as Uint8Array directly
- *   - All addresses are Address (branded strings) — no .toBase58()/.equals()
  */
 
 import type { Address } from "@solana/kit";

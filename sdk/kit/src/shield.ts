@@ -4,12 +4,6 @@
  * Wraps instruction signing with spending limits, rate limits,
  * program allowlists, and custom checks.
  *
- * Kit differences from web3.js version:
- *   - Works at Instruction[] level, not Transaction level
- *   - Uses analyzeInstructions() from inspector instead of analyzeTransaction()
- *   - Pre-compilation analysis (analyzeInstructions) needs no ALT resolution
- *   - ShieldedSigner (post-compilation) requires AltCache for ALT-compressed accounts
- *   - Address (string) instead of PublicKey throughout
  */
 
 import type {
@@ -35,7 +29,6 @@ import { simulateBeforeSend } from "./simulation.js";
 import { PHALNX_PROGRAM_ADDRESS } from "./generated/programs/phalnx.js";
 import { VALIDATE_AND_AUTHORIZE_DISCRIMINATOR } from "./generated/instructions/validateAndAuthorize.js";
 import { FINALIZE_SESSION_DISCRIMINATOR } from "./generated/instructions/finalizeSession.js";
-import { ACTION_TYPE_MAP, type IntentAction } from "./intents.js";
 import type { AltCache } from "./alt-loader.js";
 import {
   resolveVaultState,
@@ -709,11 +702,6 @@ export function shield(
 export interface ShieldedSignerOptions {
   /** Property 3: RPC for fail-closed simulation. */
   rpc?: Rpc<SolanaRpcApi>;
-  /** Property 1: Intent context for intent-TX correspondence check. */
-  intentContext?: {
-    intent: IntentAction;
-    expectedOutputMints?: Address[];
-  };
   /** Property 5: Session binding context. */
   sessionContext?: {
     sessionPda: Address;
@@ -764,11 +752,6 @@ export function createShieldedSigner(
           tx,
           options?.altCache,
         );
-
-        // Property 1: Intent-TX correspondence (SOFT)
-        if (options?.intentContext) {
-          checkIntentCorrespondence(instructions, options.intentContext);
-        }
 
         // Property 2: Velocity ceiling (HARD)
         if (options?.velocityThresholds) {
@@ -1039,29 +1022,6 @@ function checkSessionBinding(
       throw new ShieldDeniedError([{ rule: "session_binding", message }]);
     }
     console.warn(message);
-  }
-}
-
-/**
- * Property 1: Check intent-TX correspondence. SOFT — warns.
- */
-function checkIntentCorrespondence(
-  instructions: InspectableInstruction[],
-  intentContext: NonNullable<ShieldedSignerOptions["intentContext"]>,
-): void {
-  const entry = ACTION_TYPE_MAP[intentContext.intent.type];
-  if (!entry) return;
-
-  // For spending intents, verify at least one non-system program is present
-  if (entry.isSpending) {
-    const hasNonSystem = instructions.some(
-      (ix) => !SYSTEM_PROGRAMS.has(ix.programAddress),
-    );
-    if (!hasNonSystem) {
-      console.warn(
-        `[ShieldedSigner] Intent '${intentContext.intent.type}' (spending) but no protocol programs found`,
-      );
-    }
   }
 }
 
