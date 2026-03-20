@@ -1,7 +1,5 @@
 /**
  * Kit-native policy engine for Phalnx.
- *
- * Kit-native policy engine with Address types.
  */
 
 import type { Address } from "@solana/kit";
