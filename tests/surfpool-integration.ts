@@ -2025,7 +2025,7 @@ describe("surfpool-integration", function () {
         env.connection,
         [validateIx, finalizeIx],
         setup.agent,
-        "AgentPaused",
+        "6067", // AgentPaused — Surfnet may not include error name in logs
       );
     });
 
@@ -2855,6 +2855,15 @@ describe("surfpool-integration", function () {
       return new BN(80_000 + escrowCounter++);
     }
 
+    // Get on-chain unix timestamp (seconds) — more reliable than getClock()
+    // after time travel, since getBlockTime may not reflect Surfnet clock
+    async function getOnChainTimestamp(): Promise<number> {
+      const clock = await getClock(env.connection);
+      if (clock.timestamp > 0) return clock.timestamp;
+      // Fallback: use real-world time (valid since Surfnet advances forward)
+      return Math.floor(Date.now() / 1000);
+    }
+
     before(async () => {
       // Source vault
       srcSetup = await setupVaultWithAgent(env, program, {
@@ -2871,8 +2880,8 @@ describe("surfpool-integration", function () {
 
     it("create_escrow locks funds in escrow ATA", async () => {
       const escrowId = nextEscrowId();
-      const clock = await getClock(env.connection);
-      const expiresAt = clock.timestamp + 3600; // 1 hour from now
+      const currentTs = await getOnChainTimestamp();
+      const expiresAt = currentTs + 3600; // 1 hour from now
 
       const { escrowPda, escrowUsdcAta } = deriveEscrowPda(
         srcSetup.vaultPda,
@@ -2933,8 +2942,8 @@ describe("surfpool-integration", function () {
 
     it("settle_escrow before expiry succeeds", async () => {
       const escrowId = nextEscrowId();
-      const clock = await getClock(env.connection);
-      const expiresAt = clock.timestamp + 3600;
+      const currentTs = await getOnChainTimestamp();
+      const expiresAt = currentTs + 3600;
 
       const { escrowPda, escrowUsdcAta } = deriveEscrowPda(
         srcSetup.vaultPda,
@@ -3000,8 +3009,8 @@ describe("surfpool-integration", function () {
 
     it("settle after expiry fails with EscrowExpired", async () => {
       const escrowId = nextEscrowId();
-      const clock = await getClock(env.connection);
-      const expiresAt = clock.timestamp + 10; // expires in 10 seconds
+      const currentTs = await getOnChainTimestamp();
+      const expiresAt = currentTs + 10; // expires in 10 seconds
 
       const { escrowPda, escrowUsdcAta } = deriveEscrowPda(
         srcSetup.vaultPda,
@@ -3143,8 +3152,8 @@ describe("surfpool-integration", function () {
     it("double-settle escrow fails", async () => {
       // Create and settle a new escrow
       const escrowId = nextEscrowId();
-      const clock = await getClock(env.connection);
-      const expiresAt = clock.timestamp + 7200;
+      const currentTs = await getOnChainTimestamp();
+      const expiresAt = currentTs + 7200;
 
       const { escrowPda, escrowUsdcAta } = deriveEscrowPda(
         srcSetup.vaultPda,
@@ -3216,8 +3225,8 @@ describe("surfpool-integration", function () {
 
     it("self-escrow (source == dest) fails", async () => {
       const escrowId = nextEscrowId();
-      const clock = await getClock(env.connection);
-      const expiresAt = clock.timestamp + 3600;
+      const currentTs = await getOnChainTimestamp();
+      const expiresAt = currentTs + 3600;
 
       // Derive escrow with same vault as both source and dest
       const { escrowPda, escrowUsdcAta } = deriveEscrowPda(
@@ -3633,9 +3642,9 @@ describe("surfpool-integration", function () {
         .rpc();
 
       // Time travel past 60s timelock
-      const clock = await getClock(env.connection);
+      const currentTs = Math.floor(Date.now() / 1000);
       await timeTravel(env.connection, {
-        absoluteTimestamp: (clock.timestamp + 120) * 1000,
+        absoluteTimestamp: (currentTs + 86400 + 300) * 1000, // well past timelock
       });
 
       // Apply
