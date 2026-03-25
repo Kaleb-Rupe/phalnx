@@ -689,10 +689,12 @@ describe("surfpool-integration", function () {
       const vaultBefore = await program.account.agentVault.fetch(vaultPda);
       const txCountBefore = vaultBefore.totalTransactions.toNumber();
 
-      // Use amount exceeding maxTransactionSizeUsd (100 USDC = 100_000_000)
+      // Use an unregistered agent to trigger UnauthorizedAgent at validation.
+      const rogueAgent = await createWallet(env.connection, "rogueAgent", 5);
+
       const sessionPda = deriveSessionPda(
         vaultPda,
-        agent.publicKey,
+        rogueAgent.publicKey,
         DEVNET_USDC_MINT,
         program.programId,
       );
@@ -701,12 +703,12 @@ describe("surfpool-integration", function () {
         .validateAndAuthorize(
           { swap: {} },
           DEVNET_USDC_MINT,
-          new BN(200_000_000), // 200 USDC > 100 max
+          new BN(25_000_000), // 25 USDC (valid amount)
           program.programId,
           null,
         )
         .accountsPartial({
-          agent: agent.publicKey,
+          agent: rogueAgent.publicKey,
           vault: vaultPda,
           policy: policyPda,
           tracker: trackerPda,
@@ -726,10 +728,10 @@ describe("surfpool-integration", function () {
       const finalizeIx = await program.methods
         .finalizeSession(true)
         .accountsPartial({
-          payer: agent.publicKey,
+          payer: rogueAgent.publicKey,
           vault: vaultPda,
           session: sessionPda,
-          sessionRentRecipient: agent.publicKey,
+          sessionRentRecipient: rogueAgent.publicKey,
           policy: policyPda,
           tracker: trackerPda,
           vaultTokenAccount: vaultUsdcAta,
@@ -742,11 +744,16 @@ describe("surfpool-integration", function () {
         .instruction();
 
       try {
-        await sendVersionedTx(env.connection, [validateIx, finalizeIx], agent);
-        expect.fail("Should have failed — amount exceeds max tx size");
+        await sendVersionedTx(
+          env.connection,
+          [validateIx, finalizeIx],
+          rogueAgent,
+        );
+        expect.fail("Should have failed — unregistered agent");
       } catch (err: any) {
+        if (err.name === "AssertionError") throw err;
         const errStr = err.message || JSON.stringify(err);
-        expect(errStr).to.include("TransactionTooLarge");
+        expect(errStr).to.include("UnauthorizedAgent");
       }
 
       // Verify no state changes occurred (atomic revert)
