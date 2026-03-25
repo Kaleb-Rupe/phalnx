@@ -3257,4 +3257,210 @@ describe("surfpool-integration", function () {
       );
     });
   });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Suite 13: Session expiry edge cases (slot-based)
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe("13. session expiry edge cases", () => {
+    let setup: VaultSetupResult;
+
+    before(async () => {
+      setup = await setupVaultWithAgent(env, program);
+    });
+
+    it("validate+finalize succeeds at normal slot", async () => {
+      const sessionPda = deriveSessionPda(
+        setup.vaultPda,
+        setup.agent.publicKey,
+        DEVNET_USDC_MINT,
+        program.programId,
+      );
+
+      const validateIx = await program.methods
+        .validateAndAuthorize(
+          { swap: {} },
+          DEVNET_USDC_MINT,
+          new BN(5_000_000),
+          program.programId,
+          null,
+        )
+        .accountsPartial({
+          agent: setup.agent.publicKey,
+          vault: setup.vaultPda,
+          policy: setup.policyPda,
+          tracker: setup.trackerPda,
+          session: sessionPda,
+          vaultTokenAccount: setup.vaultUsdcAta,
+          tokenMintAccount: DEVNET_USDC_MINT,
+          protocolTreasuryTokenAccount: setup.protocolTreasuryAta,
+          feeDestinationTokenAccount: null,
+          outputStablecoinAccount: null,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+          agentSpendOverlay: setup.overlayPda,
+          instructionsSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
+        })
+        .instruction();
+
+      const finalizeIx = await program.methods
+        .finalizeSession(true)
+        .accountsPartial({
+          payer: setup.agent.publicKey,
+          vault: setup.vaultPda,
+          session: sessionPda,
+          sessionRentRecipient: setup.agent.publicKey,
+          policy: setup.policyPda,
+          tracker: setup.trackerPda,
+          vaultTokenAccount: setup.vaultUsdcAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+          agentSpendOverlay: setup.overlayPda,
+          instructionsSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
+          outputStablecoinAccount: null,
+        })
+        .instruction();
+
+      const result = await sendVersionedTx(
+        env.connection,
+        [validateIx, finalizeIx],
+        setup.agent,
+      );
+      expect(result.signature).to.be.a("string");
+    });
+
+    it("validate+finalize succeeds after large slot advancement", async () => {
+      // Time travel forward by many slots — each TX creates a fresh session,
+      // so slot advancement should not break composed TX flow
+      const currentSlot = await env.connection.getSlot();
+      await timeTravel(env.connection, {
+        absoluteSlot: currentSlot + 1000,
+      });
+
+      const sessionPda = deriveSessionPda(
+        setup.vaultPda,
+        setup.agent.publicKey,
+        DEVNET_USDC_MINT,
+        program.programId,
+      );
+
+      const validateIx = await program.methods
+        .validateAndAuthorize(
+          { swap: {} },
+          DEVNET_USDC_MINT,
+          new BN(5_000_000),
+          program.programId,
+          null,
+        )
+        .accountsPartial({
+          agent: setup.agent.publicKey,
+          vault: setup.vaultPda,
+          policy: setup.policyPda,
+          tracker: setup.trackerPda,
+          session: sessionPda,
+          vaultTokenAccount: setup.vaultUsdcAta,
+          tokenMintAccount: DEVNET_USDC_MINT,
+          protocolTreasuryTokenAccount: setup.protocolTreasuryAta,
+          feeDestinationTokenAccount: null,
+          outputStablecoinAccount: null,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+          agentSpendOverlay: setup.overlayPda,
+          instructionsSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
+        })
+        .instruction();
+
+      const finalizeIx = await program.methods
+        .finalizeSession(true)
+        .accountsPartial({
+          payer: setup.agent.publicKey,
+          vault: setup.vaultPda,
+          session: sessionPda,
+          sessionRentRecipient: setup.agent.publicKey,
+          policy: setup.policyPda,
+          tracker: setup.trackerPda,
+          vaultTokenAccount: setup.vaultUsdcAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+          agentSpendOverlay: setup.overlayPda,
+          instructionsSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
+          outputStablecoinAccount: null,
+        })
+        .instruction();
+
+      const result = await sendVersionedTx(
+        env.connection,
+        [validateIx, finalizeIx],
+        setup.agent,
+      );
+      expect(result.signature).to.be.a("string");
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Suite 14: Vault lifecycle completion (revoke + close)
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe("14. vault lifecycle completion", () => {
+    it("revoke_agent removes agent and freezes empty vault", async () => {
+      const setup = await setupVaultWithAgent(env, program, {
+        vaultFunding: 0,
+      });
+
+      // Revoke the only agent
+      await program.methods
+        .revokeAgent(setup.agent.publicKey)
+        .accounts({
+          owner: env.payer.publicKey,
+          vault: setup.vaultPda,
+          agentSpendOverlay: setup.overlayPda,
+        } as any)
+        .rpc();
+
+      const vault = await program.account.agentVault.fetch(setup.vaultPda);
+      expect(vault.agents.length).to.equal(0);
+      // Vault should be frozen when all agents are revoked
+      expect(vault.status).to.have.property("frozen");
+    });
+
+    it("close_vault deletes vault PDA and reclaims rent", async () => {
+      const closeSetup = await setupVaultWithAgent(env, program, {
+        vaultFunding: 0,
+      });
+
+      // Revoke agent first (required before close)
+      await program.methods
+        .revokeAgent(closeSetup.agent.publicKey)
+        .accounts({
+          owner: env.payer.publicKey,
+          vault: closeSetup.vaultPda,
+          agentSpendOverlay: closeSetup.overlayPda,
+        } as any)
+        .rpc();
+
+      // Close vault
+      await program.methods
+        .closeVault()
+        .accounts({
+          owner: env.payer.publicKey,
+          vault: closeSetup.vaultPda,
+          policy: closeSetup.policyPda,
+          tracker: closeSetup.trackerPda,
+          agentSpendOverlay: closeSetup.overlayPda,
+        } as any)
+        .rpc();
+
+      // Vault PDA should no longer exist
+      try {
+        await program.account.agentVault.fetch(closeSetup.vaultPda);
+        expect.fail("Vault should be closed");
+      } catch (err: any) {
+        if (err.name === "AssertionError") throw err;
+        const errStr = err.message || JSON.stringify(err);
+        expect(errStr).to.satisfy(
+          (s: string) =>
+            s.includes("Account does not exist") ||
+            s.includes("Could not find"),
+        );
+      }
+    });
+  });
 });
