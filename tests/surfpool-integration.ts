@@ -48,9 +48,13 @@ import {
   sendVersionedTx,
   derivePDAs,
   deriveSessionPda,
+  deriveOverlayPda,
   nextVaultId,
   surfnetRpc,
   ensureMintExists,
+  setupVaultWithAgent,
+  expectTxError,
+  VaultSetupResult,
   VersionedTxResult,
 } from "./helpers/surfpool-setup";
 
@@ -1587,6 +1591,161 @@ describe("surfpool-integration", function () {
         const errStr = err.message || JSON.stringify(err);
         expect(errStr).to.include("TimelockNotExpired");
       }
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Suite 8: Balance flows (deposit, withdraw, agent_transfer)
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe("8. balance flows", () => {
+    let setup: VaultSetupResult;
+    let ownerUsdcAta: PublicKey;
+
+    before(async () => {
+      setup = await setupVaultWithAgent(env, program, {
+        vaultFunding: 0,
+        allowedDestinations: [],
+      });
+
+      // Fund owner with USDC for deposit
+      ownerUsdcAta = await fundWithTokens(
+        env.connection,
+        env.payer.publicKey,
+        DEVNET_USDC_MINT,
+        1_000_000_000, // 1000 USDC
+      );
+    });
+
+    it("deposit_funds increases vault balance and tracks P&L", async () => {
+      const depositAmount = new BN(200_000_000); // 200 USDC
+
+      await program.methods
+        .depositFunds(depositAmount)
+        .accounts({
+          owner: env.payer.publicKey,
+          vault: setup.vaultPda,
+          mint: DEVNET_USDC_MINT,
+          ownerTokenAccount: ownerUsdcAta,
+          vaultTokenAccount: setup.vaultUsdcAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+
+      const balance = await env.connection.getTokenAccountBalance(
+        setup.vaultUsdcAta,
+      );
+      expect(Number(balance.value.amount)).to.equal(200_000_000);
+
+      const vault = await program.account.agentVault.fetch(setup.vaultPda);
+      expect(vault.totalDepositedUsd.toNumber()).to.equal(200_000_000);
+    });
+
+    it("withdraw_funds decreases vault balance and tracks P&L", async () => {
+      const withdrawAmount = new BN(50_000_000); // 50 USDC
+
+      await program.methods
+        .withdrawFunds(withdrawAmount)
+        .accounts({
+          owner: env.payer.publicKey,
+          vault: setup.vaultPda,
+          mint: DEVNET_USDC_MINT,
+          vaultTokenAccount: setup.vaultUsdcAta,
+          ownerTokenAccount: ownerUsdcAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        } as any)
+        .rpc();
+
+      const balance = await env.connection.getTokenAccountBalance(
+        setup.vaultUsdcAta,
+      );
+      expect(Number(balance.value.amount)).to.equal(150_000_000);
+
+      const vault = await program.account.agentVault.fetch(setup.vaultPda);
+      expect(vault.totalWithdrawnUsd.toNumber()).to.equal(50_000_000);
+    });
+
+    it("agent_transfer sends stablecoins with fee deduction", async () => {
+      // Create a new vault with an allowed destination for agent_transfer
+      const destWallet = await createWallet(env.connection, "dest", 2);
+      const destUsdcAta = await fundWithTokens(
+        env.connection,
+        destWallet.publicKey,
+        DEVNET_USDC_MINT,
+        0,
+      );
+
+      const transferSetup = await setupVaultWithAgent(env, program, {
+        vaultFunding: 500_000_000, // 500 USDC
+        allowedDestinations: [destWallet.publicKey],
+      });
+
+      const transferAmount = new BN(10_000_000); // 10 USDC
+      const expectedFee = Math.ceil(
+        (10_000_000 * PROTOCOL_FEE_RATE) / FEE_RATE_DENOMINATOR,
+      );
+
+      const transferIx = await program.methods
+        .agentTransfer(transferAmount)
+        .accounts({
+          agent: transferSetup.agent.publicKey,
+          vault: transferSetup.vaultPda,
+          policy: transferSetup.policyPda,
+          tracker: transferSetup.trackerPda,
+          agentSpendOverlay: transferSetup.overlayPda,
+          vaultTokenAccount: transferSetup.vaultUsdcAta,
+          tokenMintAccount: DEVNET_USDC_MINT,
+          destinationTokenAccount: destUsdcAta,
+          feeDestinationTokenAccount: null,
+          protocolTreasuryTokenAccount: transferSetup.protocolTreasuryAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        } as any)
+        .instruction();
+
+      await sendVersionedTx(
+        env.connection,
+        [transferIx],
+        transferSetup.agent,
+      );
+
+      const destBalance =
+        await env.connection.getTokenAccountBalance(destUsdcAta);
+      expect(Number(destBalance.value.amount)).to.equal(
+        10_000_000 - expectedFee,
+      );
+    });
+
+    it("withdraw more than balance fails", async () => {
+      // setup vault has 150_000_000 remaining after deposit/withdraw tests
+      const overdrawIx = await program.methods
+        .withdrawFunds(new BN(999_000_000))
+        .accounts({
+          owner: env.payer.publicKey,
+          vault: setup.vaultPda,
+          mint: DEVNET_USDC_MINT,
+          vaultTokenAccount: setup.vaultUsdcAta,
+          ownerTokenAccount: ownerUsdcAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        } as any)
+        .instruction();
+
+      await expectTxError(
+        env.connection,
+        [overdrawIx],
+        env.payer,
+        "InsufficientFunds",
+      );
+    });
+
+    it("deposit then withdraw preserves P&L counter consistency", async () => {
+      const vault = await program.account.agentVault.fetch(setup.vaultPda);
+      // After 200 deposited, 50 withdrawn:
+      expect(vault.totalDepositedUsd.toNumber()).to.be.greaterThan(0);
+      expect(vault.totalWithdrawnUsd.toNumber()).to.be.greaterThan(0);
+      expect(vault.totalDepositedUsd.toNumber()).to.be.greaterThan(
+        vault.totalWithdrawnUsd.toNumber(),
+      );
     });
   });
 });
