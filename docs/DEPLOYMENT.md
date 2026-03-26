@@ -2,6 +2,8 @@
 
 Address Lookup Table (ALT) deployment steps for Phalnx composed transactions.
 
+> **Upgrade Authority & Governance:** See [SECURITY.md](../SECURITY.md#program-upgrade-authority) for the program upgrade authority governance plan.
+
 ---
 
 ## Pre-Deployment Checklist
