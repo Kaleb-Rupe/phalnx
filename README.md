@@ -1,7 +1,7 @@
 # Phalnx
 
 [![CI](https://github.com/Kaleb-Rupe/phalnx/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Kaleb-Rupe/phalnx/actions/workflows/ci.yml)
-![Tests](https://img.shields.io/badge/tests-1450-brightgreen)
+![Tests](https://img.shields.io/badge/tests-1489-brightgreen)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 
 On-chain guardrails for AI agents on Solana. Your policies are enforced by Solana validators, not software promises.
@@ -167,7 +167,7 @@ cargo fmt --check --manifest-path programs/phalnx/Cargo.toml
 | Escrow integration (deposit/settle/refund)           |      14 |
 | Analytics counters (failed TX + per-agent TX count)  |       7 |
 | Devnet integration tests (real network)              |      69 |
-| Surfpool integration tests (local Surfnet)           |      20 |
+| Surfpool integration tests (local Surfnet)           |      59 |
 | Core policy engine (`@phalnx/core`)                  |      66 |
 | Platform client tests (`@phalnx/platform`)           |      17 |
 | Crossmint custody adapter                            |      29 |
@@ -175,7 +175,7 @@ cargo fmt --check --manifest-path programs/phalnx/Cargo.toml
 | Kit SDK devnet tests (`@phalnx/kit` devnet)          |       9 |
 | SAK plugin (`@phalnx/plugin-solana-agent-kit`)       |       6 |
 | Rust unit tests (cargo test)                         |      71 |
-| **Total**                                            | **1450** |
+| **Total**                                            | **1489** |
 
 ## Security
 
