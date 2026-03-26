@@ -61,6 +61,12 @@ pub struct AgentSpendOverlay {
     pub _padding: [u8; 7], // 7 bytes
 
     /// Per-agent cumulative spend in USD base units. Index matches entries[i].
+    /// DESIGN DECISION: Tracks spend only, NOT profit/loss.
+    /// Per-agent P&L requires oracles (removed by design) and protocol-specific
+    /// position reading (violates protocol-agnostic principle). Realized P&L
+    /// can be derived in the SDK by correlating agent spend events with vault
+    /// balance changes. See agent-analytics.ts for the SDK implementation.
+    /// Found by: Persona test (Treasury Manager "David")
     /// Appended AFTER existing layout to preserve zero-copy byte offsets.
     pub lifetime_spend: [u64; MAX_OVERLAY_ENTRIES], // 80 bytes
 

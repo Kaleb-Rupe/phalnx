@@ -40,7 +40,13 @@ pub struct AgentVault {
     /// Total volume processed in token base units
     pub total_volume: u64,
 
-    /// Number of currently open positions (for perps tracking)
+    /// Number of currently open positions (for perps tracking).
+    /// DESIGN DECISION: Counter-only. Does not store per-position details
+    /// (entry price, size, liquidation price). Individual position data is
+    /// protocol-specific (Flash Trade vs Drift vs Jupiter perps have different
+    /// layouts). The SDK reads position details via RPC. sync_positions
+    /// corrects counter drift from auto-liquidation.
+    /// Found by: Persona test (Perps Developer "Jake")
     pub open_positions: u8,
 
     /// Number of active (unsettled/unrefunded) escrow deposits from this vault
@@ -65,6 +71,18 @@ pub struct AgentVault {
     /// Informational only — never used in authorization decisions.
     pub total_failed_transactions: u64,
 }
+
+// ARCHITECTURE DECISION: No on-chain viewer/delegate role
+//
+// The program has two roles: owner (full authority) and agent (execute within policy).
+// There is no "viewer" or "delegate" role because:
+//   1. All Solana account data is publicly readable via RPC.
+//   2. Read-only access control is a dashboard/API concern, not on-chain.
+//   3. Adding viewer entries would bloat account size with zero security benefit.
+//   4. Delegate roles are handled by Squads V4 externally if the owner is a multisig.
+//
+// Found by: Persona test (Treasury Manager "David")
+// Decision: By design. Dashboard RBAC handles this.
 
 impl AgentVault {
     /// Account discriminator (8) + owner (32) + vault_id (8) +

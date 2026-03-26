@@ -428,6 +428,19 @@ pub fn handler(
     }
 
     // 7. Leverage check (for perp actions) — ALL actions
+    // DESIGN DECISION: leverage_bps is self-declared by the agent (via SDK).
+    // The program checks it against policy.max_leverage_bps but does NOT
+    // read actual position state from Flash Trade or other protocols.
+    //
+    // Rationale:
+    // - Protocol-agnostic: no coupling to Flash Trade account layout
+    // - CPI depth: reading position state consumes CPI budget
+    // - Outcome-based: finalize_session measures actual stablecoin delta
+    // - Advisory only: agent can under-declare or pass None to skip this check.
+    //   Spending caps (finalize_session) are the real enforcement, not leverage_bps.
+    //
+    // Found by: Persona test (Perps Developer "Jake")
+    // Decision: By design. Not a bug.
     if let Some(lev) = leverage_bps {
         require!(
             policy.is_leverage_within_limit(lev),
