@@ -2,7 +2,7 @@
 
 **Version**: 1.6.0 (six-pass audited)
 **Date**: 2026-03-26
-**Status**: SIX-PASS AUDITED — Six independent verification passes (see Appendix D + E + F + G + H + I)
+**Status**: IMPLEMENTED — All steps complete except ALT migration (deferred to MAINNET_DEPLOYMENT_CHECKLIST.md). Six audit passes (Appendix D-I), 42 findings resolved.
 **Branch**: `feat/wrap-architecture`
 **Author**: Architect Agent (Serena Blackwood persona)
 **Audit**: v1.6 incorporates 11 security-implications findings from sixth-pass audit (2026-03-26). Prior audits checked correctness of claims — this audit checked what IMPLEMENTING the steps would introduce. Key additions: Step 10.2/10.3 code sketches, verification failure runbook, CI job separation, ALT TOCTOU mitigation, freeze precondition gate, cross-plan dependency note. Total across all audits: 42 findings resolved.
@@ -92,9 +92,9 @@ These were fixed during the current session. Documented here for completeness an
   - `"(lines 273-377)"` → `"(lines 261-357)"`
   - `"(lines 379-415)"` → `"(lines 366-428)"`
 - **RISK**: None. Documentation-only fix.
-- **STATUS**: NOT STARTED.
+- **STATUS**: COMPLETE (WIP 1/7).
 
-**Acceptance criteria**: `docs/ARCHITECTURE.md` no longer mentions "20 instructions" or the old line number ranges.
+**Acceptance criteria**: `docs/ARCHITECTURE.md` no longer mentions "20 instructions" or the old line number ranges. ✅ Verified.
 
 ---
 
@@ -120,7 +120,7 @@ Rook (Security Auditor) stated: "CRITICALLY INSUFFICIENT -- ZERO capability to v
 
 ### Implementation
 
-- [ ] **Step 3.1**: Add `solana-verify` integration script
+- [x] **Step 3.1**: Add `solana-verify` integration script
 
   **WHAT**: Create a script that uses `solana-verify` (Ellipsis Labs' toolchain) to verify the deployed program matches a deterministic build from source.
 
@@ -180,7 +180,7 @@ Rook (Security Auditor) stated: "CRITICALLY INSUFFICIENT -- ZERO capability to v
      - Investigate: check `solana program show` for recent authority changes, check CI logs for unauthorized deploys
      - File incident report with upgrade authority holders
 
-- [ ] **Step 3.2**: Add CI verification step to deployment workflow
+- [x] **Step 3.2**: Add CI verification step to deployment workflow
 
   **WHAT**: Add a GitHub Actions workflow step that runs `solana-verify` after every program deployment.
 
@@ -212,7 +212,7 @@ Rook (Security Auditor) stated: "CRITICALLY INSUFFICIENT -- ZERO capability to v
 
   **Acceptance criteria**: After a devnet deploy, the verify step runs and outputs MATCH.
 
-- [ ] **Step 3.3**: Document verification in SECURITY.md
+- [x] **Step 3.3**: Document verification in SECURITY.md
 
   **WHAT**: Add a "Program Verification" section explaining how to verify the deployed bytecode.
 
@@ -262,7 +262,7 @@ Rook (Security Auditor) noted: "SDK does not inspect whether the program's upgra
 
 ### Implementation
 
-- [ ] **Step 4.1**: Document upgrade authority governance
+- [x] **Step 4.1**: Document upgrade authority governance
 
   **WHAT**: Create formal documentation of who holds the upgrade authority, the governance plan, and the path to renouncing.
 
@@ -301,7 +301,7 @@ Rook (Security Auditor) noted: "SDK does not inspect whether the program's upgra
 
   **Acceptance criteria**: SECURITY.md contains "Program Upgrade Authority" section with Current State, Mainnet Plan, and SDK Verification subsections. `docs/DEPLOYMENT.md` cross-links to SECURITY.md governance section.
 
-- [ ] **Step 4.2**: Add upgrade authority check to verify script
+- [x] **Step 4.2**: Add upgrade authority check to verify script
 
   **WHAT**: Extend `scripts/verify-program.ts` (from Step 3.1) to also display the current upgrade authority and warn if it is a single key.
 
@@ -353,7 +353,7 @@ This is correct by design and must NOT be changed. The reasoning:
 
 ### Where to Document
 
-- [ ] **Step 5.1**: Add design decision comment in `validate_and_authorize.rs`
+- [x] **Step 5.1**: Add design decision comment in `validate_and_authorize.rs`
 
   **WHERE**: `programs/phalnx/src/instructions/validate_and_authorize.rs`, around line 430-436 (leverage check)
 
@@ -407,7 +407,7 @@ This is correct by design:
 
 ### Where to Document
 
-- [ ] **Step 6.1**: Add design decision comment in `vault.rs`
+- [x] **Step 6.1**: Add design decision comment in `vault.rs`
 
   **WHERE**: `programs/phalnx/src/state/vault.rs`, at the `open_positions` field (line ~44)
 
@@ -447,7 +447,7 @@ This is correct by design:
 
 ### Where to Document
 
-- [ ] **Step 7.1**: Add ADR (Architecture Decision Record) comment in `vault.rs`
+- [x] **Step 7.1**: Add ADR (Architecture Decision Record) comment in `vault.rs`
 
   **WHERE**: `programs/phalnx/src/state/vault.rs`, after the `AgentVault` struct definition (after line ~67)
 
@@ -490,7 +490,7 @@ This is correct by design:
 
 ### Where to Document
 
-- [ ] **Step 8.1**: Add design decision in `docs/ARCHITECTURE.md`
+- [x] **Step 8.1**: Add design decision in `docs/ARCHITECTURE.md`
 
   **CROSS-PLAN DEPENDENCY**: SDK-IMPLEMENTATION-PLAN Step 22 also modifies `docs/ARCHITECTURE.md` (adds Trust Boundaries, Two-Tier Verification, and Jupiter Verifier sections — ~90 lines). Implement this step BEFORE or AFTER SDK Step 22, not in parallel, to avoid merge conflicts. Or coordinate: this step adds a "Multi-Sig Governance" section, SDK Step 22 adds separate sections — as long as they append to different locations, both can proceed.
 
@@ -543,7 +543,7 @@ This is correct by design. Per-agent P&L requires capabilities that conflict wit
 
 ### Where to Document
 
-- [ ] **Step 9.1**: Add design decision comment in `agent_spend_overlay.rs`
+- [x] **Step 9.1**: Add design decision comment in `agent_spend_overlay.rs`
 
   **WHERE**: `programs/phalnx/src/state/agent_spend_overlay.rs`, above `lifetime_spend` field (line ~64)
 
@@ -579,7 +579,7 @@ The spending and non-spending instruction scan paths in `validate_and_authorize.
 
 ### Implementation
 
-- [ ] **10.0.** Add required import for `Instruction` type to file header:
+- [x] **10.0.** Add required import for `Instruction` type to file header:
 
   **WHAT**: Add `use anchor_lang::solana_program::instruction::Instruction;` to the imports at line 2.
 
@@ -598,7 +598,7 @@ The spending and non-spending instruction scan paths in `validate_and_authorize.
 
   **Acceptance criteria**: `anchor build --no-idl` compiles with the new import.
 
-- [ ] **10.1.** Extract shared scan logic into a private helper function in `validate_and_authorize.rs` (same file, not a new module — keeps security-critical logic co-located with its callers). Alternative: `instructions/utils.rs` already has `stablecoin_to_usd()` and is imported via `use super::utils::*`. Either location works; same-file is preferred for security reviewability:
+- [x] **10.1.** Extract shared scan logic into a private helper function in `validate_and_authorize.rs` (same file, not a new module — keeps security-critical logic co-located with its callers). Alternative: `instructions/utils.rs` already has `stablecoin_to_usd()` and is imported via `use super::utils::*`. Either location works; same-file is preferred for security reviewability:
 
 ```rust
 /// Return type for scan_instruction helper. Not pub — internal to this module.
@@ -661,7 +661,7 @@ fn scan_instruction(
 }
 ```
 
-- [ ] **10.2.** Refactor spending scan (lines ~261-357) to use `scan_instruction()`:
+- [x] **10.2.** Refactor spending scan (lines ~261-357) to use `scan_instruction()`:
 
   **WHAT**: Replace the inline shared checks in the spending scan with calls to `scan_instruction()`. The spending-only checks (recognized DeFi detection, ProtocolMismatch, defi_ix_count, Jupiter slippage) MUST remain inline after `PassedSharedChecks`.
 
@@ -726,7 +726,7 @@ fn scan_instruction(
   }
   ```
 
-- [ ] **10.3.** Refactor non-spending scan (lines ~366-428) to use `scan_instruction()`:
+- [x] **10.3.** Refactor non-spending scan (lines ~366-428) to use `scan_instruction()`:
 
   **WHAT**: Replace the inline shared checks in the non-spending scan with calls to `scan_instruction()`. Non-spending path has NO additional inline checks — it only uses the shared checks.
 
@@ -761,7 +761,7 @@ fn scan_instruction(
   }
   ```
 
-- [ ] **10.4.** Build and test: `anchor build --no-idl` → `git checkout -- target/idl/ target/types/` → run ALL tests (361 LiteSVM + 20 Surfpool).
+- [x] **10.4.** Build and test: `anchor build --no-idl` → `git checkout -- target/idl/ target/types/` → run ALL tests (361 LiteSVM + 20 Surfpool).
 
 **Acceptance criteria for Step 10**: `anchor build --no-idl` succeeds. 361 LiteSVM tests pass. 20 Surfpool tests pass. `git diff` shows only refactored scan logic — no behavioral changes. Line count reduced from ~160 lines to ~90 lines (±20%). All 4 spending-only checks (recognized DeFi, ProtocolMismatch, defi_ix_count, Jupiter slippage) present ONLY in the spending path.
 

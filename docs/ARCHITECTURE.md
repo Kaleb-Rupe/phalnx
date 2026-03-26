@@ -44,11 +44,11 @@ The handler executes these steps in order. Steps marked **(spending only)** are 
 3. **Amount validation** — spending requires `amount > 0`, non-spending requires `amount == 0` — ALL actions
 4. **Protocol policy check** — `policy.is_protocol_allowed(&target_protocol)` — ALL actions (declared protocol only)
 5. **Cap check + fee calc** — stablecoin USD conversion, single-tx cap, rolling 24h cap, fee calculation — **(spending only)**
-6. **Spending instruction scan (lines 261-357)** — scans all instructions between validate and finalize (unbounded `while let` loop), validates all intermediate programs against policy, runs hardcoded verifiers (Jupiter slippage), blocks SPL Token transfers, enforces single-DeFi for non-stablecoin input — **(spending only)**
-6b. **Non-spending instruction scan (lines 366-428)** — scans all instructions between validate and finalize (unbounded `while let` loop). Blocks SPL Token transfers, whitelists infrastructure programs, checks all other programs against `policy.is_protocol_allowed()`, applies generic constraints if configured — **ALL non-spending actions**
+6. **Spending instruction scan (lines 329-386)** — scans all instructions between validate and finalize via `scan_instruction_shared()` helper (unbounded `while let` loop). Shared checks: SPL/Token-2022 blocking, infrastructure whitelist, protocol allowlist, generic constraints. Spending-only inline: recognized DeFi detection, ProtocolMismatch, defi_ix_count, Jupiter slippage — **(spending only)**
+6b. **Non-spending instruction scan (lines 390-419)** — scans all instructions between validate and finalize via `scan_instruction_shared()` helper (unbounded `while let` loop). Shared checks only (no spending-specific logic) — **ALL non-spending actions**
 7. **Leverage check** — `policy.is_leverage_within_limit()` — ALL actions
 8. **Position effect check** — increment/decrement/none based on action type — ALL actions
-9. **MissingFinalizeInstruction check (lines 446-472)** — confirms `finalize_session` exists in transaction — ALL actions
+9. **MissingFinalizeInstruction check** — confirmed during scan (lines 385, 418) — ALL actions
 10. **Fee collection + delegation** — CPI transfers for protocol/developer fees, token approval — **(spending only)**
 11. **Session PDA creation** — initializes `SessionAuthority` with `delegated = is_spending` — ALL actions
 
