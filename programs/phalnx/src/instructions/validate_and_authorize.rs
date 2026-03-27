@@ -1,17 +1,15 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::instruction::get_stack_height;
+use anchor_lang::solana_program::instruction::{get_stack_height, Instruction};
 use anchor_lang::solana_program::sysvar::instructions::{
     load_current_index_checked, load_instruction_at_checked,
 };
 use anchor_spl::token::{self, Approve, Mint, Token, TokenAccount, Transfer};
 
 use crate::errors::PhalnxError;
-use crate::events::{ActionAuthorized, AgentSpendLimitChecked, FeesCollected};
+use crate::events::{ActionAuthorized, FeesCollected};
 use crate::state::*;
 
 use super::integrations::{generic_constraints, jupiter};
-use super::utils::stablecoin_to_usd;
-
 use crate::state::PositionEffect;
 
 #[derive(Accounts)]
@@ -91,8 +89,8 @@ pub struct ValidateAndAuthorize<'info> {
     #[account(mut)]
     pub fee_destination_token_account: Option<Account<'info, TokenAccount>>,
 
-    /// Vault's stablecoin ATA to snapshot (for non-stablecoin input swaps).
-    /// Required when input token is NOT a stablecoin.
+    /// Vault's stablecoin ATA to snapshot (for non-stablecoin input spending).
+    /// Required when input token is NOT a stablecoin (output verification in finalize).
     #[account(mut)]
     pub output_stablecoin_account: Option<Account<'info, TokenAccount>>,
 
@@ -194,94 +192,22 @@ pub fn handler(
     // --- Stablecoin-only spending path ---
     let mut output_mint = Pubkey::default();
     let mut stablecoin_balance_before: u64 = 0;
-    let mut rolling_spend_after_record: u64 = 0;
-    let (usd_amount, protocol_fee, developer_fee) = if is_spending {
-        let token_decimals = ctx.accounts.token_mint_account.decimals;
-
+    let (protocol_fee, developer_fee) = if is_spending {
         if is_stablecoin_input {
-            // Stablecoin input: exact USD tracking (1:1 conversion)
-            let usd_amt = stablecoin_to_usd(amount, token_decimals)?;
+            // Snapshot stablecoin balance BEFORE fees or spending.
+            // Finalize uses this to compute actual spending delta.
+            stablecoin_balance_before = ctx.accounts.vault_token_account.amount;
+            output_mint = token_mint;
 
-            // Single tx USD check
-            require!(
-                usd_amt <= policy.max_transaction_size_usd,
-                PhalnxError::TransactionTooLarge
-            );
-
-            // Rolling 24h USD check
-            let mut tracker = ctx.accounts.tracker.load_mut()?;
-            let rolling_usd = tracker.get_rolling_24h_usd(&clock);
-            let new_total_usd = rolling_usd
-                .checked_add(usd_amt)
-                .ok_or(PhalnxError::Overflow)?;
-
-            require!(
-                new_total_usd <= policy.daily_spending_cap_usd,
-                PhalnxError::DailyCapExceeded
-            );
-
-            // --- Per-agent cap check via contribution overlay ---
-            let agent_key = ctx.accounts.agent.key();
-            let agent_entry = vault
-                .get_agent(&agent_key)
-                .ok_or(error!(PhalnxError::UnauthorizedAgent))?;
-            let mut overlay = ctx.accounts.agent_spend_overlay.load_mut()?;
-            if let Some(agent_slot) = overlay.find_agent_slot(&agent_key) {
-                if agent_entry.spending_limit_usd > 0 {
-                    let agent_rolling = overlay.get_agent_rolling_24h_usd(&clock, agent_slot);
-                    let new_agent_spend = agent_rolling
-                        .checked_add(usd_amt)
-                        .ok_or(PhalnxError::Overflow)?;
-                    require!(
-                        new_agent_spend <= agent_entry.spending_limit_usd,
-                        PhalnxError::AgentSpendLimitExceeded
-                    );
-                    emit!(AgentSpendLimitChecked {
-                        vault: vault_key,
-                        agent: agent_key,
-                        agent_rolling_spend: agent_rolling,
-                        spending_limit_usd: agent_entry.spending_limit_usd,
-                        amount: usd_amt,
-                        timestamp: clock.unix_timestamp,
-                    });
-                }
-                overlay.record_agent_contribution(&clock, agent_slot, usd_amt)?;
-            } else if agent_entry.spending_limit_usd > 0 {
-                return Err(error!(PhalnxError::AgentSlotNotFound));
-            }
-            drop(overlay);
-
-            // Per-protocol cap check (when enabled)
-            if let Some(proto_cap) = policy.get_protocol_cap(&target_protocol) {
-                if proto_cap > 0 {
-                    let proto_spend = tracker.get_protocol_spend(&clock, &target_protocol);
-                    let new_proto_total = proto_spend
-                        .checked_add(usd_amt)
-                        .ok_or(PhalnxError::Overflow)?;
-                    require!(
-                        new_proto_total <= proto_cap,
-                        PhalnxError::ProtocolCapExceeded
-                    );
-                }
-            }
-
-            // Record spend and capture post-record rolling value (avoids second tracker load)
-            tracker.record_spend(&clock, usd_amt)?;
-
-            // Record per-protocol spend
-            if policy.has_protocol_caps {
-                tracker.record_protocol_spend(&clock, &target_protocol, usd_amt)?;
-            }
-
-            rolling_spend_after_record = tracker.get_rolling_24h_usd(&clock);
-            drop(tracker);
+            // Cap checks and spend recording deferred to finalize_session
+            // where actual stablecoin balance delta is measured (outcome-based).
 
             // Calculate fees (ceiling division — guarantees non-zero fee on any non-zero spending)
             let dev_fee_rate = policy.developer_fee_rate;
             let p_fee = ceil_fee(amount, PROTOCOL_FEE_RATE as u64)?;
             let d_fee = ceil_fee(amount, dev_fee_rate as u64)?;
 
-            (usd_amt, p_fee, d_fee)
+            (p_fee, d_fee)
         } else {
             // Non-stablecoin input: snapshot stablecoin balance, verify at finalize.
             // No cap check or fees here — USD tracked when stablecoin flows in finalize.
@@ -299,18 +225,18 @@ pub fn handler(
             // Verify it's actually a stablecoin mint
             require!(
                 is_stablecoin_mint(&stablecoin_acct.mint),
-                PhalnxError::TokenNotRegistered
+                PhalnxError::UnsupportedToken
             );
 
             output_mint = stablecoin_acct.mint;
             stablecoin_balance_before = stablecoin_acct.amount;
 
             // No fees here — cap check deferred to finalize_session when stablecoin delta is known
-            (0u64, 0u64, 0u64)
+            (0u64, 0u64)
         }
     } else {
         // Non-spending: no fees, no spend tracking
-        (0u64, 0u64, 0u64)
+        (0u64, 0u64)
     };
 
     // Shared across spending and non-spending scan paths
@@ -325,80 +251,107 @@ pub fn handler(
     ]);
     let finalize_hash = FINALIZE_SESSION_DISCRIMINATOR;
 
-    // --- Hardened instruction scan ---
-    // Scan ALL instructions between validate and finalize to enforce:
-    // 1. Block ALL top-level SPL Token Transfer/TransferChecked (theft prevention)
-    // 2. Whitelist infrastructure programs (ComputeBudget, SystemProgram)
-    // 3. Check all other programs against policy (protocolMode enforcement)
-    // 4. Slippage verification on recognized DeFi programs
-    // 5. Single DeFi instruction for non-stablecoin inputs (split-swap prevention)
+    // ── Shared instruction scan helper ──────────────────────────────
+    // Extracted from spending + non-spending paths to eliminate ~55 lines
+    // of duplicated security checks. See ON-CHAIN-IMPLEMENTATION-PLAN Step 10.
+    enum ScanAction {
+        FoundFinalize,
+        Infrastructure,
+        PassedSharedChecks,
+    }
+
+    fn scan_instruction_shared(
+        ix: &Instruction,
+        spl_token_id: &Pubkey,
+        compute_budget_id: &Pubkey,
+        finalize_hash: &[u8; 8],
+        policy: &PolicyConfig,
+        loaded_constraints: &Option<InstructionConstraints>,
+    ) -> anchor_lang::Result<ScanAction> {
+        // Stop at finalize_session
+        if ix.program_id == crate::ID && ix.data.len() >= 8 && ix.data[..8] == *finalize_hash {
+            return Ok(ScanAction::FoundFinalize);
+        }
+
+        // Block ALL top-level SPL Token Transfer/TransferChecked/Approve
+        if ix.program_id == *spl_token_id && !ix.data.is_empty() {
+            if ix.data[0] == 4 {
+                return Err(error!(PhalnxError::UnauthorizedTokenApproval));
+            }
+            if ix.data[0] == 3 || ix.data[0] == 12 {
+                return Err(error!(PhalnxError::UnauthorizedTokenTransfer));
+            }
+        }
+
+        // Block Token-2022 Transfer/Approve/TransferChecked/TransferCheckedWithFee
+        if ix.program_id == TOKEN_2022_PROGRAM_ID && !ix.data.is_empty() {
+            if ix.data[0] == 4 {
+                return Err(error!(PhalnxError::UnauthorizedTokenApproval));
+            }
+            if ix.data[0] == 3 || ix.data[0] == 12 || ix.data[0] == 26 {
+                return Err(error!(PhalnxError::UnauthorizedTokenTransfer));
+            }
+        }
+
+        // Whitelist infrastructure programs (no policy check needed)
+        if ix.program_id == *compute_budget_id
+            || ix.program_id == anchor_lang::solana_program::system_program::ID
+        {
+            return Ok(ScanAction::Infrastructure);
+        }
+
+        // Protocol allowlist
+        require!(
+            policy.is_protocol_allowed(&ix.program_id),
+            PhalnxError::ProtocolNotAllowed
+        );
+
+        // Generic instruction constraints (OR across entries)
+        if let Some(ref constraints) = loaded_constraints {
+            let matched = generic_constraints::verify_against_entries(
+                &constraints.entries,
+                &ix.program_id,
+                &ix.data,
+                &ix.accounts,
+            )?;
+            if !matched && constraints.strict_mode {
+                return Err(error!(PhalnxError::UnconstrainedProgramBlocked));
+            }
+        }
+
+        Ok(ScanAction::PassedSharedChecks)
+    }
+
+    // 6. Instruction scan — validates all instructions between validate and finalize.
+    // Shared checks (scan_instruction_shared): SPL/Token-2022 blocking, infrastructure
+    // whitelist, protocol allowlist, generic constraints.
+    // Spending-only checks (inline): recognized DeFi, ProtocolMismatch, defi_ix_count, Jupiter slippage.
     if is_spending {
         let mut defi_ix_count: u8 = 0;
         let mut found_finalize = false;
-
         let mut scan_idx = current_idx_usize.saturating_add(1);
-        for _ in 0..20 {
-            match load_instruction_at_checked(scan_idx, &ix_sysvar) {
-                Ok(ix) => {
-                    // Stop at finalize_session
-                    if ix.program_id == crate::ID
-                        && ix.data.len() >= 8
-                        && ix.data[..8] == finalize_hash
-                    {
-                        found_finalize = true;
-                        break;
-                    }
 
-                    // 1. Block ALL top-level SPL Token Transfer/TransferChecked/Approve.
-                    // Legitimate DeFi interactions move tokens via CPI, never
-                    // as top-level SPL Token instructions.
-                    if ix.program_id == spl_token_id && !ix.data.is_empty() {
-                        if ix.data[0] == 4 {
-                            return Err(error!(PhalnxError::UnauthorizedTokenApproval));
-                        }
-                        if ix.data[0] == 3 || ix.data[0] == 12 {
-                            return Err(error!(PhalnxError::DustDepositDetected));
-                        }
-                    }
+        while let Ok(ix) = load_instruction_at_checked(scan_idx, &ix_sysvar) {
+            match scan_instruction_shared(
+                &ix,
+                &spl_token_id,
+                &compute_budget_id,
+                &finalize_hash,
+                policy,
+                &loaded_constraints,
+            )? {
+                ScanAction::FoundFinalize => {
+                    found_finalize = true;
+                    break;
+                }
+                ScanAction::Infrastructure => {
+                    scan_idx = scan_idx.saturating_add(1);
+                    continue;
+                }
+                ScanAction::PassedSharedChecks => {
+                    // === SPENDING-ONLY CHECKS (must remain inline) ===
 
-                    // 1b. Block Token-2022 Transfer/Approve/TransferChecked/TransferCheckedWithFee
-                    if ix.program_id == TOKEN_2022_PROGRAM_ID && !ix.data.is_empty() {
-                        if ix.data[0] == 4 {
-                            return Err(error!(PhalnxError::UnauthorizedTokenApproval));
-                        }
-                        if ix.data[0] == 3 || ix.data[0] == 12 || ix.data[0] == 26 {
-                            return Err(error!(PhalnxError::DustDepositDetected));
-                        }
-                    }
-
-                    // 2. Whitelist infrastructure programs (no policy check needed)
-                    if ix.program_id == compute_budget_id
-                        || ix.program_id == anchor_lang::solana_program::system_program::ID
-                    {
-                        scan_idx = scan_idx.saturating_add(1);
-                        continue;
-                    }
-
-                    // 3. All other programs must pass policy check
-                    require!(
-                        policy.is_protocol_allowed(&ix.program_id),
-                        PhalnxError::ProtocolNotAllowed
-                    );
-
-                    // 3b. Generic instruction constraints (OR across entries)
-                    if let Some(ref constraints) = loaded_constraints {
-                        let matched = generic_constraints::verify_against_entries(
-                            &constraints.entries,
-                            &ix.program_id,
-                            &ix.data,
-                            &ix.accounts,
-                        )?;
-                        if !matched && constraints.strict_mode {
-                            return Err(error!(PhalnxError::UnconstrainedProgramBlocked));
-                        }
-                    }
-
-                    // 4. Recognized DeFi: protocol mismatch + slippage verification
+                    // Recognized DeFi: protocol mismatch + defi_ix_count
                     let is_recognized_defi = ix.program_id == JUPITER_PROGRAM
                         || ix.program_id == FLASH_TRADE_PROGRAM
                         || ix.program_id == JUPITER_LEND_PROGRAM
@@ -417,102 +370,68 @@ pub fn handler(
                     if ix.program_id == JUPITER_PROGRAM {
                         jupiter::verify_jupiter_slippage(&ix.data, policy.max_slippage_bps)?;
                     }
-
-                    scan_idx = scan_idx.saturating_add(1);
                 }
-                Err(_) => break,
             }
+            scan_idx = scan_idx.saturating_add(1);
         }
 
-        // 5. Non-stablecoin input: exactly 1 recognized DeFi instruction required.
-        // Prevents split-swap attacks (2+ swaps) and no-swap delegation theft (0 swaps).
-        if !is_stablecoin_input {
+        // DeFi instruction count enforcement
+        if is_stablecoin_input {
+            require!(defi_ix_count <= 1, PhalnxError::TooManyDeFiInstructions);
+        } else {
             require!(defi_ix_count == 1, PhalnxError::TooManyDeFiInstructions);
         }
 
         require!(found_finalize, PhalnxError::MissingFinalizeInstruction);
     }
 
-    // 6b. Non-spending instruction scan — ALWAYS runs (unconditional).
-    // Mirrors spending path checks: protocol allowlist, SPL transfer blocking,
-    // infrastructure whitelist, plus generic constraints if configured.
-    // Without this, an agent could declare a non-spending action_type while
-    // including instructions from disallowed protocols — the declared
-    // target_protocol passes the Step 2 policy check, but actual instructions
-    // would go unverified.
+    // 6b. Non-spending instruction scan — validates all instructions between
+    // validate and finalize using shared checks only (no spending-specific logic).
     if !is_spending {
         let mut found_finalize = false;
-        let mut idx = current_idx_usize
-            .checked_add(1)
-            .ok_or(error!(PhalnxError::Overflow))?;
-        for _ in 0..20 {
-            match load_instruction_at_checked(idx, &ix_sysvar) {
-                Ok(ix) => {
-                    // Stop at finalize_session
-                    if ix.program_id == crate::ID
-                        && ix.data.len() >= 8
-                        && ix.data[..8] == finalize_hash
-                    {
-                        found_finalize = true;
-                        break;
-                    }
+        let mut idx = current_idx_usize.saturating_add(1);
 
-                    // 1. Block top-level SPL Token Transfer/TransferChecked/Approve
-                    if ix.program_id == spl_token_id && !ix.data.is_empty() {
-                        if ix.data[0] == 4 {
-                            return Err(error!(PhalnxError::UnauthorizedTokenApproval));
-                        }
-                        if ix.data[0] == 3 || ix.data[0] == 12 {
-                            return Err(error!(PhalnxError::DustDepositDetected));
-                        }
-                    }
-
-                    // 1b. Block Token-2022 Transfer/Approve/TransferChecked/TransferCheckedWithFee
-                    if ix.program_id == TOKEN_2022_PROGRAM_ID && !ix.data.is_empty() {
-                        if ix.data[0] == 4 {
-                            return Err(error!(PhalnxError::UnauthorizedTokenApproval));
-                        }
-                        if ix.data[0] == 3 || ix.data[0] == 12 || ix.data[0] == 26 {
-                            return Err(error!(PhalnxError::DustDepositDetected));
-                        }
-                    }
-
-                    // 2. Whitelist infrastructure programs (no policy check needed)
-                    if ix.program_id == compute_budget_id
-                        || ix.program_id == anchor_lang::solana_program::system_program::ID
-                    {
-                        idx = idx.checked_add(1).ok_or(error!(PhalnxError::Overflow))?;
-                        continue;
-                    }
-
-                    // 3. All other programs must pass policy protocol check
-                    require!(
-                        policy.is_protocol_allowed(&ix.program_id),
-                        PhalnxError::ProtocolNotAllowed
-                    );
-
-                    // 4. Generic constraints (OR across entries + strict_mode)
-                    if let Some(ref constraints) = loaded_constraints {
-                        let matched = generic_constraints::verify_against_entries(
-                            &constraints.entries,
-                            &ix.program_id,
-                            &ix.data,
-                            &ix.accounts,
-                        )?;
-                        if !matched && constraints.strict_mode {
-                            return Err(error!(PhalnxError::UnconstrainedProgramBlocked));
-                        }
-                    }
+        while let Ok(ix) = load_instruction_at_checked(idx, &ix_sysvar) {
+            match scan_instruction_shared(
+                &ix,
+                &spl_token_id,
+                &compute_budget_id,
+                &finalize_hash,
+                policy,
+                &loaded_constraints,
+            )? {
+                ScanAction::FoundFinalize => {
+                    found_finalize = true;
+                    break;
                 }
-                Err(_) => break,
+                ScanAction::Infrastructure => {
+                    idx = idx.saturating_add(1);
+                    continue;
+                }
+                ScanAction::PassedSharedChecks => {
+                    // Non-spending has no additional checks beyond shared ones.
+                }
             }
-            idx = idx.checked_add(1).ok_or(error!(PhalnxError::Overflow))?;
+            idx = idx.saturating_add(1);
         }
 
         require!(found_finalize, PhalnxError::MissingFinalizeInstruction);
     }
 
     // 7. Leverage check (for perp actions) — ALL actions
+    // DESIGN DECISION: leverage_bps is self-declared by the agent (via SDK).
+    // The program checks it against policy.max_leverage_bps but does NOT
+    // read actual position state from Flash Trade or other protocols.
+    //
+    // Rationale:
+    // - Protocol-agnostic: no coupling to Flash Trade account layout
+    // - CPI depth: reading position state consumes CPI budget
+    // - Outcome-based: finalize_session measures actual stablecoin delta
+    // - Advisory only: agent can under-declare or pass None to skip this check.
+    //   Spending caps (finalize_session) are the real enforcement, not leverage_bps.
+    //
+    // Found by: Persona test (Perps Developer "Jake")
+    // Decision: By design. Not a bug.
     if let Some(lev) = leverage_bps {
         require!(
             policy.is_leverage_within_limit(lev),
@@ -675,9 +594,9 @@ pub fn handler(
         action_type,
         token_mint,
         amount,
-        usd_amount,
+        usd_amount: amount, // Declared input amount (USD for stablecoin input, raw for non-stablecoin)
         protocol: target_protocol,
-        rolling_spend_usd_after: rolling_spend_after_record,
+        rolling_spend_usd_after: 0, // DEPRECATED: use SessionFinalized.actual_spend_usd
         daily_cap_usd: policy.daily_spending_cap_usd,
         delegated: is_spending,
         timestamp: clock.unix_timestamp,

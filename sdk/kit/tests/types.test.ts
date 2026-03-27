@@ -30,6 +30,9 @@ import {
   getPositionEffect,
   PermissionBuilder,
   ACTION_PERMISSION_MAP,
+  normalizeNetwork,
+  validateNetwork,
+  stringsToPermissions,
 } from "../src/types.js";
 import type { Address } from "@solana/kit";
 
@@ -316,6 +319,54 @@ describe("types", () => {
     it("unknown action type silently ignored", () => {
       const perms = new PermissionBuilder().add("nonexistent").build();
       expect(perms).to.equal(0n);
+    });
+  });
+
+  describe("normalizeNetwork", () => {
+    it("passes devnet through unchanged", () => {
+      expect(normalizeNetwork("devnet")).to.equal("devnet");
+    });
+
+    it("normalizes mainnet to mainnet-beta", () => {
+      expect(normalizeNetwork("mainnet")).to.equal("mainnet-beta");
+    });
+
+    it("passes mainnet-beta through unchanged", () => {
+      expect(normalizeNetwork("mainnet-beta")).to.equal("mainnet-beta");
+    });
+  });
+
+  describe("validateNetwork", () => {
+    it("accepts mainnet as valid input", () => {
+      expect(() => validateNetwork("mainnet")).not.to.throw();
+    });
+
+    it("rejects invalid network strings", () => {
+      expect(() => validateNetwork("testnet")).to.throw(/Invalid network/);
+    });
+  });
+
+  describe("stringsToPermissions", () => {
+    it("converts single action to bitmask", () => {
+      expect(stringsToPermissions(["swap"])).to.equal(1n);
+    });
+
+    it("converts multiple actions to combined bitmask", () => {
+      // swap = bit 0 (1n), deposit = bit 5 (32n) → 33n
+      expect(stringsToPermissions(["swap", "deposit"])).to.equal(33n);
+    });
+
+    it("round-trips with permissionsToStrings", () => {
+      const original = FULL_PERMISSIONS;
+      expect(stringsToPermissions(permissionsToStrings(original))).to.equal(original);
+    });
+
+    it("throws on unknown action type", () => {
+      expect(() => stringsToPermissions(["nonexistent"])).to.throw(/Unknown action type/);
+    });
+
+    it("returns 0n for empty array", () => {
+      expect(stringsToPermissions([])).to.equal(0n);
     });
   });
 });

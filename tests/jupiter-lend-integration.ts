@@ -17,8 +17,9 @@ import {
 } from "@solana/spl-token";
 import { expect } from "chai";
 import BN from "bn.js";
-import { JUPITER_LEND_PROGRAM_ID } from "../sdk/typescript/src/integrations/jupiter-lend";
-import { CU_DEFAULT_COMPOSED } from "../sdk/typescript/src/priority-fees";
+// Inlined constants — sdk/typescript was deleted in Phase 0 nuclear cleanup
+const JUPITER_LEND_PROGRAM_ID = new PublicKey("JLend2fEim9xUFcaHsyGePEoBzFLvkjMi3MnPcSuCdu");
+const CU_DEFAULT_COMPOSED = 800_000;
 import {
   createTestEnv,
   airdropSol,
@@ -103,7 +104,6 @@ describe("jupiter-lend-integration", () => {
     amount: BN,
     targetProtocol: PublicKey,
     actionType: any,
-    success: boolean = true,
     overrideVaultTokenAta?: PublicKey,
     overrideOverlay?: PublicKey,
   ): Promise<VersionedTxResult> {
@@ -164,7 +164,7 @@ describe("jupiter-lend-integration", () => {
 
     // 4. Finalize session
     const finalizeIx = await program.methods
-      .finalizeSession(success)
+      .finalizeSession()
       .accountsPartial({
         payer: agentKp.publicKey,
         vault,
@@ -332,7 +332,8 @@ describe("jupiter-lend-integration", () => {
       // Verify vault stats updated
       const vault = await program.account.agentVault.fetch(vaultPda);
       expect(vault.totalTransactions.toNumber()).to.equal(1);
-      expect(vault.totalVolume.toNumber()).to.equal(100_000_000);
+      // totalVolume uses actual_spend_tracked; mock DeFi is no-op → 0
+      expect(vault.totalVolume.toNumber()).to.equal(0);
     });
   });
 
@@ -358,17 +359,19 @@ describe("jupiter-lend-integration", () => {
       const vault = await program.account.agentVault.fetch(vaultPda);
       expect(vault.totalTransactions.toNumber()).to.equal(2);
       // Volume unchanged (withdraw is non-spending)
-      expect(vault.totalVolume.toNumber()).to.equal(100_000_000);
+      // totalVolume uses actual_spend_tracked; mock DeFi is no-op → 0
+      expect(vault.totalVolume.toNumber()).to.equal(0);
     });
   });
 
   // =========================================================================
-  // Error: deposit exceeds daily cap
+  // Outcome-based spending: mock lend actions record zero actual spend
   // =========================================================================
-  describe("deposit exceeds daily cap", () => {
-    it("reverts when deposit amount + prior spending > cap", async () => {
-      // Already spent 100 USDC (from happy path deposit). Cap is 500 USDC.
-      // Deposit 200 USDC twice more (100+200+200 = 500, exactly at cap)
+  describe("outcome-based spending with mock lend", () => {
+    it("succeeds when declared amount exceeds cap because actual spend is zero", async () => {
+      // Outcome-based enforcement (Phase 1): finalize_session measures
+      // actual stablecoin balance delta. Mock lend instructions don't move
+      // tokens, so actual_spend = 0 and the cap check is never triggered.
       await sendComposedLend(
         vaultPda,
         policyPda,
@@ -391,23 +394,22 @@ describe("jupiter-lend-integration", () => {
         { deposit: {} },
       );
 
-      // Now at 500 spent. Try 1 USDC — total would be 501 > 500 cap
-      try {
-        await sendComposedLend(
-          vaultPda,
-          policyPda,
-          trackerPda,
-          agent,
-          usdcMint,
-          new BN(1_000_000),
-          lendProtocol,
-          { deposit: {} },
-        );
-        expect.fail("Should have thrown");
-      } catch (err: any) {
-        if (err.message === "Should have thrown") throw err;
-        expect(err.message || err.toString()).to.include("DailyCapExceeded");
-      }
+      // Would exceed 500 USDC cap if declaration-based, but succeeds
+      // because outcome-based enforcement sees zero actual spend.
+      await sendComposedLend(
+        vaultPda,
+        policyPda,
+        trackerPda,
+        agent,
+        usdcMint,
+        new BN(1_000_000),
+        lendProtocol,
+        { deposit: {} },
+      );
+
+      // Verify all TXs succeeded
+      const vault = await program.account.agentVault.fetch(vaultPda);
+      expect(vault.totalTransactions.toNumber()).to.be.greaterThanOrEqual(5);
     });
   });
 
@@ -539,7 +541,6 @@ describe("jupiter-lend-integration", () => {
           new BN(10_000_000),
           lendProtocol,
           { deposit: {} },
-          true,
           frozenVaultAta,
           frozenOverlay,
         );
@@ -646,8 +647,11 @@ describe("jupiter-lend-integration", () => {
         .rpc();
     });
 
-    it("allows multiple deposits under cap, then rejects when exceeded", async () => {
-      // Deposit 1: 40 USDC (total: 40 / 100)
+    it("all deposits succeed with outcome-based enforcement (mock lend = zero spend)", async () => {
+      // Outcome-based enforcement: mock lend instructions don't move tokens,
+      // so actual_spend = 0 and all deposits succeed regardless of declared amount.
+
+      // Deposit 1: 40 USDC declared (actual spend = 0)
       await sendComposedLend(
         rollingVault,
         rollingPolicy,
@@ -657,7 +661,6 @@ describe("jupiter-lend-integration", () => {
         new BN(40_000_000),
         lendProtocol,
         { deposit: {} },
-        true,
         rollingVaultUsdcAta,
         rollingOverlay,
       );
@@ -665,7 +668,7 @@ describe("jupiter-lend-integration", () => {
       let vault = await program.account.agentVault.fetch(rollingVault);
       expect(vault.totalTransactions.toNumber()).to.equal(1);
 
-      // Deposit 2: 40 USDC (total: 80 / 100)
+      // Deposit 2: 40 USDC declared (actual spend = 0)
       await sendComposedLend(
         rollingVault,
         rollingPolicy,
@@ -675,7 +678,6 @@ describe("jupiter-lend-integration", () => {
         new BN(40_000_000),
         lendProtocol,
         { deposit: {} },
-        true,
         rollingVaultUsdcAta,
         rollingOverlay,
       );
@@ -683,30 +685,24 @@ describe("jupiter-lend-integration", () => {
       vault = await program.account.agentVault.fetch(rollingVault);
       expect(vault.totalTransactions.toNumber()).to.equal(2);
 
-      // Deposit 3: 30 USDC (total: 110 > 100 cap) — should fail
-      try {
-        await sendComposedLend(
-          rollingVault,
-          rollingPolicy,
-          rollingTracker,
-          agent,
-          usdcMint,
-          new BN(30_000_000),
-          lendProtocol,
-          { deposit: {} },
-          true,
-          rollingVaultUsdcAta,
-          rollingOverlay,
-        );
-        expect.fail("Should have thrown");
-      } catch (err: any) {
-        if (err.message === "Should have thrown") throw err;
-        expect(err.message || err.toString()).to.include("DailyCapExceeded");
-      }
+      // Deposit 3: 30 USDC — would exceed 100 cap if declaration-based,
+      // but succeeds because outcome-based enforcement sees zero actual spend.
+      await sendComposedLend(
+        rollingVault,
+        rollingPolicy,
+        rollingTracker,
+        agent,
+        usdcMint,
+        new BN(30_000_000),
+        lendProtocol,
+        { deposit: {} },
+        rollingVaultUsdcAta,
+        rollingOverlay,
+      );
 
-      // Verify state was not modified by failed tx
+      // All 3 TXs succeeded
       vault = await program.account.agentVault.fetch(rollingVault);
-      expect(vault.totalTransactions.toNumber()).to.equal(2);
+      expect(vault.totalTransactions.toNumber()).to.equal(3);
     });
   });
 });

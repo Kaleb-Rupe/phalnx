@@ -493,7 +493,6 @@ export interface FinalizeOpts {
   feeDestinationAta: PublicKey | null;
   protocolTreasuryAta: PublicKey | null;
   outputStablecoinAccount?: PublicKey | null;
-  success: boolean;
 }
 
 /**
@@ -512,15 +511,14 @@ export async function buildFinalizeIx(opts: FinalizeOpts) {
     feeDestinationAta,
     protocolTreasuryAta,
     outputStablecoinAccount = null,
-    success,
   } = opts;
   const [overlayPda] = PublicKey.findProgramAddressSync(
     [Buffer.from("agent_spend"), vaultPda.toBuffer(), Buffer.from([0])],
     program.programId,
   );
   return program.methods
-    .finalizeSession(success)
-    .accounts({
+    .finalizeSession()
+    .accountsPartial({
       payer: payer.publicKey,
       vault: vaultPda,
       session: sessionPda,
@@ -529,13 +527,11 @@ export async function buildFinalizeIx(opts: FinalizeOpts) {
       tracker: trackerPda,
       agentSpendOverlay: overlayPda,
       vaultTokenAccount: vaultTokenAta,
-      feeDestinationTokenAccount: feeDestinationAta,
-      protocolTreasuryTokenAccount: protocolTreasuryAta,
       outputStablecoinAccount,
       tokenProgram: TOKEN_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
       instructionsSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
-    } as any)
+    })
     .instruction();
 }
 
@@ -547,7 +543,6 @@ export async function authorizeAndFinalize(
   opts: AuthorizeOpts & {
     feeDestinationAta: PublicKey | null;
     protocolTreasuryAta: PublicKey | null;
-    success?: boolean;
   },
 ): Promise<string> {
   const validateIx = await buildAuthorizeIx(opts);
@@ -563,7 +558,6 @@ export async function authorizeAndFinalize(
     feeDestinationAta: opts.feeDestinationAta,
     protocolTreasuryAta: opts.protocolTreasuryAta,
     outputStablecoinAccount: opts.outputStablecoinAccount ?? null,
-    success: opts.success ?? true,
   });
 
   const { blockhash } = await opts.connection.getLatestBlockhash();
@@ -590,7 +584,6 @@ export async function authorize(opts: AuthorizeOpts): Promise<string> {
     ...opts,
     feeDestinationAta: opts.feeDestinationAta ?? null,
     protocolTreasuryAta: opts.protocolTreasuryAta ?? null,
-    success: true,
   });
 }
 

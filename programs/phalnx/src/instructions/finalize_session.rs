@@ -1,5 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::instruction::get_stack_height;
+use anchor_lang::solana_program::sysvar::instructions::{
+    load_current_index_checked, load_instruction_at_checked,
+};
 use anchor_spl::token::{self, Revoke, Token, TokenAccount};
 
 use anchor_lang::accounts::account_loader::AccountLoader;
@@ -40,7 +43,7 @@ pub struct FinalizeSession<'info> {
     #[account(mut)]
     pub session_rent_recipient: UncheckedAccount<'info>,
 
-    /// Policy config for cap checking during non-stablecoin swap finalization
+    /// Policy config for outcome-based cap checking during finalization
     #[account(
         seeds = [b"policy", vault.key().as_ref()],
         bump = policy.bump,
@@ -67,16 +70,23 @@ pub struct FinalizeSession<'info> {
     #[account(mut)]
     pub vault_token_account: Option<Account<'info, TokenAccount>>,
 
-    /// Vault's stablecoin ATA for non-stablecoin→stablecoin swap verification.
-    /// Required when session.output_mint != Pubkey::default().
+    /// Vault's stablecoin ATA for outcome-based spending verification.
+    /// Required when session.output_mint != Pubkey::default() (all spending).
     #[account(mut)]
     pub output_stablecoin_account: Option<Account<'info, TokenAccount>>,
 
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
+
+    /// Instructions sysvar for post-finalize instruction verification.
+    /// CHECK: address constrained to sysvar::instructions::ID
+    #[account(
+        address = anchor_lang::solana_program::sysvar::instructions::ID
+    )]
+    pub instructions_sysvar: UncheckedAccount<'info>,
 }
 
-pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
+pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
     // 0. Reject CPI calls — only top-level transaction instructions allowed.
     require!(
         get_stack_height()
@@ -105,12 +115,8 @@ pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
         require!(session.authorized, PhalnxError::SessionNotAuthorized);
     }
 
-    // Expired sessions are always treated as failed
-    let success = if is_expired { false } else { success };
-
     // Extract session data before we lose access
     let session_agent = session.agent;
-    let session_amount = session.authorized_amount;
     let session_action_type = session.action_type;
     let session_delegated = session.delegated;
     let session_developer_fee = session.developer_fee;
@@ -118,6 +124,8 @@ pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
     let session_balance_before = session.stablecoin_balance_before;
     let session_delegation_token_account = session.delegation_token_account;
     let session_authorized_protocol = session.authorized_protocol;
+    let session_authorized_token = session.authorized_token;
+    let session_protocol_fee = session.protocol_fee;
 
     let vault_key = ctx.accounts.vault.key();
     let vault = &mut ctx.accounts.vault;
@@ -174,156 +182,350 @@ pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
         }
     }
 
-    // Stablecoin balance verification for non-stablecoin→stablecoin swaps
-    if session_output_mint != Pubkey::default() && success {
-        let stablecoin_account = ctx
-            .accounts
-            .output_stablecoin_account
-            .as_ref()
-            .ok_or(error!(PhalnxError::InvalidTokenAccount))?;
-        require!(
-            stablecoin_account.owner == vault_key,
-            PhalnxError::InvalidTokenAccount
-        );
-        require!(
-            stablecoin_account.mint == session_output_mint,
-            PhalnxError::InvalidTokenAccount
-        );
-        require!(
-            stablecoin_account.amount > session_balance_before,
-            PhalnxError::NonTrackedSwapMustReturnStablecoin
-        );
+    // P&L tracking: track actual spend and balance for enriched SessionFinalized event
+    let mut actual_spend_tracked: u64 = 0;
+    let mut balance_after_tracked: u64 = 0;
 
-        // Track stablecoin delta: how much USD the non-stablecoin swap produced
-        let stablecoin_delta = stablecoin_account
-            .amount
-            .checked_sub(session_balance_before)
-            .ok_or(PhalnxError::Overflow)?;
+    // --- Outcome-based spending verification (ALL non-expired spending transactions) ---
+    // Measures actual stablecoin balance delta to determine real spending.
+    // Caps and spend recording use the measured reality, not declared intent.
+    // Expired sessions skip: crank callers don't pass optional token accounts.
+    let run_outcome_check = !is_expired && session_output_mint != Pubkey::default();
+    if run_outcome_check {
+        let is_stablecoin_input = is_stablecoin_mint(&session_authorized_token);
 
-        // Single-transaction USD limit
+        let stablecoin_current = if is_stablecoin_input {
+            // Stablecoin input (e.g., swap USDC→SOL): read vault_token_account
+            let acct = ctx
+                .accounts
+                .vault_token_account
+                .as_ref()
+                .ok_or(error!(PhalnxError::InvalidTokenAccount))?;
+            acct.amount
+        } else {
+            // Non-stablecoin input (e.g., swap SOL→USDC): read output_stablecoin_account
+            let stablecoin_account = ctx
+                .accounts
+                .output_stablecoin_account
+                .as_ref()
+                .ok_or(error!(PhalnxError::InvalidTokenAccount))?;
+            require!(
+                stablecoin_account.owner == vault_key,
+                PhalnxError::InvalidTokenAccount
+            );
+            require!(
+                stablecoin_account.mint == session_output_mint,
+                PhalnxError::InvalidTokenAccount
+            );
+            stablecoin_account.amount
+        };
+
+        // P&L: set balance_after once — covers both branches (M-5 fix)
+        balance_after_tracked = stablecoin_current;
+
+        if is_stablecoin_input {
+            // Stablecoin input: measure how much LEFT the vault
+            // total_decrease = snapshot - current (includes fees + DeFi spend)
+            let total_decrease = session_balance_before.saturating_sub(stablecoin_current);
+
+            // Fees already collected in validate_and_authorize via CPI transfers.
+            // actual_spend = total_decrease - fees (only the DeFi portion)
+            let fees_collected = session_protocol_fee
+                .checked_add(session_developer_fee)
+                .ok_or(PhalnxError::Overflow)?;
+            let actual_spend = total_decrease.saturating_sub(fees_collected);
+            actual_spend_tracked = actual_spend;
+
+            if actual_spend > 0 {
+                // Per-transaction limit
+                let policy = &ctx.accounts.policy;
+                require!(
+                    actual_spend <= policy.max_transaction_size_usd,
+                    PhalnxError::TransactionTooLarge
+                );
+
+                // Rolling 24h cap
+                let mut tracker = ctx.accounts.tracker.load_mut()?;
+                let rolling_usd = tracker.get_rolling_24h_usd(&clock);
+                let new_total = rolling_usd
+                    .checked_add(actual_spend)
+                    .ok_or(PhalnxError::Overflow)?;
+                require!(
+                    new_total <= policy.daily_spending_cap_usd,
+                    PhalnxError::SpendingCapExceeded
+                );
+
+                // Per-agent cap
+                let agent_entry = vault
+                    .get_agent(&session_agent)
+                    .ok_or(error!(PhalnxError::UnauthorizedAgent))?;
+                let mut overlay = ctx.accounts.agent_spend_overlay.load_mut()?;
+                if let Some(agent_slot) = overlay.find_agent_slot(&session_agent) {
+                    if agent_entry.spending_limit_usd > 0 {
+                        let agent_rolling = overlay.get_agent_rolling_24h_usd(&clock, agent_slot);
+                        let new_agent = agent_rolling
+                            .checked_add(actual_spend)
+                            .ok_or(PhalnxError::Overflow)?;
+                        require!(
+                            new_agent <= agent_entry.spending_limit_usd,
+                            PhalnxError::AgentSpendLimitExceeded
+                        );
+                        emit!(AgentSpendLimitChecked {
+                            vault: vault_key,
+                            agent: session_agent,
+                            agent_rolling_spend: agent_rolling,
+                            spending_limit_usd: agent_entry.spending_limit_usd,
+                            amount: actual_spend,
+                            timestamp: clock.unix_timestamp,
+                        });
+                    }
+                    overlay.record_agent_contribution(&clock, agent_slot, actual_spend)?;
+                    overlay.lifetime_spend[agent_slot] = overlay.lifetime_spend[agent_slot]
+                        .checked_add(actual_spend)
+                        .ok_or(PhalnxError::Overflow)?;
+                    overlay.lifetime_tx_count[agent_slot] = overlay.lifetime_tx_count[agent_slot]
+                        .checked_add(1)
+                        .ok_or(PhalnxError::Overflow)?;
+                } else if agent_entry.spending_limit_usd > 0 {
+                    return Err(error!(PhalnxError::AgentSlotNotFound));
+                }
+                drop(overlay);
+
+                // Per-protocol cap
+                if let Some(proto_cap) = policy.get_protocol_cap(&session_authorized_protocol) {
+                    if proto_cap > 0 {
+                        let proto_spend =
+                            tracker.get_protocol_spend(&clock, &session_authorized_protocol);
+                        let new_proto = proto_spend
+                            .checked_add(actual_spend)
+                            .ok_or(PhalnxError::Overflow)?;
+                        require!(new_proto <= proto_cap, PhalnxError::ProtocolCapExceeded);
+                    }
+                }
+
+                // Record spend
+                tracker.record_spend(&clock, actual_spend)?;
+                if policy.has_protocol_caps {
+                    tracker.record_protocol_spend(
+                        &clock,
+                        &session_authorized_protocol,
+                        actual_spend,
+                    )?;
+                }
+                drop(tracker);
+            }
+        } else {
+            // Non-stablecoin input: stablecoins should INCREASE (or at least not decrease)
+            require!(
+                stablecoin_current > session_balance_before,
+                PhalnxError::NonTrackedSwapMustReturnStablecoin
+            );
+
+            let stablecoin_delta = stablecoin_current
+                .checked_sub(session_balance_before)
+                .ok_or(PhalnxError::Overflow)?;
+            actual_spend_tracked = stablecoin_delta;
+
+            // Per-transaction limit
+            let policy = &ctx.accounts.policy;
+            require!(
+                stablecoin_delta <= policy.max_transaction_size_usd,
+                PhalnxError::TransactionTooLarge
+            );
+
+            // Rolling 24h cap
+            let mut tracker = ctx.accounts.tracker.load_mut()?;
+            let rolling_usd = tracker.get_rolling_24h_usd(&clock);
+            let new_total = rolling_usd
+                .checked_add(stablecoin_delta)
+                .ok_or(PhalnxError::Overflow)?;
+            require!(
+                new_total <= policy.daily_spending_cap_usd,
+                PhalnxError::SpendingCapExceeded
+            );
+
+            // Per-agent cap
+            let agent_entry = vault
+                .get_agent(&session_agent)
+                .ok_or(error!(PhalnxError::UnauthorizedAgent))?;
+            let mut overlay = ctx.accounts.agent_spend_overlay.load_mut()?;
+            if let Some(agent_slot) = overlay.find_agent_slot(&session_agent) {
+                if agent_entry.spending_limit_usd > 0 {
+                    let agent_rolling = overlay.get_agent_rolling_24h_usd(&clock, agent_slot);
+                    let new_agent = agent_rolling
+                        .checked_add(stablecoin_delta)
+                        .ok_or(PhalnxError::Overflow)?;
+                    require!(
+                        new_agent <= agent_entry.spending_limit_usd,
+                        PhalnxError::AgentSpendLimitExceeded
+                    );
+                    emit!(AgentSpendLimitChecked {
+                        vault: vault_key,
+                        agent: session_agent,
+                        agent_rolling_spend: agent_rolling,
+                        spending_limit_usd: agent_entry.spending_limit_usd,
+                        amount: stablecoin_delta,
+                        timestamp: clock.unix_timestamp,
+                    });
+                }
+                overlay.record_agent_contribution(&clock, agent_slot, stablecoin_delta)?;
+                overlay.lifetime_spend[agent_slot] = overlay.lifetime_spend[agent_slot]
+                    .checked_add(stablecoin_delta)
+                    .ok_or(PhalnxError::Overflow)?;
+                overlay.lifetime_tx_count[agent_slot] = overlay.lifetime_tx_count[agent_slot]
+                    .checked_add(1)
+                    .ok_or(PhalnxError::Overflow)?;
+            } else if agent_entry.spending_limit_usd > 0 {
+                return Err(error!(PhalnxError::AgentSlotNotFound));
+            }
+            drop(overlay);
+
+            // Per-protocol cap
+            if let Some(proto_cap) = policy.get_protocol_cap(&session_authorized_protocol) {
+                if proto_cap > 0 {
+                    let proto_spend =
+                        tracker.get_protocol_spend(&clock, &session_authorized_protocol);
+                    let new_proto = proto_spend
+                        .checked_add(stablecoin_delta)
+                        .ok_or(PhalnxError::Overflow)?;
+                    require!(new_proto <= proto_cap, PhalnxError::ProtocolCapExceeded);
+                }
+            }
+
+            // Record spend
+            tracker.record_spend(&clock, stablecoin_delta)?;
+            if policy.has_protocol_caps {
+                tracker.record_protocol_spend(
+                    &clock,
+                    &session_authorized_protocol,
+                    stablecoin_delta,
+                )?;
+            }
+            drop(tracker);
+        }
+    }
+
+    // --- Fee-to-cap fallback (OUTSIDE run_outcome_check) ---
+    // When no DeFi spend occurred (actual_spend_tracked == 0) but fees were collected
+    // in validate_and_authorize, charge those fees to the spending cap. This prevents
+    // fee drain attacks where an agent repeatedly calls validate+finalize with no DeFi
+    // instruction to extract fees without cap enforcement.
+    // Runs unconditionally — covers both expired sessions and zero-DeFi-spend sessions.
+    let fees_collected_total = session_protocol_fee
+        .checked_add(session_developer_fee)
+        .ok_or(PhalnxError::Overflow)?;
+
+    if actual_spend_tracked == 0 && fees_collected_total > 0 {
         let policy = &ctx.accounts.policy;
-        require!(
-            stablecoin_delta <= policy.max_transaction_size_usd,
-            PhalnxError::TransactionTooLarge
-        );
-
-        // Rolling 24h cap check
         let mut tracker = ctx.accounts.tracker.load_mut()?;
         let rolling_usd = tracker.get_rolling_24h_usd(&clock);
         let new_total = rolling_usd
-            .checked_add(stablecoin_delta)
+            .checked_add(fees_collected_total)
             .ok_or(PhalnxError::Overflow)?;
         require!(
             new_total <= policy.daily_spending_cap_usd,
-            PhalnxError::DailyCapExceeded
+            PhalnxError::SpendingCapExceeded
         );
-
-        // --- Per-agent cap check via contribution overlay ---
-        let agent_entry = vault
-            .get_agent(&session_agent)
-            .ok_or(error!(PhalnxError::UnauthorizedAgent))?;
-        let mut overlay = ctx.accounts.agent_spend_overlay.load_mut()?;
-        if let Some(agent_slot) = overlay.find_agent_slot(&session_agent) {
-            if agent_entry.spending_limit_usd > 0 {
-                let agent_rolling = overlay.get_agent_rolling_24h_usd(&clock, agent_slot);
-                let new_agent = agent_rolling
-                    .checked_add(stablecoin_delta)
-                    .ok_or(PhalnxError::Overflow)?;
-                require!(
-                    new_agent <= agent_entry.spending_limit_usd,
-                    PhalnxError::AgentSpendLimitExceeded
-                );
-                emit!(AgentSpendLimitChecked {
-                    vault: vault_key,
-                    agent: session_agent,
-                    agent_rolling_spend: agent_rolling,
-                    spending_limit_usd: agent_entry.spending_limit_usd,
-                    amount: stablecoin_delta,
-                    timestamp: clock.unix_timestamp,
-                });
-            }
-            overlay.record_agent_contribution(&clock, agent_slot, stablecoin_delta)?;
-        } else if agent_entry.spending_limit_usd > 0 {
-            return Err(error!(PhalnxError::AgentSlotNotFound));
-        }
-        drop(overlay);
-
-        // Per-protocol cap check (when enabled)
-        if let Some(proto_cap) = policy.get_protocol_cap(&session_authorized_protocol) {
-            if proto_cap > 0 {
-                let proto_spend = tracker.get_protocol_spend(&clock, &session_authorized_protocol);
-                let new_proto_total = proto_spend
-                    .checked_add(stablecoin_delta)
-                    .ok_or(PhalnxError::Overflow)?;
-                require!(
-                    new_proto_total <= proto_cap,
-                    PhalnxError::ProtocolCapExceeded
-                );
-            }
-        }
-
-        // Record spend in tracker
-        tracker.record_spend(&clock, stablecoin_delta)?;
-
-        // Record per-protocol spend
-        if policy.has_protocol_caps {
-            tracker.record_protocol_spend(
-                &clock,
-                &session_authorized_protocol,
-                stablecoin_delta,
-            )?;
-        }
-
+        tracker.record_spend(&clock, fees_collected_total)?;
         drop(tracker);
     }
 
-    // Update vault stats on success (fees already collected in validate)
-    if success && !is_expired {
+    // Always track fees that were transferred in validate (regardless of expiry or outcome).
+    // Fees are CPI-transferred in validate_and_authorize — accounting must match reality.
+    if session_developer_fee > 0 {
+        vault.total_fees_collected = vault
+            .total_fees_collected
+            .checked_add(session_developer_fee)
+            .ok_or(PhalnxError::Overflow)?;
+    }
+
+    // Update vault stats (non-expired sessions only)
+    if !is_expired {
         vault.total_transactions = vault
             .total_transactions
             .checked_add(1)
             .ok_or(PhalnxError::Overflow)?;
 
-        // Only add to total_volume for spending actions
+        // Only add to total_volume for spending actions (actual measured spend,
+        // not declared — matches WRAP-ARCHITECTURE-PLAN.md:427-431)
         if session_action_type.is_spending() {
             vault.total_volume = vault
                 .total_volume
-                .checked_add(session_amount)
+                .checked_add(actual_spend_tracked)
                 .ok_or(PhalnxError::Overflow)?;
         }
 
-        if session_developer_fee > 0 {
-            vault.total_fees_collected = vault
-                .total_fees_collected
-                .checked_add(session_developer_fee)
-                .ok_or(PhalnxError::Overflow)?;
+        // Update position count — only when actual DeFi execution occurred.
+        // For spending actions, gate on actual_spend > 0 to prevent counter inflation
+        // from no-op sessions. Non-spending actions (ClosePosition, etc.) always update.
+        let should_update_positions =
+            !session_action_type.is_spending() || actual_spend_tracked > 0;
+        if should_update_positions {
+            match session_action_type.position_effect() {
+                PositionEffect::Increment => {
+                    vault.open_positions = vault
+                        .open_positions
+                        .checked_add(1)
+                        .ok_or(PhalnxError::Overflow)?;
+                }
+                PositionEffect::Decrement => {
+                    vault.open_positions = vault
+                        .open_positions
+                        .checked_sub(1)
+                        .ok_or(PhalnxError::Overflow)?;
+                }
+                PositionEffect::None => {}
+            }
         }
+    }
 
-        // Update position count based on position effect
-        match session_action_type.position_effect() {
-            PositionEffect::Increment => {
-                vault.open_positions = vault
-                    .open_positions
-                    .checked_add(1)
-                    .ok_or(PhalnxError::Overflow)?;
-            }
-            PositionEffect::Decrement => {
-                vault.open_positions = vault
-                    .open_positions
-                    .checked_sub(1)
-                    .ok_or(PhalnxError::Overflow)?;
-            }
-            PositionEffect::None => {}
-        }
+    // Analytics: count expired sessions for success rate metric.
+    if is_expired {
+        vault.total_failed_transactions = vault
+            .total_failed_transactions
+            .checked_add(1)
+            .ok_or(PhalnxError::Overflow)?;
     }
 
     emit!(SessionFinalized {
         vault: vault_key,
         agent: session_agent,
-        success,
+        success: !is_expired,
         is_expired,
         timestamp: clock.unix_timestamp,
+        actual_spend_usd: actual_spend_tracked,
+        balance_after_usd: balance_after_tracked,
+        action_type: session_action_type.permission_bit(),
     });
+
+    // --- Post-finalize instruction scan (defense-in-depth) ---
+    // Ensures no unauthorized instructions execute after the security
+    // window closes. Revocation already prevents token theft, but this
+    // catches any future regression where revocation order changes.
+    let ix_sysvar_info = ctx.accounts.instructions_sysvar.to_account_info();
+    let current_ix_index = load_current_index_checked(&ix_sysvar_info)
+        .map_err(|_| error!(PhalnxError::UnauthorizedPostFinalizeInstruction))?
+        as usize;
+
+    // Hardcoded ComputeBudget program ID — matches validate_and_authorize.rs:248-251
+    let compute_budget_id = Pubkey::new_from_array([
+        3, 6, 70, 111, 229, 33, 23, 50, 255, 236, 173, 186, 114, 195, 155, 231, 188, 140, 229, 187,
+        197, 247, 18, 107, 44, 67, 155, 58, 64, 0, 0, 0,
+    ]);
+    let system_id = anchor_lang::solana_program::system_program::ID;
+
+    // Unbounded scan: check ALL remaining instructions after finalize.
+    // The loop terminates when load_instruction_at_checked returns Err (end of tx).
+    // Using an unbounded scan instead of a fixed 20-instruction window ensures
+    // coverage at any transaction size, including SIMD-0296's proposed 4,096 bytes.
+    let mut post_idx = current_ix_index.saturating_add(1);
+    while let Ok(ix) = load_instruction_at_checked(post_idx, &ix_sysvar_info) {
+        require!(
+            ix.program_id == compute_budget_id || ix.program_id == system_id,
+            PhalnxError::UnauthorizedPostFinalizeInstruction
+        );
+        post_idx = post_idx.saturating_add(1);
+    }
 
     Ok(())
 }

@@ -41,16 +41,18 @@ function baseParams(
 
 describe("composer", () => {
   describe("composePhalnxTransaction", () => {
-    it("returns a compiled transaction object", () => {
+    // P2 #21: Verify transaction has actual content, not just existence
+    it("returns a compiled transaction with non-empty messageBytes", () => {
       const compiled = composePhalnxTransaction(baseParams());
-      // Compiled transaction should have messageBytes and signatures
       expect(compiled).to.have.property("messageBytes");
+      expect(compiled.messageBytes).to.be.instanceOf(Uint8Array);
+      expect(compiled.messageBytes.length).to.be.greaterThan(0);
     });
 
-    it("includes compute budget as first instruction data", () => {
+    it("includes compute budget — transaction has signatures array", () => {
       const compiled = composePhalnxTransaction(baseParams());
-      // The transaction should compile without error
-      expect(compiled).to.exist;
+      expect(compiled).to.have.property("signatures");
+      expect(compiled.messageBytes.length).to.be.greaterThan(0);
     });
 
     it("no priority fee ix when 0", () => {

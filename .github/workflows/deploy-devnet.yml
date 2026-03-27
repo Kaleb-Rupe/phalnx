@@ -105,10 +105,10 @@ jobs:
       - name: Configure deploy wallet
         run: |
           mkdir -p "$HOME/.config/solana"
-          echo '${{ secrets.DEVNET_DEPLOY_KEYPAIR }}' > "$HOME/.config/solana/deployer.json"
+          echo '${{ secrets.DEVNET_DEPLOY_KEYPAIR }}' > "$HOME/.config/solana/id.json"
           solana config set \
             --url "${{ secrets.DEVNET_RPC_URL }}" \
-            --keypair "$HOME/.config/solana/deployer.json" \
+            --keypair "$HOME/.config/solana/id.json" \
             > /dev/null 2>&1
 
       - name: Balance gate
@@ -132,7 +132,7 @@ jobs:
             echo "Deploy attempt $i/$MAX_RETRIES"
             if solana program deploy target/deploy/phalnx.so \
                 --program-id ${{ env.PROGRAM_ID }} \
-                --upgrade-authority "$HOME/.config/solana/deployer.json" \
+                --upgrade-authority "$HOME/.config/solana/id.json" \
                 --with-compute-unit-price 1000 \
                 --max-sign-attempts 50; then
               echo "Program deploy succeeded on attempt $i"
@@ -224,10 +224,39 @@ jobs:
 
       - name: Cleanup deploy wallet
         if: always()
-        run: rm -f "$HOME/.config/solana/deployer.json"
+        run: rm -f "$HOME/.config/solana/id.json"
 
   # ────────────────────────────────────────────────────────────────
-  # Job 2: Run devnet tests against freshly deployed program
+  # Job 2: Verify deployed binary matches source (solana-verify)
+  # ────────────────────────────────────────────────────────────────
+  verify-program:
+    name: Verify Program Binary
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9
+        with:
+          toolchain: stable
+
+      - name: Install solana-verify
+        run: cargo install solana-verify --locked
+
+      - name: Verify deployed program matches source
+        run: |
+          set -e
+          solana-verify verify-from-repo \
+            --program-id 4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL \
+            --library-name phalnx \
+            --mount-path programs/phalnx \
+            --url https://api.devnet.solana.com
+
+  # ────────────────────────────────────────────────────────────────
+  # Job 3: Run devnet tests against freshly deployed program
   # ────────────────────────────────────────────────────────────────
   test:
     name: Devnet Tests (post-deploy)

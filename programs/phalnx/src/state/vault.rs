@@ -40,7 +40,13 @@ pub struct AgentVault {
     /// Total volume processed in token base units
     pub total_volume: u64,
 
-    /// Number of currently open positions (for perps tracking)
+    /// Number of currently open positions (for perps tracking).
+    /// DESIGN DECISION: Counter-only. Does not store per-position details
+    /// (entry price, size, liquidation price). Individual position data is
+    /// protocol-specific (Flash Trade vs Drift vs Jupiter perps have different
+    /// layouts). The SDK reads position details via RPC. sync_positions
+    /// corrects counter drift from auto-liquidation.
+    /// Found by: Persona test (Perps Developer "Jake")
     pub open_positions: u8,
 
     /// Number of active (unsettled/unrefunded) escrow deposits from this vault
@@ -48,17 +54,61 @@ pub struct AgentVault {
 
     /// Cumulative developer fees collected from this vault (token base units)
     pub total_fees_collected: u64,
+
+    /// Cumulative stablecoin deposits in base units (USDC/USDT, 6 decimals).
+    /// Incremented in deposit_funds for stablecoin mints only.
+    /// Used for P&L: current_balance - total_deposited_usd + total_withdrawn_usd.
+    /// Cumulative gross — never decremented. Informational only, never authorization input.
+    pub total_deposited_usd: u64,
+
+    /// Cumulative stablecoin withdrawals in base units (USDC/USDT, 6 decimals).
+    /// Incremented in withdraw_funds for stablecoin mints only.
+    pub total_withdrawn_usd: u64,
+
+    /// Cumulative failed + expired session count.
+    /// Incremented in finalize_session when success=false OR is_expired=true.
+    /// Used for success rate: total_transactions / (total_transactions + total_failed_transactions).
+    /// Informational only — never used in authorization decisions.
+    pub total_failed_transactions: u64,
 }
+
+// ARCHITECTURE DECISION: No on-chain viewer/delegate role
+//
+// The program has two roles: owner (full authority) and agent (execute within policy).
+// There is no "viewer" or "delegate" role because:
+//   1. All Solana account data is publicly readable via RPC.
+//   2. Read-only access control is a dashboard/API concern, not on-chain.
+//   3. Adding viewer entries would bloat account size with zero security benefit.
+//   4. Delegate roles are handled by Squads V4 externally if the owner is a multisig.
+//
+// Found by: Persona test (Treasury Manager "David")
+// Decision: By design. Dashboard RBAC handles this.
 
 impl AgentVault {
     /// Account discriminator (8) + owner (32) + vault_id (8) +
     /// agents vec prefix (4) + agents data (49 * 10) +
     /// fee_destination (32) + status (1) + bump (1) +
     /// created_at (8) + total_transactions (8) + total_volume (8) +
-    /// open_positions (1) + active_escrow_count (1) + total_fees_collected (8)
-    pub const SIZE: usize =
-        8 + 32 + 8 + 4 + (49 * MAX_AGENTS_PER_VAULT) + 32 + 1 + 1 + 8 + 8 + 8 + 1 + 1 + 8;
-    // = 610
+    /// open_positions (1) + active_escrow_count (1) + total_fees_collected (8) +
+    /// total_deposited_usd (8) + total_withdrawn_usd (8) + total_failed_transactions (8)
+    pub const SIZE: usize = 8
+        + 32
+        + 8
+        + 4
+        + (49 * MAX_AGENTS_PER_VAULT)
+        + 32
+        + 1
+        + 1
+        + 8
+        + 8
+        + 8
+        + 1
+        + 1
+        + 8
+        + 8
+        + 8
+        + 8;
+    // = 634
 
     pub fn is_active(&self) -> bool {
         self.status == VaultStatus::Active

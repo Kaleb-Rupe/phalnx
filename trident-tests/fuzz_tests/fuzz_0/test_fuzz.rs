@@ -815,7 +815,7 @@ impl FuzzTest {
         // INV-3: Check session before finalization
         check_inv3_session_expiry(&Some(session_data), self.current_slot);
 
-        let data = phalnx::instruction::FinalizeSession { success: true };
+        let data = phalnx::instruction::FinalizeSession {};
         let (agent_spend_overlay, _) =
             Pubkey::find_program_address(&[b"agent_spend", vault.as_ref(), &[0u8]], &program_id());
         let accounts = phalnx::accounts::FinalizeSession {
@@ -830,6 +830,7 @@ impl FuzzTest {
             output_stablecoin_account: None,
             token_program: spl_token::ID,
             system_program: solana_sdk::system_program::ID,
+            instructions_sysvar: solana_sdk::sysvar::instructions::ID,
         };
 
         let ix = Instruction::new_with_bytes(
@@ -1236,11 +1237,11 @@ impl FuzzTest {
                     .unwrap_or_default()
             });
 
-        // Finalize with success=true — program should override to success=false
+        // Finalize — expired sessions are treated as failed (is_expired check)
         let policy_addr = unwrap_or_ret!(self.fuzz_accounts.policy.get(&mut self.trident));
         let tracker_addr = unwrap_or_ret!(self.fuzz_accounts.tracker.get(&mut self.trident));
 
-        let data = phalnx::instruction::FinalizeSession { success: true };
+        let data = phalnx::instruction::FinalizeSession {};
         let (agent_spend_overlay, _) =
             Pubkey::find_program_address(&[b"agent_spend", vault.as_ref(), &[0u8]], &program_id());
         let accounts = phalnx::accounts::FinalizeSession {
@@ -1255,6 +1256,7 @@ impl FuzzTest {
             output_stablecoin_account: None,
             token_program: spl_token::ID,
             system_program: solana_sdk::system_program::ID,
+            instructions_sysvar: solana_sdk::sysvar::instructions::ID,
         };
 
         let ix = Instruction::new_with_bytes(
@@ -1298,7 +1300,7 @@ impl FuzzTest {
         let policy_addr = unwrap_or_ret!(self.fuzz_accounts.policy.get(&mut self.trident));
         let tracker_addr = unwrap_or_ret!(self.fuzz_accounts.tracker.get(&mut self.trident));
 
-        let data = phalnx::instruction::FinalizeSession { success: true };
+        let data = phalnx::instruction::FinalizeSession {};
         let (agent_spend_overlay, _) =
             Pubkey::find_program_address(&[b"agent_spend", vault.as_ref(), &[0u8]], &program_id());
         let accounts = phalnx::accounts::FinalizeSession {
@@ -1313,6 +1315,7 @@ impl FuzzTest {
             output_stablecoin_account: None,
             token_program: spl_token::ID,
             system_program: solana_sdk::system_program::ID,
+            instructions_sysvar: solana_sdk::sysvar::instructions::ID,
         };
 
         let ix = Instruction::new_with_bytes(

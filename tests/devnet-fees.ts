@@ -252,7 +252,6 @@ describe("devnet-fees", () => {
       protocol: jupiterProgramId,
       protocolTreasuryAta: vaultA.protocolTreasuryAta,
       feeDestinationAta: vaultA.feeDestinationAta,
-      success: false,
     });
 
     // Fees WERE collected (upfront in validate)

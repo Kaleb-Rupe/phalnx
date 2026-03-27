@@ -5,6 +5,7 @@ import {
   Keypair,
   PublicKey,
   SystemProgram,
+  ComputeBudgetProgram,
   LAMPORTS_PER_SOL,
   SYSVAR_INSTRUCTIONS_PUBKEY,
 } from "@solana/web3.js";
@@ -33,6 +34,7 @@ import {
   VersionedTxResult,
   recordCU,
   printCUSummary,
+  expectPhalnxError,
   TestEnv,
   LiteSVM,
 } from "./helpers/litesvm-setup";
@@ -302,10 +304,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.satisfy(
-          (s: string) =>
-            s.includes("InvalidProtocolMode") || s.includes("Error"),
-        );
+        expectPhalnxError(err.toString(), "InvalidProtocolMode", "Error");
       }
     });
   });
@@ -370,9 +369,7 @@ describe("phalnx", () => {
         expect.fail("Should have thrown");
       } catch (err: any) {
         // Anchor's PDA re-derivation fails before the handler runs
-        expect(err.toString()).to.satisfy(
-          (s: string) => s.includes("ConstraintSeeds") || s.includes("has_one"),
-        );
+        expectPhalnxError(err.toString(), "ConstraintSeeds", "has_one");
       }
     });
   });
@@ -395,6 +392,10 @@ describe("phalnx", () => {
       expect(vault.agents[0].pubkey.toString()).to.equal(
         agent.publicKey.toString(),
       );
+      // P1 #16: Verify permission bitmask actually stored (not just pubkey)
+      expect(vault.agents[0].permissions.toString()).to.equal(
+        FULL_PERMISSIONS.toString(),
+      );
     });
 
     it("rejects double registration", async () => {
@@ -410,7 +411,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("AgentAlreadyRegistered");
+        expectPhalnxError(err.toString(), "AgentAlreadyRegistered");
       }
     });
 
@@ -478,9 +479,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.satisfy(
-          (s: string) => s.includes("ConstraintSeeds") || s.includes("has_one"),
-        );
+        expectPhalnxError(err.toString(), "ConstraintSeeds", "has_one");
       }
     });
   });
@@ -548,9 +547,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.satisfy(
-          (s: string) => s.includes("ConstraintSeeds") || s.includes("has_one"),
-        );
+        expectPhalnxError(err.toString(), "ConstraintSeeds", "has_one");
       }
     });
 
@@ -585,7 +582,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("TooManyAllowedProtocols");
+        expectPhalnxError(err.toString(), "TooManyAllowedProtocols");
       }
     });
   });
@@ -688,7 +685,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("UnauthorizedAgent");
+        expectPhalnxError(err.toString(), "UnauthorizedAgent");
       }
     });
 
@@ -705,9 +702,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.satisfy(
-          (s: string) => s.includes("ConstraintSeeds") || s.includes("has_one"),
-        );
+        expectPhalnxError(err.toString(), "ConstraintSeeds", "has_one");
       }
     });
   });
@@ -810,7 +805,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("VaultNotFrozen");
+        expectPhalnxError(err.toString(), "VaultNotFrozen");
       }
     });
 
@@ -832,7 +827,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("NoAgentRegistered");
+        expectPhalnxError(err.toString(), "NoAgentRegistered");
       }
 
       // Clean up: reactivate with new agent for subsequent tests
@@ -910,7 +905,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("InsufficientBalance");
+        expectPhalnxError(err.toString(), "InsufficientBalance");
       }
     });
 
@@ -930,9 +925,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.satisfy(
-          (s: string) => s.includes("ConstraintSeeds") || s.includes("has_one"),
-        );
+        expectPhalnxError(err.toString(), "ConstraintSeeds", "has_one");
       }
     });
   });
@@ -985,7 +978,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: agent.publicKey,
           vault: vaultPda,
@@ -1002,25 +995,155 @@ describe("phalnx", () => {
         })
         .instruction();
 
+      // P0 Finding 1: Verify vault balance before/after composed TX
+      const vaultBalBefore = getTokenBalance(svm, vaultUsdcAta);
+
       const txResult = sendVersionedTx(svm, [validateIx, finalizeIx], agent);
       recordCU("validate+finalize:stablecoin", txResult);
+
+      // P0 Finding 1: Vault balance delta verification (outcome-based spending)
+      // Mock DeFi is a no-op — vault balance decreases by protocol fee only.
+      // Protocol fee = amount * PROTOCOL_FEE_RATE / FEE_RATE_DENOMINATOR
+      // = 50_000_000 * 200 / 1_000_000 = 10_000
+      const vaultBalAfter = getTokenBalance(svm, vaultUsdcAta);
+      const balanceDelta = vaultBalBefore - vaultBalAfter;
+      // With no-op DeFi, the ONLY balance change is the protocol fee (0.02% of declared amount)
+      expect(balanceDelta).to.equal(10_000n); // 50M * 200 / 1M = 10K (protocol fee)
 
       // Session should be closed after atomic validate+finalize
       try {
         await program.account.sessionAuthority.fetch(sessionPda);
         expect.fail("Session should have been closed");
       } catch (err: any) {
-        expect(err.toString()).to.satisfy(
-          (s: string) =>
-            s.includes("Account does not exist") ||
-            s.includes("Could not find"),
-        );
+        expectPhalnxError(err.toString(), "Account does not exist", "Could not find");
       }
 
       // Verify vault stats updated
       const vault = await program.account.agentVault.fetch(vaultPda);
       expect(vault.totalTransactions.toNumber()).to.equal(1);
-      expect(vault.totalVolume.toNumber()).to.equal(50_000_000);
+      // totalVolume uses actual_spend_tracked (outcome-based), not declared amount.
+      // Mock DeFi is a no-op (0-lamport self-transfer), so actual spend = 0.
+      expect(vault.totalVolume.toNumber()).to.equal(0);
+    });
+  });
+
+  // =========================================================================
+  // Post-finalize instruction scan (Step 5.9 — defense-in-depth)
+  // =========================================================================
+  describe("post-finalize instruction scan", () => {
+    async function buildValidateFinalizePair() {
+      const [sessionPdaLocal] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("session"),
+          vaultPda.toBuffer(),
+          agent.publicKey.toBuffer(),
+          usdcMint.toBuffer(),
+        ],
+        program.programId,
+      );
+      const amount = new BN(50_000_000);
+      const validateIx = await program.methods
+        .validateAndAuthorize(
+          { swap: {} },
+          usdcMint,
+          amount,
+          jupiterProgramId,
+          null,
+        )
+        .accountsPartial({
+          agent: agent.publicKey,
+          vault: vaultPda,
+          policy: policyPda,
+          tracker: trackerPda,
+          session: sessionPdaLocal,
+          vaultTokenAccount: vaultUsdcAta,
+          tokenMintAccount: usdcMint,
+          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+          feeDestinationTokenAccount: null,
+          outputStablecoinAccount: null,
+          agentSpendOverlay: overlayPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+          instructionsSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
+        })
+        .instruction();
+
+      const finalizeIx = await program.methods
+        .finalizeSession()
+        .accountsPartial({
+          payer: agent.publicKey,
+          vault: vaultPda,
+          session: sessionPdaLocal,
+          sessionRentRecipient: agent.publicKey,
+          policy: policyPda,
+          tracker: trackerPda,
+          vaultTokenAccount: vaultUsdcAta,
+          agentSpendOverlay: overlayPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+          instructionsSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
+          outputStablecoinAccount: null,
+        })
+        .instruction();
+
+      return { validateIx, finalizeIx };
+    }
+
+    it("succeeds with nothing after finalize", async () => {
+      const { validateIx, finalizeIx } = await buildValidateFinalizePair();
+      const txResult = sendVersionedTx(svm, [validateIx, finalizeIx], agent);
+      expect(txResult).to.exist;
+    });
+
+    it("allows ComputeBudget after finalize", async () => {
+      const { validateIx, finalizeIx } = await buildValidateFinalizePair();
+      const cbIx = ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 });
+      const txResult = sendVersionedTx(
+        svm,
+        [validateIx, finalizeIx, cbIx],
+        agent,
+      );
+      expect(txResult).to.exist;
+    });
+
+    it("allows SystemProgram after finalize", async () => {
+      const { validateIx, finalizeIx } = await buildValidateFinalizePair();
+      const sysIx = SystemProgram.transfer({
+        fromPubkey: agent.publicKey,
+        toPubkey: agent.publicKey,
+        lamports: 0,
+      });
+      const txResult = sendVersionedTx(
+        svm,
+        [validateIx, finalizeIx, sysIx],
+        agent,
+      );
+      expect(txResult).to.exist;
+    });
+
+    it("rejects SPL Transfer after finalize (error 6070)", async () => {
+      const { validateIx, finalizeIx } = await buildValidateFinalizePair();
+      // Craft a top-level SPL Token transfer instruction (disc = 3)
+      const splTransferIx = {
+        programId: TOKEN_PROGRAM_ID,
+        keys: [
+          { pubkey: vaultUsdcAta, isSigner: false, isWritable: true },
+          { pubkey: vaultUsdcAta, isSigner: false, isWritable: true },
+          { pubkey: agent.publicKey, isSigner: true, isWritable: false },
+        ],
+        data: Buffer.from([3, 0, 0, 0, 0, 0, 0, 0, 0]), // Transfer disc + 0 amount
+      };
+      try {
+        sendVersionedTx(
+          svm,
+          [validateIx, finalizeIx, splTransferIx],
+          agent,
+        );
+        expect.fail("Should have thrown");
+      } catch (err: any) {
+        // Error 6070 = UnauthorizedPostFinalizeInstruction
+        expect(err.toString()).to.include("6070");
+      }
     });
   });
 
@@ -1091,7 +1214,7 @@ describe("phalnx", () => {
         expect.fail("Should have thrown");
       } catch (err: any) {
         // Non-stablecoin input requires output_stablecoin_account which is null
-        expect(err.toString()).to.include("InvalidTokenAccount");
+        expectPhalnxError(err.toString(), "InvalidTokenAccount");
       }
     });
 
@@ -1126,17 +1249,19 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("ProtocolNotAllowed");
+        expectPhalnxError(err.toString(), "ProtocolNotAllowed");
       }
     });
 
-    it("rejects transaction exceeding max size", async () => {
+    it("standalone validate rejects without finalize (cap check moved to finalize)", async () => {
+      // Outcome-based model: per-tx cap checks are in finalize_session, not validate.
+      // A standalone validate (no finalize) fails with MissingFinalizeInstruction.
       try {
         await program.methods
           .validateAndAuthorize(
             { swap: {} },
             usdcMint,
-            new BN(200_000_000), // exceeds max_transaction_size of 100 USDC
+            new BN(200_000_000), // would exceed max_transaction_size — but checked in finalize now
             jupiterProgramId,
             null,
           )
@@ -1160,87 +1285,14 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("TransactionTooLarge");
+        expectPhalnxError(err.toString(), "MissingFinalizeInstruction");
       }
     });
 
-    it("rejects when daily spending cap would be exceeded", async () => {
-      // Lower the daily cap to 200 USDC (from 500) to make this testable
-      // with fewer transactions. Already spent 50 USDC from earlier tests.
-      await program.methods
-        .updatePolicy(
-          new BN(200_000_000), // 200 USDC daily cap
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null, // hasProtocolCaps
-          null, // protocolCaps
-        )
-        .accounts({
-          owner: owner.publicKey,
-          vault: vaultPda,
-          policy: policyPda,
-        } as any)
-        .rpc();
-
-      // First, compose a successful validate+finalize for 100 USDC (50+100=150 < 200 cap)
-      const validateIx1 = await program.methods
-        .validateAndAuthorize(
-          { swap: {} },
-          usdcMint,
-          new BN(100_000_000), // 100 USDC
-          jupiterProgramId,
-          null,
-        )
-        .accountsPartial({
-          agent: agent.publicKey,
-          vault: vaultPda,
-          policy: policyPda,
-          tracker: trackerPda,
-          session: sessionPda,
-          vaultTokenAccount: vaultUsdcAta,
-          tokenMintAccount: usdcMint,
-          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
-          feeDestinationTokenAccount: null,
-          outputStablecoinAccount: null,
-          agentSpendOverlay: overlayPda,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          systemProgram: SystemProgram.programId,
-          instructionsSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
-        })
-        .instruction();
-
-      const finalizeIx1 = await program.methods
-        .finalizeSession(true)
-        .accountsPartial({
-          payer: agent.publicKey,
-          vault: vaultPda,
-          session: sessionPda,
-          sessionRentRecipient: agent.publicKey,
-          policy: policyPda,
-          tracker: trackerPda,
-          vaultTokenAccount: vaultUsdcAta,
-          agentSpendOverlay: overlayPda,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          systemProgram: SystemProgram.programId,
-          instructionsSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
-          outputStablecoinAccount: null,
-        })
-        .instruction();
-
-      const txResult2 = sendVersionedTx(svm, [validateIx1, finalizeIx1], agent);
-      recordCU("validate+finalize:spend_cap", txResult2);
-
-      // Now try to spend another 100 USDC — total would be 250 > 200 cap.
-      // This should fail with DailyCapExceeded (error fires before MissingFinalizeInstruction check).
+    it("standalone validate rejects without finalize (daily cap check moved to finalize)", async () => {
+      // Outcome-based model: daily cap checks are in finalize_session, not validate.
+      // Validate no longer records spend or checks caps — those use actual balance delta.
+      // A standalone validate (no finalize) fails with MissingFinalizeInstruction.
       try {
         await program.methods
           .validateAndAuthorize(
@@ -1270,33 +1322,8 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("DailyCapExceeded");
+        expectPhalnxError(err.toString(), "MissingFinalizeInstruction");
       }
-
-      // Restore daily cap to 500 USDC for subsequent tests
-      await program.methods
-        .updatePolicy(
-          new BN(500_000_000), // restore to 500 USDC
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null, // hasProtocolCaps
-          null, // protocolCaps
-        )
-        .accounts({
-          owner: owner.publicKey,
-          vault: vaultPda,
-          policy: policyPda,
-        } as any)
-        .rpc();
     });
 
     it("rejects unauthorized agent", async () => {
@@ -1342,7 +1369,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("UnauthorizedAgent");
+        expectPhalnxError(err.toString(), "UnauthorizedAgent");
       }
     });
 
@@ -1424,10 +1451,7 @@ describe("phalnx", () => {
       } catch (err: any) {
         // revoke_agent clears the agent key, so is_agent() constraint fails
         // before the handler's VaultNotActive check can run.
-        expect(err.toString()).to.satisfy(
-          (s: string) =>
-            s.includes("UnauthorizedAgent") || s.includes("ConstraintRaw"),
-        );
+        expectPhalnxError(err.toString(), "UnauthorizedAgent", "ConstraintRaw");
       }
     });
   });
@@ -1585,9 +1609,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.satisfy(
-          (s: string) => s.includes("ConstraintSeeds") || s.includes("has_one"),
-        );
+        expectPhalnxError(err.toString(), "ConstraintSeeds", "has_one");
       }
     });
   });
@@ -1707,7 +1729,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("DeveloperFeeTooHigh");
+        expectPhalnxError(err.toString(), "DeveloperFeeTooHigh");
       }
     });
 
@@ -1796,7 +1818,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("DeveloperFeeTooHigh");
+        expectPhalnxError(err.toString(), "DeveloperFeeTooHigh");
       }
     });
 
@@ -1899,7 +1921,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: agent.publicKey,
           vault: feeVaultPda,
@@ -2007,7 +2029,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: agent.publicKey,
           vault: feeVaultPda,
@@ -2031,8 +2053,9 @@ describe("phalnx", () => {
       expect(vault.totalFeesCollected.toNumber()).to.equal(5000);
     });
 
-    it("validate with success=false finalize → no fees credited to vault", async () => {
-      // Derive session PDA
+    it("zero-DeFi finalize always tracks developer fees in total_fees_collected", async () => {
+      // After removing the success param, fees are always tracked in accounting
+      // even when no DeFi instruction ran (fee drain fix).
       [feeSessionPda] = PublicKey.findProgramAddressSync(
         [
           Buffer.from("session"),
@@ -2046,7 +2069,7 @@ describe("phalnx", () => {
       const vaultBefore = await program.account.agentVault.fetch(feeVaultPda);
       const feesBefore = vaultBefore.totalFeesCollected.toNumber();
 
-      // Compose validate+finalize(false) atomically
+      // Compose validate+finalize atomically (no DeFi instruction between them)
       const validateIx = await program.methods
         .validateAndAuthorize(
           { swap: {} },
@@ -2074,7 +2097,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(false)
+        .finalizeSession()
         .accountsPartial({
           payer: agent.publicKey,
           vault: feeVaultPda,
@@ -2082,7 +2105,7 @@ describe("phalnx", () => {
           sessionRentRecipient: agent.publicKey,
           policy: feePolicyPda,
           tracker: feeTrackerPda,
-          vaultTokenAccount: feeVaultUsdcAta, // H1: must provide for delegation revocation
+          vaultTokenAccount: feeVaultUsdcAta,
           agentSpendOverlay: feeOverlay,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
@@ -2094,8 +2117,8 @@ describe("phalnx", () => {
       sendVersionedTx(svm, [validateIx, finalizeIx], agent);
 
       const vault = await program.account.agentVault.fetch(feeVaultPda);
-      // No new fees collected on failure
-      expect(vault.totalFeesCollected.toNumber()).to.equal(feesBefore);
+      // Developer fees ALWAYS tracked now (fee drain fix — accounting matches reality)
+      expect(vault.totalFeesCollected.toNumber()).to.be.greaterThan(feesBefore);
     });
 
     it("init vault with developer_fee_rate at max (500) succeeds", async () => {
@@ -2289,7 +2312,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: lifecycleAgent.publicKey,
           vault: lifecycleVaultPda,
@@ -2313,11 +2336,7 @@ describe("phalnx", () => {
         await program.account.sessionAuthority.fetch(lifecycleSessionPda);
         expect.fail("Session should have been closed");
       } catch (err: any) {
-        expect(err.toString()).to.satisfy(
-          (s: string) =>
-            s.includes("Account does not exist") ||
-            s.includes("Could not find"),
-        );
+        expectPhalnxError(err.toString(), "Account does not exist", "Could not find");
       }
 
       // Vault stats should be updated
@@ -2354,7 +2373,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: lifecycleAgent.publicKey,
           vault: lifecycleVaultPda,
@@ -2375,7 +2394,7 @@ describe("phalnx", () => {
         sendVersionedTx(svm, [validateIx, finalizeIx], lifecycleAgent);
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("InvalidSession");
+        expectPhalnxError(err.toString(), "InvalidSession");
       }
     });
 
@@ -2409,7 +2428,7 @@ describe("phalnx", () => {
           .instruction();
 
         const finalizeIx = await program.methods
-          .finalizeSession(true)
+          .finalizeSession()
           .accountsPartial({
             payer: lifecycleAgent.publicKey,
             vault: lifecycleVaultPda,
@@ -2498,7 +2517,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("AgentIsOwner");
+        expectPhalnxError(err.toString(), "AgentIsOwner");
       }
     });
 
@@ -2591,10 +2610,7 @@ describe("phalnx", () => {
         expect.fail("Should have thrown");
       } catch (err: any) {
         // Anchor's is_agent() constraint fires before the handler runs
-        expect(err.toString()).to.satisfy(
-          (s: string) =>
-            s.includes("UnauthorizedAgent") || s.includes("ConstraintRaw"),
-        );
+        expectPhalnxError(err.toString(), "UnauthorizedAgent", "ConstraintRaw");
       }
     });
   });
@@ -2783,12 +2799,7 @@ describe("phalnx", () => {
         // Vault PDA was closed — Anchor can't deserialize a zeroed/missing account.
         // LiteSVM proxy returns "Account does not exist"; Anchor provider
         // returns "Could not find" or "AccountNotInitialized".
-        expect(err.toString()).to.satisfy(
-          (s: string) =>
-            s.includes("AccountNotInitialized") ||
-            s.includes("does not exist") ||
-            s.includes("Could not find"),
-        );
+        expectPhalnxError(err.toString(), "AccountNotInitialized", "does not exist", "Could not find");
       }
     });
 
@@ -2907,12 +2918,7 @@ describe("phalnx", () => {
         // Vault PDA was closed — Anchor can't deserialize it.
         // LiteSVM returns "does not exist"; Anchor returns "Could not find"
         // or "AccountNotInitialized".
-        expect(err.toString()).to.satisfy(
-          (s: string) =>
-            s.includes("AccountNotInitialized") ||
-            s.includes("does not exist") ||
-            s.includes("Could not find"),
-        );
+        expectPhalnxError(err.toString(), "AccountNotInitialized", "does not exist", "Could not find");
       }
     });
   });
@@ -3049,7 +3055,7 @@ describe("phalnx", () => {
           .instruction();
 
         const finalizeIx = await program.methods
-          .finalizeSession(true)
+          .finalizeSession()
           .accountsPartial({
             payer: ringAgent.publicKey,
             vault: ringVaultPda,
@@ -3069,14 +3075,8 @@ describe("phalnx", () => {
         sendVersionedTx(svm, [validateIx, finalizeIx], ringAgent);
       }
 
-      const tracker = await program.account.spendTracker.fetch(ringTrackerPda);
-      // V2: tracker has 144 epoch buckets; spending was recorded in non-zero buckets
-      const nonZeroBuckets = tracker.buckets.filter(
-        (b: any) => b.usdAmount.toNumber() > 0,
-      );
-      expect(nonZeroBuckets.length).to.be.greaterThan(0);
-
-      // Vault should show 51 total transactions
+      // Outcome-based model: no DeFi instruction → actual_spend = 0 per TX.
+      // Tracker buckets remain empty (no recorded spend), but total_transactions increments.
       const vault = await program.account.agentVault.fetch(ringVaultPda);
       expect(vault.totalTransactions.toNumber()).to.equal(51);
     });
@@ -3220,7 +3220,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: feeEdgeAgent.publicKey,
           vault: feeEdgeVaultPda,
@@ -3286,7 +3286,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx1 = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: feeEdgeAgent.publicKey,
           vault: feeEdgeVaultPda,
@@ -3336,7 +3336,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx2 = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: feeEdgeAgent.publicKey,
           vault: feeEdgeVaultPda,
@@ -3464,7 +3464,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("TimelockActive");
+        expectPhalnxError(err.toString(), "TimelockActive");
       }
     });
 
@@ -3518,7 +3518,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("TimelockNotExpired");
+        expectPhalnxError(err.toString(), "TimelockNotExpired");
       }
     });
 
@@ -3546,11 +3546,7 @@ describe("phalnx", () => {
         await program.account.pendingPolicyUpdate.fetch(tlPendingPda);
         expect.fail("PendingPolicyUpdate should have been closed");
       } catch (err: any) {
-        expect(err.toString()).to.satisfy(
-          (s: string) =>
-            s.includes("Account does not exist") ||
-            s.includes("Could not find"),
-        );
+        expectPhalnxError(err.toString(), "Account does not exist", "Could not find");
       }
     });
 
@@ -3758,7 +3754,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("NoTimelockConfigured");
+        expectPhalnxError(err.toString(), "NoTimelockConfigured");
       }
     });
 
@@ -4081,7 +4077,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("DestinationNotAllowed");
+        expectPhalnxError(err.toString(), "DestinationNotAllowed");
       }
     });
 
@@ -4239,7 +4235,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("TooManyDestinations");
+        expectPhalnxError(err.toString(), "TooManyDestinations");
       }
     });
 
@@ -4289,7 +4285,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("DailyCapExceeded");
+        expectPhalnxError(err.toString(), "SpendingCapExceeded");
       }
     });
 
@@ -4315,7 +4311,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("TransactionTooLarge");
+        expectPhalnxError(err.toString(), "TransactionTooLarge");
       }
     });
 
@@ -4608,7 +4604,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accounts({
           payer: agent.publicKey,
           vault: maVault,
@@ -4669,7 +4665,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accounts({
           payer: agent.publicKey,
           vault: maVault,
@@ -4691,7 +4687,7 @@ describe("phalnx", () => {
         sendVersionedTx(svm, [validateIx, finalizeIx], agent);
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("InsufficientPermissions");
+        expectPhalnxError(err.toString(), "InsufficientPermissions");
       }
     });
 
@@ -4753,7 +4749,7 @@ describe("phalnx", () => {
       expect(vault.agents.length).to.equal(10);
     });
 
-    it("11th agent → MaxAgentsReached (6046)", async () => {
+    it("11th agent → MaxAgentsReached (6043)", async () => {
       const extra = Keypair.generate();
       try {
         await program.methods
@@ -4766,7 +4762,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("MaxAgentsReached");
+        expectPhalnxError(err.toString(), "MaxAgentsReached");
       }
     });
 
@@ -4835,7 +4831,7 @@ describe("phalnx", () => {
       );
     });
 
-    it("invalid permission bitmask → InvalidPermissions (6048)", async () => {
+    it("invalid permission bitmask → InvalidPermissions (6045)", async () => {
       const badAgent = Keypair.generate();
       // Bit 21+ is invalid (only 21 ActionType variants, bits 0-20 valid)
       const BAD_PERMS = new BN(1n << 21n);
@@ -4850,7 +4846,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("InvalidPermissions");
+        expectPhalnxError(err.toString(), "InvalidPermissions");
       }
     });
   });
@@ -5046,7 +5042,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have exceeded per-agent spend limit");
       } catch (err: any) {
-        expect(err.toString()).to.include("AgentSpendLimitExceeded");
+        expectPhalnxError(err.toString(), "AgentSpendLimitExceeded");
       }
 
       // But spending $150 (total = $950 < $1000) should succeed
@@ -5280,7 +5276,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: protoCapAgent.publicKey,
           vault: pcVault,
@@ -5312,7 +5308,7 @@ describe("phalnx", () => {
         composeSpend(protocolA, new BN(60_000_000));
         expect.fail("Should have thrown ProtocolCapExceeded");
       } catch (err: any) {
-        expect(err.toString()).to.include("ProtocolCapExceeded");
+        expectPhalnxError(err.toString(), "ProtocolCapExceeded");
       }
     });
 
@@ -5476,7 +5472,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("ProtocolCapsMismatch");
+        expectPhalnxError(err.toString(), "ProtocolCapsMismatch");
       }
     });
 
@@ -5533,7 +5529,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("ProtocolCapsMismatch");
+        expectPhalnxError(err.toString(), "ProtocolCapsMismatch");
       }
     });
   });
@@ -5659,7 +5655,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("VaultNotActive");
+        expectPhalnxError(err.toString(), "VaultNotActive");
       }
     });
 
@@ -5675,9 +5671,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.satisfy(
-          (s: string) => s.includes("ConstraintSeeds") || s.includes("has_one"),
-        );
+        expectPhalnxError(err.toString(), "ConstraintSeeds", "has_one");
       }
     });
 
@@ -5877,7 +5871,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("AgentAlreadyPaused");
+        expectPhalnxError(err.toString(), "AgentAlreadyPaused");
       }
     });
 
@@ -5893,7 +5887,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("UnauthorizedAgent");
+        expectPhalnxError(err.toString(), "UnauthorizedAgent");
       }
     });
 
@@ -5909,9 +5903,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.satisfy(
-          (s: string) => s.includes("ConstraintSeeds") || s.includes("has_one"),
-        );
+        expectPhalnxError(err.toString(), "ConstraintSeeds", "has_one");
       }
     });
 
@@ -5988,7 +5980,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("AgentPaused");
+        expectPhalnxError(err.toString(), "AgentPaused");
       }
     });
 
@@ -6058,7 +6050,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.include("AgentNotPaused");
+        expectPhalnxError(err.toString(), "AgentNotPaused");
       }
     });
 
@@ -6083,9 +6075,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expect(err.toString()).to.satisfy(
-          (s: string) => s.includes("ConstraintSeeds") || s.includes("has_one"),
-        );
+        expectPhalnxError(err.toString(), "ConstraintSeeds", "has_one");
       }
 
       // Clean up: unpause

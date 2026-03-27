@@ -11,8 +11,6 @@ import {
   fixDecoderSize,
   fixEncoderSize,
   getAddressEncoder,
-  getBooleanDecoder,
-  getBooleanEncoder,
   getBytesDecoder,
   getBytesEncoder,
   getProgramDerivedAddress,
@@ -68,6 +66,8 @@ export type FinalizeSessionInstruction<
     "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
   TAccountSystemProgram extends string | AccountMeta<string> =
     "11111111111111111111111111111111",
+  TAccountInstructionsSysvar extends string | AccountMeta<string> =
+    "Sysvar1nstructions1111111111111111111111111",
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
@@ -107,23 +107,22 @@ export type FinalizeSessionInstruction<
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
+      TAccountInstructionsSysvar extends string
+        ? ReadonlyAccount<TAccountInstructionsSysvar>
+        : TAccountInstructionsSysvar,
       ...TRemainingAccounts,
     ]
   >;
 
 export type FinalizeSessionInstructionData = {
   discriminator: ReadonlyUint8Array;
-  success: boolean;
 };
 
-export type FinalizeSessionInstructionDataArgs = { success: boolean };
+export type FinalizeSessionInstructionDataArgs = {};
 
 export function getFinalizeSessionInstructionDataEncoder(): FixedSizeEncoder<FinalizeSessionInstructionDataArgs> {
   return transformEncoder(
-    getStructEncoder([
-      ["discriminator", fixEncoderSize(getBytesEncoder(), 8)],
-      ["success", getBooleanEncoder()],
-    ]),
+    getStructEncoder([["discriminator", fixEncoderSize(getBytesEncoder(), 8)]]),
     (value) => ({ ...value, discriminator: FINALIZE_SESSION_DISCRIMINATOR }),
   );
 }
@@ -131,7 +130,6 @@ export function getFinalizeSessionInstructionDataEncoder(): FixedSizeEncoder<Fin
 export function getFinalizeSessionInstructionDataDecoder(): FixedSizeDecoder<FinalizeSessionInstructionData> {
   return getStructDecoder([
     ["discriminator", fixDecoderSize(getBytesDecoder(), 8)],
-    ["success", getBooleanDecoder()],
   ]);
 }
 
@@ -157,6 +155,7 @@ export type FinalizeSessionAsyncInput<
   TAccountOutputStablecoinAccount extends string = string,
   TAccountTokenProgram extends string = string,
   TAccountSystemProgram extends string = string,
+  TAccountInstructionsSysvar extends string = string,
 > = {
   payer: TransactionSigner<TAccountPayer>;
   vault: Address<TAccountVault>;
@@ -181,7 +180,8 @@ export type FinalizeSessionAsyncInput<
   outputStablecoinAccount?: Address<TAccountOutputStablecoinAccount>;
   tokenProgram?: Address<TAccountTokenProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
-  success: FinalizeSessionInstructionDataArgs["success"];
+  /** Instructions sysvar for post-finalize instruction verification. */
+  instructionsSysvar?: Address<TAccountInstructionsSysvar>;
 };
 
 export async function getFinalizeSessionInstructionAsync<
@@ -196,6 +196,7 @@ export async function getFinalizeSessionInstructionAsync<
   TAccountOutputStablecoinAccount extends string,
   TAccountTokenProgram extends string,
   TAccountSystemProgram extends string,
+  TAccountInstructionsSysvar extends string,
   TProgramAddress extends Address = typeof PHALNX_PROGRAM_ADDRESS,
 >(
   input: FinalizeSessionAsyncInput<
@@ -209,7 +210,8 @@ export async function getFinalizeSessionInstructionAsync<
     TAccountVaultTokenAccount,
     TAccountOutputStablecoinAccount,
     TAccountTokenProgram,
-    TAccountSystemProgram
+    TAccountSystemProgram,
+    TAccountInstructionsSysvar
   >,
   config?: { programAddress?: TProgramAddress },
 ): Promise<
@@ -225,7 +227,8 @@ export async function getFinalizeSessionInstructionAsync<
     TAccountVaultTokenAccount,
     TAccountOutputStablecoinAccount,
     TAccountTokenProgram,
-    TAccountSystemProgram
+    TAccountSystemProgram,
+    TAccountInstructionsSysvar
   >
 > {
   // Program address.
@@ -256,14 +259,15 @@ export async function getFinalizeSessionInstructionAsync<
     },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
+    instructionsSysvar: {
+      value: input.instructionsSysvar ?? null,
+      isWritable: false,
+    },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
     ResolvedInstructionAccount
   >;
-
-  // Original args.
-  const args = { ...input };
 
   // Resolve default values.
   if (!accounts.policy.value) {
@@ -304,6 +308,10 @@ export async function getFinalizeSessionInstructionAsync<
     accounts.systemProgram.value =
       "11111111111111111111111111111111" as Address<"11111111111111111111111111111111">;
   }
+  if (!accounts.instructionsSysvar.value) {
+    accounts.instructionsSysvar.value =
+      "Sysvar1nstructions1111111111111111111111111" as Address<"Sysvar1nstructions1111111111111111111111111">;
+  }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, "programId");
   return Object.freeze({
@@ -322,10 +330,9 @@ export async function getFinalizeSessionInstructionAsync<
       ),
       getAccountMeta("tokenProgram", accounts.tokenProgram),
       getAccountMeta("systemProgram", accounts.systemProgram),
+      getAccountMeta("instructionsSysvar", accounts.instructionsSysvar),
     ],
-    data: getFinalizeSessionInstructionDataEncoder().encode(
-      args as FinalizeSessionInstructionDataArgs,
-    ),
+    data: getFinalizeSessionInstructionDataEncoder().encode({}),
     programAddress,
   } as FinalizeSessionInstruction<
     TProgramAddress,
@@ -339,7 +346,8 @@ export async function getFinalizeSessionInstructionAsync<
     TAccountVaultTokenAccount,
     TAccountOutputStablecoinAccount,
     TAccountTokenProgram,
-    TAccountSystemProgram
+    TAccountSystemProgram,
+    TAccountInstructionsSysvar
   >);
 }
 
@@ -355,6 +363,7 @@ export type FinalizeSessionInput<
   TAccountOutputStablecoinAccount extends string = string,
   TAccountTokenProgram extends string = string,
   TAccountSystemProgram extends string = string,
+  TAccountInstructionsSysvar extends string = string,
 > = {
   payer: TransactionSigner<TAccountPayer>;
   vault: Address<TAccountVault>;
@@ -379,7 +388,8 @@ export type FinalizeSessionInput<
   outputStablecoinAccount?: Address<TAccountOutputStablecoinAccount>;
   tokenProgram?: Address<TAccountTokenProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
-  success: FinalizeSessionInstructionDataArgs["success"];
+  /** Instructions sysvar for post-finalize instruction verification. */
+  instructionsSysvar?: Address<TAccountInstructionsSysvar>;
 };
 
 export function getFinalizeSessionInstruction<
@@ -394,6 +404,7 @@ export function getFinalizeSessionInstruction<
   TAccountOutputStablecoinAccount extends string,
   TAccountTokenProgram extends string,
   TAccountSystemProgram extends string,
+  TAccountInstructionsSysvar extends string,
   TProgramAddress extends Address = typeof PHALNX_PROGRAM_ADDRESS,
 >(
   input: FinalizeSessionInput<
@@ -407,7 +418,8 @@ export function getFinalizeSessionInstruction<
     TAccountVaultTokenAccount,
     TAccountOutputStablecoinAccount,
     TAccountTokenProgram,
-    TAccountSystemProgram
+    TAccountSystemProgram,
+    TAccountInstructionsSysvar
   >,
   config?: { programAddress?: TProgramAddress },
 ): FinalizeSessionInstruction<
@@ -422,7 +434,8 @@ export function getFinalizeSessionInstruction<
   TAccountVaultTokenAccount,
   TAccountOutputStablecoinAccount,
   TAccountTokenProgram,
-  TAccountSystemProgram
+  TAccountSystemProgram,
+  TAccountInstructionsSysvar
 > {
   // Program address.
   const programAddress = config?.programAddress ?? PHALNX_PROGRAM_ADDRESS;
@@ -452,14 +465,15 @@ export function getFinalizeSessionInstruction<
     },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
+    instructionsSysvar: {
+      value: input.instructionsSysvar ?? null,
+      isWritable: false,
+    },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
     ResolvedInstructionAccount
   >;
-
-  // Original args.
-  const args = { ...input };
 
   // Resolve default values.
   if (!accounts.tokenProgram.value) {
@@ -469,6 +483,10 @@ export function getFinalizeSessionInstruction<
   if (!accounts.systemProgram.value) {
     accounts.systemProgram.value =
       "11111111111111111111111111111111" as Address<"11111111111111111111111111111111">;
+  }
+  if (!accounts.instructionsSysvar.value) {
+    accounts.instructionsSysvar.value =
+      "Sysvar1nstructions1111111111111111111111111" as Address<"Sysvar1nstructions1111111111111111111111111">;
   }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, "programId");
@@ -488,10 +506,9 @@ export function getFinalizeSessionInstruction<
       ),
       getAccountMeta("tokenProgram", accounts.tokenProgram),
       getAccountMeta("systemProgram", accounts.systemProgram),
+      getAccountMeta("instructionsSysvar", accounts.instructionsSysvar),
     ],
-    data: getFinalizeSessionInstructionDataEncoder().encode(
-      args as FinalizeSessionInstructionDataArgs,
-    ),
+    data: getFinalizeSessionInstructionDataEncoder().encode({}),
     programAddress,
   } as FinalizeSessionInstruction<
     TProgramAddress,
@@ -505,7 +522,8 @@ export function getFinalizeSessionInstruction<
     TAccountVaultTokenAccount,
     TAccountOutputStablecoinAccount,
     TAccountTokenProgram,
-    TAccountSystemProgram
+    TAccountSystemProgram,
+    TAccountInstructionsSysvar
   >);
 }
 
@@ -538,6 +556,8 @@ export type ParsedFinalizeSessionInstruction<
     outputStablecoinAccount?: TAccountMetas[8] | undefined;
     tokenProgram: TAccountMetas[9];
     systemProgram: TAccountMetas[10];
+    /** Instructions sysvar for post-finalize instruction verification. */
+    instructionsSysvar: TAccountMetas[11];
   };
   data: FinalizeSessionInstructionData;
 };
@@ -550,12 +570,12 @@ export function parseFinalizeSessionInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedFinalizeSessionInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 11) {
+  if (instruction.accounts.length < 12) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 11,
+        expectedAccountMetas: 12,
       },
     );
   }
@@ -585,6 +605,7 @@ export function parseFinalizeSessionInstruction<
       outputStablecoinAccount: getNextOptionalAccount(),
       tokenProgram: getNextAccount(),
       systemProgram: getNextAccount(),
+      instructionsSysvar: getNextAccount(),
     },
     data: getFinalizeSessionInstructionDataDecoder().decode(instruction.data),
   };

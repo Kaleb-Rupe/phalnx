@@ -5,7 +5,7 @@
  * and `bigint` instead of `BN`.
  */
 
-import type { Address } from "@solana/kit";
+import type { Address, Instruction } from "@solana/kit";
 
 // Re-export the program address from generated code
 export { PHALNX_PROGRAM_ADDRESS } from "./generated/programs/phalnx.js";
@@ -96,19 +96,53 @@ export const PROTOCOL_MODE_DENYLIST = 2;
 
 // ─── Stablecoin Mints ─────────────────────────────────────────────────────────
 
+// Devnet mints: test-controlled keypairs matching on-chain state/mod.rs
+// (we own the mint authority for devnet testing)
 export const USDC_MINT_DEVNET =
-  "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU" as Address;
+  "DMFEQFCRsvGrYzoL2gfwTEd9J8eVBQEjg7HjbJHd6oGH" as Address;
 export const USDC_MINT_MAINNET =
   "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" as Address;
 export const USDT_MINT_DEVNET =
-  "EJwZgeZrdC8TXTQbQBoL6bfuAnFUQS5S4iC5A2ciQtCK" as Address;
+  "43cd9ma7P968BssTtAKNs5qu6zgsErupwxwdjkiuMHze" as Address;
 export const USDT_MINT_MAINNET =
   "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB" as Address;
 
 export const JUPITER_PROGRAM_ADDRESS =
   "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" as Address;
 
+/** The 5 recognized DeFi programs for instruction count enforcement.
+ *  Must stay in sync with on-chain validate_and_authorize.rs:325-329. */
+export const RECOGNIZED_DEFI_PROGRAMS: ReadonlySet<string> = new Set([
+  "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4", // Jupiter V6
+  "FLASH6Lo6h3iasJKWDs2F8TkW2UKf3s15C8PMGuVfgBn", // Flash Trade
+  "JLend2fEim9xUFcaHsyGePEoBzFLvkjMi3MnPcSuCdu", // Jupiter Lend
+  "jup3YeL8QhtSx1e253b2FDvsMNC87fDrgQZivbrndc9",  // Jupiter Earn
+  "jupr81YtYssSyPt8jbnGuiWon5f6x9TcDEFxYe3Bdzi",  // Jupiter Borrow
+]);
+
 export type Network = "devnet" | "mainnet-beta";
+
+/** Validate that a string is a recognized Network value. */
+export function validateNetwork(network: string): asserts network is Network {
+  const normalized = network === "mainnet" ? "mainnet-beta" : network;
+  if (normalized !== "devnet" && normalized !== "mainnet-beta") {
+    throw new Error(`Invalid network: "${network}". Must be "devnet", "mainnet", or "mainnet-beta".`);
+  }
+}
+
+/** Short-form network accepted by public APIs. Normalized internally. */
+export type NetworkInput = "devnet" | "mainnet" | "mainnet-beta";
+
+/** Convert short-form network to canonical Network type.
+ *  "mainnet" → "mainnet-beta", all others pass through. */
+export function normalizeNetwork(network: NetworkInput): Network {
+  return network === "mainnet" ? "mainnet-beta" : (network as Network);
+}
+
+/** Type-safe instruction conversion from Codama builders. */
+export function toInstruction(ix: { programAddress: Address; accounts?: readonly unknown[]; data?: unknown }): Instruction {
+  return ix as Instruction;
+}
 
 /** Check if a mint address is a recognized stablecoin (network-aware). */
 export function isStablecoinMint(mint: Address, network: Network): boolean {
@@ -166,10 +200,37 @@ export function permissionsToStrings(permissions: bigint): string[] {
   return result;
 }
 
-/** Parse an action type enum object to its string key */
+/**
+ * Convert an array of action type strings to a permission bitmask.
+ * Inverse of permissionsToStrings().
+ *
+ * @throws Error if any string is not a recognized action type.
+ * @example stringsToPermissions(["swap", "deposit"]) // => 33n (bit 0 + bit 5)
+ */
+export function stringsToPermissions(strings: string[]): bigint {
+  let result = 0n;
+  for (const s of strings) {
+    const bit = ACTION_PERMISSION_MAP[s];
+    if (bit === undefined) {
+      const valid = Object.keys(ACTION_PERMISSION_MAP).join(", ");
+      throw new Error(`Unknown action type: "${s}". Valid types: ${valid}`);
+    }
+    result |= bit;
+  }
+  return result;
+}
+
+/**
+ * Parse an action type to its string key.
+ * Accepts either a numeric ActionType enum value or an Anchor-style { Swap: {} } object.
+ */
 export function parseActionType(
-  actionType: Record<string, unknown>,
+  actionType: number | Record<string, unknown>,
 ): string | undefined {
+  if (typeof actionType === "number") {
+    const entries = Object.entries(ACTION_PERMISSION_MAP);
+    return entries[actionType]?.[0];
+  }
   return Object.keys(actionType)[0];
 }
 

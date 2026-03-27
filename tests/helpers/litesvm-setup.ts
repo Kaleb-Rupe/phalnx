@@ -653,5 +653,112 @@ export function resetCUMeasurements(): void {
   cuMeasurements.clear();
 }
 
+// ─── Error Code Map (shared with surfpool-setup.ts) ─────────────────────────
+
+/**
+ * Phalnx custom error codes (6000-6070) mapped to Anchor error names.
+ * Source of truth: programs/phalnx/src/errors.rs
+ *
+ * Used by expectPhalnxError() for robust error matching that works
+ * regardless of whether the error message contains the name or code.
+ */
+const PHALNX_ERROR_CODES: Record<string, number> = {
+  VaultNotActive: 6000,
+  UnauthorizedAgent: 6001,
+  UnauthorizedOwner: 6002,
+  UnsupportedToken: 6003,
+  ProtocolNotAllowed: 6004,
+  TransactionTooLarge: 6005,
+  SpendingCapExceeded: 6006,
+  LeverageTooHigh: 6007,
+  TooManyPositions: 6008,
+  PositionOpeningDisallowed: 6009,
+  SessionNotAuthorized: 6010,
+  InvalidSession: 6011,
+  OpenPositionsExist: 6012,
+  TooManyAllowedProtocols: 6013,
+  AgentAlreadyRegistered: 6014,
+  NoAgentRegistered: 6015,
+  VaultNotFrozen: 6016,
+  VaultAlreadyClosed: 6017,
+  InsufficientBalance: 6018,
+  DeveloperFeeTooHigh: 6019,
+  InvalidFeeDestination: 6020,
+  InvalidProtocolTreasury: 6021,
+  InvalidAgentKey: 6022,
+  AgentIsOwner: 6023,
+  Overflow: 6024,
+  InvalidTokenAccount: 6025,
+  TimelockNotExpired: 6026,
+  TimelockActive: 6027,
+  NoTimelockConfigured: 6028,
+  DestinationNotAllowed: 6029,
+  TooManyDestinations: 6030,
+  InvalidProtocolMode: 6031,
+  InvalidNonSpendingAmount: 6032,
+  NoPositionsToClose: 6033,
+  CpiCallNotAllowed: 6034,
+  MissingFinalizeInstruction: 6035,
+  NonTrackedSwapMustReturnStablecoin: 6036,
+  SwapSlippageExceeded: 6037,
+  InvalidJupiterInstruction: 6038,
+  UnauthorizedTokenTransfer: 6039,
+  SlippageBpsTooHigh: 6040,
+  ProtocolMismatch: 6041,
+  TooManyDeFiInstructions: 6042,
+  MaxAgentsReached: 6043,
+  InsufficientPermissions: 6044,
+  InvalidPermissions: 6045,
+  EscrowNotActive: 6046,
+  EscrowExpired: 6047,
+  EscrowNotExpired: 6048,
+  InvalidEscrowVault: 6049,
+  EscrowConditionsNotMet: 6050,
+  EscrowDurationExceeded: 6051,
+  InvalidConstraintConfig: 6052,
+  ConstraintViolated: 6053,
+  InvalidConstraintsPda: 6054,
+  InvalidPendingConstraintsPda: 6055,
+  AgentSpendLimitExceeded: 6056,
+  OverlaySlotExhausted: 6057,
+  AgentSlotNotFound: 6058,
+  UnauthorizedTokenApproval: 6059,
+  InvalidSessionExpiry: 6060,
+  UnconstrainedProgramBlocked: 6061,
+  ProtocolCapExceeded: 6062,
+  ProtocolCapsMismatch: 6063,
+  ActiveEscrowsExist: 6064,
+  ConstraintsNotClosed: 6065,
+  PendingPolicyExists: 6066,
+  AgentPaused: 6067,
+  AgentAlreadyPaused: 6068,
+  AgentNotPaused: 6069,
+  UnauthorizedPostFinalizeInstruction: 6070,
+};
+
+/**
+ * Assert that an error matches a Phalnx error by name OR code.
+ * More robust than `.includes("ErrorName")` because it also checks the numeric code.
+ *
+ * @param errString - The error.toString() output
+ * @param errorNames - One or more expected error names (matches if ANY appear)
+ */
+export function expectPhalnxError(
+  errString: string,
+  ...errorNames: string[]
+): void {
+  for (const name of errorNames) {
+    if (errString.includes(name)) return; // Name match
+    const code = PHALNX_ERROR_CODES[name];
+    if (code !== undefined && errString.includes(String(code))) return; // Code match
+  }
+  const expected = errorNames
+    .map((n) => `${n} (${PHALNX_ERROR_CODES[n] ?? "?"})`)
+    .join(" | ");
+  throw new Error(
+    `Expected Phalnx error [${expected}] but got: ${errString.slice(0, 200)}`,
+  );
+}
+
 // Re-export types
 export { LiteSVM, Clock, FailedTransactionMetadata, TransactionMetadata };
