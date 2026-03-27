@@ -42,7 +42,11 @@
       "undici": ">=6.24.0",
       "picomatch": ">=2.3.2",
       "brace-expansion": ">=2.0.3",
-      "serialize-javascript": ">=7.0.5"
+      "serialize-javascript": ">=7.0.5",
+      "langsmith": ">=0.4.6",
+      "jsondiffpatch": ">=0.7.2",
+      "ai": ">=5.0.52",
+      "yaml": ">=2.8.3"
     }
   },
   "devDependencies": {
