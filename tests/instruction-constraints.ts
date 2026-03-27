@@ -1724,6 +1724,11 @@ describe("instruction-constraints", () => {
       expect(Buffer.from(dc.value).equals(Buffer.from([0x05]))).to.equal(true);
     });
 
+    // NOTE: Finding 7 (contains operator) was a FALSE FINDING.
+    // ConstraintOperator enum has exactly 7 variants: Eq, Ne, Gte, Lte, GteSigned, LteSigned, Bitmask.
+    // There is no "contains" operator — the audit agent miscounted.
+    // All 7 actual operators ARE tested in this file.
+
     it("GteSigned passthrough — constrained program not in TX", async () => {
       // Constraints exist for signedTestProgram, but no instruction from it
       // → passthrough, validate+finalize succeeds

@@ -1003,8 +1003,20 @@ describe("phalnx", () => {
         })
         .instruction();
 
+      // P0 Finding 1: Verify vault balance before/after composed TX
+      const vaultBalBefore = getTokenBalance(svm, vaultUsdcAta);
+
       const txResult = sendVersionedTx(svm, [validateIx, finalizeIx], agent);
       recordCU("validate+finalize:stablecoin", txResult);
+
+      // P0 Finding 1: Vault balance delta verification (outcome-based spending)
+      // Mock DeFi is a no-op — vault balance decreases by protocol fee only.
+      // Protocol fee = amount * PROTOCOL_FEE_RATE / FEE_RATE_DENOMINATOR
+      // = 50_000_000 * 200 / 1_000_000 = 10_000
+      const vaultBalAfter = getTokenBalance(svm, vaultUsdcAta);
+      const balanceDelta = vaultBalBefore - vaultBalAfter;
+      // With no-op DeFi, the ONLY balance change is the protocol fee (0.02% of declared amount)
+      expect(balanceDelta).to.equal(10_000n); // 50M * 200 / 1M = 10K (protocol fee)
 
       // Session should be closed after atomic validate+finalize
       try {
