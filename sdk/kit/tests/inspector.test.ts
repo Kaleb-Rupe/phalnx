@@ -281,4 +281,40 @@ describe("inspectConstraints", () => {
     const result = inspectConstraints(entries);
     expect(result).to.have.length(0);
   });
+
+  it("uses correct operator name for != (operator 1)", () => {
+    const entries = [
+      {
+        programId: "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" as Address,
+        dataConstraints: [
+          { offset: 8, operator: 1 /* != */, value: new Uint8Array([0x00, 0x00]) },
+        ],
+        accountConstraints: [],
+      },
+    ] as any[];
+
+    const result = inspectConstraints(entries);
+    expect(result).to.have.length(1);
+    expect(result[0].rules[0]).to.equal("data[8..+2] != 0x0000");
+  });
+
+  it("counts data and account constraints separately", () => {
+    const entries = [
+      {
+        programId: "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" as Address,
+        dataConstraints: [
+          { offset: 0, operator: 0, value: new Uint8Array([0xab]) },
+          { offset: 4, operator: 2 /* < */, value: new Uint8Array([0xff]) },
+        ],
+        accountConstraints: [
+          { index: 0, expected: "11111111111111111111111111111111" as Address },
+        ],
+      },
+    ] as any[];
+
+    const result = inspectConstraints(entries);
+    expect(result[0].dataConstraintCount).to.equal(2);
+    expect(result[0].accountConstraintCount).to.equal(1);
+    expect(result[0].rules).to.have.length(3);
+  });
 });

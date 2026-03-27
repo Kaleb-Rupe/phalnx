@@ -55,13 +55,23 @@ function mockSecurityState(overrides: any = {}) {
 // ─── getSecurityPosture ──────────────────────────────────────────────────────
 
 describe("getSecurityPosture", () => {
-  it("passes all checks for well-configured vault", () => {
+  it("has exactly 20 checks and each one passes for well-configured vault", () => {
     const state = mockSecurityState({ constraints: {} });
     const posture = getSecurityPosture(state);
-    // 20 checks total (13 base + 4 Step 8 + 2 Step 18 + 1 Step 20)
     expect(posture.checks).to.have.length(20);
-    expect(posture.failCount).to.equal(0);
-    expect(posture.criticalFailures).to.have.length(0);
+    // Verify each critical/warning check individually (not just summary)
+    const ids = posture.checks.map((c) => c.id);
+    expect(ids).to.include("no-full-perms");
+    expect(ids).to.include("cap-configured");
+    expect(ids).to.include("fee-destination-valid");
+    expect(ids).to.include("timelock-meaningful");
+    expect(ids).to.include("fee-rate-reasonable");
+    expect(ids).to.include("no-permission-concentration");
+    expect(ids).to.include("mode-all-unguarded");
+    // Every single check should pass — assert individually to prevent cancellation trap
+    for (const check of posture.checks) {
+      expect(check.passed, `check "${check.id}" should pass but failed: ${check.detail}`).to.equal(true);
+    }
   });
 
   it("fails no-full-perms check", () => {
@@ -291,6 +301,20 @@ describe("Step 8 security checks", () => {
     expect(check!.passed).to.equal(false);
   });
 
+  it("fails timelock-meaningful at exactly 3599n (1 second below threshold)", () => {
+    const state = mockSecurityState({ policy: { timelockDuration: 3599n } });
+    const posture = getSecurityPosture(state);
+    const check = posture.checks.find((c) => c.id === "timelock-meaningful");
+    expect(check!.passed).to.equal(false);
+  });
+
+  it("passes timelock-meaningful at exactly 3600n (boundary)", () => {
+    const state = mockSecurityState({ policy: { timelockDuration: 3600n } });
+    const posture = getSecurityPosture(state);
+    const check = posture.checks.find((c) => c.id === "timelock-meaningful");
+    expect(check!.passed).to.equal(true);
+  });
+
   it("passes timelock-meaningful for disabled (0) timelock", () => {
     const state = mockSecurityState({ policy: { timelockDuration: 0n } });
     const posture = getSecurityPosture(state);
@@ -305,8 +329,22 @@ describe("Step 8 security checks", () => {
     expect(check!.passed).to.equal(true);
   });
 
-  it("fails no-permission-concentration for 16+ bits", () => {
-    // 16 bits set: bits 0-15
+  it("passes no-permission-concentration at exactly 15 bits (boundary)", () => {
+    // 15 bits set: bits 0-14 — should PASS (threshold is > 15)
+    const fifteenBits = (1n << 15n) - 1n;
+    const state = mockSecurityState({
+      vault: {
+        agents: [{ pubkey: "a1" as Address, permissions: fifteenBits, spendingLimitUsd: 500_000_000n, paused: false }],
+        status: 0, feeDestination: "fee" as Address, openPositions: 0, activeEscrowCount: 0,
+      },
+    });
+    const posture = getSecurityPosture(state);
+    const check = posture.checks.find((c) => c.id === "no-permission-concentration");
+    expect(check!.passed).to.equal(true);
+  });
+
+  it("fails no-permission-concentration at 16 bits (boundary)", () => {
+    // 16 bits set: bits 0-15 — should FAIL (> 15)
     const highPerms = (1n << 16n) - 1n;
     const state = mockSecurityState({
       vault: {

@@ -594,12 +594,77 @@ describe("wrap() pre-flight checks", () => {
       await wrap(
         baseWrapParams({
           instructions: [nonDefiIx],
-          tokenMint: "So11111111111111111111111111111111111111112" as Address, // SOL = non-stablecoin
+          tokenMint: "So11111111111111111111111111111111111111112" as Address,
         }),
       );
       expect.fail("should throw");
     } catch (e: any) {
-      expect(e.message).to.include("Exactly 1 recognized DeFi instruction");
+      expect(e.message).to.equal(
+        "Exactly 1 recognized DeFi instruction required for non-stablecoin input.",
+      );
+    }
+  });
+
+  // Disc 12 (TransferChecked) — must also be blocked
+  it("throws on top-level SPL TransferChecked (disc 12)", async () => {
+    const ix: Instruction = {
+      programAddress: TOKEN_PROGRAM_ADDR,
+      accounts: [],
+      data: new Uint8Array([12, 0, 0, 0, 0, 0, 0, 0, 0, 6]),
+    };
+    try {
+      await wrap(baseWrapParams({ instructions: [ix] }));
+      expect.fail("should throw");
+    } catch (e: any) {
+      expect(e.message).to.match(/SPL Token Transfer not allowed/);
+    }
+  });
+
+  // Disc 26 (Token-2022 TransferCheckedWithFee) — must be blocked
+  it("throws on Token-2022 TransferCheckedWithFee (disc 26)", async () => {
+    const ix: Instruction = {
+      programAddress: TOKEN_2022_ADDR,
+      accounts: [],
+      data: new Uint8Array([26, 0, 0, 0, 0, 0, 0, 0, 0]),
+    };
+    try {
+      await wrap(baseWrapParams({ instructions: [ix] }));
+      expect.fail("should throw");
+    } catch (e: any) {
+      expect(e.message).to.match(/SPL Token Transfer not allowed/);
+    }
+  });
+
+  // Negative test: disc 1 (InitializeMint) should NOT be blocked
+  it("does not block SPL InitializeMint (disc 1)", async () => {
+    const ix: Instruction = {
+      programAddress: TOKEN_PROGRAM_ADDR,
+      accounts: [{ address: VAULT, role: AccountRole.WRITABLE }],
+      data: new Uint8Array([1, 6, 0, 0, 0]),
+    };
+    // This should pass through SPL blocking and fail later (e.g., DeFi count check)
+    // but NOT with "SPL Token Transfer not allowed" or "SPL Token Approve not allowed"
+    try {
+      await wrap(baseWrapParams({ instructions: [ix] }));
+    } catch (e: any) {
+      expect(e.message).to.not.match(/SPL Token (Transfer|Approve) not allowed/);
+    }
+  });
+
+  // DeFi count: 2+ recognized for non-stablecoin — should fail
+  it("throws on 2+ DeFi instructions for non-stablecoin input", async () => {
+    try {
+      await wrap(
+        baseWrapParams({
+          instructions: [makeInstruction(JUPITER), makeInstruction(JUPITER)],
+          tokenMint: "So11111111111111111111111111111111111111112" as Address,
+        }),
+      );
+      expect.fail("should throw");
+    } catch (e: any) {
+      expect(e.message).to.equal(
+        "Exactly 1 recognized DeFi instruction required for non-stablecoin input.",
+      );
     }
   });
 });

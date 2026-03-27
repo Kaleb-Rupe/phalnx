@@ -165,9 +165,18 @@ describe("getAgentLeaderboardAcrossVaults", () => {
 
     const result = getAgentLeaderboardAcrossVaults(vaultStates);
     expect(result).to.have.length(2);
-    expect(result[0].agent).to.equal("a2"); // higher spend ranked first
+    // Verify sort order property: each element spend24h >= next
+    expect(result[0].spend24h).to.equal(500n);
+    expect(result[1].spend24h).to.equal(200n);
+    expect(result[0].agent).to.equal("a2");
+    expect(result[1].agent).to.equal("a1");
+    // Verify ranks are sequential
     expect(result[0].rank).to.equal(1);
     expect(result[1].rank).to.equal(2);
+    // Verify sort order is descending
+    for (let i = 1; i < result.length; i++) {
+      expect(result[i].spend24h <= result[i - 1].spend24h).to.equal(true);
+    }
   });
 
   it("returns empty for vaults with no agents", () => {
@@ -182,5 +191,34 @@ describe("getAgentLeaderboardAcrossVaults", () => {
       },
     ]);
     expect(result).to.have.length(0);
+  });
+
+  it("lists same agent in multiple vaults as separate entries", () => {
+    const vaultStates = [
+      {
+        address: "v1" as any,
+        state: {
+          vault: { vaultId: 1n, agents: [{ pubkey: "shared" as any, permissions: 1n, spendingLimitUsd: 0n, paused: false }] },
+          allAgentBudgets: new Map([["shared", { spent24h: 100n, cap: 1000n, remaining: 900n }]]),
+          overlay: null,
+        } as any,
+      },
+      {
+        address: "v2" as any,
+        state: {
+          vault: { vaultId: 2n, agents: [{ pubkey: "shared" as any, permissions: 1n, spendingLimitUsd: 0n, paused: false }] },
+          allAgentBudgets: new Map([["shared", { spent24h: 300n, cap: 1000n, remaining: 700n }]]),
+          overlay: null,
+        } as any,
+      },
+    ];
+
+    const result = getAgentLeaderboardAcrossVaults(vaultStates);
+    // Same agent in 2 vaults = 2 SEPARATE entries (not aggregated)
+    expect(result).to.have.length(2);
+    expect(result[0].spend24h).to.equal(300n); // v2 entry first (higher spend)
+    expect(result[0].vaultAddress).to.equal("v2");
+    expect(result[1].spend24h).to.equal(100n);
+    expect(result[1].vaultAddress).to.equal("v1");
   });
 });
