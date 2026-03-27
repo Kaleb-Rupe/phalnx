@@ -135,7 +135,6 @@ describe("jupiter-integration", () => {
     tokenMint: PublicKey,
     amount: BN,
     targetProtocol: PublicKey,
-    success: boolean = true,
     overrideVaultTokenAta?: PublicKey,
   ): Promise<VersionedTxResult> {
     const effectiveVaultAta = overrideVaultTokenAta ?? vaultUsdcAta;
@@ -180,8 +179,8 @@ describe("jupiter-integration", () => {
         vaultTokenAccount: effectiveVaultAta,
         tokenMintAccount: tokenMint,
         protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
-        feeDestinationTokenAccount: null,
-        outputStablecoinAccount: null,
+        feeDestinationTokenAccount: program.programId,
+        outputStablecoinAccount: program.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
         instructionsSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
@@ -193,7 +192,7 @@ describe("jupiter-integration", () => {
 
     // 4. Finalize session
     const finalizeIx = await program.methods
-      .finalizeSession(success)
+      .finalizeSession()
       .accountsPartial({
         payer: agentKp.publicKey,
         vault,
@@ -203,7 +202,7 @@ describe("jupiter-integration", () => {
         tracker,
         agentSpendOverlay: overlayForVault,
         vaultTokenAccount: effectiveVaultAta,
-        outputStablecoinAccount: null,
+        outputStablecoinAccount: program.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
         instructionsSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
@@ -437,12 +436,9 @@ describe("jupiter-integration", () => {
       const vault = await program.account.agentVault.fetch(vaultPda);
       expect(vault.totalTransactions.toNumber()).to.be.greaterThanOrEqual(5);
 
-      // Verify tracker has zero rolling spend (mock swaps produce no balance delta)
-      const tracker = await program.account.spendTracker.fetch(trackerPda);
-      const nonZeroBuckets = tracker.buckets.filter(
-        (b: any) => b.usdAmount.toNumber() > 0,
-      );
-      expect(nonZeroBuckets.length).to.equal(0);
+      // Fee drain fix: tracker now records protocol fees even when actual_spend=0.
+      // The key invariant: totalVolume = 0 (no real DeFi spend occurred).
+      expect(vault.totalVolume.toNumber()).to.equal(0);
     });
   });
 
@@ -469,7 +465,6 @@ describe("jupiter-integration", () => {
           solMint, // not registered as allowed token
           new BN(1_000_000),
           jupiterProtocol,
-          true,
           vaultSolAta,
         );
         expect.fail("Should have thrown");
@@ -620,7 +615,6 @@ describe("jupiter-integration", () => {
           usdcMint,
           new BN(1_000_000),
           jupiterProtocol,
-          true,
           frozenVaultAta,
         );
         expect.fail("Should have thrown");
@@ -749,7 +743,6 @@ describe("jupiter-integration", () => {
         usdcMint,
         new BN(40_000_000),
         jupiterProtocol,
-        true,
         rollingVaultUsdcAta,
       );
 
@@ -765,7 +758,6 @@ describe("jupiter-integration", () => {
         usdcMint,
         new BN(40_000_000),
         jupiterProtocol,
-        true,
         rollingVaultUsdcAta,
       );
 
@@ -782,7 +774,6 @@ describe("jupiter-integration", () => {
         usdcMint,
         new BN(30_000_000),
         jupiterProtocol,
-        true,
         rollingVaultUsdcAta,
       );
 

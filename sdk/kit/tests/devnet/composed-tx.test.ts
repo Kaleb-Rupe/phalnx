@@ -67,7 +67,6 @@ async function buildSwapInstructions(
     sessionRentRecipient: agent.address,
     agentSpendOverlay: vault.overlayPDA,
     vaultTokenAccount: vaultTokenAta,
-    success: true,
   });
 
   return { validateIx: validateIx as Instruction, finalizeIx: finalizeIx as Instruction };

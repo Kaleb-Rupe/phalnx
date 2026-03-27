@@ -990,7 +990,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: agent.publicKey,
           vault: vaultPda,
@@ -1085,7 +1085,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: agent.publicKey,
           vault: vaultPda,
@@ -1942,7 +1942,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: agent.publicKey,
           vault: feeVaultPda,
@@ -2050,7 +2050,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: agent.publicKey,
           vault: feeVaultPda,
@@ -2074,8 +2074,9 @@ describe("phalnx", () => {
       expect(vault.totalFeesCollected.toNumber()).to.equal(5000);
     });
 
-    it("validate with success=false finalize → no fees credited to vault", async () => {
-      // Derive session PDA
+    it("zero-DeFi finalize always tracks developer fees in total_fees_collected", async () => {
+      // After removing the success param, fees are always tracked in accounting
+      // even when no DeFi instruction ran (fee drain fix).
       [feeSessionPda] = PublicKey.findProgramAddressSync(
         [
           Buffer.from("session"),
@@ -2089,7 +2090,7 @@ describe("phalnx", () => {
       const vaultBefore = await program.account.agentVault.fetch(feeVaultPda);
       const feesBefore = vaultBefore.totalFeesCollected.toNumber();
 
-      // Compose validate+finalize(false) atomically
+      // Compose validate+finalize atomically (no DeFi instruction between them)
       const validateIx = await program.methods
         .validateAndAuthorize(
           { swap: {} },
@@ -2117,7 +2118,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(false)
+        .finalizeSession()
         .accountsPartial({
           payer: agent.publicKey,
           vault: feeVaultPda,
@@ -2125,7 +2126,7 @@ describe("phalnx", () => {
           sessionRentRecipient: agent.publicKey,
           policy: feePolicyPda,
           tracker: feeTrackerPda,
-          vaultTokenAccount: feeVaultUsdcAta, // H1: must provide for delegation revocation
+          vaultTokenAccount: feeVaultUsdcAta,
           agentSpendOverlay: feeOverlay,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
@@ -2137,8 +2138,8 @@ describe("phalnx", () => {
       sendVersionedTx(svm, [validateIx, finalizeIx], agent);
 
       const vault = await program.account.agentVault.fetch(feeVaultPda);
-      // No new fees collected on failure
-      expect(vault.totalFeesCollected.toNumber()).to.equal(feesBefore);
+      // Developer fees ALWAYS tracked now (fee drain fix — accounting matches reality)
+      expect(vault.totalFeesCollected.toNumber()).to.be.greaterThan(feesBefore);
     });
 
     it("init vault with developer_fee_rate at max (500) succeeds", async () => {
@@ -2332,7 +2333,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: lifecycleAgent.publicKey,
           vault: lifecycleVaultPda,
@@ -2397,7 +2398,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: lifecycleAgent.publicKey,
           vault: lifecycleVaultPda,
@@ -2452,7 +2453,7 @@ describe("phalnx", () => {
           .instruction();
 
         const finalizeIx = await program.methods
-          .finalizeSession(true)
+          .finalizeSession()
           .accountsPartial({
             payer: lifecycleAgent.publicKey,
             vault: lifecycleVaultPda,
@@ -3092,7 +3093,7 @@ describe("phalnx", () => {
           .instruction();
 
         const finalizeIx = await program.methods
-          .finalizeSession(true)
+          .finalizeSession()
           .accountsPartial({
             payer: ringAgent.publicKey,
             vault: ringVaultPda,
@@ -3257,7 +3258,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: feeEdgeAgent.publicKey,
           vault: feeEdgeVaultPda,
@@ -3323,7 +3324,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx1 = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: feeEdgeAgent.publicKey,
           vault: feeEdgeVaultPda,
@@ -3373,7 +3374,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx2 = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: feeEdgeAgent.publicKey,
           vault: feeEdgeVaultPda,
@@ -4645,7 +4646,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accounts({
           payer: agent.publicKey,
           vault: maVault,
@@ -4706,7 +4707,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accounts({
           payer: agent.publicKey,
           vault: maVault,
@@ -5317,7 +5318,7 @@ describe("phalnx", () => {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: protoCapAgent.publicKey,
           vault: pcVault,

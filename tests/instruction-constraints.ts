@@ -200,7 +200,7 @@ describe("instruction-constraints", () => {
       program.programId,
     );
     return program.methods
-      .finalizeSession(true)
+      .finalizeSession()
       .accountsPartial({
         payer: agentKey,
         vault: vaultPda,
@@ -2225,7 +2225,7 @@ describe("instruction-constraints", () => {
         program.programId,
       );
       return program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: cvAgent.publicKey,
           vault: cvVault,

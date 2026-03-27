@@ -236,7 +236,7 @@ describe("surfpool-integration", function () {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: agent.publicKey,
           vault: vaultPda,
@@ -401,7 +401,7 @@ describe("surfpool-integration", function () {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: agent.publicKey,
           vault: vaultPda,
@@ -509,7 +509,7 @@ describe("surfpool-integration", function () {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: agent.publicKey,
           vault: vaultPda,
@@ -665,7 +665,7 @@ describe("surfpool-integration", function () {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: agent.publicKey,
           vault: vaultPda,
@@ -731,7 +731,7 @@ describe("surfpool-integration", function () {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: rogueAgent.publicKey,
           vault: vaultPda,
@@ -802,7 +802,7 @@ describe("surfpool-integration", function () {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: agent.publicKey,
           vault: vaultPda,
@@ -981,7 +981,7 @@ describe("surfpool-integration", function () {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: agent.publicKey,
           vault: vaultPda,
@@ -1139,7 +1139,7 @@ describe("surfpool-integration", function () {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: agent.publicKey,
           vault: vaultPda,
@@ -1818,7 +1818,7 @@ describe("surfpool-integration", function () {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: setup.agent.publicKey,
           vault: setup.vaultPda,
@@ -1889,7 +1889,7 @@ describe("surfpool-integration", function () {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: setup.agent.publicKey,
           vault: setup.vaultPda,
@@ -2004,7 +2004,7 @@ describe("surfpool-integration", function () {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: setup.agent.publicKey,
           vault: setup.vaultPda,
@@ -2065,7 +2065,7 @@ describe("surfpool-integration", function () {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: agent2.publicKey,
           vault: setup.vaultPda,
@@ -2140,7 +2140,7 @@ describe("surfpool-integration", function () {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: setup.agent.publicKey,
           vault: setup.vaultPda,
@@ -2279,7 +2279,7 @@ describe("surfpool-integration", function () {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: swapSetup.agent.publicKey,
           vault: swapSetup.vaultPda,
@@ -2339,7 +2339,7 @@ describe("surfpool-integration", function () {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: noSwapSetup.agent.publicKey,
           vault: noSwapSetup.vaultPda,
@@ -2436,7 +2436,7 @@ describe("surfpool-integration", function () {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: agent2.publicKey,
           vault: swapSetup.vaultPda,
@@ -2540,7 +2540,7 @@ describe("surfpool-integration", function () {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: zeroSetup.agent.publicKey,
           vault: zeroSetup.vaultPda,
@@ -3335,7 +3335,7 @@ describe("surfpool-integration", function () {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: setup.agent.publicKey,
           vault: setup.vaultPda,
@@ -3402,7 +3402,7 @@ describe("surfpool-integration", function () {
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accountsPartial({
           payer: setup.agent.publicKey,
           vault: setup.vaultPda,

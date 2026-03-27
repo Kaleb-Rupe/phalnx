@@ -86,7 +86,7 @@ pub struct FinalizeSession<'info> {
     pub instructions_sysvar: UncheckedAccount<'info>,
 }
 
-pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
+pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
     // 0. Reject CPI calls — only top-level transaction instructions allowed.
     require!(
         get_stack_height()
@@ -114,9 +114,6 @@ pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
         );
         require!(session.authorized, PhalnxError::SessionNotAuthorized);
     }
-
-    // Expired sessions are always treated as failed
-    let success = if is_expired { false } else { success };
 
     // Extract session data before we lose access
     let session_agent = session.agent;
@@ -189,11 +186,12 @@ pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
     let mut actual_spend_tracked: u64 = 0;
     let mut balance_after_tracked: u64 = 0;
 
-    // --- Outcome-based spending verification (ALL spending transactions) ---
+    // --- Outcome-based spending verification (ALL non-expired spending transactions) ---
     // Measures actual stablecoin balance delta to determine real spending.
     // Caps and spend recording use the measured reality, not declared intent.
-    // success is already false for expired sessions (line 109), so !is_expired is redundant
-    if session_output_mint != Pubkey::default() && success {
+    // Expired sessions skip: crank callers don't pass optional token accounts.
+    let run_outcome_check = !is_expired && session_output_mint != Pubkey::default();
+    if run_outcome_check {
         let is_stablecoin_input = is_stablecoin_mint(&session_authorized_token);
 
         let stablecoin_current = if is_stablecoin_input {
@@ -407,8 +405,42 @@ pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
         }
     }
 
-    // Update vault stats on success (fees already collected in validate)
-    if success && !is_expired {
+    // --- Fee-to-cap fallback (OUTSIDE run_outcome_check) ---
+    // When no DeFi spend occurred (actual_spend_tracked == 0) but fees were collected
+    // in validate_and_authorize, charge those fees to the spending cap. This prevents
+    // fee drain attacks where an agent repeatedly calls validate+finalize with no DeFi
+    // instruction to extract fees without cap enforcement.
+    // Runs unconditionally — covers both expired sessions and zero-DeFi-spend sessions.
+    let fees_collected_total = session_protocol_fee
+        .checked_add(session_developer_fee)
+        .ok_or(PhalnxError::Overflow)?;
+
+    if actual_spend_tracked == 0 && fees_collected_total > 0 {
+        let policy = &ctx.accounts.policy;
+        let mut tracker = ctx.accounts.tracker.load_mut()?;
+        let rolling_usd = tracker.get_rolling_24h_usd(&clock);
+        let new_total = rolling_usd
+            .checked_add(fees_collected_total)
+            .ok_or(PhalnxError::Overflow)?;
+        require!(
+            new_total <= policy.daily_spending_cap_usd,
+            PhalnxError::SpendingCapExceeded
+        );
+        tracker.record_spend(&clock, fees_collected_total)?;
+        drop(tracker);
+    }
+
+    // Always track fees that were transferred in validate (regardless of expiry or outcome).
+    // Fees are CPI-transferred in validate_and_authorize — accounting must match reality.
+    if session_developer_fee > 0 {
+        vault.total_fees_collected = vault
+            .total_fees_collected
+            .checked_add(session_developer_fee)
+            .ok_or(PhalnxError::Overflow)?;
+    }
+
+    // Update vault stats (non-expired sessions only)
+    if !is_expired {
         vault.total_transactions = vault
             .total_transactions
             .checked_add(1)
@@ -423,34 +455,32 @@ pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
                 .ok_or(PhalnxError::Overflow)?;
         }
 
-        if session_developer_fee > 0 {
-            vault.total_fees_collected = vault
-                .total_fees_collected
-                .checked_add(session_developer_fee)
-                .ok_or(PhalnxError::Overflow)?;
-        }
-
-        // Update position count based on position effect
-        match session_action_type.position_effect() {
-            PositionEffect::Increment => {
-                vault.open_positions = vault
-                    .open_positions
-                    .checked_add(1)
-                    .ok_or(PhalnxError::Overflow)?;
+        // Update position count — only when actual DeFi execution occurred.
+        // For spending actions, gate on actual_spend > 0 to prevent counter inflation
+        // from no-op sessions. Non-spending actions (ClosePosition, etc.) always update.
+        let should_update_positions =
+            !session_action_type.is_spending() || actual_spend_tracked > 0;
+        if should_update_positions {
+            match session_action_type.position_effect() {
+                PositionEffect::Increment => {
+                    vault.open_positions = vault
+                        .open_positions
+                        .checked_add(1)
+                        .ok_or(PhalnxError::Overflow)?;
+                }
+                PositionEffect::Decrement => {
+                    vault.open_positions = vault
+                        .open_positions
+                        .checked_sub(1)
+                        .ok_or(PhalnxError::Overflow)?;
+                }
+                PositionEffect::None => {}
             }
-            PositionEffect::Decrement => {
-                vault.open_positions = vault
-                    .open_positions
-                    .checked_sub(1)
-                    .ok_or(PhalnxError::Overflow)?;
-            }
-            PositionEffect::None => {}
         }
     }
 
-    // Analytics: count failed and expired sessions for success rate metric.
-    // Separate from total_transactions (which counts successes only).
-    if !success || is_expired {
+    // Analytics: count expired sessions for success rate metric.
+    if is_expired {
         vault.total_failed_transactions = vault
             .total_failed_transactions
             .checked_add(1)
@@ -460,7 +490,7 @@ pub fn handler(ctx: Context<FinalizeSession>, success: bool) -> Result<()> {
     emit!(SessionFinalized {
         vault: vault_key,
         agent: session_agent,
-        success,
+        success: !is_expired,
         is_expired,
         timestamp: clock.unix_timestamp,
         actual_spend_usd: actual_spend_tracked,

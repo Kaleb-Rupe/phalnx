@@ -69,7 +69,7 @@ describe("devnet-positions", () => {
   }
 
   /** Open a position (composed validate + finalize) */
-  async function openPosition(vault: FullVaultResult, success: boolean = true) {
+  async function openPosition(vault: FullVaultResult) {
     const sessionPda = deriveSessionPda(
       vault.vaultPda,
       agent.publicKey,
@@ -92,7 +92,6 @@ describe("devnet-positions", () => {
       leverageBps: 2000,
       protocolTreasuryAta: vault.protocolTreasuryAta,
       feeDestinationAta: null,
-      success,
     });
   }
 
@@ -119,7 +118,6 @@ describe("devnet-positions", () => {
       actionType: { closePosition: {} },
       protocolTreasuryAta: null, // no fees for non-spending
       feeDestinationAta: null,
-      success: true,
     });
   }
 
@@ -181,7 +179,6 @@ describe("devnet-positions", () => {
         leverageBps: 2000,
         protocolTreasuryAta: vault.protocolTreasuryAta,
         feeDestinationAta: null,
-        success: true,
       });
       expect.fail("Should have thrown");
     } catch (err: any) {
@@ -238,7 +235,7 @@ describe("devnet-positions", () => {
     expect(vBefore.openPositions).to.equal(0);
 
     // Open with success=false
-    await openPosition(vault, false);
+    await openPosition(vault);
 
     const vAfter = await program.account.agentVault.fetch(vault.vaultPda);
     expect(vAfter.openPositions).to.equal(0);

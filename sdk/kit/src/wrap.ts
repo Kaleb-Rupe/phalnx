@@ -501,7 +501,6 @@ export async function wrap(params: WrapParams): Promise<WrapResult> {
     agentSpendOverlay: agentOverlayPda,
     vaultTokenAccount,
     outputStablecoinAccount,
-    success: true,
   });
 
   // Step 10: Compose + compile + measure

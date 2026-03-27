@@ -104,7 +104,6 @@ describe("jupiter-lend-integration", () => {
     amount: BN,
     targetProtocol: PublicKey,
     actionType: any,
-    success: boolean = true,
     overrideVaultTokenAta?: PublicKey,
     overrideOverlay?: PublicKey,
   ): Promise<VersionedTxResult> {
@@ -165,7 +164,7 @@ describe("jupiter-lend-integration", () => {
 
     // 4. Finalize session
     const finalizeIx = await program.methods
-      .finalizeSession(success)
+      .finalizeSession()
       .accountsPartial({
         payer: agentKp.publicKey,
         vault,
@@ -542,7 +541,6 @@ describe("jupiter-lend-integration", () => {
           new BN(10_000_000),
           lendProtocol,
           { deposit: {} },
-          true,
           frozenVaultAta,
           frozenOverlay,
         );
@@ -663,7 +661,6 @@ describe("jupiter-lend-integration", () => {
         new BN(40_000_000),
         lendProtocol,
         { deposit: {} },
-        true,
         rollingVaultUsdcAta,
         rollingOverlay,
       );
@@ -681,7 +678,6 @@ describe("jupiter-lend-integration", () => {
         new BN(40_000_000),
         lendProtocol,
         { deposit: {} },
-        true,
         rollingVaultUsdcAta,
         rollingOverlay,
       );
@@ -700,7 +696,6 @@ describe("jupiter-lend-integration", () => {
         new BN(30_000_000),
         lendProtocol,
         { deposit: {} },
-        true,
         rollingVaultUsdcAta,
         rollingOverlay,
       );

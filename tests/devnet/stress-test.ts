@@ -196,7 +196,6 @@ async function doComposedTx(
   overlay: PublicKey,
   vaultAta: PublicKey,
   amount: BN,
-  success: boolean = true,
 ): Promise<string> {
   const session = deriveSessionPda(
     vault,
@@ -242,7 +241,7 @@ async function doComposedTx(
   });
 
   const finalizeIx = await program.methods
-    .finalizeSession(success)
+    .finalizeSession()
     .accounts({
       payer: agent.publicKey,
       vault,
@@ -1135,7 +1134,7 @@ describe("🔥 PHALNX DEVNET STRESS TEST — Real Tokens, Real Limits", function
       });
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accounts({
           payer: agentA.publicKey,
           vault: nsV.vault,

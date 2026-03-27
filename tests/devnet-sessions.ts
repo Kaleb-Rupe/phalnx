@@ -165,7 +165,6 @@ describe("devnet-sessions", () => {
       protocol: jupiterProgramId,
       protocolTreasuryAta: vault.protocolTreasuryAta,
       feeDestinationAta: null,
-      success: true,
     });
 
     // Session PDA closed atomically
@@ -205,7 +204,6 @@ describe("devnet-sessions", () => {
       protocol: jupiterProgramId,
       protocolTreasuryAta: vault.protocolTreasuryAta,
       feeDestinationAta: null,
-      success: false,
     });
 
     // Session PDA closed
@@ -252,7 +250,6 @@ describe("devnet-sessions", () => {
       vaultTokenAta: vault.vaultTokenAta,
       feeDestinationAta: null,
       protocolTreasuryAta: vault.protocolTreasuryAta,
-      success: true,
     });
 
     const { blockhash } = await connection.getLatestBlockhash();
@@ -307,7 +304,6 @@ describe("devnet-sessions", () => {
       protocol: jupiterProgramId,
       protocolTreasuryAta: vault.protocolTreasuryAta,
       feeDestinationAta: null,
-      success: true,
     });
 
     // Composed TX for mintB
@@ -325,7 +321,6 @@ describe("devnet-sessions", () => {
       protocol: jupiterProgramId,
       protocolTreasuryAta: mintBTreasuryAta,
       feeDestinationAta: null,
-      success: true,
     });
 
     // Both sessions closed

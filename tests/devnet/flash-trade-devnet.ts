@@ -336,7 +336,7 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Phalnx", function (
         .instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accounts({
           payer: agent.publicKey,
           vault: vaultPda,
@@ -470,7 +470,7 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Phalnx", function (
         } as any).instruction();
 
       const finalizeIx = await program.methods
-        .finalizeSession(true)
+        .finalizeSession()
         .accounts({
           payer: agent.publicKey, vault, session,
           sessionRentRecipient: agent.publicKey, policy, tracker,
@@ -686,7 +686,7 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Phalnx", function (
       const mockIx = SystemProgram.transfer({
         fromPubkey: agent.publicKey, toPubkey: agent.publicKey, lamports: 0,
       });
-      const finalizeIx = await program.methods.finalizeSession(true)
+      const finalizeIx = await program.methods.finalizeSession()
         .accounts({
           payer: agent.publicKey, vault: pdas.vaultPda, session,
           sessionRentRecipient: agent.publicKey, policy: pdas.policyPda,
@@ -766,7 +766,7 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Phalnx", function (
         const mockIx = SystemProgram.transfer({
           fromPubkey: agent.publicKey, toPubkey: agent.publicKey, lamports: 0,
         });
-        const finalizeIx = await program.methods.finalizeSession(true)
+        const finalizeIx = await program.methods.finalizeSession()
           .accounts({
             payer: agent.publicKey, vault: pdas.vaultPda, session,
             sessionRentRecipient: agent.publicKey, policy: pdas.policyPda,

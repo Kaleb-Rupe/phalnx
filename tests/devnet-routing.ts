@@ -959,7 +959,6 @@ describe("devnet-routing", () => {
         feeDestinationAta: null,
         protocolTreasuryAta: vault.protocolTreasuryAta,
         outputStablecoinAccount: vault.vaultTokenAta, // USDC output
-        success: false, // failed swap
       });
       // success=false with non-stablecoin input: session closed, no fees
     } catch (err: any) {
