@@ -396,6 +396,10 @@ describe("phalnx", () => {
       expect(vault.agents[0].pubkey.toString()).to.equal(
         agent.publicKey.toString(),
       );
+      // P1 #16: Verify permission bitmask actually stored (not just pubkey)
+      expect(vault.agents[0].permissions.toString()).to.equal(
+        FULL_PERMISSIONS.toString(),
+      );
     });
 
     it("rejects double registration", async () => {
