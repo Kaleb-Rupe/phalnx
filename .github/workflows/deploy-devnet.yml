@@ -105,10 +105,10 @@ jobs:
       - name: Configure deploy wallet
         run: |
           mkdir -p "$HOME/.config/solana"
-          echo '${{ secrets.DEVNET_DEPLOY_KEYPAIR }}' > "$HOME/.config/solana/deployer.json"
+          echo '${{ secrets.DEVNET_DEPLOY_KEYPAIR }}' > "$HOME/.config/solana/id.json"
           solana config set \
             --url "${{ secrets.DEVNET_RPC_URL }}" \
-            --keypair "$HOME/.config/solana/deployer.json" \
+            --keypair "$HOME/.config/solana/id.json" \
             > /dev/null 2>&1
 
       - name: Balance gate
@@ -132,7 +132,7 @@ jobs:
             echo "Deploy attempt $i/$MAX_RETRIES"
             if solana program deploy target/deploy/phalnx.so \
                 --program-id ${{ env.PROGRAM_ID }} \
-                --upgrade-authority "$HOME/.config/solana/deployer.json" \
+                --upgrade-authority "$HOME/.config/solana/id.json" \
                 --with-compute-unit-price 1000 \
                 --max-sign-attempts 50; then
               echo "Program deploy succeeded on attempt $i"
@@ -224,7 +224,7 @@ jobs:
 
       - name: Cleanup deploy wallet
         if: always()
-        run: rm -f "$HOME/.config/solana/deployer.json"
+        run: rm -f "$HOME/.config/solana/id.json"
 
   # ────────────────────────────────────────────────────────────────
   # Job 2: Verify deployed binary matches source (solana-verify)
