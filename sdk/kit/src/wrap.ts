@@ -67,6 +67,7 @@ import {
   USDT_MINT_DEVNET,
   USDT_MINT_MAINNET,
   RECOGNIZED_DEFI_PROGRAMS,
+  PROTOCOL_FEE_RATE,
 } from "./types.js";
 import { isProtocolAllowed } from "./protocol-resolver.js";
 import { wrapToAgentError, type AgentError } from "./agent-errors.js";
@@ -427,13 +428,26 @@ export async function wrap(params: WrapParams): Promise<WrapResult> {
     }
   }
 
-  // 6c: Cap headroom (advisory warning, not error)
+  // 6c: Cap headroom — fee-inclusive check (hard error)
+  // On-chain finalize_session measures actual_spend which includes fees deducted
+  // from the vault balance. SDK must account for fees to avoid submitting TXs
+  // that will definitely fail and waste priority fees.
   if (spending && params.amount > 0n) {
+    const FEE_DENOM = 1_000_000n;
+    const ceilFee = (amount: bigint, rate: bigint): bigint =>
+      (amount * rate + FEE_DENOM - 1n) / FEE_DENOM;
+    const protocolFee = ceilFee(params.amount, BigInt(PROTOCOL_FEE_RATE));
+    const devFee = ceilFee(
+      params.amount,
+      BigInt(state.policy.developerFeeRate),
+    );
+    const totalWithFees = params.amount + protocolFee + devFee;
     const headroom = state.globalBudget.remaining;
-    if (params.amount > headroom) {
-      warnings.push(
-        `Amount ${params.amount} exceeds remaining daily cap headroom ${headroom}. ` +
-          `Transaction may be rejected on-chain.`,
+    if (totalWithFees > headroom) {
+      throw new Error(
+        `Amount ${params.amount} + fees (protocol: ${protocolFee}, dev: ${devFee}) = ${totalWithFees} ` +
+          `exceeds remaining daily cap headroom ${headroom}. ` +
+          `Reduce amount or wait for rolling window to free capacity.`,
       );
     }
   }
@@ -485,7 +499,24 @@ export async function wrap(params: WrapParams): Promise<WrapResult> {
   ] = await Promise.all([
     deriveAta(params.vault, params.tokenMint),
     needsOutputStablecoin && !params.outputStablecoinAccount
-      ? deriveAta(params.vault, defaultStableMint)
+      ? deriveAta(params.vault, defaultStableMint).then(async (ata) => {
+          // Fix 7: Verify output stablecoin ATA exists to prevent fee burn on missing account
+          try {
+            const info = await params.rpc
+              .getAccountInfo(ata, { encoding: "base64" })
+              .send();
+            if (!info || !info.value) {
+              warnings.push(
+                `Output stablecoin ATA ${ata} does not exist on-chain. ` +
+                  `Transaction will fail at validate_and_authorize. ` +
+                  `Create it first with createAssociatedTokenAccount.`,
+              );
+            }
+          } catch {
+            // RPC error — proceed with derived address (on-chain will catch)
+          }
+          return ata;
+        })
       : Promise.resolve(undefined),
     spending
       ? deriveAta(PROTOCOL_TREASURY, params.tokenMint)

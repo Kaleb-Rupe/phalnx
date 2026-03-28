@@ -5,12 +5,17 @@ import {
   RISK_FLAG_FULL_DRAIN,
   RISK_FLAG_MULTI_OUTPUT,
   detectDrainAttempt,
+  detectDrainFromWrapContext,
   adjustCU,
   parseTokenBalance,
   DEFAULT_WARNING_PERCENT,
   DEFAULT_BLOCK_PERCENT,
 } from "../src/simulation.js";
-import type { BalanceDelta, DrainDetectionInput, DrainThresholds } from "../src/simulation.js";
+import type {
+  BalanceDelta,
+  DrainDetectionInput,
+  DrainThresholds,
+} from "../src/simulation.js";
 
 function makeDelta(account: string, pre: bigint, post: bigint): BalanceDelta {
   return { account, preBalance: pre, postBalance: post, delta: post - pre };
@@ -107,6 +112,46 @@ describe("simulation", () => {
       expect(flags).to.include(RISK_FLAG_MULTI_OUTPUT);
     });
 
+    it("2 unknown positive deltas triggers MULTI_OUTPUT", () => {
+      const input: DrainDetectionInput = {
+        balanceDeltas: [
+          makeDelta(VAULT, 1000n, 400n),
+          makeDelta("attacker1", 0n, 300n),
+          makeDelta("attacker2", 0n, 300n),
+        ],
+        vaultAddress: VAULT,
+        totalVaultBalance: 1000n,
+      };
+      const flags = detectDrainAttempt(input);
+      expect(flags).to.include(RISK_FLAG_MULTI_OUTPUT);
+    });
+
+    it("2 known positive deltas does NOT trigger MULTI_OUTPUT", () => {
+      const input: DrainDetectionInput = {
+        balanceDeltas: [
+          makeDelta(VAULT, 1000n, 800n),
+          makeDelta("treasury", 0n, 100n),
+          makeDelta("fee_dest", 0n, 100n),
+        ],
+        vaultAddress: VAULT,
+        totalVaultBalance: 1000n,
+        knownRecipients: new Set(["treasury", "fee_dest"]),
+      };
+      const flags = detectDrainAttempt(input);
+      expect(flags).to.not.include(RISK_FLAG_MULTI_OUTPUT);
+    });
+
+    it("outflow at exact warningPercent triggers LARGE_OUTFLOW (>= boundary)", () => {
+      const input: DrainDetectionInput = {
+        balanceDeltas: [makeDelta(VAULT, 1000n, 500n)], // exactly 50%
+        vaultAddress: VAULT,
+        totalVaultBalance: 1000n,
+      };
+      // Default warningPercent = 50. Outflow = 500/1000 = exactly 50%.
+      const flags = detectDrainAttempt(input);
+      expect(flags).to.include(RISK_FLAG_LARGE_OUTFLOW);
+    });
+
     it("empty balance deltas returns no flags", () => {
       const input: DrainDetectionInput = {
         balanceDeltas: [],
@@ -114,6 +159,39 @@ describe("simulation", () => {
         totalVaultBalance: 1000n,
       };
       expect(detectDrainAttempt(input)).to.deep.equal([]);
+    });
+  });
+
+  describe("detectDrainFromWrapContext", () => {
+    const VAULT = "vault111111111111111111111111111111111111111";
+
+    it("wires vaultContext fields to detectDrainAttempt", () => {
+      const deltas = [
+        makeDelta(VAULT, 1000n, 400n),
+        makeDelta("unknown", 0n, 600n),
+      ];
+      const vaultContext = {
+        vaultAddress: VAULT,
+        tokenBalance: 1000n,
+        knownRecipients: new Set<string>(),
+      };
+      const flags = detectDrainFromWrapContext(deltas, vaultContext);
+      expect(flags).to.include(RISK_FLAG_LARGE_OUTFLOW); // 60% >= 50%
+      expect(flags).to.include(RISK_FLAG_UNKNOWN_RECIPIENT);
+    });
+
+    it("excludes known recipients from UNKNOWN_RECIPIENT", () => {
+      const deltas = [
+        makeDelta(VAULT, 1000n, 900n),
+        makeDelta("treasury", 0n, 100n),
+      ];
+      const vaultContext = {
+        vaultAddress: VAULT,
+        tokenBalance: 1000n,
+        knownRecipients: new Set(["treasury"]),
+      };
+      const flags = detectDrainFromWrapContext(deltas, vaultContext);
+      expect(flags).to.not.include(RISK_FLAG_UNKNOWN_RECIPIENT);
     });
   });
 
@@ -149,7 +227,7 @@ describe("simulation", () => {
       // Write 1_000_000n (0xF4240) at offset 64 in LE
       const amount = 1_000_000n;
       for (let i = 0; i < 8; i++) {
-        data[64 + i] = Number((amount >> BigInt(i * 8)) & 0xFFn);
+        data[64 + i] = Number((amount >> BigInt(i * 8)) & 0xffn);
       }
       // Convert to base64
       let binary = "";
@@ -177,7 +255,10 @@ describe("simulation", () => {
         vaultAddress: VAULT,
         totalVaultBalance: 1000n,
       };
-      const thresholds: DrainThresholds = { warningPercent: 25, blockPercent: 90 };
+      const thresholds: DrainThresholds = {
+        warningPercent: 25,
+        blockPercent: 90,
+      };
       const flags = detectDrainAttempt(input, thresholds);
       expect(flags).to.include(RISK_FLAG_LARGE_OUTFLOW);
       expect(flags).to.not.include(RISK_FLAG_FULL_DRAIN);
@@ -205,7 +286,10 @@ describe("simulation", () => {
         vaultAddress: VAULT,
         totalVaultBalance: 1000n,
       };
-      const thresholds: DrainThresholds = { warningPercent: 30, blockPercent: 70 };
+      const thresholds: DrainThresholds = {
+        warningPercent: 30,
+        blockPercent: 70,
+      };
       const flags = detectDrainAttempt(input, thresholds);
       expect(flags).to.include(RISK_FLAG_FULL_DRAIN);
       expect(flags).to.include(RISK_FLAG_LARGE_OUTFLOW);
@@ -218,7 +302,10 @@ describe("simulation", () => {
         totalVaultBalance: 1000n,
       };
       // Negative % is clamped to 0 → any outflow triggers LARGE_OUTFLOW
-      const thresholds: DrainThresholds = { warningPercent: -10, blockPercent: 95 };
+      const thresholds: DrainThresholds = {
+        warningPercent: -10,
+        blockPercent: 95,
+      };
       const flags = detectDrainAttempt(input, thresholds);
       expect(flags).to.include(RISK_FLAG_LARGE_OUTFLOW);
     });
@@ -230,7 +317,10 @@ describe("simulation", () => {
         totalVaultBalance: 1000n,
       };
       // NaN falls back to default 50% threshold
-      const thresholds: DrainThresholds = { warningPercent: NaN, blockPercent: 95 };
+      const thresholds: DrainThresholds = {
+        warningPercent: NaN,
+        blockPercent: 95,
+      };
       const flags = detectDrainAttempt(input, thresholds);
       expect(flags).to.include(RISK_FLAG_LARGE_OUTFLOW);
       expect(flags).to.not.include(RISK_FLAG_FULL_DRAIN);
@@ -243,16 +333,18 @@ describe("simulation", () => {
         totalVaultBalance: 1000n,
       };
       // Without clamping, blockPercent=200 would make FULL_DRAIN unreachable.
-      // With clamping to 100, the threshold is `outflow * 100 > balance * 100`
-      // which is `>` (strict), so 100% exactly doesn't trigger — this is correct
-      // behavior (drain must EXCEED threshold). Verify it doesn't crash.
-      const thresholds: DrainThresholds = { warningPercent: 50, blockPercent: 200 };
+      // With clamping to 100, the threshold is `outflow * 100 >= balance * 100`
+      // which is `>=` (inclusive), so 100% exactly DOES trigger FULL_DRAIN.
+      // This is correct: draining 100% of vault should always be flagged.
+      const thresholds: DrainThresholds = {
+        warningPercent: 50,
+        blockPercent: 200,
+      };
       const flags = detectDrainAttempt(input, thresholds);
-      // 100% outflow > 50% warning → LARGE_OUTFLOW fires
+      // 100% outflow >= 50% warning → LARGE_OUTFLOW fires
       expect(flags).to.include(RISK_FLAG_LARGE_OUTFLOW);
-      // 100% outflow is NOT > 100% block (strict >), so FULL_DRAIN doesn't fire
-      // This is correct: the strict > means FULL_DRAIN needs to literally exceed the balance
-      expect(flags).to.not.include(RISK_FLAG_FULL_DRAIN);
+      // 100% outflow >= 100% block (inclusive) → FULL_DRAIN fires
+      expect(flags).to.include(RISK_FLAG_FULL_DRAIN);
     });
   });
 

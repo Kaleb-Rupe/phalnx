@@ -141,17 +141,18 @@ describe("wrap()", () => {
     }
   });
 
-  it("adds advisory warning when amount exceeds cap headroom", async () => {
-    const result = await wrap(
-      baseWrapParams({
-        amount: 2_000_000_000n, // $2000 — exceeds $1000 cap
-        cachedState: makeCachedState({ dailyCap: 1_000_000_000n }),
-      }),
-    );
-    const capWarnings = result.warnings.filter((w) =>
-      w.includes("cap headroom"),
-    );
-    expect(capWarnings).to.have.length(1);
+  it("throws error when amount + fees exceeds cap headroom", async () => {
+    try {
+      await wrap(
+        baseWrapParams({
+          amount: 2_000_000_000n, // $2000 — exceeds $1000 cap
+          cachedState: makeCachedState({ dailyCap: 1_000_000_000n }),
+        }),
+      );
+      expect.fail("should throw");
+    } catch (e: any) {
+      expect(e.message).to.include("exceeds remaining daily cap headroom");
+    }
   });
 
   it("strips ComputeBudget from input instructions (avoids duplicate)", async () => {

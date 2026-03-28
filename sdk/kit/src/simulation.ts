@@ -392,7 +392,10 @@ export async function simulateBeforeSend(
       }
 
       const result = await rpc
-        .simulateTransaction(encodedTransaction, config as Parameters<typeof rpc.simulateTransaction>[1])
+        .simulateTransaction(
+          encodedTransaction,
+          config as Parameters<typeof rpc.simulateTransaction>[1],
+        )
         .send({ abortSignal: controller.signal });
 
       clearTimeout(timeout);
@@ -425,7 +428,8 @@ export async function simulateBeforeSend(
             const acctData = value.accounts[i];
             if (!acctData?.data?.[0]) continue;
             const postBalance = parseTokenBalance(acctData.data[0]);
-            const preBalance = options.preBalances?.get(options.monitorAccounts[i]) ?? 0n;
+            const preBalance =
+              options.preBalances?.get(options.monitorAccounts[i]) ?? 0n;
             balanceDeltas.push({
               account: options.monitorAccounts[i],
               preBalance,
@@ -538,8 +542,17 @@ export function detectDrainAttempt(
   const rawBlock = drainThresholds?.blockPercent ?? DEFAULT_BLOCK_PERCENT;
   // Clamp to [0, 100] — prevents NaN/Infinity crashes (BigInt throws on non-finite)
   // and negative values which would invert the threshold logic
-  const warningPct = Math.max(0, Math.min(100, Number.isFinite(rawWarning) ? rawWarning : DEFAULT_WARNING_PERCENT));
-  const blockPct = Math.max(0, Math.min(100, Number.isFinite(rawBlock) ? rawBlock : DEFAULT_BLOCK_PERCENT));
+  const warningPct = Math.max(
+    0,
+    Math.min(
+      100,
+      Number.isFinite(rawWarning) ? rawWarning : DEFAULT_WARNING_PERCENT,
+    ),
+  );
+  const blockPct = Math.max(
+    0,
+    Math.min(100, Number.isFinite(rawBlock) ? rawBlock : DEFAULT_BLOCK_PERCENT),
+  );
 
   const vaultDelta = input.balanceDeltas.find(
     (d) => d.account === input.vaultAddress,
@@ -548,18 +561,18 @@ export function detectDrainAttempt(
   if (vaultDelta && vaultDelta.delta < 0n) {
     const outflow = -vaultDelta.delta;
 
-    // LARGE_OUTFLOW: outflow exceeds warningPercent of vault balance
+    // LARGE_OUTFLOW: outflow >= warningPercent of vault balance
     if (
       input.totalVaultBalance > 0n &&
-      outflow * 100n > input.totalVaultBalance * BigInt(warningPct)
+      outflow * 100n >= input.totalVaultBalance * BigInt(warningPct)
     ) {
       flags.push(RISK_FLAG_LARGE_OUTFLOW);
     }
 
-    // FULL_DRAIN: outflow exceeds blockPercent of vault balance
+    // FULL_DRAIN: outflow >= blockPercent of vault balance
     if (
       input.totalVaultBalance > 0n &&
-      outflow * 100n > input.totalVaultBalance * BigInt(blockPct)
+      outflow * 100n >= input.totalVaultBalance * BigInt(blockPct)
     ) {
       flags.push(RISK_FLAG_FULL_DRAIN);
     }
@@ -578,15 +591,50 @@ export function detectDrainAttempt(
     }
   }
 
-  // MULTI_OUTPUT: tokens going to 3+ different accounts
-  const positiveDeltas = input.balanceDeltas.filter(
-    (d) => d.delta > 0n && d.account !== input.vaultAddress,
+  // MULTI_OUTPUT: tokens going to 2+ UNKNOWN accounts (excludes known recipients)
+  // Lowered from 3 to 2 to catch split-drain attacks where attacker uses 2 accounts.
+  // Known recipients (treasury, fee dest) are excluded to prevent false positives.
+  const unknownPositiveDeltas = input.balanceDeltas.filter(
+    (d) =>
+      d.delta > 0n &&
+      d.account !== input.vaultAddress &&
+      (!input.knownRecipients || !input.knownRecipients.has(d.account)),
   );
-  if (positiveDeltas.length >= 3) {
+  if (unknownPositiveDeltas.length >= 2) {
     flags.push(RISK_FLAG_MULTI_OUTPUT);
   }
 
   return flags;
+}
+
+/**
+ * Detect drain attempts using vault context from wrap().
+ * Automatically wires knownRecipients from the wrap result's vaultContext.
+ *
+ * Usage:
+ * ```ts
+ * const wrapResult = await wrap(params);
+ * const flags = detectDrainFromWrapContext(balanceDeltas, wrapResult.vaultContext);
+ * ```
+ */
+export function detectDrainFromWrapContext(
+  balanceDeltas: BalanceDelta[],
+  vaultContext: {
+    vaultAddress: string;
+    tokenBalance: bigint;
+    knownRecipients: Set<string>;
+  },
+  drainThresholds?: DrainThresholds,
+): RiskFlag[] {
+  return detectDrainAttempt(
+    {
+      balanceDeltas,
+      vaultAddress: vaultContext.vaultAddress,
+      totalVaultBalance: vaultContext.tokenBalance,
+      knownRecipients: vaultContext.knownRecipients,
+    },
+    drainThresholds,
+  );
 }
 
 /**

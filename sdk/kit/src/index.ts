@@ -160,6 +160,7 @@ export type { PriorityLevel, PriorityFeeConfig } from "./priority-fees.js";
 export {
   simulateBeforeSend,
   detectDrainAttempt,
+  detectDrainFromWrapContext,
   adjustCU,
   parseTokenBalance,
   RISK_FLAG_LARGE_OUTFLOW,
@@ -218,10 +219,7 @@ export {
   buildActivityItem,
   getVaultActivity,
 } from "./event-analytics.js";
-export type {
-  EventCategory,
-  VaultActivityItem,
-} from "./event-analytics.js";
+export type { EventCategory, VaultActivityItem } from "./event-analytics.js";
 
 // ─── Security Analytics ──────────────────────────────────────────────────────
 export {
@@ -300,10 +298,7 @@ export type {
 export { resolveProtocolName, PROTOCOL_NAMES } from "./protocol-names.js";
 
 // ─── Vault Analytics ─────────────────────────────────────────────────────────
-export {
-  getVaultHealth,
-  getVaultSummary,
-} from "./vault-analytics.js";
+export { getVaultHealth, getVaultSummary } from "./vault-analytics.js";
 export type {
   VaultHealth,
   VaultSummary,
@@ -423,7 +418,13 @@ export type {
 
 // ─── Wrap ──────────────────────────────────────────────────────────────────
 export { wrap, PhalnxClient, replaceAgentAtas } from "./wrap.js";
-export type { WrapParams, WrapResult, PhalnxClientConfig, ClientWrapOpts, ExecuteResult } from "./wrap.js";
+export type {
+  WrapParams,
+  WrapResult,
+  PhalnxClientConfig,
+  ClientWrapOpts,
+  ExecuteResult,
+} from "./wrap.js";
 
 // ─── Create Vault ──────────────────────────────────────────────────────────
 export { createVault, createAndSendVault } from "./create-vault.js";
@@ -473,7 +474,11 @@ export type {
 } from "./transaction-executor.js";
 
 // ─── RPC Helpers ───────────────────────────────────────────────────────────
-export { BlockhashCache, signAndEncode, sendAndConfirmTransaction } from "./rpc-helpers.js";
+export {
+  BlockhashCache,
+  signAndEncode,
+  sendAndConfirmTransaction,
+} from "./rpc-helpers.js";
 export type { Blockhash, SendAndConfirmOptions } from "./rpc-helpers.js";
 
 // ─── x402 HTTP 402 Payment Required ───────────────────────────────────────
