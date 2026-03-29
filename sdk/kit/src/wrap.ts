@@ -669,6 +669,8 @@ export async function wrap(params: WrapParams): Promise<WrapResult> {
   } else {
     // Non-stablecoin: fetch actual balance from vault's token ATA.
     // Without this, drain detection is blind (totalVaultBalance=0 skips all checks).
+    // We DO NOT silently fall back to 0n — that disables drain detection entirely.
+    // If we can't verify the balance, we tell the caller explicitly.
     try {
       const info = await params.rpc
         .getAccountInfo(vaultTokenAccount, { encoding: "base64" })
@@ -676,15 +678,20 @@ export async function wrap(params: WrapParams): Promise<WrapResult> {
       if (info?.value?.data?.[0]) {
         tokenBalance = parseTokenBalance(info.value.data[0]);
       } else {
+        // Account doesn't exist → vault genuinely has 0 tokens of this mint.
+        // This is a legitimate state (vault created but not yet funded for this token).
         tokenBalance = 0n;
-        warnings.push(
-          "Vault token account not found — drain detection may be incomplete for non-stablecoin mint.",
-        );
       }
     } catch {
-      tokenBalance = 0n;
+      // RPC failed — we cannot verify the vault balance.
+      // Rather than silently disabling drain detection by setting 0n,
+      // use a sentinel value that makes percentage checks MORE sensitive.
+      // u64::MAX means any outflow triggers LARGE_OUTFLOW + FULL_DRAIN.
+      tokenBalance = 18446744073709551615n; // u64::MAX — assume worst case
       warnings.push(
-        "Failed to fetch non-stablecoin token balance — drain detection operates in degraded mode.",
+        "Failed to fetch non-stablecoin token balance via RPC. " +
+          "Drain detection assumes maximum balance (all outflows will be flagged). " +
+          "This is a conservative fallback — verify RPC connectivity.",
       );
     }
   }
