@@ -501,7 +501,13 @@ export async function simulateBeforeSend(
 /**
  * Parse SPL Token account balance from base64-encoded account data.
  * Reads u64 LE at byte offset 64 (SPL Token layout: 32 mint + 32 owner + 8 amount).
- * Returns 0n for data shorter than 72 bytes.
+ * Returns 0n for data shorter than 72 bytes or on parse failure.
+ *
+ * SECURITY NOTE: Returns 0n on error (graceful degradation, not fail-closed).
+ * This is intentional — a 0n balance means drain detection sees no vault value,
+ * so percentage-based thresholds (outflow/balance) produce division by zero guards
+ * that skip flags. The caller (wrap.ts) fetches balance separately for drain detection
+ * and does NOT rely on this function for the totalVaultBalance denominator.
  */
 export function parseTokenBalance(base64Data: string): bigint {
   try {
@@ -513,7 +519,7 @@ export function parseTokenBalance(base64Data: string): bigint {
     }
     return result;
   } catch {
-    return 0n; // Malformed base64 → graceful degradation
+    return 0n; // Malformed base64 → 0n is safe (see SECURITY NOTE above)
   }
 }
 

@@ -693,14 +693,15 @@ export async function wrap(params: WrapParams): Promise<WrapResult> {
         // This is a legitimate state (vault created but not yet funded for this token).
         tokenBalance = 0n;
       }
-    } catch {
+    } catch (err) {
       // RPC unavailable: use sentinel so any token outflow triggers drain detection.
       // Conservative (intentional false positives) rather than disabling checks.
       tokenBalance = DRAIN_DETECTION_MIN_BALANCE;
+      const errMsg = err instanceof Error ? err.message : String(err);
       warnings.push(
         "Failed to fetch non-stablecoin token balance via RPC. " +
           "Drain detection uses minimum balance sentinel (all outflows will be flagged). " +
-          "This is a conservative fallback — verify RPC connectivity.",
+          `This is a conservative fallback — verify RPC connectivity. Error: ${errMsg}`,
       );
     }
   }

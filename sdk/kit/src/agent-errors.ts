@@ -5,7 +5,7 @@
  * Every error includes a category, retryability flag, and
  * recovery actions that tell the agent exactly what to do next.
  *
- * Maps all 71 on-chain error codes (6000-6070) plus 34 SDK
+ * Maps all 72 on-chain error codes (6000-6071) plus 34 SDK
  * error codes (7000-7033) to AgentError with machine-readable metadata.
  *
  * Zero dependency on @solana/web3.js or @coral-xyz/anchor.
@@ -1103,6 +1103,28 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
+  6071: {
+    name: "UnexpectedBalanceDecrease",
+    message:
+      "Vault stablecoin balance decreased more than the session authorized amount. " +
+      "This indicates a compromised DeFi program attempted to drain vault tokens via CPI.",
+    category: "SECURITY_VIOLATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "investigate_defi_program",
+        description:
+          "The whitelisted DeFi program may be compromised. The actual vault balance decrease " +
+          "exceeded the authorized delegation amount (fees + DeFi spend). Freeze the vault, " +
+          "investigate the DeFi program, and consider removing it from the protocol allowlist.",
+      },
+      {
+        action: "freeze_vault",
+        description:
+          "Immediately freeze the vault to prevent further transactions until the cause is identified.",
+      },
+    ],
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -2175,7 +2197,7 @@ export class PhalnxSdkError extends Error implements AgentError {
  * Returns a PhalnxSdkError (extends Error) so instanceof Error checks still work.
  *
  * Processing order:
- * 1. Try on-chain error extraction via toAgentError() (numeric codes 6000-6070)
+ * 1. Try on-chain error extraction via toAgentError() (numeric codes 6000-6071)
  * 2. Pattern-match SDK error messages (11 patterns from wrap.ts throw sites)
  * 3. Fallback to UNKNOWN/FATAL
  */
