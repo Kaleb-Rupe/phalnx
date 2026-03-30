@@ -22,7 +22,7 @@ import type {
   SolanaRpcApi,
   TransactionSigner,
 } from "@solana/kit";
-import { compileTransaction } from "@solana/kit";
+import { compileTransaction, AccountRole } from "@solana/kit";
 
 import { ActionType } from "./generated/types/actionType.js";
 import { VaultStatus } from "./generated/types/vaultStatus.js";
@@ -77,6 +77,7 @@ import {
   type VaultPnL,
   type TokenBalance,
 } from "./balance-tracker.js";
+import { parseTokenBalance } from "./simulation.js";
 import {
   createVault,
   type CreateVaultOptions,
@@ -91,6 +92,10 @@ const SYSTEM_PROGRAM = "11111111111111111111111111111111" as Address;
 const TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address;
 const TOKEN_2022_PROGRAM =
   "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb" as Address;
+
+/** Sentinel balance for drain detection when RPC fails to fetch actual balance.
+ *  1n makes any outflow trigger percentage-based flags (conservative). */
+const DRAIN_DETECTION_MIN_BALANCE = 1n;
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -197,7 +202,17 @@ export function replaceAgentAtas(
     ...ix,
     accounts: ix.accounts?.map((acc) => {
       const replacement = replacements.get(acc.address);
-      return replacement ? { ...acc, address: replacement } : acc;
+      // Only replace WRITABLE accounts — read-only accounts (authorities, oracles)
+      // should keep their original address to avoid instruction malfunction.
+      // ATAs in DeFi instructions are always WRITABLE (they receive/send tokens).
+      if (
+        replacement &&
+        (acc.role === AccountRole.WRITABLE ||
+          acc.role === AccountRole.WRITABLE_SIGNER)
+      ) {
+        return { ...acc, address: replacement };
+      }
+      return acc;
     }),
   }));
 }
@@ -323,6 +338,19 @@ export async function wrap(params: WrapParams): Promise<WrapResult> {
   }
 
   const spending = isSpendingAction(actionKey);
+  const U64_MAX = 18446744073709551615n;
+  if (params.amount < 0n) {
+    throw new Error(
+      `Amount must be non-negative, got ${params.amount}. ` +
+        `Phalnx amounts are unsigned 64-bit integers (0 to ${U64_MAX}).`,
+    );
+  }
+  if (params.amount > U64_MAX) {
+    throw new Error(
+      `Amount exceeds u64 maximum, got ${params.amount}. ` +
+        `Phalnx amounts are unsigned 64-bit integers (0 to ${U64_MAX}).`,
+    );
+  }
   if (spending && params.amount === 0n) {
     throw new Error(`Spending action "${actionKey}" requires amount > 0`);
   }
@@ -544,6 +572,12 @@ export async function wrap(params: WrapParams): Promise<WrapResult> {
   // Merge additional ATA replacements for multi-token DeFi routes
   if (params.additionalAtaReplacements) {
     for (const [agentAta, vaultAta] of params.additionalAtaReplacements) {
+      if (ataReplacements.has(agentAta)) {
+        throw new Error(
+          `additionalAtaReplacements key ${agentAta} conflicts with canonical ` +
+            `ATA replacement. Cannot override vault token account mappings.`,
+        );
+      }
       ataReplacements.set(agentAta, vaultAta);
     }
   }
@@ -638,12 +672,39 @@ export async function wrap(params: WrapParams): Promise<WrapResult> {
     net === "devnet" ? USDC_MINT_DEVNET : USDC_MINT_MAINNET;
   const usdtMintForNet =
     net === "devnet" ? USDT_MINT_DEVNET : USDT_MINT_MAINNET;
-  const tokenBalance =
-    params.tokenMint === usdcMintForNet
-      ? state.stablecoinBalances.usdc
-      : params.tokenMint === usdtMintForNet
-        ? state.stablecoinBalances.usdt
-        : 0n;
+  let tokenBalance: bigint;
+  if (params.tokenMint === usdcMintForNet) {
+    tokenBalance = state.stablecoinBalances.usdc;
+  } else if (params.tokenMint === usdtMintForNet) {
+    tokenBalance = state.stablecoinBalances.usdt;
+  } else {
+    // Non-stablecoin: fetch actual balance from vault's token ATA.
+    // Without this, drain detection is blind (totalVaultBalance=0 skips all checks).
+    // We DO NOT silently fall back to 0n — that disables drain detection entirely.
+    // If we can't verify the balance, we tell the caller explicitly.
+    try {
+      const info = await params.rpc
+        .getAccountInfo(vaultTokenAccount, { encoding: "base64" })
+        .send();
+      if (info?.value?.data?.[0]) {
+        tokenBalance = parseTokenBalance(info.value.data[0]);
+      } else {
+        // Account doesn't exist → vault genuinely has 0 tokens of this mint.
+        // This is a legitimate state (vault created but not yet funded for this token).
+        tokenBalance = 0n;
+      }
+    } catch (err) {
+      // RPC unavailable: use sentinel so any token outflow triggers drain detection.
+      // Conservative (intentional false positives) rather than disabling checks.
+      tokenBalance = DRAIN_DETECTION_MIN_BALANCE;
+      const errMsg = err instanceof Error ? err.message : String(err);
+      warnings.push(
+        "Failed to fetch non-stablecoin token balance via RPC. " +
+          "Drain detection uses minimum balance sentinel (all outflows will be flagged). " +
+          `This is a conservative fallback — verify RPC connectivity. Error: ${errMsg}`,
+      );
+    }
+  }
 
   // Known recipients: ATA addresses that legitimately receive tokens during Phalnx TXs.
   // Drain detection compares against token account (ATA) addresses in balance deltas,

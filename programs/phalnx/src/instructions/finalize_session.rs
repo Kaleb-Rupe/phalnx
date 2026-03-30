@@ -123,6 +123,7 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
     let session_output_mint = session.output_mint;
     let session_balance_before = session.stablecoin_balance_before;
     let session_delegation_token_account = session.delegation_token_account;
+    let session_authorized_amount = session.authorized_amount;
     let session_authorized_protocol = session.authorized_protocol;
     let session_authorized_token = session.authorized_token;
     let session_protocol_fee = session.protocol_fee;
@@ -222,6 +223,19 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
 
         // P&L: set balance_after once — covers both branches (M-5 fix)
         balance_after_tracked = stablecoin_current;
+
+        // CPI balance audit: verify vault balance didn't decrease more than authorized.
+        // Catches compromised DeFi programs that CPI burn/transfer vault tokens via
+        // the agent's SPL delegation. stablecoin_balance_before is snapshotted BEFORE
+        // fees are collected, so the maximum legitimate decrease is the full
+        // authorized_amount (fees + delegation combined).
+        if is_stablecoin_input && session_delegated && stablecoin_current < session_balance_before {
+            let actual_decrease = session_balance_before.saturating_sub(stablecoin_current);
+            require!(
+                actual_decrease <= session_authorized_amount,
+                PhalnxError::UnexpectedBalanceDecrease
+            );
+        }
 
         if is_stablecoin_input {
             // Stablecoin input: measure how much LEFT the vault

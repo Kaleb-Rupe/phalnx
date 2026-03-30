@@ -227,4 +227,8 @@ pub enum PhalnxError {
     // --- Post-finalize instruction check ---
     #[msg("Instructions after finalize_session must be ComputeBudget or SystemProgram only")]
     UnauthorizedPostFinalizeInstruction,
+
+    // --- CPI balance audit ---
+    #[msg("Vault balance decreased more than delegated amount — potential CPI attack")]
+    UnexpectedBalanceDecrease,
 }
