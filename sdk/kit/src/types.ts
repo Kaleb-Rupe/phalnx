@@ -212,11 +212,11 @@ export function permissionsToStrings(permissions: bigint): string[] {
 export function stringsToPermissions(strings: string[]): bigint {
   let result = 0n;
   for (const s of strings) {
-    const bit = ACTION_PERMISSION_MAP[s];
-    if (bit === undefined) {
+    if (!Object.prototype.hasOwnProperty.call(ACTION_PERMISSION_MAP, s)) {
       const valid = Object.keys(ACTION_PERMISSION_MAP).join(", ");
       throw new Error(`Unknown action type: "${s}". Valid types: ${valid}`);
     }
+    const bit = ACTION_PERMISSION_MAP[s];
     result |= bit;
   }
   return result;
@@ -241,17 +241,15 @@ export class PermissionBuilder {
   private permissions = 0n;
 
   add(actionType: string): this {
-    const bit = ACTION_PERMISSION_MAP[actionType];
-    if (bit !== undefined) {
-      this.permissions |= bit;
+    if (Object.prototype.hasOwnProperty.call(ACTION_PERMISSION_MAP, actionType)) {
+      this.permissions |= ACTION_PERMISSION_MAP[actionType];
     }
     return this;
   }
 
   remove(actionType: string): this {
-    const bit = ACTION_PERMISSION_MAP[actionType];
-    if (bit !== undefined) {
-      this.permissions &= ~bit;
+    if (Object.prototype.hasOwnProperty.call(ACTION_PERMISSION_MAP, actionType)) {
+      this.permissions &= ~ACTION_PERMISSION_MAP[actionType];
     }
     return this;
   }
