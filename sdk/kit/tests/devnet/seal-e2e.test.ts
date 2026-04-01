@@ -1,11 +1,11 @@
 /**
- * Kit SDK Devnet — wrap() + createVault() E2E Tests
+ * Kit SDK Devnet — seal() + createVault() E2E Tests
  *
  * Proves the new Phase 2 SDK entry points work against the live
- * devnet-deployed Phalnx program.
+ * devnet-deployed Sigil program.
  *
  * Run: ANCHOR_PROVIDER_URL=https://devnet.helius-rpc.com/?api-key=... \
- *      pnpm --filter @phalnx/kit test:devnet
+ *      pnpm --filter @usesigil/kit test:devnet
  */
 
 import { expect } from "chai";
@@ -25,10 +25,10 @@ import {
 } from "../../src/testing/devnet.js";
 
 import { createVault } from "../../src/create-vault.js";
-import { wrap } from "../../src/wrap.js";
+import { seal } from "../../src/seal.js";
 import { resolveVaultState } from "../../src/state-resolver.js";
 import { TransactionExecutor } from "../../src/transaction-executor.js";
-import { parsePhalnxEvents } from "../../src/events.js";
+import { parseSigilEvents } from "../../src/events.js";
 import { ActionType } from "../../src/generated/types/actionType.js";
 import { VaultStatus } from "../../src/generated/types/vaultStatus.js";
 import {
@@ -45,7 +45,7 @@ import {
 // Skip if no devnet env
 const SKIP = !process.env.ANCHOR_PROVIDER_URL;
 
-describe("Kit SDK Devnet — wrap() + createVault() E2E", function () {
+describe("Kit SDK Devnet — seal() + createVault() E2E", function () {
   if (SKIP) return;
 
   this.timeout(300_000);
@@ -104,17 +104,17 @@ describe("Kit SDK Devnet — wrap() + createVault() E2E", function () {
       expect(state.vault.agents[0].permissions).to.equal(FULL_PERMISSIONS);
       expect(state.policy.dailySpendingCapUsd).to.equal(500_000_000n);
 
-      // Store for wrap test
+      // Store for seal test
       (this as any).vaultAddress = result.vaultAddress;
     });
 
-    it("wrap() builds a valid composed transaction against the vault", async function () {
+    it("seal() builds a valid composed transaction against the vault", async function () {
       const vaultAddress: Address = (this as any).vaultAddress;
       if (!vaultAddress) this.skip();
 
       // Build a fake Jupiter-like instruction (just targeting the Jupiter program)
       // This won't execute successfully on-chain (Jupiter needs real route data),
-      // but it proves wrap() can compose the transaction correctly
+      // but it proves seal() can compose the transaction correctly
       const fakeJupiterIx: Instruction = {
         programAddress: JUPITER_PROGRAM_ADDRESS,
         accounts: [
@@ -130,8 +130,8 @@ describe("Kit SDK Devnet — wrap() + createVault() E2E", function () {
         agent.address,
       );
 
-      // Call wrap() with cachedState
-      const result = await wrap({
+      // Call seal() with cachedState
+      const result = await seal({
         vault: vaultAddress,
         agent,
         instructions: [fakeJupiterIx],
@@ -183,12 +183,12 @@ describe("Kit SDK Devnet — wrap() + createVault() E2E", function () {
       const memoIx: Instruction = {
         programAddress: MEMO_PROGRAM,
         accounts: [],
-        data: new TextEncoder().encode("phalnx-e2e-test"),
+        data: new TextEncoder().encode("sigil-e2e-test"),
       };
 
       const state = await resolveVaultState(rpc, vault.vaultAddress, agent.address);
 
-      const result = await wrap({
+      const result = await seal({
         vault: vault.vaultAddress,
         agent,
         instructions: [memoIx],
@@ -237,7 +237,7 @@ describe("Kit SDK Devnet — wrap() + createVault() E2E", function () {
       });
     });
 
-    it("wrap() with 2 DeFi instructions is rejected on-chain", async function () {
+    it("seal() with 2 DeFi instructions is rejected on-chain", async function () {
       const MEMO_PROGRAM = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr" as Address;
       const memoIx1: Instruction = {
         programAddress: MEMO_PROGRAM,
@@ -252,8 +252,8 @@ describe("Kit SDK Devnet — wrap() + createVault() E2E", function () {
 
       const state = await resolveVaultState(rpc, vault.vaultAddress, agent.address);
 
-      // wrap() builds the TX — it doesn't enforce defi_ix_count at SDK level
-      const result = await wrap({
+      // seal() builds the TX — it doesn't enforce defi_ix_count at SDK level
+      const result = await seal({
         vault: vault.vaultAddress,
         agent,
         instructions: [memoIx1, memoIx2], // 2 DeFi instructions
@@ -319,8 +319,8 @@ describe("Kit SDK Devnet — wrap() + createVault() E2E", function () {
 
       const state = await resolveVaultState(rpc, vault.vaultAddress, agent.address);
 
-      // wrap() with $20 amount (exceeds $10 cap) — SDK warns but builds TX
-      const result = await wrap({
+      // seal() with $20 amount (exceeds $10 cap) — SDK warns but builds TX
+      const result = await seal({
         vault: vault.vaultAddress,
         agent,
         instructions: [memoIx],
@@ -369,11 +369,11 @@ describe("Kit SDK Devnet — wrap() + createVault() E2E", function () {
   // ─── 3.3d: Constraint violation ───────────────────────────────────────────
   //
   // Create vault with protocol allowlist (mode=1) restricted to Jupiter.
-  // Send TX targeting a non-Jupiter program. wrap() should reject at SDK level
+  // Send TX targeting a non-Jupiter program. seal() should reject at SDK level
   // since isProtocolAllowed() returns false.
 
   describe("3.3d — protocol not in allowlist is rejected", function () {
-    it("wrap() rejects instruction targeting non-allowed protocol", async function () {
+    it("seal() rejects instruction targeting non-allowed protocol", async function () {
       // Provision vault with protocolMode=1 (allowlist) containing only Jupiter
       const restrictedVault = await provisionVault(rpc, owner, agent, USDC_MINT_DEVNET, {
         dailySpendingCapUsd: 500_000_000n,
@@ -382,7 +382,7 @@ describe("Kit SDK Devnet — wrap() + createVault() E2E", function () {
 
       // Re-create vault with restrictive policy
       // Since provisionVault uses protocolMode=0, we need to test the SDK check
-      // by using wrap() against a vault that has protocolMode=1
+      // by using seal() against a vault that has protocolMode=1
       // For now, test the SDK-level rejection by checking isProtocolAllowed
       const MEMO_PROGRAM = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr" as Address;
       const memoIx: Instruction = {
@@ -404,7 +404,7 @@ describe("Kit SDK Devnet — wrap() + createVault() E2E", function () {
       };
 
       try {
-        await wrap({
+        await seal({
           vault: restrictedVault.vaultAddress,
           agent,
           instructions: [memoIx],
@@ -416,7 +416,7 @@ describe("Kit SDK Devnet — wrap() + createVault() E2E", function () {
           targetProtocol: MEMO_PROGRAM,
           cachedState: restrictedState,
         });
-        expect.fail("wrap() should have rejected non-allowed protocol");
+        expect.fail("seal() should have rejected non-allowed protocol");
       } catch (e: any) {
         expect(e.message).to.include("not allowed");
       }

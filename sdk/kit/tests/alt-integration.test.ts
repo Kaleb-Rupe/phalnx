@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import type { Address, Instruction } from "@solana/kit";
 import {
-  composePhalnxTransaction,
+  composeSigilTransaction,
   validateTransactionSize,
   measureTransactionSize,
 } from "../src/composer.js";
@@ -10,9 +10,9 @@ import type { AddressesByLookupTableAddress } from "@solana/kit";
 import { AltCache, mergeAltAddresses } from "../src/alt-loader.js";
 import { toAgentError } from "../src/agent-errors.js";
 import {
-  PHALNX_ALT_DEVNET,
-  PHALNX_ALT_MAINNET,
-  getPhalnxAltAddress,
+  SIGIL_ALT_DEVNET,
+  SIGIL_ALT_MAINNET,
+  getSigilAltAddress,
   EXPECTED_ALT_CONTENTS_DEVNET,
   EXPECTED_ALT_CONTENTS_MAINNET,
 } from "../src/alt-config.js";
@@ -52,7 +52,7 @@ function baseParams(
 describe("ALT integration", () => {
   describe("measureTransactionSize", () => {
     it("returns correct structure", () => {
-      const compiled = composePhalnxTransaction(baseParams());
+      const compiled = composeSigilTransaction(baseParams());
       const result = measureTransactionSize(compiled);
       expect(result).to.have.property("wireBase64").that.is.a("string");
       expect(result).to.have.property("byteLength").that.is.a("number");
@@ -60,14 +60,14 @@ describe("ALT integration", () => {
     });
 
     it("small TX is within limit", () => {
-      const compiled = composePhalnxTransaction(baseParams());
+      const compiled = composeSigilTransaction(baseParams());
       const { withinLimit, byteLength } = measureTransactionSize(compiled);
       expect(withinLimit).to.be.true;
       expect(byteLength).to.be.lessThan(1232);
     });
 
     it("matches validateTransactionSize results", () => {
-      const compiled = composePhalnxTransaction(baseParams());
+      const compiled = composeSigilTransaction(baseParams());
       const { wireBase64 } = measureTransactionSize(compiled);
       const validated = validateTransactionSize(compiled);
       expect(wireBase64).to.equal(validated);
@@ -76,12 +76,12 @@ describe("ALT integration", () => {
 
   describe("composer with ALTs", () => {
     it("composes without ALTs (regression)", () => {
-      const compiled = composePhalnxTransaction(baseParams());
+      const compiled = composeSigilTransaction(baseParams());
       expect(compiled).to.have.property("messageBytes");
     });
 
     it("composes with empty ALTs", () => {
-      const compiled = composePhalnxTransaction(
+      const compiled = composeSigilTransaction(
         baseParams({ addressLookupTables: {} }),
       );
       expect(compiled).to.have.property("messageBytes");
@@ -92,7 +92,7 @@ describe("ALT integration", () => {
       const alts: AddressesByLookupTableAddress = {
         [ALT_ADDR]: [ADDR_1],
       };
-      const compiled = composePhalnxTransaction(
+      const compiled = composeSigilTransaction(
         baseParams({ addressLookupTables: alts }),
       );
       expect(compiled).to.have.property("messageBytes");
@@ -100,12 +100,12 @@ describe("ALT integration", () => {
   });
 
   describe("ALT config", () => {
-    it("getPhalnxAltAddress returns devnet ALT for devnet", () => {
-      expect(getPhalnxAltAddress("devnet")).to.equal(PHALNX_ALT_DEVNET);
+    it("getSigilAltAddress returns devnet ALT for devnet", () => {
+      expect(getSigilAltAddress("devnet")).to.equal(SIGIL_ALT_DEVNET);
     });
 
-    it("getPhalnxAltAddress throws for mainnet while ALT is placeholder", () => {
-      expect(() => getPhalnxAltAddress("mainnet-beta")).to.throw(/not yet deployed/);
+    it("getSigilAltAddress throws for mainnet while ALT is placeholder", () => {
+      expect(() => getSigilAltAddress("mainnet-beta")).to.throw(/not yet deployed/);
     });
 
     it("expected ALT contents have correct entry count per network", () => {
@@ -135,18 +135,18 @@ describe("ALT integration", () => {
   });
 
   describe("mergeAltAddresses with protocol ALTs", () => {
-    it("Jupiter ALT + Phalnx ALT produces merged list", () => {
+    it("Jupiter ALT + Sigil ALT produces merged list", () => {
       const jupiterAlt = ALT_ADDR;
-      const merged = mergeAltAddresses(PHALNX_ALT_DEVNET, [jupiterAlt]);
+      const merged = mergeAltAddresses(SIGIL_ALT_DEVNET, [jupiterAlt]);
       expect(merged).to.have.lengthOf(2);
-      expect(merged[0]).to.equal(PHALNX_ALT_DEVNET);
+      expect(merged[0]).to.equal(SIGIL_ALT_DEVNET);
       expect(merged[1]).to.equal(jupiterAlt);
     });
 
     it("overlapping ALTs are deduplicated", () => {
-      const merged = mergeAltAddresses(PHALNX_ALT_DEVNET, [
+      const merged = mergeAltAddresses(SIGIL_ALT_DEVNET, [
         ALT_ADDR,
-        PHALNX_ALT_DEVNET,
+        SIGIL_ALT_DEVNET,
         ALT_ADDR,
       ]);
       expect(merged).to.have.lengthOf(2);
@@ -156,13 +156,13 @@ describe("ALT integration", () => {
   describe("CU recompose preserves ALT compression (V3)", () => {
     it("size delta is small between initial and recomposed CU", () => {
       // Compose with a specific CU value
-      const compiled1 = composePhalnxTransaction(
+      const compiled1 = composeSigilTransaction(
         baseParams({ computeUnits: 200_000 }),
       );
       const size1 = measureTransactionSize(compiled1);
 
       // Recompose with different CU (simulating adjustCU result)
-      const compiled2 = composePhalnxTransaction(
+      const compiled2 = composeSigilTransaction(
         baseParams({ computeUnits: 250_000 }),
       );
       const size2 = measureTransactionSize(compiled2);
@@ -176,7 +176,7 @@ describe("ALT integration", () => {
       const alts: AddressesByLookupTableAddress = {
         [ALT_ADDR]: [ADDR_1],
       };
-      const compiled = composePhalnxTransaction(
+      const compiled = composeSigilTransaction(
         baseParams({ computeUnits: 300_000, addressLookupTables: alts }),
       );
       const { withinLimit } = measureTransactionSize(compiled);

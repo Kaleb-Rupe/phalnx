@@ -7,7 +7,7 @@ import {
 } from "../src/owner-transaction.js";
 import { MAX_TX_SIZE } from "../src/composer.js";
 import { CU_OWNER_ACTION } from "../src/priority-fees.js";
-import { PHALNX_PROGRAM_ADDRESS } from "../src/types.js";
+import { SIGIL_PROGRAM_ADDRESS } from "../src/types.js";
 import { createMockRpc, createMockAgent, MOCK_BLOCKHASH } from "../src/testing/index.js";
 
 // ─── Test Addresses ─────────────────────────────────────────────────────────
@@ -23,7 +23,7 @@ function mockOwner() {
 
 function makeFreezeInstruction(): Instruction {
   return {
-    programAddress: PHALNX_PROGRAM_ADDRESS,
+    programAddress: SIGIL_PROGRAM_ADDRESS,
     accounts: [
       { address: VAULT, role: AccountRole.WRITABLE },
       { address: OWNER_ADDR, role: AccountRole.READONLY_SIGNER },
@@ -34,7 +34,7 @@ function makeFreezeInstruction(): Instruction {
 
 function makeRegisterAgentInstruction(): Instruction {
   return {
-    programAddress: PHALNX_PROGRAM_ADDRESS,
+    programAddress: SIGIL_PROGRAM_ADDRESS,
     accounts: [
       { address: VAULT, role: AccountRole.WRITABLE },
       { address: OWNER_ADDR, role: AccountRole.READONLY_SIGNER },

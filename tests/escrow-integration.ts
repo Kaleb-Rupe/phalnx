@@ -8,7 +8,7 @@
  */
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { Phalnx } from "../target/types/phalnx";
+import { Sigil } from "../target/types/sigil";
 import {
   Keypair,
   PublicKey,
@@ -55,7 +55,7 @@ const FEE_RATE_DENOMINATOR = 1_000_000n;
 describe("escrow-integration", () => {
   let env: TestEnv;
   let svm: LiteSVM;
-  let program: Program<Phalnx>;
+  let program: Program<Sigil>;
 
   // Source vault actors
   let sourceOwner: anchor.Wallet;
@@ -341,8 +341,8 @@ describe("escrow-integration", () => {
       svm,
       new anchor.Wallet(destOwnerKeypair),
     );
-    const destProgram = new Program<Phalnx>(
-      require("../target/idl/phalnx.json"),
+    const destProgram = new Program<Sigil>(
+      require("../target/idl/sigil.json"),
       destProvider as unknown as anchor.Provider,
     );
 

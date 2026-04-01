@@ -1,6 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { Phalnx } from "../target/types/phalnx";
+import { Sigil } from "../target/types/sigil";
 import {
   Keypair,
   PublicKey,
@@ -49,7 +49,7 @@ const FULL_PERMISSIONS = new BN((1n << 21n) - 1n);
  * Flash Trade Integration Tests
  *
  * These tests verify that perpetual position actions (open, close, increase,
- * decrease) work correctly through Phalnx's atomic composition pattern.
+ * decrease) work correctly through Sigil's atomic composition pattern.
  *
  * Since Flash Trade is not available on localnet, we use mock DeFi instructions
  * (SystemProgram.transfer with 0 lamports) — the on-chain program doesn't
@@ -63,7 +63,7 @@ const FULL_PERMISSIONS = new BN((1n << 21n) - 1n);
 describe("flash-trade-integration", () => {
   let env: TestEnv;
   let svm: LiteSVM;
-  let program: Program<Phalnx>;
+  let program: Program<Sigil>;
 
   let owner: anchor.Wallet;
   const agent = Keypair.generate();

@@ -1,16 +1,16 @@
 /**
- * Measures real wrapped Jupiter transaction sizes.
+ * Measures real sealed Jupiter transaction sizes.
  *
  * Fetches a real Jupiter swap quote + instructions from mainnet API,
- * wraps them with Phalnx validate+finalize, and reports TX size.
+ * seals them with Sigil validate+finalize, and reports TX size.
  * Does NOT send — just measures.
  *
  * Usage:
- *   npx tsx sdk/kit/tests/devnet/measure-jupiter-wrap.ts
+ *   npx tsx sdk/kit/tests/devnet/measure-jupiter-seal.ts
  *     → Measures WITHOUT ALTs (shows the size problem)
  *
- *   npx tsx sdk/kit/tests/devnet/measure-jupiter-wrap.ts --with-alts
- *     → Measures WITH Phalnx + Jupiter ALTs resolved via RPC
+ *   npx tsx sdk/kit/tests/devnet/measure-jupiter-seal.ts --with-alts
+ *     → Measures WITH Sigil + Jupiter ALTs resolved via RPC
  *     → Requires SOLANA_RPC_URL or uses public devnet
  *
  * Prerequisites:
@@ -21,9 +21,9 @@
 import { readFileSync } from "node:fs";
 import type { Address, Instruction } from "@solana/kit";
 import { AccountRole, createSolanaRpc } from "@solana/kit";
-import { wrap } from "../../src/wrap.js";
+import { seal } from "../../src/seal.js";
 import { AltCache, mergeAltAddresses } from "../../src/alt-loader.js";
-import { PHALNX_ALT_DEVNET } from "../../src/alt-config.js";
+import { SIGIL_ALT_DEVNET } from "../../src/alt-config.js";
 import { ActionType } from "../../src/generated/types/actionType.js";
 import { VaultStatus } from "../../src/generated/types/vaultStatus.js";
 import type { ResolvedVaultState } from "../../src/state-resolver.js";
@@ -151,16 +151,16 @@ async function main() {
   console.log();
 
   // All DeFi instructions (setup + swap + cleanup)
-  // wrap() strips ComputeBudget, so include them — they'll be filtered out
+  // seal() strips ComputeBudget, so include them — they'll be filtered out
   const allDeFiIxs = [...computeIxs, ...setupIxs, swapIx];
   if (cleanupIx) allDeFiIxs.push(cleanupIx);
 
-  console.log(`  Total DeFi IXs passed to wrap(): ${allDeFiIxs.length}`);
-  console.log(`  (ComputeBudget will be stripped by wrap)`);
+  console.log(`  Total DeFi IXs passed to seal(): ${allDeFiIxs.length}`);
+  console.log(`  (ComputeBudget will be stripped by seal)`);
   console.log();
 
   // Wrap WITHOUT ALTs first
-  const resultNoAlt = await wrap({
+  const resultNoAlt = await seal({
     vault: VAULT,
     agent: { address: AGENT, signTransactions: async (txs: any) => txs } as any,
     instructions: allDeFiIxs,
@@ -191,7 +191,7 @@ async function main() {
   console.log();
 
   // Also measure swap-only (no setup/cleanup) to show the minimal case
-  const resultSwapOnly = await wrap({
+  const resultSwapOnly = await seal({
     vault: VAULT,
     agent: { address: AGENT, signTransactions: async (txs: any) => txs } as any,
     instructions: [swapIx],
@@ -214,7 +214,7 @@ async function main() {
 
   // Summary
   console.log("═══ SUMMARY ═══");
-  console.log(`  Phalnx adds ~${resultSwapOnly.txSizeBytes - (swapIx.accounts?.length ?? 0) * 32} bytes overhead`);
+  console.log(`  Sigil adds ~${resultSwapOnly.txSizeBytes - (swapIx.accounts?.length ?? 0) * 32} bytes overhead`);
   console.log(`  (validate_and_authorize + finalize_session + compute budget)`);
   console.log(`  Jupiter swap alone: ${swapIx.accounts?.length ?? 0} accounts × 32 bytes = ~${(swapIx.accounts?.length ?? 0) * 32} bytes for accounts`);
   console.log();
@@ -222,7 +222,7 @@ async function main() {
   if (resultNoAlt.txSizeBytes > 1232) {
     console.log("  ⚠️  Full Jupiter swap (with setup+cleanup) exceeds 1232 bytes WITHOUT ALTs.");
     console.log("  ✅ ALTs are REQUIRED for production. Jupiter provides them in the API response.");
-    console.log("  The Phalnx ALT + Jupiter ALTs combined should bring it under limit.");
+    console.log("  The Sigil ALT + Jupiter ALTs combined should bring it under limit.");
   } else {
     console.log("  ✅ Full Jupiter swap fits within 1232 bytes even WITHOUT ALTs.");
   }
@@ -238,9 +238,9 @@ async function main() {
     const rpc = createSolanaRpc(rpcUrl);
     const altCache = new AltCache();
 
-    // Merge Phalnx ALT + Jupiter ALTs
-    const allAlts = mergeAltAddresses(PHALNX_ALT_DEVNET, jupiterAlts);
-    console.log(`  ALTs to resolve: ${allAlts.length} (1 Phalnx + ${jupiterAlts.length} Jupiter)`);
+    // Merge Sigil ALT + Jupiter ALTs
+    const allAlts = mergeAltAddresses(SIGIL_ALT_DEVNET, jupiterAlts);
+    console.log(`  ALTs to resolve: ${allAlts.length} (1 Sigil + ${jupiterAlts.length} Jupiter)`);
 
     const resolvedAlts = await altCache.resolve(rpc, allAlts);
     const resolvedCount = Object.keys(resolvedAlts).length;
@@ -252,7 +252,7 @@ async function main() {
     console.log();
 
     try {
-      const resultWithAlts = await wrap({
+      const resultWithAlts = await seal({
         vault: VAULT,
         agent: { address: AGENT, signTransactions: async (txs: any) => txs } as any,
         instructions: allDeFiIxs,
@@ -266,7 +266,7 @@ async function main() {
         addressLookupTables: resolvedAlts,
       });
 
-      console.log("═══ Wrapped TX Size (WITH Phalnx + Jupiter ALTs) ═══");
+      console.log("═══ Wrapped TX Size (WITH Sigil + Jupiter ALTs) ═══");
       console.log(`  TX size:      ${resultWithAlts.txSizeBytes} bytes`);
       console.log(`  Limit:        1232 bytes`);
       console.log(`  Headroom:     ${1232 - resultWithAlts.txSizeBytes} bytes`);

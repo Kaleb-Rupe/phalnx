@@ -1,6 +1,6 @@
 #!/usr/bin/env npx ts-node
 /**
- * Phalnx Devnet Stress Test — REAL tokens, REAL transactions
+ * Sigil Devnet Stress Test — REAL tokens, REAL transactions
  *
  * No mocks. No dummy data. Real USDC on devnet.
  * Tests every limit of the protocol and reports where it breaks.
@@ -12,7 +12,7 @@
  */
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { Phalnx } from "../../target/types/phalnx";
+import { Sigil } from "../../target/types/sigil";
 import {
   Keypair,
   PublicKey,
@@ -275,12 +275,12 @@ async function doComposedTx(
 
 // ─── Test Suite ────────────────────────────────────────────────────────────
 
-describe("🔥 PHALNX DEVNET STRESS TEST — Real Tokens, Real Limits", function () {
+describe("🔥 SIGIL DEVNET STRESS TEST — Real Tokens, Real Limits", function () {
   this.timeout(600_000);
 
   before(async function () {
     console.log("\n  ══════════════════════════════════════════════════");
-    console.log("  PHALNX DEVNET STRESS TEST");
+    console.log("  SIGIL DEVNET STRESS TEST");
     console.log("  Program:", program.programId.toString());
     console.log("  Owner:", owner.publicKey.toString());
     console.log("  Agent A:", agentA.publicKey.toString());
@@ -767,7 +767,7 @@ describe("🔥 PHALNX DEVNET STRESS TEST — Real Tokens, Real Limits", function
     const destAgent = Keypair.generate();
 
     // Conditional escrow: preimage/hash for settlement
-    const preimage = Buffer.from("phalnx-escrow-secret-2026");
+    const preimage = Buffer.from("sigil-escrow-secret-2026");
     const conditionHash = Array.from(
       require("crypto").createHash("sha256").update(preimage).digest(),
     );

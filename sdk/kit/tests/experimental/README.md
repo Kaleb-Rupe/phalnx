@@ -11,7 +11,7 @@ Tests for upcoming Solana features that are **not yet on mainnet**. Excluded fro
 ### Running
 
 ```bash
-pnpm --filter @phalnx/kit test:experimental
+pnpm --filter @usesigil/kit test:experimental
 ```
 
 ### Removal Timeline

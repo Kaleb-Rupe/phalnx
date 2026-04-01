@@ -2,10 +2,10 @@ import { expect } from "chai";
 import type { Address } from "@solana/kit";
 import {
   mapPoliciesToVaultParams,
-  harden,
+  inscribe,
   withVault,
-  type HardenOptions,
-} from "../src/harden.js";
+  type InscribeOptions,
+} from "../src/inscribe.js";
 import { resolvePolicies } from "../src/policies.js";
 
 // Valid base58 addresses (no 0, I, O, l)
@@ -29,7 +29,7 @@ function mockAgentSigner() {
   } as any;
 }
 
-describe("harden", () => {
+describe("inscribe", () => {
   describe("mapPoliciesToVaultParams()", () => {
     it("collapses multiple spend limits to largest", () => {
       const resolved = resolvePolicies({
@@ -113,11 +113,11 @@ describe("harden", () => {
     });
   });
 
-  describe("harden()", () => {
+  describe("inscribe()", () => {
     it("rejects owner === agent", async () => {
       const sameKey = mockOwner();
       try {
-        await harden({
+        await inscribe({
           rpc: {} as any,
           network: "devnet",
           owner: sameKey,
@@ -130,7 +130,7 @@ describe("harden", () => {
     });
 
     it("returns vault info with explicit vaultId", async () => {
-      const result = await harden({
+      const result = await inscribe({
         rpc: {} as any,
         network: "devnet",
         owner: mockOwner(),
@@ -146,14 +146,14 @@ describe("harden", () => {
     });
 
     it("derives deterministic PDAs", async () => {
-      const r1 = await harden({
+      const r1 = await inscribe({
         rpc: {} as any,
         network: "devnet",
         owner: mockOwner(),
         agent: mockAgentSigner(),
         vaultId: 0n,
       });
-      const r2 = await harden({
+      const r2 = await inscribe({
         rpc: {} as any,
         network: "devnet",
         owner: mockOwner(),
@@ -166,9 +166,9 @@ describe("harden", () => {
   });
 
   describe("withVault()", () => {
-    it("returns both shield and harden results", async () => {
+    it("returns both shield and inscribe results", async () => {
       const result = await withVault({
-        harden: {
+        inscribe: {
           rpc: {} as any,
           network: "devnet",
           owner: mockOwner(),
@@ -178,12 +178,12 @@ describe("harden", () => {
       });
       expect(result.shield).to.exist;
       expect(result.shield.isPaused).to.be.false;
-      expect(result.harden.vaultAddress).to.be.a("string");
+      expect(result.inscribe.vaultAddress).to.be.a("string");
     });
 
     it("passes shield policies through", async () => {
       const result = await withVault({
-        harden: {
+        inscribe: {
           rpc: {} as any,
           network: "devnet",
           owner: mockOwner(),
@@ -197,7 +197,7 @@ describe("harden", () => {
 
     it("auto-configures onChainSync on shield", async () => {
       const result = await withVault({
-        harden: {
+        inscribe: {
           rpc: {} as any,
           network: "devnet",
           owner: mockOwner(),
@@ -209,8 +209,8 @@ describe("harden", () => {
       expect(result.shield.hasOnChainSync).to.be.true;
     });
 
-    it("harden() still works independently with unchanged API", async () => {
-      const result = await harden({
+    it("inscribe() still works independently with unchanged API", async () => {
+      const result = await inscribe({
         rpc: {} as any,
         network: "devnet",
         owner: mockOwner(),

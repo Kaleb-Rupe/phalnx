@@ -1,16 +1,16 @@
 /**
- * Tests for PhalnxErrorCategory discriminated union and categorizeError().
+ * Tests for SigilErrorCategory discriminated union and categorizeError().
  */
 
 import { expect } from "chai";
 import {
   toAgentError,
   categorizeError,
-  type PhalnxErrorCategory,
+  type SigilErrorCategory,
   type AgentError,
 } from "../src/agent-errors.js";
 
-describe("PhalnxErrorCategory", () => {
+describe("SigilErrorCategory", () => {
   it("categorizes spending cap error as spending type", () => {
     // Error 6006 = SpendingCapExceeded → SPENDING_CAP (hex 0x1776)
     const err = toAgentError({ message: "custom program error: 0x1776" });

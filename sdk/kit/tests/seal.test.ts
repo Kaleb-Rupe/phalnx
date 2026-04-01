@@ -2,12 +2,12 @@ import { expect } from "chai";
 import type { Address, Instruction } from "@solana/kit";
 import { AccountRole } from "@solana/kit";
 import {
-  wrap,
+  seal,
   replaceAgentAtas,
-  PhalnxClient,
-  type WrapParams,
-  type PhalnxClientConfig,
-} from "../src/wrap.js";
+  SigilClient,
+  type SealParams,
+  type SigilClientConfig,
+} from "../src/seal.js";
 import { createVault, type CreateVaultOptions } from "../src/create-vault.js";
 import { deriveAta } from "../src/x402/transfer-builder.js";
 import { ActionType } from "../src/generated/types/actionType.js";
@@ -65,7 +65,7 @@ function makeCachedState(
   });
 }
 
-function baseWrapParams(overrides?: Partial<WrapParams>): WrapParams {
+function baseSealParams(overrides?: Partial<SealParams>): SealParams {
   return {
     vault: VAULT,
     agent: mockAgent(),
@@ -85,9 +85,9 @@ function baseWrapParams(overrides?: Partial<WrapParams>): WrapParams {
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
-describe("wrap()", () => {
+describe("seal()", () => {
   it("with Jupiter protocol — returns composed TX with correct instruction order", async () => {
-    const result = await wrap(baseWrapParams());
+    const result = await seal(baseSealParams());
 
     expect(result.transaction).to.exist;
     expect(result.actionType).to.equal(ActionType.Swap);
@@ -97,8 +97,8 @@ describe("wrap()", () => {
   });
 
   it("with unknown protocol + protocolMode=0 — succeeds with no warnings", async () => {
-    const result = await wrap(
-      baseWrapParams({
+    const result = await seal(
+      baseSealParams({
         instructions: [makeInstruction(UNKNOWN_PROTOCOL)],
         cachedState: makeCachedState({ protocolMode: 0 }),
       }),
@@ -112,14 +112,14 @@ describe("wrap()", () => {
   });
 
   it("defaults actionType to Swap when not provided", async () => {
-    const result = await wrap(baseWrapParams({ actionType: undefined }));
+    const result = await seal(baseSealParams({ actionType: undefined }));
     expect(result.actionType).to.equal(ActionType.Swap);
   });
 
   it("throws on non-active vault (status !== Active)", async () => {
     try {
-      await wrap(
-        baseWrapParams({
+      await seal(
+        baseSealParams({
           cachedState: makeCachedState({ status: VaultStatus.Frozen }),
         }),
       );
@@ -131,8 +131,8 @@ describe("wrap()", () => {
 
   it("throws on paused agent", async () => {
     try {
-      await wrap(
-        baseWrapParams({
+      await seal(
+        baseSealParams({
           cachedState: makeCachedState({ agentPaused: true }),
         }),
       );
@@ -144,8 +144,8 @@ describe("wrap()", () => {
 
   it("throws error when amount + fees exceeds cap headroom", async () => {
     try {
-      await wrap(
-        baseWrapParams({
+      await seal(
+        baseSealParams({
           amount: 2_000_000_000n, // $2000 — exceeds $1000 cap
           cachedState: makeCachedState({ dailyCap: 1_000_000_000n }),
         }),
@@ -159,8 +159,8 @@ describe("wrap()", () => {
   it("strips ComputeBudget from input instructions (avoids duplicate)", async () => {
     const cbIx = makeInstruction(COMPUTE_BUDGET);
     const jupIx = makeInstruction(JUPITER);
-    const result = await wrap(
-      baseWrapParams({
+    const result = await seal(
+      baseSealParams({
         instructions: [cbIx, jupIx],
       }),
     );
@@ -170,8 +170,8 @@ describe("wrap()", () => {
 
   it("throws on agent not found in vault", async () => {
     try {
-      await wrap(
-        baseWrapParams({
+      await seal(
+        baseSealParams({
           cachedState: makeCachedState({ noAgents: true }),
         }),
       );
@@ -183,8 +183,8 @@ describe("wrap()", () => {
 
   it("throws on no permission for action", async () => {
     try {
-      await wrap(
-        baseWrapParams({
+      await seal(
+        baseSealParams({
           cachedState: makeCachedState({ agentPermissions: 0n }),
         }),
       );
@@ -196,8 +196,8 @@ describe("wrap()", () => {
 
   it("throws on protocol not allowed by policy", async () => {
     try {
-      await wrap(
-        baseWrapParams({
+      await seal(
+        baseSealParams({
           cachedState: makeCachedState({
             protocolMode: 1, // allowlist
             protocols: [], // empty allowlist — nothing allowed
@@ -212,8 +212,8 @@ describe("wrap()", () => {
 
   it("throws on spending action with amount=0", async () => {
     try {
-      await wrap(
-        baseWrapParams({
+      await seal(
+        baseSealParams({
           amount: 0n,
           actionType: ActionType.Swap,
         }),
@@ -226,8 +226,8 @@ describe("wrap()", () => {
 
   it("throws when no target protocol or DeFi instructions", async () => {
     try {
-      await wrap(
-        baseWrapParams({
+      await seal(
+        baseSealParams({
           instructions: [], // no instructions
           targetProtocol: undefined,
         }),
@@ -240,8 +240,8 @@ describe("wrap()", () => {
 
   it("throws on position limit exceeded", async () => {
     try {
-      await wrap(
-        baseWrapParams({
+      await seal(
+        baseSealParams({
           actionType: ActionType.OpenPosition,
           cachedState: makeCachedState({
             maxConcurrentPositions: 2,
@@ -378,9 +378,9 @@ describe("createVault()", () => {
   });
 });
 
-// ─── PhalnxClient Tests ─────────────────────────────────────────────────
+// ─── SigilClient Tests ─────────────────────────────────────────────────
 
-/** Mock RPC that supports getLatestBlockhash (needed by PhalnxClient's instance cache). */
+/** Mock RPC that supports getLatestBlockhash (needed by SigilClient's instance cache). */
 function mockRpc() {
   return {
     getLatestBlockhash: () => ({
@@ -395,8 +395,8 @@ function mockRpc() {
 }
 
 function clientConfig(
-  overrides?: Partial<PhalnxClientConfig>,
-): PhalnxClientConfig {
+  overrides?: Partial<SigilClientConfig>,
+): SigilClientConfig {
   return {
     rpc: mockRpc(),
     vault: VAULT,
@@ -406,10 +406,10 @@ function clientConfig(
   };
 }
 
-describe("PhalnxClient", () => {
+describe("SigilClient", () => {
   it("constructor stores vault, agent, network, and creates caches", () => {
     const agent = mockAgent();
-    const client = new PhalnxClient({
+    const client = new SigilClient({
       rpc: {} as any,
       vault: VAULT,
       agent,
@@ -424,9 +424,9 @@ describe("PhalnxClient", () => {
     expect(() => client.invalidateCaches()).to.not.throw();
   });
 
-  it("client.wrap() produces WrapResult via delegation to standalone wrap()", async () => {
-    const client = new PhalnxClient(clientConfig());
-    const result = await client.wrap([makeInstruction(JUPITER)], {
+  it("client.seal() produces SealResult via delegation to standalone seal()", async () => {
+    const client = new SigilClient(clientConfig());
+    const result = await client.seal([makeInstruction(JUPITER)], {
       tokenMint: USDC_DEVNET,
       amount: 100_000_000n,
       cachedState: makeCachedState(),
@@ -439,7 +439,7 @@ describe("PhalnxClient", () => {
     expect(result.txSizeBytes).to.be.a("number");
   });
 
-  it("client.wrap() produces same actionType as direct wrap() with identical params", async () => {
+  it("client.seal() produces same actionType as direct seal() with identical params", async () => {
     const state = makeCachedState();
     const blockhash = {
       blockhash: "GHtXQBpokCiBP6spMNfMW9qLBjfQJhmR4GWzCiQ2ATQA",
@@ -447,8 +447,8 @@ describe("PhalnxClient", () => {
     };
 
     // Use ClosePosition (non-spending, amount=0) to avoid RPC calls for fee ATAs
-    const directResult = await wrap(
-      baseWrapParams({
+    const directResult = await seal(
+      baseSealParams({
         cachedState: state,
         blockhash,
         actionType: ActionType.ClosePosition,
@@ -456,8 +456,8 @@ describe("PhalnxClient", () => {
       }),
     );
 
-    const client = new PhalnxClient(clientConfig());
-    const clientResult = await client.wrap([makeInstruction(JUPITER)], {
+    const client = new SigilClient(clientConfig());
+    const clientResult = await client.seal([makeInstruction(JUPITER)], {
       tokenMint: USDC_DEVNET,
       amount: 0n,
       actionType: ActionType.ClosePosition,
@@ -472,7 +472,7 @@ describe("PhalnxClient", () => {
 
   it("executeAndConfirm() throws if agent signer lacks signTransactions", async () => {
     const brokenAgent = { address: AGENT_ADDR } as any; // no signTransactions
-    const client = new PhalnxClient(clientConfig({ agent: brokenAgent }));
+    const client = new SigilClient(clientConfig({ agent: brokenAgent }));
 
     try {
       await client.executeAndConfirm([makeInstruction(JUPITER)], {
@@ -489,7 +489,7 @@ describe("PhalnxClient", () => {
 
   it("constructor throws if rpc is missing", () => {
     try {
-      new PhalnxClient({
+      new SigilClient({
         rpc: undefined as any,
         vault: VAULT,
         agent: mockAgent(),
@@ -503,7 +503,7 @@ describe("PhalnxClient", () => {
 
   it("constructor throws if vault is missing", () => {
     try {
-      new PhalnxClient({
+      new SigilClient({
         rpc: {} as any,
         vault: undefined as any,
         agent: mockAgent(),
@@ -517,7 +517,7 @@ describe("PhalnxClient", () => {
 
   it("constructor throws if agent is missing", () => {
     try {
-      new PhalnxClient({
+      new SigilClient({
         rpc: {} as any,
         vault: VAULT,
         agent: undefined as any,
@@ -531,7 +531,7 @@ describe("PhalnxClient", () => {
 
   it("constructor throws if network is missing", () => {
     try {
-      new PhalnxClient({
+      new SigilClient({
         rpc: {} as any,
         vault: VAULT,
         agent: mockAgent(),
@@ -543,8 +543,8 @@ describe("PhalnxClient", () => {
     }
   });
 
-  it("PhalnxClient.createVault() delegates to standalone createVault", async () => {
-    const result = await PhalnxClient.createVault({
+  it("SigilClient.createVault() delegates to standalone createVault", async () => {
+    const result = await SigilClient.createVault({
       rpc: {} as any,
       network: "devnet",
       owner: mockOwner(),
@@ -567,7 +567,7 @@ const TOKEN_PROGRAM_ADDR =
 const TOKEN_2022_ADDR =
   "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb" as Address;
 
-describe("wrap() pre-flight checks", () => {
+describe("seal() pre-flight checks", () => {
   it("throws on top-level SPL Transfer in instructions", async () => {
     const splTransferIx: Instruction = {
       programAddress: TOKEN_PROGRAM_ADDR,
@@ -575,7 +575,7 @@ describe("wrap() pre-flight checks", () => {
       data: new Uint8Array([3, 0, 0, 0, 0, 0, 0, 0, 0]), // disc 3 = Transfer
     };
     try {
-      await wrap(baseWrapParams({ instructions: [splTransferIx] }));
+      await seal(baseSealParams({ instructions: [splTransferIx] }));
       expect.fail("should throw");
     } catch (e: any) {
       expect(e.message).to.include("SPL Token Transfer not allowed");
@@ -589,7 +589,7 @@ describe("wrap() pre-flight checks", () => {
       data: new Uint8Array([4, 0, 0, 0, 0, 0, 0, 0, 0]), // disc 4 = Approve
     };
     try {
-      await wrap(baseWrapParams({ instructions: [splApproveIx] }));
+      await seal(baseSealParams({ instructions: [splApproveIx] }));
       expect.fail("should throw");
     } catch (e: any) {
       expect(e.message).to.include("SPL Token Approve not allowed");
@@ -603,7 +603,7 @@ describe("wrap() pre-flight checks", () => {
       data: new Uint8Array([13, 0, 0, 0, 0, 0, 0, 0, 0, 6]),
     };
     try {
-      await wrap(baseWrapParams({ instructions: [ix] }));
+      await seal(baseSealParams({ instructions: [ix] }));
       expect.fail("should throw");
     } catch (e: any) {
       expect(e.message).to.include("ApproveChecked not allowed");
@@ -617,7 +617,7 @@ describe("wrap() pre-flight checks", () => {
       data: new Uint8Array([8, 0, 0, 0, 0, 0, 0, 0, 0]),
     };
     try {
-      await wrap(baseWrapParams({ instructions: [ix] }));
+      await seal(baseSealParams({ instructions: [ix] }));
       expect.fail("should throw");
     } catch (e: any) {
       expect(e.message).to.include("Burn");
@@ -631,7 +631,7 @@ describe("wrap() pre-flight checks", () => {
       data: new Uint8Array([15, 0, 0, 0, 0, 0, 0, 0, 0, 6]),
     };
     try {
-      await wrap(baseWrapParams({ instructions: [ix] }));
+      await seal(baseSealParams({ instructions: [ix] }));
       expect.fail("should throw");
     } catch (e: any) {
       expect(e.message).to.include("Burn");
@@ -645,7 +645,7 @@ describe("wrap() pre-flight checks", () => {
       data: new Uint8Array([6, 1, 1, ...new Array(32).fill(0)]),
     };
     try {
-      await wrap(baseWrapParams({ instructions: [ix] }));
+      await seal(baseSealParams({ instructions: [ix] }));
       expect.fail("should throw");
     } catch (e: any) {
       expect(e.message).to.include("SetAuthority");
@@ -659,7 +659,7 @@ describe("wrap() pre-flight checks", () => {
       data: new Uint8Array([9]),
     };
     try {
-      await wrap(baseWrapParams({ instructions: [ix] }));
+      await seal(baseSealParams({ instructions: [ix] }));
       expect.fail("should throw");
     } catch (e: any) {
       expect(e.message).to.include("CloseAccount");
@@ -669,7 +669,7 @@ describe("wrap() pre-flight checks", () => {
   // --- ADV-6: Negative amount ---
   it("throws clean error on negative amount", async () => {
     try {
-      await wrap(baseWrapParams({ amount: -1n }));
+      await seal(baseSealParams({ amount: -1n }));
       expect.fail("should throw");
     } catch (e: any) {
       expect(e.message).to.include("non-negative");
@@ -680,8 +680,8 @@ describe("wrap() pre-flight checks", () => {
   it("throws when additionalAtaReplacements conflicts with canonical ATA", async () => {
     const canonicalAta = await deriveAta(AGENT_ADDR, USDC_DEVNET);
     try {
-      await wrap(
-        baseWrapParams({
+      await seal(
+        baseSealParams({
           additionalAtaReplacements: new Map([
             [
               canonicalAta,
@@ -728,8 +728,8 @@ describe("wrap() pre-flight checks", () => {
         send: async () => ({ value: { data: [base64, "base64"] } }),
       }),
     };
-    const result = await wrap(
-      baseWrapParams({
+    const result = await seal(
+      baseSealParams({
         rpc: rpcWithBalance as any,
         tokenMint: NON_STABLE,
         addressLookupTables: {},
@@ -742,8 +742,8 @@ describe("wrap() pre-flight checks", () => {
     const jupIx1 = makeInstruction(JUPITER);
     const jupIx2 = makeInstruction(JUPITER);
     try {
-      await wrap(
-        baseWrapParams({
+      await seal(
+        baseSealParams({
           instructions: [jupIx1, jupIx2],
           tokenMint: USDC_MINT_DEVNET, // stablecoin — must use real mint for isStablecoinMint() to match
         }),
@@ -761,8 +761,8 @@ describe("wrap() pre-flight checks", () => {
       data: new Uint8Array([1]),
     };
     try {
-      await wrap(
-        baseWrapParams({
+      await seal(
+        baseSealParams({
           instructions: [nonDefiIx],
           tokenMint: "So11111111111111111111111111111111111111112" as Address,
         }),
@@ -783,7 +783,7 @@ describe("wrap() pre-flight checks", () => {
       data: new Uint8Array([12, 0, 0, 0, 0, 0, 0, 0, 0, 6]),
     };
     try {
-      await wrap(baseWrapParams({ instructions: [ix] }));
+      await seal(baseSealParams({ instructions: [ix] }));
       expect.fail("should throw");
     } catch (e: any) {
       expect(e.message).to.match(/SPL Token Transfer not allowed/);
@@ -798,7 +798,7 @@ describe("wrap() pre-flight checks", () => {
       data: new Uint8Array([26, 0, 0, 0, 0, 0, 0, 0, 0]),
     };
     try {
-      await wrap(baseWrapParams({ instructions: [ix] }));
+      await seal(baseSealParams({ instructions: [ix] }));
       expect.fail("should throw");
     } catch (e: any) {
       expect(e.message).to.match(/SPL Token Transfer not allowed/);
@@ -815,7 +815,7 @@ describe("wrap() pre-flight checks", () => {
     // This should pass through SPL blocking and fail later (e.g., DeFi count check)
     // but NOT with "SPL Token Transfer not allowed" or "SPL Token Approve not allowed"
     try {
-      await wrap(baseWrapParams({ instructions: [ix] }));
+      await seal(baseSealParams({ instructions: [ix] }));
     } catch (e: any) {
       expect(e.message).to.not.match(
         /SPL Token (Transfer|Approve) not allowed/,
@@ -826,8 +826,8 @@ describe("wrap() pre-flight checks", () => {
   // DeFi count: 2+ recognized for non-stablecoin — should fail
   it("throws on 2+ DeFi instructions for non-stablecoin input", async () => {
     try {
-      await wrap(
-        baseWrapParams({
+      await seal(
+        baseSealParams({
           instructions: [makeInstruction(JUPITER), makeInstruction(JUPITER)],
           tokenMint: "So11111111111111111111111111111111111111112" as Address,
         }),

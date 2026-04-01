@@ -1,6 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { Phalnx } from "../target/types/phalnx";
+import { Sigil } from "../target/types/sigil";
 import {
   Keypair,
   PublicKey,
@@ -28,7 +28,7 @@ import {
   accountExists,
   advanceTime,
   sendVersionedTx,
-  expectPhalnxError,
+  expectSigilError,
   recordCU,
   printCUSummary,
   TestEnv,
@@ -40,7 +40,7 @@ const FULL_PERMISSIONS = new BN((1n << 21n) - 1n);
 describe("instruction-constraints", () => {
   let env: TestEnv;
   let svm: LiteSVM;
-  let program: Program<Phalnx>;
+  let program: Program<Sigil>;
 
   let owner: anchor.Wallet;
   const agent = Keypair.generate();
@@ -503,7 +503,7 @@ describe("instruction-constraints", () => {
         sendVersionedTx(svm, [validateIx, finalizeIx], agent);
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "InvalidConstraintsPda");
+        expectSigilError(err.toString(), "InvalidConstraintsPda");
       }
     });
 
@@ -598,7 +598,7 @@ describe("instruction-constraints", () => {
         sendVersionedTx(svm, [validateIx, finalizeIx], agent);
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "InvalidConstraintsPda");
+        expectSigilError(err.toString(), "InvalidConstraintsPda");
       }
     });
   });
@@ -645,7 +645,7 @@ describe("instruction-constraints", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "InvalidConstraintConfig");
+        expectSigilError(err.toString(), "InvalidConstraintConfig");
       }
     });
 
@@ -681,7 +681,7 @@ describe("instruction-constraints", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "InvalidConstraintConfig");
+        expectSigilError(err.toString(), "InvalidConstraintConfig");
       }
     });
 
@@ -716,7 +716,7 @@ describe("instruction-constraints", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "InvalidConstraintConfig");
+        expectSigilError(err.toString(), "InvalidConstraintConfig");
       }
     });
 
@@ -914,7 +914,7 @@ describe("instruction-constraints", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "TimelockActive");
+        expectSigilError(err.toString(), "TimelockActive");
       }
     });
 
@@ -931,7 +931,7 @@ describe("instruction-constraints", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "TimelockActive");
+        expectSigilError(err.toString(), "TimelockActive");
       }
     });
 
@@ -978,7 +978,7 @@ describe("instruction-constraints", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "TimelockNotExpired");
+        expectSigilError(err.toString(), "TimelockNotExpired");
       }
 
       // Advance time past timelock
@@ -1075,7 +1075,7 @@ describe("instruction-constraints", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "NoTimelockConfigured");
+        expectSigilError(err.toString(), "NoTimelockConfigured");
       }
     });
   });
@@ -1511,7 +1511,7 @@ describe("instruction-constraints", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "InvalidConstraintConfig");
+        expectSigilError(err.toString(), "InvalidConstraintConfig");
       }
     });
 
@@ -1538,7 +1538,7 @@ describe("instruction-constraints", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "InvalidConstraintConfig");
+        expectSigilError(err.toString(), "InvalidConstraintConfig");
       }
     });
 
@@ -2071,8 +2071,8 @@ describe("instruction-constraints", () => {
   // Audit remediation: critical security paths (C-4, C-7, H-5)
   // =======================================================================
   describe("audit remediation: constraint enforcement & timelock edge cases", () => {
-    // Separate vault (protocolMode=0) with phalnx program as mock "DeFi program"
-    // (phalnx is deployed in LiteSVM, unlike random keypair program IDs)
+    // Separate vault (protocolMode=0) with sigil program as mock "DeFi program"
+    // (sigil is deployed in LiteSVM, unlike random keypair program IDs)
     const cvVaultId = new BN(450);
     let cvVault: PublicKey;
     let cvPolicy: PublicKey;
@@ -2245,7 +2245,7 @@ describe("instruction-constraints", () => {
 
     // C-4: ConstraintViolated via composed TX
     it("ConstraintViolated when intermediate ix data mismatches constraint (C-4)", async () => {
-      // Create constraints requiring data[0]==0xAA for the phalnx program
+      // Create constraints requiring data[0]==0xAA for the sigil program
       await program.methods
         .createInstructionConstraints(
           [
@@ -2268,7 +2268,7 @@ describe("instruction-constraints", () => {
         } as any)
         .rpc();
 
-      // Intermediate ix targets phalnx program with data[0]=0xBB (violates Eq 0xAA)
+      // Intermediate ix targets sigil program with data[0]=0xBB (violates Eq 0xAA)
       const mockDeFiIx = new TransactionInstruction({
         programId: program.programId,
         keys: [],
@@ -2286,7 +2286,7 @@ describe("instruction-constraints", () => {
         sendVersionedTx(svm, [validateIx, mockDeFiIx, finalizeIx], cvAgent);
         expect.fail("Should have thrown ConstraintViolated");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "ConstraintViolated");
+        expectSigilError(err.toString(), "ConstraintViolated");
       }
 
       // Clean up: close constraints for next test
@@ -2305,7 +2305,7 @@ describe("instruction-constraints", () => {
     // P0 Finding 8: strict_mode enforcement — previously skipped, now enabled
     it("UnconstrainedProgramBlocked when strict_mode=true and unknown program (C-7)", async () => {
       // Create strict_mode=true constraints only for jupiterProgramId
-      // The intermediate ix targets phalnx program (not in constraints) → blocked
+      // The intermediate ix targets sigil program (not in constraints) → blocked
       await program.methods
         .createInstructionConstraints(
           [
@@ -2328,7 +2328,7 @@ describe("instruction-constraints", () => {
         } as any)
         .rpc();
 
-      // Intermediate ix targets phalnx program (not in constraints → strict blocks it)
+      // Intermediate ix targets sigil program (not in constraints → strict blocks it)
       const mockDeFiIx = new TransactionInstruction({
         programId: program.programId,
         keys: [],
@@ -2346,7 +2346,7 @@ describe("instruction-constraints", () => {
         sendVersionedTx(svm, [validateIx, mockDeFiIx, finalizeIx], cvAgent);
         expect.fail("Should have thrown UnconstrainedProgramBlocked");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "UnconstrainedProgramBlocked");
+        expectSigilError(err.toString(), "UnconstrainedProgramBlocked");
       }
 
       // Clean up

@@ -2,8 +2,8 @@ import { expect } from "chai";
 import {
   ON_CHAIN_ERROR_MAP,
   toAgentError,
-  wrapToAgentError,
-  PhalnxSdkError,
+  toSigilAgentError,
+  SigilSdkError,
   protocolEscalationError,
   parseOnChainErrorCode,
   isAgentError,
@@ -349,14 +349,14 @@ describe("agent-errors", () => {
     });
   });
 
-  // ─── wrapToAgentError ────────────────────────────────────────────────────
+  // ─── toSigilAgentError ────────────────────────────────────────────────────
 
-  // ─── wrapToAgentError — tests all 11 SDK_ERROR_PATTERNS ──────────────────
+  // ─── toSigilAgentError — tests all 11 SDK_ERROR_PATTERNS ──────────────────
 
-  describe("wrapToAgentError", () => {
+  describe("toSigilAgentError", () => {
     // Pattern 1: Vault not active
     it("pattern 1: vault-not-active → RESOURCE_NOT_FOUND with recovery actions", () => {
-      const result = wrapToAgentError(new Error("Vault is not active (status: Frozen)"));
+      const result = toSigilAgentError(new Error("Vault is not active (status: Frozen)"));
       expect(result.category).to.equal("RESOURCE_NOT_FOUND");
       expect(result.code).to.equal("SDK_RESOURCE_NOT_FOUND");
       expect(result.retryable).to.equal(false);
@@ -366,42 +366,42 @@ describe("agent-errors", () => {
 
     // Pattern 2: Agent not registered
     it("pattern 2: agent-not-registered → PERMISSION", () => {
-      const result = wrapToAgentError(new Error("Agent abc123 is not registered in vault xyz"));
+      const result = toSigilAgentError(new Error("Agent abc123 is not registered in vault xyz"));
       expect(result.category).to.equal("PERMISSION");
       expect(result.recovery_actions[0].action).to.equal("register_agent");
     });
 
     // Pattern 3: Agent paused
     it("pattern 3: agent-paused → PERMISSION", () => {
-      const result = wrapToAgentError(new Error("Agent abc123 is paused in vault xyz"));
+      const result = toSigilAgentError(new Error("Agent abc123 is paused in vault xyz"));
       expect(result.category).to.equal("PERMISSION");
       expect(result.recovery_actions[0].action).to.equal("unpause_agent");
     });
 
     // Pattern 4: Lacks permission
     it("pattern 4: lacks-permission → PERMISSION", () => {
-      const result = wrapToAgentError(new Error('Agent lacks permission for action "openPosition"'));
+      const result = toSigilAgentError(new Error('Agent lacks permission for action "openPosition"'));
       expect(result.category).to.equal("PERMISSION");
       expect(result.recovery_actions[0].action).to.equal("update_permissions");
     });
 
     // Pattern 5: Protocol not allowed
     it("pattern 5: protocol-not-allowed → PROTOCOL_NOT_SUPPORTED", () => {
-      const result = wrapToAgentError(new Error("Protocol JUP6Lk is not allowed by vault policy"));
+      const result = toSigilAgentError(new Error("Protocol JUP6Lk is not allowed by vault policy"));
       expect(result.category).to.equal("PROTOCOL_NOT_SUPPORTED");
       expect(result.recovery_actions[0].action).to.equal("add_protocol");
     });
 
     // Pattern 6: Transaction size
     it("pattern 6: tx-size-exceeds → INPUT_VALIDATION with ALT advice", () => {
-      const result = wrapToAgentError(new Error("Transaction size 1500 bytes exceeds 1232 byte limit"));
+      const result = toSigilAgentError(new Error("Transaction size 1500 bytes exceeds 1232 byte limit"));
       expect(result.category).to.equal("INPUT_VALIDATION");
       expect(result.recovery_actions[0].action).to.equal("add_alts");
     });
 
     // Pattern 7: Position limit (retryable)
     it("pattern 7: position-limit → POLICY_VIOLATION, retryable with close_position", () => {
-      const result = wrapToAgentError(new Error("Position limit reached: 5/5"));
+      const result = toSigilAgentError(new Error("Position limit reached: 5/5"));
       expect(result.category).to.equal("POLICY_VIOLATION");
       expect(result.retryable).to.equal(true);
       expect(result.recovery_actions[0].action).to.equal("close_position");
@@ -409,38 +409,38 @@ describe("agent-errors", () => {
 
     // Pattern 8: Spending action amount
     it("pattern 8: spending-amount-zero → INPUT_VALIDATION", () => {
-      const result = wrapToAgentError(new Error('Spending action "swap" requires amount > 0'));
+      const result = toSigilAgentError(new Error('Spending action "swap" requires amount > 0'));
       expect(result.category).to.equal("INPUT_VALIDATION");
       expect(result.recovery_actions[0].action).to.equal("fix_amount");
     });
 
     // Pattern 9: Non-spending amount
     it("pattern 9: non-spending-amount → INPUT_VALIDATION", () => {
-      const result = wrapToAgentError(new Error('Non-spending action "closePosition" requires amount === 0'));
+      const result = toSigilAgentError(new Error('Non-spending action "closePosition" requires amount === 0'));
       expect(result.category).to.equal("INPUT_VALIDATION");
       expect(result.recovery_actions[0].action).to.equal("set_zero_amount");
     });
 
     // Pattern 10: No target protocol
     it("pattern 10: no-target-protocol → INPUT_VALIDATION", () => {
-      const result = wrapToAgentError(new Error("No target protocol: provide targetProtocol or include DeFi instructions"));
+      const result = toSigilAgentError(new Error("No target protocol: provide targetProtocol or include DeFi instructions"));
       expect(result.category).to.equal("INPUT_VALIDATION");
       expect(result.recovery_actions[0].action).to.equal("add_instructions");
     });
 
     // Pattern 11: Escrow action
     it("pattern 11: escrow-action → INPUT_VALIDATION", () => {
-      const result = wrapToAgentError(new Error('Escrow action "createEscrow" uses standalone instructions'));
+      const result = toSigilAgentError(new Error('Escrow action "createEscrow" uses standalone instructions'));
       expect(result.category).to.equal("INPUT_VALIDATION");
       expect(result.recovery_actions[0].action).to.equal("use_escrow_api");
     });
 
-    // PhalnxSdkError contract
-    it("PhalnxSdkError has all 7 AgentError fields with correct values", () => {
-      const result = wrapToAgentError(new Error("Position limit reached: 5/5"));
+    // SigilSdkError contract
+    it("SigilSdkError has all 7 AgentError fields with correct values", () => {
+      const result = toSigilAgentError(new Error("Position limit reached: 5/5"));
       expect(result).to.be.instanceOf(Error);
-      expect(result).to.be.instanceOf(PhalnxSdkError);
-      expect(result.name).to.equal("PhalnxSdkError");
+      expect(result).to.be.instanceOf(SigilSdkError);
+      expect(result.name).to.equal("SigilSdkError");
       expect(result.code).to.equal("SDK_POLICY_VIOLATION");
       expect(result.message).to.equal("Position limit reached: 5/5");
       expect(result.category).to.equal("POLICY_VIOLATION");
@@ -451,7 +451,7 @@ describe("agent-errors", () => {
 
     // Fallback
     it("falls back to UNKNOWN/FATAL for unrecognized errors", () => {
-      const result = wrapToAgentError(new Error("something completely unexpected"));
+      const result = toSigilAgentError(new Error("something completely unexpected"));
       expect(result.code).to.equal("UNKNOWN");
       expect(result.category).to.equal("FATAL");
       expect(result.retryable).to.equal(false);

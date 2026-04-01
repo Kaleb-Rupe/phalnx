@@ -1,6 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { Phalnx } from "../target/types/phalnx";
+import { Sigil } from "../target/types/sigil";
 import {
   Keypair,
   PublicKey,
@@ -34,17 +34,17 @@ import {
   VersionedTxResult,
   recordCU,
   printCUSummary,
-  expectPhalnxError,
+  expectSigilError,
   TestEnv,
   LiteSVM,
 } from "./helpers/litesvm-setup";
 
 const FULL_PERMISSIONS = new BN((1n << 21n) - 1n);
 
-describe("phalnx", () => {
+describe("sigil", () => {
   let env: TestEnv;
   let svm: LiteSVM;
-  let program: Program<Phalnx>;
+  let program: Program<Sigil>;
 
   // Test actors
   let owner: anchor.Wallet;
@@ -304,7 +304,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "InvalidProtocolMode", "Error");
+        expectSigilError(err.toString(), "InvalidProtocolMode", "Error");
       }
     });
   });
@@ -369,7 +369,7 @@ describe("phalnx", () => {
         expect.fail("Should have thrown");
       } catch (err: any) {
         // Anchor's PDA re-derivation fails before the handler runs
-        expectPhalnxError(err.toString(), "ConstraintSeeds", "has_one");
+        expectSigilError(err.toString(), "ConstraintSeeds", "has_one");
       }
     });
   });
@@ -411,7 +411,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "AgentAlreadyRegistered");
+        expectSigilError(err.toString(), "AgentAlreadyRegistered");
       }
     });
 
@@ -479,7 +479,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "ConstraintSeeds", "has_one");
+        expectSigilError(err.toString(), "ConstraintSeeds", "has_one");
       }
     });
   });
@@ -547,7 +547,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "ConstraintSeeds", "has_one");
+        expectSigilError(err.toString(), "ConstraintSeeds", "has_one");
       }
     });
 
@@ -582,7 +582,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "TooManyAllowedProtocols");
+        expectSigilError(err.toString(), "TooManyAllowedProtocols");
       }
     });
   });
@@ -685,7 +685,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "UnauthorizedAgent");
+        expectSigilError(err.toString(), "UnauthorizedAgent");
       }
     });
 
@@ -702,7 +702,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "ConstraintSeeds", "has_one");
+        expectSigilError(err.toString(), "ConstraintSeeds", "has_one");
       }
     });
   });
@@ -805,7 +805,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "VaultNotFrozen");
+        expectSigilError(err.toString(), "VaultNotFrozen");
       }
     });
 
@@ -827,7 +827,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "NoAgentRegistered");
+        expectSigilError(err.toString(), "NoAgentRegistered");
       }
 
       // Clean up: reactivate with new agent for subsequent tests
@@ -905,7 +905,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "InsufficientBalance");
+        expectSigilError(err.toString(), "InsufficientBalance");
       }
     });
 
@@ -925,7 +925,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "ConstraintSeeds", "has_one");
+        expectSigilError(err.toString(), "ConstraintSeeds", "has_one");
       }
     });
   });
@@ -1015,7 +1015,7 @@ describe("phalnx", () => {
         await program.account.sessionAuthority.fetch(sessionPda);
         expect.fail("Session should have been closed");
       } catch (err: any) {
-        expectPhalnxError(
+        expectSigilError(
           err.toString(),
           "Account does not exist",
           "Could not find",
@@ -1214,7 +1214,7 @@ describe("phalnx", () => {
         expect.fail("Should have thrown");
       } catch (err: any) {
         // Non-stablecoin input requires output_stablecoin_account which is null
-        expectPhalnxError(err.toString(), "InvalidTokenAccount");
+        expectSigilError(err.toString(), "InvalidTokenAccount");
       }
     });
 
@@ -1249,7 +1249,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "ProtocolNotAllowed");
+        expectSigilError(err.toString(), "ProtocolNotAllowed");
       }
     });
 
@@ -1285,7 +1285,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "MissingFinalizeInstruction");
+        expectSigilError(err.toString(), "MissingFinalizeInstruction");
       }
     });
 
@@ -1322,7 +1322,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "MissingFinalizeInstruction");
+        expectSigilError(err.toString(), "MissingFinalizeInstruction");
       }
     });
 
@@ -1369,7 +1369,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "UnauthorizedAgent");
+        expectSigilError(err.toString(), "UnauthorizedAgent");
       }
     });
 
@@ -1451,7 +1451,7 @@ describe("phalnx", () => {
       } catch (err: any) {
         // revoke_agent clears the agent key, so is_agent() constraint fails
         // before the handler's VaultNotActive check can run.
-        expectPhalnxError(err.toString(), "UnauthorizedAgent", "ConstraintRaw");
+        expectSigilError(err.toString(), "UnauthorizedAgent", "ConstraintRaw");
       }
     });
   });
@@ -1609,7 +1609,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "ConstraintSeeds", "has_one");
+        expectSigilError(err.toString(), "ConstraintSeeds", "has_one");
       }
     });
   });
@@ -1729,7 +1729,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "DeveloperFeeTooHigh");
+        expectSigilError(err.toString(), "DeveloperFeeTooHigh");
       }
     });
 
@@ -1818,7 +1818,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "DeveloperFeeTooHigh");
+        expectSigilError(err.toString(), "DeveloperFeeTooHigh");
       }
     });
 
@@ -2336,7 +2336,7 @@ describe("phalnx", () => {
         await program.account.sessionAuthority.fetch(lifecycleSessionPda);
         expect.fail("Session should have been closed");
       } catch (err: any) {
-        expectPhalnxError(
+        expectSigilError(
           err.toString(),
           "Account does not exist",
           "Could not find",
@@ -2398,7 +2398,7 @@ describe("phalnx", () => {
         sendVersionedTx(svm, [validateIx, finalizeIx], lifecycleAgent);
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "InvalidSession");
+        expectSigilError(err.toString(), "InvalidSession");
       }
     });
 
@@ -2521,7 +2521,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "AgentIsOwner");
+        expectSigilError(err.toString(), "AgentIsOwner");
       }
     });
 
@@ -2614,7 +2614,7 @@ describe("phalnx", () => {
         expect.fail("Should have thrown");
       } catch (err: any) {
         // Anchor's is_agent() constraint fires before the handler runs
-        expectPhalnxError(err.toString(), "UnauthorizedAgent", "ConstraintRaw");
+        expectSigilError(err.toString(), "UnauthorizedAgent", "ConstraintRaw");
       }
     });
   });
@@ -2803,7 +2803,7 @@ describe("phalnx", () => {
         // Vault PDA was closed — Anchor can't deserialize a zeroed/missing account.
         // LiteSVM proxy returns "Account does not exist"; Anchor provider
         // returns "Could not find" or "AccountNotInitialized".
-        expectPhalnxError(
+        expectSigilError(
           err.toString(),
           "AccountNotInitialized",
           "does not exist",
@@ -2927,7 +2927,7 @@ describe("phalnx", () => {
         // Vault PDA was closed — Anchor can't deserialize it.
         // LiteSVM returns "does not exist"; Anchor returns "Could not find"
         // or "AccountNotInitialized".
-        expectPhalnxError(
+        expectSigilError(
           err.toString(),
           "AccountNotInitialized",
           "does not exist",
@@ -3478,7 +3478,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "TimelockActive");
+        expectSigilError(err.toString(), "TimelockActive");
       }
     });
 
@@ -3532,7 +3532,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "TimelockNotExpired");
+        expectSigilError(err.toString(), "TimelockNotExpired");
       }
     });
 
@@ -3560,7 +3560,7 @@ describe("phalnx", () => {
         await program.account.pendingPolicyUpdate.fetch(tlPendingPda);
         expect.fail("PendingPolicyUpdate should have been closed");
       } catch (err: any) {
-        expectPhalnxError(
+        expectSigilError(
           err.toString(),
           "Account does not exist",
           "Could not find",
@@ -3772,7 +3772,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "NoTimelockConfigured");
+        expectSigilError(err.toString(), "NoTimelockConfigured");
       }
     });
 
@@ -4095,7 +4095,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "DestinationNotAllowed");
+        expectSigilError(err.toString(), "DestinationNotAllowed");
       }
     });
 
@@ -4253,7 +4253,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "TooManyDestinations");
+        expectSigilError(err.toString(), "TooManyDestinations");
       }
     });
 
@@ -4303,7 +4303,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "SpendingCapExceeded");
+        expectSigilError(err.toString(), "SpendingCapExceeded");
       }
     });
 
@@ -4329,7 +4329,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "TransactionTooLarge");
+        expectSigilError(err.toString(), "TransactionTooLarge");
       }
     });
 
@@ -4710,7 +4710,7 @@ describe("phalnx", () => {
         sendVersionedTx(svm, [validateIx, finalizeIx], agent);
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "InsufficientPermissions");
+        expectSigilError(err.toString(), "InsufficientPermissions");
       }
     });
 
@@ -4785,7 +4785,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "MaxAgentsReached");
+        expectSigilError(err.toString(), "MaxAgentsReached");
       }
     });
 
@@ -4869,7 +4869,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "InvalidPermissions");
+        expectSigilError(err.toString(), "InvalidPermissions");
       }
     });
   });
@@ -5065,7 +5065,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have exceeded per-agent spend limit");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "AgentSpendLimitExceeded");
+        expectSigilError(err.toString(), "AgentSpendLimitExceeded");
       }
 
       // But spending $150 (total = $950 < $1000) should succeed
@@ -5331,7 +5331,7 @@ describe("phalnx", () => {
         composeSpend(protocolA, new BN(60_000_000));
         expect.fail("Should have thrown ProtocolCapExceeded");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "ProtocolCapExceeded");
+        expectSigilError(err.toString(), "ProtocolCapExceeded");
       }
     });
 
@@ -5495,7 +5495,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "ProtocolCapsMismatch");
+        expectSigilError(err.toString(), "ProtocolCapsMismatch");
       }
     });
 
@@ -5552,7 +5552,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "ProtocolCapsMismatch");
+        expectSigilError(err.toString(), "ProtocolCapsMismatch");
       }
     });
   });
@@ -5678,7 +5678,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "VaultNotActive");
+        expectSigilError(err.toString(), "VaultNotActive");
       }
     });
 
@@ -5694,7 +5694,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "ConstraintSeeds", "has_one");
+        expectSigilError(err.toString(), "ConstraintSeeds", "has_one");
       }
     });
 
@@ -5894,7 +5894,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "AgentAlreadyPaused");
+        expectSigilError(err.toString(), "AgentAlreadyPaused");
       }
     });
 
@@ -5910,7 +5910,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "UnauthorizedAgent");
+        expectSigilError(err.toString(), "UnauthorizedAgent");
       }
     });
 
@@ -5926,7 +5926,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "ConstraintSeeds", "has_one");
+        expectSigilError(err.toString(), "ConstraintSeeds", "has_one");
       }
     });
 
@@ -6003,7 +6003,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "AgentPaused");
+        expectSigilError(err.toString(), "AgentPaused");
       }
     });
 
@@ -6073,7 +6073,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "AgentNotPaused");
+        expectSigilError(err.toString(), "AgentNotPaused");
       }
     });
 
@@ -6098,7 +6098,7 @@ describe("phalnx", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectPhalnxError(err.toString(), "ConstraintSeeds", "has_one");
+        expectSigilError(err.toString(), "ConstraintSeeds", "has_one");
       }
 
       // Clean up: unpause

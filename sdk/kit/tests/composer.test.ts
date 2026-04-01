@@ -5,7 +5,7 @@ import type {
   AddressesByLookupTableAddress,
 } from "@solana/kit";
 import {
-  composePhalnxTransaction,
+  composeSigilTransaction,
   validateTransactionSize,
   measureTransactionSize,
 } from "../src/composer.js";
@@ -40,51 +40,51 @@ function baseParams(
 }
 
 describe("composer", () => {
-  describe("composePhalnxTransaction", () => {
+  describe("composeSigilTransaction", () => {
     // P2 #21: Verify transaction has actual content, not just existence
     it("returns a compiled transaction with non-empty messageBytes", () => {
-      const compiled = composePhalnxTransaction(baseParams());
+      const compiled = composeSigilTransaction(baseParams());
       expect(compiled).to.have.property("messageBytes");
       expect(compiled.messageBytes).to.be.instanceOf(Uint8Array);
       expect(compiled.messageBytes.length).to.be.greaterThan(0);
     });
 
     it("includes compute budget — transaction has signatures array", () => {
-      const compiled = composePhalnxTransaction(baseParams());
+      const compiled = composeSigilTransaction(baseParams());
       expect(compiled).to.have.property("signatures");
       expect(compiled.messageBytes.length).to.be.greaterThan(0);
     });
 
     it("no priority fee ix when 0", () => {
-      const compiled = composePhalnxTransaction(
+      const compiled = composeSigilTransaction(
         baseParams({ priorityFeeMicroLamports: 0 }),
       );
       expect(compiled).to.exist;
     });
 
     it("no priority fee ix when undefined", () => {
-      const compiled = composePhalnxTransaction(
+      const compiled = composeSigilTransaction(
         baseParams({ priorityFeeMicroLamports: undefined }),
       );
       expect(compiled).to.exist;
     });
 
     it("priority fee ix added when > 0", () => {
-      const compiled = composePhalnxTransaction(
+      const compiled = composeSigilTransaction(
         baseParams({ priorityFeeMicroLamports: 10_000 }),
       );
       expect(compiled).to.exist;
     });
 
     it("custom CU override is used", () => {
-      const compiled = composePhalnxTransaction(
+      const compiled = composeSigilTransaction(
         baseParams({ computeUnits: 1_400_000 }),
       );
       expect(compiled).to.exist;
     });
 
     it("handles multiple DeFi instructions", () => {
-      const compiled = composePhalnxTransaction(
+      const compiled = composeSigilTransaction(
         baseParams({
           defiInstructions: [mockIx(), mockIx(), mockIx()],
         }),
@@ -93,7 +93,7 @@ describe("composer", () => {
     });
 
     it("handles empty DeFi instructions array", () => {
-      const compiled = composePhalnxTransaction(
+      const compiled = composeSigilTransaction(
         baseParams({ defiInstructions: [] }),
       );
       expect(compiled).to.exist;
@@ -102,14 +102,14 @@ describe("composer", () => {
 
   describe("validateTransactionSize", () => {
     it("valid tx returns base64 string", () => {
-      const compiled = composePhalnxTransaction(baseParams());
+      const compiled = composeSigilTransaction(baseParams());
       const base64 = validateTransactionSize(compiled);
       expect(base64).to.be.a("string");
       expect(base64.length).to.be.greaterThan(0);
     });
 
     it("small transaction passes validation", () => {
-      const compiled = composePhalnxTransaction(
+      const compiled = composeSigilTransaction(
         baseParams({ defiInstructions: [] }),
       );
       expect(() => validateTransactionSize(compiled)).to.not.throw();
@@ -135,7 +135,7 @@ describe("composer", () => {
         [ALT_ADDR]: [altAccount],
       };
 
-      const compiled = composePhalnxTransaction(
+      const compiled = composeSigilTransaction(
         baseParams({
           defiInstructions: [ixWithAltAccounts],
           addressLookupTables: alts,
@@ -148,7 +148,7 @@ describe("composer", () => {
     });
 
     it("composer without ALTs produces no addressTableLookups", () => {
-      const compiled = composePhalnxTransaction(baseParams());
+      const compiled = composeSigilTransaction(baseParams());
       // Verify the compiled transaction exists and is valid
       const base64 = validateTransactionSize(compiled);
       expect(base64).to.be.a("string");
@@ -158,7 +158,7 @@ describe("composer", () => {
   describe("Instruction ordering", () => {
     it("transaction compiles with correct instruction count (no priority fee)", () => {
       // Without priority fee: [computeBudget, validate, defi, finalize] = 4 ix
-      const compiled = composePhalnxTransaction(baseParams());
+      const compiled = composeSigilTransaction(baseParams());
       // We can verify by checking the base64 output is valid
       const base64 = validateTransactionSize(compiled);
       expect(base64).to.be.a("string");
@@ -166,7 +166,7 @@ describe("composer", () => {
 
     it("transaction compiles with correct instruction count (with priority fee)", () => {
       // With priority fee: [computeBudget, priorityFee, validate, defi, finalize] = 5 ix
-      const compiled = composePhalnxTransaction(
+      const compiled = composeSigilTransaction(
         baseParams({ priorityFeeMicroLamports: 5_000 }),
       );
       const base64 = validateTransactionSize(compiled);

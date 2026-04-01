@@ -35,7 +35,7 @@ import {
 import bs58 from "bs58";
 import { SuccessfulTxSimulationResponse } from "@coral-xyz/anchor/dist/cjs/utils/rpc";
 import * as path from "path";
-import { Phalnx } from "../../target/types/phalnx";
+import { Sigil } from "../../target/types/sigil";
 import {
   TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -51,7 +51,7 @@ const PROGRAM_ID = new PublicKey(
 );
 const PROGRAM_SO_PATH = path.resolve(
   __dirname,
-  "../../target/deploy/phalnx.so",
+  "../../target/deploy/sigil.so",
 );
 
 // ─── Connection proxy ────────────────────────────────────────────────────────
@@ -270,7 +270,7 @@ export class LiteSVMProvider implements Provider {
 export interface TestEnv {
   svm: LiteSVM;
   provider: LiteSVMProvider;
-  program: Program<Phalnx>;
+  program: Program<Sigil>;
   connection: Connection;
 }
 
@@ -300,8 +300,8 @@ export function createTestEnv(): TestEnv {
   const provider = new LiteSVMProvider(svm);
   anchor.setProvider(provider as unknown as Provider);
 
-  const program = new Program<Phalnx>(
-    require("../../target/idl/phalnx.json"),
+  const program = new Program<Sigil>(
+    require("../../target/idl/sigil.json"),
     provider as unknown as Provider,
   );
 
@@ -656,13 +656,13 @@ export function resetCUMeasurements(): void {
 // ─── Error Code Map (shared with surfpool-setup.ts) ─────────────────────────
 
 /**
- * Phalnx custom error codes (6000-6070) mapped to Anchor error names.
- * Source of truth: programs/phalnx/src/errors.rs
+ * Sigil custom error codes (6000-6070) mapped to Anchor error names.
+ * Source of truth: programs/sigil/src/errors.rs
  *
- * Used by expectPhalnxError() for robust error matching that works
+ * Used by expectSigilError() for robust error matching that works
  * regardless of whether the error message contains the name or code.
  */
-const PHALNX_ERROR_CODES: Record<string, number> = {
+const SIGIL_ERROR_CODES: Record<string, number> = {
   VaultNotActive: 6000,
   UnauthorizedAgent: 6001,
   UnauthorizedOwner: 6002,
@@ -737,26 +737,26 @@ const PHALNX_ERROR_CODES: Record<string, number> = {
 };
 
 /**
- * Assert that an error matches a Phalnx error by name OR code.
+ * Assert that an error matches a Sigil error by name OR code.
  * More robust than `.includes("ErrorName")` because it also checks the numeric code.
  *
  * @param errString - The error.toString() output
  * @param errorNames - One or more expected error names (matches if ANY appear)
  */
-export function expectPhalnxError(
+export function expectSigilError(
   errString: string,
   ...errorNames: string[]
 ): void {
   for (const name of errorNames) {
     if (errString.includes(name)) return; // Name match
-    const code = PHALNX_ERROR_CODES[name];
+    const code = SIGIL_ERROR_CODES[name];
     if (code !== undefined && errString.includes(String(code))) return; // Code match
   }
   const expected = errorNames
-    .map((n) => `${n} (${PHALNX_ERROR_CODES[n] ?? "?"})`)
+    .map((n) => `${n} (${SIGIL_ERROR_CODES[n] ?? "?"})`)
     .join(" | ");
   throw new Error(
-    `Expected Phalnx error [${expected}] but got: ${errString.slice(0, 200)}`,
+    `Expected Sigil error [${expected}] but got: ${errString.slice(0, 200)}`,
   );
 }
 

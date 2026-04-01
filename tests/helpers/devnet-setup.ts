@@ -7,7 +7,7 @@
  */
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { Phalnx } from "../../target/types/phalnx";
+import { Sigil } from "../../target/types/sigil";
 import {
   Keypair,
   PublicKey,
@@ -31,7 +31,7 @@ import BN from "bn.js";
 
 // ─── Test-controlled stablecoin mint keypairs ────────────────────────────────
 // These pubkeys MUST match the Rust USDC_MINT and USDT_MINT devnet constants
-// in programs/phalnx/src/state/mod.rs (and DEVNET_USDC_MINT/DEVNET_USDT_MINT
+// in programs/sigil/src/state/mod.rs (and DEVNET_USDC_MINT/DEVNET_USDT_MINT
 // in tests/helpers/litesvm-setup.ts).
 // Private keys committed here are devnet-only — no security concern.
 
@@ -121,7 +121,7 @@ function createThrottledFetch(): typeof fetch {
   } as typeof fetch;
 }
 
-// ─── Constants (mirrors programs/phalnx/src/state/mod.rs) ─────────────
+// ─── Constants (mirrors programs/sigil/src/state/mod.rs) ─────────────
 
 export const PROTOCOL_TREASURY = new PublicKey(
   "ASHie1dFTnDSnrHMPGmniJhMgfJVGPm3rAaEPnrtWDiT",
@@ -211,7 +211,7 @@ export function getDevnetProvider() {
     commitment: "confirmed",
   });
   anchor.setProvider(provider);
-  const program = anchor.workspace.Phalnx as Program<Phalnx>;
+  const program = anchor.workspace.Sigil as Program<Sigil>;
   const owner = provider.wallet as anchor.Wallet;
   return { provider, program, connection, owner };
 }
@@ -219,7 +219,7 @@ export function getDevnetProvider() {
 // ─── Full vault factory ─────────────────────────────────────────────────────
 
 export interface CreateFullVaultOpts {
-  program: Program<Phalnx>;
+  program: Program<Sigil>;
   connection: Connection;
   owner: anchor.Wallet;
   agent: Keypair;
@@ -403,7 +403,7 @@ export async function createFullVault(
 // ─── Authorize + Finalize helper (composed into single versioned TX) ────────
 
 export interface AuthorizeOpts {
-  program: Program<Phalnx>;
+  program: Program<Sigil>;
   connection: Connection;
   agent: Keypair;
   vaultPda: PublicKey;
@@ -482,7 +482,7 @@ export async function buildAuthorizeIx(opts: AuthorizeOpts) {
 }
 
 export interface FinalizeOpts {
-  program: Program<Phalnx>;
+  program: Program<Sigil>;
   payer: Keypair;
   vaultPda: PublicKey;
   policyPda: PublicKey;

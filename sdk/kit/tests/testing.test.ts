@@ -1,8 +1,8 @@
 /**
- * Tests for @phalnx/kit/testing utilities.
+ * Tests for @usesigil/kit/testing utilities.
  *
  * Validates mock RPC, mock agent, and mock vault state factories
- * work correctly and integrate with wrap().
+ * work correctly and integrate with seal().
  */
 
 import { expect } from "chai";
@@ -20,10 +20,10 @@ import {
   type MockRpcOverrides,
   type MockVaultStateOverrides,
 } from "../src/testing/index.js";
-import { wrap } from "../src/wrap.js";
+import { seal } from "../src/seal.js";
 import { FULL_PERMISSIONS } from "../src/types.js";
 
-// ─── Known program addresses for wrap() test ────────────────────────────────
+// ─── Known program addresses for seal() test ────────────────────────────────
 
 const JUPITER = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" as Address;
 const USDC_DEVNET = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU" as Address;
@@ -126,7 +126,7 @@ describe("testing utilities", () => {
       expect(state.vault.totalWithdrawnUsd).to.equal(3_000_000_000n);
     });
 
-    it("result accepted by wrap() — returns WrapResult", async () => {
+    it("result accepted by seal() — returns SealResult", async () => {
       const vault = "11111111111111111111111111111112" as Address;
       const agent = createMockAgent(
         "11111111111111111111111111111113" as Address,
@@ -136,7 +136,7 @@ describe("testing utilities", () => {
         agent: agent.address,
       });
 
-      const result = await wrap({
+      const result = await seal({
         vault,
         agent,
         instructions: [

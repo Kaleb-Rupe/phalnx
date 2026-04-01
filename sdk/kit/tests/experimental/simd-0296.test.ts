@@ -1,5 +1,5 @@
 /**
- * SIMD-0296 readiness tests — validates Phalnx security invariants
+ * SIMD-0296 readiness tests — validates Sigil security invariants
  * hold at the proposed 4,096-byte transaction size limit.
  *
  * These tests verify that:
@@ -7,7 +7,7 @@
  * 2. The post-finalize instruction scan pattern catches trailing attacks at expanded sizes
  * 3. The instruction scan loop (max 20 iterations) is sufficient at expanded sizes
  *
- * Excluded from default test run. Run with: pnpm --filter @phalnx/kit test:experimental
+ * Excluded from default test run. Run with: pnpm --filter @usesigil/kit test:experimental
  *
  * @see https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0296-larger-transactions.md
  * @see https://simd-0296.surfnet.dev/
@@ -17,7 +17,7 @@ import { expect } from "chai";
 import type { Address, Instruction } from "@solana/kit";
 import { AccountRole } from "@solana/kit";
 import {
-  composePhalnxTransaction,
+  composeSigilTransaction,
   measureTransactionSize,
   MAX_TX_SIZE,
 } from "../../src/composer.js";
@@ -91,10 +91,10 @@ describe("SIMD-0296: Larger Transactions (4,096 bytes)", () => {
     // Uses large data payloads rather than many unique accounts to push over the limit.
     const bigDefiIx = makeBulkInstruction(JUPITER, 5, 600); // 600 bytes of data
 
-    const PHALNX_PROGRAM = "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL" as Address;
+    const SIGIL_PROGRAM = "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL" as Address;
 
     const validateIx: Instruction = {
-      programAddress: PHALNX_PROGRAM,
+      programAddress: SIGIL_PROGRAM,
       accounts: Array.from({ length: 5 }, (_, i) => ({
         address: addrAt(i),
         role: i < 3 ? AccountRole.WRITABLE : AccountRole.READONLY,
@@ -103,7 +103,7 @@ describe("SIMD-0296: Larger Transactions (4,096 bytes)", () => {
     };
 
     const finalizeIx: Instruction = {
-      programAddress: PHALNX_PROGRAM,
+      programAddress: SIGIL_PROGRAM,
       accounts: Array.from({ length: 5 }, (_, i) => ({
         address: addrAt(i + 5),
         role: i < 2 ? AccountRole.WRITABLE : AccountRole.READONLY,
@@ -111,7 +111,7 @@ describe("SIMD-0296: Larger Transactions (4,096 bytes)", () => {
       data: new Uint8Array(9), // finalize instruction data
     };
 
-    const compiledTx = composePhalnxTransaction({
+    const compiledTx = composeSigilTransaction({
       feePayer: AGENT_ADDR,
       validateIx,
       defiInstructions: [bigDefiIx],
@@ -135,7 +135,7 @@ describe("SIMD-0296: Larger Transactions (4,096 bytes)", () => {
 
   // NOTE: On-chain scan loop behavior (unbounded vs fixed-20) cannot be tested at the SDK level.
   // The scan runs in the BPF runtime, not in TypeScript. The unbounded loop change is verified
-  // by on-chain LiteSVM tests (tests/phalnx.ts) and documented in:
+  // by on-chain LiteSVM tests (tests/sigil.ts) and documented in:
   //   - finalize_session.rs:491 (post-finalize scan: loop { ... break on Err })
   //   - validate_and_authorize.rs:265 (spending scan: loop { ... break on finalize match })
   //   - validate_and_authorize.rs:379 (non-spending scan: same pattern)
@@ -144,7 +144,7 @@ describe("SIMD-0296: Larger Transactions (4,096 bytes)", () => {
     // Stress test: build a transaction that is well above 1,232 bytes
     // but within the SIMD-0296 4,096-byte limit. This validates the composer
     // handles mid-range transactions correctly (not just marginal overflow).
-    const PHALNX_PROGRAM = "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL" as Address;
+    const SIGIL_PROGRAM = "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL" as Address;
 
     // Three large DeFi instructions (simulating a 3-hop swap)
     const hop1 = makeBulkInstruction(JUPITER, 5, 500);
@@ -152,7 +152,7 @@ describe("SIMD-0296: Larger Transactions (4,096 bytes)", () => {
     const hop3 = makeBulkInstruction(JUPITER, 5, 500);
 
     const validateIx: Instruction = {
-      programAddress: PHALNX_PROGRAM,
+      programAddress: SIGIL_PROGRAM,
       accounts: Array.from({ length: 5 }, (_, i) => ({
         address: addrAt(i),
         role: i < 3 ? AccountRole.WRITABLE : AccountRole.READONLY,
@@ -161,7 +161,7 @@ describe("SIMD-0296: Larger Transactions (4,096 bytes)", () => {
     };
 
     const finalizeIx: Instruction = {
-      programAddress: PHALNX_PROGRAM,
+      programAddress: SIGIL_PROGRAM,
       accounts: Array.from({ length: 5 }, (_, i) => ({
         address: addrAt(i + 5),
         role: i < 2 ? AccountRole.WRITABLE : AccountRole.READONLY,
@@ -169,7 +169,7 @@ describe("SIMD-0296: Larger Transactions (4,096 bytes)", () => {
       data: new Uint8Array(9),
     };
 
-    const compiledTx = composePhalnxTransaction({
+    const compiledTx = composeSigilTransaction({
       feePayer: AGENT_ADDR,
       validateIx,
       defiInstructions: [hop1, hop2, hop3],

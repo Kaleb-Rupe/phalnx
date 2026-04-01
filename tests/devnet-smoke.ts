@@ -9,7 +9,7 @@
  */
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { Phalnx } from "../target/types/phalnx";
+import { Sigil } from "../target/types/sigil";
 import {
   Keypair,
   PublicKey,
