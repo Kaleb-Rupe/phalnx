@@ -1,13 +1,13 @@
-# @phalnx/platform
+# @usesigil/platform
 
-Platform client for Phalnx — request TEE wallet provisioning via Solana Actions endpoints. Zero runtime dependencies.
+Platform client for Sigil — request TEE wallet provisioning via Solana Actions endpoints. Zero runtime dependencies.
 
-`@phalnx/platform` is a lightweight HTTP client that lets AI agents request protected wallet provisioning through Phalnx's Solana Actions (Blinks) API. It generates Action URLs, Blink URLs, submits provision requests, and polls for results.
+`@usesigil/platform` is a lightweight HTTP client that lets AI agents request protected wallet provisioning through Sigil's Solana Actions (Blinks) API. It generates Action URLs, Blink URLs, submits provision requests, and polls for results.
 
 ## Installation
 
 ```bash
-npm install @phalnx/platform
+npm install @usesigil/platform
 ```
 
 Zero runtime dependencies. Uses the native `fetch` API (Node.js 18+).
@@ -15,10 +15,10 @@ Zero runtime dependencies. Uses the native `fetch` API (Node.js 18+).
 ## Quick Start
 
 ```typescript
-import { PhalnxPlatform } from "@phalnx/platform";
+import { SigilPlatform } from "@usesigil/platform";
 
 // 1. Create a platform client
-const platform = new PhalnxPlatform("https://agent-middleware.vercel.app");
+const platform = new SigilPlatform("https://agent-middleware.vercel.app");
 
 // 2. Generate an Action URL for the user to sign
 const actionUrl = platform.getProvisionActionUrl({ dailyCap: 500 });
@@ -40,9 +40,9 @@ console.log(result.agentPubkey); // Agent signing key
 
 ## API Reference
 
-### `new PhalnxPlatform(baseUrl)`
+### `new SigilPlatform(baseUrl)`
 
-Create a platform client pointing to an Phalnx Actions server.
+Create a platform client pointing to an Sigil Actions server.
 
 | Parameter | Type     | Description                                                                 |
 | --------- | -------- | --------------------------------------------------------------------------- |
@@ -145,15 +145,15 @@ interface ActionMetadata {
 
 | Package                                                      | Description                                     |
 | ------------------------------------------------------------ | ----------------------------------------------- |
-| [`@phalnx/kit`](https://www.npmjs.com/package/@phalnx/kit)   | On-chain guardrails — `withVault()` primary API |
-| [`@phalnx/core`](https://www.npmjs.com/package/@phalnx/core) | Pure TypeScript policy engine                   |
+| [`@usesigil/kit`](https://www.npmjs.com/package/@usesigil/kit)   | On-chain guardrails — `withVault()` primary API |
+| [`@usesigil/core`](https://www.npmjs.com/package/@usesigil/core) | Pure TypeScript policy engine                   |
 
 
 ## Support
 
 - X/Twitter: [@MightieMags](https://x.com/MightieMags)
 - Telegram: [MightyMags](https://t.me/MightyMags)
-- Issues: [GitHub Issues](https://github.com/Kaleb-Rupe/phalnx/issues)
+- Issues: [GitHub Issues](https://github.com/Kaleb-Rupe/sigil/issues)
 
 ## License
 

@@ -1,6 +1,6 @@
 import { z } from "zod";
-import type { PhalnxClient } from "@phalnx/kit";
-import { ActionType, resolveToken, toAgentError, toBaseUnits } from "@phalnx/kit";
+import type { SigilClient } from "@usesigil/kit";
+import { ActionType, resolveToken, toAgentError, toBaseUnits } from "@usesigil/kit";
 import { AccountRole, type Address, type Instruction } from "@solana/kit";
 import { toResolvedNetwork } from "../types.js";
 
@@ -26,10 +26,10 @@ const schema = z.object({
     .describe("Slippage tolerance in BPS (default 50 = 0.5%)"),
 });
 
-export function swapAction(client: PhalnxClient, jupiterApiUrl: string) {
+export function swapAction(client: SigilClient, jupiterApiUrl: string) {
   return {
     description:
-      "Execute a Phalnx-secured token swap via Jupiter. Enforces vault spending caps and permissions.",
+      "Execute a Sigil-secured token swap via Jupiter. Enforces vault spending caps and permissions.",
     schema,
     handler: async (_agent: unknown, input: z.infer<typeof schema>) => {
       try {

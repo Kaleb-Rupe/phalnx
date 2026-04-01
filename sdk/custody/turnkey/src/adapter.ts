@@ -18,7 +18,7 @@ import { TurnkeyWalletConfig, validateConfig } from "./config";
 import { createHash, sign, createPrivateKey } from "crypto";
 
 /**
- * Minimal wallet interface — identical to the one in @phalnx/kit.
+ * Minimal wallet interface — identical to the one in @usesigil/kit.
  * Duplicated here to avoid a hard dependency on the wrapper package.
  */
 export interface WalletLike {
@@ -296,7 +296,7 @@ export class TurnkeyWallet implements WalletLike {
     } else {
       // Create new wallet
       const result = await sdkClient.createWallet({
-        walletName: `phalnx-agent-${Date.now()}`,
+        walletName: `sigil-agent-${Date.now()}`,
       });
       address = result.address;
       walletId = result.walletId;

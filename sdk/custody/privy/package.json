@@ -1,13 +1,13 @@
 {
-  "name": "@phalnx/custody-privy",
+  "name": "@usesigil/custody-privy",
   "version": "0.1.0",
   "author": "Kaleb Rupe (https://x.com/MightieMags)",
-  "homepage": "https://github.com/Kaleb-Rupe/phalnx#readme",
+  "homepage": "https://github.com/Kaleb-Rupe/sigil#readme",
   "bugs": {
-    "url": "https://github.com/Kaleb-Rupe/phalnx/issues",
+    "url": "https://github.com/Kaleb-Rupe/sigil/issues",
     "email": "https://t.me/MightyMags"
   },
-  "description": "Privy TEE custody adapter for Phalnx — AWS Nitro Enclave signing for AI agents",
+  "description": "Privy TEE custody adapter for Sigil — AWS Nitro Enclave signing for AI agents",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -47,7 +47,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Kaleb-Rupe/phalnx",
+    "url": "https://github.com/Kaleb-Rupe/sigil",
     "directory": "sdk/custody/privy"
   }
 }

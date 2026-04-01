@@ -1,13 +1,13 @@
-# @phalnx/core
+# @usesigil/core
 
 Pure TypeScript policy engine for AI agent spending controls. Zero blockchain dependencies.
 
-`@phalnx/core` is the foundational policy engine that powers all Phalnx packages. It provides spending caps, rate limiting, protocol allowlists, and transaction analysis in a framework-agnostic, chain-agnostic core. Use it directly if you're building a custom integration, or let higher-level packages like `@phalnx/kit` consume it automatically.
+`@usesigil/core` is the foundational policy engine that powers all Sigil packages. It provides spending caps, rate limiting, protocol allowlists, and transaction analysis in a framework-agnostic, chain-agnostic core. Use it directly if you're building a custom integration, or let higher-level packages like `@usesigil/kit` consume it automatically.
 
 ## Installation
 
 ```bash
-npm install @phalnx/core
+npm install @usesigil/core
 ```
 
 Zero dependencies. Works in Node.js, browsers, and edge runtimes.
@@ -31,7 +31,7 @@ import {
   evaluatePolicy,
   recordTransaction,
   ShieldState,
-} from "@phalnx/core";
+} from "@usesigil/core";
 
 // 1. Define policies
 const policies = resolvePolicies({
@@ -192,7 +192,7 @@ const state = new ShieldState({
 Thrown when a transaction violates one or more policies.
 
 ```typescript
-import { ShieldDeniedError } from "@phalnx/core";
+import { ShieldDeniedError } from "@usesigil/core";
 
 try {
   enforcePolicy(analysis, policies, state);
@@ -279,7 +279,7 @@ interface TokenTransfer {
 ## Architecture
 
 ```
-@phalnx/core (this package)
+@usesigil/core (this package)
 ├── policies.ts    — Config types, parsing, defaults
 ├── engine.ts      — Policy evaluation + enforcement
 ├── state.ts       — Rolling spend + rate limit tracking
@@ -287,7 +287,7 @@ interface TokenTransfer {
 └── errors.ts      — ShieldDeniedError, ShieldConfigError
 
 Used by:
-├── @phalnx/kit      — On-chain guardrails (primary package)
+├── @usesigil/kit      — On-chain guardrails (primary package)
 └── (your custom integration)
 ```
 
@@ -298,13 +298,13 @@ Used by:
 - Testing policy logic in isolation
 - Building framework integrations
 
-For Solana-specific integrations, use `@phalnx/kit` which wraps this package with Solana transaction analysis and wallet signing.
+For Solana-specific integrations, use `@usesigil/kit` which wraps this package with Solana transaction analysis and wallet signing.
 
 ## Support
 
 - X/Twitter: [@MightieMags](https://x.com/MightieMags)
 - Telegram: [MightyMags](https://t.me/MightyMags)
-- Issues: [GitHub Issues](https://github.com/Kaleb-Rupe/phalnx/issues)
+- Issues: [GitHub Issues](https://github.com/Kaleb-Rupe/sigil/issues)
 
 ## License
 

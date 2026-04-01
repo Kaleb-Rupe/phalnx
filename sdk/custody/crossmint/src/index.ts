@@ -1,13 +1,13 @@
 /**
- * @phalnx/custody-crossmint
+ * @usesigil/custody-crossmint
  *
- * Crossmint TEE custody adapter for Phalnx.
+ * Crossmint TEE custody adapter for Sigil.
  * Hardware-enclave signing — the private key never leaves the TEE.
  *
  * @example One-liner with shieldWallet():
  * ```typescript
- * import { shieldWallet } from '@phalnx/kit';
- * import { crossmint } from '@phalnx/custody-crossmint';
+ * import { shieldWallet } from '@usesigil/kit';
+ * import { crossmint } from '@usesigil/custody-crossmint';
  *
  * const wallet = shieldWallet(
  *   await crossmint({ apiKey: 'sk_...' }),
@@ -17,8 +17,8 @@
  *
  * @example Zero-config from environment:
  * ```typescript
- * import { shieldWallet } from '@phalnx/kit';
- * import { crossmintFromEnv } from '@phalnx/custody-crossmint';
+ * import { shieldWallet } from '@usesigil/kit';
+ * import { crossmintFromEnv } from '@usesigil/custody-crossmint';
  *
  * // Reads CROSSMINT_API_KEY (+ optional CROSSMINT_WALLET_LOCATOR) from env
  * const wallet = shieldWallet(await crossmintFromEnv(), { maxSpend: '500 USDC/day' });

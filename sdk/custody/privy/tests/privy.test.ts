@@ -143,7 +143,7 @@ function createTestVersionedTransaction(): VersionedTransaction {
 // Tests
 // ===========================================================================
 
-describe("@phalnx/custody-privy", () => {
+describe("@usesigil/custody-privy", () => {
   // ---- Config & Validation ------------------------------------------------
 
   describe("config", () => {

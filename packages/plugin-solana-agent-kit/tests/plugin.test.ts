@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import type { Address, TransactionSigner } from "@solana/kit";
-import { createPhalnxPlugin, type PhalnxSakConfig } from "../src/index.js";
+import { createSigilPlugin, type SigilSakConfig } from "../src/index.js";
 
 // ─── Test Addresses ─────────────────────────────────────────────────────────
 
@@ -20,7 +20,7 @@ function mockRpc(): any {
   return {} as any;
 }
 
-function mockConfig(overrides?: Partial<PhalnxSakConfig>): PhalnxSakConfig {
+function mockConfig(overrides?: Partial<SigilSakConfig>): SigilSakConfig {
   return {
     vault: VAULT,
     network: "devnet",
@@ -32,20 +32,20 @@ function mockConfig(overrides?: Partial<PhalnxSakConfig>): PhalnxSakConfig {
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
-describe("@phalnx/plugin-solana-agent-kit", () => {
-  describe("createPhalnxPlugin", () => {
+describe("@usesigil/plugin-solana-agent-kit", () => {
+  describe("createSigilPlugin", () => {
     it("returns valid SAK plugin shape", () => {
-      const plugin = createPhalnxPlugin(mockConfig());
+      const plugin = createSigilPlugin(mockConfig());
 
-      expect(plugin).to.have.property("name", "phalnx");
+      expect(plugin).to.have.property("name", "sigil");
       expect(plugin).to.have.property("methods");
-      expect(plugin.methods).to.have.property("phalnx_swap");
-      expect(plugin.methods).to.have.property("phalnx_transfer");
-      expect(plugin.methods).to.have.property("phalnx_status");
+      expect(plugin.methods).to.have.property("sigil_swap");
+      expect(plugin.methods).to.have.property("sigil_transfer");
+      expect(plugin.methods).to.have.property("sigil_status");
     });
 
     it("each method has description, schema, and handler", () => {
-      const plugin = createPhalnxPlugin(mockConfig());
+      const plugin = createSigilPlugin(mockConfig());
 
       for (const [name, action] of Object.entries(plugin.methods)) {
         expect(action, `${name} missing description`).to.have.property(
@@ -64,18 +64,18 @@ describe("@phalnx/plugin-solana-agent-kit", () => {
         sign: async (bytes: Uint8Array) => new Uint8Array(64),
       };
 
-      const plugin = createPhalnxPlugin(
+      const plugin = createSigilPlugin(
         mockConfig({ agent: custodyAdapter }),
       );
-      expect(plugin.name).to.equal("phalnx");
-      expect(plugin.methods).to.have.property("phalnx_swap");
+      expect(plugin.name).to.equal("sigil");
+      expect(plugin.methods).to.have.property("sigil_swap");
     });
 
     it("swap action converts Jupiter instructions to Kit format", async () => {
       // We test the instruction deserialization indirectly by verifying
       // the swap handler exists and has the expected schema
-      const plugin = createPhalnxPlugin(mockConfig());
-      const swap = plugin.methods.phalnx_swap;
+      const plugin = createSigilPlugin(mockConfig());
+      const swap = plugin.methods.sigil_swap;
 
       expect(swap.schema).to.exist;
       // Verify schema accepts required fields
@@ -101,16 +101,16 @@ describe("@phalnx/plugin-solana-agent-kit", () => {
     });
 
     it("status action has empty input schema", () => {
-      const plugin = createPhalnxPlugin(mockConfig());
-      const status = plugin.methods.phalnx_status;
+      const plugin = createSigilPlugin(mockConfig());
+      const status = plugin.methods.sigil_status;
 
       const result = status.schema.safeParse({});
       expect(result.success).to.be.true;
     });
 
     it("transfer action returns not-implemented error", async () => {
-      const plugin = createPhalnxPlugin(mockConfig());
-      const transfer = plugin.methods.phalnx_transfer;
+      const plugin = createSigilPlugin(mockConfig());
+      const transfer = plugin.methods.sigil_transfer;
 
       const result = await transfer.handler(null, {
         destination: AGENT_ADDR,

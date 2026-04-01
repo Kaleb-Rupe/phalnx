@@ -1,10 +1,10 @@
 {
-  "name": "@phalnx/core",
+  "name": "@usesigil/core",
   "version": "0.1.5",
   "author": "Kaleb Rupe (https://x.com/MightieMags)",
-  "homepage": "https://github.com/Kaleb-Rupe/phalnx#readme",
+  "homepage": "https://github.com/Kaleb-Rupe/sigil#readme",
   "bugs": {
-    "url": "https://github.com/Kaleb-Rupe/phalnx/issues",
+    "url": "https://github.com/Kaleb-Rupe/sigil/issues",
     "email": "https://t.me/MightyMags"
   },
   "description": "Pure TypeScript policy engine for AI agent spending controls — zero blockchain dependencies",
@@ -41,7 +41,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Kaleb-Rupe/phalnx",
+    "url": "https://github.com/Kaleb-Rupe/sigil",
     "directory": "sdk/core"
   }
 }

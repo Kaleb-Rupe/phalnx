@@ -129,7 +129,7 @@ function createTestVersionedTransaction(): VersionedTransaction {
 // Tests
 // ===========================================================================
 
-describe("@phalnx/custody-crossmint", () => {
+describe("@usesigil/custody-crossmint", () => {
   // ---- Config & Validation ------------------------------------------------
 
   describe("config", () => {

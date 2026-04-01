@@ -1,13 +1,13 @@
 /**
- * @phalnx/custody-turnkey
+ * @usesigil/custody-turnkey
  *
- * Turnkey TEE custody adapter for Phalnx.
+ * Turnkey TEE custody adapter for Sigil.
  * Hardware-enclave signing — the private key never leaves Turnkey's secure infrastructure.
  *
  * @example One-liner with shieldWallet():
  * ```typescript
- * import { shieldWallet } from '@phalnx/kit';
- * import { turnkey } from '@phalnx/custody-turnkey';
+ * import { shieldWallet } from '@usesigil/kit';
+ * import { turnkey } from '@usesigil/custody-turnkey';
  *
  * const wallet = shieldWallet(
  *   await turnkey({ organizationId: '...', apiKeyId: '...', apiPrivateKey: '...' }),
@@ -17,8 +17,8 @@
  *
  * @example Zero-config from environment:
  * ```typescript
- * import { shieldWallet } from '@phalnx/kit';
- * import { turnkeyFromEnv } from '@phalnx/custody-turnkey';
+ * import { shieldWallet } from '@usesigil/kit';
+ * import { turnkeyFromEnv } from '@usesigil/custody-turnkey';
  *
  * // Reads TURNKEY_ORGANIZATION_ID + TURNKEY_API_KEY_ID + TURNKEY_API_PRIVATE_KEY from env
  * const wallet = shieldWallet(await turnkeyFromEnv(), { maxSpend: '500 USDC/day' });

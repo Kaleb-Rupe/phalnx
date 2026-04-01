@@ -27,12 +27,12 @@ describe("ShieldState", () => {
       const storage = createMockStorage();
       // Pre-populate storage with spend data
       storage.setItem(
-        "phalnx:spends",
+        "sigil:spends",
         JSON.stringify([
           { mint: "USDC", amount: "1000000", timestamp: Date.now() },
         ]),
       );
-      storage.setItem("phalnx:txs", JSON.stringify([]));
+      storage.setItem("sigil:txs", JSON.stringify([]));
 
       const state = new ShieldState(storage);
       const spend = state.getSpendInWindow("USDC", 86_400_000);
@@ -53,12 +53,12 @@ describe("ShieldState", () => {
       // Create entries with old timestamps
       const oldTimestamp = Date.now() - 100_000_000; // ~27 hours ago
       storage.setItem(
-        "phalnx:spends",
+        "sigil:spends",
         JSON.stringify([
           { mint: "USDC", amount: "1000000", timestamp: oldTimestamp },
         ]),
       );
-      storage.setItem("phalnx:txs", JSON.stringify([]));
+      storage.setItem("sigil:txs", JSON.stringify([]));
 
       const state = new ShieldState(storage);
       const spend = state.getSpendInWindow("USDC", 86_400_000);
@@ -100,10 +100,10 @@ describe("ShieldState", () => {
       const storage = createMockStorage();
       const oldTimestamp = Date.now() - 7_200_000; // 2 hours ago
       storage.setItem(
-        "phalnx:txs",
+        "sigil:txs",
         JSON.stringify([{ timestamp: oldTimestamp }]),
       );
-      storage.setItem("phalnx:spends", JSON.stringify([]));
+      storage.setItem("sigil:spends", JSON.stringify([]));
 
       const state = new ShieldState(storage);
       const count = state.getTransactionCountInWindow(3_600_000);
@@ -116,14 +116,14 @@ describe("ShieldState", () => {
       const storage = createMockStorage();
       const now = Date.now();
       storage.setItem(
-        "phalnx:spends",
+        "sigil:spends",
         JSON.stringify([
           { mint: "USDC", amount: "100", timestamp: now - 200_000 },
           { mint: "USDC", amount: "200", timestamp: now },
         ]),
       );
       storage.setItem(
-        "phalnx:txs",
+        "sigil:txs",
         JSON.stringify([{ timestamp: now - 200_000 }, { timestamp: now }]),
       );
 
@@ -178,7 +178,7 @@ describe("ShieldState", () => {
       }
 
       // Verify via storage — should have exactly 5000 entries
-      const persisted = JSON.parse(storage.data["phalnx:spends"]) as unknown[];
+      const persisted = JSON.parse(storage.data["sigil:spends"]) as unknown[];
       expect(persisted.length).to.equal(5000);
     });
   });
@@ -186,8 +186,8 @@ describe("ShieldState", () => {
   describe("corrupt JSON recovery", () => {
     it("gracefully recovers from corrupt storage data", () => {
       const storage = createMockStorage();
-      storage.setItem("phalnx:spends", "not valid json {{{");
-      storage.setItem("phalnx:txs", "also broken");
+      storage.setItem("sigil:spends", "not valid json {{{");
+      storage.setItem("sigil:txs", "also broken");
 
       const state = new ShieldState(storage);
       // Should start with empty state, not throw

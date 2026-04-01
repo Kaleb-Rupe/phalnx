@@ -1,13 +1,13 @@
 import { z } from "zod";
-import type { PhalnxClient } from "@phalnx/kit";
-import { formatUsd, toAgentError } from "@phalnx/kit";
+import type { SigilClient } from "@usesigil/kit";
+import { formatUsd, toAgentError } from "@usesigil/kit";
 
 const schema = z.object({}).describe("No input required — queries the configured vault.");
 
-export function statusAction(client: PhalnxClient) {
+export function statusAction(client: SigilClient) {
   return {
     description:
-      "Query Phalnx vault budget and status. Returns global and agent spending limits, remaining budget, and vault health.",
+      "Query Sigil vault budget and status. Returns global and agent spending limits, remaining budget, and vault health.",
     schema,
     handler: async () => {
       try {

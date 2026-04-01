@@ -1,7 +1,7 @@
 {
-  "name": "@phalnx/plugin-solana-agent-kit",
+  "name": "@usesigil/plugin-solana-agent-kit",
   "version": "0.1.0",
-  "description": "Phalnx security plugin for Solana Agent Kit — thin adapter calling wrap()",
+  "description": "Sigil security plugin for Solana Agent Kit — thin adapter calling seal()",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -10,14 +10,14 @@
     "test": "mocha --require tsx tests/*.test.ts --timeout 30000"
   },
   "peerDependencies": {
-    "@phalnx/kit": "workspace:*",
+    "@usesigil/kit": "workspace:*",
     "solana-agent-kit": ">=2.0.0"
   },
   "dependencies": {
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@phalnx/kit": "workspace:*",
+    "@usesigil/kit": "workspace:*",
     "@types/chai": "^5.2.3",
     "@types/mocha": "^10.0.6",
     "chai": "^6.2.2",
@@ -28,7 +28,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Kaleb-Rupe/phalnx",
+    "url": "https://github.com/Kaleb-Rupe/sigil",
     "directory": "packages/plugin-solana-agent-kit"
   }
 }

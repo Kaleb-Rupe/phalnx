@@ -1,13 +1,13 @@
 {
-  "name": "@phalnx/custody-turnkey",
+  "name": "@usesigil/custody-turnkey",
   "version": "0.1.0",
   "author": "Kaleb Rupe (https://x.com/MightieMags)",
-  "homepage": "https://github.com/Kaleb-Rupe/phalnx#readme",
+  "homepage": "https://github.com/Kaleb-Rupe/sigil#readme",
   "bugs": {
-    "url": "https://github.com/Kaleb-Rupe/phalnx/issues",
+    "url": "https://github.com/Kaleb-Rupe/sigil/issues",
     "email": "https://t.me/MightyMags"
   },
-  "description": "Turnkey TEE custody adapter for Phalnx — hardware-enclave signing via Turnkey",
+  "description": "Turnkey TEE custody adapter for Sigil — hardware-enclave signing via Turnkey",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -43,13 +43,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Kaleb-Rupe/phalnx.git",
+    "url": "https://github.com/Kaleb-Rupe/sigil.git",
     "directory": "sdk/custody/turnkey"
   },
   "license": "MIT",
   "keywords": [
     "solana",
-    "phalnx",
+    "sigil",
     "turnkey",
     "tee",
     "custody",

@@ -1,10 +1,10 @@
 import {
-  PhalnxClient,
+  SigilClient,
   custodyAdapterToTransactionSigner,
   type CustodyAdapter,
-} from "@phalnx/kit";
+} from "@usesigil/kit";
 import type { TransactionSigner } from "@solana/kit";
-import type { PhalnxSakConfig } from "./types.js";
+import type { SigilSakConfig } from "./types.js";
 import { swapAction } from "./actions/swap.js";
 import { transferAction } from "./actions/transfer.js";
 import { statusAction } from "./actions/status.js";
@@ -19,12 +19,12 @@ function isCustodyAdapter(
   );
 }
 
-export function createPhalnxPlugin(config: PhalnxSakConfig) {
+export function createSigilPlugin(config: SigilSakConfig) {
   const signer = isCustodyAdapter(config.agent)
     ? custodyAdapterToTransactionSigner(config.agent)
     : config.agent;
 
-  const client = new PhalnxClient({
+  const client = new SigilClient({
     rpc: config.rpc,
     vault: config.vault,
     agent: signer,
@@ -34,13 +34,13 @@ export function createPhalnxPlugin(config: PhalnxSakConfig) {
   const jupiterApi = config.jupiterApiUrl ?? "https://quote-api.jup.ag/v6";
 
   return {
-    name: "phalnx",
+    name: "sigil",
     methods: {
-      phalnx_swap: swapAction(client, jupiterApi),
-      phalnx_transfer: transferAction(client),
-      phalnx_status: statusAction(client),
+      sigil_swap: swapAction(client, jupiterApi),
+      sigil_transfer: transferAction(client),
+      sigil_status: statusAction(client),
     },
   };
 }
 
-export type { PhalnxSakConfig } from "./types.js";
+export type { SigilSakConfig } from "./types.js";

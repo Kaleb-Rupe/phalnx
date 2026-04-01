@@ -1,22 +1,22 @@
-# @phalnx/custody-crossmint
+# @usesigil/custody-crossmint
 
-Crossmint TEE custody adapter for Phalnx — hardware-enclave signing for AI agents. The private key never leaves the Trusted Execution Environment.
+Crossmint TEE custody adapter for Sigil — hardware-enclave signing for AI agents. The private key never leaves the Trusted Execution Environment.
 
-`@phalnx/custody-crossmint` wraps Crossmint's Intel TDX-backed wallets into a standard `WalletLike` interface that works with `shieldWallet()` and the rest of the Phalnx ecosystem. Your agent gets a signing interface; the private key stays in hardware.
+`@usesigil/custody-crossmint` wraps Crossmint's Intel TDX-backed wallets into a standard `WalletLike` interface that works with `shieldWallet()` and the rest of the Sigil ecosystem. Your agent gets a signing interface; the private key stays in hardware.
 
 ## Installation
 
 ```bash
-npm install @phalnx/custody-crossmint @solana/web3.js
+npm install @usesigil/custody-crossmint @solana/web3.js
 ```
 
-Optional peer dependency: `@phalnx/kit` (for `shieldWallet()` integration)
+Optional peer dependency: `@usesigil/kit` (for `shieldWallet()` integration)
 
 ## Quick Start
 
 ```typescript
-import { shieldWallet } from "@phalnx/kit";
-import { crossmint } from "@phalnx/custody-crossmint";
+import { shieldWallet } from "@usesigil/kit";
+import { crossmint } from "@usesigil/custody-crossmint";
 
 // Create a TEE-backed wallet and wrap it with spending controls
 const wallet = shieldWallet(await crossmint({ apiKey: "sk_production_..." }), {
@@ -30,8 +30,8 @@ await wallet.signTransaction(tx);
 ### Zero-Config from Environment
 
 ```typescript
-import { shieldWallet } from "@phalnx/kit";
-import { crossmintFromEnv } from "@phalnx/custody-crossmint";
+import { shieldWallet } from "@usesigil/kit";
+import { crossmintFromEnv } from "@usesigil/custody-crossmint";
 
 // Reads CROSSMINT_API_KEY from environment
 const wallet = shieldWallet(await crossmintFromEnv(), {
@@ -113,8 +113,8 @@ interface CrossmintWalletConfig {
 ## Integration with shieldWallet()
 
 ```typescript
-import { shieldWallet, ShieldDeniedError } from "@phalnx/kit";
-import { crossmint } from "@phalnx/custody-crossmint";
+import { shieldWallet, ShieldDeniedError } from "@usesigil/kit";
+import { crossmint } from "@usesigil/custody-crossmint";
 
 const teeWallet = await crossmint({ apiKey: "sk_..." });
 const protectedWallet = shieldWallet(teeWallet, {
@@ -139,14 +139,14 @@ try {
 
 | Package                                                                          | Description                                      |
 | -------------------------------------------------------------------------------- | ------------------------------------------------ |
-| [`@phalnx/kit`](https://www.npmjs.com/package/@phalnx/kit)                       | On-chain guardrails — `withVault()` primary API  |
-| [`@phalnx/core`](https://www.npmjs.com/package/@phalnx/core)                     | Pure TypeScript policy engine                    |
+| [`@usesigil/kit`](https://www.npmjs.com/package/@usesigil/kit)                       | On-chain guardrails — `withVault()` primary API  |
+| [`@usesigil/core`](https://www.npmjs.com/package/@usesigil/core)                     | Pure TypeScript policy engine                    |
 
 ## Support
 
 - X/Twitter: [@MightieMags](https://x.com/MightieMags)
 - Telegram: [MightyMags](https://t.me/MightyMags)
-- Issues: [GitHub Issues](https://github.com/Kaleb-Rupe/phalnx/issues)
+- Issues: [GitHub Issues](https://github.com/Kaleb-Rupe/sigil/issues)
 
 ## License
 

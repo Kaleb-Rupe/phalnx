@@ -1,12 +1,12 @@
 import type { Address, Rpc, SolanaRpcApi, TransactionSigner } from "@solana/kit";
-import type { CustodyAdapter, Network } from "@phalnx/kit";
+import type { CustodyAdapter, Network } from "@usesigil/kit";
 
 /** Convert plugin's "mainnet" to kit's "mainnet-beta" network string. */
 export function toResolvedNetwork(network: "devnet" | "mainnet"): Network {
   return network === "mainnet" ? "mainnet-beta" : "devnet";
 }
 
-export interface PhalnxSakConfig {
+export interface SigilSakConfig {
   /** Vault PDA address. */
   vault: Address;
   /** Network selector. */

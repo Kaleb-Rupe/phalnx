@@ -126,7 +126,7 @@ function createTestVersionedTransaction(): VersionedTransaction {
 // Tests
 // ===========================================================================
 
-describe("@phalnx/custody-turnkey", () => {
+describe("@usesigil/custody-turnkey", () => {
   // ---- Config & Validation ------------------------------------------------
 
   describe("config", () => {
@@ -281,7 +281,7 @@ describe("@phalnx/custody-turnkey", () => {
       );
 
       const call = client.calls[0];
-      expect(call.args[0].walletName).to.include("phalnx-agent-");
+      expect(call.args[0].walletName).to.include("sigil-agent-");
     });
 
     it("uses existing wallet when walletId provided", async () => {
