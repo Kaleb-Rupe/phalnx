@@ -1,7 +1,7 @@
 // CVLR Specification: Access Control Constants & Logic
 //
 // Verifies safety-critical constants and pure helper functions
-// that underpin Phalnx's authorization model.
+// that underpin Sigil's authorization model.
 // V2: TrackerTier removed — epoch-based circular buffer replaces tiered tracking.
 // V3: Oracle system removed — stablecoin-only architecture.
 
