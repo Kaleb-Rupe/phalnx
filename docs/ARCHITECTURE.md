@@ -1,4 +1,4 @@
-# Phalnx Architecture Reference
+# Sigil Architecture Reference
 
 ## Account Model (Full)
 
@@ -96,14 +96,14 @@ Dependency: `@x402/core` for types/encoding.
 
 ## Multi-Sig Governance
 
-Phalnx does not implement on-chain multi-sig. Instead, it composes
+Sigil does not implement on-chain multi-sig. Instead, it composes
 with external multi-sig programs (recommended: Squads V4).
 
 **How it works:**
 1. Set `vault.owner` to a Squads V4 multisig PDA
 2. All owner actions (policy changes, agent management, withdrawals)
-   require threshold signing through Squads before reaching Phalnx
-3. Phalnx checks `owner.key == vault.owner` -- the Solana runtime
+   require threshold signing through Squads before reaching Sigil
+3. Sigil checks `owner.key == vault.owner` -- the Solana runtime
    guarantees this signature is valid
 
 **Combined with timelock:**

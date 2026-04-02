@@ -1,4 +1,4 @@
-// @phalnx/kit/testing — Test utilities for consumers of the Phalnx SDK.
+// @usesigil/kit/testing — Test utilities for consumers of the Sigil SDK.
 //
 // Mock utilities (unit tests — no network)
 
@@ -23,4 +23,4 @@ export {
 
 // NOTE: Devnet utilities intentionally NOT re-exported here.
 // devnet.ts imports node:fs + @solana/web3.js — breaks browser bundlers.
-// Import directly: import { ... } from "@phalnx/kit/testing/devnet"
+// Import directly: import { ... } from "@usesigil/kit/testing/devnet"

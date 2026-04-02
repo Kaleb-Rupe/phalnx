@@ -163,7 +163,7 @@ export class PriorityFeeEstimator {
     try {
       const body = {
         jsonrpc: "2.0",
-        id: "phalnx-fee-estimate",
+        id: "sigil-fee-estimate",
         method: "getPriorityFeeEstimate",
         params: [
           {

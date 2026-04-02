@@ -1,0 +1,6 @@
+# Auto-generated code — formatted by codama.mjs, not prettier
+sdk/kit/src/generated/
+
+# Build output
+**/dist/
+**/node_modules/

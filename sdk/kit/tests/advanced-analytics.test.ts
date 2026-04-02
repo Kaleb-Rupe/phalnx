@@ -11,13 +11,13 @@ import {
   getPermissionEscalationLatency,
   getInstructionCoverageRatio,
 } from "../src/advanced-analytics.js";
-import type { DecodedPhalnxEvent } from "../src/events.js";
+import type { DecodedSigilEvent } from "../src/events.js";
 
 // ─── getSlippageEfficiency ───────────────────────────────────────────────────
 
 describe("getSlippageEfficiency", () => {
   it("computes slippage from auth/finalize pairs", () => {
-    const events: DecodedPhalnxEvent[] = [
+    const events: DecodedSigilEvent[] = [
       { name: "ActionAuthorized", data: new Uint8Array(0), fields: { agent: "a1", usdAmount: 100_000_000n } },
       { name: "SessionFinalized", data: new Uint8Array(0), fields: { agent: "a1", actualSpendUsd: 102_000_000n, success: true } },
     ];
@@ -28,14 +28,14 @@ describe("getSlippageEfficiency", () => {
   });
 
   it("returns empty for no trade events", () => {
-    const events: DecodedPhalnxEvent[] = [
+    const events: DecodedSigilEvent[] = [
       { name: "FundsDeposited", data: new Uint8Array(0), fields: { amount: 100n } },
     ];
     expect(getSlippageEfficiency(events).byAgent).to.have.length(0);
   });
 
   it("handles zero authorized amount", () => {
-    const events: DecodedPhalnxEvent[] = [
+    const events: DecodedSigilEvent[] = [
       { name: "ActionAuthorized", data: new Uint8Array(0), fields: { agent: "a1", usdAmount: 0n } },
       { name: "SessionFinalized", data: new Uint8Array(0), fields: { agent: "a1", actualSpendUsd: 50_000_000n, success: true } },
     ];
@@ -70,7 +70,7 @@ describe("getCapVelocity", () => {
 
 describe("getSessionDeviationRate", () => {
   it("detects deviations above 2% threshold", () => {
-    const events: DecodedPhalnxEvent[] = [
+    const events: DecodedSigilEvent[] = [
       { name: "ActionAuthorized", data: new Uint8Array(0), fields: { agent: "a1", usdAmount: 100_000_000n } },
       { name: "SessionFinalized", data: new Uint8Array(0), fields: { agent: "a1", actualSpendUsd: 105_000_000n, success: true } },
     ];
@@ -81,7 +81,7 @@ describe("getSessionDeviationRate", () => {
   });
 
   it("ignores normal slippage (<2%)", () => {
-    const events: DecodedPhalnxEvent[] = [
+    const events: DecodedSigilEvent[] = [
       { name: "ActionAuthorized", data: new Uint8Array(0), fields: { agent: "a1", usdAmount: 100_000_000n } },
       { name: "SessionFinalized", data: new Uint8Array(0), fields: { agent: "a1", actualSpendUsd: 101_000_000n, success: true } },
     ];
@@ -100,7 +100,7 @@ describe("getSessionDeviationRate", () => {
 
 describe("getIdleCapitalDuration", () => {
   it("computes idle time between trades", () => {
-    const events: DecodedPhalnxEvent[] = [
+    const events: DecodedSigilEvent[] = [
       { name: "SessionFinalized", data: new Uint8Array(0), fields: { agent: "a1", timestamp: 1700000000n } },
       { name: "SessionFinalized", data: new Uint8Array(0), fields: { agent: "a1", timestamp: 1700003600n } }, // 1h later
       { name: "SessionFinalized", data: new Uint8Array(0), fields: { agent: "a1", timestamp: 1700010800n } }, // 2h later
@@ -122,7 +122,7 @@ describe("getIdleCapitalDuration", () => {
 
 describe("getPermissionEscalationLatency", () => {
   it("detects suspicious rapid permission use", () => {
-    const events: DecodedPhalnxEvent[] = [
+    const events: DecodedSigilEvent[] = [
       { name: "AgentPermissionsUpdated", data: new Uint8Array(0), fields: { agent: "a1", timestamp: 1700000000n, newPermissions: 1n, oldPermissions: 0n } },
       { name: "ActionAuthorized", data: new Uint8Array(0), fields: { agent: "a1", timestamp: 1700000030n } }, // 30s later
     ];
@@ -133,7 +133,7 @@ describe("getPermissionEscalationLatency", () => {
   });
 
   it("normal latency is not suspicious", () => {
-    const events: DecodedPhalnxEvent[] = [
+    const events: DecodedSigilEvent[] = [
       { name: "AgentPermissionsUpdated", data: new Uint8Array(0), fields: { agent: "a1", timestamp: 1700000000n, newPermissions: 1n, oldPermissions: 0n } },
       { name: "ActionAuthorized", data: new Uint8Array(0), fields: { agent: "a1", timestamp: 1700003600n } }, // 1h later
     ];
@@ -142,7 +142,7 @@ describe("getPermissionEscalationLatency", () => {
   });
 
   it("handles no subsequent use", () => {
-    const events: DecodedPhalnxEvent[] = [
+    const events: DecodedSigilEvent[] = [
       { name: "AgentPermissionsUpdated", data: new Uint8Array(0), fields: { agent: "a1", timestamp: 1700000000n, newPermissions: 1n, oldPermissions: 0n } },
     ];
     const report = getPermissionEscalationLatency(events);
@@ -155,7 +155,7 @@ describe("getPermissionEscalationLatency", () => {
 
 describe("getInstructionCoverageRatio", () => {
   it("reports 100% coverage for matched pairs", () => {
-    const events: DecodedPhalnxEvent[] = [
+    const events: DecodedSigilEvent[] = [
       { name: "ActionAuthorized", data: new Uint8Array(0), fields: { agent: "a1" } },
       { name: "SessionFinalized", data: new Uint8Array(0), fields: { agent: "a1" } },
     ];
@@ -166,7 +166,7 @@ describe("getInstructionCoverageRatio", () => {
   });
 
   it("detects orphaned validates", () => {
-    const events: DecodedPhalnxEvent[] = [
+    const events: DecodedSigilEvent[] = [
       { name: "ActionAuthorized", data: new Uint8Array(0), fields: { agent: "a1" } },
       { name: "ActionAuthorized", data: new Uint8Array(0), fields: { agent: "a1" } },
       { name: "SessionFinalized", data: new Uint8Array(0), fields: { agent: "a1" } },

@@ -1,5 +1,5 @@
 /**
- * Anchor CPI event log parser for Phalnx.
+ * Anchor CPI event log parser for Sigil.
  *
  * Parses "Program data: " log lines from transaction logs to extract
  * Anchor events. Uses the IDL-provided event discriminators (first 8 bytes
@@ -44,19 +44,19 @@ import {
   getPositionsSyncedDecoder,
 } from "./generated/types/index.js";
 
-/** All known Phalnx event names */
-export type PhalnxEventName = (typeof EVENT_DISCRIMINATOR_MAP)[string];
+/** All known Sigil event names */
+export type SigilEventName = (typeof EVENT_DISCRIMINATOR_MAP)[string];
 
 /** Parsed event from transaction logs */
-export interface PhalnxEvent {
+export interface SigilEvent {
   /** Event name (e.g. "VaultCreated", "ActionAuthorized") */
-  name: PhalnxEventName;
+  name: SigilEventName;
   /** Raw event data bytes (after discriminator) */
   data: Uint8Array;
 }
 
 /**
- * Parse Phalnx Anchor events from transaction logs.
+ * Parse Sigil Anchor events from transaction logs.
  *
  * Anchor emits events as "Program data: <base64>" log lines.
  * The first 8 bytes are the event discriminator (SHA256 prefix).
@@ -64,8 +64,8 @@ export interface PhalnxEvent {
  * @param logs - Array of log strings from a transaction
  * @returns Array of parsed events with name and raw data
  */
-export function parsePhalnxEvents(logs: string[]): PhalnxEvent[] {
-  const events: PhalnxEvent[] = [];
+export function parseSigilEvents(logs: string[]): SigilEvent[] {
+  const events: SigilEvent[] = [];
   const PROGRAM_DATA_PREFIX = "Program data: ";
 
   for (const log of logs) {
@@ -103,13 +103,13 @@ export function parsePhalnxEvents(logs: string[]): PhalnxEvent[] {
  */
 export function filterEvents(
   logs: string[],
-  eventName: PhalnxEventName,
-): PhalnxEvent[] {
-  return parsePhalnxEvents(logs).filter((e) => e.name === eventName);
+  eventName: SigilEventName,
+): SigilEvent[] {
+  return parseSigilEvents(logs).filter((e) => e.name === eventName);
 }
 
 /** Get all known event names */
-export function getEventNames(): PhalnxEventName[] {
+export function getEventNames(): SigilEventName[] {
   return Object.values(EVENT_DISCRIMINATOR_MAP);
 }
 
@@ -133,7 +133,10 @@ function bytesToHex(bytes: Uint8Array): string {
 // ─── Event Decoder Map ──────────────────────────────────────────────────────
 
 // Decoders cached at module level — avoids re-creating struct decoders on every call
-const EVENT_DECODER_MAP: Record<string, { decode: (data: Uint8Array) => unknown }> = {
+const EVENT_DECODER_MAP: Record<
+  string,
+  { decode: (data: Uint8Array) => unknown }
+> = {
   ActionAuthorized: getActionAuthorizedDecoder(),
   SessionFinalized: getSessionFinalizedDecoder(),
   FeesCollected: getFeesCollectedDecoder(),
@@ -174,7 +177,7 @@ for (const name of discriminatorEventNames) {
   if (!decoderEventNames.has(name)) {
     throw new Error(
       `EVENT_DECODER_MAP missing entry for "${name}". ` +
-      `Update EVENT_DECODER_MAP in events.ts after adding new events.`,
+        `Update EVENT_DECODER_MAP in events.ts after adding new events.`,
     );
   }
 }
@@ -182,7 +185,7 @@ for (const name of decoderEventNames) {
   if (!discriminatorEventNames.has(name)) {
     throw new Error(
       `EVENT_DECODER_MAP has stale entry "${name}" not in EVENT_DISCRIMINATOR_MAP. ` +
-      `Remove it from EVENT_DECODER_MAP in events.ts.`,
+        `Remove it from EVENT_DECODER_MAP in events.ts.`,
     );
   }
 }
@@ -190,8 +193,8 @@ for (const name of decoderEventNames) {
 // ─── Event Decoding ─────────────────────────────────────────────────────────
 
 /** Decoded event with typed fields */
-export interface DecodedPhalnxEvent {
-  name: PhalnxEventName;
+export interface DecodedSigilEvent {
+  name: SigilEventName;
   /** Raw bytes preserved for debugging */
   data: Uint8Array;
   /** Decoded fields, or null if decoding fails */
@@ -199,12 +202,12 @@ export interface DecodedPhalnxEvent {
 }
 
 /**
- * Decode a parsed Phalnx event's raw bytes into typed fields.
+ * Decode a parsed Sigil event's raw bytes into typed fields.
  *
  * Returns `fields: null` if the event name is unknown or decoding fails
  * (e.g. events from older program versions with different layouts).
  */
-export function decodePhalnxEvent(event: PhalnxEvent): DecodedPhalnxEvent {
+export function decodeSigilEvent(event: SigilEvent): DecodedSigilEvent {
   const decoder = EVENT_DECODER_MAP[event.name];
   if (!decoder) {
     return { name: event.name, data: event.data, fields: null };
@@ -218,8 +221,8 @@ export function decodePhalnxEvent(event: PhalnxEvent): DecodedPhalnxEvent {
 }
 
 /**
- * Parse and decode Phalnx events from transaction logs in one step.
+ * Parse and decode Sigil events from transaction logs in one step.
  */
-export function parseAndDecodePhalnxEvents(logs: string[]): DecodedPhalnxEvent[] {
-  return parsePhalnxEvents(logs).map(decodePhalnxEvent);
+export function parseAndDecodeSigilEvents(logs: string[]): DecodedSigilEvent[] {
+  return parseSigilEvents(logs).map(decodeSigilEvent);
 }

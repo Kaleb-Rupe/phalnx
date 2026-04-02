@@ -8,7 +8,7 @@ import {
   describeEvent,
   buildActivityItem,
 } from "../src/event-analytics.js";
-import type { DecodedPhalnxEvent } from "../src/events.js";
+import type { DecodedSigilEvent } from "../src/events.js";
 
 // ─── categorizeEvent ─────────────────────────────────────────────────────────
 
@@ -61,7 +61,7 @@ describe("categorizeEvent", () => {
 
 describe("describeEvent", () => {
   it("describes FundsDeposited with amount", () => {
-    const decoded: DecodedPhalnxEvent = {
+    const decoded: DecodedSigilEvent = {
       name: "FundsDeposited",
       data: new Uint8Array(0),
       fields: {
@@ -77,7 +77,7 @@ describe("describeEvent", () => {
   });
 
   it("describes VaultFrozen", () => {
-    const decoded: DecodedPhalnxEvent = {
+    const decoded: DecodedSigilEvent = {
       name: "VaultFrozen",
       data: new Uint8Array(0),
       fields: { vault: "v", owner: "o", agentsPreserved: 2, timestamp: 0n },
@@ -86,7 +86,7 @@ describe("describeEvent", () => {
   });
 
   it("handles null fields gracefully", () => {
-    const decoded: DecodedPhalnxEvent = {
+    const decoded: DecodedSigilEvent = {
       name: "ActionAuthorized",
       data: new Uint8Array(0),
       fields: null,
@@ -95,14 +95,14 @@ describe("describeEvent", () => {
   });
 
   it("describes expired session differently from failed", () => {
-    const expired: DecodedPhalnxEvent = {
+    const expired: DecodedSigilEvent = {
       name: "SessionFinalized",
       data: new Uint8Array(0),
       fields: { vault: "v", agent: "a123456789abcdef", success: false, isExpired: true, timestamp: 0n },
     };
     expect(describeEvent(expired)).to.include("expired");
 
-    const failed: DecodedPhalnxEvent = {
+    const failed: DecodedSigilEvent = {
       name: "SessionFinalized",
       data: new Uint8Array(0),
       fields: { vault: "v", agent: "a123456789abcdef", success: false, isExpired: false, timestamp: 0n },
@@ -111,7 +111,7 @@ describe("describeEvent", () => {
   });
 
   it("describes unknown event with name", () => {
-    const decoded: DecodedPhalnxEvent = {
+    const decoded: DecodedSigilEvent = {
       name: "FutureEvent" as any,
       data: new Uint8Array(0),
       fields: {},
@@ -124,7 +124,7 @@ describe("describeEvent", () => {
 
 describe("buildActivityItem", () => {
   it("builds complete activity item from FundsDeposited", () => {
-    const decoded: DecodedPhalnxEvent = {
+    const decoded: DecodedSigilEvent = {
       name: "FundsDeposited",
       data: new Uint8Array(0),
       fields: {
@@ -144,7 +144,7 @@ describe("buildActivityItem", () => {
   });
 
   it("handles ActionAuthorized with Codama enum actionType", () => {
-    const decoded: DecodedPhalnxEvent = {
+    const decoded: DecodedSigilEvent = {
       name: "ActionAuthorized",
       data: new Uint8Array(0),
       fields: {
@@ -169,7 +169,7 @@ describe("buildActivityItem", () => {
   });
 
   it("handles SessionFinalized with u8 actionType", () => {
-    const decoded: DecodedPhalnxEvent = {
+    const decoded: DecodedSigilEvent = {
       name: "SessionFinalized",
       data: new Uint8Array(0),
       fields: {
@@ -190,7 +190,7 @@ describe("buildActivityItem", () => {
   });
 
   it("defaults success to true for non-session events", () => {
-    const decoded: DecodedPhalnxEvent = {
+    const decoded: DecodedSigilEvent = {
       name: "VaultCreated",
       data: new Uint8Array(0),
       fields: { vault: "v", owner: "o", vaultId: 1n, timestamp: 0n },

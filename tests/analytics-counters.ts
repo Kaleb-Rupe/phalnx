@@ -1,6 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { Phalnx } from "../target/types/phalnx";
+import { Sigil } from "../target/types/sigil";
 import {
   Keypair,
   PublicKey,
@@ -35,7 +35,7 @@ const FULL_PERMISSIONS = new BN((1n << 21n) - 1n);
 describe("analytics-counters", () => {
   let env: TestEnv;
   let svm: LiteSVM;
-  let program: Program<Phalnx>;
+  let program: Program<Sigil>;
 
   let owner: anchor.Wallet;
   const agent = Keypair.generate();

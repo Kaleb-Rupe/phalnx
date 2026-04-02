@@ -1,9 +1,9 @@
 /**
- * Flash Trade Devnet Integration — Real Perpetuals Through Phalnx
+ * Flash Trade Devnet Integration — Real Perpetuals Through Sigil
  *
  * Segregated Flash Trade tests. NOT bundled with generic tests.
  * Tests real Flash Trade swap/position instructions composed with
- * Phalnx validate_and_authorize + finalize_session on devnet.
+ * Sigil validate_and_authorize + finalize_session on devnet.
  *
  * Prerequisites:
  *   - Program deployed with `devnet-testing` feature (any mint = stablecoin)
@@ -17,7 +17,7 @@
  */
 import * as anchor from "@coral-xyz/anchor";
 import { AnchorProvider, Program } from "@coral-xyz/anchor";
-import { Phalnx } from "../../target/types/phalnx";
+import { Sigil } from "../../target/types/sigil";
 import {
   Keypair,
   PublicKey,
@@ -73,7 +73,7 @@ const FULL_PERMISSIONS = new BN((1n << 21n) - 1n);
 
 // ─── Test Suite ────────────────────────────────────────────────────────────
 
-describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Phalnx", function () {
+describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function () {
   this.timeout(600_000);
 
   const { provider, program, connection, owner } = getDevnetProvider();
@@ -90,7 +90,7 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Phalnx", function (
   before(async function () {
     console.log("\n  ══════════════════════════════════════════════════");
     console.log("  ⚡ FLASH TRADE DEVNET INTEGRATION");
-    console.log("  Program (Phalnx):", program.programId.toString());
+    console.log("  Program (Sigil):", program.programId.toString());
     console.log("  Program (Flash Trade):", FLASH_TRADE_DEVNET.toString());
     console.log("  Owner:", owner.publicKey.toString());
     console.log("  Agent:", agent.publicKey.toString());
@@ -151,10 +151,10 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Phalnx", function (
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // Test 1: Flash Trade Swap (USDC → SOL) — standalone (no Phalnx)
+  // Test 1: Flash Trade Swap (USDC → SOL) — standalone (no Sigil)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  describe("Baseline: Flash Trade swap without Phalnx", () => {
+  describe("Baseline: Flash Trade swap without Sigil", () => {
     it("builds a real Flash Trade swap instruction (USDC → SOL)", async function () {
       // Build swap instruction using flash-sdk
       const { instructions } = await flashClient.swap(
@@ -188,10 +188,10 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Phalnx", function (
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // Test 2: Phalnx Vault with Flash Trade USDC
+  // Test 2: Sigil Vault with Flash Trade USDC
   // ═══════════════════════════════════════════════════════════════════════════
 
-  describe("Phalnx vault with Flash Trade USDC", () => {
+  describe("Sigil vault with Flash Trade USDC", () => {
     let vaultPda: PublicKey;
     let policyPda: PublicKey;
     let trackerPda: PublicKey;
@@ -297,7 +297,7 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Phalnx", function (
 
       console.log(`    Flash Trade IXs: ${deFiIxs.length} (of ${flashIxs.length} total)`);
 
-      // Build Phalnx sandwich
+      // Build Sigil sandwich
       const sessionPda = deriveSessionPda(
         vaultPda,
         agent.publicKey,
@@ -375,13 +375,13 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Phalnx", function (
 
       // The composed TX structure is valid but can't execute because:
       // Flash Trade's swap IX requires the wallet owner as SIGNER (account[0]).
-      // In Phalnx composition, the AGENT signs the TX and the vault PDA holds tokens.
+      // In Sigil composition, the AGENT signs the TX and the vault PDA holds tokens.
       // Full integration requires remapping Flash Trade accounts:
       //   1. Replace user ATA → vault PDA ATA
       //   2. Replace user signer → agent signer (with delegation authority)
       //   3. Handle wrapped SOL ATA creation/close
       //
-      // This proves: TX fits (896 bytes), Phalnx IXs compose correctly,
+      // This proves: TX fits (896 bytes), Sigil IXs compose correctly,
       // Flash Trade IXs are structurally valid. The account remapping is
       // the composability bridge work needed for production.
       console.log("    ✅ Composed TX structure validated (896 bytes)");
@@ -433,10 +433,10 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Phalnx", function (
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // Section 4: TX Size Analysis — Phalnx Sandwich Overhead Per Action
+  // Section 4: TX Size Analysis — Sigil Sandwich Overhead Per Action
   // ═══════════════════════════════════════════════════════════════════════════
 
-  describe("TX size analysis — Phalnx sandwich overhead", () => {
+  describe("TX size analysis — Sigil sandwich overhead", () => {
     // Helper: build a composed TX and return size
     async function measureComposedSize(
       actionName: string,
@@ -623,10 +623,10 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Phalnx", function (
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // Section 6: Phalnx Policy Enforcement — Flash Trade Specific
+  // Section 6: Sigil Policy Enforcement — Flash Trade Specific
   // ═══════════════════════════════════════════════════════════════════════════
 
-  describe("Phalnx policy enforcement with Flash Trade", () => {
+  describe("Sigil policy enforcement with Flash Trade", () => {
     it("Flash Trade in allowlist → validate succeeds", async function () {
       // Create vault with Flash Trade in allowlist
       const vaultId = nextVaultId(1);
@@ -831,7 +831,7 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Phalnx", function (
       }
 
       console.log("    └──────────────────────┴──────────┴─────────┴────────────┘");
-      console.log("    Note: Owner signer accounts need remapping to agent+delegation for Phalnx");
+      console.log("    Note: Owner signer accounts need remapping to agent+delegation for Sigil");
     });
 
     it("identifies all unique programs in Flash Trade swap", async function () {

@@ -1,6 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { Phalnx } from "../target/types/phalnx";
+import { Sigil } from "../target/types/sigil";
 import {
   Keypair,
   PublicKey,
@@ -66,7 +66,7 @@ const FULL_PERMISSIONS = new BN((1n << 21n) - 1n);
  * Jupiter Integration Tests
  *
  * These tests verify that Jupiter swap instructions can be correctly composed
- * into Phalnx's atomic [validate, ...defi, finalize] transactions.
+ * into Sigil's atomic [validate, ...defi, finalize] transactions.
  *
  * Since the on-chain program does not inspect DeFi instruction contents — it
  * only validates policy in validate_and_authorize and records the result in
@@ -75,7 +75,7 @@ const FULL_PERMISSIONS = new BN((1n << 21n) - 1n);
 describe("jupiter-integration", () => {
   let env: TestEnv;
   let svm: LiteSVM;
-  let program: Program<Phalnx>;
+  let program: Program<Sigil>;
 
   // Test actors
   let owner: anchor.Wallet;
@@ -108,7 +108,7 @@ describe("jupiter-integration", () => {
   /**
    * Create a mock DeFi instruction that mimics what Jupiter would produce.
    * Uses SystemProgram as the program ID since the real Jupiter program
-   * doesn't exist on localnet. The on-chain Phalnx program doesn't
+   * doesn't exist on localnet. The on-chain Sigil program doesn't
    * inspect the DeFi instruction — it only validates policy in
    * validate_and_authorize and records the result in finalize_session.
    *

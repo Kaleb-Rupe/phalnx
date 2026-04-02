@@ -1,12 +1,12 @@
 /**
- * @phalnx/platform
+ * @usesigil/platform
  *
  * Lightweight client for agents to request TEE wallet provisioning
- * via the Phalnx platform's Solana Actions endpoints.
+ * via the Sigil platform's Solana Actions endpoints.
  *
  * @example
  * ```typescript
- * const platform = new PhalnxPlatform("https://app.phalnx.io");
+ * const platform = new SigilPlatform("https://app.sigil.trade");
  *
  * // 1. Generate Action URL for user to sign
  * const actionUrl = platform.getProvisionActionUrl({ dailyCap: 500 });
@@ -55,7 +55,7 @@ export interface ProvisionResult {
   error?: string;
 }
 
-export class PhalnxPlatform {
+export class SigilPlatform {
   private readonly baseUrl: string;
 
   constructor(baseUrl: string) {

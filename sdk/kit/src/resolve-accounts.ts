@@ -1,5 +1,5 @@
 /**
- * Kit-native PDA resolution for Phalnx accounts.
+ * Kit-native PDA resolution for Sigil accounts.
  *
  * Uses Kit's `getProgramDerivedAddress()` and `getAddressEncoder()` for
  * seed encoding. All 9 PDA types are derivable.
@@ -7,7 +7,7 @@
 
 import type { Address, ReadonlyUint8Array } from "@solana/kit";
 import { getAddressEncoder, getProgramDerivedAddress } from "@solana/kit";
-import { PHALNX_PROGRAM_ADDRESS } from "./generated/programs/phalnx.js";
+import { SIGIL_PROGRAM_ADDRESS } from "./generated/programs/sigil.js";
 
 // ─── PDA Derivation ──────────────────────────────────────────────────────────
 
@@ -38,7 +38,7 @@ function seedU8(value: number): Seed {
 export async function getVaultPDA(
   owner: Address,
   vaultId: bigint,
-  programAddress: Address = PHALNX_PROGRAM_ADDRESS,
+  programAddress: Address = SIGIL_PROGRAM_ADDRESS,
 ): Promise<[Address, number]> {
   const [pda, bump] = await getProgramDerivedAddress({
     programAddress,
@@ -49,7 +49,7 @@ export async function getVaultPDA(
 
 export async function getPolicyPDA(
   vault: Address,
-  programAddress: Address = PHALNX_PROGRAM_ADDRESS,
+  programAddress: Address = SIGIL_PROGRAM_ADDRESS,
 ): Promise<[Address, number]> {
   const [pda, bump] = await getProgramDerivedAddress({
     programAddress,
@@ -60,7 +60,7 @@ export async function getPolicyPDA(
 
 export async function getTrackerPDA(
   vault: Address,
-  programAddress: Address = PHALNX_PROGRAM_ADDRESS,
+  programAddress: Address = SIGIL_PROGRAM_ADDRESS,
 ): Promise<[Address, number]> {
   const [pda, bump] = await getProgramDerivedAddress({
     programAddress,
@@ -73,7 +73,7 @@ export async function getSessionPDA(
   vault: Address,
   agent: Address,
   tokenMint: Address,
-  programAddress: Address = PHALNX_PROGRAM_ADDRESS,
+  programAddress: Address = SIGIL_PROGRAM_ADDRESS,
 ): Promise<[Address, number]> {
   const [pda, bump] = await getProgramDerivedAddress({
     programAddress,
@@ -89,7 +89,7 @@ export async function getSessionPDA(
 
 export async function getPendingPolicyPDA(
   vault: Address,
-  programAddress: Address = PHALNX_PROGRAM_ADDRESS,
+  programAddress: Address = SIGIL_PROGRAM_ADDRESS,
 ): Promise<[Address, number]> {
   const [pda, bump] = await getProgramDerivedAddress({
     programAddress,
@@ -102,7 +102,7 @@ export async function getEscrowPDA(
   sourceVault: Address,
   destinationVault: Address,
   escrowId: bigint,
-  programAddress: Address = PHALNX_PROGRAM_ADDRESS,
+  programAddress: Address = SIGIL_PROGRAM_ADDRESS,
 ): Promise<[Address, number]> {
   const [pda, bump] = await getProgramDerivedAddress({
     programAddress,
@@ -119,7 +119,7 @@ export async function getEscrowPDA(
 export async function getAgentOverlayPDA(
   vault: Address,
   shardIndex: number = 0,
-  programAddress: Address = PHALNX_PROGRAM_ADDRESS,
+  programAddress: Address = SIGIL_PROGRAM_ADDRESS,
 ): Promise<[Address, number]> {
   const [pda, bump] = await getProgramDerivedAddress({
     programAddress,
@@ -130,7 +130,7 @@ export async function getAgentOverlayPDA(
 
 export async function getConstraintsPDA(
   vault: Address,
-  programAddress: Address = PHALNX_PROGRAM_ADDRESS,
+  programAddress: Address = SIGIL_PROGRAM_ADDRESS,
 ): Promise<[Address, number]> {
   const [pda, bump] = await getProgramDerivedAddress({
     programAddress,
@@ -141,7 +141,7 @@ export async function getConstraintsPDA(
 
 export async function getPendingConstraintsPDA(
   vault: Address,
-  programAddress: Address = PHALNX_PROGRAM_ADDRESS,
+  programAddress: Address = SIGIL_PROGRAM_ADDRESS,
 ): Promise<[Address, number]> {
   const [pda, bump] = await getProgramDerivedAddress({
     programAddress,
@@ -171,12 +171,12 @@ export interface ResolvedAccounts {
 }
 
 /**
- * Auto-derive all PDA accounts needed for a composed Phalnx transaction.
+ * Auto-derive all PDA accounts needed for a composed Sigil transaction.
  * Token ATAs must be derived separately using `@solana-program/token`.
  */
 export async function resolveAccounts(
   input: ResolveAccountsInput,
-  programAddress: Address = PHALNX_PROGRAM_ADDRESS,
+  programAddress: Address = SIGIL_PROGRAM_ADDRESS,
 ): Promise<ResolvedAccounts> {
   const [policyPda] = await getPolicyPDA(input.vault, programAddress);
   const [trackerPda] = await getTrackerPDA(input.vault, programAddress);

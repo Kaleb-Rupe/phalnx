@@ -1,4 +1,4 @@
-// @phalnx/kit — Kit-native SDK for Phalnx
+// @usesigil/kit — Kit-native SDK for Sigil
 // ESM-only, zero web3.js dependency
 
 // ─── Generated Client ─────────────────────────────────────────────────────────
@@ -7,7 +7,7 @@ export * from "./generated/index.js";
 // ─── Type Constants + Permissions ─────────────────────────────────────────────
 export {
   // Program
-  PHALNX_PROGRAM_ADDRESS,
+  SIGIL_PROGRAM_ADDRESS,
   // Fee constants
   FEE_RATE_DENOMINATOR,
   PROTOCOL_FEE_RATE,
@@ -111,15 +111,15 @@ export type {
 
 // ─── ALT (Address Lookup Table) ──────────────────────────────────────────────
 export {
-  PHALNX_ALT_DEVNET,
-  PHALNX_ALT_MAINNET,
-  getPhalnxAltAddress,
+  SIGIL_ALT_DEVNET,
+  SIGIL_ALT_MAINNET,
+  getSigilAltAddress,
 } from "./alt-config.js";
 export { AltCache, mergeAltAddresses } from "./alt-loader.js";
 
 // ─── Transaction Composer ─────────────────────────────────────────────────────
 export {
-  composePhalnxTransaction,
+  composeSigilTransaction,
   validateTransactionSize,
   measureTransactionSize,
 } from "./composer.js";
@@ -127,16 +127,16 @@ export type { ComposeTransactionParams } from "./composer.js";
 
 // ─── Event Parser ─────────────────────────────────────────────────────────────
 export {
-  parsePhalnxEvents,
+  parseSigilEvents,
   filterEvents,
   getEventNames,
-  decodePhalnxEvent,
-  parseAndDecodePhalnxEvents,
+  decodeSigilEvent,
+  parseAndDecodeSigilEvents,
 } from "./events.js";
 export type {
-  PhalnxEvent,
-  PhalnxEventName,
-  DecodedPhalnxEvent,
+  SigilEvent,
+  SigilEventName,
+  DecodedSigilEvent,
 } from "./events.js";
 
 // ─── Priority Fees ────────────────────────────────────────────────────────────
@@ -160,7 +160,7 @@ export type { PriorityLevel, PriorityFeeConfig } from "./priority-fees.js";
 export {
   simulateBeforeSend,
   detectDrainAttempt,
-  detectDrainFromWrapContext,
+  detectDrainFromSealContext,
   adjustCU,
   parseTokenBalance,
   RISK_FLAG_LARGE_OUTFLOW,
@@ -362,8 +362,8 @@ export type { CustodyAdapter } from "./custody-adapter.js";
 export {
   ON_CHAIN_ERROR_MAP,
   toAgentError,
-  wrapToAgentError,
-  PhalnxSdkError,
+  toSigilAgentError,
+  SigilSdkError,
   protocolEscalationError,
   parseOnChainErrorCode,
   isAgentError,
@@ -375,7 +375,7 @@ export type {
   ErrorCategory,
   RecoveryAction,
   AgentError,
-  PhalnxErrorCategory,
+  SigilErrorCategory,
 } from "./agent-errors.js";
 
 // ─── Protocol Resolver ───────────────────────────────────────────────────────
@@ -416,15 +416,15 @@ export type {
   ShieldedSignerOptions,
 } from "./shield.js";
 
-// ─── Wrap ──────────────────────────────────────────────────────────────────
-export { wrap, PhalnxClient, replaceAgentAtas } from "./wrap.js";
+// ─── Seal ──────────────────────────────────────────────────────────────────
+export { seal, SigilClient, replaceAgentAtas } from "./seal.js";
 export type {
-  WrapParams,
-  WrapResult,
-  PhalnxClientConfig,
-  ClientWrapOpts,
+  SealParams,
+  SealResult,
+  SigilClientConfig,
+  ClientSealOpts,
   ExecuteResult,
-} from "./wrap.js";
+} from "./seal.js";
 
 // ─── Create Vault ──────────────────────────────────────────────────────────
 export { createVault, createAndSendVault } from "./create-vault.js";
@@ -451,19 +451,19 @@ export type {
   OwnerTransactionResult,
 } from "./owner-transaction.js";
 
-// ─── Harden / withVault ─────────────────────────────────────────────────────
+// ─── Inscribe / withVault ─────────────────────────────────────────────────────
 export {
   mapPoliciesToVaultParams,
   findNextVaultId,
-  harden,
+  inscribe,
   withVault,
-} from "./harden.js";
+} from "./inscribe.js";
 export type {
-  HardenOptions,
-  HardenResult,
+  InscribeOptions,
+  InscribeResult,
   WithVaultOptions,
   WithVaultResult,
-} from "./harden.js";
+} from "./inscribe.js";
 
 // ─── Transaction Executor ──────────────────────────────────────────────────
 export { TransactionExecutor } from "./transaction-executor.js";
@@ -481,61 +481,32 @@ export {
 } from "./rpc-helpers.js";
 export type { Blockhash, SendAndConfirmOptions } from "./rpc-helpers.js";
 
-// ─── x402 HTTP 402 Payment Required ───────────────────────────────────────
-export {
-  // Core
-  shieldedFetch,
-  createShieldedFetch,
-  // Codec
-  decodePaymentRequiredHeader,
-  encodePaymentSignatureHeader,
-  decodePaymentResponseHeader,
-  // Selector
-  selectPaymentOption,
-  // Transfer Builder
-  buildX402TransferInstruction,
-  deriveAta,
-  transferToInspectable,
-  X402_TOKEN_PROGRAM_ID,
-  X402_ATA_PROGRAM_ID,
-  // Nonce Tracker
-  NonceTracker,
-  // Amount Guard
-  validatePaymentAmount,
-  recordPaymentAmount,
-  resetPaymentHistory,
-  // Policy Bridge
-  evaluateX402Payment,
-  recordX402Spend,
-  // Facilitator
-  validateSettlement,
-  // Audit
-  emitPaymentEvent,
-  createPaymentEvent,
-  // Errors
-  X402ParseError,
-  X402PaymentError,
-  X402UnsupportedError,
-  X402DestinationBlockedError,
-  X402ReplayError,
-} from "./x402/index.js";
-export type {
-  PaymentRequired,
-  PaymentRequirements,
-  ResourceInfo,
-  PaymentPayload,
-  SettleResponse,
-  X402Config,
-  ShieldedFetchOptions,
-  ShieldedFetchResponse,
-  X402PaymentResult,
-  X402PaymentEvent,
-  FacilitatorVerifyResult,
-} from "./x402/index.js";
-
 // ─── VelocityTracker ──────────────────────────────────────────────────────
 export { VelocityTracker } from "./velocity-tracker.js";
 export type { VelocityConfig, SpendStatus } from "./velocity-tracker.js";
+
+// ─── Core Policy Engine ──────────────────────────────────────────────────────
+// Non-conflicting core exports only. Kit's shield.ts defines its own
+// ShieldState, ShieldDeniedError, PolicyViolation. Kit's policies.ts defines
+// its own ShieldPolicies, SpendLimit, TransactionAnalysis, TokenTransfer,
+// ResolvedPolicies, resolvePolicies. DEFAULT_POLICIES, parseSpendLimit,
+// RateLimitConfig, PolicyCheckResult already flow through policies.ts.
+export { ShieldConfigError } from "./core/index.js";
+export {
+  evaluatePolicy,
+  enforcePolicy,
+  recordTransaction,
+} from "./core/index.js";
+export {
+  KNOWN_PROTOCOLS,
+  KNOWN_TOKENS,
+  SYSTEM_PROGRAMS,
+  getTokenInfo,
+  getProtocolName,
+  isKnownProtocol,
+  isSystemProgram,
+} from "./core/index.js";
+export type { ShieldStorage, SpendEntry, TxEntry } from "./core/index.js";
 
 // ─── Balance Tracker / P&L ──────────────────────────────────────────────────
 export {

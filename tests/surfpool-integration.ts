@@ -10,7 +10,7 @@
  */
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { Phalnx } from "../target/types/phalnx";
+import { Sigil } from "../target/types/sigil";
 import {
   Keypair,
   PublicKey,
@@ -64,7 +64,7 @@ const FULL_PERMISSIONS = new BN((1n << 21n) - 1n);
 // ─── Shared state ───────────────────────────────────────────────────────────
 
 let env: SurfpoolTestEnv;
-let program: Program<Phalnx>;
+let program: Program<Sigil>;
 
 describe("surfpool-integration", function () {
   this.timeout(300_000); // 5 min global timeout
@@ -1952,7 +1952,7 @@ describe("surfpool-integration", function () {
         env.connection,
         [reactivateIx],
         setup.agent,
-        "2006", // Anchor ConstraintHasOne — framework error, not in PHALNX_ERROR_NAMES
+        "2006", // Anchor ConstraintHasOne — framework error, not in SIGIL_ERROR_NAMES
       );
 
       // Unfreeze for subsequent tests (must succeed or cascade fails)

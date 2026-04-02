@@ -9,7 +9,7 @@
  */
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { Phalnx } from "../../target/types/phalnx";
+import { Sigil } from "../../target/types/sigil";
 import {
   Connection,
   Keypair,
@@ -95,7 +95,7 @@ export async function waitForReady(
     try {
       await connection.getSlot();
       // Register IDL for account parsing in Studio
-      const idlPath = path.resolve(__dirname, "../../target/idl/phalnx.json");
+      const idlPath = path.resolve(__dirname, "../../target/idl/sigil.json");
       if (fs.existsSync(idlPath)) {
         const idl = JSON.parse(fs.readFileSync(idlPath, "utf-8"));
         try {
@@ -121,7 +121,7 @@ export async function waitForReady(
 // ─── Local program deployment ────────────────────────────────────────────────
 
 /**
- * Deploy the local phalnx.so to Surfnet via `solana program deploy`.
+ * Deploy the local sigil.so to Surfnet via `solana program deploy`.
  *
  * surfnet_setAccount alone does NOT update the SVM's compiled program cache.
  * The standard BPF Loader Deploy instruction is required to properly reload
@@ -131,7 +131,7 @@ export async function waitForReady(
  *   3. Run `solana program deploy` which triggers a proper BPF reload
  */
 async function deployLocalProgram(connection: Connection): Promise<void> {
-  const soPath = path.resolve(__dirname, "../../target/deploy/phalnx.so");
+  const soPath = path.resolve(__dirname, "../../target/deploy/sigil.so");
   if (!fs.existsSync(soPath)) {
     throw new Error(
       `Program .so not found at ${soPath}. Run 'anchor build --no-idl' first.`,
@@ -207,7 +207,7 @@ async function deployLocalProgram(connection: Connection): Promise<void> {
 export interface SurfpoolTestEnv {
   connection: Connection;
   provider: anchor.AnchorProvider;
-  program: Program<Phalnx>;
+  program: Program<Sigil>;
   payer: Keypair;
 }
 
@@ -234,10 +234,10 @@ export async function createSurfpoolTestEnv(): Promise<SurfpoolTestEnv> {
   });
   anchor.setProvider(provider);
 
-  const program = new Program<Phalnx>(
+  const program = new Program<Sigil>(
     JSON.parse(
       fs.readFileSync(
-        path.resolve(__dirname, "../../target/idl/phalnx.json"),
+        path.resolve(__dirname, "../../target/idl/sigil.json"),
         "utf-8",
       ),
     ),
@@ -452,12 +452,12 @@ export async function getProfilesByTag(
 // ─── Anchor error code → name lookup ─────────────────────────────────────────
 
 /**
- * Phalnx custom error codes (6000-6070) mapped to Anchor error names.
- * Source of truth: programs/phalnx/src/errors.rs
+ * Sigil custom error codes (6000-6070) mapped to Anchor error names.
+ * Source of truth: programs/sigil/src/errors.rs
  * Surfnet does NOT return program logs for failed TXs via getTransaction(),
  * so we must decode the numeric error code to include the name in errors.
  */
-const PHALNX_ERROR_NAMES: Record<number, string> = {
+const SIGIL_ERROR_NAMES: Record<number, string> = {
   6000: "VaultNotActive",
   6001: "UnauthorizedAgent",
   6002: "UnauthorizedOwner",
@@ -539,7 +539,7 @@ function resolveErrorName(err: any): string {
   const match = errJson.match(/"Custom":(\d+)/);
   if (match) {
     const code = parseInt(match[1], 10);
-    const name = PHALNX_ERROR_NAMES[code];
+    const name = SIGIL_ERROR_NAMES[code];
     if (name) return `${name} (${code})`;
   }
   return "";
@@ -860,7 +860,7 @@ export async function expectTxError(
 
     // Surfpool returns numeric codes like {"Custom":6000} instead of "VaultNotActive".
     // Reverse-lookup: if errorSubstring is an error name, check if the numeric code appears.
-    const codeEntry = Object.entries(PHALNX_ERROR_NAMES).find(
+    const codeEntry = Object.entries(SIGIL_ERROR_NAMES).find(
       ([, name]) => name === errorSubstring,
     );
     if (codeEntry) {

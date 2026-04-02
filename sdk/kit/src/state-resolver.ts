@@ -73,7 +73,7 @@ import {
   NUM_EPOCHS,
   OVERLAY_EPOCH_DURATION,
   OVERLAY_NUM_EPOCHS,
-  PHALNX_PROGRAM_ADDRESS,
+  SIGIL_PROGRAM_ADDRESS,
   PROTOCOL_TREASURY,
   ROLLING_WINDOW_SECONDS,
   U64_MAX,
@@ -447,7 +447,11 @@ export async function resolveVaultState(
       );
       if (overlayEntry) {
         const spent = getAgentRolling24hUsd(overlayEntry, timestamp);
-        budget = { spent24h: spent, cap, remaining: cap > spent ? cap - spent : 0n };
+        budget = {
+          spent24h: spent,
+          cap,
+          remaining: cap > spent ? cap - spent : 0n,
+        };
       } else {
         budget = { spent24h: 0n, cap, remaining: cap };
       }
@@ -533,7 +537,10 @@ export async function resolveVaultState(
 // ─── resolveVaultStateForOwner ────────────────────────────────────────────────
 
 /** Owner-facing vault state — all agents' budgets, no single-agent focus. */
-export type ResolvedVaultStateForOwner = Omit<ResolvedVaultState, "agentBudget">;
+export type ResolvedVaultStateForOwner = Omit<
+  ResolvedVaultState,
+  "agentBudget"
+>;
 
 /**
  * Resolve complete vault state for an owner — returns all agents' budgets
@@ -588,11 +595,7 @@ export async function resolveVaultBudget(
   agent: Address,
   nowUnix?: bigint,
 ): Promise<ResolvedBudget> {
-  const [
-    [policyPda],
-    [trackerPda],
-    [overlayPda],
-  ] = await Promise.all([
+  const [[policyPda], [trackerPda], [overlayPda]] = await Promise.all([
     getPolicyPDA(vault),
     getTrackerPDA(vault),
     getAgentOverlayPDA(vault, 0),
@@ -630,7 +633,8 @@ export async function resolveVaultBudget(
   // Global budget
   const globalSpent = tracker ? getRolling24hUsd(tracker, timestamp) : 0n;
   const globalCap = decodedPolicy.data.dailySpendingCapUsd;
-  const globalRemaining = globalCap > globalSpent ? globalCap - globalSpent : 0n;
+  const globalRemaining =
+    globalCap > globalSpent ? globalCap - globalSpent : 0n;
   const globalBudget: EffectiveBudget = {
     spent24h: globalSpent,
     cap: globalCap,
@@ -648,7 +652,11 @@ export async function resolveVaultBudget(
       );
       if (overlayEntry) {
         const spent = getAgentRolling24hUsd(overlayEntry, timestamp);
-        agentBudget = { spent24h: spent, cap, remaining: cap > spent ? cap - spent : 0n };
+        agentBudget = {
+          spent24h: spent,
+          cap,
+          remaining: cap > spent ? cap - spent : 0n,
+        };
       } else {
         agentBudget = { spent24h: 0n, cap, remaining: cap };
       }
@@ -747,23 +755,29 @@ export async function findVaultsByOwner(
   // Strategy A: getProgramAccounts with memcmp filter
   try {
     const accounts = await rpc
-      .getProgramAccounts(PHALNX_PROGRAM_ADDRESS, {
+      .getProgramAccounts(SIGIL_PROGRAM_ADDRESS, {
         dataSlice: { offset: VAULT_ID_OFFSET, length: 8 },
         filters: [
           { dataSize: BigInt(AGENT_VAULT_SIZE) },
-          { memcmp: { offset: BigInt(8), bytes: ownerBase64 as Base64EncodedBytes, encoding: "base64" } },
+          {
+            memcmp: {
+              offset: BigInt(8),
+              bytes: ownerBase64 as Base64EncodedBytes,
+              encoding: "base64",
+            },
+          },
         ],
         encoding: "base64",
       })
       .send();
 
-    const parsed = (accounts as { pubkey: Address; account: { data: [string, string] } }[]).map(
-      (entry) => {
-        const raw = base64ToUint8(entry.account.data[0]);
-        const vaultId = u64Decoder.decode(raw);
-        return { vaultAddress: entry.pubkey, vaultId };
-      },
-    );
+    const parsed = (
+      accounts as { pubkey: Address; account: { data: [string, string] } }[]
+    ).map((entry) => {
+      const raw = base64ToUint8(entry.account.data[0]);
+      const vaultId = u64Decoder.decode(raw);
+      return { vaultAddress: entry.pubkey, vaultId };
+    });
 
     // V-1 fix: Re-derive PDAs to verify RPC-returned pubkeys are legitimate vault addresses.
     // A malicious RPC could return fabricated pubkeys that don't correspond to real vault PDAs.
@@ -776,11 +790,16 @@ export async function findVaultsByOwner(
     }
 
     // Sort by vaultId for consistent ordering regardless of RPC response order
-    return verified.sort((a, b) => (a.vaultId < b.vaultId ? -1 : a.vaultId > b.vaultId ? 1 : 0));
+    return verified.sort((a, b) =>
+      a.vaultId < b.vaultId ? -1 : a.vaultId > b.vaultId ? 1 : 0,
+    );
   } catch (err) {
     // Rate limits must propagate — never fall back to slow probing under rate limit
     const code = (err as { code?: number }).code;
-    if (code === -32005 || (err instanceof Error && err.message.includes("429"))) {
+    if (
+      code === -32005 ||
+      (err instanceof Error && err.message.includes("429"))
+    ) {
       throw err;
     }
     // Only fall back to probing if the RPC doesn't support getProgramAccounts.
@@ -835,10 +854,16 @@ export async function findEscrowsByVault(
 
   try {
     const accounts = await rpc
-      .getProgramAccounts(PHALNX_PROGRAM_ADDRESS, {
+      .getProgramAccounts(SIGIL_PROGRAM_ADDRESS, {
         filters: [
           { dataSize: BigInt(ESCROW_DEPOSIT_SIZE) },
-          { memcmp: { offset: BigInt(8), bytes: vaultBase64 as Base64EncodedBytes, encoding: "base64" } },
+          {
+            memcmp: {
+              offset: BigInt(8),
+              bytes: vaultBase64 as Base64EncodedBytes,
+              encoding: "base64",
+            },
+          },
         ],
         encoding: "base64",
       })
@@ -846,13 +871,13 @@ export async function findEscrowsByVault(
 
     // Decode directly from GPA response (avoids double RPC)
     const decoder = getEscrowDepositDecoder();
-    return (accounts as { pubkey: Address; account: { data: [string, string] } }[]).map(
-      (entry) => {
-        const raw = base64ToUint8(entry.account.data[0]);
-        const data = decoder.decode(raw);
-        return { ...data, address: entry.pubkey };
-      },
-    );
+    return (
+      accounts as { pubkey: Address; account: { data: [string, string] } }[]
+    ).map((entry) => {
+      const raw = base64ToUint8(entry.account.data[0]);
+      const data = decoder.decode(raw);
+      return { ...data, address: entry.pubkey };
+    });
   } catch (err) {
     if (!isGpaUnsupportedError(err)) throw err;
     return []; // GPA not supported — return empty
@@ -876,10 +901,16 @@ export async function findSessionsByVault(
 
   try {
     const accounts = await rpc
-      .getProgramAccounts(PHALNX_PROGRAM_ADDRESS, {
+      .getProgramAccounts(SIGIL_PROGRAM_ADDRESS, {
         filters: [
           { dataSize: BigInt(SESSION_AUTHORITY_SIZE) },
-          { memcmp: { offset: BigInt(8), bytes: vaultBase64 as Base64EncodedBytes, encoding: "base64" } },
+          {
+            memcmp: {
+              offset: BigInt(8),
+              bytes: vaultBase64 as Base64EncodedBytes,
+              encoding: "base64",
+            },
+          },
         ],
         encoding: "base64",
       })
@@ -887,13 +918,13 @@ export async function findSessionsByVault(
 
     // Decode directly from GPA response (avoids double RPC)
     const decoder = getSessionAuthorityDecoder();
-    return (accounts as { pubkey: Address; account: { data: [string, string] } }[]).map(
-      (entry) => {
-        const raw = base64ToUint8(entry.account.data[0]);
-        const data = decoder.decode(raw);
-        return { ...data, address: entry.pubkey };
-      },
-    );
+    return (
+      accounts as { pubkey: Address; account: { data: [string, string] } }[]
+    ).map((entry) => {
+      const raw = base64ToUint8(entry.account.data[0]);
+      const data = decoder.decode(raw);
+      return { ...data, address: entry.pubkey };
+    });
   } catch (err) {
     if (!isGpaUnsupportedError(err)) throw err;
     return []; // GPA not supported — return empty

@@ -1,14 +1,14 @@
 import { expect } from "chai";
 import * as sinon from "sinon";
-import { PhalnxPlatform } from "../src/index";
+import { SigilPlatform } from "../src/index";
 
-describe("PhalnxPlatform", () => {
-  const BASE_URL = "https://app.phalnx.io";
-  let platform: PhalnxPlatform;
+describe("SigilPlatform", () => {
+  const BASE_URL = "https://app.sigil.io";
+  let platform: SigilPlatform;
   let fetchStub: sinon.SinonStub;
 
   beforeEach(() => {
-    platform = new PhalnxPlatform(BASE_URL);
+    platform = new SigilPlatform(BASE_URL);
     fetchStub = sinon.stub(globalThis, "fetch");
   });
 
@@ -46,7 +46,7 @@ describe("PhalnxPlatform", () => {
     });
 
     it("strips trailing slash from base URL", () => {
-      const p = new PhalnxPlatform("https://example.com/");
+      const p = new SigilPlatform("https://example.com/");
       const url = p.getProvisionActionUrl();
       expect(url).to.equal("https://example.com/api/actions/provision");
     });
@@ -66,7 +66,7 @@ describe("PhalnxPlatform", () => {
     it("fetches GET endpoint", async () => {
       const mockMetadata = {
         type: "action",
-        title: "Create Phalnx Protected Vault",
+        title: "Create Sigil Protected Vault",
         icon: "https://example.com/icon.png",
         description: "Test",
         label: "Create Vault",
@@ -79,7 +79,7 @@ describe("PhalnxPlatform", () => {
       } as Response);
 
       const result = await platform.getActionMetadata();
-      expect(result.title).to.equal("Create Phalnx Protected Vault");
+      expect(result.title).to.equal("Create Sigil Protected Vault");
       expect(fetchStub.calledOnce).to.be.true;
       expect(fetchStub.firstCall.args[0]).to.equal(
         `${BASE_URL}/api/actions/provision`,
@@ -226,7 +226,7 @@ describe("PhalnxPlatform", () => {
         ok: true,
         json: async () => ({
           status: "not_found",
-          error: "TX does not involve Phalnx",
+          error: "TX does not involve Sigil",
         }),
       } as Response);
 

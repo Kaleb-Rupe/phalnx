@@ -35,7 +35,7 @@ import {
   type SpendLimit,
 } from "./policies.js";
 import { simulateBeforeSend } from "./simulation.js";
-import { PHALNX_PROGRAM_ADDRESS } from "./generated/programs/phalnx.js";
+import { SIGIL_PROGRAM_ADDRESS } from "./generated/programs/sigil.js";
 import { VALIDATE_AND_AUTHORIZE_DISCRIMINATOR } from "./generated/instructions/validateAndAuthorize.js";
 import { FINALIZE_SESSION_DISCRIMINATOR } from "./generated/instructions/finalizeSession.js";
 import type { AltCache } from "./alt-loader.js";
@@ -170,7 +170,9 @@ export class ShieldState {
     const PRUNE_THRESHOLD = 10_000;
     if (this.spendEntries.length > PRUNE_THRESHOLD) {
       const cutoff = Date.now() - 86_400_000;
-      this.spendEntries = this.spendEntries.filter((e) => e.timestamp >= cutoff);
+      this.spendEntries = this.spendEntries.filter(
+        (e) => e.timestamp >= cutoff,
+      );
     }
     if (this.txEntries.length > PRUNE_THRESHOLD) {
       const cutoff = Date.now() - 86_400_000;
@@ -829,7 +831,7 @@ export function createShieldedSigner(
         if (options?.sessionContext) {
           checkSessionBinding(
             tx,
-            PHALNX_PROGRAM_ADDRESS,
+            SIGIL_PROGRAM_ADDRESS,
             options?.sessionBindingSeverity ?? "hard",
           );
         }
@@ -866,7 +868,9 @@ export function createShieldedSigner(
 
       // Delegate to base signer
       const signer = baseSigner as TransactionSigner & {
-        modifyAndSignTransactions?: (...args: unknown[]) => Promise<readonly unknown[]>;
+        modifyAndSignTransactions?: (
+          ...args: unknown[]
+        ) => Promise<readonly unknown[]>;
         signTransactions?: (...args: unknown[]) => Promise<readonly unknown[]>;
       };
       if (signer.modifyAndSignTransactions) {
@@ -875,7 +879,10 @@ export function createShieldedSigner(
         const sigs = await signer.signTransactions(txs);
         return txs.map((tx: any, i: number) => ({
           ...tx,
-          signatures: { ...tx.signatures, ...(sigs[i] as Record<string, unknown>) },
+          signatures: {
+            ...tx.signatures,
+            ...(sigs[i] as Record<string, unknown>),
+          },
         }));
       }
       throw new Error(
@@ -921,7 +928,9 @@ export function _extractInstructionsFromCompiled(
     // ALL lookups first, then ALL readonlys from ALL lookups.
     // Pass 1: ALL writables from ALL lookups (in lookup order)
     for (const lookup of msg.addressTableLookups) {
-      const resolved = altCache.getCachedAddresses(lookup.lookupTableAddress as Address);
+      const resolved = altCache.getCachedAddresses(
+        lookup.lookupTableAddress as Address,
+      );
       if (resolved) {
         for (const idx of lookup.writableIndexes ?? []) {
           accountTable.push(resolveAltIndex(idx, resolved));
@@ -930,7 +939,9 @@ export function _extractInstructionsFromCompiled(
     }
     // Pass 2: ALL readonlys from ALL lookups
     for (const lookup of msg.addressTableLookups) {
-      const resolved = altCache.getCachedAddresses(lookup.lookupTableAddress as Address);
+      const resolved = altCache.getCachedAddresses(
+        lookup.lookupTableAddress as Address,
+      );
       if (resolved) {
         for (const idx of lookup.readonlyIndexes ?? []) {
           accountTable.push(resolveAltIndex(idx, resolved));
@@ -1011,13 +1022,13 @@ function checkSessionBinding(
     return;
   }
 
-  const phalnxIxs = msg.instructions.filter(
+  const sigilIxs = msg.instructions.filter(
     (ix: any) => msg.staticAccounts[ix.programAddressIndex] === programAddress,
   );
 
-  if (phalnxIxs.length === 0) {
+  if (sigilIxs.length === 0) {
     const message =
-      "[ShieldedSigner] No Phalnx instructions found in transaction";
+      "[ShieldedSigner] No Sigil instructions found in transaction";
     if (severity === "hard") {
       throw new ShieldDeniedError([{ rule: "session_binding", message }]);
     }
@@ -1025,8 +1036,8 @@ function checkSessionBinding(
     return;
   }
 
-  const firstData = phalnxIxs[0].data;
-  const lastData = phalnxIxs[phalnxIxs.length - 1].data;
+  const firstData = sigilIxs[0].data;
+  const lastData = sigilIxs[sigilIxs.length - 1].data;
 
   const hasValidate =
     firstData &&

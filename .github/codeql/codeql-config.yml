@@ -1,4 +1,4 @@
-name: "Phalnx CodeQL Configuration"
+name: "Sigil CodeQL Configuration"
 
 # Custody adapters (Turnkey, Privy) make authenticated API requests using
 # P-256 ECDSA request stamping and crypto.createHash for message digests.

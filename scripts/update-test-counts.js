@@ -247,28 +247,20 @@ updateFile("CLAUDE.md", "CLAUDE.md", (content) => {
   // These follow the pattern: `path/` — description (N tests)
   const packagePatterns = [
     {
-      match: /`sdk\/core\/`[^)]*?(\d+) tests\)/,
-      suite: "Core policy engine (`@phalnx/core`)",
-    },
-    {
-      match: /`sdk\/typescript\/`[^)]*?(\d+) tests\)/,
-      suite: "SDK tests (`@phalnx/sdk`)",
-    },
-    {
       match: /`sdk\/platform\/`[^)]*?(\d+) tests\)/,
-      suite: "Platform client tests (`@phalnx/platform`)",
+      suite: "Platform client tests (`@usesigil/platform`)",
     },
     {
-      match: /`sdk\/custody\/crossmint\/`[^)]*?(\d+) tests\)/,
-      suite: "Crossmint custody adapter",
+      match: /`sdk\/custody\/`[^)]*?(\d+) tests\)/,
+      suite: "Custody adapters (`@usesigil/custody`)",
     },
     {
       match: /`packages\/mcp\/`[^)]*?(\d+) tests\)/,
-      suite: "MCP server (`@phalnx/mcp`)",
+      suite: "MCP server (`@usesigil/mcp`)",
     },
     {
       match: /`apps\/actions-server\/`[^)]*?(\d+) tests\)/,
-      suite: "Actions server (`@phalnx/actions-server`)",
+      suite: "Actions server (`@usesigil/actions-server`)",
     },
   ];
 

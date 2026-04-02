@@ -1,12 +1,12 @@
 import { expect } from "chai";
 import { createHash } from "crypto";
 import {
-  parsePhalnxEvents,
+  parseSigilEvents,
   filterEvents,
   getEventNames,
-  decodePhalnxEvent,
-  parseAndDecodePhalnxEvents,
-  type PhalnxEvent,
+  decodeSigilEvent,
+  parseAndDecodeSigilEvents,
+  type SigilEvent,
 } from "../src/events.js";
 import { EVENT_DISCRIMINATOR_MAP } from "../src/generated/event-discriminators.js";
 import { type Address } from "@solana/kit";
@@ -50,21 +50,21 @@ describe("events", () => {
     });
   });
 
-  describe("parsePhalnxEvents", () => {
+  describe("parseSigilEvents", () => {
     it("empty logs returns empty array", () => {
-      expect(parsePhalnxEvents([])).to.deep.equal([]);
+      expect(parseSigilEvents([])).to.deep.equal([]);
     });
 
     it("no 'Program data:' returns empty array", () => {
       const logs = ["Program log: hello world", "some other log"];
-      expect(parsePhalnxEvents(logs)).to.deep.equal([]);
+      expect(parseSigilEvents(logs)).to.deep.equal([]);
     });
 
     it("valid base64 with known discriminator parses event", () => {
       const disc = Object.keys(EVENT_DISCRIMINATOR_MAP)[0];
       const expectedName = EVENT_DISCRIMINATOR_MAP[disc];
       const logs = [mockEventLog(disc, [1, 2, 3])];
-      const events = parsePhalnxEvents(logs);
+      const events = parseSigilEvents(logs);
       expect(events).to.have.length(1);
       expect(events[0].name).to.equal(expectedName);
       expect(events[0].data).to.have.length(3);
@@ -73,31 +73,31 @@ describe("events", () => {
     it("multiple events in same log set", () => {
       const discs = Object.keys(EVENT_DISCRIMINATOR_MAP);
       const logs = [mockEventLog(discs[0]), mockEventLog(discs[1])];
-      const events = parsePhalnxEvents(logs);
+      const events = parseSigilEvents(logs);
       expect(events).to.have.length(2);
     });
 
     it("unknown discriminator is skipped", () => {
       const logs = [mockEventLog("0000000000000000", [1, 2, 3])];
-      expect(parsePhalnxEvents(logs)).to.deep.equal([]);
+      expect(parseSigilEvents(logs)).to.deep.equal([]);
     });
 
     it("base64 too short (<8 bytes) is skipped", () => {
       const shortData = new Uint8Array([1, 2, 3]);
       const logs = [`Program data: ${toBase64(shortData)}`];
-      expect(parsePhalnxEvents(logs)).to.deep.equal([]);
+      expect(parseSigilEvents(logs)).to.deep.equal([]);
     });
 
     it("malformed base64 is skipped", () => {
       const logs = ["Program data: !!!not-base64!!!"];
-      expect(parsePhalnxEvents(logs)).to.deep.equal([]);
+      expect(parseSigilEvents(logs)).to.deep.equal([]);
     });
 
     it("event data bytes are correct (after discriminator)", () => {
       const disc = Object.keys(EVENT_DISCRIMINATOR_MAP)[0];
       const payload = [0xaa, 0xbb, 0xcc, 0xdd];
       const logs = [mockEventLog(disc, payload)];
-      const events = parsePhalnxEvents(logs);
+      const events = parseSigilEvents(logs);
       expect(events).to.have.length(1);
       expect(Array.from(events[0].data)).to.deep.equal(payload);
     });
@@ -158,7 +158,7 @@ describe("events", () => {
       const expectedName = EVENT_DISCRIMINATOR_MAP[disc];
       const payload = [10, 20, 30, 40, 50];
       const log = mockEventLog(disc, payload);
-      const events = parsePhalnxEvents([log]);
+      const events = parseSigilEvents([log]);
       expect(events).to.have.length(1);
       expect(events[0].name).to.equal(expectedName);
       expect(Array.from(events[0].data)).to.deep.equal(payload);
@@ -167,7 +167,7 @@ describe("events", () => {
     it("discriminator-only event (no data) parses correctly", () => {
       const disc = Object.keys(EVENT_DISCRIMINATOR_MAP)[0];
       const log = mockEventLog(disc, []);
-      const events = parsePhalnxEvents([log]);
+      const events = parseSigilEvents([log]);
       expect(events).to.have.length(1);
       expect(events[0].data).to.have.length(0);
     });
@@ -175,7 +175,7 @@ describe("events", () => {
 
   // ─── Event Decoding (Step 2.7) ──────────────────────────────────────────────
 
-  describe("decodePhalnxEvent", () => {
+  describe("decodeSigilEvent", () => {
     // Known addresses for building test payloads
     const VAULT_ADDR = "11111111111111111111111111111111" as Address;
     const AGENT_ADDR = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address;
@@ -198,12 +198,12 @@ describe("events", () => {
         timestamp: 1700000000n,
       });
 
-      const event: PhalnxEvent = {
+      const event: SigilEvent = {
         name: "ActionAuthorized",
         data: new Uint8Array(encoded),
       };
 
-      const decoded = decodePhalnxEvent(event);
+      const decoded = decodeSigilEvent(event);
       expect(decoded.fields).to.not.be.null;
       expect(decoded.fields!.vault).to.equal(VAULT_ADDR);
       expect(decoded.fields!.agent).to.equal(AGENT_ADDR);
@@ -229,12 +229,12 @@ describe("events", () => {
         actionType: 0,
       });
 
-      const event: PhalnxEvent = {
+      const event: SigilEvent = {
         name: "SessionFinalized",
         data: new Uint8Array(encoded),
       };
 
-      const decoded = decodePhalnxEvent(event);
+      const decoded = decodeSigilEvent(event);
       expect(decoded.fields).to.not.be.null;
       expect(decoded.fields!.vault).to.equal(VAULT_ADDR);
       expect(decoded.fields!.agent).to.equal(AGENT_ADDR);
@@ -247,18 +247,18 @@ describe("events", () => {
     });
 
     it("returns fields=null when decoder fails on corrupt data", () => {
-      const event: PhalnxEvent = {
+      const event: SigilEvent = {
         name: "ActionAuthorized",
         data: new Uint8Array([0xde, 0xad, 0xbe, 0xef]), // way too short
       };
 
-      const decoded = decodePhalnxEvent(event);
+      const decoded = decodeSigilEvent(event);
       expect(decoded.name).to.equal("ActionAuthorized");
       expect(decoded.fields).to.be.null;
       expect(decoded.data).to.deep.equal(new Uint8Array([0xde, 0xad, 0xbe, 0xef]));
     });
 
-    it("parseAndDecodePhalnxEvents decodes from raw log strings", () => {
+    it("parseAndDecodeSigilEvents decodes from raw log strings", () => {
       // Build an ActionAuthorized event as a full log line (disc + payload)
       const encoder = getActionAuthorizedEncoder();
       const payload = encoder.encode({
@@ -288,7 +288,7 @@ describe("events", () => {
       const allBytes = new Uint8Array([...discBytes, ...new Uint8Array(payload)]);
       const log = `Program data: ${Buffer.from(allBytes).toString("base64")}`;
 
-      const decoded = parseAndDecodePhalnxEvents([log]);
+      const decoded = parseAndDecodeSigilEvents([log]);
       expect(decoded).to.have.length(1);
       expect(decoded[0].name).to.equal("ActionAuthorized");
       expect(decoded[0].fields).to.not.be.null;
@@ -307,11 +307,11 @@ describe("events", () => {
         timestamp: 1700000300n,
       });
 
-      const eventSome: PhalnxEvent = {
+      const eventSome: SigilEvent = {
         name: "VaultReactivated",
         data: new Uint8Array(encodedSome),
       };
-      const decodedSome = decodePhalnxEvent(eventSome);
+      const decodedSome = decodeSigilEvent(eventSome);
       expect(decodedSome.fields).to.not.be.null;
       expect(decodedSome.fields!.vault).to.equal(VAULT_ADDR);
       expect(decodedSome.fields!.timestamp).to.equal(1700000300n);
@@ -324,17 +324,17 @@ describe("events", () => {
         timestamp: 1700000400n,
       });
 
-      const eventNone: PhalnxEvent = {
+      const eventNone: SigilEvent = {
         name: "VaultReactivated",
         data: new Uint8Array(encodedNone),
       };
-      const decodedNone = decodePhalnxEvent(eventNone);
+      const decodedNone = decodeSigilEvent(eventNone);
       expect(decodedNone.fields).to.not.be.null;
       expect(decodedNone.fields!.vault).to.equal(VAULT_ADDR);
       expect(decodedNone.fields!.timestamp).to.equal(1700000400n);
     });
 
-    it("parseAndDecodePhalnxEvents handles mixed known/unknown events", () => {
+    it("parseAndDecodeSigilEvents handles mixed known/unknown events", () => {
       // Build one valid event log
       const discHex = Object.entries(EVENT_DISCRIMINATOR_MAP).find(
         ([, name]) => name === "SessionFinalized",
@@ -365,7 +365,7 @@ describe("events", () => {
         "Program data: AAAA", // too short to be an event
       ];
 
-      const decoded = parseAndDecodePhalnxEvents(logs);
+      const decoded = parseAndDecodeSigilEvents(logs);
       expect(decoded).to.have.length(1);
       expect(decoded[0].name).to.equal("SessionFinalized");
       expect(decoded[0].fields).to.not.be.null;
@@ -376,15 +376,15 @@ describe("events", () => {
   describe("EVENT_DECODER_MAP completeness", () => {
     it("has a decoder entry for every event in EVENT_DISCRIMINATOR_MAP", () => {
       const discriminatorNames = new Set(Object.values(EVENT_DISCRIMINATOR_MAP));
-      // decodePhalnxEvent returns non-null fields for known events,
+      // decodeSigilEvent returns non-null fields for known events,
       // null for unknown. If the decoder map is missing an entry,
       // we'd get null for a known discriminator name.
       for (const eventName of discriminatorNames) {
         // Build minimal valid bytes (won't decode, but decoder lookup should succeed)
-        const event: PhalnxEvent = { name: eventName, data: new Uint8Array(0) };
-        const decoded = decodePhalnxEvent(event);
+        const event: SigilEvent = { name: eventName, data: new Uint8Array(0) };
+        const decoded = decodeSigilEvent(event);
         // fields may be null due to empty data, but the name should match
-        // The key test: decodePhalnxEvent should attempt decoding (not skip with "unknown")
+        // The key test: decodeSigilEvent should attempt decoding (not skip with "unknown")
         // We verify by checking that the raw data is preserved and name is correct
         expect(decoded.name, `Missing decoder for ${eventName}`).to.equal(eventName);
       }

@@ -7,7 +7,10 @@
 
 import type { Address, Rpc, SolanaRpcApi } from "@solana/kit";
 import type { ResolvedVaultState } from "./state-resolver.js";
-import { findVaultsByOwner, resolveVaultStateForOwner } from "./state-resolver.js";
+import {
+  findVaultsByOwner,
+  resolveVaultStateForOwner,
+} from "./state-resolver.js";
 import { resolveProtocolName } from "./protocol-names.js";
 import type { Network } from "./types.js";
 
@@ -50,9 +53,7 @@ export function getProtocolBreakdown(
     utilization:
       pb.cap > 0n ? Number((pb.spent24h * 10000n) / pb.cap) / 100 : 0,
     percentOfTotalSpend:
-      totalSpend > 0n
-        ? Number((pb.spent24h * 10000n) / totalSpend) / 100
-        : 0,
+      totalSpend > 0n ? Number((pb.spent24h * 10000n) / totalSpend) / 100 : 0,
   }));
 }
 
@@ -76,7 +77,13 @@ export async function getProtocolUsageAcrossVaults(
     ),
   );
   const states = results
-    .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof resolveVaultStateForOwner>>> => r.status === "fulfilled")
+    .filter(
+      (
+        r,
+      ): r is PromiseFulfilledResult<
+        Awaited<ReturnType<typeof resolveVaultStateForOwner>>
+      > => r.status === "fulfilled",
+    )
     .map((r) => r.value);
 
   const protocolMap = new Map<
@@ -107,7 +114,11 @@ export async function getProtocolUsageAcrossVaults(
   }
 
   usage.sort((a, b) =>
-    b.totalSpend24h > a.totalSpend24h ? 1 : b.totalSpend24h < a.totalSpend24h ? -1 : 0,
+    b.totalSpend24h > a.totalSpend24h
+      ? 1
+      : b.totalSpend24h < a.totalSpend24h
+        ? -1
+        : 0,
   );
 
   return usage;

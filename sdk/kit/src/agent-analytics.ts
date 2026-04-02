@@ -6,7 +6,7 @@
  */
 
 import type { Address } from "@solana/kit";
-import type { DecodedPhalnxEvent } from "./events.js";
+import type { DecodedSigilEvent } from "./events.js";
 import type { ResolvedVaultState, EffectiveBudget } from "./state-resolver.js";
 import { bytesToAddress } from "./state-resolver.js";
 import { permissionsToStrings, FULL_PERMISSIONS } from "./types.js";
@@ -95,9 +95,7 @@ export function getAgentProfile(
   }
 
   const capUtilization =
-    budget.cap > 0n
-      ? Number((budget.spent24h * 10000n) / budget.cap) / 100
-      : 0;
+    budget.cap > 0n ? Number((budget.spent24h * 10000n) / budget.cap) / 100 : 0;
 
   const permStrings = permissionsToStrings(agentEntry.permissions);
 
@@ -111,7 +109,8 @@ export function getAgentProfile(
     budget,
     lifetimeSpend,
     lifetimeTxCount,
-    avgTransactionSize: lifetimeTxCount > 0n ? lifetimeSpend / lifetimeTxCount : 0n,
+    avgTransactionSize:
+      lifetimeTxCount > 0n ? lifetimeSpend / lifetimeTxCount : 0n,
     capUtilization,
     isApproachingCap: capUtilization > 80,
     hasFullPermissions: agentEntry.permissions === FULL_PERMISSIONS,
@@ -124,9 +123,7 @@ export function getAgentProfile(
  * Rank all agents in a vault by 24h spending (descending).
  * Returns agents with 1-based rank numbers.
  */
-export function getAgentLeaderboard(
-  state: ResolvedVaultState,
-): AgentRanking[] {
+export function getAgentLeaderboard(state: ResolvedVaultState): AgentRanking[] {
   const { vault, overlay, allAgentBudgets } = state;
 
   const rankings: AgentRanking[] = vault.agents.map((agentEntry) => {
@@ -238,7 +235,7 @@ export interface AgentErrorBreakdown {
  * Used for the Agent Detail page success rate metric.
  */
 export function getAgentErrorBreakdown(
-  events: DecodedPhalnxEvent[],
+  events: DecodedSigilEvent[],
   agentAddress: Address,
 ): AgentErrorBreakdown {
   let total = 0;

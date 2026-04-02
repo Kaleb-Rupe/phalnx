@@ -1019,7 +1019,7 @@ describe("shield", () => {
 
   // ─── S-4: Session binding severity ──────────────────────────────────────
   describe("S-4: session binding severity", () => {
-    const PHALNX_PROG =
+    const SIGIL_PROG =
       "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL" as Address;
 
     function mockBaseSigner() {
@@ -1030,7 +1030,7 @@ describe("shield", () => {
       } as any;
     }
 
-    function txWithNoPhalnx() {
+    function txWithNoSigil() {
       return {
         compiledMessage: {
           staticAccounts: ["11111111111111111111111111111111" as Address],
@@ -1053,7 +1053,7 @@ describe("shield", () => {
         skipSimulation: true,
       });
       try {
-        await (signer as any).modifyAndSignTransactions([txWithNoPhalnx()]);
+        await (signer as any).modifyAndSignTransactions([txWithNoSigil()]);
         expect.fail("should have thrown");
       } catch (err) {
         expect(err).to.be.instanceOf(ShieldDeniedError);
@@ -1076,8 +1076,8 @@ describe("shield", () => {
           sessionBindingSeverity: "soft",
           skipSimulation: true,
         });
-        await (signer as any).modifyAndSignTransactions([txWithNoPhalnx()]);
-        expect(warnings.some((w) => w.includes("No Phalnx instructions"))).to.be
+        await (signer as any).modifyAndSignTransactions([txWithNoSigil()]);
+        expect(warnings.some((w) => w.includes("No Sigil instructions"))).to.be
           .true;
       } finally {
         console.warn = origWarn;
@@ -1091,7 +1091,7 @@ describe("shield", () => {
         skipSimulation: true,
       });
       try {
-        await (signer as any).modifyAndSignTransactions([txWithNoPhalnx()]);
+        await (signer as any).modifyAndSignTransactions([txWithNoSigil()]);
         expect.fail("should have thrown");
       } catch (err) {
         expect(err).to.be.instanceOf(ShieldDeniedError);

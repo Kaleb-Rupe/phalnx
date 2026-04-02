@@ -1,16 +1,16 @@
 /**
- * Kit-native policy engine for Phalnx.
+ * Kit-native policy engine for Sigil.
  */
 
 import type { Address } from "@solana/kit";
-import * as Core from "@phalnx/core";
+import * as Core from "./core/index.js";
 import { isStablecoinMint, type Network } from "./types.js";
 
 // Re-export core types that don't need Solana adaptation
-export type { RateLimitConfig, PolicyCheckResult } from "@phalnx/core";
-export { DEFAULT_POLICIES, parseSpendLimit } from "@phalnx/core";
+export type { RateLimitConfig, PolicyCheckResult } from "./core/index.js";
+export { DEFAULT_POLICIES, parseSpendLimit } from "./core/index.js";
 
-/** Policy configuration for the Phalnx wrapper (accepts Address or string) */
+/** Policy configuration for the Sigil wrapper (accepts Address or string) */
 export interface ShieldPolicies {
   /** Maximum spend per rolling 24h window, per token. e.g. "500 USDC/day" or { mint, amount } */
   maxSpend?: SpendLimit | SpendLimit[] | string | string[];

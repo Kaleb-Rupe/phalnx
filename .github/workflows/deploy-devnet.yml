@@ -21,7 +21,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "programs/phalnx/src/**"
+      - "programs/sigil/src/**"
       - "Anchor.toml"
   workflow_dispatch: # Manual trigger for devnet reset recovery or debugging
 
@@ -65,7 +65,7 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin
             target
-          key: deploy-${{ runner.os }}-${{ hashFiles('programs/phalnx/Cargo.lock') }}
+          key: deploy-${{ runner.os }}-${{ hashFiles('programs/sigil/Cargo.lock') }}
           restore-keys: deploy-${{ runner.os }}-
 
       - name: Install Solana CLI
@@ -130,7 +130,7 @@ jobs:
           MAX_RETRIES=3
           for i in $(seq 1 $MAX_RETRIES); do
             echo "Deploy attempt $i/$MAX_RETRIES"
-            if solana program deploy target/deploy/phalnx.so \
+            if solana program deploy target/deploy/sigil.so \
                 --program-id ${{ env.PROGRAM_ID }} \
                 --upgrade-authority "$HOME/.config/solana/id.json" \
                 --with-compute-unit-price 1000 \
@@ -163,7 +163,7 @@ jobs:
           for i in $(seq 1 $MAX_RETRIES); do
             echo "IDL init attempt $i/$MAX_RETRIES"
             if anchor idl init \
-                --filepath target/idl/phalnx.json \
+                --filepath target/idl/sigil.json \
                 ${{ env.PROGRAM_ID }} \
                 --provider.cluster "${{ secrets.DEVNET_RPC_URL }}"; then
               echo "IDL init succeeded on attempt $i"
@@ -198,13 +198,13 @@ jobs:
 
       - name: Save deploy metadata
         run: |
-          BINARY_HASH=$(sha256sum target/deploy/phalnx.so | cut -d' ' -f1)
+          BINARY_HASH=$(sha256sum target/deploy/sigil.so | cut -d' ' -f1)
           cat > deploy-metadata.json <<EOF
           {
             "commit": "${{ github.sha }}",
             "branch": "${{ github.ref_name }}",
             "binary_hash": "$BINARY_HASH",
-            "binary_size": $(wc -c < target/deploy/phalnx.so),
+            "binary_size": $(wc -c < target/deploy/sigil.so),
             "deployed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "deployed_by": "github-actions",
             "anchor_version": "${{ env.ANCHOR_VERSION }}",
@@ -257,8 +257,8 @@ jobs:
           solana-verify verify-from-repo \
             https://github.com/Kaleb-Rupe/phalnx \
             --program-id 4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL \
-            --library-name phalnx \
-            --mount-path programs/phalnx \
+            --library-name sigil \
+            --mount-path programs/sigil \
             --url "${VERIFY_RPC:-https://api.devnet.solana.com}"
 
   # ────────────────────────────────────────────────────────────────

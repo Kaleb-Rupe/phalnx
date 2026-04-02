@@ -98,7 +98,11 @@ export const VAULT_PRESETS = {
     maxTransactionSizeUsd: 500_000_000n, // $500
     maxSlippageBps: 100, // 1%
     protocolMode: PROTOCOL_MODE_ALLOWLIST,
-    protocols: [JUPITER_PROGRAM_ADDRESS, JUPITER_LEND_PROGRAM, KAMINO_LEND_PROGRAM],
+    protocols: [
+      JUPITER_PROGRAM_ADDRESS,
+      JUPITER_LEND_PROGRAM,
+      KAMINO_LEND_PROGRAM,
+    ],
     maxLeverageBps: 0,
     maxConcurrentPositions: 0,
   },
@@ -126,7 +130,8 @@ export type PresetName = keyof typeof VAULT_PRESETS;
  * @returns The preset, or undefined if name is not recognized.
  */
 export function getPreset(name: string): VaultPreset | undefined {
-  if (!Object.prototype.hasOwnProperty.call(VAULT_PRESETS, name)) return undefined;
+  if (!Object.prototype.hasOwnProperty.call(VAULT_PRESETS, name))
+    return undefined;
   return (VAULT_PRESETS as Record<string, VaultPreset>)[name];
 }
 

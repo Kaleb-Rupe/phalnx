@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import type { Address, AddressesByLookupTableAddress } from "@solana/kit";
-import { AltCache, mergeAltAddresses, verifyPhalnxAlt } from "../src/alt-loader.js";
+import { AltCache, mergeAltAddresses, verifySigilAlt } from "../src/alt-loader.js";
 
 const ALT_A = "ALTaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
 const ALT_B = "ALTbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address;
@@ -96,17 +96,17 @@ describe("alt-loader", () => {
   });
 
   describe("mergeAltAddresses", () => {
-    it("returns phalnx ALT when no protocol ALTs", () => {
+    it("returns sigil ALT when no protocol ALTs", () => {
       const result = mergeAltAddresses(ALT_A);
       expect(result).to.deep.equal([ALT_A]);
     });
 
-    it("returns phalnx ALT when protocol ALTs is empty", () => {
+    it("returns sigil ALT when protocol ALTs is empty", () => {
       const result = mergeAltAddresses(ALT_A, []);
       expect(result).to.deep.equal([ALT_A]);
     });
 
-    it("merges phalnx + protocol ALTs", () => {
+    it("merges sigil + protocol ALTs", () => {
       const result = mergeAltAddresses(ALT_A, [ALT_B]);
       expect(result).to.deep.equal([ALT_A, ALT_B]);
     });
@@ -116,19 +116,19 @@ describe("alt-loader", () => {
       expect(result).to.deep.equal([ALT_A, ALT_B]);
     });
 
-    it("phalnx ALT always comes first", () => {
+    it("sigil ALT always comes first", () => {
       const result = mergeAltAddresses(ALT_B, [ALT_A]);
       expect(result[0]).to.equal(ALT_B);
     });
   });
 
-  describe("verifyPhalnxAlt", () => {
+  describe("verifySigilAlt", () => {
     it("passes when all expected addresses are present", () => {
       const resolved: AddressesByLookupTableAddress = {
         [ALT_A]: [ADDR_1, ADDR_2, ADDR_3],
       };
       // Should not throw
-      verifyPhalnxAlt(resolved, ALT_A, [ADDR_1, ADDR_2]);
+      verifySigilAlt(resolved, ALT_A, [ADDR_1, ADDR_2]);
     });
 
     it("passes when ALT has extra addresses beyond expected", () => {
@@ -136,7 +136,7 @@ describe("alt-loader", () => {
         [ALT_A]: [ADDR_1, ADDR_2, ADDR_3],
       };
       // Extra ADDR_3 is fine — ALTs can have more than expected
-      verifyPhalnxAlt(resolved, ALT_A, [ADDR_1, ADDR_2]);
+      verifySigilAlt(resolved, ALT_A, [ADDR_1, ADDR_2]);
     });
 
     it("throws when expected address is missing from ALT", () => {
@@ -144,7 +144,7 @@ describe("alt-loader", () => {
         [ALT_A]: [ADDR_1], // missing ADDR_2
       };
       expect(() =>
-        verifyPhalnxAlt(resolved, ALT_A, [ADDR_1, ADDR_2]),
+        verifySigilAlt(resolved, ALT_A, [ADDR_1, ADDR_2]),
       ).to.throw(/missing 1 expected address/);
     });
 
@@ -153,25 +153,25 @@ describe("alt-loader", () => {
         [ALT_A]: [], // missing all
       };
       expect(() =>
-        verifyPhalnxAlt(resolved, ALT_A, [ADDR_1, ADDR_2, ADDR_3]),
+        verifySigilAlt(resolved, ALT_A, [ADDR_1, ADDR_2, ADDR_3]),
       ).to.throw(/missing 3 expected address/);
     });
 
-    it("is a no-op when Phalnx ALT was not resolved (graceful degradation)", () => {
+    it("is a no-op when Sigil ALT was not resolved (graceful degradation)", () => {
       const resolved: AddressesByLookupTableAddress = {
         // ALT_A not present — RPC fetch failed for this ALT
       };
       // Should not throw — graceful degradation
-      verifyPhalnxAlt(resolved, ALT_A, [ADDR_1, ADDR_2]);
+      verifySigilAlt(resolved, ALT_A, [ADDR_1, ADDR_2]);
     });
 
     it("is a no-op with completely empty resolved map", () => {
       const resolved: AddressesByLookupTableAddress = {};
-      verifyPhalnxAlt(resolved, ALT_A, [ADDR_1, ADDR_2]);
+      verifySigilAlt(resolved, ALT_A, [ADDR_1, ADDR_2]);
     });
 
     it("stale cache scenario: first verify throws, second with fresh data passes", () => {
-      // Simulates the retry pattern in wrap.ts:
+      // Simulates the retry pattern in seal.ts:
       // 1. Cache has old ALT (2 entries), expected has 3 entries → throws
       // 2. Cache invalidated, fresh fetch has 3 entries → passes
 
@@ -184,10 +184,10 @@ describe("alt-loader", () => {
       const expected = [ADDR_1, ADDR_2, ADDR_3];
 
       // First attempt throws (stale)
-      expect(() => verifyPhalnxAlt(staleResolved, ALT_A, expected)).to.throw(/missing 1/);
+      expect(() => verifySigilAlt(staleResolved, ALT_A, expected)).to.throw(/missing 1/);
 
-      // Second attempt passes (fresh) — simulates the retry in wrap.ts
-      verifyPhalnxAlt(freshResolved, ALT_A, expected);
+      // Second attempt passes (fresh) — simulates the retry in seal.ts
+      verifySigilAlt(freshResolved, ALT_A, expected);
     });
   });
 });

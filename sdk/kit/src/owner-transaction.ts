@@ -1,11 +1,11 @@
 /**
- * Owner-side transaction builder for Phalnx dashboard.
+ * Owner-side transaction builder for Sigil dashboard.
  *
  * Builds complete versioned transactions for owner-only instructions
  * (freeze, deposit, withdraw, policy changes, agent management, constraints).
  * Returns compiled (unsigned) transactions for wallet adapter signing.
  *
- * Unlike composePhalnxTransaction() which builds the agent-side
+ * Unlike composeSigilTransaction() which builds the agent-side
  * validate→DeFi→finalize sandwich, owner transactions are direct
  * program calls with compute budget and ALT compression.
  */
@@ -34,7 +34,7 @@ import {
 import { measureTransactionSize, MAX_TX_SIZE } from "./composer.js";
 import { BlockhashCache, type Blockhash } from "./rpc-helpers.js";
 import { AltCache } from "./alt-loader.js";
-import { getPhalnxAltAddress } from "./alt-config.js";
+import { getSigilAltAddress } from "./alt-config.js";
 import { CU_OWNER_ACTION } from "./priority-fees.js";
 import { normalizeNetwork, type Network } from "./types.js";
 
@@ -45,7 +45,7 @@ export interface BuildOwnerTransactionParams {
   rpc: Rpc<SolanaRpcApi>;
   /** Owner signer (fee payer). */
   owner: TransactionSigner;
-  /** One or more Phalnx owner instructions. */
+  /** One or more Sigil owner instructions. */
   instructions: Instruction[];
   /** Network for ALT resolution. */
   network: "devnet" | "mainnet";
@@ -53,7 +53,7 @@ export interface BuildOwnerTransactionParams {
   computeUnits?: number;
   /** Priority fee in microLamports per CU. Default: 0 (no priority fee). */
   priorityFeeMicroLamports?: number;
-  /** Pre-resolved ALTs. If omitted, resolves Phalnx ALT automatically. */
+  /** Pre-resolved ALTs. If omitted, resolves Sigil ALT automatically. */
   addressLookupTables?: AddressesByLookupTableAddress;
   /** Pre-fetched blockhash. If omitted, fetches via RPC. */
   blockhash?: Blockhash;
@@ -91,7 +91,7 @@ export async function buildOwnerTransaction(
       : blockhashCache.get(params.rpc),
     params.addressLookupTables
       ? Promise.resolve(params.addressLookupTables)
-      : altCache.resolve(params.rpc, [getPhalnxAltAddress(net)]),
+      : altCache.resolve(params.rpc, [getSigilAltAddress(net)]),
   ]);
 
   // 3. Build compute budget instructions

@@ -14,7 +14,7 @@
  */
 
 import type { Address } from "@solana/kit";
-import type { DecodedPhalnxEvent } from "./events.js";
+import type { DecodedSigilEvent } from "./events.js";
 import type { SpendTracker } from "./generated/index.js";
 import type { EffectiveBudget } from "./state-resolver.js";
 import { EPOCH_DURATION } from "./types.js";
@@ -83,7 +83,7 @@ export interface CoverageReport {
  * Pairs ActionAuthorized → SessionFinalized events by agent.
  */
 export function getSlippageEfficiency(
-  events: DecodedPhalnxEvent[],
+  events: DecodedSigilEvent[],
 ): SlippageReport {
   const agentTrades = new Map<
     string,
@@ -123,9 +123,7 @@ export function getSlippageEfficiency(
     for (const trade of trades) {
       if (trade.authorized === 0n) continue;
       const diff =
-        trade.actual > trade.authorized
-          ? trade.actual - trade.authorized
-          : 0n;
+        trade.actual > trade.authorized ? trade.actual - trade.authorized : 0n;
       const bps = Number((diff * 10000n) / trade.authorized);
       totalBps += bps;
       totalWaste += diff;
@@ -146,8 +144,7 @@ export function getSlippageEfficiency(
 
   return {
     byAgent,
-    vaultAvgSlippageBps:
-      totalTrades > 0 ? totalSlippageBps / totalTrades : 0,
+    vaultAvgSlippageBps: totalTrades > 0 ? totalSlippageBps / totalTrades : 0,
   };
 }
 
@@ -183,13 +180,11 @@ export function getCapVelocity(
   const currentRate =
     recentCount > 0 ? (recentSum * 6n) / BigInt(recentCount) : 0n;
   const avgRate = globalBudget.spent24h / 24n;
-  const acceleration =
-    avgRate > 0n ? Number(currentRate) / Number(avgRate) : 0;
+  const acceleration = avgRate > 0n ? Number(currentRate) / Number(avgRate) : 0;
 
   let projectedCapHitTime: number | null = null;
   if (currentRate > 0n && globalBudget.remaining > 0n) {
-    const hoursRemaining =
-      Number(globalBudget.remaining) / Number(currentRate);
+    const hoursRemaining = Number(globalBudget.remaining) / Number(currentRate);
     projectedCapHitTime = Number(nowUnix) + hoursRemaining * 3600;
   }
 
@@ -223,7 +218,7 @@ export function getCapVelocity(
  * SOC 2 auditors require this metric.
  */
 export function getSessionDeviationRate(
-  events: DecodedPhalnxEvent[],
+  events: DecodedSigilEvent[],
 ): DeviationReport {
   const pairs: Array<{ agent: string; authorized: bigint; actual: bigint }> =
     [];
@@ -236,8 +231,10 @@ export function getSessionDeviationRate(
       if (events[j].name !== "SessionFinalized" || !events[j].fields) continue;
       const fin = events[j].fields!;
 
-      const finActual = typeof fin.actualSpendUsd === "bigint" ? fin.actualSpendUsd : 0n;
-      const authAmount = typeof auth.usdAmount === "bigint" ? auth.usdAmount : 0n;
+      const finActual =
+        typeof fin.actualSpendUsd === "bigint" ? fin.actualSpendUsd : 0n;
+      const authAmount =
+        typeof auth.usdAmount === "bigint" ? auth.usdAmount : 0n;
       if (auth.agent === fin.agent && finActual > 0n) {
         pairs.push({
           agent: auth.agent as string,
@@ -286,7 +283,7 @@ export function getSessionDeviationRate(
  * Measure how long vault funds sit idle between agent actions.
  */
 export function getIdleCapitalDuration(
-  events: DecodedPhalnxEvent[],
+  events: DecodedSigilEvent[],
   nowUnix: number,
 ): IdleCapitalReport {
   const tradeTimestamps: number[] = [];
@@ -334,7 +331,7 @@ export function getIdleCapitalDuration(
  * Time between permission grants and first use. <60s = suspicious.
  */
 export function getPermissionEscalationLatency(
-  events: DecodedPhalnxEvent[],
+  events: DecodedSigilEvent[],
 ): EscalationReport {
   const escalations: EscalationReport["escalations"] = [];
 
@@ -378,7 +375,7 @@ export function getPermissionEscalationLatency(
  * were properly finalized. Non-zero orphan rate = potential attack surface.
  */
 export function getInstructionCoverageRatio(
-  events: DecodedPhalnxEvent[],
+  events: DecodedSigilEvent[],
 ): CoverageReport {
   const authorized = new Map<string, number>();
   const finalized = new Map<string, number>();
@@ -425,12 +422,27 @@ export interface PermissionUtilization {
 }
 
 const ACTION_NAMES = [
-  "Swap", "OpenPosition", "ClosePosition", "IncreasePosition", "DecreasePosition",
-  "Deposit", "Withdraw", "Transfer", "AddCollateral", "RemoveCollateral",
-  "PlaceTriggerOrder", "EditTriggerOrder", "CancelTriggerOrder",
-  "PlaceLimitOrder", "EditLimitOrder", "CancelLimitOrder",
-  "SwapAndOpenPosition", "CloseAndSwapPosition",
-  "CreateEscrow", "SettleEscrow", "RefundEscrow",
+  "Swap",
+  "OpenPosition",
+  "ClosePosition",
+  "IncreasePosition",
+  "DecreasePosition",
+  "Deposit",
+  "Withdraw",
+  "Transfer",
+  "AddCollateral",
+  "RemoveCollateral",
+  "PlaceTriggerOrder",
+  "EditTriggerOrder",
+  "CancelTriggerOrder",
+  "PlaceLimitOrder",
+  "EditLimitOrder",
+  "CancelLimitOrder",
+  "SwapAndOpenPosition",
+  "CloseAndSwapPosition",
+  "CreateEscrow",
+  "SettleEscrow",
+  "RefundEscrow",
 ];
 
 /**
@@ -439,18 +451,22 @@ const ACTION_NAMES = [
  */
 export function getPermissionUtilizationRate(
   state: { vault: { agents: Array<{ pubkey: Address; permissions: bigint }> } },
-  events: DecodedPhalnxEvent[],
+  events: DecodedSigilEvent[],
 ): PermissionUtilization {
   // Count which ActionTypes each agent has used
   const agentActionUsage = new Map<string, Set<string>>();
   for (const e of events) {
-    if (e.name === "ActionAuthorized" && e.fields?.agent && e.fields?.actionType) {
+    if (
+      e.name === "ActionAuthorized" &&
+      e.fields?.agent &&
+      e.fields?.actionType
+    ) {
       const agent = e.fields.agent as string;
       const actionObj = e.fields.actionType as { __kind: string } | number;
       const actionName =
         typeof actionObj === "object" && "__kind" in actionObj
           ? actionObj.__kind
-          : ACTION_NAMES[Number(actionObj)] ?? "Unknown";
+          : (ACTION_NAMES[Number(actionObj)] ?? "Unknown");
 
       if (!agentActionUsage.has(agent)) agentActionUsage.set(agent, new Set());
       agentActionUsage.get(agent)!.add(actionName);
@@ -469,7 +485,8 @@ export function getPermissionUtilizationRate(
       }
     }
 
-    const exercised = agentActionUsage.get(agent as string) ?? new Set<string>();
+    const exercised =
+      agentActionUsage.get(agent as string) ?? new Set<string>();
     const exercisedArr = [...exercised].filter((a) => granted.includes(a));
     const unused = granted.filter((a) => !exercised.has(a));
 
@@ -481,7 +498,8 @@ export function getPermissionUtilizationRate(
       agent,
       grantedPermissions: granted,
       exercisedPermissions: exercisedArr,
-      utilizationRate: granted.length > 0 ? (exercisedArr.length / granted.length) * 100 : 0,
+      utilizationRate:
+        granted.length > 0 ? (exercisedArr.length / granted.length) * 100 : 0,
       unusedPermissions: unused,
     });
   }
@@ -491,9 +509,19 @@ export function getPermissionUtilizationRate(
   let maxCount = 0;
   let minCount = Infinity;
   for (const [action, count] of globalActionCounts) {
-    if (count > maxCount) { maxCount = count; mostUsed = action; }
-    if (count < minCount) { minCount = count; leastUsed = action; }
+    if (count > maxCount) {
+      maxCount = count;
+      mostUsed = action;
+    }
+    if (count < minCount) {
+      minCount = count;
+      leastUsed = action;
+    }
   }
 
-  return { byAgent, mostUsedActionType: mostUsed, leastUsedActionType: leastUsed };
+  return {
+    byAgent,
+    mostUsedActionType: mostUsed,
+    leastUsedActionType: leastUsed,
+  };
 }

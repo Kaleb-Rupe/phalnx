@@ -246,15 +246,13 @@ export function formatTokenAmount(
   const frac = absAmount % factor;
 
   const fracDigits = displayDecimals ?? decimals;
-  const fracStr = frac
-    .toString()
-    .padStart(decimals, "0")
-    .slice(0, fracDigits);
+  const fracStr = frac.toString().padStart(decimals, "0").slice(0, fracDigits);
 
   const wholeFormatted = numberFormatter.format(Number(whole));
-  const result = fracDigits > 0
-    ? `${wholeFormatted}.${fracStr} ${symbol}`
-    : `${wholeFormatted} ${symbol}`;
+  const result =
+    fracDigits > 0
+      ? `${wholeFormatted}.${fracStr} ${symbol}`
+      : `${wholeFormatted} ${symbol}`;
   return isNegative ? `-${result}` : result;
 }
 

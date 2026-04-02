@@ -6,7 +6,7 @@
  *
  * NOTE: This module imports node:fs and @solana/web3.js — do NOT re-export
  * from the barrel (index.ts) to avoid breaking browser bundlers.
- * Import directly: import { ... } from "@phalnx/kit/testing/devnet"
+ * Import directly: import { ... } from "@usesigil/kit/testing/devnet"
  */
 
 import {
@@ -28,31 +28,15 @@ import {
   type Rpc,
   type SolanaRpcApi,
 } from "@solana/kit";
-import {
-  getSetComputeUnitLimitInstruction,
-} from "@solana-program/compute-budget";
+import { getSetComputeUnitLimitInstruction } from "@solana-program/compute-budget";
 import { readFileSync } from "node:fs";
 
-import {
-  getInitializeVaultInstructionAsync,
-} from "../generated/instructions/initializeVault.js";
-import {
-  getRegisterAgentInstruction,
-} from "../generated/instructions/registerAgent.js";
-import {
-  getDepositFundsInstructionAsync,
-} from "../generated/instructions/depositFunds.js";
-import {
-  harden,
-} from "../harden.js";
-import {
-  getAgentOverlayPDA,
-  getTrackerPDA,
-} from "../resolve-accounts.js";
-import {
-  sendAndConfirmTransaction,
-  BlockhashCache,
-} from "../rpc-helpers.js";
+import { getInitializeVaultInstructionAsync } from "../generated/instructions/initializeVault.js";
+import { getRegisterAgentInstruction } from "../generated/instructions/registerAgent.js";
+import { getDepositFundsInstructionAsync } from "../generated/instructions/depositFunds.js";
+import { inscribe } from "../inscribe.js";
+import { getAgentOverlayPDA, getTrackerPDA } from "../resolve-accounts.js";
+import { sendAndConfirmTransaction, BlockhashCache } from "../rpc-helpers.js";
 import {
   USDC_MINT_DEVNET,
   FULL_PERMISSIONS,
@@ -92,7 +76,8 @@ function createThrottledFetch(): typeof fetch {
  * Create a Kit-native Rpc with throttled fetch.
  */
 export function createDevnetRpc(): Rpc<SolanaRpcApi> {
-  const url = process.env.ANCHOR_PROVIDER_URL || "https://api.devnet.solana.com";
+  const url =
+    process.env.ANCHOR_PROVIDER_URL || "https://api.devnet.solana.com";
   // Cast config to bypass missing 'fetch' in TS types (works at runtime)
   return createSolanaRpc(url, { fetch: createThrottledFetch() } as any);
 }
@@ -102,7 +87,10 @@ export function createDevnetRpc(): Rpc<SolanaRpcApi> {
 /**
  * Load the owner keypair from ANCHOR_WALLET (same file as Anchor CLI).
  */
-export async function loadOwnerSigner(): Promise<{ signer: KeyPairSigner; bytes: Uint8Array }> {
+export async function loadOwnerSigner(): Promise<{
+  signer: KeyPairSigner;
+  bytes: Uint8Array;
+}> {
   const walletPath =
     process.env.ANCHOR_WALLET || `${process.env.HOME}/.config/solana/id.json`;
   const raw = JSON.parse(readFileSync(walletPath, "utf-8")) as number[];
@@ -123,7 +111,11 @@ export async function createFundedAgent(
   const agent = await generateKeyPairSigner();
 
   // Manual SystemProgram transfer (program 11111111..., instruction index 2)
-  const transferIx = buildSystemTransferIx(owner.address, agent.address, BigInt(lamports));
+  const transferIx = buildSystemTransferIx(
+    owner.address,
+    agent.address,
+    BigInt(lamports),
+  );
   await sendKitTransaction(rpc, owner, [transferIx]);
 
   return agent;
@@ -147,7 +139,7 @@ function buildSystemTransferIx(
     programAddress: "11111111111111111111111111111111" as Address,
     accounts: [
       { address: from, role: 3 as any }, // writable signer
-      { address: to, role: 1 as any },   // writable
+      { address: to, role: 1 as any }, // writable
     ],
     data,
   };
@@ -167,10 +159,8 @@ export async function ensureStablecoinBalance(
 ): Promise<void> {
   // Dynamic import to keep these as optional deps
   const { Connection, Keypair, PublicKey } = await import("@solana/web3.js");
-  const {
-    getOrCreateAssociatedTokenAccount,
-    mintTo,
-  } = await import("@solana/spl-token");
+  const { getOrCreateAssociatedTokenAccount, mintTo } =
+    await import("@solana/spl-token");
 
   const connection = new Connection(rpcUrl, {
     commitment: "confirmed",
@@ -187,7 +177,7 @@ export async function ensureStablecoinBalance(
     // For real devnet USDC, the mint already exists
     throw new Error(
       `Mint ${mintAddress} does not exist on devnet. ` +
-      `Use a mint that already exists or create it first.`,
+        `Use a mint that already exists or create it first.`,
     );
   }
 
@@ -206,10 +196,11 @@ export async function ensureStablecoinBalance(
   try {
     await mintTo(connection, payer, mint, ata.address, payer.publicKey, amount);
   } catch (mintError: unknown) {
-    const msg = mintError instanceof Error ? mintError.message : String(mintError);
+    const msg =
+      mintError instanceof Error ? mintError.message : String(mintError);
     throw new Error(
       `Cannot mint tokens for ${mintAddress}: ${msg}. ` +
-      `If owner is not the mint authority, fund the ATA manually.`,
+        `If owner is not the mint authority, fund the ATA manually.`,
     );
   }
 }
@@ -237,7 +228,7 @@ export interface ProvisionVaultResult {
 /**
  * Provision a vault using Kit-native Codama builders.
  *
- * 1. Call harden() for PDA derivation + vault ID probing
+ * 1. Call inscribe() for PDA derivation + vault ID probing
  * 2. Build + send initializeVault IX via Codama
  * 3. Build + send registerAgent IX via Codama
  * 4. Build + send depositFunds IX via Codama (optional)
@@ -255,8 +246,8 @@ export async function provisionVault(
   const permissions = opts.permissions ?? FULL_PERMISSIONS;
   const spendingLimitUsd = opts.spendingLimitUsd ?? 0n;
 
-  // 1. Derive PDAs via harden()
-  const hardenResult = await harden({
+  // 1. Derive PDAs via inscribe()
+  const inscribeResult = await inscribe({
     rpc,
     network: "devnet",
     owner,
@@ -264,7 +255,7 @@ export async function provisionVault(
     unsafeSkipTeeCheck: true,
   });
 
-  const { vaultAddress, vaultId, policyAddress } = hardenResult;
+  const { vaultAddress, vaultId, policyAddress } = inscribeResult;
   const [overlayPDA] = await getAgentOverlayPDA(vaultAddress, 0);
 
   // 2. Build and send initializeVault
@@ -348,15 +339,22 @@ export async function sendKitTransaction(
     (tx) => setTransactionMessageFeePayer(signer.address, tx),
     (tx) =>
       setTransactionMessageLifetimeUsingBlockhash(
-        blockhash as Parameters<typeof setTransactionMessageLifetimeUsingBlockhash>[0],
+        blockhash as Parameters<
+          typeof setTransactionMessageLifetimeUsingBlockhash
+        >[0],
         tx,
       ),
     (tx) => appendTransactionMessageInstructions(instructions, tx),
   );
 
   // Attach fee payer signer so signTransactionMessageWithSigners can sign it
-  const txWithSigners = addSignersToTransactionMessage([signer], txMessage as any);
-  const signedTx = await signTransactionMessageWithSigners(txWithSigners as any);
+  const txWithSigners = addSignersToTransactionMessage(
+    [signer],
+    txMessage as any,
+  );
+  const signedTx = await signTransactionMessageWithSigners(
+    txWithSigners as any,
+  );
   const wireBase64 = getBase64EncodedWireTransaction(signedTx as any);
 
   return sendAndConfirmTransaction(rpc, wireBase64, {

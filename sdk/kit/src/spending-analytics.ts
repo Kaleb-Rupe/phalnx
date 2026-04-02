@@ -14,7 +14,11 @@
 
 import type { Address } from "@solana/kit";
 import type { SpendTracker, AgentSpendOverlay } from "./generated/index.js";
-import type { ResolvedVaultState, EffectiveBudget, SpendingEpoch } from "./state-resolver.js";
+import type {
+  ResolvedVaultState,
+  EffectiveBudget,
+  SpendingEpoch,
+} from "./state-resolver.js";
 import { bytesToAddress } from "./state-resolver.js";
 import { formatUsd } from "./formatting.js";
 import { resolveProtocolName } from "./protocol-names.js";
@@ -117,7 +121,8 @@ export function getSpendingVelocity(
   let peakEpochId = 0n;
 
   for (const bucket of tracker.buckets) {
-    if (bucket.epochId < windowStartEpoch || bucket.epochId > currentEpoch) continue;
+    if (bucket.epochId < windowStartEpoch || bucket.epochId > currentEpoch)
+      continue;
     if (bucket.usdAmount === 0n) continue;
 
     validBuckets.push({ epochId: bucket.epochId, usdAmount: bucket.usdAmount });
@@ -146,9 +151,7 @@ export function getSpendingVelocity(
 
   // Acceleration: currentRate > 1.5x averageRate (integer: currentRate > averageRate * 3 / 2)
   const isAccelerating =
-    averageRate > 0n
-      ? currentRate > (averageRate * 3n) / 2n
-      : currentRate > 0n;
+    averageRate > 0n ? currentRate > (averageRate * 3n) / 2n : currentRate > 0n;
 
   // Time to cap projection
   let timeToCapSeconds: number | null = null;
@@ -180,8 +183,11 @@ export function getSpendingVelocity(
  * The dashboard Spending tab needs global, per-agent, per-protocol spend, and
  * concentration metrics all at once. This does it in one pass.
  */
-export function getSpendingBreakdown(state: ResolvedVaultState): SpendingBreakdown {
-  const { globalBudget, allAgentBudgets, protocolBudgets, overlay, vault } = state;
+export function getSpendingBreakdown(
+  state: ResolvedVaultState,
+): SpendingBreakdown {
+  const { globalBudget, allAgentBudgets, protocolBudgets, overlay, vault } =
+    state;
 
   // Global utilization
   const globalUtil =
@@ -236,9 +242,7 @@ export function getSpendingBreakdown(state: ResolvedVaultState): SpendingBreakdo
 
   for (const pb of protocolBudgets) {
     const util =
-      pb.cap > 0n
-        ? Number((pb.spent24h * 10000n) / pb.cap) / 100
-        : 0;
+      pb.cap > 0n ? Number((pb.spent24h * 10000n) / pb.cap) / 100 : 0;
 
     byProtocol.push({
       protocol: pb.protocol,
@@ -255,7 +259,11 @@ export function getSpendingBreakdown(state: ResolvedVaultState): SpendingBreakdo
   }
 
   return {
-    global: { spent24h: globalBudget.spent24h, cap: globalBudget.cap, utilization: globalUtil },
+    global: {
+      spent24h: globalBudget.spent24h,
+      cap: globalBudget.cap,
+      utilization: globalUtil,
+    },
     byAgent,
     byProtocol,
     agentConcentration: computeHerfindahl(byAgent.map((a) => a.spent24h)),
@@ -278,7 +286,12 @@ export function getAgentSpendingHistory(
   agentSlot: number,
   nowUnix: bigint,
 ): SpendingEpoch[] {
-  if (!overlay || agentSlot < 0 || agentSlot >= MAX_AGENTS_PER_VAULT || nowUnix <= 0n) {
+  if (
+    !overlay ||
+    agentSlot < 0 ||
+    agentSlot >= MAX_AGENTS_PER_VAULT ||
+    nowUnix <= 0n
+  ) {
     return [];
   }
 

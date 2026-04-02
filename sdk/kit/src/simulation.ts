@@ -617,16 +617,16 @@ export function detectDrainAttempt(
 }
 
 /**
- * Detect drain attempts using vault context from wrap().
- * Automatically wires knownRecipients from the wrap result's vaultContext.
+ * Detect drain attempts using vault context from seal().
+ * Automatically wires knownRecipients from the seal result's vaultContext.
  *
  * Usage:
  * ```ts
- * const wrapResult = await wrap(params);
- * const flags = detectDrainFromWrapContext(balanceDeltas, wrapResult.vaultContext);
+ * const sealResult = await seal(params);
+ * const flags = detectDrainFromSealContext(balanceDeltas, sealResult.vaultContext);
  * ```
  */
-export function detectDrainFromWrapContext(
+export function detectDrainFromSealContext(
   balanceDeltas: BalanceDelta[],
   vaultContext: {
     vaultAddress: string;

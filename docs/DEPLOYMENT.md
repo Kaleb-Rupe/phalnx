@@ -1,6 +1,6 @@
 # ALT Deployment Plan — Devnet & Mainnet
 
-Address Lookup Table (ALT) deployment steps for Phalnx composed transactions.
+Address Lookup Table (ALT) deployment steps for Sigil composed transactions.
 
 > **Upgrade Authority & Governance:** See [SECURITY.md](../SECURITY.md#program-upgrade-authority) for the program upgrade authority governance plan.
 
@@ -11,7 +11,7 @@ Address Lookup Table (ALT) deployment steps for Phalnx composed transactions.
 - [ ] All kit tests pass (`npx mocha --require tsx sdk/kit/tests/*.test.ts`)
 - [ ] Shield ALT resolution verified (V6, V6b, V10 tests)
 - [ ] CU recompose preserves ALT compression (V3 test)
-- [ ] Changeset committed for `@phalnx/kit`
+- [ ] Changeset committed for `@usesigil/kit`
 - [ ] No open critical/high audit findings
 
 ---
@@ -36,9 +36,9 @@ solana address-lookup-table create \
 
 Save the returned ALT address.
 
-### 1b. Extend with Phalnx Shared Accounts
+### 1b. Extend with Sigil Shared Accounts
 
-The Phalnx ALT stores 5 non-program accounts shared across composed transactions:
+The Sigil ALT stores 5 non-program accounts shared across composed transactions:
 
 | # | Account | Devnet | Mainnet |
 |---|---------|--------|---------|
@@ -76,8 +76,8 @@ Confirm the output lists exactly 5 addresses in the order above.
 Edit `sdk/kit/src/alt-config.ts`:
 
 ```typescript
-export const PHALNX_ALT_DEVNET = "<new-devnet-alt-address>" as Address;
-export const PHALNX_ALT_MAINNET = "<new-mainnet-alt-address>" as Address;
+export const SIGIL_ALT_DEVNET = "<new-devnet-alt-address>" as Address;
+export const SIGIL_ALT_MAINNET = "<new-mainnet-alt-address>" as Address;
 ```
 
 ### 1f. Make ALT Immutable (Production Only)
@@ -137,11 +137,11 @@ The key design principle: **ALTs are an optimization, not a requirement.** Every
 Program deployed to devnet at `4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL`. Redeploy after any Rust changes:
 ```bash
 anchor build --no-idl
-solana program deploy target/deploy/phalnx.so --url devnet --keypair <deploy-authority>
+solana program deploy target/deploy/sigil.so --url devnet --keypair <deploy-authority>
 ```
 
 ### 5b. Devnet ALT
-ALT deployed and populated with 5 shared accounts (USDC/USDT mints, protocol treasury, instruction sysvar, clock sysvar). Address stored in `sdk/kit/src/alt-config.ts` as `PHALNX_ALT_DEVNET`.
+ALT deployed and populated with 5 shared accounts (USDC/USDT mints, protocol treasury, instruction sysvar, clock sysvar). Address stored in `sdk/kit/src/alt-config.ts` as `SIGIL_ALT_DEVNET`.
 
 ### 5c. Treasury USDC ATA
 Protocol treasury requires a USDC ATA on devnet to receive protocol fees. Created via:
@@ -153,23 +153,23 @@ The treasury ATA address is hardcoded in `protocolTreasuryTokenAccount` referenc
 ### 5d. Turnkey Signing Policy Configuration
 For production custody, configure Turnkey signing policies to:
 1. Restrict signing to transactions containing `validate_and_authorize` as the first non-ComputeBudget instruction
-2. Enforce allowlisted program IDs (Phalnx program + configured DeFi protocols)
+2. Enforce allowlisted program IDs (Sigil program + configured DeFi protocols)
 3. Set rate limits aligned with on-chain `PolicyConfig` caps
 
-Example Turnkey policy JSON for a Phalnx agent wallet:
+Example Turnkey policy JSON for a Sigil agent wallet:
 ```json
 {
-  "policyName": "phalnx-agent-signing-policy",
+  "policyName": "sigil-agent-signing-policy",
   "effect": "EFFECT_ALLOW",
   "consensus": "approvers.any(user, user.id == '<AGENT_USER_ID>')",
   "condition": "solana.tx.instructions.any(ix, ix.program_id == '4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL')",
-  "notes": "Allow signing only when the Phalnx program is invoked (validate_and_authorize). Additional constraints: max 100 TX/day, reject if total lamports transferred exceeds policy cap."
+  "notes": "Allow signing only when the Sigil program is invoked (validate_and_authorize). Additional constraints: max 100 TX/day, reject if total lamports transferred exceeds policy cap."
 }
 ```
 
 Key policy requirements:
-- **Phalnx program must be present**: Every agent TX must include `validate_and_authorize` (Phalnx program ID in at least one instruction)
-- **No raw token transfers**: Block standalone SPL Token transfer/approve instructions not wrapped by Phalnx
+- **Sigil program must be present**: Every agent TX must include `validate_and_authorize` (Sigil program ID in at least one instruction)
+- **No raw token transfers**: Block standalone SPL Token transfer/approve instructions not wrapped by Sigil
 - **Rate limiting**: Align Turnkey's per-wallet rate limit with the vault's `dailySpendingCapUsd`
 - **Emergency**: Configure a separate "freeze" policy that the owner can invoke to block all signing immediately
 

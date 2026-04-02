@@ -1,13 +1,13 @@
 {
-  "name": "@phalnx/platform",
-  "version": "0.1.4",
+  "name": "@usesigil/platform",
+  "version": "0.1.0",
   "author": "Kaleb Rupe (https://x.com/MightieMags)",
-  "homepage": "https://github.com/Kaleb-Rupe/phalnx#readme",
+  "homepage": "https://github.com/Kaleb-Rupe/sigil#readme",
   "bugs": {
-    "url": "https://github.com/Kaleb-Rupe/phalnx/issues",
+    "url": "https://github.com/Kaleb-Rupe/sigil/issues",
     "email": "https://t.me/MightyMags"
   },
-  "description": "Platform client for Phalnx — request TEE wallet provisioning via Solana Actions",
+  "description": "Platform client for Sigil — request TEE wallet provisioning via Solana Actions",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -18,8 +18,9 @@
     "test": "NODE_OPTIONS='--no-experimental-strip-types' mocha --require ts-node/register tests/**/*.test.ts --timeout 30000"
   },
   "files": [
-    "dist/**/*",
-    "README.md"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=18.0.0"
@@ -43,10 +44,14 @@
     "tee",
     "provisioning"
   ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Kaleb-Rupe/phalnx",
+    "url": "https://github.com/Kaleb-Rupe/sigil",
     "directory": "sdk/platform"
   }
 }

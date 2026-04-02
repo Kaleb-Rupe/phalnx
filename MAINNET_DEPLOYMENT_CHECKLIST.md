@@ -1,6 +1,6 @@
 # Mainnet Deployment Checklist
 
-Pre-mainnet checklist for Phalnx. Every box must be checked before deploying to mainnet-beta.
+Pre-mainnet checklist for Sigil. Every box must be checked before deploying to mainnet-beta.
 
 ---
 
@@ -15,7 +15,7 @@ Pre-mainnet checklist for Phalnx. Every box must be checked before deploying to 
 
 ### PROTOCOL_TREASURY Address
 
-- [ ] Replace zero-address placeholder in `programs/phalnx/src/state/mod.rs` (line ~91) with real mainnet treasury pubkey
+- [ ] Replace zero-address placeholder in `programs/sigil/src/state/mod.rs` (line ~91) with real mainnet treasury pubkey
 - [ ] Verify build-time test `mainnet_treasury_must_not_be_zero()` passes with new address
 - [ ] Treasury address matches Squads multisig vault (Section 7)
 
@@ -27,16 +27,16 @@ Pre-mainnet checklist for Phalnx. Every box must be checked before deploying to 
 
 ### Program Deployment
 
-- [ ] Deploy to mainnet-beta with upgrade authority: `solana program deploy target/deploy/phalnx.so --program-id 4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL --upgrade-authority <deployer-keypair> --url mainnet-beta`
+- [ ] Deploy to mainnet-beta with upgrade authority: `solana program deploy target/deploy/sigil.so --program-id 4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL --upgrade-authority <deployer-keypair> --url mainnet-beta`
 - [ ] Verify program deployed: `solana program show 4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL --url mainnet-beta`
-- [ ] Record binary SHA-256 hash for verifiable build: `sha256sum target/deploy/phalnx.so`
+- [ ] Record binary SHA-256 hash for verifiable build: `sha256sum target/deploy/sigil.so`
 - [ ] Save deploy metadata (commit, binary hash, timestamp, Anchor/Solana versions)
 
 ### IDL Deployment (Mainnet)
 
-- [ ] Deploy IDL: `anchor idl init --filepath target/idl/phalnx.json 4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL --provider.cluster mainnet-beta`
+- [ ] Deploy IDL: `anchor idl init --filepath target/idl/sigil.json 4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL --provider.cluster mainnet-beta`
 - [ ] Verify IDL on-chain: `anchor idl fetch 4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL --provider.cluster mainnet-beta` shows 29 instructions, 9 accounts, 70 errors
-- [ ] Committed IDL matches on-chain IDL (diff `target/idl/phalnx.json` against fetched)
+- [ ] Committed IDL matches on-chain IDL (diff `target/idl/sigil.json` against fetched)
 
 ### Upgrade Authority Transfer
 
@@ -64,7 +64,7 @@ Reference: `docs/DEPLOYMENT.md` for step-by-step commands.
 
 - [ ] Wait for finality (~60s on mainnet)
 - [ ] Verify ALT contents: `solana address-lookup-table get <ALT_ADDRESS> --url mainnet-beta --output json`
-- [ ] Update `sdk/kit/src/alt-config.ts`: replace `PHALNX_ALT_MAINNET` placeholder (`11111...`) with real ALT address
+- [ ] Update `sdk/kit/src/alt-config.ts`: replace `SIGIL_ALT_MAINNET` placeholder (`11111...`) with real ALT address
 - [ ] Update `EXPECTED_ALT_CONTENTS_MAINNET` in alt-config.ts with mainnet treasury address
 - [ ] Transfer ALT authority to Squads multisig — see [Section 11: ALT Authority Migration](#11-alt-authority-migration-to-squads-v4) for detailed steps
 
@@ -78,24 +78,24 @@ All 6 packages need npm OIDC Trusted Publishing configured:
 
 | Package | Current Version | publishConfig |
 |---------|----------------|---------------|
-| `@phalnx/core` | 0.1.5 | needs adding |
-| `@phalnx/platform` | 0.1.4 | needs adding |
-| `@phalnx/kit` | 0.1.0 | needs adding |
-| `@phalnx/custody-turnkey` | 0.1.0 | configured |
-| `@phalnx/custody-crossmint` | 0.1.4 | needs adding |
-| `@phalnx/custody-privy` | 0.1.0 | needs adding |
+| `@usesigil/core` | 0.1.5 | needs adding |
+| `@usesigil/platform` | 0.1.4 | needs adding |
+| `@usesigil/kit` | 0.1.0 | needs adding |
+| `@usesigil/custody-turnkey` | 0.1.0 | configured |
+| `@usesigil/custody-crossmint` | 0.1.4 | needs adding |
+| `@usesigil/custody-privy` | 0.1.0 | needs adding |
 
-- [ ] Configure Trusted Publishing on npmjs.com for each package: Package Settings → Publishing Access → Trusted Publishers → GitHub Actions (repo: `Kaleb-Rupe/phalnx`, workflow: `release.yml`, environment: `production`)
+- [ ] Configure Trusted Publishing on npmjs.com for each package: Package Settings → Publishing Access → Trusted Publishers → GitHub Actions (repo: `Kaleb-Rupe/sigil`, workflow: `release.yml`, environment: `production`)
 - [ ] Add `publishConfig` to all packages missing it (access: public, provenance: true, registry: https://registry.npmjs.org/)
 - [ ] Verify `pnpm changeset publish --dry-run` succeeds for all packages
-- [ ] Update `@phalnx/kit` types.ts: ensure mainnet network config points to correct program ID and ALT
+- [ ] Update `@usesigil/kit` types.ts: ensure mainnet network config points to correct program ID and ALT
 - [ ] All packages build cleanly: `pnpm -r run build`
 - [ ] Version bump via changesets for mainnet release (all packages should be ≥1.0.0 for mainnet)
 
 ### SDK Config Updates
 
-- [ ] `sdk/kit/src/types.ts`: verify `PHALNX_PROGRAM_ADDRESS` works on mainnet (same program ID across networks)
-- [ ] `sdk/kit/src/alt-config.ts`: `PHALNX_ALT_MAINNET` updated from placeholder
+- [ ] `sdk/kit/src/types.ts`: verify `SIGIL_PROGRAM_ADDRESS` works on mainnet (same program ID across networks)
+- [ ] `sdk/kit/src/alt-config.ts`: `SIGIL_ALT_MAINNET` updated from placeholder
 - [ ] `sdk/kit/src/types.ts`: `PROTOCOL_TREASURY` matches on-chain mainnet address
 - [ ] All test suites pass with mainnet config: core (66), platform (17), crossmint (29), kit (1156+)
 
@@ -111,11 +111,11 @@ Project: `agent-middleware.vercel.app`
 |----------|-------|-------|
 | `SOLANA_RPC_URL` | Production | Switch from devnet Helius to mainnet Helius RPC endpoint |
 | `CROSSMINT_API_KEY` | Production | Production Crossmint API key (mark as Sensitive) |
-| `PHALNX_PROGRAM_ID` | Production | `4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL` (same across networks) |
+| `SIGIL_PROGRAM_ID` | Production | `4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL` (same across networks) |
 
 - [ ] Update `SOLANA_RPC_URL` to mainnet Helius endpoint
 - [ ] Update `CROSSMINT_API_KEY` to production key (or remove if not using Crossmint on mainnet)
-- [ ] Set `PHALNX_PROGRAM_ID` (or confirm default is correct)
+- [ ] Set `SIGIL_PROGRAM_ID` (or confirm default is correct)
 - [ ] Verify security headers in `vercel.json` are production-ready (HSTS, X-Frame-Options, CSP — currently configured)
 - [ ] Confirm Vercel project is on the correct plan (team/pro) for production traffic
 
@@ -153,7 +153,7 @@ Currently only `deploy-devnet.yml` exists. Mainnet needs:
 ### Code Audit
 
 - [ ] Run Sec3 X-Ray static analysis: `sec3 autoaudit --all` — zero critical/high findings
-- [ ] Run Certora formal verification: all specs in `programs/phalnx/src/certora/specs/` pass
+- [ ] Run Certora formal verification: all specs in `programs/sigil/src/certora/specs/` pass
 - [ ] Run Trident fuzz tests: `trident fuzz run-hfuzz fuzz_0 -- -n 10000` — no panics
 - [ ] Manual review of all 29 instructions for checked math (no raw `+`, `-`, `*`, `/` on u64)
 - [ ] Review all `require!()` and `require_keys_eq!()` guards are correct
@@ -180,8 +180,8 @@ Currently only `deploy-devnet.yml` exists. Mainnet needs:
 
 ### Open vs Private Split
 
-- [ ] Identify what stays in public repo (`Kaleb-Rupe/phalnx`):
-  - On-chain program (`programs/phalnx/`)
+- [ ] Identify what stays in public repo (`Kaleb-Rupe/sigil`):
+  - On-chain program (`programs/sigil/`)
   - SDK packages (`sdk/`)
   - CI workflows (`.github/workflows/`)
   - IDL (`target/idl/`, `target/types/`)
@@ -229,8 +229,8 @@ For the dashboard private repo — agent signing infrastructure:
 - [ ] Configure sub-organization for agent wallet management
 - [ ] Set up wallet creation policy (key type: Solana ed25519)
 - [ ] Configure signing policy: require TEE attestation for agent operations
-- [ ] Store Turnkey credentials in dashboard repo's environment (NOT in public phalnx repo)
-- [ ] Verify `@phalnx/custody-turnkey` adapter works against production Turnkey org
+- [ ] Store Turnkey credentials in dashboard repo's environment (NOT in public sigil repo)
+- [ ] Verify `@usesigil/custody-turnkey` adapter works against production Turnkey org
 - [ ] Test agent wallet provisioning end-to-end
 - [ ] Document Turnkey recovery procedures (organization recovery, key rotation)
 - [ ] Set up Turnkey webhook monitoring for signing events
@@ -271,14 +271,14 @@ For the dashboard private repo — agent signing infrastructure:
 
 ### Context
 
-The Phalnx ALT on devnet is controlled by a single EOA keypair: `6wrkKTM2pjkcCAbMfRz2j3AXspavu6pq3ePcuJUE3Azp`. If this keypair is lost or compromised, the authority can deactivate the ALT (liveness DoS) or extend it with malicious addresses.
+The Sigil ALT on devnet is controlled by a single EOA keypair: `6wrkKTM2pjkcCAbMfRz2j3AXspavu6pq3ePcuJUE3Azp`. If this keypair is lost or compromised, the authority can deactivate the ALT (liveness DoS) or extend it with malicious addresses.
 
 ### Steps
 
 - [ ] **11.1** Install `@sqds/multisig` devDependency: `pnpm add -Dw @sqds/multisig`
 - [ ] **11.2** Create Squads V4 multisig vault (2-of-3) on devnet — new script `scripts/create-alt-multisig.ts` using `multisig.instructions.multisigCreateV2()` and `multisig.getMultisigPda()`
-- [ ] **11.3** Create NEW ALT with Squads PDA as authority, migrate all entries from old ALT, update `PHALNX_ALT_DEVNET` in `sdk/kit/src/alt-config.ts`, deactivate old ALT — new script `scripts/migrate-alt-authority.ts`. Note: Solana ALTs do NOT support SetAuthority, so this is a create-and-migrate approach.
-- [ ] **11.4** Update `scripts/extend-phalnx-alt.ts` to build Squads proposals instead of direct signing
+- [ ] **11.3** Create NEW ALT with Squads PDA as authority, migrate all entries from old ALT, update `SIGIL_ALT_DEVNET` in `sdk/kit/src/alt-config.ts`, deactivate old ALT — new script `scripts/migrate-alt-authority.ts`. Note: Solana ALTs do NOT support SetAuthority, so this is a create-and-migrate approach.
+- [ ] **11.4** Update `scripts/extend-sigil-alt.ts` to build Squads proposals instead of direct signing
 - [ ] **11.5** (POST-MAINNET) Optional: Freeze ALT via `FreezeLookupTable` — only after upgrade authority is renounced. Irreversible.
 
 ### TOCTOU Mitigation
@@ -289,5 +289,5 @@ During the migration grace period, deactivate the old ALT immediately (not after
 
 - Verify Squads vault exists on devnet: `solana account <pda>`
 - Verify new ALT contents match `EXPECTED_ALT_CONTENTS_DEVNET`
-- Run `pnpm --filter @phalnx/kit test:devnet` against new ALT
+- Run `pnpm --filter @usesigil/kit test:devnet` against new ALT
 - Verify old ALT deactivation doesn't break SDK (grace period behavior)

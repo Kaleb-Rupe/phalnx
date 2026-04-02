@@ -182,7 +182,9 @@ export async function verifyTeeAttestation(
   // is true but no explicit level is set (prevents ProviderTrusted from passing silently)
   const effectiveMinLevel =
     config?.minAttestationLevel ??
-    (config?.requireAttestation ? AttestationStatus.ProviderVerified : undefined);
+    (config?.requireAttestation
+      ? AttestationStatus.ProviderVerified
+      : undefined);
   if (effectiveMinLevel) {
     if (!attestationStatusMeetsLevel(result.status, effectiveMinLevel)) {
       throw new TeeAttestationError(

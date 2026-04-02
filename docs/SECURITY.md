@@ -1,10 +1,10 @@
-# Phalnx Security Specification
+# Sigil Security Specification
 
 > Formal specification for external auditors. Covers the on-chain Anchor program
 > (`4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL`), its invariants, access
 > control model, PDA derivation paths, error catalog, and trust assumptions.
 >
-> Program: `programs/phalnx/` — Anchor 0.32.1, Rust 1.89.0
+> Program: `programs/sigil/` — Anchor 0.32.1, Rust 1.89.0
 > 29 instruction handlers, 9 PDA account types, 70 error codes, 31 events.
 >
 > Cross-reference: See `docs/ARCHITECTURE.md` for account model and `sdk/kit/src/agent-errors.ts` for error mappings.
@@ -13,7 +13,7 @@
 
 ## 1. Security Model Overview
 
-Phalnx is a permissioned middleware for AI agent wallets on Solana. It sits between an AI agent's signing key and DeFi protocols, enforcing spending limits, token/protocol whitelists, and audit logging via PDA-controlled vaults.
+Sigil is a permissioned middleware for AI agent wallets on Solana. It sits between an AI agent's signing key and DeFi protocols, enforcing spending limits, token/protocol whitelists, and audit logging via PDA-controlled vaults.
 
 ### Owner/Agent Separation
 
@@ -26,10 +26,10 @@ The owner holds full authority. The agent is an execute-only key that can only o
 
 ### Architecture
 
-Phalnx bundles three layers of protection:
+Sigil bundles three layers of protection:
 
-1. **Client-side policy engine** (`@phalnx/kit`) — Software policy enforcement, fast deny before transactions hit the network.
-2. **On-chain vault** (`@phalnx/kit` + TEE custody) — TEE key custody (Crossmint/Turnkey) + on-chain PDA vaults with cryptographic guarantees. Cannot be bypassed by compromised software. Production.
+1. **Client-side policy engine** (`@usesigil/kit`) — Software policy enforcement, fast deny before transactions hit the network.
+2. **On-chain vault** (`@usesigil/kit` + TEE custody) — TEE key custody (Crossmint/Turnkey) + on-chain PDA vaults with cryptographic guarantees. Cannot be bypassed by compromised software. Production.
 
 This document covers the on-chain vault component.
 
@@ -50,7 +50,7 @@ All instructions succeed or all revert atomically. Token delegation (SPL `approv
 The following properties must hold at all times:
 
 ### INV-1: Checked Arithmetic
-All arithmetic on `u64`/`u128`/`i128` uses `.checked_add()`, `.checked_sub()`, `.checked_mul()`, `.checked_div()`. Overflow returns `PhalnxError::Overflow` (error 6025). No raw `+`, `-`, `*`, `/` on numeric types.
+All arithmetic on `u64`/`u128`/`i128` uses `.checked_add()`, `.checked_sub()`, `.checked_mul()`, `.checked_div()`. Overflow returns `SigilError::Overflow` (error 6025). No raw `+`, `-`, `*`, `/` on numeric types.
 
 ### INV-2: Bounded Data Structures
 No unbounded `Vec<T>` in on-chain accounts. All vectors and arrays have compile-time maximums:
@@ -149,7 +149,7 @@ Vault seeds include `vault_id` (a `u64`) to allow one owner to create multiple i
 
 ## 5. Error Code Catalog
 
-70 error codes (6000–6069) using Anchor's `#[error_code]`. See `docs/ERROR-CODES.md` for the full table with categories. Source of truth: `programs/phalnx/src/errors.rs`.
+70 error codes (6000–6069) using Anchor's `#[error_code]`. See `docs/ERROR-CODES.md` for the full table with categories. Source of truth: `programs/sigil/src/errors.rs`.
 
 **Categories:** Vault state (7), Access control (2), Stablecoin (2), Policy (5), Spending (1), Session (2), Fee (3), Validation (6), Timelock (3), Security (5), Integration (4), Multi-agent (6), Escrow (6), Constraints (8), Arithmetic (1).
 
@@ -157,7 +157,7 @@ Vault seeds include `vault_id` (a `u64`) to allow one owner to create multiple i
 
 ## 6. Event Catalog
 
-31 events using Anchor's `#[event]` attribute, emitted via `emit!()`. See `docs/PROJECT.md` for the full table with all field listings. Source of truth: `programs/phalnx/src/events.rs`.
+31 events using Anchor's `#[event]` attribute, emitted via `emit!()`. See `docs/PROJECT.md` for the full table with all field listings. Source of truth: `programs/sigil/src/events.rs`.
 
 **Core events:** VaultCreated, FundsDeposited, AgentRegistered, AgentSpendLimitChecked, PolicyUpdated, ActionAuthorized, SessionFinalized, DelegationRevoked, AgentRevoked, VaultReactivated, FundsWithdrawn, FeesCollected, VaultClosed, AgentTransferExecuted, PositionsSynced.
 
@@ -260,12 +260,12 @@ The SDK trusts RPC account data for client-side precheck. A malicious RPC can su
 ## 9. Audit Scope
 
 ### In Scope
-- All 29 instruction handlers in `programs/phalnx/src/instructions/`
-- All 9 PDA account types in `programs/phalnx/src/state/`
-- DeFi integration verifiers in `programs/phalnx/src/instructions/integrations/`
-- Error definitions in `programs/phalnx/src/errors.rs` (70 codes)
-- Event definitions in `programs/phalnx/src/events.rs` (31 events)
-- Program entrypoint in `programs/phalnx/src/lib.rs`
+- All 29 instruction handlers in `programs/sigil/src/instructions/`
+- All 9 PDA account types in `programs/sigil/src/state/`
+- DeFi integration verifiers in `programs/sigil/src/instructions/integrations/`
+- Error definitions in `programs/sigil/src/errors.rs` (70 codes)
+- Event definitions in `programs/sigil/src/events.rs` (31 events)
+- Program entrypoint in `programs/sigil/src/lib.rs`
 
 ### Out of Scope
 - Kit SDK (`sdk/kit/`) — off-chain code
@@ -274,7 +274,7 @@ The SDK trusts RPC account data for client-side precheck. A malicious RPC can su
 - Dashboard (separate repo)
 
 ### Test Suites
-- `tests/phalnx.ts` — core on-chain tests
+- `tests/sigil.ts` — core on-chain tests
 - `tests/jupiter-integration.ts` — composed transaction tests
 - `tests/flash-trade-integration.ts` — Flash Trade integration tests
 - `tests/security-exploits.ts` — exploit scenario tests

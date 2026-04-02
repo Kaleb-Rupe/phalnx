@@ -15,7 +15,7 @@ import {
   type ShieldedContext,
 } from "../src/shield.js";
 import type { InspectableInstruction } from "../src/inspector.js";
-import { PHALNX_PROGRAM_ADDRESS } from "../src/generated/programs/phalnx.js";
+import { SIGIL_PROGRAM_ADDRESS } from "../src/generated/programs/sigil.js";
 import { VALIDATE_AND_AUTHORIZE_DISCRIMINATOR } from "../src/generated/instructions/validateAndAuthorize.js";
 import { FINALIZE_SESSION_DISCRIMINATOR } from "../src/generated/instructions/finalizeSession.js";
 
@@ -97,14 +97,14 @@ function buildCompiledTx(
 }
 
 /**
- * Build a compiled TX with Phalnx validate+finalize sandwich.
+ * Build a compiled TX with Sigil validate+finalize sandwich.
  */
 function buildSandwichTx(defiIxs: InspectableInstruction[]): any {
   // validate_and_authorize instruction
   const validateData = new Uint8Array(32);
   validateData.set(VALIDATE_AND_AUTHORIZE_DISCRIMINATOR, 0);
   const validateIx: InspectableInstruction = {
-    programAddress: PHALNX_PROGRAM_ADDRESS,
+    programAddress: SIGIL_PROGRAM_ADDRESS,
     accounts: [],
     data: validateData,
   };
@@ -113,7 +113,7 @@ function buildSandwichTx(defiIxs: InspectableInstruction[]): any {
   const finalizeData = new Uint8Array(16);
   finalizeData.set(FINALIZE_SESSION_DISCRIMINATOR, 0);
   const finalizeIx: InspectableInstruction = {
-    programAddress: PHALNX_PROGRAM_ADDRESS,
+    programAddress: SIGIL_PROGRAM_ADDRESS,
     accounts: [],
     data: finalizeData,
   };
@@ -549,13 +549,13 @@ describe("createShieldedSigner", () => {
         sessionBindingSeverity: "soft",
       }) as any;
 
-      // TX without Phalnx instructions — missing sandwich
+      // TX without Sigil instructions — missing sandwich
       const tx = buildCompiledTx([noopIx(SYSTEM_PROGRAM)]);
       const { warnings } = await captureWarnsAsync(() =>
         shielded.modifyAndSignTransactions([tx]),
       );
 
-      expect(warnings.some((w) => w.includes("No Phalnx instructions"))).to.be
+      expect(warnings.some((w) => w.includes("No Sigil instructions"))).to.be
         .true;
     });
 

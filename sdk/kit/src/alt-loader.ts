@@ -1,11 +1,11 @@
 /**
- * Cached ALT loader for Phalnx composed transactions.
+ * Cached ALT loader for Sigil composed transactions.
  *
  * Wraps @solana/kit's fetchAddressesForLookupTables with:
  * - TTL-based cache (default 5 min) to avoid repeated RPC calls
  * - Graceful degradation: RPC failure returns empty map (S-4)
  * - Synchronous cache read for ShieldedSigner (S-1)
- * - Deduplication when merging Phalnx + protocol ALTs
+ * - Deduplication when merging Sigil + protocol ALTs
  */
 
 import type { Address, Rpc, SolanaRpcApi } from "@solana/kit";
@@ -118,19 +118,19 @@ export class AltCache {
 // ─── Merge Helper ─────────────────────────────────────────────────────────────
 
 /**
- * Merge Phalnx ALT + protocol ALTs, deduplicate by Address equality.
+ * Merge Sigil ALT + protocol ALTs, deduplicate by Address equality.
  * Returns a unique list of ALT addresses to resolve.
  */
 export function mergeAltAddresses(
-  phalnxAlt: Address,
+  sigilAlt: Address,
   protocolAlts?: Address[],
 ): Address[] {
   const seen = new Set<string>();
   const merged: Address[] = [];
 
-  // Phalnx ALT first
-  seen.add(phalnxAlt as string);
-  merged.push(phalnxAlt);
+  // Sigil ALT first
+  seen.add(sigilAlt as string);
+  merged.push(sigilAlt);
 
   // Protocol ALTs (e.g. Jupiter route-specific ALTs)
   if (protocolAlts) {
@@ -146,23 +146,23 @@ export function mergeAltAddresses(
   return merged;
 }
 
-// ─── Phalnx ALT Verification ─────────────────────────────────────────────────
+// ─── Sigil ALT Verification ─────────────────────────────────────────────────
 
 /**
- * Verify that the Phalnx ALT contains all expected addresses.
+ * Verify that the Sigil ALT contains all expected addresses.
  *
- * Throws on mismatch for the Phalnx ALT (we control it — mismatch is corruption).
+ * Throws on mismatch for the Sigil ALT (we control it — mismatch is corruption).
  * Protocol ALTs (Jupiter, Flash Trade) rotate per-route and are NOT verified here.
  *
- * Called after AltCache.resolve() in wrap(). If the Phalnx ALT was not resolved
+ * Called after AltCache.resolve() in wrap(). If the Sigil ALT was not resolved
  * (RPC failure / graceful degradation), this is a no-op.
  */
-export function verifyPhalnxAlt(
+export function verifySigilAlt(
   resolved: AddressesByLookupTableAddress,
-  phalnxAltAddress: Address,
+  sigilAltAddress: Address,
   expectedContents: Address[],
 ): void {
-  const altAddresses = resolved[phalnxAltAddress];
+  const altAddresses = resolved[sigilAltAddress];
   if (!altAddresses) {
     // ALT not resolved — graceful degradation (S-4) already handles this.
     // Transaction will be larger without ALT compression but still works.
@@ -179,9 +179,9 @@ export function verifyPhalnxAlt(
 
   if (missing.length > 0) {
     throw new Error(
-      `Phalnx ALT ${phalnxAltAddress} is missing ${missing.length} expected address(es): ` +
+      `Sigil ALT ${sigilAltAddress} is missing ${missing.length} expected address(es): ` +
         `${missing.join(", ")}. ` +
-        `ALT may need extension — run scripts/extend-phalnx-alt.ts.`,
+        `ALT may need extension — run scripts/extend-sigil-alt.ts.`,
     );
   }
 }
