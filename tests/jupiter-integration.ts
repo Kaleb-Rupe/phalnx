@@ -283,7 +283,7 @@ describe("jupiter-integration", () => {
         1, // max concurrent positions
         0, // developer fee rate (0 = none)
         100, // maxSlippageBps
-        new BN(0), // timelockDuration
+        new BN(1800), // timelockDuration
         [], // allowedDestinations
         [], // protocolCaps
       )

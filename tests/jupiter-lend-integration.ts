@@ -252,7 +252,7 @@ describe("jupiter-lend-integration", () => {
         1, // max concurrent positions
         0, // developer fee rate
         100, // maxSlippageBps
-        new BN(0), // timelockDuration
+        new BN(1800), // timelockDuration
         [], // allowedDestinations
         [], // protocolCaps
       )

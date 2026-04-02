@@ -221,7 +221,7 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
           5, // max_concurrent_positions
           0, // developer_fee_rate
           5000, // maxSlippageBps (50%)
-          new BN(0), // timelock
+          new BN(1800), // timelock
           [], // destinations
           [], // protocolCaps
         )

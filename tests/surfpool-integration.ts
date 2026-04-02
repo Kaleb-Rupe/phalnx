@@ -137,7 +137,7 @@ describe("surfpool-integration", function () {
           3, // max_concurrent_positions
           0, // developer_fee_rate
           100, // maxSlippageBps (1%)
-          new BN(0), // timelockDuration
+          new BN(1800), // timelockDuration
           [], // allowedDestinations
           [], // protocolCaps
         )

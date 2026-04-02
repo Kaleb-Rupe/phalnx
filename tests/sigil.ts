@@ -3825,7 +3825,7 @@ describe("sigil", () => {
             1,
             0,
             100, // maxSlippageBps
-            new BN(0), // below MIN_TIMELOCK_DURATION
+            new BN(1800), // below MIN_TIMELOCK_DURATION
             [],
             [], // protocolCaps
           )

@@ -1096,7 +1096,7 @@ describe("instruction-constraints", () => {
         .initializeVault(
           noTlVaultId, new BN(500_000_000), new BN(100_000_000),
           0, [], new BN(0) as any, 3, 0, 100,
-          new BN(0), // no timelock
+          new BN(1800), // no timelock
           [], [],
         )
         .accounts({
