@@ -100,14 +100,24 @@ async function pollSignatureStatus(
   const deadline = Date.now() + timeoutMs;
   let delay = 500;
   while (Date.now() < deadline) {
-    const result = await rpc.getSignatureStatuses([signature as unknown as Parameters<typeof rpc.getSignatureStatuses>[0][0]]).send();
-    const statuses = (result as unknown as { value: readonly ({ err: unknown; confirmationStatus: string } | null)[] }).value;
+    const result = await rpc
+      .getSignatureStatuses([
+        signature as unknown as Parameters<
+          typeof rpc.getSignatureStatuses
+        >[0][0],
+      ])
+      .send();
+    const statuses = (
+      result as unknown as {
+        value: readonly ({ err: unknown; confirmationStatus: string } | null)[];
+      }
+    ).value;
     if (statuses?.[0]) {
       if (statuses[0].err) return false;
       const level = statuses[0].confirmationStatus;
       if (level === "confirmed" || level === "finalized") return true;
     }
-    await new Promise(r => setTimeout(r, delay));
+    await new Promise((r) => setTimeout(r, delay));
     delay = Math.min(delay * 1.5, 2_000);
   }
   return false;

@@ -116,8 +116,8 @@ export const RECOGNIZED_DEFI_PROGRAMS: ReadonlySet<string> = new Set([
   "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4", // Jupiter V6
   "FLASH6Lo6h3iasJKWDs2F8TkW2UKf3s15C8PMGuVfgBn", // Flash Trade
   "JLend2fEim9xUFcaHsyGePEoBzFLvkjMi3MnPcSuCdu", // Jupiter Lend
-  "jup3YeL8QhtSx1e253b2FDvsMNC87fDrgQZivbrndc9",  // Jupiter Earn
-  "jupr81YtYssSyPt8jbnGuiWon5f6x9TcDEFxYe3Bdzi",  // Jupiter Borrow
+  "jup3YeL8QhtSx1e253b2FDvsMNC87fDrgQZivbrndc9", // Jupiter Earn
+  "jupr81YtYssSyPt8jbnGuiWon5f6x9TcDEFxYe3Bdzi", // Jupiter Borrow
 ]);
 
 export type Network = "devnet" | "mainnet-beta";
@@ -126,7 +126,9 @@ export type Network = "devnet" | "mainnet-beta";
 export function validateNetwork(network: string): asserts network is Network {
   const normalized = network === "mainnet" ? "mainnet-beta" : network;
   if (normalized !== "devnet" && normalized !== "mainnet-beta") {
-    throw new Error(`Invalid network: "${network}". Must be "devnet", "mainnet", or "mainnet-beta".`);
+    throw new Error(
+      `Invalid network: "${network}". Must be "devnet", "mainnet", or "mainnet-beta".`,
+    );
   }
 }
 
@@ -140,7 +142,11 @@ export function normalizeNetwork(network: NetworkInput): Network {
 }
 
 /** Type-safe instruction conversion from Codama builders. */
-export function toInstruction(ix: { programAddress: Address; accounts?: readonly unknown[]; data?: unknown }): Instruction {
+export function toInstruction(ix: {
+  programAddress: Address;
+  accounts?: readonly unknown[];
+  data?: unknown;
+}): Instruction {
   return ix as Instruction;
 }
 
@@ -184,7 +190,9 @@ export function hasPermission(
   permissions: bigint,
   actionType: string,
 ): boolean {
-  if (!Object.prototype.hasOwnProperty.call(ACTION_PERMISSION_MAP, actionType)) {
+  if (
+    !Object.prototype.hasOwnProperty.call(ACTION_PERMISSION_MAP, actionType)
+  ) {
     return false;
   }
   const bit = ACTION_PERMISSION_MAP[actionType];
@@ -241,14 +249,18 @@ export class PermissionBuilder {
   private permissions = 0n;
 
   add(actionType: string): this {
-    if (Object.prototype.hasOwnProperty.call(ACTION_PERMISSION_MAP, actionType)) {
+    if (
+      Object.prototype.hasOwnProperty.call(ACTION_PERMISSION_MAP, actionType)
+    ) {
       this.permissions |= ACTION_PERMISSION_MAP[actionType];
     }
     return this;
   }
 
   remove(actionType: string): this {
-    if (Object.prototype.hasOwnProperty.call(ACTION_PERMISSION_MAP, actionType)) {
+    if (
+      Object.prototype.hasOwnProperty.call(ACTION_PERMISSION_MAP, actionType)
+    ) {
       this.permissions &= ~ACTION_PERMISSION_MAP[actionType];
     }
     return this;

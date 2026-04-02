@@ -12,7 +12,11 @@ export type {
   TokenTransfer,
   ResolvedPolicies,
 } from "./policies.js";
-export { parseSpendLimit, resolvePolicies, DEFAULT_POLICIES } from "./policies.js";
+export {
+  parseSpendLimit,
+  resolvePolicies,
+  DEFAULT_POLICIES,
+} from "./policies.js";
 
 // Protocol & token registry
 export {

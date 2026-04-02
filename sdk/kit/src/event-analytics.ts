@@ -111,9 +111,11 @@ export function describeEvent(
       const isExpired = f.isExpired as boolean;
       const spend = (f.actualSpendUsd as bigint) ?? 0n;
 
-      if (isExpired) return `Session for agent ${agent} expired and was cleaned up`;
+      if (isExpired)
+        return `Session for agent ${agent} expired and was cleaned up`;
       if (!success) return `Agent ${agent} session finalized (action failed)`;
-      if (spend > 0n) return `Agent ${agent} completed trade — ${formatUsd(spend, 2)} spent`;
+      if (spend > 0n)
+        return `Agent ${agent} completed trade — ${formatUsd(spend, 2)} spent`;
       return `Agent ${agent} completed action successfully`;
     }
 
@@ -279,9 +281,7 @@ export async function getVaultActivity(
   limit = 20,
   network: Network = "mainnet-beta",
 ): Promise<VaultActivityItem[]> {
-  const signatures = await rpc
-    .getSignaturesForAddress(vault, { limit })
-    .send();
+  const signatures = await rpc.getSignaturesForAddress(vault, { limit }).send();
 
   if (signatures.length === 0) return [];
 

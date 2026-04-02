@@ -10,13 +10,21 @@
  */
 
 import type { Address } from "@solana/kit";
-import type { ResolvedVaultState, ResolvedVaultStateForOwner } from "./state-resolver.js";
+import type {
+  ResolvedVaultState,
+  ResolvedVaultStateForOwner,
+} from "./state-resolver.js";
 import type { DecodedSigilEvent } from "./events.js";
 import { VaultStatus } from "./generated/types/vaultStatus.js";
 import { getSpendingVelocity } from "./spending-analytics.js";
 import { describeEvent } from "./event-analytics.js";
 import { formatUsd, formatAddress } from "./formatting.js";
-import { FULL_PERMISSIONS, PROTOCOL_MODE_ALLOWLIST, EPOCH_DURATION, MAX_DEVELOPER_FEE_RATE } from "./types.js";
+import {
+  FULL_PERMISSIONS,
+  PROTOCOL_MODE_ALLOWLIST,
+  EPOCH_DURATION,
+  MAX_DEVELOPER_FEE_RATE,
+} from "./types.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -50,7 +58,12 @@ export interface Alert {
 export interface AuditEntry {
   timestamp: number;
   txSignature: string;
-  category: "policy_change" | "agent_change" | "emergency" | "escrow" | "constraint_change";
+  category:
+    | "policy_change"
+    | "agent_change"
+    | "emergency"
+    | "escrow"
+    | "constraint_change";
   action: string;
   actor: Address;
   details: Record<string, unknown>;
@@ -86,7 +99,8 @@ export function getSecurityPosture(state: ResolvedVaultState): SecurityPosture {
       label: "No agent has full permissions",
       passed: !vault.agents.some((a) => a.permissions === FULL_PERMISSIONS),
       severity: "critical",
-      detail: "An agent with all 21 permission bits can perform any action including transfers.",
+      detail:
+        "An agent with all 21 permission bits can perform any action including transfers.",
       remediation: vault.agents.some((a) => a.permissions === FULL_PERMISSIONS)
         ? "Restrict agent permissions to only the actions they need."
         : null,
@@ -97,24 +111,31 @@ export function getSecurityPosture(state: ResolvedVaultState): SecurityPosture {
       passed: policy.dailySpendingCapUsd > 0n,
       severity: "critical",
       detail: "Without a cap, agents can spend unlimited amounts in 24 hours.",
-      remediation: policy.dailySpendingCapUsd === 0n
-        ? "Set a daily spending cap. Start with your expected daily volume + 20% buffer."
-        : null,
+      remediation:
+        policy.dailySpendingCapUsd === 0n
+          ? "Set a daily spending cap. Start with your expected daily volume + 20% buffer."
+          : null,
     },
     {
       id: "fee-destination-valid",
       label: "Fee destination is not system program",
-      passed: vault.feeDestination !== ("11111111111111111111111111111111" as Address),
+      passed:
+        vault.feeDestination !==
+        ("11111111111111111111111111111111" as Address),
       severity: "critical",
       detail: "Fees sent to the system program address are effectively burned.",
-      remediation: "Fee destination is immutable after vault creation. If incorrect, close and recreate the vault.",
+      remediation:
+        "Fee destination is immutable after vault creation. If incorrect, close and recreate the vault.",
     },
     {
       id: "agent-limits",
       label: "All agents have spending limits",
-      passed: vault.agents.length === 0 || vault.agents.every((a) => a.spendingLimitUsd > 0n),
+      passed:
+        vault.agents.length === 0 ||
+        vault.agents.every((a) => a.spendingLimitUsd > 0n),
       severity: "warning",
-      detail: "Per-agent limits prevent any single agent from consuming the entire vault cap.",
+      detail:
+        "Per-agent limits prevent any single agent from consuming the entire vault cap.",
       remediation: vault.agents.some((a) => a.spendingLimitUsd === 0n)
         ? "Set per-agent spending limits."
         : null,
@@ -125,52 +146,66 @@ export function getSecurityPosture(state: ResolvedVaultState): SecurityPosture {
       passed: policy.protocolMode === PROTOCOL_MODE_ALLOWLIST,
       severity: "warning",
       detail: "Allowlist mode restricts agents to approved protocols only.",
-      remediation: policy.protocolMode !== PROTOCOL_MODE_ALLOWLIST
-        ? "Switch to Allowlist mode and add only the protocols your agents need."
-        : null,
+      remediation:
+        policy.protocolMode !== PROTOCOL_MODE_ALLOWLIST
+          ? "Switch to Allowlist mode and add only the protocols your agents need."
+          : null,
     },
     {
       id: "timelock-enabled",
       label: "Policy changes require waiting period",
       passed: policy.timelockDuration > 0n,
       severity: "warning",
-      detail: "A timelock prevents instant policy changes. Gives time to respond if owner key is compromised.",
-      remediation: policy.timelockDuration === 0n
-        ? "Enable timelock (recommended: 1-24 hours)."
-        : null,
+      detail:
+        "A timelock prevents instant policy changes. Gives time to respond if owner key is compromised.",
+      remediation:
+        policy.timelockDuration === 0n
+          ? "Enable timelock (recommended: 1-24 hours)."
+          : null,
     },
     {
       id: "slippage-reasonable",
       label: "Max slippage below 10%",
       passed: policy.maxSlippageBps < 1000,
       severity: "warning",
-      detail: "High slippage tolerance allows agents to accept unfavorable trade prices.",
-      remediation: policy.maxSlippageBps >= 1000
-        ? `Current max slippage is ${policy.maxSlippageBps / 100}%. Reduce to 1-3% for most strategies.`
-        : null,
+      detail:
+        "High slippage tolerance allows agents to accept unfavorable trade prices.",
+      remediation:
+        policy.maxSlippageBps >= 1000
+          ? `Current max slippage is ${policy.maxSlippageBps / 100}%. Reduce to 1-3% for most strategies.`
+          : null,
     },
     {
       id: "agent-limits-sum",
       label: "Agent limits don't exceed vault cap",
       passed: (() => {
         if (vault.agents.length === 0) return true;
-        const sumLimits = vault.agents.reduce((s, a) => s + a.spendingLimitUsd, 0n);
-        const allHaveLimits = vault.agents.every((a) => a.spendingLimitUsd > 0n);
+        const sumLimits = vault.agents.reduce(
+          (s, a) => s + a.spendingLimitUsd,
+          0n,
+        );
+        const allHaveLimits = vault.agents.every(
+          (a) => a.spendingLimitUsd > 0n,
+        );
         return !allHaveLimits || sumLimits <= policy.dailySpendingCapUsd;
       })(),
       severity: "warning",
-      detail: "If per-agent limits sum to more than the vault cap, agents may assume they have more budget than exists.",
-      remediation: "Reduce per-agent limits so their sum is at or below the vault daily cap.",
+      detail:
+        "If per-agent limits sum to more than the vault cap, agents may assume they have more budget than exists.",
+      remediation:
+        "Reduce per-agent limits so their sum is at or below the vault daily cap.",
     },
     {
       id: "constraints-configured",
       label: "Instruction constraints are set",
       passed: constraints !== null,
       severity: "info",
-      detail: "Instruction constraints add byte-level validation on DeFi instructions.",
-      remediation: constraints === null
-        ? "Consider adding instruction constraints for high-value vaults."
-        : null,
+      detail:
+        "Instruction constraints add byte-level validation on DeFi instructions.",
+      remediation:
+        constraints === null
+          ? "Consider adding instruction constraints for high-value vaults."
+          : null,
     },
     {
       id: "has-agents",
@@ -178,7 +213,10 @@ export function getSecurityPosture(state: ResolvedVaultState): SecurityPosture {
       passed: vault.agents.length > 0,
       severity: "info",
       detail: "A vault without agents cannot execute any DeFi operations.",
-      remediation: vault.agents.length === 0 ? "Register an agent to start using this vault." : null,
+      remediation:
+        vault.agents.length === 0
+          ? "Register an agent to start using this vault."
+          : null,
     },
     {
       id: "not-all-paused",
@@ -194,7 +232,9 @@ export function getSecurityPosture(state: ResolvedVaultState): SecurityPosture {
     {
       id: "vault-has-balance",
       label: "Vault has non-zero token balance",
-      passed: state.stablecoinBalances.usdc > 0n || state.stablecoinBalances.usdt > 0n,
+      passed:
+        state.stablecoinBalances.usdc > 0n ||
+        state.stablecoinBalances.usdt > 0n,
       severity: "info",
       detail: "A vault with zero balance cannot execute any DeFi operations.",
       remediation: "Deposit funds to the vault to enable agent trading.",
@@ -207,17 +247,22 @@ export function getSecurityPosture(state: ResolvedVaultState): SecurityPosture {
         const epochDuration = BigInt(EPOCH_DURATION);
         const lastEpochTimestamp = state.tracker.lastWriteEpoch * epochDuration;
         const sevenDaysAgo = state.resolvedAtTimestamp - 604800n;
-        return lastEpochTimestamp > sevenDaysAgo || state.tracker.lastWriteEpoch === 0n;
+        return (
+          lastEpochTimestamp > sevenDaysAgo ||
+          state.tracker.lastWriteEpoch === 0n
+        );
       })(),
       severity: "info",
-      detail: "A vault with no recent activity may indicate a broken or stopped agent.",
+      detail:
+        "A vault with no recent activity may indicate a broken or stopped agent.",
       remediation: "Check agent health and ensure it's connected and running.",
     },
     // ---- Step 8: 4 new checks (14-17) ----
     {
       id: "timelock-meaningful",
       label: "Timelock is at least 1 hour",
-      passed: policy.timelockDuration === 0n || policy.timelockDuration >= 3600n,
+      passed:
+        policy.timelockDuration === 0n || policy.timelockDuration >= 3600n,
       severity: "warning",
       detail:
         "A timelock under 1 hour may not provide enough reaction time if the owner key is compromised. " +
@@ -246,11 +291,17 @@ export function getSecurityPosture(state: ResolvedVaultState): SecurityPosture {
       id: "constraints-protocol-aligned",
       label: "Constraint programs are in allowlist",
       passed: (() => {
-        if (!constraints || !constraints.entries || policy.protocolMode !== PROTOCOL_MODE_ALLOWLIST) return true;
+        if (
+          !constraints ||
+          !constraints.entries ||
+          policy.protocolMode !== PROTOCOL_MODE_ALLOWLIST
+        )
+          return true;
         if (!policy.protocols) return true;
         const allowedSet = new Set(policy.protocols.map(String));
         for (const entry of constraints.entries) {
-          if (entry.programId && !allowedSet.has(String(entry.programId))) return false;
+          if (entry.programId && !allowedSet.has(String(entry.programId)))
+            return false;
         }
         return true;
       })(),
@@ -258,57 +309,77 @@ export function getSecurityPosture(state: ResolvedVaultState): SecurityPosture {
       detail:
         "Instruction constraints reference program addresses not in the protocol allowlist. " +
         "These constraints will never trigger because the protocol is already blocked.",
-      remediation: "Update the allowlist to include constrained programs, or remove stale constraints.",
+      remediation:
+        "Update the allowlist to include constrained programs, or remove stale constraints.",
     },
     {
       id: "no-permission-concentration",
       label: "No agent has more than 15 permissions",
-      passed: !vault.agents.some((a: { permissions: bigint }) => countBits(a.permissions) > 15),
+      passed: !vault.agents.some(
+        (a: { permissions: bigint }) => countBits(a.permissions) > 15,
+      ),
       severity: "warning",
       detail:
         "An agent with more than 15 of 21 permission bits is effectively unrestricted. " +
         "Use least-privilege — grant only the actions the agent's strategy requires.",
-      remediation: "Review agent permissions and restrict to only necessary action types.",
+      remediation:
+        "Review agent permissions and restrict to only necessary action types.",
     },
     // ---- Step 18: 2 more checks (18-19) — council security findings ----
     {
       id: "constraints-current",
       label: "Constraint discriminators are current",
-      passed: !constraints || !constraints.entries || constraints.entries.length === 0 || (() => {
-        // Verify constraint entries reference known program discriminators.
-        // Stale constraints silently stop matching after protocol upgrades.
-        for (const entry of constraints.entries) {
-          if (entry.dataConstraints && entry.dataConstraints.length === 0 &&
-              entry.accountConstraints && entry.accountConstraints.length === 0) {
-            return false; // Empty entry = likely stale or misconfigured
+      passed:
+        !constraints ||
+        !constraints.entries ||
+        constraints.entries.length === 0 ||
+        (() => {
+          // Verify constraint entries reference known program discriminators.
+          // Stale constraints silently stop matching after protocol upgrades.
+          for (const entry of constraints.entries) {
+            if (
+              entry.dataConstraints &&
+              entry.dataConstraints.length === 0 &&
+              entry.accountConstraints &&
+              entry.accountConstraints.length === 0
+            ) {
+              return false; // Empty entry = likely stale or misconfigured
+            }
           }
-        }
-        return true;
-      })(),
+          return true;
+        })(),
       severity: "warning",
       detail:
         "Stale or empty constraint entries may not match current protocol instruction formats. " +
         "Review constraints when protocols upgrade.",
-      remediation: "Review and update InstructionConstraints entries. Remove empty entries.",
+      remediation:
+        "Review and update InstructionConstraints entries. Remove empty entries.",
     },
     {
       id: "constraints-cover-allowlist",
       label: "All allowlisted protocols have constraint entries",
-      passed: !constraints || !constraints.entries || policy.protocolMode !== PROTOCOL_MODE_ALLOWLIST ||
+      passed:
+        !constraints ||
+        !constraints.entries ||
+        policy.protocolMode !== PROTOCOL_MODE_ALLOWLIST ||
         !policy.protocols ||
         policy.protocols.every((p: Address) =>
-          constraints.entries.some((e: { programId: Address }) => String(e.programId) === String(p)),
+          constraints.entries.some(
+            (e: { programId: Address }) => String(e.programId) === String(p),
+          ),
         ),
       severity: "info",
       detail:
         "Protocols on the allowlist without constraint entries rely solely on spending caps for protection.",
-      remediation: "Add InstructionConstraints entries for all allowlisted protocols.",
+      remediation:
+        "Add InstructionConstraints entries for all allowlisted protocols.",
     },
     // ---- Step 20: 1 more check (20) — council security finding ----
     {
       id: "mode-all-unguarded",
       label: "Protocol mode ALL has constraint protection",
-      passed: policy.protocolMode !== 0 /* PROTOCOL_MODE_ALL */ ||
+      passed:
+        policy.protocolMode !== 0 /* PROTOCOL_MODE_ALL */ ||
         (constraints !== null && constraints.strictMode === true),
       severity: "critical",
       detail:
@@ -321,7 +392,9 @@ export function getSecurityPosture(state: ResolvedVaultState): SecurityPosture {
 
   const passCount = checks.filter((c) => c.passed).length;
   const failCount = checks.filter((c) => !c.passed).length;
-  const criticalFailures = checks.filter((c) => c.severity === "critical" && !c.passed);
+  const criticalFailures = checks.filter(
+    (c) => c.severity === "critical" && !c.passed,
+  );
 
   return { checks, passCount, failCount, criticalFailures };
 }
@@ -432,7 +505,8 @@ export function evaluateAlertConditions(
       id: `no-agents-${vaultAddress}`,
       severity: "warning",
       title: "No agents registered",
-      description: "This vault has no agents and cannot execute any DeFi operations.",
+      description:
+        "This vault has no agents and cannot execute any DeFi operations.",
       vaultAddress,
       agentAddress: null,
       actionHref: `/dashboard/vault/${vaultAddress}?tab=agents`,
@@ -446,7 +520,8 @@ export function evaluateAlertConditions(
       id: `all-paused-${vaultAddress}`,
       severity: "warning",
       title: "All agents are paused",
-      description: "No agent can execute actions. Unpause at least one to resume operations.",
+      description:
+        "No agent can execute actions. Unpause at least one to resume operations.",
       vaultAddress,
       agentAddress: null,
       actionHref: `/dashboard/vault/${vaultAddress}?tab=agents`,
@@ -456,10 +531,17 @@ export function evaluateAlertConditions(
 
   // High velocity + drain detection — delegate to spending-analytics for rate math
   if (state.tracker && globalBudget.cap > 0n) {
-    const velocity = getSpendingVelocity(state.tracker, state.resolvedAtTimestamp, globalBudget);
+    const velocity = getSpendingVelocity(
+      state.tracker,
+      state.resolvedAtTimestamp,
+      globalBudget,
+    );
 
     // High velocity alert: current rate > 2x average (stricter than spending-analytics 1.5x)
-    if (velocity.averageRate > 0n && velocity.currentRate > velocity.averageRate * 2n) {
+    if (
+      velocity.averageRate > 0n &&
+      velocity.currentRate > velocity.averageRate * 2n
+    ) {
       const multiplier = Number(velocity.currentRate / velocity.averageRate);
       alerts.push({
         id: `high-velocity-${vaultAddress}`,
@@ -474,12 +556,16 @@ export function evaluateAlertConditions(
     }
 
     // Drain detection: current hourly rate > 50% of daily cap
-    if (velocity.currentRate > 0n && velocity.currentRate > globalBudget.cap / 2n) {
+    if (
+      velocity.currentRate > 0n &&
+      velocity.currentRate > globalBudget.cap / 2n
+    ) {
       alerts.push({
         id: `drain-detected-${vaultAddress}`,
         severity: "critical",
         title: "Potential drain detected",
-        description: "Spending rate would consume over 50% of daily budget in one hour. Consider freezing the vault.",
+        description:
+          "Spending rate would consume over 50% of daily budget in one hour. Consider freezing the vault.",
         vaultAddress,
         agentAddress: null,
         actionHref: `/dashboard/vault/${vaultAddress}?tab=security`,
@@ -556,15 +642,21 @@ export function getAuditTrail(
 
     // Timestamp fallback: timestamp → executes_at → applied_at → 0
     const timestamp = Number(
-      (f.timestamp as bigint) ?? (f.executes_at as bigint) ?? (f.applied_at as bigint) ?? 0n,
+      (f.timestamp as bigint) ??
+        (f.executes_at as bigint) ??
+        (f.applied_at as bigint) ??
+        0n,
     );
 
     if (options?.since && timestamp > 0 && timestamp < options.since) continue;
 
     // Actor fallback: owner → agent → settled_by → refunded_by → vault → "unknown"
-    const actor = (
-      (f.owner ?? f.agent ?? f.settled_by ?? f.refunded_by ?? f.vault ?? "unknown") as string
-    ) as Address;
+    const actor = (f.owner ??
+      f.agent ??
+      f.settled_by ??
+      f.refunded_by ??
+      f.vault ??
+      "unknown") as string as Address;
 
     if (options?.actor && actor !== options.actor) continue;
 

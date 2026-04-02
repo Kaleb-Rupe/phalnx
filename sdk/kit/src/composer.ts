@@ -99,12 +99,16 @@ export function composeSigilTransaction(
     Object.keys(params.addressLookupTables).length > 0
   ) {
     txMessage = compressTransactionMessageUsingAddressLookupTables(
-      txMessage as Parameters<typeof compressTransactionMessageUsingAddressLookupTables>[0],
+      txMessage as Parameters<
+        typeof compressTransactionMessageUsingAddressLookupTables
+      >[0],
       params.addressLookupTables,
     ) as typeof txMessage;
   }
 
-  return compileTransaction(txMessage as Parameters<typeof compileTransaction>[0]);
+  return compileTransaction(
+    txMessage as Parameters<typeof compileTransaction>[0],
+  );
 }
 
 /**

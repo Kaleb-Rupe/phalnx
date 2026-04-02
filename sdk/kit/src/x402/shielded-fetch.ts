@@ -65,16 +65,30 @@ async function confirmSettlementOnChain(
   const deadline = Date.now() + timeoutMs;
   let delay = 500;
   while (Date.now() < deadline) {
-    const result = await rpc.getSignatureStatuses([txSignature as unknown as Parameters<typeof rpc.getSignatureStatuses>[0][0]]).send();
-    const statuses = (result as unknown as { value: readonly (unknown | null)[] }).value;
+    const result = await rpc
+      .getSignatureStatuses([
+        txSignature as unknown as Parameters<
+          typeof rpc.getSignatureStatuses
+        >[0][0],
+      ])
+      .send();
+    const statuses = (
+      result as unknown as { value: readonly (unknown | null)[] }
+    ).value;
     if (statuses?.[0]) {
-      const status = statuses[0] as { err?: unknown; confirmationStatus?: string };
+      const status = statuses[0] as {
+        err?: unknown;
+        confirmationStatus?: string;
+      };
       if (status.err) return "failed";
-      if (status.confirmationStatus === "confirmed" || status.confirmationStatus === "finalized") {
+      if (
+        status.confirmationStatus === "confirmed" ||
+        status.confirmationStatus === "finalized"
+      ) {
         return "confirmed";
       }
     }
-    await new Promise(r => setTimeout(r, delay));
+    await new Promise((r) => setTimeout(r, delay));
     delay = Math.min(delay * 1.5, 3000);
   }
   return "timeout";
@@ -178,7 +192,11 @@ export async function shieldedFetch(
 
   // Step 9: Replay check
   if (config?.enableReplayProtection !== false) {
-    await globalNonceTracker.checkOrThrow(urlStr, selected.payTo, selected.amount);
+    await globalNonceTracker.checkOrThrow(
+      urlStr,
+      selected.payTo,
+      selected.amount,
+    );
   }
 
   // Step 10: Amount sanity
@@ -271,7 +289,7 @@ export async function shieldedFetch(
   );
 
   const compiledTx = compileTransaction(
-    txMessage as Parameters<typeof compileTransaction>[0]
+    txMessage as Parameters<typeof compileTransaction>[0],
   );
 
   // Sign + encode using shared utility
@@ -378,7 +396,9 @@ export async function shieldedFetch(
     ) {
       const timeout = config?.confirmPaymentTimeoutMs ?? 10_000;
       const status = await confirmSettlementOnChain(
-        effectiveRpc, settlement.transaction, timeout,
+        effectiveRpc,
+        settlement.transaction,
+        timeout,
       );
       if (status === "failed") {
         shouldRecordSpend = false;

@@ -42,14 +42,24 @@ export interface PortfolioOverview {
 // ─── Helpers (exported for testing) ──────────────────────────────────────────
 
 /** Aggregate VaultSummary[] into portfolio totals. Pure function. */
-export function aggregatePortfolio(vaults: VaultSummary[]): Omit<PortfolioOverview, "alerts"> {
+export function aggregatePortfolio(
+  vaults: VaultSummary[],
+): Omit<PortfolioOverview, "alerts"> {
   if (vaults.length === 0) {
     return {
       vaults: [],
       totals: {
-        vaultCount: 0, activeVaultCount: 0, totalValueUsd: 0n, totalAgents: 0,
-        totalSpend24h: 0n, totalVolume: 0n, totalFeesCollected: 0n,
-        totalPnl: 0n, totalDeposited: 0n, totalWithdrawn: 0n, overallPnlPercent: 0,
+        vaultCount: 0,
+        activeVaultCount: 0,
+        totalValueUsd: 0n,
+        totalAgents: 0,
+        totalSpend24h: 0n,
+        totalVolume: 0n,
+        totalFeesCollected: 0n,
+        totalPnl: 0n,
+        totalDeposited: 0n,
+        totalWithdrawn: 0n,
+        overallPnlPercent: 0,
       },
       topVaultByValue: null,
       topVaultBySpending: null,
@@ -94,9 +104,7 @@ export function aggregatePortfolio(vaults: VaultSummary[]): Omit<PortfolioOvervi
 
   const netInvestment = totalDeposited - totalWithdrawn;
   const overallPnlPercent =
-    netInvestment > 0n
-      ? Number((totalPnl * 10000n) / netInvestment) / 100
-      : 0;
+    netInvestment > 0n ? Number((totalPnl * 10000n) / netInvestment) / 100 : 0;
 
   return {
     vaults,
@@ -140,7 +148,10 @@ export async function getPortfolioOverview(
     discovered.map((v) => getVaultSummary(rpc, v.vaultAddress, network)),
   );
   const vaults = results
-    .filter((r): r is PromiseFulfilledResult<VaultSummary> => r.status === "fulfilled")
+    .filter(
+      (r): r is PromiseFulfilledResult<VaultSummary> =>
+        r.status === "fulfilled",
+    )
     .map((r) => r.value);
 
   const portfolio = aggregatePortfolio(vaults);
@@ -191,7 +202,10 @@ export function getCrossVaultAgentRanking(
             return false;
           }
         });
-        if (slotIdx >= 0 && slotIdx < vault.state.overlay.lifetimeSpend.length) {
+        if (
+          slotIdx >= 0 &&
+          slotIdx < vault.state.overlay.lifetimeSpend.length
+        ) {
           lifetimeSpend = vault.state.overlay.lifetimeSpend[slotIdx];
         }
       }
@@ -340,9 +354,7 @@ export function getPortfolioTimeSeries(
     .sort((a, b) => a.timestamp - b.timestamp);
 
   const utilization =
-    totalCap24h > 0n
-      ? Number((totalSpend24h * 10000n) / totalCap24h) / 100
-      : 0;
+    totalCap24h > 0n ? Number((totalSpend24h * 10000n) / totalCap24h) / 100 : 0;
 
   return { spendingByEpoch, totalSpend24h, totalCap24h, utilization };
 }

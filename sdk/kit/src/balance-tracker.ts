@@ -77,9 +77,7 @@ export async function getVaultPnL(
   const netInvestment = totalDeposited - totalWithdrawn;
   const pnl = currentBalance - netInvestment;
   const pnlPercent =
-    netInvestment > 0n
-      ? Number((pnl * 10000n) / netInvestment) / 100
-      : 0;
+    netInvestment > 0n ? Number((pnl * 10000n) / netInvestment) / 100 : 0;
 
   return {
     totalDeposited,
@@ -135,7 +133,9 @@ export async function getVaultTokenBalances(
     if (amount === 0n) continue;
 
     const resolved = resolveToken(mint as string, network);
-    const symbol = resolved ? resolved.symbol : (mint as string).slice(0, 4) + "...";
+    const symbol = resolved
+      ? resolved.symbol
+      : (mint as string).slice(0, 4) + "...";
     const decimals = resolved ? resolved.decimals : info.tokenAmount.decimals;
     balances.push({ mint, balance: amount, symbol, decimals });
   }
@@ -224,7 +224,9 @@ export class BalanceSnapshotStore {
 
   static fromJSON(json: string): BalanceSnapshotStore {
     const data = JSON.parse(json);
-    const maxEntries = Number.isInteger(data.maxEntries) ? data.maxEntries : 144;
+    const maxEntries = Number.isInteger(data.maxEntries)
+      ? data.maxEntries
+      : 144;
     const store = new BalanceSnapshotStore(maxEntries);
     if (data.baseline) {
       store.baseline = {
@@ -262,7 +264,12 @@ export function getBalancePnL(
   const baseline = store.getBaseline();
   const latest = store.getLatest();
   if (!baseline || !latest || baseline.timestamp === latest.timestamp) {
-    return { startBalance: 0n, currentBalance: 0n, delta: 0n, percentChange: 0 };
+    return {
+      startBalance: 0n,
+      currentBalance: 0n,
+      delta: 0n,
+      percentChange: 0,
+    };
   }
 
   const sumStablecoins = (balances: TokenBalance[]): bigint =>
@@ -275,9 +282,7 @@ export function getBalancePnL(
   const currentBalance = sumStablecoins(latest.balances);
   const delta = currentBalance - startBalance;
   const percentChange =
-    startBalance > 0n
-      ? Number((delta * 10000n) / startBalance) / 100
-      : 0;
+    startBalance > 0n ? Number((delta * 10000n) / startBalance) / 100 : 0;
 
   return { startBalance, currentBalance, delta, percentChange };
 }

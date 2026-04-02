@@ -23,7 +23,8 @@ import {
 // ─── Sigil ALT Addresses ────────────────────────────────────────────────────
 
 /** Devnet Sigil ALT — deployed 2026-03-20, authority: 6wrkKTM2pjkcCAbMfRz2j3AXspavu6pq3ePcuJUE3Azp */
-export const SIGIL_ALT_DEVNET = "BtRLCMVamw9c3R8UDwgYBCFur5YVkqACmakVh9xi2aTw" as Address;
+export const SIGIL_ALT_DEVNET =
+  "BtRLCMVamw9c3R8UDwgYBCFur5YVkqACmakVh9xi2aTw" as Address;
 
 /** Mainnet Sigil ALT — placeholder until deployed */
 export const SIGIL_ALT_MAINNET = "11111111111111111111111111111111" as Address;

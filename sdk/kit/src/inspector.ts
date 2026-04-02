@@ -245,20 +245,23 @@ export function inspectConstraints(
 
       // Data constraints: { offset, operator: ConstraintOperator, value: ReadonlyUint8Array }
       for (const dc of entry.dataConstraints ?? []) {
-        const opNum = typeof dc.operator === "number" ? dc.operator : (dc.operator as { __kind: string }).__kind ? 0 : 0;
+        const opNum =
+          typeof dc.operator === "number"
+            ? dc.operator
+            : (dc.operator as { __kind: string }).__kind
+              ? 0
+              : 0;
         const op = OPERATOR_NAMES[opNum] ?? `op(${String(dc.operator)})`;
         const bytes = new Uint8Array(dc.value as unknown as ArrayLike<number>);
-        const valueHex = Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
-        rules.push(
-          `data[${dc.offset}..+${bytes.length}] ${op} 0x${valueHex}`,
-        );
+        const valueHex = Array.from(bytes)
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
+        rules.push(`data[${dc.offset}..+${bytes.length}] ${op} 0x${valueHex}`);
       }
 
       // Account constraints: { index, expected: Address }
       for (const ac of entry.accountConstraints ?? []) {
-        rules.push(
-          `account[${ac.index}] == ${ac.expected}`,
-        );
+        rules.push(`account[${ac.index}] == ${ac.expected}`);
       }
 
       return {

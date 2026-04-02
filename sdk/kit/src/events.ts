@@ -133,7 +133,10 @@ function bytesToHex(bytes: Uint8Array): string {
 // ─── Event Decoder Map ──────────────────────────────────────────────────────
 
 // Decoders cached at module level — avoids re-creating struct decoders on every call
-const EVENT_DECODER_MAP: Record<string, { decode: (data: Uint8Array) => unknown }> = {
+const EVENT_DECODER_MAP: Record<
+  string,
+  { decode: (data: Uint8Array) => unknown }
+> = {
   ActionAuthorized: getActionAuthorizedDecoder(),
   SessionFinalized: getSessionFinalizedDecoder(),
   FeesCollected: getFeesCollectedDecoder(),
@@ -174,7 +177,7 @@ for (const name of discriminatorEventNames) {
   if (!decoderEventNames.has(name)) {
     throw new Error(
       `EVENT_DECODER_MAP missing entry for "${name}". ` +
-      `Update EVENT_DECODER_MAP in events.ts after adding new events.`,
+        `Update EVENT_DECODER_MAP in events.ts after adding new events.`,
     );
   }
 }
@@ -182,7 +185,7 @@ for (const name of decoderEventNames) {
   if (!discriminatorEventNames.has(name)) {
     throw new Error(
       `EVENT_DECODER_MAP has stale entry "${name}" not in EVENT_DISCRIMINATOR_MAP. ` +
-      `Remove it from EVENT_DECODER_MAP in events.ts.`,
+        `Remove it from EVENT_DECODER_MAP in events.ts.`,
     );
   }
 }

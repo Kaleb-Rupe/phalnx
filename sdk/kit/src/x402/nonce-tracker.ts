@@ -94,7 +94,11 @@ export class NonceTracker {
    * Check if a payment is a duplicate.
    * Does NOT record — call record() after successful payment.
    */
-  async isDuplicate(url: string, payTo: string, amount: string): Promise<boolean> {
+  async isDuplicate(
+    url: string,
+    payTo: string,
+    amount: string,
+  ): Promise<boolean> {
     this.gc();
     const key = NonceTracker.buildKey(url, payTo, amount);
     if (this.storage.has(key)) return true;
@@ -106,7 +110,11 @@ export class NonceTracker {
    * Check and throw if duplicate.
    * @throws X402ReplayError if the payment was already seen
    */
-  async checkOrThrow(url: string, payTo: string, amount: string): Promise<void> {
+  async checkOrThrow(
+    url: string,
+    payTo: string,
+    amount: string,
+  ): Promise<void> {
     if (await this.isDuplicate(url, payTo, amount)) {
       throw new X402ReplayError(NonceTracker.buildKey(url, payTo, amount));
     }

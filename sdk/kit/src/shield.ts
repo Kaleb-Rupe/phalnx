@@ -170,7 +170,9 @@ export class ShieldState {
     const PRUNE_THRESHOLD = 10_000;
     if (this.spendEntries.length > PRUNE_THRESHOLD) {
       const cutoff = Date.now() - 86_400_000;
-      this.spendEntries = this.spendEntries.filter((e) => e.timestamp >= cutoff);
+      this.spendEntries = this.spendEntries.filter(
+        (e) => e.timestamp >= cutoff,
+      );
     }
     if (this.txEntries.length > PRUNE_THRESHOLD) {
       const cutoff = Date.now() - 86_400_000;
@@ -866,7 +868,9 @@ export function createShieldedSigner(
 
       // Delegate to base signer
       const signer = baseSigner as TransactionSigner & {
-        modifyAndSignTransactions?: (...args: unknown[]) => Promise<readonly unknown[]>;
+        modifyAndSignTransactions?: (
+          ...args: unknown[]
+        ) => Promise<readonly unknown[]>;
         signTransactions?: (...args: unknown[]) => Promise<readonly unknown[]>;
       };
       if (signer.modifyAndSignTransactions) {
@@ -875,7 +879,10 @@ export function createShieldedSigner(
         const sigs = await signer.signTransactions(txs);
         return txs.map((tx: any, i: number) => ({
           ...tx,
-          signatures: { ...tx.signatures, ...(sigs[i] as Record<string, unknown>) },
+          signatures: {
+            ...tx.signatures,
+            ...(sigs[i] as Record<string, unknown>),
+          },
         }));
       }
       throw new Error(
@@ -921,7 +928,9 @@ export function _extractInstructionsFromCompiled(
     // ALL lookups first, then ALL readonlys from ALL lookups.
     // Pass 1: ALL writables from ALL lookups (in lookup order)
     for (const lookup of msg.addressTableLookups) {
-      const resolved = altCache.getCachedAddresses(lookup.lookupTableAddress as Address);
+      const resolved = altCache.getCachedAddresses(
+        lookup.lookupTableAddress as Address,
+      );
       if (resolved) {
         for (const idx of lookup.writableIndexes ?? []) {
           accountTable.push(resolveAltIndex(idx, resolved));
@@ -930,7 +939,9 @@ export function _extractInstructionsFromCompiled(
     }
     // Pass 2: ALL readonlys from ALL lookups
     for (const lookup of msg.addressTableLookups) {
-      const resolved = altCache.getCachedAddresses(lookup.lookupTableAddress as Address);
+      const resolved = altCache.getCachedAddresses(
+        lookup.lookupTableAddress as Address,
+      );
       if (resolved) {
         for (const idx of lookup.readonlyIndexes ?? []) {
           accountTable.push(resolveAltIndex(idx, resolved));

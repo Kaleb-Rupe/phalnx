@@ -39,10 +39,7 @@ import {
   type ResolvedBudget,
 } from "./state-resolver.js";
 import { getSessionPDA, getAgentOverlayPDA } from "./resolve-accounts.js";
-import {
-  composeSigilTransaction,
-  measureTransactionSize,
-} from "./composer.js";
+import { composeSigilTransaction, measureTransactionSize } from "./composer.js";
 import {
   BlockhashCache,
   signAndEncode,

@@ -219,7 +219,9 @@ export async function findNextVaultId(
  * - getRegisterAgentInstructionAsync()
  * - getUpdatePolicyInstructionAsync()
  */
-export async function inscribe(options: InscribeOptions): Promise<InscribeResult> {
+export async function inscribe(
+  options: InscribeOptions,
+): Promise<InscribeResult> {
   const { rpc, network, owner, agent } = options;
   validateNetwork(network);
 
