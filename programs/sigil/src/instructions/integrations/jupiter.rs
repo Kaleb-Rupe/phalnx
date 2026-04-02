@@ -196,10 +196,7 @@ pub fn verify_jupiter_slippage(ix_data: &[u8], max_slippage_bps: u16) -> Result<
     let end4 = cursor
         .checked_add(4)
         .ok_or(error!(SigilError::InvalidJupiterInstruction))?;
-    require!(
-        ix_data.len() >= end4,
-        SigilError::InvalidJupiterInstruction
-    );
+    require!(ix_data.len() >= end4, SigilError::InvalidJupiterInstruction);
     let vec_len = u32::from_le_bytes(
         ix_data[cursor..end4]
             .try_into()
@@ -325,10 +322,7 @@ fn skip_remaining_accounts_info(data: &[u8], cursor: &mut usize) -> Result<()> {
         .checked_add(skip)
         .ok_or(error!(SigilError::InvalidJupiterInstruction))?;
 
-    require!(
-        data.len() >= *cursor,
-        SigilError::InvalidJupiterInstruction
-    );
+    require!(data.len() >= *cursor, SigilError::InvalidJupiterInstruction);
     Ok(())
 }
 

@@ -748,8 +748,8 @@ describe("seal() pre-flight checks", () => {
         },
       }),
     };
-    const result = await wrap(
-      baseWrapParams({
+    const result = await seal(
+      baseSealParams({
         rpc: rpcThatFails as any,
         tokenMint: NON_STABLE,
         addressLookupTables: {},

@@ -90,10 +90,7 @@ pub fn handler(
         policy.developer_fee_rate = fee_rate;
     }
     if let Some(slippage) = max_slippage_bps {
-        require!(
-            slippage <= MAX_SLIPPAGE_BPS,
-            SigilError::SlippageBpsTooHigh
-        );
+        require!(slippage <= MAX_SLIPPAGE_BPS, SigilError::SlippageBpsTooHigh);
         policy.max_slippage_bps = slippage;
     }
     if let Some(tl) = timelock_duration {
