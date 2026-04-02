@@ -402,13 +402,17 @@ describe("devnet-spending", () => {
     console.log("    Session + agent_transfer spends tracked together at cap");
   });
 
-  it("6. update_policy changes daily cap (V2: no tracker in updatePolicy)", async () => {
+  it("6. queue/cancel policy update + spend within original cap", async () => {
+    // Create vault with 500M cap — high enough for two spends without needing a mid-test change.
+    // With mandatory 30-min timelock, we can't apply policy changes on devnet in a test.
+    // Instead we verify: (a) queue works, (b) pending values correct, (c) cancel works,
+    // (d) spending under the original cap succeeds.
     const vault = await createDualTokenVault({
-      dailyCap: new BN(200_000_000),
-      maxTx: new BN(200_000_000),
+      dailyCap: new BN(500_000_000),
+      maxTx: new BN(300_000_000),
     });
 
-    // Spend some
+    // Spend 100M (first spend)
     const sessionA = deriveSessionPda(
       vault.vaultPda,
       agent.publicKey,
@@ -431,10 +435,10 @@ describe("devnet-spending", () => {
       protocolTreasuryAta: vault.protocolTreasuryAta,
     });
 
-    // Update daily cap higher via queue/apply (mandatory timelock)
+    // Queue a policy cap change (verify queue mechanism works on devnet)
     await program.methods
       .queuePolicyUpdate(
-        new BN(500_000_000), // new daily cap
+        new BN(1_000_000_000), // queued cap: 1B
         null,
         null,
         null,
@@ -458,13 +462,12 @@ describe("devnet-spending", () => {
       } as any)
       .rpc();
 
-    // Wait for timelock to expire (devnet: sleep 1800s is impractical —
-    // this test must be run with a short-lived devnet or modified timelock.
-    // For CI, skip the apply and verify the queue succeeded instead.)
-    const pendingAccount = await program.account.pendingPolicyUpdate.fetch(pdas.pendingPolicyPda);
-    expect(pendingAccount.dailySpendingCapUsd.toNumber()).to.equal(500_000_000);
+    // Verify the pending update was created with correct values
+    const pendingAccount = await program.account.pendingPolicyUpdate.fetch(vault.pendingPolicyPda);
+    expect(pendingAccount.dailySpendingCapUsd.toNumber()).to.equal(1_000_000_000);
+    console.log("    Queue policy update succeeded, pending cap = 1B");
 
-    // Cancel the pending update (cleanup — can't wait 30min on devnet)
+    // Cancel the pending update (can't wait 30min on devnet)
     await program.methods
       .cancelPendingPolicy()
       .accounts({
@@ -475,7 +478,12 @@ describe("devnet-spending", () => {
       } as any)
       .rpc();
 
-    // Can spend more with increased cap
+    // Verify policy unchanged after cancel
+    const policy = await program.account.policyConfig.fetch(vault.policyPda);
+    expect(policy.dailySpendingCapUsd.toNumber()).to.equal(500_000_000);
+    console.log("    Cancel succeeded, cap still 500M");
+
+    // Spend 200M more (within original 500M cap — total now 300M < 500M)
     const sessionB = deriveSessionPda(
       vault.vaultPda,
       agent.publicKey,
@@ -497,6 +505,6 @@ describe("devnet-spending", () => {
       feeDestinationAta: null,
       protocolTreasuryAta: vault.protocolTreasuryAta,
     });
-    console.log("    Daily cap updated and additional spend succeeded");
+    console.log("    Second spend succeeded under original 500M cap (300M total)");
   });
 });
