@@ -1,6 +1,6 @@
-# Error Codes (6000-6070)
+# Error Codes (6000-6071)
 
-All 71 custom errors defined in `programs/sigil/src/errors.rs`. Use `require!(condition, SigilError::Name)`.
+All 72 custom errors defined in `programs/sigil/src/errors.rs`. Use `require!(condition, SigilError::Name)`.
 
 | Code | Name | Category | Invoked In |
 |------|------|----------|------------|
@@ -75,8 +75,9 @@ All 71 custom errors defined in `programs/sigil/src/errors.rs`. Use `require!(co
 | 6068 | AgentAlreadyPaused | Emergency | pause_agent |
 | 6069 | AgentNotPaused | Emergency | unpause_agent |
 | 6070 | UnauthorizedPostFinalizeInstruction | Validation | finalize_session |
+| 6071 | UnexpectedBalanceDecrease | Security | finalize_session |
 
-## Changes from Previous (77 codes → 70 codes)
+## Changes from Previous (77 codes → 72 codes)
 
 **Renamed (4):**
 - 6003: TokenNotRegistered → UnsupportedToken
@@ -93,13 +94,13 @@ All 71 custom errors defined in `programs/sigil/src/errors.rs`. Use `require!(co
 - ConstraintsUpdateNotExpired (was 6060) — Uses TimelockNotExpired (6026) instead
 - ConstraintsUpdateExpired (was 6062) — Reserved, never implemented
 
-All codes >= 6039 have been renumbered. See `MEMORY/WORK/20260317-153000_error-code-implementation/PRD.md` for the full old→new mapping.
+All codes >= 6039 have been renumbered.
 
 ## TS Error Map Coverage
 
 | Location | Codes Mapped |
 |----------|-------------|
-| `sdk/kit/src/simulation.ts` | 70/70 |
-| `sdk/kit/src/agent-errors.ts` | 70/70 + 34 SDK |
-| `sdk/kit/src/generated/errors/sigil.ts` | 70/70 |
-| `target/idl/sigil.json` | 70/70 |
+| `sdk/kit/src/simulation.ts` | 72/72 |
+| `sdk/kit/src/agent-errors.ts` | 72/72 + 34 SDK |
+| `sdk/kit/src/generated/errors/sigil.ts` | 72/72 |
+| `target/idl/sigil.json` | 72/72 |

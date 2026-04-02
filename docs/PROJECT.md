@@ -8,11 +8,11 @@ Sigil is the OpenZeppelin for AI agents on Solana. Import it, and your agent is 
 
 **Solution:**
 
-- **Primary API (`@usesigil/sdk`):** One call gives you full protection — client-side fast deny, TEE key custody, and on-chain vault enforcement bundled as one product.
+- **Primary API (`@usesigil/kit`):** One call gives you full protection — client-side fast deny, TEE key custody, and on-chain vault enforcement bundled as one product.
   ```typescript
-  import { withVault } from '@usesigil/sdk';
-  const result = await withVault(teeWallet, { maxSpend: '500 USDC/day' }, { connection });
-  // result.wallet is ready — policies enforced by Solana validators
+  import { seal, SigilClient } from '@usesigil/kit';
+  // seal() sandwiches any DeFi instruction with authorization + finalization
+  // SigilClient wraps seal() with stateful vault/agent context
   ```
 
 - **Client-side only (`shieldWallet()`):** For development/testing. Wraps any wallet with spending controls, protocol allowlists, and rate limiting. Zero on-chain overhead.
@@ -651,25 +651,13 @@ agent-middleware/
 │   ├── devnet-*.ts                            # 8 devnet test suites
 │   └── helpers/litesvm-setup.ts
 ├── sdk/
-│   ├── core/                                  # @usesigil/core (policy engine)
-│   ├── typescript/                            # @usesigil/sdk (primary package)
-│   │   └── src/integrations/
-│   │       ├── jupiter.ts
-│   │       ├── flash-trade.ts
-│   │       └── flash-trade-reconcile.ts
-│   ├── platform/                              # @usesigil/platform
-│   └── custody/
-│       ├── crossmint/                         # @usesigil/custody-crossmint
-│       ├── privy/                             # @usesigil/custody-privy
-│       └── turnkey/                           # @usesigil/custody-turnkey
+│   ├── kit/                                   # @usesigil/kit (full SDK + merged core policy engine)
+│   ├── platform/                              # @usesigil/platform (Solana Actions provisioning)
+│   └── custody/                               # @usesigil/custody (TEE adapters: crossmint, privy, turnkey)
+│       └── src/{crossmint,privy,turnkey}/      # Subpath exports
 ├── packages/
-│   ├── mcp/                                   # @usesigil/mcp (49 tools, 3 resources)
-│   └── sigil/                                # @usesigil/cli (init wizard, scaffolder)
-├── apps/
-│   └── actions-server/                        # Solana Actions/Blinks (Vercel)
-│       └── src/routes/
-│           ├── provision.ts
-│           ├── provision-tee.ts
+│   └── plugins/                               # @usesigil/plugins (agent framework adapters)
+│       └── src/sak/                           # Solana Agent Kit adapter (./sak subpath)
 │           ├── status.ts
 │           ├── discovery.ts
 │           ├── fund.ts
@@ -846,7 +834,7 @@ Five moats that compound over time:
 
 1. **Aggregate custody providers** — Work WITH Coinbase/Privy/Turnkey, not against them. "They protect keys, we enforce DeFi policies." The dual-layer model (custody + policy) makes Sigil complementary to every custody provider. Phase 6.7.
 
-2. **MCP as universal integration surface** — The `@usesigil/mcp` server (49 tools) provides framework-agnostic access to all Sigil capabilities via the industry-standard Model Context Protocol. Any MCP-compatible agent (Claude, Cursor, VS Code, Windsurf, custom agents) gets Sigil integration without per-framework plugins.
+2. **MCP as universal integration surface** — The `@usesigil/mcp (planned)` server (49 tools) provides framework-agnostic access to all Sigil capabilities via the industry-standard Model Context Protocol. Any MCP-compatible agent (Claude, Cursor, VS Code, Windsurf, custom agents) gets Sigil integration without per-framework plugins.
 
 3. **On-chain reputation network** — Vaults operating within policy for N days earn a verifiable on-chain reputation score stored in a PDA. Higher reputation → higher spending caps from DeFi protocol partners. Creates switching cost: leave Sigil = lose reputation history.
 
@@ -862,7 +850,7 @@ Five moats that compound over time:
 
 | Channel | Action | Expected Impact |
 |---------|--------|-----------------|
-| **awesome-mcp-servers** (81K stars) | PR to add `@usesigil/mcp` under Finance/Blockchain | High discovery — largest MCP directory |
+| **awesome-mcp-servers** (81K stars) | PR to add `@usesigil/mcp (planned)` under Finance/Blockchain | High discovery — largest MCP directory |
 | **mcp.so** (MCP Registry) | Submit via website form | Official MCP registry |
 | **PulseMCP** | Submit via directory | Growing MCP aggregator |
 | **Glama.ai** | Submit via MCP marketplace | Enterprise-focused MCP discovery |
@@ -920,7 +908,7 @@ Top trading agent projects from the Colosseum hackathon that execute DeFi trades
 |---------------|------------------------|
 | **GLAM Systems users** | GLAM manages fund permissions but lacks multi-protocol DeFi middleware. Sigil adds per-protocol policies on top of GLAM's asset management. |
 | **ClawPay / Lobster.cash ecosystem** | ClawPay handles agent payments but not DeFi execution. Sigil provides the DeFi guardrails their agents need. |
-| **MCP-compatible agent builders** | Any agent using MCP (Claude, Cursor, VS Code, Windsurf, custom agents) gets Sigil integration via `@usesigil/mcp` — no per-framework plugins needed. |
+| **MCP-compatible agent builders** | Any agent using MCP (Claude, Cursor, VS Code, Windsurf, custom agents) gets Sigil integration via `@usesigil/mcp (planned)` — no per-framework plugins needed. |
 | **Coinbase Agentic Wallet users** | Coinbase custody + Sigil policy = dual-layer protection. Agentic wallet holds keys, vault enforces DeFi policies. |
 | **Privy / Turnkey users** | Same dual-layer model. Custody provider manages key security, Sigil manages spending/DeFi policies. |
 

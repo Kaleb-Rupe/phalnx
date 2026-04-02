@@ -513,9 +513,9 @@ These aren't single instructions but combinations that the SDK must orchestrate 
 
 ---
 
-## 13. ERROR HANDLING FEATURES (70 Codes)
+## 13. ERROR HANDLING FEATURES (72 Codes)
 
-All 70 on-chain errors (6000-6069) should be:
+All 72 on-chain errors (6000-6071) should be:
 - **Parseable** from transaction logs → `parseOnChainError(logs)` → structured error
 - **Mapped** to human-readable messages with actionable suggestions (for AI agents)
 - **Pre-checkable** where possible → `precheckError(intent)` → catches errors before TX submission

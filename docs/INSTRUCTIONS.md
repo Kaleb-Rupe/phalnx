@@ -220,45 +220,9 @@ Do not build any of the following in the initial phases:
 
 ---
 
-## @solana/kit Compatibility Patterns
+## @solana/kit SDK
 
-> **NOTE (2026-03-20):** The Kit migration is COMPLETE. `@usesigil/kit` is now the sole SDK — fully Kit-native, zero web3.js dependency. The compat layer below was never needed. The old `sdk/typescript` and `@usesigil/sdk` packages were deleted in Phase 0.
-
-### Why Not a Full Migration (Historical)
-
-Anchor 0.32.1 uses `@solana/web3.js` internally. A full migration to `@solana/kit` would require replacing Anchor's `Provider`, `Program`, `BN`, and `PublicKey` types throughout the SDK — essentially fighting the framework. Wait for Anchor to migrate (inevitable), then flip internals.
-
-### Compatibility Layer Approach
-
-Create an adapter module at `sdk/typescript/src/compat/kit.ts` that:
-
-1. **Exports Kit-native types** alongside web3.js types:
-   ```typescript
-   // Kit users import from compat
-   import { SigilKitClient } from '@usesigil/sdk/kit';
-
-   // web3.js users import normally
-   import { SigilClient } from '@usesigil/sdk';
-   ```
-
-2. **Type converters** — bidirectional conversion between web3.js and Kit types:
-   ```typescript
-   // Address (Kit) ↔ PublicKey (web3.js)
-   function toKitAddress(pubkey: PublicKey): Address;
-   function fromKitAddress(address: Address): PublicKey;
-
-   // TransactionMessage (Kit) ↔ Transaction (web3.js)
-   function toKitTransaction(tx: Transaction): TransactionMessage;
-   ```
-
-3. **Separate entry point** — Kit adapter is importable via `@usesigil/sdk/kit` subpath export. Not included in the main bundle. Tree-shakeable.
-
-### Rules
-
-- Never import `@solana/kit` in the main SDK source. Kit types only appear in `src/compat/`.
-- All type converters must be tested with round-trip assertions (`pubkey → address → pubkey === original`).
-- The Kit client wrapper delegates to the real `SigilClient` internally — it's a thin type-translation layer, not a reimplementation.
-- When Anchor migrates to Kit, invert the dependency: Kit becomes the core, web3.js becomes the compat layer.
+`@usesigil/kit` is the sole SDK — fully Kit-native (`@solana/kit` peer dep), zero `@solana/web3.js` dependency, ESM-only. Primary API is `SigilClient` which wraps `seal()`.
 
 ---
 
@@ -480,7 +444,7 @@ interface PaymentRequirements {
 ### SDK API
 
 ```typescript
-import { shieldedFetch, createShieldedFetchForWallet } from '@usesigil/sdk';
+import { shieldedFetch, createShieldedFetch } from '@usesigil/kit/x402';
 
 // Direct usage
 const res = await shieldedFetch(wallet, 'https://api.example.com/paid', { connection });
