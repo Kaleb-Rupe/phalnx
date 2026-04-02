@@ -70,9 +70,10 @@ describe("sigil", () => {
   let vaultUsdcAta: PublicKey;
   let feeDestUsdcAta: PublicKey;
 
-  // Helper: read current policy version for TOCTOU check
-  async function pv(): Promise<BN> {
-    const pol = await program.account.policyConfig.fetch(policyPda);
+  // Helper: read current policy version for TOCTOU check.
+  // Defaults to main vault policyPda. Pass different address for other vaults.
+  async function pv(addr?: PublicKey): Promise<BN> {
+    const pol = await program.account.policyConfig.fetch(addr ?? policyPda);
     return (pol as any).policyVersion ?? new BN(0);
   }
 
@@ -2007,7 +2008,7 @@ describe("sigil", () => {
           new BN(10_000_000),
           jupiterProgramId,
           null,
-          await pv(),
+          await pv(feePolicyPda),
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -2420,7 +2421,7 @@ describe("sigil", () => {
           new BN(10_000_000),
           jupiterProgramId,
           null,
-          await pv(),
+          await pv(lifecyclePolicyPda),
         )
         .accountsPartial({
           agent: lifecycleAgent.publicKey,
@@ -2486,7 +2487,7 @@ describe("sigil", () => {
           new BN(5_000_000),
           jupiterProgramId,
           null,
-          await pv(),
+          await pv(lifecyclePolicyPda),
         )
         .accountsPartial({
           agent: lifecycleAgent.publicKey,
@@ -2542,7 +2543,7 @@ describe("sigil", () => {
             new BN(5_000_000),
             jupiterProgramId,
             null,
-            await pv(),
+            await pv(lifecyclePolicyPda),
           )
           .accountsPartial({
             agent: lifecycleAgent.publicKey,
@@ -3182,7 +3183,7 @@ describe("sigil", () => {
             new BN(1_000_000), // 1 USDC each
             jupiterProgramId,
             null,
-            await pv(),
+            await pv(ringPolicyPda),
           )
           .accountsPartial({
             agent: ringAgent.publicKey,
@@ -3348,7 +3349,7 @@ describe("sigil", () => {
           new BN(1), // 1 lamport
           jupiterProgramId,
           null,
-          await pv(),
+          await pv(feeEdgePolicyPda),
         )
         .accountsPartial({
           agent: feeEdgeAgent.publicKey,
@@ -3415,7 +3416,7 @@ describe("sigil", () => {
           new BN(4_999),
           jupiterProgramId,
           null,
-          await pv(),
+          await pv(feeEdgePolicyPda),
         )
         .accountsPartial({
           agent: feeEdgeAgent.publicKey,
@@ -3466,7 +3467,7 @@ describe("sigil", () => {
           new BN(5_000),
           jupiterProgramId,
           null,
-          await pv(),
+          await pv(feeEdgePolicyPda),
         )
         .accountsPartial({
           agent: feeEdgeAgent.publicKey,
@@ -5373,7 +5374,7 @@ describe("sigil", () => {
       );
 
       const validateIx = await program.methods
-        .validateAndAuthorize({ swap: {} }, usdcMint, amount, protocol, null, await pv())
+        .validateAndAuthorize({ swap: {} }, usdcMint, amount, protocol, null, await pv(protoCapPolicyPda))
         .accountsPartial({
           agent: protoCapAgent.publicKey,
           vault: pcVault,
