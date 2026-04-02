@@ -1,7 +1,7 @@
 # Sigil
 
 [![CI](https://github.com/Kaleb-Rupe/sigil/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Kaleb-Rupe/sigil/actions/workflows/ci.yml)
-![Tests](https://img.shields.io/badge/tests-1580-brightgreen)
+![Tests](https://img.shields.io/badge/tests-1651-brightgreen)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 
 On-chain guardrails for AI agents on Solana. Your policies are enforced by Solana validators, not software promises.
@@ -168,13 +168,13 @@ cargo fmt --check --manifest-path programs/sigil/Cargo.toml
 | Analytics counters (failed TX + per-agent TX count)  |       7 |
 | Devnet integration tests (real network)              |      69 |
 | Surfpool integration tests (local Surfnet)           |      59 |
-| Platform client tests (`@usesigil/platform`)           |      17 |
-| Custody adapter tests (`@usesigil/custody`)            |      96 |
-| Kit SDK tests (`@usesigil/kit`, includes core)         |     950 |
-| Kit SDK devnet tests (`@usesigil/kit` devnet)          |       9 |
-| Plugins (`@usesigil/plugins`)                          |       6 |
+| Platform client tests (`@usesigil/platform`)         |      17 |
+| Custody adapters (`@usesigil/custody`)               |      96 |
+| Kit-native SDK (`@usesigil/kit` — includes merged core) |     950 |
+| Kit SDK devnet tests (`@usesigil/kit` devnet)        |       9 |
+| Plugins (`@usesigil/plugins`)                        |       6 |
 | Rust unit tests (cargo test)                         |      71 |
-| **Total**                                            | **1580** |
+| **Total**                                            | **1651** |
 
 ## Security
 
