@@ -180,7 +180,7 @@ cargo fmt --check --manifest-path programs/sigil/Cargo.toml
 | Surfpool integration tests (local Surfnet)           |      59 |
 | Platform client tests (`@usesigil/platform`)         |      17 |
 | Custody adapters (`@usesigil/custody`)               |      96 |
-| Kit-native SDK (`@usesigil/kit` — includes core + dashboard) |    1099 |
+| Kit-native SDK (`@usesigil/kit` — includes merged core + dashboard) |    1099 |
 | Kit SDK devnet tests (`@usesigil/kit` devnet)        |      26 |
 | Plugins (`@usesigil/plugins`)                        |       6 |
 | Rust unit tests (cargo test)                         |      71 |
