@@ -215,6 +215,7 @@ export interface ProvisionVaultOpts {
   permissions?: bigint;
   spendingLimitUsd?: bigint;
   skipDeposit?: boolean;
+  timelockDuration?: bigint;
 }
 
 export interface ProvisionVaultResult {
@@ -272,7 +273,7 @@ export async function provisionVault(
     maxConcurrentPositions: 5,
     developerFeeRate: 0,
     maxSlippageBps: 500,
-    timelockDuration: 0n,
+    timelockDuration: opts?.timelockDuration ?? 1800n, // MIN_TIMELOCK_DURATION (TOCTOU fix)
     allowedDestinations: [],
     protocolCaps: [],
   });

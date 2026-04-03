@@ -124,6 +124,13 @@ jobs:
               tests/devnet-routing.ts
           fi
 
+      - name: Run Kit SDK devnet tests (dashboard integration)
+        working-directory: sdk/kit
+        env:
+          ANCHOR_PROVIDER_URL: ${{ secrets.DEVNET_RPC_URL }}
+        run: |
+          npx mocha --require tsx tests/devnet/dashboard-integration.test.ts --timeout 300000
+
       - name: Cleanup wallet
         if: always()
         run: rm -f "$HOME/.config/solana/id.json"

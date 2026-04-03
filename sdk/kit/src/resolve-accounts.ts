@@ -150,6 +150,22 @@ export async function getPendingConstraintsPDA(
   return [pda, bump];
 }
 
+/**
+ * Derive PDA for pending CLOSE constraints (queue_close_constraints).
+ * Seed: "pending_close_constraints" — NOT the same as "pending_constraints" (which is for updates).
+ * See close_vault.rs:127.
+ */
+export async function getPendingCloseConstraintsPDA(
+  vault: Address,
+  programAddress: Address = SIGIL_PROGRAM_ADDRESS,
+): Promise<[Address, number]> {
+  const [pda, bump] = await getProgramDerivedAddress({
+    programAddress,
+    seeds: [seedString("pending_close_constraints"), seedAddress(vault)],
+  });
+  return [pda, bump];
+}
+
 // ─── Composite Account Resolution ────────────────────────────────────────────
 
 export interface ResolveAccountsInput {
