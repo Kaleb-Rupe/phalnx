@@ -61,6 +61,14 @@ import {
 
 const FULL_PERMISSIONS = new BN((1n << 21n) - 1n);
 
+// Helper: read current policy version for any vault's policy PDA
+async function readPolicyVersion(prog: Program<Sigil>, policyPda: PublicKey): Promise<BN> {
+  try {
+    const pol = await prog.account.policyConfig.fetch(policyPda);
+    return (pol as any).policyVersion ?? new BN(0);
+  } catch { return new BN(0); }
+}
+
 // ─── Shared state ───────────────────────────────────────────────────────────
 
 let env: SurfpoolTestEnv;
@@ -216,7 +224,7 @@ describe("surfpool-integration", function () {
           new BN(50_000_000), // 50 USDC
           program.programId, // dummy protocol
           null,
-          new BN(0),
+          await readPolicyVersion(program, policyPda),
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -383,7 +391,7 @@ describe("surfpool-integration", function () {
           new BN(10_000_000), // 10 USDC
           program.programId,
           null,
-          new BN(0),
+          await readPolicyVersion(program, policyPda),
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -447,7 +455,7 @@ describe("surfpool-integration", function () {
           new BN(10_000_000),
           program.programId,
           null,
-          new BN(0),
+          await readPolicyVersion(program, policyPda),
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -499,7 +507,7 @@ describe("surfpool-integration", function () {
           new BN(5_000_000), // 5 USDC
           program.programId,
           null,
-          new BN(0),
+          await readPolicyVersion(program, policyPda),
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -656,7 +664,7 @@ describe("surfpool-integration", function () {
           new BN(25_000_000), // 25 USDC
           program.programId,
           null,
-          new BN(0),
+          await readPolicyVersion(program, policyPda),
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -723,7 +731,7 @@ describe("surfpool-integration", function () {
           new BN(25_000_000), // 25 USDC (valid amount)
           program.programId,
           null,
-          new BN(0),
+          await readPolicyVersion(program, policyPda),
         )
         .accountsPartial({
           agent: rogueAgent.publicKey,
@@ -800,7 +808,7 @@ describe("surfpool-integration", function () {
           new BN(30_000_000), // 30 USDC
           program.programId,
           null,
-          new BN(0),
+          await readPolicyVersion(program, policyPda),
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -980,7 +988,7 @@ describe("surfpool-integration", function () {
           new BN(amount),
           program.programId,
           null,
-          new BN(0),
+          await readPolicyVersion(program, policyPda),
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -1139,7 +1147,7 @@ describe("surfpool-integration", function () {
           new BN(20_000_000),
           program.programId,
           null,
-          new BN(0),
+          await readPolicyVersion(program, policyPda),
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -1822,7 +1830,7 @@ describe("surfpool-integration", function () {
           new BN(10_000_000),
           program.programId,
           null,
-          new BN(0),
+          await readPolicyVersion(program, setup.policyPda),
         )
         .accountsPartial({
           agent: setup.agent.publicKey,
@@ -1894,7 +1902,7 @@ describe("surfpool-integration", function () {
           new BN(5_000_000),
           program.programId,
           null,
-          new BN(0),
+          await readPolicyVersion(program, setup.policyPda),
         )
         .accountsPartial({
           agent: setup.agent.publicKey,
@@ -2009,7 +2017,7 @@ describe("surfpool-integration", function () {
           new BN(5_000_000),
           program.programId,
           null,
-          new BN(0),
+          await readPolicyVersion(program, setup.policyPda),
         )
         .accountsPartial({
           agent: setup.agent.publicKey,
@@ -2071,7 +2079,7 @@ describe("surfpool-integration", function () {
           new BN(5_000_000),
           program.programId,
           null,
-          new BN(0),
+          await readPolicyVersion(program, setup.policyPda),
         )
         .accountsPartial({
           agent: agent2.publicKey,
@@ -2146,7 +2154,7 @@ describe("surfpool-integration", function () {
           new BN(5_000_000),
           program.programId,
           null,
-          new BN(0),
+          await readPolicyVersion(program, setup.policyPda),
         )
         .accountsPartial({
           agent: setup.agent.publicKey,
@@ -2287,7 +2295,7 @@ describe("surfpool-integration", function () {
           new BN(5_000_000),
           program.programId,
           null,
-          new BN(0),
+          await readPolicyVersion(program, swapSetup.policyPda),
         )
         .accountsPartial({
           agent: swapSetup.agent.publicKey,
@@ -2479,6 +2487,9 @@ describe("surfpool-integration", function () {
         DEVNET_USDC_MINT,
         program.programId,
       );
+      // Read current policy version (may have been bumped by earlier queue+apply)
+      const pol = await program.account.policyConfig.fetch(swapSetup.policyPda);
+      const currentVersion = (pol as any).policyVersion ?? new BN(0);
       const validateIx = await program.methods
         .validateAndAuthorize(
           { swap: {} },
@@ -2486,7 +2497,7 @@ describe("surfpool-integration", function () {
           new BN(5_000_000),
           program.programId,
           null,
-          new BN(0),
+          currentVersion,
         )
         .accountsPartial({
           agent: agent2.publicKey,
@@ -2591,7 +2602,7 @@ describe("surfpool-integration", function () {
           new BN(5_000_000),
           program.programId,
           null,
-          new BN(0),
+          await readPolicyVersion(program, zeroSetup.policyPda),
         )
         .accountsPartial({
           agent: zeroSetup.agent.publicKey,
@@ -3396,7 +3407,7 @@ describe("surfpool-integration", function () {
           new BN(5_000_000),
           program.programId,
           null,
-          new BN(0),
+          await readPolicyVersion(program, setup.policyPda),
         )
         .accountsPartial({
           agent: setup.agent.publicKey,
@@ -3464,7 +3475,7 @@ describe("surfpool-integration", function () {
           new BN(5_000_000),
           program.programId,
           null,
-          new BN(0),
+          await readPolicyVersion(program, setup.policyPda),
         )
         .accountsPartial({
           agent: setup.agent.publicKey,
