@@ -1,12 +1,12 @@
 /**
- * Devnet Security Tests — 14 tests (V3)
+ * Devnet Security Tests — 14 tests (V4)
  *
  * Adversarial access control tests against the live deployed program.
  * Confirms the same constraints that LiteSVM tests verify actually hold
  * on the deployed devnet binary.
  *
  *     Stablecoin-only architecture. Non-stablecoin tokens -> UnsupportedToken.
- *     updatePolicy: no tracker in accounts.
+ *     V4: updatePolicy deleted; security tests use queuePolicyUpdate instead.
  */
 import * as anchor from "@coral-xyz/anchor";
 import {
@@ -99,10 +99,10 @@ describe("devnet-security", () => {
     console.log("  Attacker:", attacker.publicKey.toString());
   });
 
-  it("1. non-owner cannot update_policy", async () => {
+  it("1. non-owner cannot queue_policy_update", async () => {
     try {
       await program.methods
-        .updatePolicy(
+        .queuePolicyUpdate(
           null,
           null,
           null,
@@ -122,6 +122,8 @@ describe("devnet-security", () => {
           owner: attacker.publicKey,
           vault: vault.vaultPda,
           policy: vault.policyPda,
+          pendingPolicy: vault.pendingPolicyPda,
+          systemProgram: SystemProgram.programId,
         } as any)
         .signers([attacker])
         .rpc();
@@ -129,7 +131,7 @@ describe("devnet-security", () => {
     } catch (err: any) {
       expectError(err, "ConstraintSeeds", "Unauthorized", "2006", "constraint");
     }
-    console.log("    Non-owner update_policy rejected");
+    console.log("    Non-owner queue_policy_update rejected");
   });
 
   it("2. non-owner cannot revoke_agent", async () => {
@@ -214,6 +216,7 @@ describe("devnet-security", () => {
           new BN(10_000_000),
           jupiterProgramId,
           null,
+          new BN(0),
         )
         .accounts({
           agent: attacker.publicKey,
@@ -240,10 +243,10 @@ describe("devnet-security", () => {
     console.log("    Non-agent validate_and_authorize rejected");
   });
 
-  it("6. agent cannot call update_policy (owner-only)", async () => {
+  it("6. agent cannot call queue_policy_update (owner-only)", async () => {
     try {
       await program.methods
-        .updatePolicy(
+        .queuePolicyUpdate(
           null,
           null,
           null,
@@ -263,6 +266,8 @@ describe("devnet-security", () => {
           owner: agent.publicKey,
           vault: vault.vaultPda,
           policy: vault.policyPda,
+          pendingPolicy: vault.pendingPolicyPda,
+          systemProgram: SystemProgram.programId,
         } as any)
         .signers([agent])
         .rpc();
@@ -270,7 +275,7 @@ describe("devnet-security", () => {
     } catch (err: any) {
       expectError(err, "ConstraintSeeds", "Unauthorized", "2006", "constraint");
     }
-    console.log("    Agent update_policy rejected (owner-only)");
+    console.log("    Agent queue_policy_update rejected (owner-only)");
   });
 
   it("7. over-cap spending blocked with SpendingCapExceeded", async () => {
