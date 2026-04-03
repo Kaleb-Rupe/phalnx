@@ -20,7 +20,8 @@ import {
 
 import { resolveVaultState } from "../../src/state-resolver.js";
 import { fetchMaybeAgentVault } from "../../src/generated/accounts/agentVault.js";
-import { getUpdatePolicyInstructionAsync } from "../../src/generated/instructions/updatePolicy.js";
+import { getQueuePolicyUpdateInstructionAsync } from "../../src/generated/instructions/queuePolicyUpdate.js";
+import { getCancelPendingPolicyInstructionAsync } from "../../src/generated/instructions/cancelPendingPolicy.js";
 import {
   USDC_MINT_DEVNET,
   FULL_PERMISSIONS,
@@ -116,10 +117,10 @@ describe("Kit SDK Devnet — Vault Lifecycle", function () {
     expect(state.globalBudget.remaining).to.deep.equal(state.globalBudget.cap);
   });
 
-  it("updatePolicy via Codama builder", async function () {
+  it("queuePolicyUpdate + cancel via Codama builder (can't apply on devnet — 30min timelock)", async function () {
     const newCap = 1_000_000_000n; // $1000
 
-    const updateIx = await getUpdatePolicyInstructionAsync({
+    const queueIx = await getQueuePolicyUpdateInstructionAsync({
       owner,
       vault: vault.vaultAddress,
       dailySpendingCapUsd: newCap,
@@ -138,14 +139,22 @@ describe("Kit SDK Devnet — Vault Lifecycle", function () {
       protocolCaps: null,
     });
 
-    await sendKitTransaction(rpc, owner, [updateIx as Instruction]);
+    await sendKitTransaction(rpc, owner, [queueIx as Instruction]);
 
-    // Verify the policy was updated
+    // Cancel the pending update (can't wait 30min on devnet)
+    const cancelIx = await getCancelPendingPolicyInstructionAsync({
+      owner,
+      vault: vault.vaultAddress,
+    });
+    await sendKitTransaction(rpc, owner, [cancelIx as Instruction]);
+
+    // Verify the policy was NOT updated (cancelled)
     const state = await resolveVaultState(
       rpc,
       vault.vaultAddress,
       agent.address,
     );
-    expect(Number(state.policy.dailySpendingCapUsd)).to.equal(Number(newCap));
+    // Cap should be unchanged (queue was cancelled, not applied)
+    expect(Number(state.policy.dailySpendingCapUsd)).to.not.equal(Number(newCap));
   });
 });

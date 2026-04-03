@@ -58,6 +58,7 @@ async function buildSwapInstructions(
     amount,
     targetProtocol: JUPITER_PROGRAM_ADDRESS,
     leverageBps: null,
+    expectedPolicyVersion: 0n,
   });
 
   const finalizeIx = await getFinalizeSessionInstructionAsync({

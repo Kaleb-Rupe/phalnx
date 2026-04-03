@@ -103,6 +103,7 @@ function mockState(): ResolvedVaultState {
       protocolCaps: [],
       sessionExpirySlots: 0n,
       bump: 255,
+      policyVersion: 0n,
     },
     tracker: null,
     overlay: null,
