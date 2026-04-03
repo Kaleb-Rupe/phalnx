@@ -598,6 +598,7 @@ export async function seal(params: SealParams): Promise<SealResult> {
     amount: params.amount,
     targetProtocol,
     leverageBps: params.leverageBps ?? null,
+    expectedPolicyVersion: state.policy.policyVersion ?? 0n,
   });
 
   const finalizeIx = await getFinalizeSessionInstructionAsync({
