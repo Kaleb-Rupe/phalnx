@@ -84,17 +84,38 @@ export type AgentVault = {
   totalTransactions: bigint;
   /** Total volume processed in token base units */
   totalVolume: bigint;
-  /** Number of currently open positions (for perps tracking) */
+  /**
+   * Number of currently open positions (for perps tracking).
+   * DESIGN DECISION: Counter-only. Does not store per-position details
+   * (entry price, size, liquidation price). Individual position data is
+   * protocol-specific (Flash Trade vs Drift vs Jupiter perps have different
+   * layouts). The SDK reads position details via RPC. sync_positions
+   * corrects counter drift from auto-liquidation.
+   * Found by: Persona test (Perps Developer "Jake")
+   */
   openPositions: number;
   /** Number of active (unsettled/unrefunded) escrow deposits from this vault */
   activeEscrowCount: number;
   /** Cumulative developer fees collected from this vault (token base units) */
   totalFeesCollected: bigint;
-  /** Cumulative stablecoin deposits in base units (USDC/USDT, 6 decimals) */
+  /**
+   * Cumulative stablecoin deposits in base units (USDC/USDT, 6 decimals).
+   * Incremented in deposit_funds for stablecoin mints only.
+   * Used for P&L: current_balance - total_deposited_usd + total_withdrawn_usd.
+   * Cumulative gross — never decremented. Informational only, never authorization input.
+   */
   totalDepositedUsd: bigint;
-  /** Cumulative stablecoin withdrawals in base units (USDC/USDT, 6 decimals) */
+  /**
+   * Cumulative stablecoin withdrawals in base units (USDC/USDT, 6 decimals).
+   * Incremented in withdraw_funds for stablecoin mints only.
+   */
   totalWithdrawnUsd: bigint;
-  /** Cumulative failed + expired session count */
+  /**
+   * Cumulative failed + expired session count.
+   * Incremented in finalize_session when success=false OR is_expired=true.
+   * Used for success rate: total_transactions / (total_transactions + total_failed_transactions).
+   * Informational only — never used in authorization decisions.
+   */
   totalFailedTransactions: bigint;
 };
 
@@ -120,17 +141,38 @@ export type AgentVaultArgs = {
   totalTransactions: number | bigint;
   /** Total volume processed in token base units */
   totalVolume: number | bigint;
-  /** Number of currently open positions (for perps tracking) */
+  /**
+   * Number of currently open positions (for perps tracking).
+   * DESIGN DECISION: Counter-only. Does not store per-position details
+   * (entry price, size, liquidation price). Individual position data is
+   * protocol-specific (Flash Trade vs Drift vs Jupiter perps have different
+   * layouts). The SDK reads position details via RPC. sync_positions
+   * corrects counter drift from auto-liquidation.
+   * Found by: Persona test (Perps Developer "Jake")
+   */
   openPositions: number;
   /** Number of active (unsettled/unrefunded) escrow deposits from this vault */
   activeEscrowCount: number;
   /** Cumulative developer fees collected from this vault (token base units) */
   totalFeesCollected: number | bigint;
-  /** Cumulative stablecoin deposits in base units (USDC/USDT, 6 decimals) */
+  /**
+   * Cumulative stablecoin deposits in base units (USDC/USDT, 6 decimals).
+   * Incremented in deposit_funds for stablecoin mints only.
+   * Used for P&L: current_balance - total_deposited_usd + total_withdrawn_usd.
+   * Cumulative gross — never decremented. Informational only, never authorization input.
+   */
   totalDepositedUsd: number | bigint;
-  /** Cumulative stablecoin withdrawals in base units (USDC/USDT, 6 decimals) */
+  /**
+   * Cumulative stablecoin withdrawals in base units (USDC/USDT, 6 decimals).
+   * Incremented in withdraw_funds for stablecoin mints only.
+   */
   totalWithdrawnUsd: number | bigint;
-  /** Cumulative failed + expired session count */
+  /**
+   * Cumulative failed + expired session count.
+   * Incremented in finalize_session when success=false OR is_expired=true.
+   * Used for success rate: total_transactions / (total_transactions + total_failed_transactions).
+   * Informational only — never used in authorization decisions.
+   */
   totalFailedTransactions: number | bigint;
 };
 

@@ -55,6 +55,7 @@ export type ApplyConstraintsUpdateInstruction<
   TProgram extends string = typeof SIGIL_PROGRAM_ADDRESS,
   TAccountOwner extends string | AccountMeta<string> = string,
   TAccountVault extends string | AccountMeta<string> = string,
+  TAccountPolicy extends string | AccountMeta<string> = string,
   TAccountConstraints extends string | AccountMeta<string> = string,
   TAccountPendingConstraints extends string | AccountMeta<string> = string,
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
@@ -69,6 +70,9 @@ export type ApplyConstraintsUpdateInstruction<
       TAccountVault extends string
         ? ReadonlyAccount<TAccountVault>
         : TAccountVault,
+      TAccountPolicy extends string
+        ? WritableAccount<TAccountPolicy>
+        : TAccountPolicy,
       TAccountConstraints extends string
         ? WritableAccount<TAccountConstraints>
         : TAccountConstraints,
@@ -114,11 +118,17 @@ export function getApplyConstraintsUpdateInstructionDataCodec(): FixedSizeCodec<
 export type ApplyConstraintsUpdateAsyncInput<
   TAccountOwner extends string = string,
   TAccountVault extends string = string,
+  TAccountPolicy extends string = string,
   TAccountConstraints extends string = string,
   TAccountPendingConstraints extends string = string,
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
+  /**
+   * PolicyConfig — needed to bump policy_version on constraint changes.
+   * IDL BREAKING CHANGE: this account was added in the TOCTOU fix.
+   */
+  policy?: Address<TAccountPolicy>;
   constraints?: Address<TAccountConstraints>;
   pendingConstraints?: Address<TAccountPendingConstraints>;
 };
@@ -126,6 +136,7 @@ export type ApplyConstraintsUpdateAsyncInput<
 export async function getApplyConstraintsUpdateInstructionAsync<
   TAccountOwner extends string,
   TAccountVault extends string,
+  TAccountPolicy extends string,
   TAccountConstraints extends string,
   TAccountPendingConstraints extends string,
   TProgramAddress extends Address = typeof SIGIL_PROGRAM_ADDRESS,
@@ -133,6 +144,7 @@ export async function getApplyConstraintsUpdateInstructionAsync<
   input: ApplyConstraintsUpdateAsyncInput<
     TAccountOwner,
     TAccountVault,
+    TAccountPolicy,
     TAccountConstraints,
     TAccountPendingConstraints
   >,
@@ -142,6 +154,7 @@ export async function getApplyConstraintsUpdateInstructionAsync<
     TProgramAddress,
     TAccountOwner,
     TAccountVault,
+    TAccountPolicy,
     TAccountConstraints,
     TAccountPendingConstraints
   >
@@ -153,6 +166,7 @@ export async function getApplyConstraintsUpdateInstructionAsync<
   const originalAccounts = {
     owner: { value: input.owner ?? null, isWritable: true },
     vault: { value: input.vault ?? null, isWritable: false },
+    policy: { value: input.policy ?? null, isWritable: true },
     constraints: { value: input.constraints ?? null, isWritable: true },
     pendingConstraints: {
       value: input.pendingConstraints ?? null,
@@ -165,6 +179,20 @@ export async function getApplyConstraintsUpdateInstructionAsync<
   >;
 
   // Resolve default values.
+  if (!accounts.policy.value) {
+    accounts.policy.value = await getProgramDerivedAddress({
+      programAddress,
+      seeds: [
+        getBytesEncoder().encode(new Uint8Array([112, 111, 108, 105, 99, 121])),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            "vault",
+            accounts.vault.value,
+          ),
+        ),
+      ],
+    });
+  }
   if (!accounts.constraints.value) {
     accounts.constraints.value = await getProgramDerivedAddress({
       programAddress,
@@ -206,6 +234,7 @@ export async function getApplyConstraintsUpdateInstructionAsync<
     accounts: [
       getAccountMeta("owner", accounts.owner),
       getAccountMeta("vault", accounts.vault),
+      getAccountMeta("policy", accounts.policy),
       getAccountMeta("constraints", accounts.constraints),
       getAccountMeta("pendingConstraints", accounts.pendingConstraints),
     ],
@@ -215,6 +244,7 @@ export async function getApplyConstraintsUpdateInstructionAsync<
     TProgramAddress,
     TAccountOwner,
     TAccountVault,
+    TAccountPolicy,
     TAccountConstraints,
     TAccountPendingConstraints
   >);
@@ -223,11 +253,17 @@ export async function getApplyConstraintsUpdateInstructionAsync<
 export type ApplyConstraintsUpdateInput<
   TAccountOwner extends string = string,
   TAccountVault extends string = string,
+  TAccountPolicy extends string = string,
   TAccountConstraints extends string = string,
   TAccountPendingConstraints extends string = string,
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
+  /**
+   * PolicyConfig — needed to bump policy_version on constraint changes.
+   * IDL BREAKING CHANGE: this account was added in the TOCTOU fix.
+   */
+  policy: Address<TAccountPolicy>;
   constraints: Address<TAccountConstraints>;
   pendingConstraints: Address<TAccountPendingConstraints>;
 };
@@ -235,6 +271,7 @@ export type ApplyConstraintsUpdateInput<
 export function getApplyConstraintsUpdateInstruction<
   TAccountOwner extends string,
   TAccountVault extends string,
+  TAccountPolicy extends string,
   TAccountConstraints extends string,
   TAccountPendingConstraints extends string,
   TProgramAddress extends Address = typeof SIGIL_PROGRAM_ADDRESS,
@@ -242,6 +279,7 @@ export function getApplyConstraintsUpdateInstruction<
   input: ApplyConstraintsUpdateInput<
     TAccountOwner,
     TAccountVault,
+    TAccountPolicy,
     TAccountConstraints,
     TAccountPendingConstraints
   >,
@@ -250,6 +288,7 @@ export function getApplyConstraintsUpdateInstruction<
   TProgramAddress,
   TAccountOwner,
   TAccountVault,
+  TAccountPolicy,
   TAccountConstraints,
   TAccountPendingConstraints
 > {
@@ -260,6 +299,7 @@ export function getApplyConstraintsUpdateInstruction<
   const originalAccounts = {
     owner: { value: input.owner ?? null, isWritable: true },
     vault: { value: input.vault ?? null, isWritable: false },
+    policy: { value: input.policy ?? null, isWritable: true },
     constraints: { value: input.constraints ?? null, isWritable: true },
     pendingConstraints: {
       value: input.pendingConstraints ?? null,
@@ -276,6 +316,7 @@ export function getApplyConstraintsUpdateInstruction<
     accounts: [
       getAccountMeta("owner", accounts.owner),
       getAccountMeta("vault", accounts.vault),
+      getAccountMeta("policy", accounts.policy),
       getAccountMeta("constraints", accounts.constraints),
       getAccountMeta("pendingConstraints", accounts.pendingConstraints),
     ],
@@ -285,6 +326,7 @@ export function getApplyConstraintsUpdateInstruction<
     TProgramAddress,
     TAccountOwner,
     TAccountVault,
+    TAccountPolicy,
     TAccountConstraints,
     TAccountPendingConstraints
   >);
@@ -298,8 +340,13 @@ export type ParsedApplyConstraintsUpdateInstruction<
   accounts: {
     owner: TAccountMetas[0];
     vault: TAccountMetas[1];
-    constraints: TAccountMetas[2];
-    pendingConstraints: TAccountMetas[3];
+    /**
+     * PolicyConfig — needed to bump policy_version on constraint changes.
+     * IDL BREAKING CHANGE: this account was added in the TOCTOU fix.
+     */
+    policy: TAccountMetas[2];
+    constraints: TAccountMetas[3];
+    pendingConstraints: TAccountMetas[4];
   };
   data: ApplyConstraintsUpdateInstructionData;
 };
@@ -312,12 +359,12 @@ export function parseApplyConstraintsUpdateInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedApplyConstraintsUpdateInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 4) {
+  if (instruction.accounts.length < 5) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 4,
+        expectedAccountMetas: 5,
       },
     );
   }
@@ -332,6 +379,7 @@ export function parseApplyConstraintsUpdateInstruction<
     accounts: {
       owner: getNextAccount(),
       vault: getNextAccount(),
+      policy: getNextAccount(),
       constraints: getNextAccount(),
       pendingConstraints: getNextAccount(),
     },

@@ -107,7 +107,7 @@ export type PolicyConfig = {
   allowedDestinations: Array<Address>;
   /**
    * Whether instruction constraints PDA exists for this vault.
-   * Set true by create_instruction_constraints, false by close_instruction_constraints.
+   * Set true by create_instruction_constraints, false by apply_close_constraints.
    */
   hasConstraints: boolean;
   /**
@@ -133,6 +133,13 @@ export type PolicyConfig = {
   sessionExpirySlots: bigint;
   /** Bump seed for PDA */
   bump: number;
+  /**
+   * Policy version counter for OCC (optimistic concurrency control).
+   * Incremented on every apply_pending_policy and apply_constraints_update.
+   * Agents include expected_policy_version in validate_and_authorize;
+   * program rejects if version changed since the agent's RPC read.
+   */
+  policyVersion: bigint;
 };
 
 export type PolicyConfigArgs = {
@@ -186,7 +193,7 @@ export type PolicyConfigArgs = {
   allowedDestinations: Array<Address>;
   /**
    * Whether instruction constraints PDA exists for this vault.
-   * Set true by create_instruction_constraints, false by close_instruction_constraints.
+   * Set true by create_instruction_constraints, false by apply_close_constraints.
    */
   hasConstraints: boolean;
   /**
@@ -212,6 +219,13 @@ export type PolicyConfigArgs = {
   sessionExpirySlots: number | bigint;
   /** Bump seed for PDA */
   bump: number;
+  /**
+   * Policy version counter for OCC (optimistic concurrency control).
+   * Incremented on every apply_pending_policy and apply_constraints_update.
+   * Agents include expected_policy_version in validate_and_authorize;
+   * program rejects if version changed since the agent's RPC read.
+   */
+  policyVersion: number | bigint;
 };
 
 /** Gets the encoder for {@link PolicyConfigArgs} account data. */
@@ -237,6 +251,7 @@ export function getPolicyConfigEncoder(): Encoder<PolicyConfigArgs> {
       ["protocolCaps", getArrayEncoder(getU64Encoder())],
       ["sessionExpirySlots", getU64Encoder()],
       ["bump", getU8Encoder()],
+      ["policyVersion", getU64Encoder()],
     ]),
     (value) => ({ ...value, discriminator: POLICY_CONFIG_DISCRIMINATOR }),
   );
@@ -264,6 +279,7 @@ export function getPolicyConfigDecoder(): Decoder<PolicyConfig> {
     ["protocolCaps", getArrayDecoder(getU64Decoder())],
     ["sessionExpirySlots", getU64Decoder()],
     ["bump", getU8Decoder()],
+    ["policyVersion", getU64Decoder()],
   ]);
 }
 

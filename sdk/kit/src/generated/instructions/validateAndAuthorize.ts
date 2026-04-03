@@ -147,6 +147,7 @@ export type ValidateAndAuthorizeInstructionData = {
   amount: bigint;
   targetProtocol: Address;
   leverageBps: Option<number>;
+  expectedPolicyVersion: bigint;
 };
 
 export type ValidateAndAuthorizeInstructionDataArgs = {
@@ -155,6 +156,7 @@ export type ValidateAndAuthorizeInstructionDataArgs = {
   amount: number | bigint;
   targetProtocol: Address;
   leverageBps: OptionOrNullable<number>;
+  expectedPolicyVersion: number | bigint;
 };
 
 export function getValidateAndAuthorizeInstructionDataEncoder(): Encoder<ValidateAndAuthorizeInstructionDataArgs> {
@@ -166,6 +168,7 @@ export function getValidateAndAuthorizeInstructionDataEncoder(): Encoder<Validat
       ["amount", getU64Encoder()],
       ["targetProtocol", getAddressEncoder()],
       ["leverageBps", getOptionEncoder(getU16Encoder())],
+      ["expectedPolicyVersion", getU64Encoder()],
     ]),
     (value) => ({
       ...value,
@@ -182,6 +185,7 @@ export function getValidateAndAuthorizeInstructionDataDecoder(): Decoder<Validat
     ["amount", getU64Decoder()],
     ["targetProtocol", getAddressDecoder()],
     ["leverageBps", getOptionDecoder(getU16Decoder())],
+    ["expectedPolicyVersion", getU64Decoder()],
   ]);
 }
 
@@ -232,8 +236,8 @@ export type ValidateAndAuthorizeAsyncInput<
   /** Developer fee destination token account (needed when developer_fee > 0) */
   feeDestinationTokenAccount?: Address<TAccountFeeDestinationTokenAccount>;
   /**
-   * Vault's stablecoin ATA to snapshot (for non-stablecoin input swaps).
-   * Required when input token is NOT a stablecoin.
+   * Vault's stablecoin ATA to snapshot (for non-stablecoin input spending).
+   * Required when input token is NOT a stablecoin (output verification in finalize).
    */
   outputStablecoinAccount?: Address<TAccountOutputStablecoinAccount>;
   tokenProgram?: Address<TAccountTokenProgram>;
@@ -248,6 +252,7 @@ export type ValidateAndAuthorizeAsyncInput<
   amount: ValidateAndAuthorizeInstructionDataArgs["amount"];
   targetProtocol: ValidateAndAuthorizeInstructionDataArgs["targetProtocol"];
   leverageBps: ValidateAndAuthorizeInstructionDataArgs["leverageBps"];
+  expectedPolicyVersion: ValidateAndAuthorizeInstructionDataArgs["expectedPolicyVersion"];
 };
 
 export async function getValidateAndAuthorizeInstructionAsync<
@@ -508,8 +513,8 @@ export type ValidateAndAuthorizeInput<
   /** Developer fee destination token account (needed when developer_fee > 0) */
   feeDestinationTokenAccount?: Address<TAccountFeeDestinationTokenAccount>;
   /**
-   * Vault's stablecoin ATA to snapshot (for non-stablecoin input swaps).
-   * Required when input token is NOT a stablecoin.
+   * Vault's stablecoin ATA to snapshot (for non-stablecoin input spending).
+   * Required when input token is NOT a stablecoin (output verification in finalize).
    */
   outputStablecoinAccount?: Address<TAccountOutputStablecoinAccount>;
   tokenProgram?: Address<TAccountTokenProgram>;
@@ -524,6 +529,7 @@ export type ValidateAndAuthorizeInput<
   amount: ValidateAndAuthorizeInstructionDataArgs["amount"];
   targetProtocol: ValidateAndAuthorizeInstructionDataArgs["targetProtocol"];
   leverageBps: ValidateAndAuthorizeInstructionDataArgs["leverageBps"];
+  expectedPolicyVersion: ValidateAndAuthorizeInstructionDataArgs["expectedPolicyVersion"];
 };
 
 export function getValidateAndAuthorizeInstruction<
@@ -717,8 +723,8 @@ export type ParsedValidateAndAuthorizeInstruction<
     /** Developer fee destination token account (needed when developer_fee > 0) */
     feeDestinationTokenAccount?: TAccountMetas[9] | undefined;
     /**
-     * Vault's stablecoin ATA to snapshot (for non-stablecoin input swaps).
-     * Required when input token is NOT a stablecoin.
+     * Vault's stablecoin ATA to snapshot (for non-stablecoin input spending).
+     * Required when input token is NOT a stablecoin (output verification in finalize).
      */
     outputStablecoinAccount?: TAccountMetas[10] | undefined;
     tokenProgram: TAccountMetas[11];

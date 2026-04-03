@@ -85,13 +85,17 @@ export type SessionAuthority = {
   /** Developer fee collected during validate (for event logging in finalize) */
   developerFee: bigint;
   /**
-   * Expected output stablecoin mint for non-stablecoin→stablecoin swaps.
-   * Pubkey::default() when input is already a stablecoin (no snapshot needed).
+   * Stablecoin mint for outcome-based spending detection.
+   * For stablecoin input: set to authorized_token (the stablecoin being spent).
+   * For non-stablecoin input: set to the expected stablecoin output mint.
+   * Pubkey::default() for non-spending actions (no outcome check needed).
    */
   outputMint: Address;
   /**
-   * Snapshot of vault's stablecoin ATA balance before swap.
-   * 0 when input is already a stablecoin.
+   * Snapshot of the relevant stablecoin account balance before the swap.
+   * For stablecoin input: vault_token_account.amount (taken before fee collection).
+   * For non-stablecoin input: output_stablecoin_account.amount.
+   * 0 for non-spending actions.
    */
   stablecoinBalanceBefore: bigint;
   /** Bump seed for PDA */
@@ -125,13 +129,17 @@ export type SessionAuthorityArgs = {
   /** Developer fee collected during validate (for event logging in finalize) */
   developerFee: number | bigint;
   /**
-   * Expected output stablecoin mint for non-stablecoin→stablecoin swaps.
-   * Pubkey::default() when input is already a stablecoin (no snapshot needed).
+   * Stablecoin mint for outcome-based spending detection.
+   * For stablecoin input: set to authorized_token (the stablecoin being spent).
+   * For non-stablecoin input: set to the expected stablecoin output mint.
+   * Pubkey::default() for non-spending actions (no outcome check needed).
    */
   outputMint: Address;
   /**
-   * Snapshot of vault's stablecoin ATA balance before swap.
-   * 0 when input is already a stablecoin.
+   * Snapshot of the relevant stablecoin account balance before the swap.
+   * For stablecoin input: vault_token_account.amount (taken before fee collection).
+   * For non-stablecoin input: output_stablecoin_account.amount.
+   * 0 for non-spending actions.
    */
   stablecoinBalanceBefore: number | bigint;
   /** Bump seed for PDA */

@@ -37,6 +37,8 @@ import {
   getAgentVaultCodec,
   getEscrowDepositCodec,
   getInstructionConstraintsCodec,
+  getPendingAgentPermissionsUpdateCodec,
+  getPendingCloseConstraintsCodec,
   getPendingConstraintsUpdateCodec,
   getPendingPolicyUpdateCodec,
   getPolicyConfigCodec,
@@ -50,6 +52,10 @@ import {
   type EscrowDepositArgs,
   type InstructionConstraints,
   type InstructionConstraintsArgs,
+  type PendingAgentPermissionsUpdate,
+  type PendingAgentPermissionsUpdateArgs,
+  type PendingCloseConstraints,
+  type PendingCloseConstraintsArgs,
   type PendingConstraintsUpdate,
   type PendingConstraintsUpdateArgs,
   type PendingPolicyUpdate,
@@ -63,11 +69,14 @@ import {
 } from "../accounts/index.js";
 import {
   getAgentTransferInstructionAsync,
+  getApplyAgentPermissionsUpdateInstructionAsync,
+  getApplyCloseConstraintsInstructionAsync,
   getApplyConstraintsUpdateInstructionAsync,
   getApplyPendingPolicyInstructionAsync,
+  getCancelAgentPermissionsUpdateInstruction,
+  getCancelCloseConstraintsInstructionAsync,
   getCancelConstraintsUpdateInstructionAsync,
   getCancelPendingPolicyInstructionAsync,
-  getCloseInstructionConstraintsInstructionAsync,
   getCloseSettledEscrowInstructionAsync,
   getCloseVaultInstructionAsync,
   getCreateEscrowInstructionAsync,
@@ -77,6 +86,8 @@ import {
   getFreezeVaultInstruction,
   getInitializeVaultInstructionAsync,
   getPauseAgentInstruction,
+  getQueueAgentPermissionsUpdateInstructionAsync,
+  getQueueCloseConstraintsInstructionAsync,
   getQueueConstraintsUpdateInstructionAsync,
   getQueuePolicyUpdateInstructionAsync,
   getReactivateVaultInstruction,
@@ -86,17 +97,17 @@ import {
   getSettleEscrowInstructionAsync,
   getSyncPositionsInstruction,
   getUnpauseAgentInstruction,
-  getUpdateAgentPermissionsInstructionAsync,
-  getUpdateInstructionConstraintsInstructionAsync,
-  getUpdatePolicyInstructionAsync,
   getValidateAndAuthorizeInstructionAsync,
   getWithdrawFundsInstructionAsync,
   parseAgentTransferInstruction,
+  parseApplyAgentPermissionsUpdateInstruction,
+  parseApplyCloseConstraintsInstruction,
   parseApplyConstraintsUpdateInstruction,
   parseApplyPendingPolicyInstruction,
+  parseCancelAgentPermissionsUpdateInstruction,
+  parseCancelCloseConstraintsInstruction,
   parseCancelConstraintsUpdateInstruction,
   parseCancelPendingPolicyInstruction,
-  parseCloseInstructionConstraintsInstruction,
   parseCloseSettledEscrowInstruction,
   parseCloseVaultInstruction,
   parseCreateEscrowInstruction,
@@ -106,6 +117,8 @@ import {
   parseFreezeVaultInstruction,
   parseInitializeVaultInstruction,
   parsePauseAgentInstruction,
+  parseQueueAgentPermissionsUpdateInstruction,
+  parseQueueCloseConstraintsInstruction,
   parseQueueConstraintsUpdateInstruction,
   parseQueuePolicyUpdateInstruction,
   parseReactivateVaultInstruction,
@@ -115,17 +128,17 @@ import {
   parseSettleEscrowInstruction,
   parseSyncPositionsInstruction,
   parseUnpauseAgentInstruction,
-  parseUpdateAgentPermissionsInstruction,
-  parseUpdateInstructionConstraintsInstruction,
-  parseUpdatePolicyInstruction,
   parseValidateAndAuthorizeInstruction,
   parseWithdrawFundsInstruction,
   type AgentTransferAsyncInput,
+  type ApplyAgentPermissionsUpdateAsyncInput,
+  type ApplyCloseConstraintsAsyncInput,
   type ApplyConstraintsUpdateAsyncInput,
   type ApplyPendingPolicyAsyncInput,
+  type CancelAgentPermissionsUpdateInput,
+  type CancelCloseConstraintsAsyncInput,
   type CancelConstraintsUpdateAsyncInput,
   type CancelPendingPolicyAsyncInput,
-  type CloseInstructionConstraintsAsyncInput,
   type CloseSettledEscrowAsyncInput,
   type CloseVaultAsyncInput,
   type CreateEscrowAsyncInput,
@@ -135,11 +148,14 @@ import {
   type FreezeVaultInput,
   type InitializeVaultAsyncInput,
   type ParsedAgentTransferInstruction,
+  type ParsedApplyAgentPermissionsUpdateInstruction,
+  type ParsedApplyCloseConstraintsInstruction,
   type ParsedApplyConstraintsUpdateInstruction,
   type ParsedApplyPendingPolicyInstruction,
+  type ParsedCancelAgentPermissionsUpdateInstruction,
+  type ParsedCancelCloseConstraintsInstruction,
   type ParsedCancelConstraintsUpdateInstruction,
   type ParsedCancelPendingPolicyInstruction,
-  type ParsedCloseInstructionConstraintsInstruction,
   type ParsedCloseSettledEscrowInstruction,
   type ParsedCloseVaultInstruction,
   type ParsedCreateEscrowInstruction,
@@ -149,6 +165,8 @@ import {
   type ParsedFreezeVaultInstruction,
   type ParsedInitializeVaultInstruction,
   type ParsedPauseAgentInstruction,
+  type ParsedQueueAgentPermissionsUpdateInstruction,
+  type ParsedQueueCloseConstraintsInstruction,
   type ParsedQueueConstraintsUpdateInstruction,
   type ParsedQueuePolicyUpdateInstruction,
   type ParsedReactivateVaultInstruction,
@@ -158,12 +176,11 @@ import {
   type ParsedSettleEscrowInstruction,
   type ParsedSyncPositionsInstruction,
   type ParsedUnpauseAgentInstruction,
-  type ParsedUpdateAgentPermissionsInstruction,
-  type ParsedUpdateInstructionConstraintsInstruction,
-  type ParsedUpdatePolicyInstruction,
   type ParsedValidateAndAuthorizeInstruction,
   type ParsedWithdrawFundsInstruction,
   type PauseAgentInput,
+  type QueueAgentPermissionsUpdateAsyncInput,
+  type QueueCloseConstraintsAsyncInput,
   type QueueConstraintsUpdateAsyncInput,
   type QueuePolicyUpdateAsyncInput,
   type ReactivateVaultInput,
@@ -173,9 +190,6 @@ import {
   type SettleEscrowAsyncInput,
   type SyncPositionsInput,
   type UnpauseAgentInput,
-  type UpdateAgentPermissionsAsyncInput,
-  type UpdateInstructionConstraintsAsyncInput,
-  type UpdatePolicyAsyncInput,
   type ValidateAndAuthorizeAsyncInput,
   type WithdrawFundsAsyncInput,
 } from "../instructions/index.js";
@@ -188,6 +202,8 @@ export enum SigilAccount {
   AgentVault,
   EscrowDeposit,
   InstructionConstraints,
+  PendingAgentPermissionsUpdate,
+  PendingCloseConstraints,
   PendingConstraintsUpdate,
   PendingPolicyUpdate,
   PolicyConfig,
@@ -242,6 +258,28 @@ export function identifySigilAccount(
     )
   ) {
     return SigilAccount.InstructionConstraints;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([137, 132, 60, 184, 171, 184, 194, 56]),
+      ),
+      0,
+    )
+  ) {
+    return SigilAccount.PendingAgentPermissionsUpdate;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([128, 154, 58, 181, 85, 163, 243, 233]),
+      ),
+      0,
+    )
+  ) {
+    return SigilAccount.PendingCloseConstraints;
   }
   if (
     containsBytes(
@@ -306,11 +344,14 @@ export function identifySigilAccount(
 
 export enum SigilInstruction {
   AgentTransfer,
+  ApplyAgentPermissionsUpdate,
+  ApplyCloseConstraints,
   ApplyConstraintsUpdate,
   ApplyPendingPolicy,
+  CancelAgentPermissionsUpdate,
+  CancelCloseConstraints,
   CancelConstraintsUpdate,
   CancelPendingPolicy,
-  CloseInstructionConstraints,
   CloseSettledEscrow,
   CloseVault,
   CreateEscrow,
@@ -320,6 +361,8 @@ export enum SigilInstruction {
   FreezeVault,
   InitializeVault,
   PauseAgent,
+  QueueAgentPermissionsUpdate,
+  QueueCloseConstraints,
   QueueConstraintsUpdate,
   QueuePolicyUpdate,
   ReactivateVault,
@@ -329,9 +372,6 @@ export enum SigilInstruction {
   SettleEscrow,
   SyncPositions,
   UnpauseAgent,
-  UpdateAgentPermissions,
-  UpdateInstructionConstraints,
-  UpdatePolicy,
   ValidateAndAuthorize,
   WithdrawFunds,
 }
@@ -350,6 +390,28 @@ export function identifySigilInstruction(
     )
   ) {
     return SigilInstruction.AgentTransfer;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([234, 166, 205, 3, 28, 166, 221, 240]),
+      ),
+      0,
+    )
+  ) {
+    return SigilInstruction.ApplyAgentPermissionsUpdate;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([133, 184, 235, 88, 53, 237, 43, 145]),
+      ),
+      0,
+    )
+  ) {
+    return SigilInstruction.ApplyCloseConstraints;
   }
   if (
     containsBytes(
@@ -377,6 +439,28 @@ export function identifySigilInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([92, 232, 92, 115, 110, 238, 235, 55]),
+      ),
+      0,
+    )
+  ) {
+    return SigilInstruction.CancelAgentPermissionsUpdate;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([150, 125, 186, 114, 40, 105, 237, 184]),
+      ),
+      0,
+    )
+  ) {
+    return SigilInstruction.CancelCloseConstraints;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([169, 121, 85, 230, 154, 2, 78, 61]),
       ),
       0,
@@ -394,17 +478,6 @@ export function identifySigilInstruction(
     )
   ) {
     return SigilInstruction.CancelPendingPolicy;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([145, 240, 233, 37, 11, 78, 195, 145]),
-      ),
-      0,
-    )
-  ) {
-    return SigilInstruction.CloseInstructionConstraints;
   }
   if (
     containsBytes(
@@ -509,6 +582,28 @@ export function identifySigilInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([182, 37, 105, 181, 28, 195, 223, 167]),
+      ),
+      0,
+    )
+  ) {
+    return SigilInstruction.QueueAgentPermissionsUpdate;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([248, 124, 93, 115, 195, 88, 11, 109]),
+      ),
+      0,
+    )
+  ) {
+    return SigilInstruction.QueueCloseConstraints;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([247, 253, 233, 93, 233, 54, 53, 131]),
       ),
       0,
@@ -608,39 +703,6 @@ export function identifySigilInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([56, 163, 109, 133, 69, 188, 163, 184]),
-      ),
-      0,
-    )
-  ) {
-    return SigilInstruction.UpdateAgentPermissions;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([229, 117, 208, 238, 102, 240, 54, 74]),
-      ),
-      0,
-    )
-  ) {
-    return SigilInstruction.UpdateInstructionConstraints;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([212, 245, 246, 7, 163, 151, 18, 57]),
-      ),
-      0,
-    )
-  ) {
-    return SigilInstruction.UpdatePolicy;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([22, 183, 48, 222, 218, 11, 197, 152]),
       ),
       0,
@@ -672,20 +734,29 @@ export type ParsedSigilInstruction<
       instructionType: SigilInstruction.AgentTransfer;
     } & ParsedAgentTransferInstruction<TProgram>)
   | ({
+      instructionType: SigilInstruction.ApplyAgentPermissionsUpdate;
+    } & ParsedApplyAgentPermissionsUpdateInstruction<TProgram>)
+  | ({
+      instructionType: SigilInstruction.ApplyCloseConstraints;
+    } & ParsedApplyCloseConstraintsInstruction<TProgram>)
+  | ({
       instructionType: SigilInstruction.ApplyConstraintsUpdate;
     } & ParsedApplyConstraintsUpdateInstruction<TProgram>)
   | ({
       instructionType: SigilInstruction.ApplyPendingPolicy;
     } & ParsedApplyPendingPolicyInstruction<TProgram>)
   | ({
+      instructionType: SigilInstruction.CancelAgentPermissionsUpdate;
+    } & ParsedCancelAgentPermissionsUpdateInstruction<TProgram>)
+  | ({
+      instructionType: SigilInstruction.CancelCloseConstraints;
+    } & ParsedCancelCloseConstraintsInstruction<TProgram>)
+  | ({
       instructionType: SigilInstruction.CancelConstraintsUpdate;
     } & ParsedCancelConstraintsUpdateInstruction<TProgram>)
   | ({
       instructionType: SigilInstruction.CancelPendingPolicy;
     } & ParsedCancelPendingPolicyInstruction<TProgram>)
-  | ({
-      instructionType: SigilInstruction.CloseInstructionConstraints;
-    } & ParsedCloseInstructionConstraintsInstruction<TProgram>)
   | ({
       instructionType: SigilInstruction.CloseSettledEscrow;
     } & ParsedCloseSettledEscrowInstruction<TProgram>)
@@ -714,6 +785,12 @@ export type ParsedSigilInstruction<
       instructionType: SigilInstruction.PauseAgent;
     } & ParsedPauseAgentInstruction<TProgram>)
   | ({
+      instructionType: SigilInstruction.QueueAgentPermissionsUpdate;
+    } & ParsedQueueAgentPermissionsUpdateInstruction<TProgram>)
+  | ({
+      instructionType: SigilInstruction.QueueCloseConstraints;
+    } & ParsedQueueCloseConstraintsInstruction<TProgram>)
+  | ({
       instructionType: SigilInstruction.QueueConstraintsUpdate;
     } & ParsedQueueConstraintsUpdateInstruction<TProgram>)
   | ({
@@ -741,15 +818,6 @@ export type ParsedSigilInstruction<
       instructionType: SigilInstruction.UnpauseAgent;
     } & ParsedUnpauseAgentInstruction<TProgram>)
   | ({
-      instructionType: SigilInstruction.UpdateAgentPermissions;
-    } & ParsedUpdateAgentPermissionsInstruction<TProgram>)
-  | ({
-      instructionType: SigilInstruction.UpdateInstructionConstraints;
-    } & ParsedUpdateInstructionConstraintsInstruction<TProgram>)
-  | ({
-      instructionType: SigilInstruction.UpdatePolicy;
-    } & ParsedUpdatePolicyInstruction<TProgram>)
-  | ({
       instructionType: SigilInstruction.ValidateAndAuthorize;
     } & ParsedValidateAndAuthorizeInstruction<TProgram>)
   | ({
@@ -768,6 +836,20 @@ export function parseSigilInstruction<TProgram extends string>(
         ...parseAgentTransferInstruction(instruction),
       };
     }
+    case SigilInstruction.ApplyAgentPermissionsUpdate: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: SigilInstruction.ApplyAgentPermissionsUpdate,
+        ...parseApplyAgentPermissionsUpdateInstruction(instruction),
+      };
+    }
+    case SigilInstruction.ApplyCloseConstraints: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: SigilInstruction.ApplyCloseConstraints,
+        ...parseApplyCloseConstraintsInstruction(instruction),
+      };
+    }
     case SigilInstruction.ApplyConstraintsUpdate: {
       assertIsInstructionWithAccounts(instruction);
       return {
@@ -782,6 +864,20 @@ export function parseSigilInstruction<TProgram extends string>(
         ...parseApplyPendingPolicyInstruction(instruction),
       };
     }
+    case SigilInstruction.CancelAgentPermissionsUpdate: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: SigilInstruction.CancelAgentPermissionsUpdate,
+        ...parseCancelAgentPermissionsUpdateInstruction(instruction),
+      };
+    }
+    case SigilInstruction.CancelCloseConstraints: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: SigilInstruction.CancelCloseConstraints,
+        ...parseCancelCloseConstraintsInstruction(instruction),
+      };
+    }
     case SigilInstruction.CancelConstraintsUpdate: {
       assertIsInstructionWithAccounts(instruction);
       return {
@@ -794,13 +890,6 @@ export function parseSigilInstruction<TProgram extends string>(
       return {
         instructionType: SigilInstruction.CancelPendingPolicy,
         ...parseCancelPendingPolicyInstruction(instruction),
-      };
-    }
-    case SigilInstruction.CloseInstructionConstraints: {
-      assertIsInstructionWithAccounts(instruction);
-      return {
-        instructionType: SigilInstruction.CloseInstructionConstraints,
-        ...parseCloseInstructionConstraintsInstruction(instruction),
       };
     }
     case SigilInstruction.CloseSettledEscrow: {
@@ -866,6 +955,20 @@ export function parseSigilInstruction<TProgram extends string>(
         ...parsePauseAgentInstruction(instruction),
       };
     }
+    case SigilInstruction.QueueAgentPermissionsUpdate: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: SigilInstruction.QueueAgentPermissionsUpdate,
+        ...parseQueueAgentPermissionsUpdateInstruction(instruction),
+      };
+    }
+    case SigilInstruction.QueueCloseConstraints: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: SigilInstruction.QueueCloseConstraints,
+        ...parseQueueCloseConstraintsInstruction(instruction),
+      };
+    }
     case SigilInstruction.QueueConstraintsUpdate: {
       assertIsInstructionWithAccounts(instruction);
       return {
@@ -929,27 +1032,6 @@ export function parseSigilInstruction<TProgram extends string>(
         ...parseUnpauseAgentInstruction(instruction),
       };
     }
-    case SigilInstruction.UpdateAgentPermissions: {
-      assertIsInstructionWithAccounts(instruction);
-      return {
-        instructionType: SigilInstruction.UpdateAgentPermissions,
-        ...parseUpdateAgentPermissionsInstruction(instruction),
-      };
-    }
-    case SigilInstruction.UpdateInstructionConstraints: {
-      assertIsInstructionWithAccounts(instruction);
-      return {
-        instructionType: SigilInstruction.UpdateInstructionConstraints,
-        ...parseUpdateInstructionConstraintsInstruction(instruction),
-      };
-    }
-    case SigilInstruction.UpdatePolicy: {
-      assertIsInstructionWithAccounts(instruction);
-      return {
-        instructionType: SigilInstruction.UpdatePolicy,
-        ...parseUpdatePolicyInstruction(instruction),
-      };
-    }
     case SigilInstruction.ValidateAndAuthorize: {
       assertIsInstructionWithAccounts(instruction);
       return {
@@ -986,6 +1068,15 @@ export type SigilPluginAccounts = {
     SelfFetchFunctions<EscrowDepositArgs, EscrowDeposit>;
   instructionConstraints: ReturnType<typeof getInstructionConstraintsCodec> &
     SelfFetchFunctions<InstructionConstraintsArgs, InstructionConstraints>;
+  pendingAgentPermissionsUpdate: ReturnType<
+    typeof getPendingAgentPermissionsUpdateCodec
+  > &
+    SelfFetchFunctions<
+      PendingAgentPermissionsUpdateArgs,
+      PendingAgentPermissionsUpdate
+    >;
+  pendingCloseConstraints: ReturnType<typeof getPendingCloseConstraintsCodec> &
+    SelfFetchFunctions<PendingCloseConstraintsArgs, PendingCloseConstraints>;
   pendingConstraintsUpdate: ReturnType<
     typeof getPendingConstraintsUpdateCodec
   > &
@@ -1005,6 +1096,14 @@ export type SigilPluginInstructions = {
     input: AgentTransferAsyncInput,
   ) => ReturnType<typeof getAgentTransferInstructionAsync> &
     SelfPlanAndSendFunctions;
+  applyAgentPermissionsUpdate: (
+    input: ApplyAgentPermissionsUpdateAsyncInput,
+  ) => ReturnType<typeof getApplyAgentPermissionsUpdateInstructionAsync> &
+    SelfPlanAndSendFunctions;
+  applyCloseConstraints: (
+    input: ApplyCloseConstraintsAsyncInput,
+  ) => ReturnType<typeof getApplyCloseConstraintsInstructionAsync> &
+    SelfPlanAndSendFunctions;
   applyConstraintsUpdate: (
     input: ApplyConstraintsUpdateAsyncInput,
   ) => ReturnType<typeof getApplyConstraintsUpdateInstructionAsync> &
@@ -1013,6 +1112,14 @@ export type SigilPluginInstructions = {
     input: ApplyPendingPolicyAsyncInput,
   ) => ReturnType<typeof getApplyPendingPolicyInstructionAsync> &
     SelfPlanAndSendFunctions;
+  cancelAgentPermissionsUpdate: (
+    input: CancelAgentPermissionsUpdateInput,
+  ) => ReturnType<typeof getCancelAgentPermissionsUpdateInstruction> &
+    SelfPlanAndSendFunctions;
+  cancelCloseConstraints: (
+    input: CancelCloseConstraintsAsyncInput,
+  ) => ReturnType<typeof getCancelCloseConstraintsInstructionAsync> &
+    SelfPlanAndSendFunctions;
   cancelConstraintsUpdate: (
     input: CancelConstraintsUpdateAsyncInput,
   ) => ReturnType<typeof getCancelConstraintsUpdateInstructionAsync> &
@@ -1020,10 +1127,6 @@ export type SigilPluginInstructions = {
   cancelPendingPolicy: (
     input: CancelPendingPolicyAsyncInput,
   ) => ReturnType<typeof getCancelPendingPolicyInstructionAsync> &
-    SelfPlanAndSendFunctions;
-  closeInstructionConstraints: (
-    input: CloseInstructionConstraintsAsyncInput,
-  ) => ReturnType<typeof getCloseInstructionConstraintsInstructionAsync> &
     SelfPlanAndSendFunctions;
   closeSettledEscrow: (
     input: CloseSettledEscrowAsyncInput,
@@ -1059,6 +1162,14 @@ export type SigilPluginInstructions = {
   pauseAgent: (
     input: PauseAgentInput,
   ) => ReturnType<typeof getPauseAgentInstruction> & SelfPlanAndSendFunctions;
+  queueAgentPermissionsUpdate: (
+    input: QueueAgentPermissionsUpdateAsyncInput,
+  ) => ReturnType<typeof getQueueAgentPermissionsUpdateInstructionAsync> &
+    SelfPlanAndSendFunctions;
+  queueCloseConstraints: (
+    input: QueueCloseConstraintsAsyncInput,
+  ) => ReturnType<typeof getQueueCloseConstraintsInstructionAsync> &
+    SelfPlanAndSendFunctions;
   queueConstraintsUpdate: (
     input: QueueConstraintsUpdateAsyncInput,
   ) => ReturnType<typeof getQueueConstraintsUpdateInstructionAsync> &
@@ -1093,18 +1204,6 @@ export type SigilPluginInstructions = {
   unpauseAgent: (
     input: UnpauseAgentInput,
   ) => ReturnType<typeof getUnpauseAgentInstruction> & SelfPlanAndSendFunctions;
-  updateAgentPermissions: (
-    input: UpdateAgentPermissionsAsyncInput,
-  ) => ReturnType<typeof getUpdateAgentPermissionsInstructionAsync> &
-    SelfPlanAndSendFunctions;
-  updateInstructionConstraints: (
-    input: UpdateInstructionConstraintsAsyncInput,
-  ) => ReturnType<typeof getUpdateInstructionConstraintsInstructionAsync> &
-    SelfPlanAndSendFunctions;
-  updatePolicy: (
-    input: UpdatePolicyAsyncInput,
-  ) => ReturnType<typeof getUpdatePolicyInstructionAsync> &
-    SelfPlanAndSendFunctions;
   validateAndAuthorize: (
     input: ValidateAndAuthorizeAsyncInput,
   ) => ReturnType<typeof getValidateAndAuthorizeInstructionAsync> &
@@ -1138,6 +1237,14 @@ export function sigilProgram() {
             client,
             getInstructionConstraintsCodec(),
           ),
+          pendingAgentPermissionsUpdate: addSelfFetchFunctions(
+            client,
+            getPendingAgentPermissionsUpdateCodec(),
+          ),
+          pendingCloseConstraints: addSelfFetchFunctions(
+            client,
+            getPendingCloseConstraintsCodec(),
+          ),
           pendingConstraintsUpdate: addSelfFetchFunctions(
             client,
             getPendingConstraintsUpdateCodec(),
@@ -1159,6 +1266,16 @@ export function sigilProgram() {
               client,
               getAgentTransferInstructionAsync(input),
             ),
+          applyAgentPermissionsUpdate: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getApplyAgentPermissionsUpdateInstructionAsync(input),
+            ),
+          applyCloseConstraints: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getApplyCloseConstraintsInstructionAsync(input),
+            ),
           applyConstraintsUpdate: (input) =>
             addSelfPlanAndSendFunctions(
               client,
@@ -1169,6 +1286,16 @@ export function sigilProgram() {
               client,
               getApplyPendingPolicyInstructionAsync(input),
             ),
+          cancelAgentPermissionsUpdate: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getCancelAgentPermissionsUpdateInstruction(input),
+            ),
+          cancelCloseConstraints: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getCancelCloseConstraintsInstructionAsync(input),
+            ),
           cancelConstraintsUpdate: (input) =>
             addSelfPlanAndSendFunctions(
               client,
@@ -1178,11 +1305,6 @@ export function sigilProgram() {
             addSelfPlanAndSendFunctions(
               client,
               getCancelPendingPolicyInstructionAsync(input),
-            ),
-          closeInstructionConstraints: (input) =>
-            addSelfPlanAndSendFunctions(
-              client,
-              getCloseInstructionConstraintsInstructionAsync(input),
             ),
           closeSettledEscrow: (input) =>
             addSelfPlanAndSendFunctions(
@@ -1232,6 +1354,16 @@ export function sigilProgram() {
               client,
               getPauseAgentInstruction(input),
             ),
+          queueAgentPermissionsUpdate: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getQueueAgentPermissionsUpdateInstructionAsync(input),
+            ),
+          queueCloseConstraints: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getQueueCloseConstraintsInstructionAsync(input),
+            ),
           queueConstraintsUpdate: (input) =>
             addSelfPlanAndSendFunctions(
               client,
@@ -1276,21 +1408,6 @@ export function sigilProgram() {
             addSelfPlanAndSendFunctions(
               client,
               getUnpauseAgentInstruction(input),
-            ),
-          updateAgentPermissions: (input) =>
-            addSelfPlanAndSendFunctions(
-              client,
-              getUpdateAgentPermissionsInstructionAsync(input),
-            ),
-          updateInstructionConstraints: (input) =>
-            addSelfPlanAndSendFunctions(
-              client,
-              getUpdateInstructionConstraintsInstructionAsync(input),
-            ),
-          updatePolicy: (input) =>
-            addSelfPlanAndSendFunctions(
-              client,
-              getUpdatePolicyInstructionAsync(input),
             ),
           validateAndAuthorize: (input) =>
             addSelfPlanAndSendFunctions(

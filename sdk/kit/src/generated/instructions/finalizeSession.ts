@@ -165,7 +165,7 @@ export type FinalizeSessionAsyncInput<
    */
   session: Address<TAccountSession>;
   sessionRentRecipient: Address<TAccountSessionRentRecipient>;
-  /** Policy config for cap checking during non-stablecoin swap finalization */
+  /** Policy config for outcome-based cap checking during finalization */
   policy?: Address<TAccountPolicy>;
   /** Zero-copy SpendTracker for recording non-stablecoin swap value */
   tracker?: Address<TAccountTracker>;
@@ -174,8 +174,8 @@ export type FinalizeSessionAsyncInput<
   /** Vault's PDA token account for the session's token */
   vaultTokenAccount?: Address<TAccountVaultTokenAccount>;
   /**
-   * Vault's stablecoin ATA for non-stablecoin→stablecoin swap verification.
-   * Required when session.output_mint != Pubkey::default().
+   * Vault's stablecoin ATA for outcome-based spending verification.
+   * Required when session.output_mint != Pubkey::default() (all spending).
    */
   outputStablecoinAccount?: Address<TAccountOutputStablecoinAccount>;
   tokenProgram?: Address<TAccountTokenProgram>;
@@ -373,7 +373,7 @@ export type FinalizeSessionInput<
    */
   session: Address<TAccountSession>;
   sessionRentRecipient: Address<TAccountSessionRentRecipient>;
-  /** Policy config for cap checking during non-stablecoin swap finalization */
+  /** Policy config for outcome-based cap checking during finalization */
   policy: Address<TAccountPolicy>;
   /** Zero-copy SpendTracker for recording non-stablecoin swap value */
   tracker: Address<TAccountTracker>;
@@ -382,8 +382,8 @@ export type FinalizeSessionInput<
   /** Vault's PDA token account for the session's token */
   vaultTokenAccount?: Address<TAccountVaultTokenAccount>;
   /**
-   * Vault's stablecoin ATA for non-stablecoin→stablecoin swap verification.
-   * Required when session.output_mint != Pubkey::default().
+   * Vault's stablecoin ATA for outcome-based spending verification.
+   * Required when session.output_mint != Pubkey::default() (all spending).
    */
   outputStablecoinAccount?: Address<TAccountOutputStablecoinAccount>;
   tokenProgram?: Address<TAccountTokenProgram>;
@@ -541,7 +541,7 @@ export type ParsedFinalizeSessionInstruction<
      */
     session: TAccountMetas[2];
     sessionRentRecipient: TAccountMetas[3];
-    /** Policy config for cap checking during non-stablecoin swap finalization */
+    /** Policy config for outcome-based cap checking during finalization */
     policy: TAccountMetas[4];
     /** Zero-copy SpendTracker for recording non-stablecoin swap value */
     tracker: TAccountMetas[5];
@@ -550,8 +550,8 @@ export type ParsedFinalizeSessionInstruction<
     /** Vault's PDA token account for the session's token */
     vaultTokenAccount?: TAccountMetas[7] | undefined;
     /**
-     * Vault's stablecoin ATA for non-stablecoin→stablecoin swap verification.
-     * Required when session.output_mint != Pubkey::default().
+     * Vault's stablecoin ATA for outcome-based spending verification.
+     * Required when session.output_mint != Pubkey::default() (all spending).
      */
     outputStablecoinAccount?: TAccountMetas[8] | undefined;
     tokenProgram: TAccountMetas[9];

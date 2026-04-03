@@ -67,9 +67,22 @@ export type AgentSpendOverlay = {
   bump: number;
   /** Padding for 8-byte alignment */
   padding: ReadonlyUint8Array;
-  /** Per-agent cumulative spend in USD base units */
+  /**
+   * Per-agent cumulative spend in USD base units. Index matches entries[i].
+   * DESIGN DECISION: Tracks spend only, NOT profit/loss.
+   * Per-agent P&L requires oracles (removed by design) and protocol-specific
+   * position reading (violates protocol-agnostic principle). Realized P&L
+   * can be derived in the SDK by correlating agent spend events with vault
+   * balance changes. See agent-analytics.ts for the SDK implementation.
+   * Found by: Persona test (Treasury Manager "David")
+   * Appended AFTER existing layout to preserve zero-copy byte offsets.
+   */
   lifetimeSpend: Array<bigint>;
-  /** Per-agent cumulative transaction count */
+  /**
+   * Per-agent cumulative transaction count. Index matches entries[i].
+   * Incremented in finalize_session for EVERY successful spending session.
+   * Used for: avg TX size (lifetime_spend / lifetime_tx_count), agent activity ranking.
+   */
   lifetimeTxCount: Array<bigint>;
 };
 
@@ -82,9 +95,22 @@ export type AgentSpendOverlayArgs = {
   bump: number;
   /** Padding for 8-byte alignment */
   padding: ReadonlyUint8Array;
-  /** Per-agent cumulative spend in USD base units */
+  /**
+   * Per-agent cumulative spend in USD base units. Index matches entries[i].
+   * DESIGN DECISION: Tracks spend only, NOT profit/loss.
+   * Per-agent P&L requires oracles (removed by design) and protocol-specific
+   * position reading (violates protocol-agnostic principle). Realized P&L
+   * can be derived in the SDK by correlating agent spend events with vault
+   * balance changes. See agent-analytics.ts for the SDK implementation.
+   * Found by: Persona test (Treasury Manager "David")
+   * Appended AFTER existing layout to preserve zero-copy byte offsets.
+   */
   lifetimeSpend: Array<number | bigint>;
-  /** Per-agent cumulative transaction count */
+  /**
+   * Per-agent cumulative transaction count. Index matches entries[i].
+   * Incremented in finalize_session for EVERY successful spending session.
+   * Used for: avg TX size (lifetime_spend / lifetime_tx_count), agent activity ranking.
+   */
   lifetimeTxCount: Array<number | bigint>;
 };
 

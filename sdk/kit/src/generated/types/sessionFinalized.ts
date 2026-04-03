@@ -32,8 +32,14 @@ export type SessionFinalized = {
   success: boolean;
   isExpired: boolean;
   timestamp: bigint;
+  /**
+   * Actual stablecoin spend measured by balance delta (0 for non-spending actions).
+   * For stablecoin-input: outflow minus fees. For non-stablecoin-input: stablecoin gain.
+   */
   actualSpendUsd: bigint;
+  /** Vault stablecoin balance after this transaction (0 for non-spending). */
   balanceAfterUsd: bigint;
+  /** ActionType as u8 for downstream classification (permission_bit() value, 0-20). */
   actionType: number;
 };
 
@@ -43,8 +49,14 @@ export type SessionFinalizedArgs = {
   success: boolean;
   isExpired: boolean;
   timestamp: number | bigint;
+  /**
+   * Actual stablecoin spend measured by balance delta (0 for non-spending actions).
+   * For stablecoin-input: outflow minus fees. For non-stablecoin-input: stablecoin gain.
+   */
   actualSpendUsd: number | bigint;
+  /** Vault stablecoin balance after this transaction (0 for non-spending). */
   balanceAfterUsd: number | bigint;
+  /** ActionType as u8 for downstream classification (permission_bit() value, 0-20). */
   actionType: number;
 };
 

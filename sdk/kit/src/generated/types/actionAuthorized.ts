@@ -38,6 +38,11 @@ export type ActionAuthorized = {
   amount: bigint;
   usdAmount: bigint;
   protocol: Address;
+  /**
+   * DEPRECATED (v5): Always 0 since outcome-based spending.
+   * Actual rolling spend is in SessionFinalized.actual_spend_usd.
+   * Retained for IDL backward compatibility.
+   */
   rollingSpendUsdAfter: bigint;
   dailyCapUsd: bigint;
   delegated: boolean;
@@ -52,6 +57,11 @@ export type ActionAuthorizedArgs = {
   amount: number | bigint;
   usdAmount: number | bigint;
   protocol: Address;
+  /**
+   * DEPRECATED (v5): Always 0 since outcome-based spending.
+   * Actual rolling spend is in SessionFinalized.actual_spend_usd.
+   * Retained for IDL backward compatibility.
+   */
   rollingSpendUsdAfter: number | bigint;
   dailyCapUsd: number | bigint;
   delegated: boolean;

@@ -7,11 +7,14 @@
  */
 
 export * from "./agentTransfer.js";
+export * from "./applyAgentPermissionsUpdate.js";
+export * from "./applyCloseConstraints.js";
 export * from "./applyConstraintsUpdate.js";
 export * from "./applyPendingPolicy.js";
+export * from "./cancelAgentPermissionsUpdate.js";
+export * from "./cancelCloseConstraints.js";
 export * from "./cancelConstraintsUpdate.js";
 export * from "./cancelPendingPolicy.js";
-export * from "./closeInstructionConstraints.js";
 export * from "./closeSettledEscrow.js";
 export * from "./closeVault.js";
 export * from "./createEscrow.js";
@@ -21,6 +24,8 @@ export * from "./finalizeSession.js";
 export * from "./freezeVault.js";
 export * from "./initializeVault.js";
 export * from "./pauseAgent.js";
+export * from "./queueAgentPermissionsUpdate.js";
+export * from "./queueCloseConstraints.js";
 export * from "./queueConstraintsUpdate.js";
 export * from "./queuePolicyUpdate.js";
 export * from "./reactivateVault.js";
@@ -30,8 +35,5 @@ export * from "./revokeAgent.js";
 export * from "./settleEscrow.js";
 export * from "./syncPositions.js";
 export * from "./unpauseAgent.js";
-export * from "./updateAgentPermissions.js";
-export * from "./updateInstructionConstraints.js";
-export * from "./updatePolicy.js";
 export * from "./validateAndAuthorize.js";
 export * from "./withdrawFunds.js";
