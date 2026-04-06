@@ -3756,7 +3756,7 @@ describe("surfpool-integration", function () {
       await sendVersionedTx(env.connection, [applyIx], env.payer);
 
       constraints = await program.account.instructionConstraints.fetch(cPda);
-      expect(constraints.strictMode).to.equal(true);
+      expect(Number(constraints.strictMode)).to.equal(1); // u8 in zero-copy
     });
 
     it("queue+apply close_constraints reclaims rent", async () => {
