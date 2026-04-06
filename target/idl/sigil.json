@@ -5158,6 +5158,32 @@
       ]
     },
     {
+      "name": "PdaAllocated",
+      "discriminator": [
+        27,
+        99,
+        195,
+        198,
+        238,
+        53,
+        3,
+        181
+      ]
+    },
+    {
+      "name": "PdaExtended",
+      "discriminator": [
+        67,
+        151,
+        95,
+        79,
+        12,
+        11,
+        51,
+        242
+      ]
+    },
+    {
       "name": "PolicyChangeApplied",
       "discriminator": [
         104,
@@ -7075,6 +7101,54 @@
           {
             "name": "strict_mode",
             "type": "bool"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PdaAllocated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "pda_type",
+            "type": "u8"
+          },
+          {
+            "name": "initial_size",
+            "type": "u32"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PdaExtended",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_size",
+            "type": "u32"
+          },
+          {
+            "name": "new_size",
+            "type": "u32"
           },
           {
             "name": "timestamp",

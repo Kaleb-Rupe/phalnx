@@ -5164,6 +5164,32 @@ export type Sigil = {
       ]
     },
     {
+      "name": "pdaAllocated",
+      "discriminator": [
+        27,
+        99,
+        195,
+        198,
+        238,
+        53,
+        3,
+        181
+      ]
+    },
+    {
+      "name": "pdaExtended",
+      "discriminator": [
+        67,
+        151,
+        95,
+        79,
+        12,
+        11,
+        51,
+        242
+      ]
+    },
+    {
       "name": "policyChangeApplied",
       "discriminator": [
         104,
@@ -7081,6 +7107,54 @@ export type Sigil = {
           {
             "name": "strictMode",
             "type": "bool"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "pdaAllocated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "pdaType",
+            "type": "u8"
+          },
+          {
+            "name": "initialSize",
+            "type": "u32"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "pdaExtended",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "oldSize",
+            "type": "u32"
+          },
+          {
+            "name": "newSize",
+            "type": "u32"
           },
           {
             "name": "timestamp",
