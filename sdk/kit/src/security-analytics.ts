@@ -365,10 +365,11 @@ export function getSecurityPosture(state: ResolvedVaultState): SecurityPosture {
         !policy.protocols ||
         policy.protocols.every((p: Address) =>
           constraints.entries
-            .slice(0, (constraints as any).entryCount ?? constraints.entries.length)
-            .some(
-              (e: any) => String(e.programId) === String(p),
-            ),
+            .slice(
+              0,
+              (constraints as any).entryCount ?? constraints.entries.length,
+            )
+            .some((e: any) => String(e.programId) === String(p)),
         ),
       severity: "info",
       detail:
