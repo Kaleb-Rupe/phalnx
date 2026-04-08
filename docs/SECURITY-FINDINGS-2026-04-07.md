@@ -1,8 +1,31 @@
 # Security Findings — 2026-04-07
 
-**Status:** INTERNAL — do not distribute until all CRITICAL / HIGH items resolved
-**Source:** Phase 1 Sigil Constraint Engine Foundation Sprint verification pass
-**Verifier:** Multi-agent pentest + silent-failure-hunter reviews against live source
+**Status:** INTERNAL — Phase 1.5 closure pass in progress
+**Source:** Phase 1 Sigil Constraint Engine Foundation Sprint verification pass + Gate 5 code review + Phase 1.5 addendum
+**Verifier:** Multi-agent pentest + silent-failure-hunter + code-reviewer against live source
+
+**Closure status as of 2026-04-08:** 9 of 16 findings CLOSED. Remaining: Finding 3 (A9 CPI guard — the last load-bearing MEDIUM), Finding 8b (chunked encoding DOS — new), Findings 10/11/13/14/16 (LOW or test-only), plus Phase 1 deferred items.
+
+| # | Finding | Severity | Status | Commit |
+|---|---|---|---|---|
+| 1 | A5 discriminator anchor invariant | CRITICAL (9) | ✅ **CLOSED** | 40beafe |
+| 2 | A3 zero-mask Bitmask wildcard | HIGH (7) | ✅ **CLOSED** | 4bf7463 |
+| 3 | A9 CPI guard on 27 handlers | MEDIUM (6) | ⏳ open | — |
+| 4 | toDxError string-code collapse | CRITICAL | ✅ **CLOSED** | 6e904fb |
+| 5 | getVaultActivity silent swallow | HIGH | ✅ **CLOSED** | c7774ae |
+| 6 | RPC proxy X-Real-IP bypass | HIGH | ✅ **CLOSED** | 3403518 |
+| 7 | RPC proxy forward-raw body | MEDIUM | ✅ **CLOSED** | 5065c36 |
+| 8 | RPC proxy body buffer DOS | HIGH | ✅ **CLOSED (partial — see 8b)** | 3403518 |
+| 8b | RPC proxy chunked-encoding DOS | MEDIUM | ⏳ open (new, surfaced during Finding 8 close) | — |
+| 9 | RPC proxy LRU eviction refresh | MEDIUM | ✅ **CLOSED** | 5065c36 |
+| 10 | Content-Type check before rate limit | LOW | ⏳ open (cosmetic reorder) | — |
+| 11 | HTTP 200 for parser/envelope errors | LOW | ⏳ open (JSON-RPC compliance judgment) | — |
+| 12 | Parser nested Option<i64> signedness | MEDIUM | ✅ **CLOSED** | ec640f2 |
+| 13 | Integration test hermeticity + Windows path | MEDIUM (test) | ⏳ open (Phase 1.6) | — |
+| 14 | Parser allArgs post-boundary drops | LOW | ⏳ open (introspection gap) | — |
+| 15 | Missing Option<i64> fixture | LOW | ✅ **COVERED** by ec640f2 fixtures 16+17 | ec640f2 |
+| 16 | 0.9 integration pass-rate threshold | LOW | ⏳ open | — |
+| — | Sigil-dashboard route unit test coverage | META | ⏳ open (Phase 1.6 prereq, raised by monitoring agent) | — |
 
 ---
 
