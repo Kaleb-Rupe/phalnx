@@ -850,3 +850,254 @@ within severity):
 
 Findings 1 and 2 remain load-bearing — nothing in Phase 1.5 touching
 the constraint engine codebase should commit until they land.
+
+**2026-04-08 UPDATE — Findings 1 and 2 are CLOSED** (commits 40beafe,
+4bf7463). See the Phase 1.5 Closure Addendum below for the full
+scoreboard and per-finding closure evidence.
+
+---
+
+## Phase 1.5 Closure Addendum (2026-04-08)
+
+Eleven of the 16 findings documented above are now closed. The remaining
+five open items are either load-bearing on-chain work (Finding 3 A9) or
+low-severity polish that can ship to Phase 1.6. One NEW finding surfaced
+during the Finding 8 close — tracked here as Finding 8b.
+
+### Finding 1 — A5 discriminator anchor invariant → CLOSED
+
+**Commit:** `40beafe` `fix(security): A5 require discriminator anchor invariant`
+
+validate_entries now requires every ConstraintEntry's first DataConstraint
+to be `{offset: 0, operator: Eq, value.len() >= 8, value contains at least
+one non-zero byte}`. SDK `assembleEntries` updated to reject empty
+`dataConstraints` arrays (closes the `length > 0` hole in the existing SDK
+anchor check). 10 new Rust regression tests covering every rejection mode
++ the existing A3 tests restructured to include valid discriminator anchors
+so they co-exist with A5. SDK test `allows entry with only account
+constraints` inverted to assert rejection.
+
+Verification: `cargo test --lib constraints::` = 59 pass (13 new + 46
+existing), `anchor build --no-idl` = 4.40s, IDL restored, `pnpm test` =
+145 LiteSVM passing, `sdk/kit pnpm test` = 1,212 passing. Known latent
+test debt in `tests/instruction-constraints.ts` and
+`tests/surfpool-integration.ts` (non-baseline tests) tracked as Phase 1.6
+follow-up.
+
+### Finding 2 — A3 zero-mask Bitmask wildcard → CLOSED
+
+**Commit:** `4bf7463` `fix(security): A3 reject zero-mask Bitmask constraints`
+
+validate_entries now rejects any `Bitmask` constraint whose `value` bytes
+are all zero. The `bitmask_check` math primitive is left unchanged
+(mathematically correct: `(actual & 0) == 0`). Validation-layer rejection
+means zero masks never reach `pack_entries`, the zero-copy account, or
+`verify_data_constraints_zc` in production. The passing unit test
+`bitmask_zero_mask_always_passes` that codified the broken semantic was
+removed and replaced with a historical comment pointing to the new tests.
+
+Verification: `cargo test --lib constraints::` = 50 pass (4 new + 46
+existing), `anchor build --no-idl`, IDL restored, `pnpm test` = 145
+LiteSVM passing. CU impact: `validate+finalize:stablecoin` 67,952 →
+72,452 (+4,500 CU per data-constraint check, well inside the 1.4M
+budget).
+
+### Finding 3 — A9 CPI guard on 27 handlers → STILL OPEN
+
+Unchanged from the initial finding. Still the biggest remaining item.
+Next target in the Phase 1.5 order of operations.
+
+### Finding 4 — toDxError string-code collapse → CLOSED
+
+**Commit:** `6e904fb` `fix(sdk): preserve DxError code fidelity via SDK_ERROR_CODES reverse lookup`
+
+Exported `SDK_ERROR_CODES` from `agent-errors.ts`. Built a reverse `name →
+number` lookup at module load in `dashboard/errors.ts`. New
+`resolveDxCode(rawCode)` helper with priority: (1) named SDK code string
+reverse-lookup, (2) numeric string/number passthrough, (3)
+`DX_ERROR_CODE_UNMAPPED = 7999` sentinel. 7000 is now unambiguously
+`NETWORK_ERROR` — never used as a fallback. 7 new regression tests lock
+the invariants in place.
+
+Verification: `sdk/kit pnpm test` = 1,219 passing (7 new + 1,212
+existing). No Rust changes → no anchor build cycle.
+
+### Finding 5 — getVaultActivity silent swallow → CLOSED
+
+**Commit:** `c7774ae` `fix(sdk): log getVaultActivity failures instead of swallowing silently`
+
+`.catch(() => [])` replaced with `.catch((err) => { console.warn(...);
+return []; })`. Graceful degradation preserved (activity is enrichment —
+`getAgents` should still complete on RPC failure), but the error is now
+observable via `console.warn`.
+
+### Finding 6 — RPC proxy X-Real-IP bypass → CLOSED
+
+**Commit:** `3403518` `fix(dashboard): close RPC proxy HIGH findings (X-Real-IP + body DOS)`
+
+`getClientIp()` now trusts ONLY `x-vercel-forwarded-for` (platform-set,
+stripped from incoming client traffic). When absent (non-Vercel deploy,
+dev, preview), all callers share a single `"global"` rate-limit bucket —
+noisy but not exploitable. Explicit SECURITY NOTE added to the docstring
+that the route MUST be fronted by Vercel's edge in production.
+
+### Finding 7 — RPC proxy forward-raw body → CLOSED
+
+**Commit:** `5065c36` `fix(dashboard): RPC proxy LRU refresh + forward-validated body (Findings 9 + 7)`
+
+Changed `body: bodyText` to `body: JSON.stringify(body)` at the Helius
+fetch site. Proxy now forwards the re-serialized validated object, not
+the raw client-supplied text.
+
+### Finding 8 — RPC proxy body buffer DOS → CLOSED (partial; see Finding 8b)
+
+**Commit:** `3403518` (same commit as Finding 6)
+
+Added Content-Length pre-check BEFORE `request.text()`. Rejects clients
+that declare oversized bodies via the `content-length` header. The
+post-buffer `Buffer.byteLength` check remains as defense-in-depth.
+
+**CLOSURE CAVEAT:** This fix rejects the common case where a hostile
+client sets `Content-Length: <huge>`, but chunked transfer encoding
+(`Transfer-Encoding: chunked`) omits Content-Length entirely, and the
+post-buffer check only fires AFTER the full chunked body is read.
+Chunked hostile payloads can still reach ~4.5 MB buffered before
+rejection. See Finding 8b below.
+
+### Finding 8b — RPC proxy chunked-encoding DOS → NEW, OPEN
+
+**Severity:** MEDIUM (smaller blast radius than the original Finding 8
+because chunked encoding is harder to automate at scale, but the same
+attacker budget calculation applies within the per-IP rate limit)
+**Layer:** dashboard
+**File:** `sigil-dashboard/src/app/api/rpc/route.ts` body reading path
+
+**Problem:** The Content-Length pre-check added in commit `3403518`
+only fires when the client includes a `content-length` header. A
+client using `Transfer-Encoding: chunked` omits Content-Length
+entirely — the fetch Web API will still stream the chunked body into
+`request.text()` up to whatever Next.js/Vercel Function limit applies.
+The `Buffer.byteLength` post-check then rejects, but only AFTER the
+full body is buffered in memory.
+
+**Proof of concept:**
+```bash
+curl -X POST https://target/api/rpc \
+  -H "Content-Type: application/json" \
+  -H "Transfer-Encoding: chunked" \
+  --data-binary @hostile-chunked-payload-4mb.json
+```
+The payload buffers to ~4 MB before `Buffer.byteLength` rejects.
+
+**Recommended fix (two options):**
+1. **Stream-based size accounting:** Instead of `await request.text()`,
+   read the body via `request.body` (a `ReadableStream`), accumulate
+   bytes in a loop, and abort the stream when
+   `accumulated > MAX_BODY_BYTES`. Reject without buffering the rest.
+2. **Reject chunked encoding entirely:** If `Transfer-Encoding: chunked`
+   is set AND Content-Length is absent, reject with a JSON-RPC error.
+   Legitimate JSON-RPC clients always know the body size in advance.
+
+Option 2 is simpler but slightly more restrictive. Option 1 is more
+permissive but more complex.
+
+**Effort:** ~20-30 LOC + 1 regression test. 30-45 minutes. Deferred
+to the next Phase 1.5 close-out cycle.
+
+### Finding 9 — RPC proxy LRU eviction refresh → CLOSED
+
+**Commit:** `5065c36` (same commit as Finding 7)
+
+Added explicit `rateState.delete(ip)` before `rateState.set(ip, ...)`
+so the re-inserted entry lands at the tail of the Map's insertion
+order. Size-cap eviction now always targets a genuinely different IP.
+
+### Finding 10 — Content-Type check order → STILL OPEN (LOW)
+
+Cosmetic reorder. Moving the Content-Type check below `checkRateLimit`
+so invalid-Content-Type traffic depletes the attacker's rate budget.
+Deferred — not blocking.
+
+### Finding 11 — HTTP 200 for parser/envelope errors → STILL OPEN (LOW)
+
+Judgment call: JSON-RPC 2.0 spec is silent on HTTP status. Current
+implementation prefers JSON-RPC compliance (HTTP 200 for JSON-RPC
+errors). Deferred — not blocking.
+
+### Finding 12 — Parser nested Option<i64> signedness → CLOSED
+
+**Commit:** `ec640f2` `fix(parser): preserve signedness through nested Option<T> / COption<T>`
+
+Added `unwrapOptionPayload(type)` helper. `expandDefinedStruct` leaf
+branch now calls the helper before `idlTypeToFieldType`, so nested
+`Option<i64>` and `COption<i64>` preserve signedness as `"i64"` instead
+of falling through to the size-based `"u64"` fallback. Walker at
+parser.ts:443-449 left alone (already correct via inline unwrap); DRY
+refactor deferred.
+
+**New fixtures added:** 16 (Option<i64> inside struct) + 17
+(COption<i64> inside struct) in `parser.test.ts`. Both would have
+failed pre-fix with `type: "u64"`. These fixtures also cover Finding
+15's request for an Option<i64> regression guard.
+
+Verification: `vitest run __tests__/constraints` = 22/22 passing (was
+20; +2 regression guards).
+
+### Finding 13 — Integration test hermeticity + Windows path → STILL OPEN (MEDIUM, Phase 1.6)
+
+Not blocking the core Phase 1.5 close. Requires copying the 4 real
+IDL files into `sigil-dashboard/__tests__/constraints/fixtures/idls/`
+(~1 MB total) and updating `parser.integration.test.ts` to use
+`fileURLToPath(import.meta.url)` for cross-platform resolution.
+Deferred to Phase 1.6 test infrastructure pass.
+
+### Finding 14 — Parser allArgs post-boundary drops → STILL OPEN (LOW)
+
+Introspection completeness gap. allArgs should always emit an entry
+(with `{offset: -1, size: -1, type: "post-variable"}`) for fixed-size
+args that follow a variable-length boundary, so callers can
+distinguish "not present" from "post-boundary fixed". Deferred.
+
+### Finding 15 — Missing Option<i64> fixture → COVERED by Finding 12
+
+The code-reviewer's Finding 15 asked for an `Option<i64>` regression
+guard. The Finding 12 fix (commit `ec640f2`) added fixtures 16 + 17
+covering `Option<i64>` and `COption<i64>` inside defined structs —
+exactly where the regression would live. Finding 15 is effectively
+closed by the Finding 12 commit. Not tracking separately.
+
+### Finding 16 — 0.9 integration pass-rate threshold → STILL OPEN (LOW)
+
+Threshold is too lenient vs. project CLAUDE.md's zero-tolerance
+posture toward boundary errors. Tighten to 1.0 or require all
+failures to be classified "variable-length boundary" errors
+specifically. Deferred.
+
+### Meta: sigil-dashboard route unit test coverage → STILL OPEN (Phase 1.6 prereq)
+
+Raised by the monitoring agent. No unit tests exist at the
+sigil-dashboard route level — Pentester did live PoC, QATester
+checked page load, but there are no regression tests for the findings
+themselves. Adding Vitest-based route handler tests (constructing a
+`NextRequest`, calling `POST` directly, asserting on `Response.json()`
+output) is a Phase 1.6 prereq before any further route-level security
+work. Estimated 2-3 hours + ~200 LOC of test scaffolding. Deferred.
+
+### Phase 1.5 close line (2026-04-08)
+
+**Above the line (must land for Phase 1.5 to close):**
+- Finding 3 — A9 CPI guard on 27 handlers (MEDIUM, on-chain,
+  load-bearing for Phase 2)
+
+**Below the line (Phase 1.6 / Phase 2 prereqs):**
+- Finding 8b — chunked-encoding DOS (new, MEDIUM)
+- Finding 13 — integration test hermeticity (MEDIUM, test-only)
+- Findings 10, 11, 14, 16 — LOW polish
+- Sigil-dashboard route unit test coverage — new meta-gap
+- Phase 1 deferred items — differential fuzz 10K+, 16 of the top-20
+  IDL integration tests (requires `idl-fetch.ts` from
+  CONSTRAINT-BUILDER-PLAN Step 2), ISC-80/81/82 regression tests
+  (Bug 1 N+1 pin, Bug 3 round-trip, cursor math invariant),
+  ISC-85 adversarial parser inputs,
+  `tests/instruction-constraints.ts` +
+  `tests/surfpool-integration.ts` TS test sweep
