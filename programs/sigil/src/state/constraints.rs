@@ -130,9 +130,80 @@ impl InstructionConstraints {
                 );
                 // Reject zero-length constraint values
                 require!(!dc.value.is_empty(), SigilError::InvalidConstraintConfig);
+                // Fix A3: reject all-zero Bitmask masks. They act as universal
+                // wildcards because `(actual & 0) == 0` is always true for any
+                // input — a policy that looks like a byte-level filter but uses
+                // a zero mask is a silent no-op. The `bitmask_check` math
+                // primitive in integrations/generic_constraints.rs is left
+                // unchanged because its behavior on zero masks is
+                // mathematically correct; we block zero masks one layer up so
+                // they can never reach it in production.
+                // See docs/SECURITY-FINDINGS-2026-04-07.md Finding 2.
+                if dc.operator == ConstraintOperator::Bitmask {
+                    require!(
+                        dc.value.iter().any(|&b| b != 0),
+                        SigilError::InvalidConstraintConfig
+                    );
+                }
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn mk_entry(data_constraints: Vec<DataConstraint>) -> ConstraintEntry {
+        ConstraintEntry {
+            program_id: Pubkey::default(),
+            data_constraints,
+            account_constraints: vec![],
+        }
+    }
+
+    #[test]
+    fn validate_entries_rejects_single_byte_zero_mask_bitmask() {
+        let entries = vec![mk_entry(vec![DataConstraint {
+            offset: 0,
+            operator: ConstraintOperator::Bitmask,
+            value: vec![0x00],
+        }])];
+        assert!(InstructionConstraints::validate_entries(&entries).is_err());
+    }
+
+    #[test]
+    fn validate_entries_rejects_multi_byte_zero_mask_bitmask() {
+        let entries = vec![mk_entry(vec![DataConstraint {
+            offset: 0,
+            operator: ConstraintOperator::Bitmask,
+            value: vec![0u8; 8],
+        }])];
+        assert!(InstructionConstraints::validate_entries(&entries).is_err());
+    }
+
+    #[test]
+    fn validate_entries_accepts_non_zero_mask_bitmask() {
+        let entries = vec![mk_entry(vec![DataConstraint {
+            offset: 0,
+            operator: ConstraintOperator::Bitmask,
+            value: vec![0x00, 0x80, 0x00],
+        }])];
+        assert!(InstructionConstraints::validate_entries(&entries).is_ok());
+    }
+
+    #[test]
+    fn validate_entries_accepts_all_zero_eq_value() {
+        // Non-Bitmask operators with all-zero value are not wildcards —
+        // Eq/Ne/Gte/Lte require exact or bounded comparison. Zero is a
+        // valid pattern (e.g., "first 8 bytes must be zero").
+        let entries = vec![mk_entry(vec![DataConstraint {
+            offset: 0,
+            operator: ConstraintOperator::Eq,
+            value: vec![0u8; 8],
+        }])];
+        assert!(InstructionConstraints::validate_entries(&entries).is_ok());
     }
 }
 
