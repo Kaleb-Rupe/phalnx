@@ -3,9 +3,9 @@
   "version": "0.2.2",
   "type": "module",
   "author": "Kaleb Rupe (https://x.com/MightieMags)",
-  "homepage": "https://github.com/Kaleb-Rupe/sigil#readme",
+  "homepage": "https://github.com/Sigil-Trade/sigil#readme",
   "bugs": {
-    "url": "https://github.com/Kaleb-Rupe/sigil/issues",
+    "url": "https://github.com/Sigil-Trade/sigil/issues",
     "email": "https://t.me/MightyMags"
   },
   "description": "Kit-native TypeScript SDK for Sigil — zero web3.js dependency, ESM-only",
@@ -101,7 +101,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Kaleb-Rupe/sigil",
+    "url": "https://github.com/Sigil-Trade/sigil",
     "directory": "sdk/kit"
   }
 }
