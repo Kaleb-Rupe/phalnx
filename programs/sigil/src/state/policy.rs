@@ -30,8 +30,7 @@ pub struct PolicyConfig {
     /// Bounded to MAX_ALLOWED_PROTOCOLS entries.
     pub protocols: Vec<Pubkey>,
 
-    /// Maximum leverage multiplier in basis points (e.g., 10000 = 100x)
-    /// Set to 0 to disallow leveraged positions entirely
+    /// DEPRECATED: Not enforced on-chain. Kept for layout stability. See Phase B3 post-assertions.
     pub max_leverage_bps: u16,
 
     /// Whether the agent can open new positions (vs only close existing)
@@ -134,6 +133,7 @@ impl PolicyConfig {
         }
     }
 
+    #[deprecated(note = "Leverage enforcement moved to Phase B3 post-execution assertions")]
     pub fn is_leverage_within_limit(&self, leverage_bps: u16) -> bool {
         leverage_bps <= self.max_leverage_bps
     }

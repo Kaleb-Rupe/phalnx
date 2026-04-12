@@ -61,10 +61,10 @@ pub fn handler(ctx: Context<ApplyAgentPermissionsUpdate>) -> Result<()> {
     );
 
     let agent = pending.agent;
-    let new_permissions = pending.new_permissions;
+    let new_capability = pending.new_capability;
     let spending_limit_usd = pending.spending_limit_usd;
 
-    // Find agent entry and update permissions + spending limit
+    // Find agent entry and update capability + spending limit
     let vault = &mut ctx.accounts.vault;
     let entry = vault
         .agents
@@ -72,7 +72,7 @@ pub fn handler(ctx: Context<ApplyAgentPermissionsUpdate>) -> Result<()> {
         .find(|a| a.pubkey == agent)
         .ok_or(error!(SigilError::UnauthorizedAgent))?;
     let old_spending_limit = entry.spending_limit_usd;
-    entry.permissions = new_permissions;
+    entry.capability = new_capability;
     entry.spending_limit_usd = spending_limit_usd;
 
     // Manage overlay slot when spending limit changes

@@ -28,7 +28,7 @@ pub struct RegisterAgent<'info> {
 pub fn handler(
     ctx: Context<RegisterAgent>,
     agent: Pubkey,
-    permissions: u64,
+    capability: u8,
     spending_limit_usd: u64,
 ) -> Result<()> {
     crate::reject_cpi!();
@@ -40,7 +40,7 @@ pub fn handler(
         SigilError::VaultAlreadyClosed
     );
     require!(
-        permissions & !FULL_PERMISSIONS == 0,
+        capability <= FULL_CAPABILITY,
         SigilError::InvalidPermissions
     );
     require!(!vault.is_agent(&agent), SigilError::AgentAlreadyRegistered);
@@ -53,7 +53,8 @@ pub fn handler(
 
     vault.agents.push(AgentEntry {
         pubkey: agent,
-        permissions,
+        capability,
+        _reserved: [0u8; 7],
         spending_limit_usd,
         paused: false,
     });
@@ -81,7 +82,7 @@ pub fn handler(
     emit!(AgentRegistered {
         vault: vault.key(),
         agent,
-        permissions,
+        capability,
         spending_limit_usd,
         timestamp: clock.unix_timestamp,
     });

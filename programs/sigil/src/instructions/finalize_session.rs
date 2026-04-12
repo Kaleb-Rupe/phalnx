@@ -117,7 +117,8 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
 
     // Extract session data before we lose access
     let session_agent = session.agent;
-    let session_action_type = session.action_type;
+    let session_is_spending = session.is_spending;
+    let session_position_effect = session.position_effect;
     let session_delegated = session.delegated;
     let session_developer_fee = session.developer_fee;
     let session_output_mint = session.output_mint;
@@ -460,9 +461,8 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
             .checked_add(1)
             .ok_or(SigilError::Overflow)?;
 
-        // Only add to total_volume for spending actions (actual measured spend,
-        // not declared — matches WRAP-ARCHITECTURE-PLAN.md:427-431)
-        if session_action_type.is_spending() {
+        // Only add to total_volume for spending actions (actual measured spend)
+        if session_is_spending {
             vault.total_volume = vault
                 .total_volume
                 .checked_add(actual_spend_tracked)
@@ -470,12 +470,15 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
         }
 
         // Update position count — only when actual DeFi execution occurred.
-        // For spending actions, gate on actual_spend > 0 to prevent counter inflation
-        // from no-op sessions. Non-spending actions (ClosePosition, etc.) always update.
-        let should_update_positions =
-            !session_action_type.is_spending() || actual_spend_tracked > 0;
+        // For spending actions, gate on actual_spend > 0 to prevent counter inflation.
+        let should_update_positions = !session_is_spending || actual_spend_tracked > 0;
         if should_update_positions {
-            match session_action_type.position_effect() {
+            let position_effect = match session_position_effect {
+                1 => PositionEffect::Increment,
+                2 => PositionEffect::Decrement,
+                _ => PositionEffect::None,
+            };
+            match position_effect {
                 PositionEffect::Increment => {
                     vault.open_positions = vault
                         .open_positions
@@ -608,7 +611,8 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
         timestamp: clock.unix_timestamp,
         actual_spend_usd: actual_spend_tracked,
         balance_after_usd: balance_after_tracked,
-        action_type: session_action_type.permission_bit(),
+        is_spending: session_is_spending,
+        position_effect: session_position_effect,
     });
 
     // --- Post-finalize instruction scan (defense-in-depth) ---

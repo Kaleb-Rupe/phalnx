@@ -1,4 +1,3 @@
-use crate::state::ActionType;
 use anchor_lang::prelude::*;
 
 #[event]
@@ -21,7 +20,7 @@ pub struct FundsDeposited {
 pub struct AgentRegistered {
     pub vault: Pubkey,
     pub agent: Pubkey,
-    pub permissions: u64,
+    pub capability: u8,
     pub spending_limit_usd: u64,
     pub timestamp: i64,
 }
@@ -42,14 +41,11 @@ pub struct AgentSpendLimitChecked {
 pub struct ActionAuthorized {
     pub vault: Pubkey,
     pub agent: Pubkey,
-    pub action_type: ActionType,
+    pub is_spending: bool,
     pub token_mint: Pubkey,
     pub amount: u64,
     pub usd_amount: u64,
     pub protocol: Pubkey,
-    /// DEPRECATED (v5): Always 0 since outcome-based spending.
-    /// Actual rolling spend is in SessionFinalized.actual_spend_usd.
-    /// Retained for IDL backward compatibility.
     pub rolling_spend_usd_after: u64,
     pub daily_cap_usd: u64,
     pub delegated: bool,
@@ -64,12 +60,13 @@ pub struct SessionFinalized {
     pub is_expired: bool,
     pub timestamp: i64,
     /// Actual stablecoin spend measured by balance delta (0 for non-spending actions).
-    /// For stablecoin-input: outflow minus fees. For non-stablecoin-input: stablecoin gain.
     pub actual_spend_usd: u64,
     /// Vault stablecoin balance after this transaction (0 for non-spending).
     pub balance_after_usd: u64,
-    /// ActionType as u8 for downstream classification (permission_bit() value, 0-20).
-    pub action_type: u8,
+    /// Whether this was a spending action.
+    pub is_spending: bool,
+    /// Position effect: 0=None, 1=Increment, 2=Decrement.
+    pub position_effect: u8,
 }
 
 #[event]
@@ -91,7 +88,7 @@ pub struct AgentRevoked {
 pub struct VaultReactivated {
     pub vault: Pubkey,
     pub new_agent: Option<Pubkey>,
-    pub new_agent_permissions: Option<u64>,
+    pub new_agent_capability: Option<u8>,
     pub timestamp: i64,
 }
 

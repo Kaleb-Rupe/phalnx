@@ -66,10 +66,10 @@ pub mod sigil {
     pub fn register_agent(
         ctx: Context<RegisterAgent>,
         agent: Pubkey,
-        permissions: u64,
+        capability: u8,
         spending_limit_usd: u64,
     ) -> Result<()> {
-        instructions::register_agent::handler(ctx, agent, permissions, spending_limit_usd)
+        instructions::register_agent::handler(ctx, agent, capability, spending_limit_usd)
     }
 
     // update_policy DELETED — all policy changes now route through
@@ -81,20 +81,16 @@ pub mod sigil {
     /// Creates a SessionAuthority PDA, delegates tokens to agent.
     pub fn validate_and_authorize(
         ctx: Context<ValidateAndAuthorize>,
-        action_type: state::ActionType,
         token_mint: Pubkey,
         amount: u64,
         target_protocol: Pubkey,
-        leverage_bps: Option<u16>,
         expected_policy_version: u64,
     ) -> Result<()> {
         instructions::validate_and_authorize::handler(
             ctx,
-            action_type,
             token_mint,
             amount,
             target_protocol,
-            leverage_bps,
             expected_policy_version,
         )
     }
@@ -115,9 +111,9 @@ pub mod sigil {
     pub fn reactivate_vault(
         ctx: Context<ReactivateVault>,
         new_agent: Option<Pubkey>,
-        new_agent_permissions: Option<u64>,
+        new_agent_capability: Option<u8>,
     ) -> Result<()> {
-        instructions::reactivate_vault::handler(ctx, new_agent, new_agent_permissions)
+        instructions::reactivate_vault::handler(ctx, new_agent, new_agent_capability)
     }
 
     /// Withdraw tokens from the vault back to the owner.
@@ -280,13 +276,13 @@ pub mod sigil {
     pub fn queue_agent_permissions_update(
         ctx: Context<QueueAgentPermissionsUpdate>,
         agent: Pubkey,
-        new_permissions: u64,
+        new_capability: u8,
         spending_limit_usd: u64,
     ) -> Result<()> {
         instructions::queue_agent_permissions_update::handler(
             ctx,
             agent,
-            new_permissions,
+            new_capability,
             spending_limit_usd,
         )
     }

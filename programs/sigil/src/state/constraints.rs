@@ -217,6 +217,8 @@ mod tests {
             program_id: Pubkey::default(),
             data_constraints,
             account_constraints: vec![],
+            is_spending: 1,
+            position_effect: 0,
         }
     }
 
@@ -228,6 +230,8 @@ mod tests {
             program_id: Pubkey::default(),
             data_constraints,
             account_constraints,
+            is_spending: 1,
+            position_effect: 0,
         }
     }
 
@@ -424,6 +428,12 @@ pub(crate) fn pack_entries(
             dst[i].account_constraints[k].expected = ac.expected.to_bytes();
             dst[i].account_constraints[k].index = ac.index;
         }
+
+        // Copy spending classification + position effect to zero-copy layout.
+        // Without this, fields default to 0 (Pod zero-init), silently
+        // breaking spending classification and position tracking on-chain.
+        dst[i].is_spending = entry.is_spending;
+        dst[i].position_effect = entry.position_effect;
     }
     *count_out = entries.len() as u8;
     Ok(())

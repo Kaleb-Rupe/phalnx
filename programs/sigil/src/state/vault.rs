@@ -17,7 +17,7 @@ pub struct AgentEntry {
     pub paused: bool,            // 1 byte  — owner-controlled suspension
     pub _reserved: [u8; 7],      // 7 bytes — maintain layout size for account stability
 }
-// Total: 50 bytes per entry (32 + 1 + 8 + 1 + 7 = 49... wait, we need to maintain the same total)
+// Total: 49 bytes per entry (32 + 1 + 8 + 1 + 7 = 49, same as old layout with permissions: u64)
 
 #[account]
 pub struct AgentVault {
@@ -170,4 +170,3 @@ impl AgentVault {
     }
 }
 
-use super::ActionType;

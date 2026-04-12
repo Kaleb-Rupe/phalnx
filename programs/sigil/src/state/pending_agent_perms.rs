@@ -7,7 +7,8 @@ use anchor_lang::prelude::*;
 pub struct PendingAgentPermissionsUpdate {
     pub vault: Pubkey,
     pub agent: Pubkey,
-    pub new_permissions: u64,
+    pub new_capability: u8,
+    pub _reserved_cap: [u8; 7],
     pub spending_limit_usd: u64,
     pub queued_at: i64,
     pub executes_at: i64,
@@ -15,7 +16,7 @@ pub struct PendingAgentPermissionsUpdate {
 }
 
 impl PendingAgentPermissionsUpdate {
-    /// 8 (discriminator) + 32 (vault) + 32 (agent) + 8 (new_permissions)
+    /// 8 (discriminator) + 32 (vault) + 32 (agent) + 8 (new_capability + reserved)
     /// + 8 (spending_limit_usd) + 8 (queued_at) + 8 (executes_at) + 1 (bump)
     pub const SIZE: usize = 105;
 

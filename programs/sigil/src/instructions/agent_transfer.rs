@@ -106,13 +106,13 @@ pub fn handler(
         SigilError::AgentPaused
     );
 
-    // 1a. Agent must have Transfer permission (single lookup replaces has_permission + get_agent)
+    // 1a. Agent must have capability (single lookup replaces has_permission + get_agent)
     let agent_key = ctx.accounts.agent.key();
     let agent_entry = vault
         .get_agent(&agent_key)
         .ok_or(error!(SigilError::UnauthorizedAgent))?;
     require!(
-        agent_entry.permissions & (1u64 << ActionType::Transfer.permission_bit()) != 0,
+        vault.has_capability(&agent_key, true),
         SigilError::InsufficientPermissions
     );
 

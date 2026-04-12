@@ -158,7 +158,7 @@ mod treasury_tests {
         use super::*;
         assert_ne!(SESSION_EXPIRY_SLOTS, 0, "session expiry must be non-zero");
         assert!(MAX_AGENTS_PER_VAULT > 0, "must allow at least one agent");
-        assert!(FULL_PERMISSIONS > 0, "permissions bitmask must be non-zero");
+        assert!(FULL_CAPABILITY > 0, "capability value must be non-zero");
     }
 }
 
