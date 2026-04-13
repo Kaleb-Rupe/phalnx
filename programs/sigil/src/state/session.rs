@@ -53,6 +53,16 @@ pub struct SessionAuthority {
 
     /// Bump seed for PDA
     pub bump: u8,
+
+    /// Phase B2: Snapshots of target account bytes captured in validate_and_authorize
+    /// before DeFi instruction executes. Index i corresponds to PostAssertionEntry i.
+    /// Used by delta assertion modes (1=MaxDecrease, 2=MaxIncrease, 3=NoChange).
+    pub assertion_snapshots: [[u8; 32]; 4],
+
+    /// Phase B2: Actual value_len captured for each snapshot.
+    /// 0 = no snapshot captured (mode 0 entries). Non-zero = snapshot was captured.
+    /// finalize_session cross-checks snapshot_lens[i] == entry.value_len.
+    pub snapshot_lens: [u8; 4],
 }
 
 impl SessionAuthority {
@@ -60,8 +70,9 @@ impl SessionAuthority {
     /// amount (8) + token (32) + protocol (32) + is_spending (1) + position_effect (1) +
     /// expires (8) + delegated (1) + delegation_token_account (32) +
     /// protocol_fee (8) + developer_fee (8) +
-    /// output_mint (32) + stablecoin_balance_before (8) + bump (1)
-    pub const SIZE: usize = 8 + 32 + 32 + 1 + 8 + 32 + 32 + 1 + 1 + 8 + 1 + 32 + 8 + 8 + 32 + 8 + 1;
+    /// output_mint (32) + stablecoin_balance_before (8) + bump (1) +
+    /// assertion_snapshots (128) + snapshot_lens (4)
+    pub const SIZE: usize = 8 + 32 + 32 + 1 + 8 + 32 + 32 + 1 + 1 + 8 + 1 + 32 + 8 + 8 + 32 + 8 + 1 + 128 + 4;
 
     pub fn is_expired(&self, current_slot: u64) -> bool {
         current_slot > self.expires_at_slot

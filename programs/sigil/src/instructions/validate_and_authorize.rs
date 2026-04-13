@@ -253,6 +253,24 @@ pub fn handler(
     let current_idx = load_current_index_checked(&ix_sysvar)
         .map_err(|_| error!(SigilError::MissingFinalizeInstruction))?;
     let current_idx_usize = current_idx as usize;
+
+    // 5a. Backward instruction scan (Phase B2 security fix):
+    // Reject any non-infrastructure instructions BEFORE validate_and_authorize.
+    // Prevents DeFi-before-validate ordering attack where an agent places the
+    // DeFi instruction first to make snapshot capture post-modification state.
+    let compute_budget_id_backward = Pubkey::new_from_array([
+        3, 6, 70, 111, 229, 33, 23, 50, 255, 236, 173, 186, 114, 195, 155, 231, 188, 140, 229,
+        187, 197, 247, 18, 107, 44, 67, 155, 58, 64, 0, 0, 0,
+    ]);
+    for pre_idx in 0..current_idx_usize {
+        if let Ok(ix) = load_instruction_at_checked(pre_idx, &ix_sysvar) {
+            require!(
+                ix.program_id == compute_budget_id_backward
+                    || ix.program_id == anchor_lang::solana_program::system_program::ID,
+                SigilError::UnauthorizedPreValidateInstruction
+            );
+        }
+    }
     let spl_token_id = ctx.accounts.token_program.key();
     let compute_budget_id = Pubkey::new_from_array([
         3, 6, 70, 111, 229, 33, 23, 50, 255, 236, 173, 186, 114, 195, 155, 231, 188, 140, 229, 187,
@@ -601,6 +619,86 @@ pub fn handler(
     session.output_mint = output_mint;
     session.stablecoin_balance_before = stablecoin_balance_before;
     session.bump = ctx.bumps.session;
+    // Initialize snapshot fields to zero (default for non-delta sessions)
+    session.assertion_snapshots = [[0u8; 32]; 4];
+    session.snapshot_lens = [0u8; 4];
+
+    // ── Phase B2: Snapshot capture for delta assertions ─────────────────
+    // If the vault has post-assertions with delta modes (1-3), capture target
+    // account bytes BEFORE the DeFi instruction executes.
+    if policy.has_post_assertions != 0 {
+        // Find PostExecutionAssertions PDA in remaining_accounts via PDA derivation
+        let assertions_pda_expected =
+            Pubkey::create_program_address(
+                &[b"post_assertions", vault_key.as_ref(), &[{
+                    // We need the bump — derive it
+                    let (_, bump) = Pubkey::find_program_address(
+                        &[b"post_assertions", vault_key.as_ref()],
+                        &crate::ID,
+                    );
+                    bump
+                }]],
+                &crate::ID,
+            )
+            .map_err(|_| error!(SigilError::PostAssertionFailed))?;
+
+        // PDA-based lookup (not positional — security audit H2 fix)
+        let assertions_info = ctx
+            .remaining_accounts
+            .iter()
+            .find(|a| a.key() == assertions_pda_expected);
+
+        if let Some(assertions_info) = assertions_info {
+            require!(
+                assertions_info.owner == &crate::ID,
+                SigilError::PostAssertionFailed
+            );
+            let assertions_data = assertions_info.try_borrow_data()?;
+            let struct_size = core::mem::size_of::<PostExecutionAssertions>();
+            require!(
+                assertions_data.len() >= 8 + struct_size,
+                SigilError::PostAssertionFailed
+            );
+            let assertions: &PostExecutionAssertions =
+                bytemuck::from_bytes(&assertions_data[8..8 + struct_size]);
+            require!(
+                assertions.vault == vault_key.to_bytes(),
+                SigilError::PostAssertionFailed
+            );
+
+            let count = assertions.entry_count as usize;
+            for i in 0..count {
+                let entry = &assertions.entries[i];
+                // Only snapshot for delta modes (1=MaxDecrease, 2=MaxIncrease, 3=NoChange)
+                if entry.assertion_mode == 0 {
+                    continue;
+                }
+                // Hard-fail if delta assertion exists but we can't snapshot (security audit C1)
+                let target_pubkey = Pubkey::new_from_array(entry.target_account);
+                let target = ctx
+                    .remaining_accounts
+                    .iter()
+                    .find(|a| a.key() == target_pubkey);
+                require!(target.is_some(), SigilError::PostAssertionFailed);
+                let target = target.unwrap();
+                let target_data = target.try_borrow_data()?;
+
+                let offset = entry.offset as usize;
+                let len = entry.value_len as usize;
+                let end = offset
+                    .checked_add(len)
+                    .ok_or(error!(SigilError::PostAssertionFailed))?;
+                require!(end <= target_data.len(), SigilError::PostAssertionFailed);
+
+                // Capture snapshot
+                session.assertion_snapshots[i][..len]
+                    .copy_from_slice(&target_data[offset..end]);
+                session.snapshot_lens[i] = entry.value_len;
+            }
+        }
+        // Note: if assertions PDA not provided but policy says assertions exist,
+        // finalize_session will hard-fail (existing B1 defense at finalize line 508).
+    }
 
     emit!(ActionAuthorized {
         vault: vault_key,

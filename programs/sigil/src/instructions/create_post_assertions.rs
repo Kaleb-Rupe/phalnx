@@ -59,6 +59,11 @@ pub fn handler(ctx: Context<CreatePostAssertions>, entries: Vec<PostAssertionEnt
         zc.operator = entry.operator;
         zc.assertion_mode = entry.assertion_mode;
 
+        // Phase B3: copy CrossFieldLte fields (native → LE byte arrays for zero-copy)
+        zc.cross_field_offset_b = entry.cross_field_offset_b.to_le_bytes();
+        zc.cross_field_multiplier_bps = entry.cross_field_multiplier_bps.to_le_bytes();
+        zc.cross_field_flags = entry.cross_field_flags;
+
         // Copy expected value (padded to MAX_CONSTRAINT_VALUE_LEN)
         let len = entry
             .expected_value
