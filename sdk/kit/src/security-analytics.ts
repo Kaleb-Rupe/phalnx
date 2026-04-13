@@ -325,16 +325,18 @@ export function getSecurityPosture(state: ResolvedVaultState): SecurityPosture {
     },
     {
       id: "no-permission-concentration",
-      label: "No agent has excessive capability bits",
+      label: "No agent has full Operator capability",
       passed: !vault.agents.some(
-        (a: { permissions: bigint }) => countBits(a.permissions) > 1,
+        (a: { capability?: bigint | number; permissions?: bigint }) =>
+          BigInt(a.capability ?? a.permissions ?? 0n) >=
+          BigInt(FULL_CAPABILITY),
       ),
       severity: "warning",
       detail:
-        "An agent with multiple capability bits set may have more authority than intended. " +
-        "Use least-privilege — grant only the capability the agent's strategy requires.",
+        "An agent with Operator capability can perform any spending action. " +
+        "Use Observer capability for agents that only need non-spending access.",
       remediation:
-        "Review agent capability and restrict to only necessary bits.",
+        "Downgrade agent capability to Observer (1) if spending is not required.",
     },
     // ---- Step 18: 2 more checks (18-19) — council security findings ----
     {
