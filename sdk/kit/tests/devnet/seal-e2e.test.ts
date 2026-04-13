@@ -100,7 +100,7 @@ describe("Kit SDK Devnet — seal() + createVault() E2E", function () {
       expect(state.vault.owner).to.equal(owner.address);
       expect(state.vault.agents).to.have.length(1);
       expect(state.vault.agents[0].pubkey).to.equal(agent.address);
-      expect(state.vault.agents[0].permissions).to.equal(FULL_CAPABILITY);
+      expect(state.vault.agents[0].capability).to.equal(FULL_CAPABILITY);
       expect(state.policy.dailySpendingCapUsd).to.equal(500_000_000n);
 
       // Store for seal test

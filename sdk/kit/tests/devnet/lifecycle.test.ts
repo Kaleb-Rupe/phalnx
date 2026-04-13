@@ -88,7 +88,7 @@ describe("Kit SDK Devnet — Vault Lifecycle", function () {
       (a) => a.pubkey === agent.address,
     );
     expect(agentEntry).to.exist;
-    expect(agentEntry!.permissions).to.equal(FULL_CAPABILITY);
+    expect(agentEntry!.capability).to.equal(FULL_CAPABILITY);
 
     // Check daily spending cap
     expect(Number(state.policy.dailySpendingCapUsd)).to.equal(500_000_000);

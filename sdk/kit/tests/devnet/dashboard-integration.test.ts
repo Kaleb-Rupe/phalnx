@@ -138,8 +138,8 @@ describe("OwnerClient Devnet Integration", function () {
         const first = agents[0];
         expect(first.address).to.be.a("string");
         expect(first.status).to.be.oneOf(["active", "paused"]);
-        expect(typeof first.permissionBitmask).to.equal("bigint");
-        expect(first.permissions).to.be.an("array");
+        expect(typeof first.capability).to.equal("number");
+        expect(first.capabilityLabel).to.be.a("string");
         expect(typeof first.spending.amount).to.equal("bigint");
       }
     });

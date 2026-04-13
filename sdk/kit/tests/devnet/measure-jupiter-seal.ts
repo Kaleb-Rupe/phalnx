@@ -71,7 +71,7 @@ function mockState(): ResolvedVaultState {
       agents: [
         {
           pubkey: AGENT,
-          permissions: FULL_CAPABILITY,
+          capability: Number(FULL_CAPABILITY),
           spendingLimitUsd: 0n,
           paused: false,
         },

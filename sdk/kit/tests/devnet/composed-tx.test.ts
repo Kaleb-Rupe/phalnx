@@ -53,11 +53,9 @@ async function buildSwapInstructions(
     vaultTokenAccount: vaultTokenAta,
     tokenMintAccount: USDC_MINT_DEVNET,
     protocolTreasuryTokenAccount: protocolTreasuryAta,
-    actionType: 0 as any, // v6: ActionType eliminated, wire-compat placeholder
     tokenMint: USDC_MINT_DEVNET,
     amount,
     targetProtocol: JUPITER_PROGRAM_ADDRESS,
-    leverageBps: null,
     expectedPolicyVersion: 0n,
   });
 
