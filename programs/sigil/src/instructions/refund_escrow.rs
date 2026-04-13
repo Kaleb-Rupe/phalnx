@@ -74,8 +74,7 @@ pub fn handler(ctx: Context<RefundEscrow>) -> Result<()> {
             SigilError::AgentPaused
         );
         require!(
-            source_vault
-                .has_permission(&ctx.accounts.source_signer.key(), &ActionType::RefundEscrow),
+            source_vault.has_capability(&ctx.accounts.source_signer.key(), true),
             SigilError::InsufficientPermissions
         );
     }

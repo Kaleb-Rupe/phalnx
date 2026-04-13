@@ -121,7 +121,7 @@ pub fn handler(
 
     // 1. Permission check
     require!(
-        source_vault.has_permission(&ctx.accounts.agent.key(), &ActionType::CreateEscrow),
+        source_vault.has_capability(&ctx.accounts.agent.key(), true),
         SigilError::InsufficientPermissions
     );
 

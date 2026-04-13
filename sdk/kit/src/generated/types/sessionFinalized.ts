@@ -32,15 +32,14 @@ export type SessionFinalized = {
   success: boolean;
   isExpired: boolean;
   timestamp: bigint;
-  /**
-   * Actual stablecoin spend measured by balance delta (0 for non-spending actions).
-   * For stablecoin-input: outflow minus fees. For non-stablecoin-input: stablecoin gain.
-   */
+  /** Actual stablecoin spend measured by balance delta (0 for non-spending actions). */
   actualSpendUsd: bigint;
   /** Vault stablecoin balance after this transaction (0 for non-spending). */
   balanceAfterUsd: bigint;
-  /** ActionType as u8 for downstream classification (permission_bit() value, 0-20). */
-  actionType: number;
+  /** Whether this was a spending action. */
+  isSpending: boolean;
+  /** Position effect: 0=None, 1=Increment, 2=Decrement. */
+  positionEffect: number;
 };
 
 export type SessionFinalizedArgs = {
@@ -49,15 +48,14 @@ export type SessionFinalizedArgs = {
   success: boolean;
   isExpired: boolean;
   timestamp: number | bigint;
-  /**
-   * Actual stablecoin spend measured by balance delta (0 for non-spending actions).
-   * For stablecoin-input: outflow minus fees. For non-stablecoin-input: stablecoin gain.
-   */
+  /** Actual stablecoin spend measured by balance delta (0 for non-spending actions). */
   actualSpendUsd: number | bigint;
   /** Vault stablecoin balance after this transaction (0 for non-spending). */
   balanceAfterUsd: number | bigint;
-  /** ActionType as u8 for downstream classification (permission_bit() value, 0-20). */
-  actionType: number;
+  /** Whether this was a spending action. */
+  isSpending: boolean;
+  /** Position effect: 0=None, 1=Increment, 2=Decrement. */
+  positionEffect: number;
 };
 
 export function getSessionFinalizedEncoder(): FixedSizeEncoder<SessionFinalizedArgs> {
@@ -69,7 +67,8 @@ export function getSessionFinalizedEncoder(): FixedSizeEncoder<SessionFinalizedA
     ["timestamp", getI64Encoder()],
     ["actualSpendUsd", getU64Encoder()],
     ["balanceAfterUsd", getU64Encoder()],
-    ["actionType", getU8Encoder()],
+    ["isSpending", getBooleanEncoder()],
+    ["positionEffect", getU8Encoder()],
   ]);
 }
 
@@ -82,7 +81,8 @@ export function getSessionFinalizedDecoder(): FixedSizeDecoder<SessionFinalized>
     ["timestamp", getI64Decoder()],
     ["actualSpendUsd", getU64Decoder()],
     ["balanceAfterUsd", getU64Decoder()],
-    ["actionType", getU8Decoder()],
+    ["isSpending", getBooleanDecoder()],
+    ["positionEffect", getU8Decoder()],
   ]);
 }
 

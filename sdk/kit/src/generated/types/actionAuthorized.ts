@@ -23,26 +23,15 @@ import {
   type FixedSizeDecoder,
   type FixedSizeEncoder,
 } from "@solana/kit";
-import {
-  getActionTypeDecoder,
-  getActionTypeEncoder,
-  type ActionType,
-  type ActionTypeArgs,
-} from "./index.js";
 
 export type ActionAuthorized = {
   vault: Address;
   agent: Address;
-  actionType: ActionType;
+  isSpending: boolean;
   tokenMint: Address;
   amount: bigint;
   usdAmount: bigint;
   protocol: Address;
-  /**
-   * DEPRECATED (v5): Always 0 since outcome-based spending.
-   * Actual rolling spend is in SessionFinalized.actual_spend_usd.
-   * Retained for IDL backward compatibility.
-   */
   rollingSpendUsdAfter: bigint;
   dailyCapUsd: bigint;
   delegated: boolean;
@@ -52,16 +41,11 @@ export type ActionAuthorized = {
 export type ActionAuthorizedArgs = {
   vault: Address;
   agent: Address;
-  actionType: ActionTypeArgs;
+  isSpending: boolean;
   tokenMint: Address;
   amount: number | bigint;
   usdAmount: number | bigint;
   protocol: Address;
-  /**
-   * DEPRECATED (v5): Always 0 since outcome-based spending.
-   * Actual rolling spend is in SessionFinalized.actual_spend_usd.
-   * Retained for IDL backward compatibility.
-   */
   rollingSpendUsdAfter: number | bigint;
   dailyCapUsd: number | bigint;
   delegated: boolean;
@@ -72,7 +56,7 @@ export function getActionAuthorizedEncoder(): FixedSizeEncoder<ActionAuthorizedA
   return getStructEncoder([
     ["vault", getAddressEncoder()],
     ["agent", getAddressEncoder()],
-    ["actionType", getActionTypeEncoder()],
+    ["isSpending", getBooleanEncoder()],
     ["tokenMint", getAddressEncoder()],
     ["amount", getU64Encoder()],
     ["usdAmount", getU64Encoder()],
@@ -88,7 +72,7 @@ export function getActionAuthorizedDecoder(): FixedSizeDecoder<ActionAuthorized>
   return getStructDecoder([
     ["vault", getAddressDecoder()],
     ["agent", getAddressDecoder()],
-    ["actionType", getActionTypeDecoder()],
+    ["isSpending", getBooleanDecoder()],
     ["tokenMint", getAddressDecoder()],
     ["amount", getU64Decoder()],
     ["usdAmount", getU64Decoder()],

@@ -12,6 +12,7 @@ import {
   type PresetName,
 } from "../src/presets.js";
 import {
+  FULL_CAPABILITY,
   FULL_PERMISSIONS,
   SWAP_ONLY,
   PERPS_FULL,
@@ -46,10 +47,9 @@ describe("VAULT_PRESETS", () => {
         expect(preset.description).to.be.a("string").with.length.greaterThan(0);
       });
 
-      it("has valid permissions (fits in 21 bits)", () => {
-        expect(preset.permissions).to.be.a("bigint");
-        expect(preset.permissions >= 0n).to.be.true;
-        expect(preset.permissions <= FULL_PERMISSIONS).to.be.true;
+      it("has valid capability (non-negative bigint)", () => {
+        expect(preset.capability).to.be.a("bigint");
+        expect(preset.capability >= 0n).to.be.true;
       });
 
       it("has positive spending caps", () => {
@@ -90,8 +90,8 @@ describe("VAULT_PRESETS", () => {
 // ─── Specific Preset Values ──────────────────────────────────────────────────
 
 describe("preset values", () => {
-  it("jupiter-swap-bot has SWAP_ONLY permissions", () => {
-    expect(VAULT_PRESETS["jupiter-swap-bot"].permissions).to.equal(SWAP_ONLY);
+  it("jupiter-swap-bot has SWAP_ONLY capability", () => {
+    expect(VAULT_PRESETS["jupiter-swap-bot"].capability).to.equal(SWAP_ONLY);
   });
 
   it("jupiter-swap-bot includes Jupiter in allowlist", () => {
@@ -100,8 +100,8 @@ describe("preset values", () => {
     );
   });
 
-  it("perps-trader has perps + swap permissions", () => {
-    const perms = VAULT_PRESETS["perps-trader"].permissions;
+  it("perps-trader has perps + swap capability", () => {
+    const perms = VAULT_PRESETS["perps-trader"].capability;
     // Should include both PERPS_FULL and SWAP_ONLY
     expect(perms & SWAP_ONLY).to.equal(SWAP_ONLY);
     expect(perms & PERPS_FULL).to.equal(PERPS_FULL);
@@ -111,16 +111,17 @@ describe("preset values", () => {
     expect(VAULT_PRESETS["perps-trader"].maxLeverageBps).to.be.greaterThan(0);
   });
 
-  it("lending-optimizer has deposit + withdraw permissions", () => {
-    const perms = VAULT_PRESETS["lending-optimizer"].permissions;
+  it("lending-optimizer has deposit + withdraw capability", () => {
+    const perms = VAULT_PRESETS["lending-optimizer"].capability;
     const DEPOSIT = 1n << 5n;
     const WITHDRAW = 1n << 6n;
     expect(perms & DEPOSIT).to.equal(DEPOSIT);
     expect(perms & WITHDRAW).to.equal(WITHDRAW);
   });
 
-  it("full-access has FULL_PERMISSIONS", () => {
-    expect(VAULT_PRESETS["full-access"].permissions).to.equal(FULL_PERMISSIONS);
+  it("full-access has FULL_CAPABILITY", () => {
+    expect(VAULT_PRESETS["full-access"].capability).to.equal(FULL_CAPABILITY);
+    expect(VAULT_PRESETS["full-access"].capability).to.equal(FULL_CAPABILITY);
   });
 
   it("full-access uses protocol mode all", () => {

@@ -39,7 +39,7 @@ pub struct QueueAgentPermissionsUpdate<'info> {
 pub fn handler(
     ctx: Context<QueueAgentPermissionsUpdate>,
     agent: Pubkey,
-    new_permissions: u64,
+    new_capability: u8,
     spending_limit_usd: u64,
 ) -> Result<()> {
     crate::reject_cpi!();
@@ -64,9 +64,9 @@ pub fn handler(
         SigilError::UnauthorizedAgent
     );
 
-    // Validate permissions bitmask
+    // Validate capability
     require!(
-        new_permissions & !FULL_PERMISSIONS == 0,
+        new_capability <= FULL_CAPABILITY,
         SigilError::InvalidPermissions
     );
 
@@ -74,7 +74,7 @@ pub fn handler(
     let pending = &mut ctx.accounts.pending_agent_perms;
     pending.vault = vault.key();
     pending.agent = agent;
-    pending.new_permissions = new_permissions;
+    pending.new_capability = new_capability;
     pending.spending_limit_usd = spending_limit_usd;
     pending.queued_at = clock.unix_timestamp;
     pending.executes_at = clock

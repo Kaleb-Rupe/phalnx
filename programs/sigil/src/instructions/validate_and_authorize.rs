@@ -13,7 +13,7 @@ use super::integrations::{generic_constraints, jupiter};
 use crate::state::PositionEffect;
 
 #[derive(Accounts)]
-#[instruction(action_type: ActionType, token_mint: Pubkey)]
+#[instruction(token_mint: Pubkey)]
 pub struct ValidateAndAuthorize<'info> {
     #[account(mut)]
     pub agent: Signer<'info>,
@@ -109,11 +109,9 @@ pub struct ValidateAndAuthorize<'info> {
 
 pub fn handler(
     ctx: Context<ValidateAndAuthorize>,
-    action_type: ActionType,
     token_mint: Pubkey,
     amount: u64,
     target_protocol: Pubkey,
-    leverage_bps: Option<u16>,
     expected_policy_version: u64,
 ) -> Result<()> {
     // 0. Reject CPI calls — only top-level transaction instructions allowed.
@@ -128,13 +126,13 @@ pub fn handler(
     let clock = Clock::get()?;
 
     // TOCTOU fix: reject if policy changed since agent's off-chain RPC read.
-    // This closes the off-chain-read to on-chain-execution race completely.
     require!(
         policy.policy_version == expected_policy_version,
         SigilError::PolicyVersionMismatch
     );
     let vault_key = vault.key();
-    let is_spending = action_type.is_spending();
+    // Spending classification: amount > 0 = spending, amount == 0 = non-spending.
+    let is_spending = amount > 0;
     let is_stablecoin_input = is_stablecoin_mint(&token_mint);
 
     // Load zero-copy constraints PDA from remaining_accounts.
@@ -188,22 +186,11 @@ pub fn handler(
         SigilError::AgentPaused
     );
 
-    // 1a. Agent must have permission for this action type
+    // 1a. Agent must have capability for the spending level
     require!(
-        vault.has_permission(&ctx.accounts.agent.key(), &action_type),
+        vault.has_capability(&ctx.accounts.agent.key(), is_spending),
         SigilError::InsufficientPermissions
     );
-
-    // 1b. Escrow actions use standalone instructions, not the composition flow
-    require!(!action_type.is_escrow_action(), SigilError::InvalidSession);
-
-    // 1c. Amount validation: spending requires amount > 0,
-    //     non-spending requires amount == 0
-    if is_spending {
-        require!(amount > 0, SigilError::TransactionTooLarge);
-    } else {
-        require!(amount == 0, SigilError::InvalidNonSpendingAmount);
-    }
 
     // 2. Protocol must be allowed (mode-based check) — ALL actions
     require!(
@@ -279,7 +266,10 @@ pub fn handler(
     enum ScanAction {
         FoundFinalize,
         Infrastructure,
-        PassedSharedChecks,
+        /// Passed shared checks. Contains the index of the matched constraint entry (if any).
+        PassedSharedChecks {
+            matched_entry_idx: Option<usize>,
+        },
     }
 
     fn scan_instruction_shared(
@@ -296,11 +286,6 @@ pub fn handler(
         }
 
         // Block dangerous top-level SPL Token instructions.
-        // Approve(4), ApproveChecked(13): delegate could drain vault.
-        // Transfer(3), TransferChecked(12): direct token theft.
-        // SetAuthority(6), CloseAccount(9): defense-in-depth (require vault PDA sig,
-        //   but CPI from compromised whitelisted DeFi program could exploit).
-        // Burn(8), BurnChecked(15): delegate can burn (SPL delegation grants burn).
         if ix.program_id == *spl_token_id && !ix.data.is_empty() {
             match ix.data[0] {
                 4 | 13 => return Err(error!(SigilError::UnauthorizedTokenApproval)),
@@ -334,25 +319,31 @@ pub fn handler(
         );
 
         // Generic instruction constraints (OR across entries, zero-copy)
-        if let Some(constraints) = loaded_constraints {
+        let matched_entry_idx = if let Some(constraints) = loaded_constraints {
             let matched = generic_constraints::verify_against_entries_zc(
                 constraints,
                 &ix.program_id,
                 &ix.data,
                 &ix.accounts,
             )?;
-            if !matched && constraints.strict_mode != 0 {
+            if matched.is_none() && constraints.strict_mode != 0 {
                 return Err(error!(SigilError::UnconstrainedProgramBlocked));
             }
-        }
+            matched
+        } else {
+            None
+        };
 
-        Ok(ScanAction::PassedSharedChecks)
+        Ok(ScanAction::PassedSharedChecks { matched_entry_idx })
     }
 
     // 6. Instruction scan — validates all instructions between validate and finalize.
     // Shared checks (scan_instruction_shared): SPL/Token-2022 blocking, infrastructure
     // whitelist, protocol allowlist, generic constraints.
     // Spending-only checks (inline): recognized DeFi, ProtocolMismatch, defi_ix_count, Jupiter slippage.
+    // Track position effect from matched DeFi constraint entry (default: None = 0).
+    let mut defi_position_effect: u8 = 0;
+
     if is_spending {
         let mut defi_ix_count: u8 = 0;
         let mut found_finalize = false;
@@ -375,7 +366,7 @@ pub fn handler(
                     scan_idx = scan_idx.saturating_add(1);
                     continue;
                 }
-                ScanAction::PassedSharedChecks => {
+                ScanAction::PassedSharedChecks { matched_entry_idx } => {
                     // === SPENDING-ONLY CHECKS (must remain inline) ===
 
                     // Recognized DeFi: protocol mismatch + defi_ix_count
@@ -391,6 +382,13 @@ pub fn handler(
                             SigilError::ProtocolMismatch
                         );
                         defi_ix_count = defi_ix_count.saturating_add(1);
+
+                        // Capture position effect from matched constraint entry
+                        if let Some(idx) = matched_entry_idx {
+                            if let Some(constraints) = loaded_constraints {
+                                defi_position_effect = constraints.entries[idx].position_effect;
+                            }
+                        }
                     }
 
                     // Slippage verification on Jupiter V6 swaps
@@ -412,8 +410,7 @@ pub fn handler(
         require!(found_finalize, SigilError::MissingFinalizeInstruction);
     }
 
-    // 6b. Non-spending instruction scan — validates all instructions between
-    // validate and finalize using shared checks only (no spending-specific logic).
+    // 6b. Non-spending instruction scan
     if !is_spending {
         let mut found_finalize = false;
         let mut idx = current_idx_usize.saturating_add(1);
@@ -435,8 +432,13 @@ pub fn handler(
                     idx = idx.saturating_add(1);
                     continue;
                 }
-                ScanAction::PassedSharedChecks => {
-                    // Non-spending has no additional checks beyond shared ones.
+                ScanAction::PassedSharedChecks { matched_entry_idx } => {
+                    // Capture position effect for non-spending DeFi instructions too
+                    if let Some(entry_idx) = matched_entry_idx {
+                        if let Some(constraints) = loaded_constraints {
+                            defi_position_effect = constraints.entries[entry_idx].position_effect;
+                        }
+                    }
                 }
             }
             idx = idx.saturating_add(1);
@@ -445,29 +447,13 @@ pub fn handler(
         require!(found_finalize, SigilError::MissingFinalizeInstruction);
     }
 
-    // 7. Leverage check (for perp actions) — ALL actions
-    // DESIGN DECISION: leverage_bps is self-declared by the agent (via SDK).
-    // The program checks it against policy.max_leverage_bps but does NOT
-    // read actual position state from Flash Trade or other protocols.
-    //
-    // Rationale:
-    // - Protocol-agnostic: no coupling to Flash Trade account layout
-    // - CPI depth: reading position state consumes CPI budget
-    // - Outcome-based: finalize_session measures actual stablecoin delta
-    // - Advisory only: agent can under-declare or pass None to skip this check.
-    //   Spending caps (finalize_session) are the real enforcement, not leverage_bps.
-    //
-    // Found by: Persona test (Perps Developer "Jake")
-    // Decision: By design. Not a bug.
-    if let Some(lev) = leverage_bps {
-        require!(
-            policy.is_leverage_within_limit(lev),
-            SigilError::LeverageTooHigh
-        );
-    }
-
-    // 8. Position effect checks
-    match action_type.position_effect() {
+    // 7. Position effect checks — derived from matched constraint entry
+    let position_effect = match defi_position_effect {
+        1 => PositionEffect::Increment,
+        2 => PositionEffect::Decrement,
+        _ => PositionEffect::None,
+    };
+    match position_effect {
         PositionEffect::Increment => {
             require!(
                 policy.can_open_positions,
@@ -604,7 +590,8 @@ pub fn handler(
     session.authorized_amount = amount;
     session.authorized_token = token_mint;
     session.authorized_protocol = target_protocol;
-    session.action_type = action_type;
+    session.is_spending = is_spending;
+    session.position_effect = defi_position_effect;
     session.expires_at_slot =
         SessionAuthority::calculate_expiry(clock.slot, policy.effective_session_expiry_slots());
     session.delegation_token_account = ctx.accounts.vault_token_account.key();
@@ -618,12 +605,12 @@ pub fn handler(
     emit!(ActionAuthorized {
         vault: vault_key,
         agent: ctx.accounts.agent.key(),
-        action_type,
+        is_spending,
         token_mint,
         amount,
-        usd_amount: amount, // Declared input amount (USD for stablecoin input, raw for non-stablecoin)
+        usd_amount: amount,
         protocol: target_protocol,
-        rolling_spend_usd_after: 0, // DEPRECATED: use SessionFinalized.actual_spend_usd
+        rolling_spend_usd_after: 0,
         daily_cap_usd: policy.daily_spending_cap_usd,
         delegated: is_spending,
         timestamp: clock.unix_timestamp,

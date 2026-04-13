@@ -20,7 +20,7 @@ pub struct ReactivateVault<'info> {
 pub fn handler(
     ctx: Context<ReactivateVault>,
     new_agent: Option<Pubkey>,
-    new_agent_permissions: Option<u64>,
+    new_agent_capability: Option<u8>,
 ) -> Result<()> {
     crate::reject_cpi!();
 
@@ -32,19 +32,19 @@ pub fn handler(
         SigilError::VaultNotFrozen
     );
 
-    // 2. Validate mutual presence of new_agent and new_agent_permissions
+    // 2. Validate mutual presence of new_agent and new_agent_capability
     require!(
-        new_agent.is_some() == new_agent_permissions.is_some(),
+        new_agent.is_some() == new_agent_capability.is_some(),
         SigilError::InvalidPermissions
     );
 
     // 3. Optionally assign new agent
     if let Some(agent_key) = new_agent {
-        let permissions = new_agent_permissions.unwrap();
+        let capability = new_agent_capability.unwrap();
         require!(agent_key != Pubkey::default(), SigilError::InvalidAgentKey);
         require!(agent_key != vault.owner, SigilError::AgentIsOwner);
         require!(
-            permissions & !FULL_PERMISSIONS == 0,
+            capability <= FULL_CAPABILITY,
             SigilError::InvalidPermissions
         );
         require!(
@@ -57,7 +57,8 @@ pub fn handler(
         );
         vault.agents.push(AgentEntry {
             pubkey: agent_key,
-            permissions,
+            capability,
+            _reserved: [0u8; 7],
             spending_limit_usd: 0, // reactivation agent starts with no per-agent limit
             paused: false,
         });
@@ -73,7 +74,7 @@ pub fn handler(
     emit!(VaultReactivated {
         vault: vault.key(),
         new_agent,
-        new_agent_permissions,
+        new_agent_capability,
         timestamp: clock.unix_timestamp,
     });
 

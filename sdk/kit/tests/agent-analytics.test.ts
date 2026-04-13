@@ -29,7 +29,7 @@ function mockStateWithAgents(
     });
     return {
       pubkey: a.pubkey as Address,
-      permissions: a.perms,
+      capability: Number(a.perms),
       spendingLimitUsd: a.limit,
       paused: a.paused ?? false,
     };
@@ -53,7 +53,7 @@ describe("getAgentProfile", () => {
     expect(profile).to.not.be.null;
     expect(profile!.capUtilization).to.equal(40);
     expect(profile!.isApproachingCap).to.equal(false);
-    expect(profile!.hasFullPermissions).to.equal(false);
+    expect(profile!.hasFullCapability).to.equal(false);
   });
 
   it("returns null for unregistered agent", () => {
@@ -63,13 +63,14 @@ describe("getAgentProfile", () => {
     expect(getAgentProfile(state, "agent999" as Address)).to.be.null;
   });
 
-  it("detects FULL_PERMISSIONS", () => {
+  it("detects FULL_CAPABILITY", () => {
     const state = mockStateWithAgents([
       { pubkey: "agent1", spend: 0n, limit: 0n, perms: FULL_PERMISSIONS },
     ]);
     const profile = getAgentProfile(state, "agent1" as Address);
-    expect(profile!.hasFullPermissions).to.equal(true);
-    expect(profile!.permissionCount).to.equal(21);
+    expect(profile!.hasFullCapability).to.equal(true);
+    // FULL_CAPABILITY = 2 (Operator level)
+    expect(profile!.capability).to.equal(Number(FULL_PERMISSIONS));
   });
 
   it("detects approaching cap (>80%)", () => {

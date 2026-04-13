@@ -88,10 +88,9 @@ pub fn handler(ctx: Context<SettleEscrow>, proof: Vec<u8>) -> Result<()> {
 
     // 1. Permission check
     require!(
-        ctx.accounts.destination_vault.has_permission(
-            &ctx.accounts.destination_agent.key(),
-            &ActionType::SettleEscrow
-        ),
+        ctx.accounts
+            .destination_vault
+            .has_capability(&ctx.accounts.destination_agent.key(), true),
         SigilError::InsufficientPermissions
     );
 

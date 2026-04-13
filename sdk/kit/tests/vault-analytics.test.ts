@@ -82,14 +82,14 @@ describe("getVaultHealth", () => {
     expect(health.status).to.equal("Frozen");
   });
 
-  it("reports unhealthy when agent has FULL_PERMISSIONS", () => {
+  it("reports unhealthy when agent has FULL_CAPABILITY", () => {
     const health = getVaultHealth(
       mockState({
         vault: {
           agents: [
             {
               pubkey: "agent1",
-              permissions: FULL_PERMISSIONS,
+              capability: Number(FULL_PERMISSIONS),
               spendingLimitUsd: 0n,
               paused: false,
             },

@@ -448,42 +448,56 @@ const ACTION_NAMES = [
 /**
  * Ratio of granted permission bits actually exercised by each agent.
  * Shows which ActionTypes agents use vs what they're granted — security surface analysis.
+ *
+ * Handles both legacy (actionType enum) and new v6 (isSpending + positionEffect) event formats.
  */
 export function getPermissionUtilizationRate(
-  state: { vault: { agents: Array<{ pubkey: Address; permissions: bigint }> } },
+  state: { vault: { agents: Array<{ pubkey: Address; capability: number }> } },
   events: DecodedSigilEvent[],
 ): PermissionUtilization {
-  // Count which ActionTypes each agent has used
+  // Count which action categories each agent has used
   const agentActionUsage = new Map<string, Set<string>>();
   for (const e of events) {
-    if (
-      e.name === "ActionAuthorized" &&
-      e.fields?.agent &&
-      e.fields?.actionType
-    ) {
+    if (e.name === "ActionAuthorized" && e.fields?.agent) {
       const agent = e.fields.agent as string;
-      const actionObj = e.fields.actionType as { __kind: string } | number;
-      const actionName =
-        typeof actionObj === "object" && "__kind" in actionObj
-          ? actionObj.__kind
-          : (ACTION_NAMES[Number(actionObj)] ?? "Unknown");
-
       if (!agentActionUsage.has(agent)) agentActionUsage.set(agent, new Set());
-      agentActionUsage.get(agent)!.add(actionName);
+
+      // v6 event format: isSpending + positionEffect
+      if (e.fields.isSpending != null) {
+        const label = (e.fields.isSpending as boolean)
+          ? "Spending"
+          : "NonSpending";
+        agentActionUsage.get(agent)!.add(label);
+        const effect = e.fields.positionEffect as string | undefined;
+        if (effect && effect !== "none") {
+          agentActionUsage.get(agent)!.add(`Position:${effect}`);
+        }
+      } else if (e.fields.actionType) {
+        // Legacy event format
+        const actionObj = e.fields.actionType as { __kind: string } | number;
+        const actionName =
+          typeof actionObj === "object" && "__kind" in actionObj
+            ? actionObj.__kind
+            : (ACTION_NAMES[Number(actionObj)] ?? "Unknown");
+        agentActionUsage.get(agent)!.add(actionName);
+      }
     }
   }
 
   const globalActionCounts = new Map<string, number>();
   const byAgent: PermissionUtilization["byAgent"] = [];
 
+  // Capability-based granted permissions:
+  // 0=Disabled (no permissions), 1=Observer (NonSpending), 2=Operator (Spending + NonSpending)
+  const CAPABILITY_GRANTS: Record<number, string[]> = {
+    0: [],
+    1: ["NonSpending"],
+    2: ["Spending", "NonSpending"],
+  };
+
   for (const agentEntry of state.vault.agents) {
     const agent = agentEntry.pubkey;
-    const granted: string[] = [];
-    for (let bit = 0; bit < 21; bit++) {
-      if ((agentEntry.permissions & (1n << BigInt(bit))) !== 0n) {
-        granted.push(ACTION_NAMES[bit]);
-      }
-    }
+    const granted = CAPABILITY_GRANTS[agentEntry.capability] ?? [];
 
     const exercised =
       agentActionUsage.get(agent as string) ?? new Set<string>();

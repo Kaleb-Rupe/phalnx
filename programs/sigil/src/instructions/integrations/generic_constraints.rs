@@ -219,17 +219,17 @@ pub fn verify_account_constraints_zc(
 
 /// Zero-copy variant: verify an instruction against all constraint entries.
 /// Multiple entries with the same program_id are ORed.
-/// Returns Ok(true) if matched and passed, Ok(false) if no entries matched.
+/// Returns Ok(None) if no entries matched, Ok(Some(index)) with the matched entry index.
 pub fn verify_against_entries_zc(
     constraints: &InstructionConstraints,
     program_id: &Pubkey,
     ix_data: &[u8],
     ix_accounts: &[AccountMeta],
-) -> Result<bool> {
+) -> Result<Option<usize>> {
     let program_bytes = program_id.to_bytes();
     let count = constraints.entry_count as usize;
     let mut found_any = false;
-    let mut any_passed = false;
+    let mut matched_index: Option<usize> = None;
 
     for i in 0..count {
         let entry = &constraints.entries[i];
@@ -240,16 +240,16 @@ pub fn verify_against_entries_zc(
         let data_ok = verify_data_constraints_zc(ix_data, entry).is_ok();
         let acct_ok = verify_account_constraints_zc(ix_accounts, entry).is_ok();
         if data_ok && acct_ok {
-            any_passed = true;
+            matched_index = Some(i);
             break;
         }
     }
 
     if !found_any {
-        return Ok(false);
+        return Ok(None);
     }
-    require!(any_passed, SigilError::ConstraintViolated);
-    Ok(true)
+    require!(matched_index.is_some(), SigilError::ConstraintViolated);
+    Ok(matched_index)
 }
 
 #[cfg(test)]
@@ -382,11 +382,15 @@ mod tests {
                 program_id: pk1,
                 data_constraints: vec![],
                 account_constraints: vec![],
+                is_spending: 1,
+                position_effect: 0,
             },
             ConstraintEntry {
                 program_id: pk2,
                 data_constraints: vec![],
                 account_constraints: vec![],
+                is_spending: 1,
+                position_effect: 0,
             },
         ];
         assert!(find_constraint_entry(&entries, &pk1).is_some());
@@ -402,11 +406,15 @@ mod tests {
                 program_id: pk,
                 data_constraints: vec![dc(0, ConstraintOperator::Eq, vec![0xFF])],
                 account_constraints: vec![],
+                is_spending: 1,
+                position_effect: 0,
             },
             ConstraintEntry {
                 program_id: pk,
                 data_constraints: vec![dc(0, ConstraintOperator::Eq, vec![0xAA])],
                 account_constraints: vec![],
+                is_spending: 1,
+                position_effect: 0,
             },
         ];
         let ix_data = vec![0xAA];
@@ -425,11 +433,15 @@ mod tests {
                 program_id: pk,
                 data_constraints: vec![dc(0, ConstraintOperator::Eq, vec![0xFF])],
                 account_constraints: vec![],
+                is_spending: 1,
+                position_effect: 0,
             },
             ConstraintEntry {
                 program_id: pk,
                 data_constraints: vec![dc(0, ConstraintOperator::Eq, vec![0xEE])],
                 account_constraints: vec![],
+                is_spending: 1,
+                position_effect: 0,
             },
         ];
         let ix_data = vec![0xAA];
@@ -444,6 +456,8 @@ mod tests {
             program_id: pk,
             data_constraints: vec![dc(0, ConstraintOperator::Eq, vec![0xAA])],
             account_constraints: vec![],
+            is_spending: 1,
+            position_effect: 0,
         }];
         let ix_data = vec![0xAA];
         assert_eq!(
@@ -460,6 +474,8 @@ mod tests {
             program_id: pk1,
             data_constraints: vec![dc(0, ConstraintOperator::Eq, vec![0xAA])],
             account_constraints: vec![],
+            is_spending: 1,
+            position_effect: 0,
         }];
         let ix_data = vec![0xAA];
         // No entries for pk2 → Ok(false)

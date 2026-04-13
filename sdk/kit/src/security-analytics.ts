@@ -20,7 +20,7 @@ import { getSpendingVelocity } from "./spending-analytics.js";
 import { describeEvent } from "./event-analytics.js";
 import { formatUsd, formatAddress } from "./formatting.js";
 import {
-  FULL_PERMISSIONS,
+  FULL_CAPABILITY,
   PROTOCOL_MODE_ALLOWLIST,
   EPOCH_DURATION,
   MAX_DEVELOPER_FEE_RATE,
@@ -96,13 +96,17 @@ export function getSecurityPosture(state: ResolvedVaultState): SecurityPosture {
   const checks: SecurityCheck[] = [
     {
       id: "no-full-perms",
-      label: "No agent has full permissions",
-      passed: !vault.agents.some((a) => a.permissions === FULL_PERMISSIONS),
+      label: "No agent has full capability",
+      passed: !vault.agents.some(
+        (a) => a.capability === Number(FULL_CAPABILITY),
+      ),
       severity: "critical",
       detail:
-        "An agent with all 21 permission bits can perform any action including transfers.",
-      remediation: vault.agents.some((a) => a.permissions === FULL_PERMISSIONS)
-        ? "Restrict agent permissions to only the actions they need."
+        "An agent with full capability can perform any action including transfers.",
+      remediation: vault.agents.some(
+        (a) => a.capability === Number(FULL_CAPABILITY),
+      )
+        ? "Restrict agent capability to only the actions they need."
         : null,
     },
     {
@@ -325,16 +329,16 @@ export function getSecurityPosture(state: ResolvedVaultState): SecurityPosture {
     },
     {
       id: "no-permission-concentration",
-      label: "No agent has more than 15 permissions",
+      label: "No agent has full Operator capability",
       passed: !vault.agents.some(
-        (a: { permissions: bigint }) => countBits(a.permissions) > 15,
+        (a) => a.capability >= Number(FULL_CAPABILITY),
       ),
       severity: "warning",
       detail:
-        "An agent with more than 15 of 21 permission bits is effectively unrestricted. " +
-        "Use least-privilege — grant only the actions the agent's strategy requires.",
+        "An agent with Operator capability can perform any spending action. " +
+        "Use Observer capability for agents that only need non-spending access.",
       remediation:
-        "Review agent permissions and restrict to only necessary action types.",
+        "Downgrade agent capability to Observer (1) if spending is not required.",
     },
     // ---- Step 18: 2 more checks (18-19) — council security findings ----
     {

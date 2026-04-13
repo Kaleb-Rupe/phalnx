@@ -77,8 +77,8 @@ describe("Dashboard types — toJSON serialization", () => {
     const agent: AgentData = {
       address: "agent1",
       status: "active",
-      permissions: ["Swap"],
-      permissionBitmask: 1n,
+      capabilityLabel: "Operator",
+      capability: 2,
       spending: { amount: 1_840_000_000n, limit: 2_000_000_000n, percent: 92 },
       lastActionType: "swap",
       lastActionProtocol: "Jupiter",
@@ -87,8 +87,8 @@ describe("Dashboard types — toJSON serialization", () => {
       toJSON: () => ({
         address: "agent1",
         status: "active",
-        permissions: ["Swap"],
-        permissionBitmask: "1",
+        capabilityLabel: "Operator",
+        capability: 2,
         spending: { amount: "1840000000", limit: "2000000000", percent: 92 },
         lastActionType: "swap",
         lastActionProtocol: "Jupiter",
@@ -98,7 +98,7 @@ describe("Dashboard types — toJSON serialization", () => {
     };
 
     const json = JSON.parse(JSON.stringify(agent));
-    expect(json.permissionBitmask).to.equal("1");
+    expect(json.capability).to.equal(2);
     expect(json.spending.amount).to.equal("1840000000");
     expect(json.spending.limit).to.equal("2000000000");
     expect(json.spending.percent).to.equal(92);
