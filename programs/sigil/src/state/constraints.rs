@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::ID as SPL_TOKEN_PROGRAM_ID;
 
+use super::TOKEN_2022_PROGRAM_ID;
 use crate::errors::SigilError;
 
 pub const MAX_CONSTRAINT_ENTRIES: usize = 64;
@@ -168,6 +170,32 @@ impl InstructionConstraints {
             entries.len() <= MAX_CONSTRAINT_ENTRIES,
             SigilError::InvalidConstraintConfig
         );
+        // Enforce consistent discriminator_format per program_id.
+        // Mixed formats for the same program create OR-logic dominance
+        // where the loosest format (Spl1) nullifies stricter entries (Anchor8).
+        {
+            let mut seen_formats: [(Pubkey, DiscriminatorFormat); MAX_CONSTRAINT_ENTRIES] =
+                [(Pubkey::default(), DiscriminatorFormat::Anchor8); MAX_CONSTRAINT_ENTRIES];
+            let mut seen_count = 0usize;
+            for entry in entries {
+                let mut found = false;
+                for j in 0..seen_count {
+                    if seen_formats[j].0 == entry.program_id {
+                        require!(
+                            seen_formats[j].1 == entry.discriminator_format,
+                            SigilError::InvalidConstraintConfig
+                        );
+                        found = true;
+                        break;
+                    }
+                }
+                if !found {
+                    seen_formats[seen_count] = (entry.program_id, entry.discriminator_format);
+                    seen_count += 1;
+                }
+            }
+        }
+
         for entry in entries {
             require!(
                 entry.data_constraints.len() <= MAX_DATA_CONSTRAINTS_PER_ENTRY,
@@ -205,10 +233,44 @@ impl InstructionConstraints {
                 first.value.len() >= min_len,
                 SigilError::InvalidConstraintConfig
             );
+            // Non-zero discriminator value required. All-zero values are either
+            // accidentally uninitialized or a bypass attempt. This also blocks
+            // SPL Token's InitializeMint (opcode 0x00) when format=Spl1, which
+            // is correct — agents should never initialize new token mints.
             require!(
                 first.value.iter().any(|&b| b != 0),
                 SigilError::InvalidConstraintConfig
             );
+
+            // Bind Spl1 format to SPL Token / Token-2022 program IDs.
+            // Spl1 reduces the A5 discriminator minimum from 8 bytes to 1.
+            // This is only safe for programs that use 1-byte enum discriminators.
+            // Applying Spl1 to an Anchor program (8-byte SHA-256 discriminators)
+            // would create first-byte collisions (~N/256 probability per instruction).
+            // This check eliminates that attack vector entirely.
+            if entry.discriminator_format == DiscriminatorFormat::Spl1 {
+                require!(
+                    entry.program_id == SPL_TOKEN_PROGRAM_ID
+                        || entry.program_id == TOKEN_2022_PROGRAM_ID,
+                    SigilError::InvalidConstraintConfig
+                );
+
+                // Reject Spl1 entries whose discriminator targets a blocked SPL opcode.
+                // These opcodes are hard-rejected by scan_instruction_shared() in
+                // validate_and_authorize.rs before constraint verification runs.
+                // Creating constraint entries for them is misleading — they will
+                // never match a real instruction because the instruction gets
+                // blocked first. Blocked: Transfer(3), Approve(4), SetAuthority(6),
+                // Burn(8), CloseAccount(9), TransferChecked(12), ApproveChecked(13),
+                // BurnChecked(15).
+                if first.value.len() >= 1 {
+                    const BLOCKED_SPL_OPCODES: [u8; 8] = [3, 4, 6, 8, 9, 12, 13, 15];
+                    require!(
+                        !BLOCKED_SPL_OPCODES.contains(&first.value[0]),
+                        SigilError::InvalidConstraintConfig
+                    );
+                }
+            }
 
             for dc in &entry.data_constraints {
                 require!(
@@ -277,8 +339,27 @@ mod tests {
         data_constraints: Vec<DataConstraint>,
         format: DiscriminatorFormat,
     ) -> ConstraintEntry {
+        // For Spl1 format, use the real SPL Token program ID (required by H-1 binding).
+        // For Anchor8, use default (any program).
+        let program_id = match format {
+            DiscriminatorFormat::Spl1 => SPL_TOKEN_PROGRAM_ID,
+            DiscriminatorFormat::Anchor8 => Pubkey::default(),
+        };
         ConstraintEntry {
-            program_id: Pubkey::default(),
+            program_id,
+            data_constraints,
+            account_constraints: vec![],
+            discriminator_format: format,
+        }
+    }
+
+    fn mk_entry_with_program(
+        data_constraints: Vec<DataConstraint>,
+        format: DiscriminatorFormat,
+        program_id: Pubkey,
+    ) -> ConstraintEntry {
+        ConstraintEntry {
+            program_id,
             data_constraints,
             account_constraints: vec![],
             is_spending: 1,
@@ -474,12 +555,12 @@ mod tests {
 
     #[test]
     fn validate_entries_accepts_spl1_format_with_1_byte_discriminator() {
-        // SPL Token Transfer = opcode 0x03 (1 byte). Format Spl1 allows >= 1.
+        // SPL Token MintTo = opcode 0x07 (1 byte, non-blocked). Format Spl1 allows >= 1.
         let entries = vec![mk_entry_with_format(
             vec![DataConstraint {
                 offset: 0,
                 operator: ConstraintOperator::Eq,
-                value: vec![0x03], // SPL Token Transfer
+                value: vec![0x07], // SPL Token MintTo (non-blocked)
             }],
             DiscriminatorFormat::Spl1,
         )];
@@ -522,8 +603,8 @@ mod tests {
             vec![DataConstraint {
                 offset: 0,
                 operator: ConstraintOperator::Eq,
-                value: vec![0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01],
-                // SPL Transfer + amount=1 (u64 LE)
+                value: vec![0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01],
+                // SPL MintTo(0x07) + amount=1 (u64 LE) — non-blocked opcode
             }],
             DiscriminatorFormat::Spl1,
         )];
@@ -557,13 +638,13 @@ mod tests {
     }
 
     #[test]
-    fn validate_entries_spl1_with_transfer_checked_discriminator() {
-        // SPL Token TransferChecked = opcode 0x0C. Verify a real opcode.
+    fn validate_entries_spl1_with_freeze_account_discriminator() {
+        // SPL Token FreezeAccount = opcode 0x0A (10). Non-blocked opcode.
         let entries = vec![mk_entry_with_format(
             vec![DataConstraint {
                 offset: 0,
                 operator: ConstraintOperator::Eq,
-                value: vec![0x0C], // TransferChecked
+                value: vec![0x0A], // FreezeAccount (non-blocked)
             }],
             DiscriminatorFormat::Spl1,
         )];
@@ -578,11 +659,154 @@ mod tests {
             vec![DataConstraint {
                 offset: 0,
                 operator: ConstraintOperator::Lte,
-                value: vec![0x03],
+                value: vec![0x07], // Non-blocked opcode, but wrong operator
             }],
             DiscriminatorFormat::Spl1,
         )];
         assert!(InstructionConstraints::validate_entries(&entries).is_err());
+    }
+
+    // ─── Security elimination tests ────────────────────────────────────────
+
+    #[test]
+    fn validate_entries_rejects_spl1_on_non_spl_program() {
+        // H-1 elimination: Spl1 format MUST be paired with SPL Token or Token-2022.
+        // Using Spl1 on a random program (Pubkey::default) must be rejected.
+        let entries = vec![mk_entry_with_program(
+            vec![DataConstraint {
+                offset: 0,
+                operator: ConstraintOperator::Eq,
+                value: vec![0x07],
+            }],
+            DiscriminatorFormat::Spl1,
+            Pubkey::default(), // Not SPL Token — rejected
+        )];
+        assert!(InstructionConstraints::validate_entries(&entries).is_err());
+    }
+
+    #[test]
+    fn validate_entries_accepts_spl1_on_spl_token_program() {
+        // H-1: Spl1 on the actual SPL Token program ID is accepted.
+        let entries = vec![mk_entry_with_program(
+            vec![DataConstraint {
+                offset: 0,
+                operator: ConstraintOperator::Eq,
+                value: vec![0x07], // MintTo (non-blocked)
+            }],
+            DiscriminatorFormat::Spl1,
+            SPL_TOKEN_PROGRAM_ID,
+        )];
+        assert!(InstructionConstraints::validate_entries(&entries).is_ok());
+    }
+
+    #[test]
+    fn validate_entries_accepts_spl1_on_token_2022_program() {
+        // H-1: Spl1 on Token-2022 program ID is accepted.
+        let entries = vec![mk_entry_with_program(
+            vec![DataConstraint {
+                offset: 0,
+                operator: ConstraintOperator::Eq,
+                value: vec![0x07], // MintTo (non-blocked)
+            }],
+            DiscriminatorFormat::Spl1,
+            TOKEN_2022_PROGRAM_ID,
+        )];
+        assert!(InstructionConstraints::validate_entries(&entries).is_ok());
+    }
+
+    #[test]
+    fn validate_entries_rejects_spl1_with_blocked_transfer_opcode() {
+        // M-1 elimination: Spl1 + Transfer(0x03) is unreachable at runtime
+        // because scan_instruction_shared blocks it first. Reject at creation.
+        let entries = vec![mk_entry_with_program(
+            vec![DataConstraint {
+                offset: 0,
+                operator: ConstraintOperator::Eq,
+                value: vec![0x03], // Transfer — blocked
+            }],
+            DiscriminatorFormat::Spl1,
+            SPL_TOKEN_PROGRAM_ID,
+        )];
+        assert!(InstructionConstraints::validate_entries(&entries).is_err());
+    }
+
+    #[test]
+    fn validate_entries_rejects_spl1_with_blocked_approve_opcode() {
+        // M-1: Approve(0x04) is also blocked at runtime.
+        let entries = vec![mk_entry_with_program(
+            vec![DataConstraint {
+                offset: 0,
+                operator: ConstraintOperator::Eq,
+                value: vec![0x04], // Approve — blocked
+            }],
+            DiscriminatorFormat::Spl1,
+            SPL_TOKEN_PROGRAM_ID,
+        )];
+        assert!(InstructionConstraints::validate_entries(&entries).is_err());
+    }
+
+    #[test]
+    fn validate_entries_accepts_spl1_with_non_blocked_opcode() {
+        // M-1: MintTo(0x07) is NOT in the blocked list — constraint is valid.
+        let entries = vec![mk_entry_with_program(
+            vec![DataConstraint {
+                offset: 0,
+                operator: ConstraintOperator::Eq,
+                value: vec![0x07], // MintTo — NOT blocked
+            }],
+            DiscriminatorFormat::Spl1,
+            SPL_TOKEN_PROGRAM_ID,
+        )];
+        assert!(InstructionConstraints::validate_entries(&entries).is_ok());
+    }
+
+    #[test]
+    fn validate_entries_rejects_mixed_format_same_program() {
+        // M-2 elimination: Two entries for same program_id with different formats
+        // create OR-logic dominance. Must be rejected.
+        let entries = vec![
+            mk_entry_with_program(
+                vec![discriminator_anchor()],
+                DiscriminatorFormat::Anchor8,
+                SPL_TOKEN_PROGRAM_ID,
+            ),
+            mk_entry_with_program(
+                vec![DataConstraint {
+                    offset: 0,
+                    operator: ConstraintOperator::Eq,
+                    value: vec![0x07],
+                }],
+                DiscriminatorFormat::Spl1,
+                SPL_TOKEN_PROGRAM_ID,
+            ),
+        ];
+        assert!(InstructionConstraints::validate_entries(&entries).is_err());
+    }
+
+    #[test]
+    fn validate_entries_accepts_same_format_same_program() {
+        // M-2: Two Spl1 entries for same program_id with same format is fine.
+        let entries = vec![
+            mk_entry_with_program(
+                vec![DataConstraint {
+                    offset: 0,
+                    operator: ConstraintOperator::Eq,
+                    value: vec![0x07], // MintTo
+                }],
+                DiscriminatorFormat::Spl1,
+                SPL_TOKEN_PROGRAM_ID,
+            ),
+            mk_entry_with_program(
+                vec![DataConstraint {
+                    offset: 0,
+                    operator: ConstraintOperator::Eq,
+                    value: vec![0x0A], // FreezeAccount
+                }],
+                DiscriminatorFormat::Spl1,
+                SPL_TOKEN_PROGRAM_ID,
+            ),
+        ];
+        assert!(InstructionConstraints::validate_entries(&entries).is_ok());
     }
 }
 
@@ -594,6 +818,11 @@ pub(crate) fn pack_entries(
     count_out: &mut u8,
 ) -> Result<()> {
     for (i, entry) in entries.iter().enumerate() {
+        // Zero stale data before packing. Eliminates ghost bytes in unused
+        // DC/AC slots, value bytes beyond value_len, and padding fields.
+        // ConstraintEntryZC implements Zeroable via #[zero_copy].
+        dst[i] = bytemuck::Zeroable::zeroed();
+
         dst[i].program_id = entry.program_id.to_bytes();
         dst[i].data_count = entry.data_constraints.len() as u8;
         dst[i].account_count = entry.account_constraints.len() as u8;
