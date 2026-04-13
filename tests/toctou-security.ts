@@ -510,7 +510,9 @@ describe("TOCTOU Security Fix", () => {
           {
             offset: 0,
             operator: { eq: {} },
-            value: Buffer.from([0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, 0xc8]),
+            value: Buffer.from([
+              0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, 0xc8,
+            ]),
           },
         ],
         accountConstraints: [],

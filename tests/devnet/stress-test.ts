@@ -209,12 +209,7 @@ async function doComposedTx(
   });
 
   const validateIx = await program.methods
-    .validateAndAuthorize(
-      usdcMint,
-      amount,
-      allowedProtocol,
-      new BN(0),
-    )
+    .validateAndAuthorize(usdcMint, amount, allowedProtocol, new BN(0))
     .accounts({
       agent: agent.publicKey,
       vault,

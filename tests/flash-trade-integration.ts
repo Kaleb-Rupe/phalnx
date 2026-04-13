@@ -142,12 +142,7 @@ describe("flash-trade-integration", () => {
     const currentVersion = (polAcct as any).policyVersion ?? new BN(0);
 
     const validateIx = await program.methods
-      .validateAndAuthorize(
-        tokenMint,
-        amount,
-        targetProtocol,
-        currentVersion,
-      )
+      .validateAndAuthorize(tokenMint, amount, targetProtocol, currentVersion)
       .accountsPartial({
         agent: agentKp.publicKey,
         vault,
@@ -1095,7 +1090,6 @@ describe("flash-trade-integration", () => {
       );
       expect(sig.signature).to.be.a("string");
     });
-
   });
 
   describe("trigger orders (non-spending)", () => {
@@ -1137,7 +1131,6 @@ describe("flash-trade-integration", () => {
       );
       expect(sig.signature).to.be.a("string");
     });
-
   });
 
   describe.skip("limit orders -- requires constraint entries with position_effect", () => {

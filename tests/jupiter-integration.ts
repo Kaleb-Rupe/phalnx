@@ -166,12 +166,7 @@ describe("jupiter-integration", () => {
 
     // 2. Validate and authorize
     const validateIx = await program.methods
-      .validateAndAuthorize(
-        tokenMint,
-        amount,
-        targetProtocol,
-        new BN(0),
-      )
+      .validateAndAuthorize(tokenMint, amount, targetProtocol, new BN(0))
       .accountsPartial({
         agent: agentKp.publicKey,
         vault,

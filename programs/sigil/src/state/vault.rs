@@ -9,13 +9,13 @@ pub const CAPABILITY_OPERATOR: u8 = 2;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq)]
 pub struct AgentEntry {
-    pub pubkey: Pubkey,          // 32 bytes
+    pub pubkey: Pubkey, // 32 bytes
     /// Agent capability: 0=Disabled, 1=Observer (non-spending), 2=Operator (full).
     /// Replaces the 21-bit ActionType permission bitmask.
-    pub capability: u8,          // 1 byte (was permissions: u64, 8 bytes)
+    pub capability: u8, // 1 byte (was permissions: u64, 8 bytes)
     pub spending_limit_usd: u64, // 8 bytes — 0 = no per-agent limit
-    pub paused: bool,            // 1 byte  — owner-controlled suspension
-    pub _reserved: [u8; 7],      // 7 bytes — maintain layout size for account stability
+    pub paused: bool,   // 1 byte  — owner-controlled suspension
+    pub _reserved: [u8; 7], // 7 bytes — maintain layout size for account stability
 }
 // Total: 49 bytes per entry (32 + 1 + 8 + 1 + 7 = 49, same as old layout with permissions: u64)
 
@@ -169,4 +169,3 @@ impl AgentVault {
         self.get_agent(signer).map(|a| a.paused).unwrap_or(false)
     }
 }
-

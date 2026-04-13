@@ -267,7 +267,9 @@ pub fn handler(
         FoundFinalize,
         Infrastructure,
         /// Passed shared checks. Contains the index of the matched constraint entry (if any).
-        PassedSharedChecks { matched_entry_idx: Option<usize> },
+        PassedSharedChecks {
+            matched_entry_idx: Option<usize>,
+        },
     }
 
     fn scan_instruction_shared(
@@ -434,8 +436,7 @@ pub fn handler(
                     // Capture position effect for non-spending DeFi instructions too
                     if let Some(entry_idx) = matched_entry_idx {
                         if let Some(constraints) = loaded_constraints {
-                            defi_position_effect =
-                                constraints.entries[entry_idx].position_effect;
+                            defi_position_effect = constraints.entries[entry_idx].position_effect;
                         }
                     }
                 }

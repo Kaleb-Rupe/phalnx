@@ -464,7 +464,9 @@ export function getPermissionUtilizationRate(
 
       // New v6 event format: isSpending + positionEffect
       if (e.fields.isSpending != null) {
-        const label = (e.fields.isSpending as boolean) ? "Spending" : "NonSpending";
+        const label = (e.fields.isSpending as boolean)
+          ? "Spending"
+          : "NonSpending";
         agentActionUsage.get(agent)!.add(label);
         const effect = e.fields.positionEffect as string | undefined;
         if (effect && effect !== "none") {

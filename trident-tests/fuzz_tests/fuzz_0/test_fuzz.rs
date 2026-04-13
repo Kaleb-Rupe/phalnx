@@ -27,7 +27,7 @@ mod fuzz_accounts;
 use anchor_lang::prelude::Pubkey;
 use anchor_lang::{AccountDeserialize, InstructionData, ToAccountMetas};
 use sigil::state::{
-    ActionType, AgentVault, PolicyConfig, SessionAuthority, SpendTracker, VaultStatus,
+    AgentVault, PolicyConfig, SessionAuthority, SpendTracker, VaultStatus,
 };
 
 const MAX_DEVELOPER_FEE_RATE: u16 = 500;
@@ -244,7 +244,7 @@ impl FuzzTest {
 
         let reg_data = sigil::instruction::RegisterAgent {
             agent,
-            permissions: sigil::state::FULL_PERMISSIONS,
+            capability: sigil::state::FULL_CAPABILITY,
             spending_limit_usd: 0,
         };
         let (reg_agent_spend_overlay, _) =
@@ -537,7 +537,7 @@ impl FuzzTest {
 
         let data = sigil::instruction::RegisterAgent {
             agent,
-            permissions: sigil::state::FULL_PERMISSIONS,
+            capability: sigil::state::FULL_CAPABILITY,
             spending_limit_usd: 0,
         };
         let (agent_spend_overlay, _) =
@@ -725,11 +725,9 @@ impl FuzzTest {
         let pre_policy = self.snapshot_policy(&policy_addr);
 
         let data = sigil::instruction::ValidateAndAuthorize {
-            action_type: ActionType::Swap,
             token_mint: mint,
             amount,
             target_protocol: Pubkey::default(),
-            leverage_bps: None,
             expected_policy_version: 0, // Fresh vault, no policy changes applied
         };
 
@@ -1018,7 +1016,7 @@ impl FuzzTest {
 
         let data = sigil::instruction::ReactivateVault {
             new_agent: None,
-            new_agent_permissions: None,
+            new_agent_capability: None,
         };
         let accounts = sigil::accounts::ReactivateVault { owner, vault };
 

@@ -197,12 +197,7 @@ describe("analytics-counters", () => {
 
   async function buildValidateIx(amount: BN) {
     return program.methods
-      .validateAndAuthorize(
-        usdcMint,
-        amount,
-        jupiterProgramId,
-        new BN(0),
-      )
+      .validateAndAuthorize(usdcMint, amount, jupiterProgramId, new BN(0))
       .accountsPartial({
         agent: agent.publicKey,
         vault: vaultPda,

@@ -776,10 +776,7 @@ const PENDING_CONSTRAINTS_SIZE = 35_904;
 const MAX_CPI_SIZE = 10_240;
 
 function anchorDisc(name: string): Buffer {
-  return createHash("sha256")
-    .update(`global:${name}`)
-    .digest()
-    .subarray(0, 8);
+  return createHash("sha256").update(`global:${name}`).digest().subarray(0, 8);
 }
 
 const ALLOC_CONSTRAINTS_DISC = anchorDisc("allocate_constraints_pda");
@@ -980,7 +977,15 @@ export function queueConstraintsUpdateMultiIx(
 // ─── Zero-copy → test-friendly fetch adapter ────────────────────────────────
 // Converts the raw ZC account data into the same shape tests were written for.
 
-const OPERATOR_NAMES = ["eq", "ne", "gte", "lte", "gteSigned", "lteSigned", "bitmask"];
+const OPERATOR_NAMES = [
+  "eq",
+  "ne",
+  "gte",
+  "lte",
+  "gteSigned",
+  "lteSigned",
+  "bitmask",
+];
 
 /**
  * Fetch and convert InstructionConstraints from zero-copy layout to
@@ -997,7 +1002,8 @@ export async function fetchConstraints(
   entryCount: number;
   bump: number;
 }> {
-  const raw = await program.account.instructionConstraints.fetch(constraintsPda);
+  const raw =
+    await program.account.instructionConstraints.fetch(constraintsPda);
   const entryCount = (raw as any).entryCount;
   return {
     vault: new PublicKey((raw as any).vault),
@@ -1012,7 +1018,8 @@ export async function fetchConstraints(
         programId: new PublicKey(e.programId),
         dataConstraints: Array.from({ length: dataCount }, (_, j) => {
           const dc = e.dataConstraints[j];
-          const opName = OPERATOR_NAMES[dc.operator] || `unknown(${dc.operator})`;
+          const opName =
+            OPERATOR_NAMES[dc.operator] || `unknown(${dc.operator})`;
           return {
             offset: dc.offset,
             operator: { [opName]: {} },

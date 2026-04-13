@@ -264,12 +264,24 @@ export function buildActivityItem(
     }
     if (actionType) {
       isSpending = [
-        "swap", "Swap", "openPosition", "OpenPosition",
-        "increasePosition", "IncreasePosition", "deposit", "Deposit",
-        "transfer", "Transfer", "addCollateral", "AddCollateral",
-        "placeLimitOrder", "PlaceLimitOrder",
-        "swapAndOpenPosition", "SwapAndOpenPosition",
-        "createEscrow", "CreateEscrow",
+        "swap",
+        "Swap",
+        "openPosition",
+        "OpenPosition",
+        "increasePosition",
+        "IncreasePosition",
+        "deposit",
+        "Deposit",
+        "transfer",
+        "Transfer",
+        "addCollateral",
+        "AddCollateral",
+        "placeLimitOrder",
+        "PlaceLimitOrder",
+        "swapAndOpenPosition",
+        "SwapAndOpenPosition",
+        "createEscrow",
+        "CreateEscrow",
       ].includes(actionType);
     }
   }

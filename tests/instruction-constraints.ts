@@ -259,12 +259,7 @@ describe("instruction-constraints", () => {
       program.programId,
     );
     let builder = program.methods
-      .validateAndAuthorize(
-        usdcMint,
-        amount,
-        targetProtocol,
-        await pv(),
-      )
+      .validateAndAuthorize(usdcMint, amount, targetProtocol, await pv())
       .accounts({
         agent: agent.publicKey,
         vault: vaultPda,
@@ -297,7 +292,16 @@ describe("instruction-constraints", () => {
     pendingConstraints: PublicKey,
     timelockSeconds: number = 1800,
   ) {
-    queueConstraintsUpdateMultiIx(program, svm, owner.payer, vault, policy, constraints, entries, strictMode);
+    queueConstraintsUpdateMultiIx(
+      program,
+      svm,
+      owner.payer,
+      vault,
+      policy,
+      constraints,
+      entries,
+      strictMode,
+    );
     advanceTime(svm, timelockSeconds + 1);
     await program.methods
       .applyConstraintsUpdate()
@@ -362,11 +366,18 @@ describe("instruction-constraints", () => {
         },
       ];
 
-      createConstraintsAccount(program, svm, owner.payer, vaultPda, policyPda, entries, false);
+      createConstraintsAccount(
+        program,
+        svm,
+        owner.payer,
+        vaultPda,
+        policyPda,
+        entries,
+        false,
+      );
 
       // Verify constraints PDA
-      const constraintsAcct =
-        await fetchConstraints(program, constraintsPda);
+      const constraintsAcct = await fetchConstraints(program, constraintsPda);
       expect(constraintsAcct.vault.toString()).to.equal(vaultPda.toString());
       expect(constraintsAcct.entries.length).to.equal(1);
       expect(constraintsAcct.entries[0].programId.toString()).to.equal(
@@ -403,8 +414,7 @@ describe("instruction-constraints", () => {
         pendingConstraintsPda,
       );
 
-      const constraintsAcct =
-        await fetchConstraints(program, constraintsPda);
+      const constraintsAcct = await fetchConstraints(program, constraintsPda);
       expect(constraintsAcct.entries[0].dataConstraints[0].offset).to.equal(8);
     });
 
@@ -443,7 +453,15 @@ describe("instruction-constraints", () => {
         },
       ];
 
-      createConstraintsAccount(program, svm, owner.payer, vaultPda, policyPda, entries, false);
+      createConstraintsAccount(
+        program,
+        svm,
+        owner.payer,
+        vaultPda,
+        policyPda,
+        entries,
+        false,
+      );
     });
 
     it("backward compat: no constraints PDA + has_constraints=false works", async () => {
@@ -477,7 +495,15 @@ describe("instruction-constraints", () => {
           accountConstraints: [],
         },
       ];
-      createConstraintsAccount(program, svm, owner.payer, vaultPda, policyPda, entries, false);
+      createConstraintsAccount(
+        program,
+        svm,
+        owner.payer,
+        vaultPda,
+        policyPda,
+        entries,
+        false,
+      );
     });
 
     it("spending action with matching Eq constraint passes", async () => {
@@ -497,11 +523,9 @@ describe("instruction-constraints", () => {
     });
 
     it("non-spending action with constraints PDA succeeds when no intermediate ix", async () => {
-      const validateIx = await buildValidateIx(
-        new BN(0),
-        jupiterProgramId,
-        [{ pubkey: constraintsPda, isSigner: false, isWritable: false }],
-      );
+      const validateIx = await buildValidateIx(new BN(0), jupiterProgramId, [
+        { pubkey: constraintsPda, isSigner: false, isWritable: false },
+      ]);
       const finalizeIx = await buildFinalizeIx(agent.publicKey, usdcMint);
 
       // Need to open a position first so we can close it
@@ -607,12 +631,20 @@ describe("instruction-constraints", () => {
 
       // Create constraints on vault 2
       createConstraintsAccount(
-        program, svm, owner.payer, vault2Pda, policy2Pda,
+        program,
+        svm,
+        owner.payer,
+        vault2Pda,
+        policy2Pda,
         [
           {
             programId: jupiterProgramId,
             dataConstraints: [
-              { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01, 0, 0, 0, 0, 0, 0, 0]) },
+              {
+                offset: 0,
+                operator: { eq: {} },
+                value: Buffer.from([0x01, 0, 0, 0, 0, 0, 0, 0]),
+              },
             ],
             accountConstraints: [],
           },
@@ -657,14 +689,26 @@ describe("instruction-constraints", () => {
         entries.push({
           programId: Keypair.generate().publicKey,
           dataConstraints: [
-            { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01, 0, 0, 0, 0, 0, 0, 0]) },
+            {
+              offset: 0,
+              operator: { eq: {} },
+              value: Buffer.from([0x01, 0, 0, 0, 0, 0, 0, 0]),
+            },
           ],
           accountConstraints: [],
         });
       }
 
       try {
-        createConstraintsAccount(program, svm, owner.payer, vaultPda, policyPda, entries, false);
+        createConstraintsAccount(
+          program,
+          svm,
+          owner.payer,
+          vaultPda,
+          policyPda,
+          entries,
+          false,
+        );
         expect.fail("Should have thrown");
       } catch (err: any) {
         // 65 entries exceeds both the on-chain limit (InvalidConstraintConfig)
@@ -692,7 +736,11 @@ describe("instruction-constraints", () => {
 
       try {
         createConstraintsAccount(
-          program, svm, owner.payer, vaultPda, policyPda,
+          program,
+          svm,
+          owner.payer,
+          vaultPda,
+          policyPda,
           [
             {
               programId: jupiterProgramId,
@@ -713,7 +761,11 @@ describe("instruction-constraints", () => {
 
       try {
         createConstraintsAccount(
-          program, svm, owner.payer, vaultPda, policyPda,
+          program,
+          svm,
+          owner.payer,
+          vaultPda,
+          policyPda,
           [
             {
               programId: jupiterProgramId,
@@ -748,7 +800,11 @@ describe("instruction-constraints", () => {
       }
       const exactValue = Buffer.alloc(32, 0xab);
       createConstraintsAccount(
-        program, svm, owner.payer, vaultPda, policyPda,
+        program,
+        svm,
+        owner.payer,
+        vaultPda,
+        policyPda,
         [
           {
             programId: jupiterProgramId,
@@ -761,8 +817,7 @@ describe("instruction-constraints", () => {
         false,
       );
 
-      const acct =
-        await fetchConstraints(program, constraintsPda);
+      const acct = await fetchConstraints(program, constraintsPda);
       expect(
         Buffer.from(acct.entries[0].dataConstraints[0].value).length,
       ).to.equal(32);
@@ -782,7 +837,11 @@ describe("instruction-constraints", () => {
       const policy = await program.account.policyConfig.fetch(policyPda);
       if (!policy.hasConstraints) {
         createConstraintsAccount(
-          program, svm, owner.payer, vaultPda, policyPda,
+          program,
+          svm,
+          owner.payer,
+          vaultPda,
+          policyPda,
           [
             {
               programId: jupiterProgramId,
@@ -873,7 +932,11 @@ describe("instruction-constraints", () => {
 
       // Create constraints (allowed — additive change)
       createConstraintsAccount(
-        program, svm, owner.payer, tlVaultPda, tlPolicyPda,
+        program,
+        svm,
+        owner.payer,
+        tlVaultPda,
+        tlPolicyPda,
         [
           {
             programId: jupiterProgramId,
@@ -905,7 +968,9 @@ describe("instruction-constraints", () => {
             {
               offset: 0,
               operator: { eq: {} },
-              value: Buffer.from([0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8]),
+              value: Buffer.from([
+                0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8,
+              ]),
             },
           ],
           accountConstraints: [],
@@ -913,7 +978,16 @@ describe("instruction-constraints", () => {
       ];
 
       // Queue
-      queueConstraintsUpdateMultiIx(program, svm, owner.payer, tlVaultPda, tlPolicyPda, tlConstraintsPda, newEntries, false);
+      queueConstraintsUpdateMultiIx(
+        program,
+        svm,
+        owner.payer,
+        tlVaultPda,
+        tlPolicyPda,
+        tlConstraintsPda,
+        newEntries,
+        false,
+      );
 
       expect(accountExists(svm, tlPendingConstraintsPda)).to.equal(true);
 
@@ -950,8 +1024,7 @@ describe("instruction-constraints", () => {
         .rpc();
 
       // Verify updated
-      const constraints =
-        await fetchConstraints(program, tlConstraintsPda);
+      const constraints = await fetchConstraints(program, tlConstraintsPda);
       expect(constraints.entries[0].dataConstraints[0].offset).to.equal(0);
 
       // Pending PDA closed
@@ -961,12 +1034,21 @@ describe("instruction-constraints", () => {
     it("cancel pending constraints update", async () => {
       // Queue another update
       queueConstraintsUpdateMultiIx(
-        program, svm, owner.payer, tlVaultPda, tlPolicyPda, tlConstraintsPda,
+        program,
+        svm,
+        owner.payer,
+        tlVaultPda,
+        tlPolicyPda,
+        tlConstraintsPda,
         [
           {
             programId: jupiterProgramId,
             dataConstraints: [
-              { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01, 0, 0, 0, 0, 0, 0, 0]) },
+              {
+                offset: 0,
+                operator: { eq: {} },
+                value: Buffer.from([0x01, 0, 0, 0, 0, 0, 0, 0]),
+              },
             ],
             accountConstraints: [],
           },
@@ -1069,7 +1151,11 @@ describe("instruction-constraints", () => {
       );
 
       createConstraintsAccount(
-        program, svm, owner.payer, vaultPda, policyPda,
+        program,
+        svm,
+        owner.payer,
+        vaultPda,
+        policyPda,
         [
           {
             programId: jupiterProgramId,
@@ -1102,7 +1188,11 @@ describe("instruction-constraints", () => {
       );
 
       createConstraintsAccount(
-        program, svm, owner.payer, vaultPda, policyPda,
+        program,
+        svm,
+        owner.payer,
+        vaultPda,
+        policyPda,
         [
           {
             programId: unrelatedProgram,
@@ -1181,7 +1271,11 @@ describe("instruction-constraints", () => {
 
       // Re-create constraints for subsequent tests
       createConstraintsAccount(
-        program, svm, owner.payer, vaultPda, policyPda,
+        program,
+        svm,
+        owner.payer,
+        vaultPda,
+        policyPda,
         [
           {
             programId: jupiterProgramId,
@@ -1257,7 +1351,11 @@ describe("instruction-constraints", () => {
         {
           programId: jupiterProgramId,
           dataConstraints: [
-            { offset: 0, operator: { eq: {} }, value: Buffer.from([0xff, 0, 0, 0, 0, 0, 0, 0]) },
+            {
+              offset: 0,
+              operator: { eq: {} },
+              value: Buffer.from([0xff, 0, 0, 0, 0, 0, 0, 0]),
+            },
           ],
           accountConstraints: [],
         },
@@ -1274,7 +1372,15 @@ describe("instruction-constraints", () => {
         },
       ];
 
-      createConstraintsAccount(program, svm, owner.payer, vaultPda, policyPda, entries, false);
+      createConstraintsAccount(
+        program,
+        svm,
+        owner.payer,
+        vaultPda,
+        policyPda,
+        entries,
+        false,
+      );
 
       // Instruction data [0x01, 0x02] matches second entry → should pass
       const validateIx = await buildValidateIx(
@@ -1304,7 +1410,11 @@ describe("instruction-constraints", () => {
           {
             programId: jupiterProgramId,
             dataConstraints: [
-              { offset: 0, operator: { eq: {} }, value: Buffer.from([0xff, 0, 0, 0, 0, 0, 0, 0]) },
+              {
+                offset: 0,
+                operator: { eq: {} },
+                value: Buffer.from([0xff, 0, 0, 0, 0, 0, 0, 0]),
+              },
             ],
             accountConstraints: [],
           },
@@ -1332,8 +1442,7 @@ describe("instruction-constraints", () => {
       // but the point is: no constraints PDA entry for the actual DeFi program).
       // Since the test TX has [validate, finalize] with no intermediate DeFi ix,
       // strict_mode doesn't fire. Verify that strict_mode=false is stored.
-      const constraintsAcct =
-        await fetchConstraints(program, constraintsPda);
+      const constraintsAcct = await fetchConstraints(program, constraintsPda);
       expect(constraintsAcct.strictMode).to.equal(false);
     });
 
@@ -1347,7 +1456,11 @@ describe("instruction-constraints", () => {
       );
 
       createConstraintsAccount(
-        program, svm, owner.payer, vaultPda, policyPda,
+        program,
+        svm,
+        owner.payer,
+        vaultPda,
+        policyPda,
         [
           {
             programId: jupiterProgramId,
@@ -1364,8 +1477,7 @@ describe("instruction-constraints", () => {
         false,
       );
 
-      const constraintsAcct =
-        await fetchConstraints(program, constraintsPda);
+      const constraintsAcct = await fetchConstraints(program, constraintsPda);
       // strict_mode is always false on this branch (not settable via instruction)
       expect(constraintsAcct.strictMode).to.equal(false);
     });
@@ -1381,7 +1493,11 @@ describe("instruction-constraints", () => {
 
       try {
         createConstraintsAccount(
-          program, svm, owner.payer, vaultPda, policyPda,
+          program,
+          svm,
+          owner.payer,
+          vaultPda,
+          policyPda,
           [
             {
               programId: jupiterProgramId,
@@ -1402,7 +1518,11 @@ describe("instruction-constraints", () => {
     it("empty entry rejected → InvalidConstraintConfig", async () => {
       try {
         createConstraintsAccount(
-          program, svm, owner.payer, vaultPda, policyPda,
+          program,
+          svm,
+          owner.payer,
+          vaultPda,
+          policyPda,
           [
             {
               programId: jupiterProgramId,
@@ -1431,10 +1551,17 @@ describe("instruction-constraints", () => {
         });
       }
 
-      createConstraintsAccount(program, svm, owner.payer, vaultPda, policyPda, entries, false);
+      createConstraintsAccount(
+        program,
+        svm,
+        owner.payer,
+        vaultPda,
+        policyPda,
+        entries,
+        false,
+      );
 
-      const constraintsAcct =
-        await fetchConstraints(program, constraintsPda);
+      const constraintsAcct = await fetchConstraints(program, constraintsPda);
       expect(constraintsAcct.entries.length).to.equal(16);
     });
 
@@ -1464,8 +1591,7 @@ describe("instruction-constraints", () => {
         pendingConstraintsPda,
       );
 
-      const constraintsAcct =
-        await fetchConstraints(program, constraintsPda);
+      const constraintsAcct = await fetchConstraints(program, constraintsPda);
       expect(constraintsAcct.entries[0].dataConstraints.length).to.equal(8);
     });
   });
@@ -1493,7 +1619,11 @@ describe("instruction-constraints", () => {
       negTen.writeBigInt64LE(-10n);
 
       createConstraintsAccount(
-        program, svm, owner.payer, vaultPda, policyPda,
+        program,
+        svm,
+        owner.payer,
+        vaultPda,
+        policyPda,
         [
           {
             programId: signedTestProgram,
@@ -1510,8 +1640,7 @@ describe("instruction-constraints", () => {
         false,
       );
 
-      const acct =
-        await fetchConstraints(program, constraintsPda);
+      const acct = await fetchConstraints(program, constraintsPda);
       expect(acct.entries.length).to.equal(1);
       const dc = acct.entries[0].dataConstraints[0];
       expect(dc.offset).to.equal(8);
@@ -1532,7 +1661,11 @@ describe("instruction-constraints", () => {
       thousand.writeBigInt64LE(1000n);
 
       createConstraintsAccount(
-        program, svm, owner.payer, vaultPda, policyPda,
+        program,
+        svm,
+        owner.payer,
+        vaultPda,
+        policyPda,
         [
           {
             programId: signedTestProgram,
@@ -1549,8 +1682,7 @@ describe("instruction-constraints", () => {
         false,
       );
 
-      const acct =
-        await fetchConstraints(program, constraintsPda);
+      const acct = await fetchConstraints(program, constraintsPda);
       const dc = acct.entries[0].dataConstraints[0];
       expect("lteSigned" in dc.operator).to.equal(true);
       expect(Buffer.from(dc.value).equals(thousand)).to.equal(true);
@@ -1566,7 +1698,11 @@ describe("instruction-constraints", () => {
 
       // Bitmask: require bits 0 and 2 set (0x05)
       createConstraintsAccount(
-        program, svm, owner.payer, vaultPda, policyPda,
+        program,
+        svm,
+        owner.payer,
+        vaultPda,
+        policyPda,
         [
           {
             programId: bitmaskTestProgram,
@@ -1583,8 +1719,7 @@ describe("instruction-constraints", () => {
         false,
       );
 
-      const acct =
-        await fetchConstraints(program, constraintsPda);
+      const acct = await fetchConstraints(program, constraintsPda);
       const dc = acct.entries[0].dataConstraints[0];
       expect("bitmask" in dc.operator).to.equal(true);
       expect(Buffer.from(dc.value).equals(Buffer.from([0x05]))).to.equal(true);
@@ -1609,7 +1744,11 @@ describe("instruction-constraints", () => {
       negFive.writeBigInt64LE(-5n);
 
       createConstraintsAccount(
-        program, svm, owner.payer, vaultPda, policyPda,
+        program,
+        svm,
+        owner.payer,
+        vaultPda,
+        policyPda,
         [
           {
             programId: signedTestProgram,
@@ -1644,7 +1783,11 @@ describe("instruction-constraints", () => {
       );
 
       createConstraintsAccount(
-        program, svm, owner.payer, vaultPda, policyPda,
+        program,
+        svm,
+        owner.payer,
+        vaultPda,
+        policyPda,
         [
           {
             programId: bitmaskTestProgram,
@@ -1683,7 +1826,11 @@ describe("instruction-constraints", () => {
 
       // Two entries for same program: GteSigned OR Bitmask (OR logic)
       createConstraintsAccount(
-        program, svm, owner.payer, vaultPda, policyPda,
+        program,
+        svm,
+        owner.payer,
+        vaultPda,
+        policyPda,
         [
           {
             programId: signedTestProgram,
@@ -1712,8 +1859,7 @@ describe("instruction-constraints", () => {
       );
 
       // Verify both entries stored with OR structure
-      const acct =
-        await fetchConstraints(program, constraintsPda);
+      const acct = await fetchConstraints(program, constraintsPda);
       expect(acct.entries.length).to.equal(2);
       expect(acct.entries[0].programId.toString()).to.equal(
         signedTestProgram.toString(),
@@ -1742,7 +1888,11 @@ describe("instruction-constraints", () => {
 
       // Eq on discriminator (offset 0) + GteSigned on amount (offset 8) — AND
       createConstraintsAccount(
-        program, svm, owner.payer, vaultPda, policyPda,
+        program,
+        svm,
+        owner.payer,
+        vaultPda,
+        policyPda,
         [
           {
             programId: signedTestProgram,
@@ -1765,8 +1915,7 @@ describe("instruction-constraints", () => {
       );
 
       // Verify both constraints stored with AND
-      const acct =
-        await fetchConstraints(program, constraintsPda);
+      const acct = await fetchConstraints(program, constraintsPda);
       expect(acct.entries.length).to.equal(1);
       expect(acct.entries[0].dataConstraints.length).to.equal(2);
       expect("eq" in acct.entries[0].dataConstraints[0].operator).to.equal(
@@ -1787,12 +1936,20 @@ describe("instruction-constraints", () => {
 
       // Create entry with all 7 operators (max 8 per entry)
       createConstraintsAccount(
-        program, svm, owner.payer, vaultPda, policyPda,
+        program,
+        svm,
+        owner.payer,
+        vaultPda,
+        policyPda,
         [
           {
             programId: signedTestProgram,
             dataConstraints: [
-              { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01, 0, 0, 0, 0, 0, 0, 0]) },
+              {
+                offset: 0,
+                operator: { eq: {} },
+                value: Buffer.from([0x01, 0, 0, 0, 0, 0, 0, 0]),
+              },
               { offset: 1, operator: { ne: {} }, value: Buffer.from([0x02]) },
               {
                 offset: 2,
@@ -1826,8 +1983,7 @@ describe("instruction-constraints", () => {
         false,
       );
 
-      const acct =
-        await fetchConstraints(program, constraintsPda);
+      const acct = await fetchConstraints(program, constraintsPda);
       const dcs = acct.entries[0].dataConstraints;
       expect(dcs.length).to.equal(7);
       expect("eq" in dcs[0].operator).to.equal(true);
@@ -2023,12 +2179,20 @@ describe("instruction-constraints", () => {
     it("ConstraintViolated when intermediate ix data mismatches constraint (C-4)", async () => {
       // Create constraints requiring data[0]==0xAA for the sigil program
       createConstraintsAccount(
-        program, svm, owner.payer, cvVault, cvPolicy,
+        program,
+        svm,
+        owner.payer,
+        cvVault,
+        cvPolicy,
         [
           {
             programId: program.programId,
             dataConstraints: [
-              { offset: 0, operator: { eq: {} }, value: Buffer.from([0xaa, 0, 0, 0, 0, 0, 0, 0]) },
+              {
+                offset: 0,
+                operator: { eq: {} },
+                value: Buffer.from([0xaa, 0, 0, 0, 0, 0, 0, 0]),
+              },
             ],
             accountConstraints: [],
           },
@@ -2071,12 +2235,20 @@ describe("instruction-constraints", () => {
       // Create strict_mode=true constraints only for jupiterProgramId
       // The intermediate ix targets sigil program (not in constraints) → blocked
       createConstraintsAccount(
-        program, svm, owner.payer, cvVault, cvPolicy,
+        program,
+        svm,
+        owner.payer,
+        cvVault,
+        cvPolicy,
         [
           {
             programId: jupiterProgramId, // only constrained program
             dataConstraints: [
-              { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01, 0, 0, 0, 0, 0, 0, 0]) },
+              {
+                offset: 0,
+                operator: { eq: {} },
+                value: Buffer.from([0x01, 0, 0, 0, 0, 0, 0, 0]),
+              },
             ],
             accountConstraints: [],
           },
@@ -2205,12 +2377,20 @@ describe("instruction-constraints", () => {
 
       // Create constraints
       createConstraintsAccount(
-        program, svm, owner.payer, tlVault, tlPolicy,
+        program,
+        svm,
+        owner.payer,
+        tlVault,
+        tlPolicy,
         [
           {
             programId: jupiterProgramId,
             dataConstraints: [
-              { offset: 0, operator: { eq: {} }, value: Buffer.from([0x01, 0, 0, 0, 0, 0, 0, 0]) },
+              {
+                offset: 0,
+                operator: { eq: {} },
+                value: Buffer.from([0x01, 0, 0, 0, 0, 0, 0, 0]),
+              },
             ],
             accountConstraints: [],
           },
@@ -2220,12 +2400,23 @@ describe("instruction-constraints", () => {
 
       // Queue first update — distinct 8-byte discriminator to prove update worked
       queueConstraintsUpdateMultiIx(
-        program, svm, owner.payer, tlVault, tlPolicy, tlConstraints,
+        program,
+        svm,
+        owner.payer,
+        tlVault,
+        tlPolicy,
+        tlConstraints,
         [
           {
             programId: jupiterProgramId,
             dataConstraints: [
-              { offset: 0, operator: { eq: {} }, value: Buffer.from([0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8]) },
+              {
+                offset: 0,
+                operator: { eq: {} },
+                value: Buffer.from([
+                  0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8,
+                ]),
+              },
             ],
             accountConstraints: [],
           },
@@ -2236,7 +2427,12 @@ describe("instruction-constraints", () => {
       // Queue second update → should fail (pending already exists)
       try {
         queueConstraintsUpdateMultiIx(
-          program, svm, owner.payer, tlVault, tlPolicy, tlConstraints,
+          program,
+          svm,
+          owner.payer,
+          tlVault,
+          tlPolicy,
+          tlConstraints,
           [
             {
               programId: jupiterProgramId,
@@ -2244,7 +2440,9 @@ describe("instruction-constraints", () => {
                 {
                   offset: 0,
                   operator: { eq: {} },
-                  value: Buffer.from([0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8]),
+                  value: Buffer.from([
+                    0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8,
+                  ]),
                 },
               ],
               accountConstraints: [],
@@ -2311,7 +2509,11 @@ describe("instruction-constraints", () => {
           { pubkey: ownerKey, isSigner: true, isWritable: true },
           { pubkey: vault, isSigner: false, isWritable: false },
           { pubkey: pda, isSigner: false, isWritable: true },
-          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+          {
+            pubkey: SystemProgram.programId,
+            isSigner: false,
+            isWritable: false,
+          },
         ],
         data,
       });
@@ -2331,7 +2533,11 @@ describe("instruction-constraints", () => {
           { pubkey: vault, isSigner: false, isWritable: false },
           { pubkey: policy, isSigner: false, isWritable: false },
           { pubkey: constraintsPda, isSigner: false, isWritable: true },
-          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+          {
+            pubkey: SystemProgram.programId,
+            isSigner: false,
+            isWritable: false,
+          },
         ],
         data: ALLOC_CONSTRAINTS_DISC,
       });
@@ -2341,7 +2547,11 @@ describe("instruction-constraints", () => {
     async function setupFreshVault(vaultIdNum: number) {
       const id = new BN(vaultIdNum);
       const [vault] = PublicKey.findProgramAddressSync(
-        [Buffer.from("vault"), owner.publicKey.toBuffer(), id.toArrayLike(Buffer, "le", 8)],
+        [
+          Buffer.from("vault"),
+          owner.publicKey.toBuffer(),
+          id.toArrayLike(Buffer, "le", 8),
+        ],
         program.programId,
       );
       const [policy] = PublicKey.findProgramAddressSync(
@@ -2398,7 +2608,11 @@ describe("instruction-constraints", () => {
       {
         programId: jupiterProgramId,
         dataConstraints: [
-          { offset: 0, operator: { eq: {} }, value: Buffer.from([0xaa, 0, 0, 0, 0, 0, 0, 0]) },
+          {
+            offset: 0,
+            operator: { eq: {} },
+            value: Buffer.from([0xaa, 0, 0, 0, 0, 0, 0, 0]),
+          },
         ],
         accountConstraints: [],
       },
@@ -2409,13 +2623,21 @@ describe("instruction-constraints", () => {
 
       // Allocate at MAX_CPI_SIZE
       const allocIx = buildAllocateIx(
-        program.programId, owner.publicKey, f.vault, f.policy, f.constraints,
+        program.programId,
+        owner.publicKey,
+        f.vault,
+        f.policy,
+        f.constraints,
       );
       sendVersionedTx(svm, [allocIx], owner.payer);
 
       // Try extend with target = 40000 (exceeds max of 35,904)
       const extendIx = buildExtendPdaIx(
-        program.programId, owner.publicKey, f.vault, f.constraints, 40_000,
+        program.programId,
+        owner.publicKey,
+        f.vault,
+        f.constraints,
+        40_000,
       );
       try {
         sendVersionedTx(svm, [extendIx], owner.payer);
@@ -2431,12 +2653,21 @@ describe("instruction-constraints", () => {
 
       // Create full constraints (allocate + extend + populate)
       createConstraintsAccount(
-        program, svm, owner.payer, f.vault, f.policy, sampleEntries, false,
+        program,
+        svm,
+        owner.payer,
+        f.vault,
+        f.policy,
+        sampleEntries,
+        false,
       );
 
       // Try to extend the populated PDA further
       const extendIx = buildExtendPdaIx(
-        program.programId, owner.publicKey, f.vault, f.constraints,
+        program.programId,
+        owner.publicKey,
+        f.vault,
+        f.constraints,
         CONSTRAINTS_SIZE + 100,
       );
       try {
@@ -2448,7 +2679,10 @@ describe("instruction-constraints", () => {
 
       // Cleanup
       await queueAndApplyCloseConstraints(
-        f.vault, f.policy, f.constraints, f.pendingClose,
+        f.vault,
+        f.policy,
+        f.constraints,
+        f.pendingClose,
       );
     });
 
@@ -2457,11 +2691,19 @@ describe("instruction-constraints", () => {
 
       // Allocate at MAX_CPI_SIZE
       const allocIx = buildAllocateIx(
-        program.programId, owner.publicKey, f.vault, f.policy, f.constraints,
+        program.programId,
+        owner.publicKey,
+        f.vault,
+        f.policy,
+        f.constraints,
       );
       // Extend to only 20,480 (not full CONSTRAINTS_SIZE of 35,888)
       const extendIx = buildExtendPdaIx(
-        program.programId, owner.publicKey, f.vault, f.constraints, 20_480,
+        program.programId,
+        owner.publicKey,
+        f.vault,
+        f.constraints,
+        20_480,
       );
 
       // Build populate instruction manually
@@ -2491,7 +2733,10 @@ describe("instruction-constraints", () => {
       // Cleanup — close if the PDA was partially created
       if (accountExists(svm, f.constraints)) {
         await queueAndApplyCloseConstraints(
-          f.vault, f.policy, f.constraints, f.pendingClose,
+          f.vault,
+          f.policy,
+          f.constraints,
+          f.pendingClose,
         );
       }
     });
@@ -2501,13 +2746,25 @@ describe("instruction-constraints", () => {
 
       // Create full constraints first
       createConstraintsAccount(
-        program, svm, owner.payer, f.vault, f.policy, sampleEntries, false,
+        program,
+        svm,
+        owner.payer,
+        f.vault,
+        f.policy,
+        sampleEntries,
+        false,
       );
 
       // Try to create constraints again on the same vault
       try {
         createConstraintsAccount(
-          program, svm, owner.payer, f.vault, f.policy, sampleEntries, false,
+          program,
+          svm,
+          owner.payer,
+          f.vault,
+          f.policy,
+          sampleEntries,
+          false,
         );
         expect.fail("Should have thrown");
       } catch (err: any) {
@@ -2523,7 +2780,10 @@ describe("instruction-constraints", () => {
 
       // Cleanup
       await queueAndApplyCloseConstraints(
-        f.vault, f.policy, f.constraints, f.pendingClose,
+        f.vault,
+        f.policy,
+        f.constraints,
+        f.pendingClose,
       );
     });
 
@@ -2532,13 +2792,21 @@ describe("instruction-constraints", () => {
 
       // Allocate at MAX_CPI_SIZE
       const allocIx = buildAllocateIx(
-        program.programId, owner.publicKey, f.vault, f.policy, f.constraints,
+        program.programId,
+        owner.publicKey,
+        f.vault,
+        f.policy,
+        f.constraints,
       );
       sendVersionedTx(svm, [allocIx], owner.payer);
 
       // Try extend with target = current size (no growth)
       const extendIx = buildExtendPdaIx(
-        program.programId, owner.publicKey, f.vault, f.constraints, MAX_CPI_SIZE,
+        program.programId,
+        owner.publicKey,
+        f.vault,
+        f.constraints,
+        MAX_CPI_SIZE,
       );
       try {
         sendVersionedTx(svm, [extendIx], owner.payer);
@@ -2554,16 +2822,28 @@ describe("instruction-constraints", () => {
 
       // Allocate and extend to 20,480
       const allocIx = buildAllocateIx(
-        program.programId, owner.publicKey, f.vault, f.policy, f.constraints,
+        program.programId,
+        owner.publicKey,
+        f.vault,
+        f.policy,
+        f.constraints,
       );
       const extendIx1 = buildExtendPdaIx(
-        program.programId, owner.publicKey, f.vault, f.constraints, 20_480,
+        program.programId,
+        owner.publicKey,
+        f.vault,
+        f.constraints,
+        20_480,
       );
       sendVersionedTx(svm, [allocIx, extendIx1], owner.payer);
 
       // Try extend with target < current size (shrink)
       const shrinkIx = buildExtendPdaIx(
-        program.programId, owner.publicKey, f.vault, f.constraints, 15_000,
+        program.programId,
+        owner.publicKey,
+        f.vault,
+        f.constraints,
+        15_000,
       );
       try {
         sendVersionedTx(svm, [shrinkIx], owner.payer);
@@ -2579,7 +2859,11 @@ describe("instruction-constraints", () => {
 
       // Allocate constraints PDA as legitimate owner
       const allocIx = buildAllocateIx(
-        program.programId, owner.publicKey, f.vault, f.policy, f.constraints,
+        program.programId,
+        owner.publicKey,
+        f.vault,
+        f.policy,
+        f.constraints,
       );
       sendVersionedTx(svm, [allocIx], owner.payer);
 
@@ -2589,7 +2873,11 @@ describe("instruction-constraints", () => {
 
       // Attacker tries to extend the PDA
       const extendIx = buildExtendPdaIx(
-        program.programId, attacker.publicKey, f.vault, f.constraints, 20_480,
+        program.programId,
+        attacker.publicKey,
+        f.vault,
+        f.constraints,
+        20_480,
       );
       try {
         sendVersionedTx(svm, [extendIx], attacker);
@@ -2612,12 +2900,22 @@ describe("instruction-constraints", () => {
 
       // Create full constraints
       createConstraintsAccount(
-        program, svm, owner.payer, f.vault, f.policy, sampleEntries, false,
+        program,
+        svm,
+        owner.payer,
+        f.vault,
+        f.policy,
+        sampleEntries,
+        false,
       );
 
       // Try just the allocate instruction again
       const allocIx = buildAllocateIx(
-        program.programId, owner.publicKey, f.vault, f.policy, f.constraints,
+        program.programId,
+        owner.publicKey,
+        f.vault,
+        f.policy,
+        f.constraints,
       );
       try {
         sendVersionedTx(svm, [allocIx], owner.payer);
@@ -2635,7 +2933,10 @@ describe("instruction-constraints", () => {
 
       // Cleanup
       await queueAndApplyCloseConstraints(
-        f.vault, f.policy, f.constraints, f.pendingClose,
+        f.vault,
+        f.policy,
+        f.constraints,
+        f.pendingClose,
       );
     });
   });
