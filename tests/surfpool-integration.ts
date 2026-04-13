@@ -2241,7 +2241,7 @@ describe("surfpool-integration", function () {
     // Capability levels: 0=Disabled, 1=Observer (non-spending), 2=Operator (full)
     const SWAP_ONLY = 2; // Operator — can do spending operations (swap)
     const NO_SWAP = 1; // Observer — non-spending only, swap (spending) blocked
-    const TRANSFER_ONLY = 2; // Operator — can do spending operations (transfer)
+    const OBSERVER_ONLY = 1; // Observer — can only do non-spending operations
     const ZERO_PERMISSIONS = 0; // Disabled — no operations
 
     let swapSetup: VaultSetupResult;
@@ -2447,7 +2447,7 @@ describe("surfpool-integration", function () {
       // Register agent2 with transfer-only on the swap vault
       const agent2 = await createWallet(env.connection, "permAgent2", 10);
       await program.methods
-        .registerAgent(agent2.publicKey, TRANSFER_ONLY, new BN(0))
+        .registerAgent(agent2.publicKey, OBSERVER_ONLY, new BN(0))
         .accounts({
           owner: env.payer.publicKey,
           vault: swapSetup.vaultPda,
@@ -2527,7 +2527,7 @@ describe("surfpool-integration", function () {
       );
 
       const transferSetup = await setupVaultWithAgent(env, program, {
-        agentCapability: TRANSFER_ONLY,
+        agentCapability: OBSERVER_ONLY,
         allowedDestinations: [destWallet.publicKey],
       });
 
@@ -3576,6 +3576,8 @@ describe("surfpool-integration", function () {
         },
       ],
       accountConstraints: [],
+      isSpending: 1,
+      positionEffect: 0,
     };
 
     it("create + update constraints via queue+apply", async () => {
