@@ -363,6 +363,8 @@ mod tests {
             program_id,
             data_constraints,
             account_constraints: vec![],
+            is_spending: 1,
+            position_effect: 0,
             discriminator_format: format,
         }
     }

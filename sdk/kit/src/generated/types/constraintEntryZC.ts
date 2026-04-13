@@ -34,21 +34,6 @@ import {
   type DataConstraintZCArgs,
 } from "./index.js";
 
-/**
- * BYTE LAYOUT REGISTRY — Canonical assignment of padding bytes.
- *
- * Both `feat/multi-format-discriminator` and `feat/actiontype-elimination`
- * branches carve fields from the original 6-byte `_padding`. This registry
- * is the single source of truth. When merging, the layout MUST be:
- *
- * byte 554: discriminator_format  (this branch)
- * byte 555: is_spending           (actiontype-elimination branch)
- * byte 556: position_effect       (actiontype-elimination branch)
- * bytes 557-559: _padding[3]      (reserved for future use)
- *
- * Total: 32+320+200+1+1+1+1+1+3 = 560 (unchanged).
- * The branch that merges second MUST rebase and adjust its slot to match.
- */
 export type ConstraintEntryZC = {
   programId: ReadonlyUint8Array;
   dataConstraints: Array<DataConstraintZC>;
@@ -56,12 +41,16 @@ export type ConstraintEntryZC = {
   dataCount: number;
   accountCount: number;
   /**
-   * DiscriminatorFormat discriminant (0=Anchor8, 1=Spl1). Write-time only —
-   * verify_data_constraints_zc() does not read this field at runtime.
-   * Zero-initialized on existing V1 PDAs → 0 → Anchor8 (backward compatible).
-   * BYTE LAYOUT: byte 554 — permanently reserved for discriminator_format.
+   * Spending classification: 0=Unset (treated as spending), 1=Spending, 2=NonSpending.
+   * Set by vault owner at constraint creation time. The constraint engine returns
+   * this value when it matches an entry — replaces ActionType.is_spending().
    */
-  discriminatorFormat: number;
+  isSpending: number;
+  /**
+   * Position tracking: 0=None, 1=Increment (opens position), 2=Decrement (closes position).
+   * Replaces ActionType.position_effect().
+   */
+  positionEffect: number;
   padding: ReadonlyUint8Array;
 };
 
@@ -72,12 +61,16 @@ export type ConstraintEntryZCArgs = {
   dataCount: number;
   accountCount: number;
   /**
-   * DiscriminatorFormat discriminant (0=Anchor8, 1=Spl1). Write-time only —
-   * verify_data_constraints_zc() does not read this field at runtime.
-   * Zero-initialized on existing V1 PDAs → 0 → Anchor8 (backward compatible).
-   * BYTE LAYOUT: byte 554 — permanently reserved for discriminator_format.
+   * Spending classification: 0=Unset (treated as spending), 1=Spending, 2=NonSpending.
+   * Set by vault owner at constraint creation time. The constraint engine returns
+   * this value when it matches an entry — replaces ActionType.is_spending().
    */
-  discriminatorFormat: number;
+  isSpending: number;
+  /**
+   * Position tracking: 0=None, 1=Increment (opens position), 2=Decrement (closes position).
+   * Replaces ActionType.position_effect().
+   */
+  positionEffect: number;
   padding: ReadonlyUint8Array;
 };
 
@@ -94,8 +87,9 @@ export function getConstraintEntryZCEncoder(): FixedSizeEncoder<ConstraintEntryZ
     ],
     ["dataCount", getU8Encoder()],
     ["accountCount", getU8Encoder()],
-    ["discriminatorFormat", getU8Encoder()],
-    ["padding", fixEncoderSize(getBytesEncoder(), 5)],
+    ["isSpending", getU8Encoder()],
+    ["positionEffect", getU8Encoder()],
+    ["padding", fixEncoderSize(getBytesEncoder(), 4)],
   ]);
 }
 
@@ -112,8 +106,9 @@ export function getConstraintEntryZCDecoder(): FixedSizeDecoder<ConstraintEntryZ
     ],
     ["dataCount", getU8Decoder()],
     ["accountCount", getU8Decoder()],
-    ["discriminatorFormat", getU8Decoder()],
-    ["padding", fixDecoderSize(getBytesDecoder(), 5)],
+    ["isSpending", getU8Decoder()],
+    ["positionEffect", getU8Decoder()],
+    ["padding", fixDecoderSize(getBytesDecoder(), 4)],
   ]);
 }
 

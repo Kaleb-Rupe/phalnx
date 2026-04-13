@@ -7,39 +7,30 @@
  */
 
 import {
-  addDecoderSizePrefix,
-  addEncoderSizePrefix,
   combineCodec,
   getAddressDecoder,
   getAddressEncoder,
+  getArrayDecoder,
+  getArrayEncoder,
   getBooleanDecoder,
   getBooleanEncoder,
-  getBytesDecoder,
-  getBytesEncoder,
   getI64Decoder,
   getI64Encoder,
   getStructDecoder,
   getStructEncoder,
-  getU32Decoder,
-  getU32Encoder,
   getU8Decoder,
   getU8Encoder,
   type Address,
   type Codec,
   type Decoder,
   type Encoder,
-  type ReadonlyUint8Array,
 } from "@solana/kit";
 
 export type InstructionConstraintsCreated = {
   vault: Address;
   entriesCount: number;
   strictMode: boolean;
-  /**
-   * Per-entry discriminator format (0=Anchor8, 1=Spl1).
-   * Enables off-chain monitors to detect format changes/downgrades.
-   */
-  discriminatorFormats: ReadonlyUint8Array;
+  discriminatorFormats: Array<number>;
   timestamp: bigint;
 };
 
@@ -47,11 +38,7 @@ export type InstructionConstraintsCreatedArgs = {
   vault: Address;
   entriesCount: number;
   strictMode: boolean;
-  /**
-   * Per-entry discriminator format (0=Anchor8, 1=Spl1).
-   * Enables off-chain monitors to detect format changes/downgrades.
-   */
-  discriminatorFormats: ReadonlyUint8Array;
+  discriminatorFormats: Array<number>;
   timestamp: number | bigint;
 };
 
@@ -60,10 +47,7 @@ export function getInstructionConstraintsCreatedEncoder(): Encoder<InstructionCo
     ["vault", getAddressEncoder()],
     ["entriesCount", getU8Encoder()],
     ["strictMode", getBooleanEncoder()],
-    [
-      "discriminatorFormats",
-      addEncoderSizePrefix(getBytesEncoder(), getU32Encoder()),
-    ],
+    ["discriminatorFormats", getArrayEncoder(getU8Encoder())],
     ["timestamp", getI64Encoder()],
   ]);
 }
@@ -73,10 +57,7 @@ export function getInstructionConstraintsCreatedDecoder(): Decoder<InstructionCo
     ["vault", getAddressDecoder()],
     ["entriesCount", getU8Decoder()],
     ["strictMode", getBooleanDecoder()],
-    [
-      "discriminatorFormats",
-      addDecoderSizePrefix(getBytesDecoder(), getU32Decoder()),
-    ],
+    ["discriminatorFormats", getArrayDecoder(getU8Decoder())],
     ["timestamp", getI64Decoder()],
   ]);
 }

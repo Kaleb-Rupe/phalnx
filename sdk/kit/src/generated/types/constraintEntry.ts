@@ -14,6 +14,8 @@ import {
   getArrayEncoder,
   getStructDecoder,
   getStructEncoder,
+  getU8Decoder,
+  getU8Encoder,
   type Address,
   type Codec,
   type Decoder,
@@ -38,11 +40,10 @@ export type ConstraintEntry = {
   programId: Address;
   dataConstraints: Array<DataConstraint>;
   accountConstraints: Array<AccountConstraint>;
-  /**
-   * Discriminator format for this entry's target program. Controls the
-   * minimum byte length of the first DataConstraint (the A5 anchor).
-   * Default: Anchor8 (0). Use Spl1 (1) for SPL Token / Token-2022.
-   */
+  /** Spending classification: 1=Spending, 2=NonSpending. Required (0 rejected). */
+  isSpending: number;
+  /** Position effect: 0=None, 1=Increment, 2=Decrement. */
+  positionEffect: number;
   discriminatorFormat: DiscriminatorFormat;
 };
 
@@ -50,11 +51,10 @@ export type ConstraintEntryArgs = {
   programId: Address;
   dataConstraints: Array<DataConstraintArgs>;
   accountConstraints: Array<AccountConstraintArgs>;
-  /**
-   * Discriminator format for this entry's target program. Controls the
-   * minimum byte length of the first DataConstraint (the A5 anchor).
-   * Default: Anchor8 (0). Use Spl1 (1) for SPL Token / Token-2022.
-   */
+  /** Spending classification: 1=Spending, 2=NonSpending. Required (0 rejected). */
+  isSpending: number;
+  /** Position effect: 0=None, 1=Increment, 2=Decrement. */
+  positionEffect: number;
   discriminatorFormat: DiscriminatorFormatArgs;
 };
 
@@ -63,6 +63,8 @@ export function getConstraintEntryEncoder(): Encoder<ConstraintEntryArgs> {
     ["programId", getAddressEncoder()],
     ["dataConstraints", getArrayEncoder(getDataConstraintEncoder())],
     ["accountConstraints", getArrayEncoder(getAccountConstraintEncoder())],
+    ["isSpending", getU8Encoder()],
+    ["positionEffect", getU8Encoder()],
     ["discriminatorFormat", getDiscriminatorFormatEncoder()],
   ]);
 }
@@ -72,6 +74,8 @@ export function getConstraintEntryDecoder(): Decoder<ConstraintEntry> {
     ["programId", getAddressDecoder()],
     ["dataConstraints", getArrayDecoder(getDataConstraintDecoder())],
     ["accountConstraints", getArrayDecoder(getAccountConstraintDecoder())],
+    ["isSpending", getU8Decoder()],
+    ["positionEffect", getU8Decoder()],
     ["discriminatorFormat", getDiscriminatorFormatDecoder()],
   ]);
 }

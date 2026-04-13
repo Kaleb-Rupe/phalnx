@@ -112,7 +112,7 @@
         {
           "name": "agent_spend_overlay",
           "docs": [
-            "Zero-copy AgentSpendOverlay — per-agent rolling spend"
+            "Zero-copy AgentSpendOverlay \u2014 per-agent rolling spend"
           ],
           "writable": true
         },
@@ -552,7 +552,7 @@
         {
           "name": "agent_spend_overlay",
           "docs": [
-            "Agent spend overlay — per-agent tracking slot."
+            "Agent spend overlay \u2014 per-agent tracking slot."
           ],
           "writable": true
         }
@@ -765,7 +765,7 @@
         {
           "name": "policy",
           "docs": [
-            "PolicyConfig — needed to bump policy_version on constraint changes."
+            "PolicyConfig \u2014 needed to bump policy_version on constraint changes."
           ],
           "writable": true,
           "pda": {
@@ -1471,7 +1471,7 @@
     {
       "name": "close_settled_escrow",
       "docs": [
-        "Close a settled/refunded escrow PDA — owner reclaims rent."
+        "Close a settled/refunded escrow PDA \u2014 owner reclaims rent."
       ],
       "discriminator": [
         169,
@@ -1645,7 +1645,7 @@
         {
           "name": "tracker",
           "docs": [
-            "Zero-copy SpendTracker — close returns rent to owner"
+            "Zero-copy SpendTracker \u2014 close returns rent to owner"
           ],
           "writable": true,
           "pda": {
@@ -1672,7 +1672,7 @@
         {
           "name": "agent_spend_overlay",
           "docs": [
-            "Zero-copy AgentSpendOverlay — close returns rent to owner"
+            "Zero-copy AgentSpendOverlay \u2014 close returns rent to owner"
           ],
           "writable": true
         },
@@ -1782,7 +1782,7 @@
         {
           "name": "agent_spend_overlay",
           "docs": [
-            "Zero-copy AgentSpendOverlay — per-agent rolling spend"
+            "Zero-copy AgentSpendOverlay \u2014 per-agent rolling spend"
           ],
           "writable": true
         },
@@ -1854,7 +1854,7 @@
         {
           "name": "escrow_ata",
           "docs": [
-            "Escrow-owned ATA — init_if_needed because escrow PDA is created in same ix"
+            "Escrow-owned ATA \u2014 init_if_needed because escrow PDA is created in same ix"
           ],
           "writable": true,
           "pda": {
@@ -2732,7 +2732,7 @@
         {
           "name": "agent_spend_overlay",
           "docs": [
-            "Zero-copy AgentSpendOverlay — per-agent rolling spend"
+            "Zero-copy AgentSpendOverlay \u2014 per-agent rolling spend"
           ],
           "writable": true
         },
@@ -2927,7 +2927,7 @@
         {
           "name": "agent_spend_overlay",
           "docs": [
-            "Agent spend overlay — per-agent contribution tracking"
+            "Agent spend overlay \u2014 per-agent contribution tracking"
           ],
           "writable": true
         },
@@ -3182,8 +3182,8 @@
           "type": "pubkey"
         },
         {
-          "name": "new_permissions",
-          "type": "u64"
+          "name": "new_capability",
+          "type": "u8"
         },
         {
           "name": "spending_limit_usd",
@@ -3423,7 +3423,7 @@
         {
           "name": "constraints",
           "docs": [
-            "Existing constraints — seeds verify PDA, bump verified via load()."
+            "Existing constraints \u2014 seeds verify PDA, bump verified via load()."
           ],
           "pda": {
             "seeds": [
@@ -3771,9 +3771,9 @@
           }
         },
         {
-          "name": "new_agent_permissions",
+          "name": "new_agent_capability",
           "type": {
-            "option": "u64"
+            "option": "u8"
           }
         }
       ]
@@ -3781,7 +3781,7 @@
     {
       "name": "refund_escrow",
       "docs": [
-        "Refund an escrow — source vault's agent or owner reclaims funds after expiry.",
+        "Refund an escrow \u2014 source vault's agent or owner reclaims funds after expiry.",
         "Cap charge is NOT reversed (prevents cap-washing attacks)."
       ],
       "discriminator": [
@@ -4026,7 +4026,7 @@
         {
           "name": "agent_spend_overlay",
           "docs": [
-            "Agent spend overlay — per-agent tracking slot."
+            "Agent spend overlay \u2014 per-agent tracking slot."
           ],
           "writable": true
         }
@@ -4037,8 +4037,8 @@
           "type": "pubkey"
         },
         {
-          "name": "permissions",
-          "type": "u64"
+          "name": "capability",
+          "type": "u8"
         },
         {
           "name": "spending_limit_usd",
@@ -4100,7 +4100,7 @@
         {
           "name": "agent_spend_overlay",
           "docs": [
-            "Agent spend overlay — release slot on revocation."
+            "Agent spend overlay \u2014 release slot on revocation."
           ],
           "writable": true
         }
@@ -4115,7 +4115,7 @@
     {
       "name": "settle_escrow",
       "docs": [
-        "Settle an escrow — destination vault's agent claims funds before expiry.",
+        "Settle an escrow \u2014 destination vault's agent claims funds before expiry.",
         "For conditional escrows, proof must match the SHA-256 condition hash."
       ],
       "discriminator": [
@@ -4556,14 +4556,14 @@
         {
           "name": "agent_spend_overlay",
           "docs": [
-            "Zero-copy AgentSpendOverlay — per-agent rolling spend"
+            "Zero-copy AgentSpendOverlay \u2014 per-agent rolling spend"
           ],
           "writable": true
         },
         {
           "name": "session",
           "docs": [
-            "Ephemeral session PDA — `init` ensures no double-authorization.",
+            "Ephemeral session PDA \u2014 `init` ensures no double-authorization.",
             "Seeds include token_mint for per-token concurrent sessions."
           ],
           "writable": true,
@@ -4606,7 +4606,7 @@
         {
           "name": "token_mint_account",
           "docs": [
-            "The token mint being spent — constrained to match token_mint arg"
+            "The token mint being spent \u2014 constrained to match token_mint arg"
           ]
         },
         {
@@ -4653,14 +4653,6 @@
       ],
       "args": [
         {
-          "name": "action_type",
-          "type": {
-            "defined": {
-              "name": "ActionType"
-            }
-          }
-        },
-        {
           "name": "token_mint",
           "type": "pubkey"
         },
@@ -4671,12 +4663,6 @@
         {
           "name": "target_protocol",
           "type": "pubkey"
-        },
-        {
-          "name": "leverage_bps",
-          "type": {
-            "option": "u16"
-          }
         },
         {
           "name": "expected_policy_version",
@@ -5850,7 +5836,7 @@
     {
       "code": 6051,
       "name": "InvalidConstraintConfig",
-      "msg": "Invalid constraint configuration: bounds exceeded"
+      "msg": "Invalid constraint configuration"
     },
     {
       "code": 6052,
@@ -5945,7 +5931,7 @@
     {
       "code": 6070,
       "name": "UnexpectedBalanceDecrease",
-      "msg": "Vault balance decreased more than delegated amount — potential CPI attack"
+      "msg": "Vault balance decreased more than delegated amount \u2014 potential CPI attack"
     },
     {
       "code": 6071,
@@ -5955,7 +5941,7 @@
     {
       "code": 6072,
       "name": "PolicyVersionMismatch",
-      "msg": "Policy version mismatch — policy changed since agent's last RPC read"
+      "msg": "Policy version mismatch \u2014 policy changed since agent's last RPC read"
     },
     {
       "code": 6073,
@@ -6001,6 +5987,11 @@
       "code": 6081,
       "name": "ConstraintEntryCountExceeded",
       "msg": "Cannot pack entries: entry count exceeds MAX_CONSTRAINT_ENTRIES"
+    },
+    {
+      "code": 6082,
+      "name": "BlockedSplOpcode",
+      "msg": "SPL opcode is blocked at runtime and cannot be used in constraints"
     }
   ],
   "types": [
@@ -6071,12 +6062,8 @@
             "type": "pubkey"
           },
           {
-            "name": "action_type",
-            "type": {
-              "defined": {
-                "name": "ActionType"
-              }
-            }
+            "name": "is_spending",
+            "type": "bool"
           },
           {
             "name": "token_mint",
@@ -6096,11 +6083,6 @@
           },
           {
             "name": "rolling_spend_usd_after",
-            "docs": [
-              "DEPRECATED (v5): Always 0 since outcome-based spending.",
-              "Actual rolling spend is in SessionFinalized.actual_spend_usd.",
-              "Retained for IDL backward compatibility."
-            ],
             "type": "u64"
           },
           {
@@ -6119,87 +6101,13 @@
       }
     },
     {
-      "name": "ActionType",
-      "docs": [
-        "Action types that agents can request"
-      ],
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "Swap"
-          },
-          {
-            "name": "OpenPosition"
-          },
-          {
-            "name": "ClosePosition"
-          },
-          {
-            "name": "IncreasePosition"
-          },
-          {
-            "name": "DecreasePosition"
-          },
-          {
-            "name": "Deposit"
-          },
-          {
-            "name": "Withdraw"
-          },
-          {
-            "name": "Transfer"
-          },
-          {
-            "name": "AddCollateral"
-          },
-          {
-            "name": "RemoveCollateral"
-          },
-          {
-            "name": "PlaceTriggerOrder"
-          },
-          {
-            "name": "EditTriggerOrder"
-          },
-          {
-            "name": "CancelTriggerOrder"
-          },
-          {
-            "name": "PlaceLimitOrder"
-          },
-          {
-            "name": "EditLimitOrder"
-          },
-          {
-            "name": "CancelLimitOrder"
-          },
-          {
-            "name": "SwapAndOpenPosition"
-          },
-          {
-            "name": "CloseAndSwapPosition"
-          },
-          {
-            "name": "CreateEscrow"
-          },
-          {
-            "name": "SettleEscrow"
-          },
-          {
-            "name": "RefundEscrow"
-          }
-        ]
-      }
-    },
-    {
       "name": "AgentContributionEntry",
       "docs": [
         "Per-agent contribution entry within an overlay.",
         "Tracks each agent's individual spend contributions using a 24-bucket",
         "hourly epoch scheme with per-entry `last_write_epoch` for correct gap-zeroing.",
         "",
-        "Layout: 32 (agent) + 8 (last_write_epoch) + 8 × 24 (contributions) = 232 bytes"
+        "Layout: 32 (agent) + 8 (last_write_epoch) + 8 \u00d7 24 (contributions) = 232 bytes"
       ],
       "serialization": "bytemuck",
       "repr": {
@@ -6255,8 +6163,12 @@
             "type": "pubkey"
           },
           {
-            "name": "permissions",
-            "type": "u64"
+            "name": "capability",
+            "docs": [
+              "Agent capability: 0=Disabled, 1=Observer (non-spending), 2=Operator (full).",
+              "Replaces the 21-bit ActionType permission bitmask."
+            ],
+            "type": "u8"
           },
           {
             "name": "spending_limit_usd",
@@ -6265,6 +6177,15 @@
           {
             "name": "paused",
             "type": "bool"
+          },
+          {
+            "name": "_reserved",
+            "type": {
+              "array": [
+                "u8",
+                7
+              ]
+            }
           }
         ]
       }
@@ -6359,8 +6280,8 @@
             "type": "pubkey"
           },
           {
-            "name": "permissions",
-            "type": "u64"
+            "name": "capability",
+            "type": "u8"
           },
           {
             "name": "spending_limit_usd",
@@ -6439,7 +6360,7 @@
         "Supports up to 10 agents (matches MAX_AGENTS_PER_VAULT).",
         "",
         "Size calculation:",
-        "8 (discriminator) + 32 (vault) + 232 × 10 (entries) + 1 (bump) + 7 (padding) + 80 (lifetime_spend) + 80 (lifetime_tx_count) = 2,528 bytes"
+        "8 (discriminator) + 32 (vault) + 232 \u00d7 10 (entries) + 1 (bump) + 7 (padding) + 80 (lifetime_spend) + 80 (lifetime_tx_count) = 2,528 bytes"
       ],
       "serialization": "bytemuck",
       "repr": {
@@ -6605,7 +6526,7 @@
           {
             "name": "fee_destination",
             "docs": [
-              "Developer fee destination — IMMUTABLE after initialization.",
+              "Developer fee destination \u2014 IMMUTABLE after initialization.",
               "Prevents a compromised owner from redirecting fees."
             ],
             "type": "pubkey"
@@ -6682,7 +6603,7 @@
               "Cumulative stablecoin deposits in base units (USDC/USDT, 6 decimals).",
               "Incremented in deposit_funds for stablecoin mints only.",
               "Used for P&L: current_balance - total_deposited_usd + total_withdrawn_usd.",
-              "Cumulative gross — never decremented. Informational only, never authorization input."
+              "Cumulative gross \u2014 never decremented. Informational only, never authorization input."
             ],
             "type": "u64"
           },
@@ -6700,7 +6621,7 @@
               "Cumulative failed + expired session count.",
               "Incremented in finalize_session when success=false OR is_expired=true.",
               "Used for success rate: total_transactions / (total_transactions + total_failed_transactions).",
-              "Informational only — never used in authorization decisions."
+              "Informational only \u2014 never used in authorization decisions."
             ],
             "type": "u64"
           },
@@ -6790,12 +6711,21 @@
             }
           },
           {
-            "name": "discriminator_format",
+            "name": "is_spending",
             "docs": [
-              "Discriminator format for this entry's target program. Controls the",
-              "minimum byte length of the first DataConstraint (the A5 anchor).",
-              "Default: Anchor8 (0). Use Spl1 (1) for SPL Token / Token-2022."
+              "Spending classification: 1=Spending, 2=NonSpending. Required (0 rejected)."
             ],
+            "type": "u8"
+          },
+          {
+            "name": "position_effect",
+            "docs": [
+              "Position effect: 0=None, 1=Increment, 2=Decrement."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "discriminator_format",
             "type": {
               "defined": {
                 "name": "DiscriminatorFormat"
@@ -6807,21 +6737,6 @@
     },
     {
       "name": "ConstraintEntryZC",
-      "docs": [
-        "BYTE LAYOUT REGISTRY — Canonical assignment of padding bytes.",
-        "",
-        "Both `feat/multi-format-discriminator` and `feat/actiontype-elimination`",
-        "branches carve fields from the original 6-byte `_padding`. This registry",
-        "is the single source of truth. When merging, the layout MUST be:",
-        "",
-        "byte 554: discriminator_format  (this branch)",
-        "byte 555: is_spending           (actiontype-elimination branch)",
-        "byte 556: position_effect       (actiontype-elimination branch)",
-        "bytes 557-559: _padding[3]      (reserved for future use)",
-        "",
-        "Total: 32+320+200+1+1+1+1+1+3 = 560 (unchanged).",
-        "The branch that merges second MUST rebase and adjust its slot to match."
-      ],
       "serialization": "bytemuck",
       "repr": {
         "kind": "c"
@@ -6873,12 +6788,19 @@
             "type": "u8"
           },
           {
-            "name": "discriminator_format",
+            "name": "is_spending",
             "docs": [
-              "DiscriminatorFormat discriminant (0=Anchor8, 1=Spl1). Write-time only —",
-              "verify_data_constraints_zc() does not read this field at runtime.",
-              "Zero-initialized on existing V1 PDAs → 0 → Anchor8 (backward compatible).",
-              "BYTE LAYOUT: byte 554 — permanently reserved for discriminator_format."
+              "Spending classification: 0=Unset (treated as spending), 1=Spending, 2=NonSpending.",
+              "Set by vault owner at constraint creation time. The constraint engine returns",
+              "this value when it matches an entry \u2014 replaces ActionType.is_spending()."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "position_effect",
+            "docs": [
+              "Position tracking: 0=None, 1=Increment (opens position), 2=Decrement (closes position).",
+              "Replaces ActionType.position_effect()."
             ],
             "type": "u8"
           },
@@ -6887,7 +6809,7 @@
             "type": {
               "array": [
                 "u8",
-                5
+                4
               ]
             }
           }
@@ -6933,6 +6855,12 @@
             "type": "pubkey"
           },
           {
+            "name": "discriminator_formats",
+            "type": {
+              "vec": "u8"
+            }
+          },
+          {
             "name": "applied_at",
             "type": "i64"
           }
@@ -6962,11 +6890,9 @@
           },
           {
             "name": "discriminator_formats",
-            "docs": [
-              "Per-entry discriminator format (0=Anchor8, 1=Spl1).",
-              "Enables off-chain monitors to detect format changes/downgrades."
-            ],
-            "type": "bytes"
+            "type": {
+              "vec": "u8"
+            }
           },
           {
             "name": "executes_at",
@@ -7062,32 +6988,10 @@
       }
     },
     {
-      "name": "DiscriminatorFormat",
-      "docs": [
-        "Discriminator format for the first DataConstraint in a ConstraintEntry.",
-        "Controls the minimum byte length required for the instruction discriminator",
-        "anchor (A5 invariant). Different Solana programs use different discriminator",
-        "widths — Anchor uses 8-byte SHA-256 prefixes, SPL Token uses 1-byte enum",
-        "indices. The format is checked at constraint creation time only; runtime",
-        "verification in verify_data_constraints_zc() uses value_len directly."
-      ],
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "Anchor8"
-          },
-          {
-            "name": "Spl1"
-          }
-        ]
-      }
-    },
-    {
       "name": "EpochBucket",
       "docs": [
         "A single epoch bucket tracking aggregate USD spend.",
-        "16 bytes per bucket. USD-only — rate limiting stays client-side."
+        "16 bytes per bucket. USD-only \u2014 rate limiting stays client-side."
       ],
       "serialization": "bytemuck",
       "repr": {
@@ -7432,11 +7336,18 @@
             "type": "u8"
           },
           {
+            "name": "constraint_version",
+            "docs": [
+              "Constraint schema version. Always 1 for new deployments."
+            ],
+            "type": "u8"
+          },
+          {
             "name": "_padding",
             "type": {
               "array": [
                 "u8",
-                5
+                4
               ]
             }
           }
@@ -7462,11 +7373,9 @@
           },
           {
             "name": "discriminator_formats",
-            "docs": [
-              "Per-entry discriminator format (0=Anchor8, 1=Spl1).",
-              "Enables off-chain monitors to detect format changes/downgrades."
-            ],
-            "type": "bytes"
+            "type": {
+              "vec": "u8"
+            }
           },
           {
             "name": "timestamp",
@@ -7528,7 +7437,7 @@
       "docs": [
         "Queued agent permissions update. Timelock-gated.",
         "PDA seeds: [b\"pending_agent_perms\", vault.key().as_ref(), agent.as_ref()]",
-        "Per-agent PDA — allows concurrent pending updates for different agents."
+        "Per-agent PDA \u2014 allows concurrent pending updates for different agents."
       ],
       "type": {
         "kind": "struct",
@@ -7542,8 +7451,17 @@
             "type": "pubkey"
           },
           {
-            "name": "new_permissions",
-            "type": "u64"
+            "name": "new_capability",
+            "type": "u8"
+          },
+          {
+            "name": "_reserved_cap",
+            "type": {
+              "array": [
+                "u8",
+                7
+              ]
+            }
           },
           {
             "name": "spending_limit_usd",
@@ -7567,7 +7485,7 @@
     {
       "name": "PendingCloseConstraints",
       "docs": [
-        "Queued constraint closure. Minimal — just needs the timelock gate.",
+        "Queued constraint closure. Minimal \u2014 just needs the timelock gate.",
         "PDA seeds: [b\"pending_close_constraints\", vault.key().as_ref()]"
       ],
       "type": {
@@ -7600,7 +7518,7 @@
         "",
         "PDA seeds: `[b\"pending_constraints\", vault.key().as_ref()]`",
         "",
-        "Zero-copy layout — same entries array as InstructionConstraints",
+        "Zero-copy layout \u2014 same entries array as InstructionConstraints",
         "plus queued_at and executes_at timestamps."
       ],
       "serialization": "bytemuck",
@@ -7915,8 +7833,7 @@
           {
             "name": "max_leverage_bps",
             "docs": [
-              "Maximum leverage multiplier in basis points (e.g., 10000 = 100x)",
-              "Set to 0 to disallow leveraged positions entirely"
+              "DEPRECATED: Not enforced on-chain. Kept for layout stability. See Phase B3 post-assertions."
             ],
             "type": "u16"
           },
@@ -8130,10 +8047,10 @@
         "instruction executes, within the same atomic transaction.",
         "",
         "Same bytes-at-offset pattern as DataConstraintZC, but applied to",
-        "account data instead of instruction data. Protocol-agnostic — the",
+        "account data instead of instruction data. Protocol-agnostic \u2014 the",
         "vault owner configures byte offsets from protocol documentation.",
         "",
-        "Phase B1: absolute value assertions (check field ≤ max, field ≥ min).",
+        "Phase B1: absolute value assertions (check field \u2264 max, field \u2265 min).",
         "Phase B3 will add CrossFieldLte for leverage ratio enforcement."
       ],
       "serialization": "bytemuck",
@@ -8194,8 +8111,8 @@
             "docs": [
               "Assertion mode:",
               "0 = Absolute: check current value against expected_value",
-              "1 = MaxDecrease: check (snapshot - current) ≤ expected_value (Phase B2)",
-              "2 = MaxIncrease: check (current - snapshot) ≤ expected_value (Phase B2)",
+              "1 = MaxDecrease: check (snapshot - current) \u2264 expected_value (Phase B2)",
+              "2 = MaxIncrease: check (current - snapshot) \u2264 expected_value (Phase B2)",
               "3 = NoChange: check current == snapshot (Phase B2)"
             ],
             "type": "u8"
@@ -8409,15 +8326,19 @@
             "type": "pubkey"
           },
           {
-            "name": "action_type",
+            "name": "is_spending",
             "docs": [
-              "The action type that was authorized (stored so finalize can record it)"
+              "Whether the matched constraint entry classifies this as spending.",
+              "Derived from amount > 0 in validate_and_authorize."
             ],
-            "type": {
-              "defined": {
-                "name": "ActionType"
-              }
-            }
+            "type": "bool"
+          },
+          {
+            "name": "position_effect",
+            "docs": [
+              "Position effect from matched constraint entry (0=None, 1=Increment, 2=Decrement)."
+            ],
+            "type": "u8"
           },
           {
             "name": "expires_at_slot",
@@ -8513,8 +8434,7 @@
           {
             "name": "actual_spend_usd",
             "docs": [
-              "Actual stablecoin spend measured by balance delta (0 for non-spending actions).",
-              "For stablecoin-input: outflow minus fees. For non-stablecoin-input: stablecoin gain."
+              "Actual stablecoin spend measured by balance delta (0 for non-spending actions)."
             ],
             "type": "u64"
           },
@@ -8526,9 +8446,16 @@
             "type": "u64"
           },
           {
-            "name": "action_type",
+            "name": "is_spending",
             "docs": [
-              "ActionType as u8 for downstream classification (permission_bit() value, 0-20)."
+              "Whether this was a spending action."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "position_effect",
+            "docs": [
+              "Position effect: 0=None, 1=Increment, 2=Decrement."
             ],
             "type": "u8"
           }
@@ -8595,7 +8522,7 @@
             "name": "last_write_epoch",
             "docs": [
               "Epoch of most recent record_spend() call. Enables early exit in get_rolling_24h_usd().",
-              "Zero-initialized — value 0 correctly triggers early exit (current_epoch >> 144)."
+              "Zero-initialized \u2014 value 0 correctly triggers early exit (current_epoch >> 144)."
             ],
             "type": "i64"
           },
@@ -8705,9 +8632,9 @@
             }
           },
           {
-            "name": "new_agent_permissions",
+            "name": "new_agent_capability",
             "type": {
-              "option": "u64"
+              "option": "u8"
             }
           },
           {
@@ -8733,6 +8660,20 @@
           },
           {
             "name": "Closed"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DiscriminatorFormat",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Anchor8"
+          },
+          {
+            "name": "Spl1"
           }
         ]
       }
