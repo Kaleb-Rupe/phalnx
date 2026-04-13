@@ -192,10 +192,10 @@ impl InstructionConstraints {
             let mut seen_count = 0usize;
             for entry in entries {
                 let mut found = false;
-                for j in 0..seen_count {
-                    if seen_formats[j].0 == entry.program_id {
+                for seen in seen_formats.iter().take(seen_count) {
+                    if seen.0 == entry.program_id {
                         require!(
-                            seen_formats[j].1 == entry.discriminator_format,
+                            seen.1 == entry.discriminator_format,
                             SigilError::InvalidConstraintConfig
                         );
                         found = true;
@@ -276,13 +276,12 @@ impl InstructionConstraints {
                 // blocked first. Blocked: Transfer(3), Approve(4), SetAuthority(6),
                 // Burn(8), CloseAccount(9), TransferChecked(12), ApproveChecked(13),
                 // BurnChecked(15).
-                if first.value.len() >= 1 {
-                    const BLOCKED_SPL_OPCODES: [u8; 8] = [3, 4, 6, 8, 9, 12, 13, 15];
-                    require!(
-                        !BLOCKED_SPL_OPCODES.contains(&first.value[0]),
-                        SigilError::InvalidConstraintConfig
-                    );
-                }
+                // first.value.len() >= 1 guaranteed by min_discriminator_len check above
+                const BLOCKED_SPL_OPCODES: [u8; 8] = [3, 4, 6, 8, 9, 12, 13, 15];
+                require!(
+                    !BLOCKED_SPL_OPCODES.contains(&first.value[0]),
+                    SigilError::InvalidConstraintConfig
+                );
             }
 
             for dc in &entry.data_constraints {
