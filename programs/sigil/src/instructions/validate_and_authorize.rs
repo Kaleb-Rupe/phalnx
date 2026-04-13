@@ -254,28 +254,25 @@ pub fn handler(
         .map_err(|_| error!(SigilError::MissingFinalizeInstruction))?;
     let current_idx_usize = current_idx as usize;
 
-    // 5a. Backward instruction scan (Phase B2 security fix):
-    // Reject any non-infrastructure instructions BEFORE validate_and_authorize.
-    // Prevents DeFi-before-validate ordering attack where an agent places the
-    // DeFi instruction first to make snapshot capture post-modification state.
-    let compute_budget_id_backward = Pubkey::new_from_array([
-        3, 6, 70, 111, 229, 33, 23, 50, 255, 236, 173, 186, 114, 195, 155, 231, 188, 140, 229,
-        187, 197, 247, 18, 107, 44, 67, 155, 58, 64, 0, 0, 0,
-    ]);
-    for pre_idx in 0..current_idx_usize {
-        if let Ok(ix) = load_instruction_at_checked(pre_idx, &ix_sysvar) {
-            require!(
-                ix.program_id == compute_budget_id_backward
-                    || ix.program_id == anchor_lang::solana_program::system_program::ID,
-                SigilError::UnauthorizedPreValidateInstruction
-            );
-        }
-    }
     let spl_token_id = ctx.accounts.token_program.key();
     let compute_budget_id = Pubkey::new_from_array([
         3, 6, 70, 111, 229, 33, 23, 50, 255, 236, 173, 186, 114, 195, 155, 231, 188, 140, 229, 187,
         197, 247, 18, 107, 44, 67, 155, 58, 64, 0, 0, 0,
     ]);
+
+    // 5a. Backward instruction scan (Phase B2 security fix):
+    // Reject any non-infrastructure instructions BEFORE validate_and_authorize.
+    // Prevents DeFi-before-validate ordering attack where an agent places the
+    // DeFi instruction first to make snapshot capture post-modification state.
+    for pre_idx in 0..current_idx_usize {
+        if let Ok(ix) = load_instruction_at_checked(pre_idx, &ix_sysvar) {
+            require!(
+                ix.program_id == compute_budget_id
+                    || ix.program_id == anchor_lang::solana_program::system_program::ID,
+                SigilError::UnauthorizedPreValidateInstruction
+            );
+        }
+    }
     let finalize_hash = FINALIZE_SESSION_DISCRIMINATOR;
 
     // ── Shared instruction scan helper ──────────────────────────────
@@ -627,20 +624,11 @@ pub fn handler(
     // If the vault has post-assertions with delta modes (1-3), capture target
     // account bytes BEFORE the DeFi instruction executes.
     if policy.has_post_assertions != 0 {
-        // Find PostExecutionAssertions PDA in remaining_accounts via PDA derivation
-        let assertions_pda_expected =
-            Pubkey::create_program_address(
-                &[b"post_assertions", vault_key.as_ref(), &[{
-                    // We need the bump — derive it
-                    let (_, bump) = Pubkey::find_program_address(
-                        &[b"post_assertions", vault_key.as_ref()],
-                        &crate::ID,
-                    );
-                    bump
-                }]],
-                &crate::ID,
-            )
-            .map_err(|_| error!(SigilError::PostAssertionFailed))?;
+        // Find PostExecutionAssertions PDA via derivation (audit H3: single call)
+        let (assertions_pda_expected, _) = Pubkey::find_program_address(
+            &[b"post_assertions", vault_key.as_ref()],
+            &crate::ID,
+        );
 
         // PDA-based lookup (not positional — security audit H2 fix)
         let assertions_info = ctx

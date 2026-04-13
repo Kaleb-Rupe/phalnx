@@ -534,19 +534,8 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
             SigilError::PostAssertionFailed
         );
 
-        // CRITICAL: verify Anchor discriminator to prevent account substitution.
-        // Without this, any same-vault zero-copy account (SpendTracker,
-        // AgentSpendOverlay, InstructionConstraints) could be substituted —
-        // they all have vault as the first 32 bytes after discriminator.
-        // Zero-copy accounts use SHA256("account:PostExecutionAssertions")[0..8]
-        // as their discriminator. Verify via PDA derivation instead — if the
-        // account matches the expected PDA address, it IS the right account.
-        let (expected_pda, _) =
-            Pubkey::find_program_address(&[b"post_assertions", vault_key.as_ref()], &crate::ID);
-        require!(
-            assertions_info.key() == expected_pda,
-            SigilError::PostAssertionFailed
-        );
+        // PDA address already verified at line 514-519 via find_program_address.
+        // Account substitution is impossible — the PDA derivation check is the defense.
 
         let assertions: &PostExecutionAssertions =
             bytemuck::from_bytes(&assertions_data[8..8 + struct_size]);

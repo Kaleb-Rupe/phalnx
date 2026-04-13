@@ -153,6 +153,11 @@ impl PostExecutionAssertions {
 
             // Phase B3: CrossFieldLte validation
             if entry.cross_field_flags & 0x01 != 0 {
+                // CrossFieldLte parses fields as u64 — value_len must fit (audit C1)
+                require!(
+                    entry.value_len <= 8,
+                    crate::errors::SigilError::InvalidConstraintConfig
+                );
                 // CrossFieldLte only composes with Absolute mode
                 require!(
                     entry.assertion_mode == 0,
@@ -196,4 +201,168 @@ pub struct PostAssertionEntry {
     pub cross_field_multiplier_bps: u32,
     /// Phase B3: flags byte — bit 0 = enable CrossFieldLte (0 if unused)
     pub cross_field_flags: u8,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ─── Helpers ────────────────────────────────────────────────────────
+
+    fn mk_assertion_entry(mode: u8, value_len: u8) -> PostAssertionEntry {
+        PostAssertionEntry {
+            target_account: Pubkey::default(),
+            offset: 0,
+            value_len,
+            operator: 0, // Eq
+            expected_value: vec![0u8; value_len as usize],
+            assertion_mode: mode,
+            cross_field_offset_b: 0,
+            cross_field_multiplier_bps: 0,
+            cross_field_flags: 0,
+        }
+    }
+
+    fn mk_crossfield_entry(multiplier_bps: u32, flags: u8) -> PostAssertionEntry {
+        PostAssertionEntry {
+            target_account: Pubkey::default(),
+            offset: 0,
+            value_len: 8,
+            operator: 0,
+            expected_value: vec![0u8; 8],
+            assertion_mode: 0, // Absolute — required for CrossFieldLte
+            cross_field_offset_b: 100,
+            cross_field_multiplier_bps: multiplier_bps,
+            cross_field_flags: flags,
+        }
+    }
+
+    // ─── AssertionMode TryFrom<u8> ──────────────────────────────────────
+
+    #[test]
+    fn assertion_mode_try_from_valid_discriminants() {
+        assert_eq!(AssertionMode::try_from(0), Ok(AssertionMode::Absolute));
+        assert_eq!(AssertionMode::try_from(1), Ok(AssertionMode::MaxDecrease));
+        assert_eq!(AssertionMode::try_from(2), Ok(AssertionMode::MaxIncrease));
+        assert_eq!(AssertionMode::try_from(3), Ok(AssertionMode::NoChange));
+    }
+
+    #[test]
+    fn assertion_mode_try_from_rejects_4() {
+        assert!(AssertionMode::try_from(4).is_err());
+    }
+
+    #[test]
+    fn assertion_mode_try_from_rejects_255() {
+        assert!(AssertionMode::try_from(255).is_err());
+    }
+
+    #[test]
+    fn assertion_mode_round_trip_discriminants() {
+        assert_eq!(AssertionMode::Absolute as u8, 0);
+        assert_eq!(AssertionMode::MaxDecrease as u8, 1);
+        assert_eq!(AssertionMode::MaxIncrease as u8, 2);
+        assert_eq!(AssertionMode::NoChange as u8, 3);
+    }
+
+    // ─── B2: delta modes in validate_entries ────────────────────────────
+
+    #[test]
+    fn validate_accepts_max_decrease_with_value_len_8() {
+        let entries = vec![mk_assertion_entry(1, 8)]; // MaxDecrease, 8 bytes
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_ok());
+    }
+
+    #[test]
+    fn validate_accepts_max_increase_with_value_len_4() {
+        let entries = vec![mk_assertion_entry(2, 4)]; // MaxIncrease, 4 bytes
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_ok());
+    }
+
+    #[test]
+    fn validate_accepts_no_change_with_value_len_1() {
+        let entries = vec![mk_assertion_entry(3, 1)]; // NoChange, 1 byte
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_ok());
+    }
+
+    #[test]
+    fn validate_rejects_max_decrease_with_value_len_9() {
+        let entries = vec![mk_assertion_entry(1, 9)]; // MaxDecrease, 9 bytes — too large for delta
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
+    }
+
+    #[test]
+    fn validate_rejects_max_decrease_with_value_len_32() {
+        let entries = vec![mk_assertion_entry(1, 32)]; // MaxDecrease, 32 bytes — way too large
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
+    }
+
+    #[test]
+    fn validate_rejects_unknown_mode_4() {
+        let entries = vec![mk_assertion_entry(4, 4)];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
+    }
+
+    #[test]
+    fn validate_rejects_unknown_mode_255() {
+        let entries = vec![mk_assertion_entry(255, 4)];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
+    }
+
+    // ─── B3: CrossFieldLte in validate_entries ──────────────────────────
+
+    #[test]
+    fn validate_accepts_crossfield_enabled_absolute_mode_positive_multiplier() {
+        // flags=1 (enabled), mode=0 (Absolute), multiplier>0 → valid
+        let entries = vec![mk_crossfield_entry(10_000, 1)];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_ok());
+    }
+
+    #[test]
+    fn validate_rejects_crossfield_enabled_with_delta_mode() {
+        // flags=1 (enabled) but mode=1 (MaxDecrease) → must be Absolute
+        let mut entry = mk_crossfield_entry(10_000, 1);
+        entry.assertion_mode = 1;
+        let entries = vec![entry];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
+    }
+
+    #[test]
+    fn validate_rejects_crossfield_enabled_with_zero_multiplier() {
+        // flags=1 (enabled) but multiplier=0 → invalid
+        let entries = vec![mk_crossfield_entry(0, 1)];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
+    }
+
+    #[test]
+    fn validate_rejects_crossfield_enabled_with_unknown_flags() {
+        // flags=3 (bit 0 + bit 1 set) → unknown bit 1 must be rejected
+        let entries = vec![mk_crossfield_entry(10_000, 3)];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
+    }
+
+    #[test]
+    fn validate_accepts_crossfield_disabled_zeroed_fields() {
+        // flags=0 (disabled), offset_b=0, multiplier=0 → valid
+        let entries = vec![mk_assertion_entry(0, 8)]; // all B3 fields are 0
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_ok());
+    }
+
+    #[test]
+    fn validate_rejects_crossfield_disabled_but_nonzero_offset_b() {
+        // flags=0 (disabled) but offset_b != 0 → unused fields must be zeroed
+        let mut entry = mk_assertion_entry(0, 8);
+        entry.cross_field_offset_b = 42;
+        let entries = vec![entry];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
+    }
+
+    #[test]
+    fn validate_rejects_crossfield_disabled_but_nonzero_multiplier() {
+        // flags=0 (disabled) but multiplier != 0 → unused fields must be zeroed
+        let mut entry = mk_assertion_entry(0, 8);
+        entry.cross_field_multiplier_bps = 5000;
+        let entries = vec![entry];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
+    }
 }
