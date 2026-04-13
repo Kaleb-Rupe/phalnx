@@ -128,6 +128,9 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
     let session_authorized_protocol = session.authorized_protocol;
     let session_authorized_token = session.authorized_token;
     let session_protocol_fee = session.protocol_fee;
+    // Phase B2: extract snapshot data for delta assertions
+    let session_snapshots = session.assertion_snapshots;
+    let session_snapshot_lens = session.snapshot_lens;
 
     let vault_key = ctx.accounts.vault.key();
     let vault = &mut ctx.accounts.vault;
@@ -507,7 +510,14 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
         let remaining = &ctx.remaining_accounts;
         require!(!remaining.is_empty(), SigilError::PostAssertionFailed);
 
-        let assertions_info = &remaining[remaining.len() - 1];
+        // PDA-based lookup (not positional — security audit H2 fix)
+        let (expected_assertions_pda, _) =
+            Pubkey::find_program_address(&[b"post_assertions", vault_key.as_ref()], &crate::ID);
+        let assertions_info = remaining
+            .iter()
+            .find(|a| a.key() == expected_assertions_pda);
+        require!(assertions_info.is_some(), SigilError::PostAssertionFailed);
+        let assertions_info = assertions_info.unwrap();
 
         // Hard-fail: PDA must be owned by this program
         require!(
@@ -524,19 +534,8 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
             SigilError::PostAssertionFailed
         );
 
-        // CRITICAL: verify Anchor discriminator to prevent account substitution.
-        // Without this, any same-vault zero-copy account (SpendTracker,
-        // AgentSpendOverlay, InstructionConstraints) could be substituted —
-        // they all have vault as the first 32 bytes after discriminator.
-        // Zero-copy accounts use SHA256("account:PostExecutionAssertions")[0..8]
-        // as their discriminator. Verify via PDA derivation instead — if the
-        // account matches the expected PDA address, it IS the right account.
-        let (expected_pda, _) =
-            Pubkey::find_program_address(&[b"post_assertions", vault_key.as_ref()], &crate::ID);
-        require!(
-            assertions_info.key() == expected_pda,
-            SigilError::PostAssertionFailed
-        );
+        // PDA address already verified at line 514-519 via find_program_address.
+        // Account substitution is impossible — the PDA derivation check is the defense.
 
         let assertions: &PostExecutionAssertions =
             bytemuck::from_bytes(&assertions_data[8..8 + struct_size]);
@@ -559,36 +558,130 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
             let target = target.unwrap();
             let target_data = target.try_borrow_data()?;
 
-            // Phase B1: absolute value assertions only (mode == 0)
-            if entry.assertion_mode == 0 {
-                let offset = entry.offset as usize;
-                let len = entry.value_len as usize;
+            let offset = entry.offset as usize;
+            let len = entry.value_len as usize;
+            let end = offset
+                .checked_add(len)
+                .ok_or(error!(SigilError::PostAssertionFailed))?;
+            require!(end <= target_data.len(), SigilError::PostAssertionFailed);
+            let actual = &target_data[offset..end];
 
-                // Checked arithmetic (CLAUDE.md constraint #3)
-                let end = offset
-                    .checked_add(len)
-                    .ok_or(error!(SigilError::PostAssertionFailed))?;
-                require!(end <= target_data.len(), SigilError::PostAssertionFailed);
+            // Exhaustive match on assertion_mode — unknown modes hard-fail (security audit H3)
+            let mode = crate::state::post_assertions::AssertionMode::try_from(entry.assertion_mode)
+                .map_err(|_| error!(SigilError::InvalidConstraintConfig))?;
 
-                let actual = &target_data[offset..end];
-                let expected = &entry.expected_value[..len];
-                let operator = ConstraintOperator::try_from(entry.operator)
-                    .map_err(|_| error!(SigilError::InvalidConstraintOperator))?;
+            match mode {
+                crate::state::post_assertions::AssertionMode::Absolute => {
+                    // Phase B1: check current value against expected_value
+                    let expected = &entry.expected_value[..len];
+                    let operator = ConstraintOperator::try_from(entry.operator)
+                        .map_err(|_| error!(SigilError::InvalidConstraintOperator))?;
 
-                let passed = crate::instructions::integrations::generic_constraints::bytes_match(
-                    actual, &operator, expected,
-                );
+                    // Phase B3: CrossFieldLte — ratio check using two offsets
+                    if entry.cross_field_flags & 0x01 != 0 {
+                        let offset_b = u16::from_le_bytes(entry.cross_field_offset_b) as usize;
+                        let end_b = offset_b
+                            .checked_add(len)
+                            .ok_or(error!(SigilError::PostAssertionFailed))?;
+                        require!(end_b <= target_data.len(), SigilError::PostAssertionFailed);
+                        let field_b_bytes = &target_data[offset_b..end_b];
 
-                require!(passed, SigilError::PostAssertionFailed);
+                        // Parse as little-endian unsigned integers
+                        let mut a_buf = [0u8; 8];
+                        let mut b_buf = [0u8; 8];
+                        a_buf[..len].copy_from_slice(actual);
+                        b_buf[..len].copy_from_slice(field_b_bytes);
+                        let field_a = u64::from_le_bytes(a_buf);
+                        let field_b = u64::from_le_bytes(b_buf);
 
-                emit!(crate::events::PostAssertionChecked {
-                    vault: vault_key,
-                    entry_index: i as u8,
-                    passed: true,
-                    timestamp: clock_ts,
-                });
+                        let multiplier =
+                            u32::from_le_bytes(entry.cross_field_multiplier_bps) as u128;
+
+                        // Handle field_B = 0 explicitly (security audit H5)
+                        if field_b == 0 {
+                            require!(field_a == 0, SigilError::PostAssertionFailed);
+                        } else {
+                            // Cross-multiply with u128 to avoid overflow (security audit M1)
+                            let lhs = (field_a as u128)
+                                .checked_mul(10000u128)
+                                .ok_or(error!(SigilError::Overflow))?;
+                            let rhs = multiplier
+                                .checked_mul(field_b as u128)
+                                .ok_or(error!(SigilError::Overflow))?;
+                            require!(lhs <= rhs, SigilError::PostAssertionFailed);
+                        }
+                    } else {
+                        // Standard absolute comparison (B1)
+                        let passed =
+                            crate::instructions::integrations::generic_constraints::bytes_match(
+                                actual, &operator, expected,
+                            );
+                        require!(passed, SigilError::PostAssertionFailed);
+                    }
+                }
+                crate::state::post_assertions::AssertionMode::MaxDecrease => {
+                    // Phase B2: check (snapshot - current) ≤ expected_value
+                    // NOTE: If value increases, saturating sub = 0, check passes.
+                    require!(
+                        session_snapshot_lens[i] == entry.value_len,
+                        SigilError::SnapshotNotCaptured
+                    );
+                    let snapshot = &session_snapshots[i][..len];
+                    let expected = &entry.expected_value[..len];
+
+                    let mut snap_buf = [0u8; 8];
+                    let mut curr_buf = [0u8; 8];
+                    let mut exp_buf = [0u8; 8];
+                    snap_buf[..len].copy_from_slice(snapshot);
+                    curr_buf[..len].copy_from_slice(actual);
+                    exp_buf[..len].copy_from_slice(expected);
+                    let snap_val = u64::from_le_bytes(snap_buf);
+                    let curr_val = u64::from_le_bytes(curr_buf);
+                    let exp_val = u64::from_le_bytes(exp_buf);
+
+                    let delta = snap_val.saturating_sub(curr_val);
+                    require!(delta <= exp_val, SigilError::PostAssertionFailed);
+                }
+                crate::state::post_assertions::AssertionMode::MaxIncrease => {
+                    // Phase B2: check (current - snapshot) ≤ expected_value
+                    // NOTE: If value decreases, saturating sub = 0, check passes.
+                    require!(
+                        session_snapshot_lens[i] == entry.value_len,
+                        SigilError::SnapshotNotCaptured
+                    );
+                    let snapshot = &session_snapshots[i][..len];
+                    let expected = &entry.expected_value[..len];
+
+                    let mut snap_buf = [0u8; 8];
+                    let mut curr_buf = [0u8; 8];
+                    let mut exp_buf = [0u8; 8];
+                    snap_buf[..len].copy_from_slice(snapshot);
+                    curr_buf[..len].copy_from_slice(actual);
+                    exp_buf[..len].copy_from_slice(expected);
+                    let snap_val = u64::from_le_bytes(snap_buf);
+                    let curr_val = u64::from_le_bytes(curr_buf);
+                    let exp_val = u64::from_le_bytes(exp_buf);
+
+                    let delta = curr_val.saturating_sub(snap_val);
+                    require!(delta <= exp_val, SigilError::PostAssertionFailed);
+                }
+                crate::state::post_assertions::AssertionMode::NoChange => {
+                    // Phase B2: check current == snapshot (byte equality)
+                    require!(
+                        session_snapshot_lens[i] == entry.value_len,
+                        SigilError::SnapshotNotCaptured
+                    );
+                    let snapshot = &session_snapshots[i][..len];
+                    require!(actual == snapshot, SigilError::PostAssertionFailed);
+                }
             }
-            // Phase B2/B3 assertion modes handled in future commits
+
+            emit!(crate::events::PostAssertionChecked {
+                vault: vault_key,
+                entry_index: i as u8,
+                passed: true,
+                timestamp: clock_ts,
+            });
         }
     }
 

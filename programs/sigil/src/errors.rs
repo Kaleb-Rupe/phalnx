@@ -254,6 +254,12 @@ pub enum SigilError {
     #[msg("Post-assertion constraint references invalid instruction index")]
     InvalidPostAssertionIndex,
 
+    #[msg("Non-infrastructure instruction detected before validate_and_authorize")]
+    UnauthorizedPreValidateInstruction,
+
+    #[msg("Delta assertion snapshot was not captured in validate_and_authorize")]
+    SnapshotNotCaptured,
+
     #[msg("Constraint entry index out of bounds for zero-copy array")]
     ConstraintIndexOutOfBounds,
 
