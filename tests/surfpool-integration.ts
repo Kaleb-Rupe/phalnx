@@ -2527,7 +2527,7 @@ describe("surfpool-integration", function () {
       );
 
       const transferSetup = await setupVaultWithAgent(env, program, {
-        agentCapability: OBSERVER_ONLY,
+        agentCapability: SWAP_ONLY, // Operator (2) — transfers are spending actions
         allowedDestinations: [destWallet.publicKey],
       });
 
@@ -3887,6 +3887,8 @@ describe("surfpool-integration", function () {
           },
         ],
         accountConstraints: [],
+        isSpending: 1,
+        positionEffect: 0,
       };
       // Multi-IX: allocate pending + extend×3 + populate
       {
