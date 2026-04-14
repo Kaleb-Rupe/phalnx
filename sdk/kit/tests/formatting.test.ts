@@ -18,6 +18,9 @@ import {
   formatAddress,
   formatTokenAmount,
   formatTokenAmountCompact,
+  toUsdNumber,
+  fromUsdNumber,
+  FROM_USD_NUMBER_MAX,
 } from "../src/formatting.js";
 
 // ─── USD Formatting ──────────────────────────────────────────────────────────
@@ -274,5 +277,109 @@ describe("formatTokenAmountCompact", () => {
     expect(formatTokenAmountCompact(3_500_000_000_000n, 6, "USDC")).to.equal(
       "3.5M USDC",
     );
+  });
+});
+
+// ─── Precision Helpers ──────────────────────────────────────────────────────
+
+describe("toUsdNumber", () => {
+  it("converts $500 base units to Number", () => {
+    expect(toUsdNumber(500_000_000n)).to.equal(500);
+  });
+
+  it("handles zero", () => {
+    expect(toUsdNumber(0n)).to.equal(0);
+  });
+
+  it("handles sub-dollar precision", () => {
+    expect(toUsdNumber(500_000n)).to.equal(0.5);
+  });
+
+  it("handles 1 microdollar (smallest unit)", () => {
+    expect(toUsdNumber(1n)).to.equal(0.000001);
+  });
+
+  it("throws RangeError on negative input (precondition)", () => {
+    expect(() => toUsdNumber(-1n)).to.throw(RangeError);
+    expect(() => toUsdNumber(-500_000_000n)).to.throw(RangeError);
+  });
+});
+
+describe("fromUsdNumber", () => {
+  it("converts 500 dollars to base units", () => {
+    expect(fromUsdNumber(500)).to.equal(500_000_000n);
+  });
+
+  it("handles zero", () => {
+    expect(fromUsdNumber(0)).to.equal(0n);
+  });
+
+  it("handles negative dollars", () => {
+    expect(fromUsdNumber(-100)).to.equal(-100_000_000n);
+  });
+
+  it("rounds sub-microdollar input to nearest microdollar", () => {
+    // 0.0000001 is 1/10 of a microdollar — rounds to 0
+    expect(fromUsdNumber(0.0000001)).to.equal(0n);
+    // 0.0000006 rounds to 1 microdollar
+    expect(fromUsdNumber(0.0000006)).to.equal(1n);
+  });
+
+  it("throws TypeError on NaN", () => {
+    expect(() => fromUsdNumber(NaN)).to.throw(TypeError);
+  });
+
+  it("throws TypeError on positive Infinity", () => {
+    expect(() => fromUsdNumber(Infinity)).to.throw(TypeError);
+  });
+
+  it("throws TypeError on negative Infinity", () => {
+    expect(() => fromUsdNumber(-Infinity)).to.throw(TypeError);
+  });
+
+  it("throws RangeError on value exceeding precision ceiling (positive)", () => {
+    // ~1.8e10 dollars, above the ~9.007e9 ceiling
+    expect(() => fromUsdNumber(1e20)).to.throw(RangeError);
+  });
+
+  it("throws RangeError on value exceeding precision ceiling (negative)", () => {
+    expect(() => fromUsdNumber(-1e20)).to.throw(RangeError);
+  });
+
+  it("throws RangeError on Number.MAX_VALUE", () => {
+    // Previously: Math.round(MAX_VALUE * 1e6) = Infinity → BigInt(Infinity)
+    // would throw RangeError from the BigInt constructor itself, but not
+    // until after silent precision loss. Guard catches it first.
+    expect(() => fromUsdNumber(Number.MAX_VALUE)).to.throw(RangeError);
+  });
+
+  it("throws RangeError at exactly FROM_USD_NUMBER_MAX (inclusive boundary)", () => {
+    // At |value| === FROM_USD_NUMBER_MAX, `Math.round(value * 1_000_000)`
+    // produces MAX_SAFE_INTEGER + 1 — no longer a safe integer. The check
+    // uses `>=` to reject this boundary value before precision drift.
+    expect(() => fromUsdNumber(FROM_USD_NUMBER_MAX)).to.throw(RangeError);
+    expect(() => fromUsdNumber(-FROM_USD_NUMBER_MAX)).to.throw(RangeError);
+  });
+});
+
+describe("toUsdNumber/fromUsdNumber round-trip", () => {
+  it("round-trips common dollar values", () => {
+    expect(fromUsdNumber(toUsdNumber(500_000_000n))).to.equal(500_000_000n);
+    expect(fromUsdNumber(toUsdNumber(1_234_567_890n))).to.equal(1_234_567_890n);
+  });
+
+  it("round-trips zero", () => {
+    expect(fromUsdNumber(toUsdNumber(0n))).to.equal(0n);
+  });
+
+  it("round-trips sub-dollar values", () => {
+    expect(fromUsdNumber(toUsdNumber(500_000n))).to.equal(500_000n);
+    expect(fromUsdNumber(toUsdNumber(1n))).to.equal(1n);
+  });
+
+  it("round-trips at $1B (well under the ~$9B precision ceiling)", () => {
+    // $1B as bigint microunits — well under 2^53 (~$9B ceiling for fromUsdNumber)
+    const oneBillion = 1_000_000_000_000_000n;
+    expect(fromUsdNumber(toUsdNumber(oneBillion))).to.equal(oneBillion);
   });
 });
