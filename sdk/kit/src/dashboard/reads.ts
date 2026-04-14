@@ -331,7 +331,8 @@ export async function getActivity(
       const cat = (item.category as string) ?? "unknown";
       const evt = (item.eventType as string) ?? "";
       const act = (item.actionType as string) ?? undefined;
-      const type = mapCategory(cat, evt, act);
+      const posEffect = (item.positionEffect as string | null) ?? undefined;
+      const type = mapCategory(cat, evt, act, posEffect);
       const amt = item.amount ?? 0n;
       const sig = item.txSignature || `evt-${item.timestamp}-${item.eventType}`;
 
@@ -395,9 +396,15 @@ function mapCategory(
   cat: string,
   evt: string,
   actionType?: string,
+  positionEffect?: string,
 ): ActivityType {
   if (cat === "trade") {
-    // ActionAuthorized carries actionType to distinguish swap vs lend vs perps
+    // v6 events carry positionEffect ("increment"/"decrement"/"none") instead
+    // of actionType. Prefer it when present — actionType is null for post-
+    // ActionType-elimination events.
+    if (positionEffect === "increment") return "open_position";
+    if (positionEffect === "decrement") return "close_position";
+    // Legacy v5 event path: actionType carries swap vs lend vs perps detail.
     if (actionType) {
       const at = actionType.toLowerCase();
       if (

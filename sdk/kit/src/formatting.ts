@@ -4,7 +4,8 @@
  * Design decisions:
  * - All USD formatting takes bigint (6-decimal stablecoin base units) and converts to display.
  * - Never use Number() on raw bigint amounts > 2^53 — precision loss. The division by 10^6
- *   is safe because the result fits in Number range (< $18.4 trillion).
+ *   is done on the bigint first so only the whole-dollar result must fit Number's safe
+ *   integer range (ceiling ≈ $9,007 trillion, far above any realistic vault balance).
  * - Locale: en-US hardcoded. International formatting is a future concern.
  *
  * This module is Phase 6 P0 from ANALYTICS-DATA-LAYER-PLAN, pulled forward into Step 5.5
@@ -55,23 +56,36 @@ const numberFormatterCompact = new Intl.NumberFormat("en-US", {
 /**
  * Convert stablecoin base units (6 decimals) to a Number in dollars.
  *
- * Precision-safe for |absAmount| < 2^53 microdollars (~$18.4T). The division is
- * done on bigints to avoid precision loss before conversion to Number.
+ * Precision-safe for very large magnitudes because the bigint division is done
+ * first: the whole-dollar portion `absAmount / STABLECOIN_USD_FACTOR` only
+ * needs to fit `Number.MAX_SAFE_INTEGER` (≈$9,007T) when converted; the
+ * fractional remainder is always below $1 so conversion is exact.
  *
- * @param absAmount - Absolute value in stablecoin base units. Caller must pass
- *   a non-negative bigint; negative inputs produce incorrect results because
- *   JavaScript's bigint modulo preserves sign.
+ * @param absAmount - Non-negative bigint in stablecoin base units. The
+ *   parameter name encodes the precondition: JavaScript's bigint modulo is
+ *   sign-preserving, so negative inputs produce wrong results. A guard throws
+ *   `RangeError` on negative inputs rather than silently returning garbage.
  * @returns USD value as Number (e.g., 500_000_000n → 500)
+ * @throws RangeError when absAmount is negative
  */
 export function toUsdNumber(absAmount: bigint): number {
+  if (absAmount < 0n) {
+    throw new RangeError(
+      `toUsdNumber requires a non-negative bigint, received ${absAmount}`,
+    );
+  }
   return (
     Number(absAmount / STABLECOIN_USD_FACTOR) +
     Number(absAmount % STABLECOIN_USD_FACTOR) / 1_000_000
   );
 }
 
-/** Precision ceiling for fromUsdNumber: |value * 1_000_000| must fit in Number.MAX_SAFE_INTEGER. */
-const FROM_USD_NUMBER_MAX = Number.MAX_SAFE_INTEGER / 1_000_000;
+/**
+ * Precision ceiling for {@link fromUsdNumber}: `|value * 1_000_000|` must fit
+ * in `Number.MAX_SAFE_INTEGER`. Exported so dashboard form validators can
+ * pre-check input magnitude without re-deriving the constant.
+ */
+export const FROM_USD_NUMBER_MAX = Number.MAX_SAFE_INTEGER / 1_000_000;
 
 /**
  * Convert a Number in dollars to stablecoin base units (6 decimals).
@@ -94,9 +108,9 @@ export function fromUsdNumber(value: number): bigint {
       `fromUsdNumber requires a finite Number, received ${value}`,
     );
   }
-  if (Math.abs(value) > FROM_USD_NUMBER_MAX) {
+  if (Math.abs(value) >= FROM_USD_NUMBER_MAX) {
     throw new RangeError(
-      `fromUsdNumber: |value| exceeds precision ceiling (${FROM_USD_NUMBER_MAX}). Received ${value}. Use bigint base units directly for larger amounts.`,
+      `fromUsdNumber: |value| meets or exceeds precision ceiling (${FROM_USD_NUMBER_MAX}). Received ${value}. Use bigint base units directly for larger amounts.`,
     );
   }
   return BigInt(Math.round(value * 1_000_000));

@@ -480,6 +480,24 @@ export async function withdraw(
   return run(rpc, owner, network, [ix], opts);
 }
 
+/**
+ * Queue a policy update. Client-side pre-validation catches the most common
+ * mistakes before an RPC round-trip, but is not exhaustive — on-chain remains
+ * the source of truth for all rejections.
+ *
+ * Client-validated (throws before sending):
+ *   - `timelock` >= 1800s (30 min)
+ *   - `dailyCap`, `maxPerTrade` > 0n
+ *   - `developerFeeRate` <= 500 BPS
+ *   - `approvedApps.length` <= MAX_ALLOWED_PROTOCOLS
+ *   - `maxConcurrentPositions` within u8 (0-255) via requireU8
+ *
+ * On-chain-only (silent pass through SDK, may fail on-chain):
+ *   - `allowedDestinations.length` (MAX_ALLOWED_DESTINATIONS on-chain)
+ *   - `protocolCaps.length` must equal `approvedApps.length` when has_protocol_caps
+ *   - `maxSlippageBps` <= MAX_SLIPPAGE_BPS on-chain
+ *   - `sessionExpirySlots` range (10..=450 when > 0)
+ */
 export async function queuePolicyUpdate(
   rpc: Rpc<SolanaRpcApi>,
   vault: Address,

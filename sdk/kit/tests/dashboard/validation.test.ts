@@ -340,6 +340,75 @@ describe("Validation: queuePolicyUpdate", () => {
       expect(err.message).to.include("must be positive");
     }
   });
+
+  it("rejects approvedApps.length > MAX_ALLOWED_PROTOCOLS (10)", async () => {
+    const elevenApps = Array.from({ length: 11 }, () => VALID_AGENT);
+    try {
+      await queuePolicyUpdate(rpc, VAULT, owner, "devnet", {
+        approvedApps: elevenApps,
+      });
+      expect.fail("Should have thrown");
+    } catch (err: any) {
+      expect(err.message).to.include("MAX_ALLOWED_PROTOCOLS");
+    }
+  });
+
+  it("accepts approvedApps.length === MAX_ALLOWED_PROTOCOLS (10)", async () => {
+    // 10 is the boundary — should pass validation and fail later at RPC
+    const tenApps = Array.from({ length: 10 }, () => VALID_AGENT);
+    try {
+      await queuePolicyUpdate(rpc, VAULT, owner, "devnet", {
+        approvedApps: tenApps,
+      });
+      expect.fail("Should have thrown at RPC, not validation");
+    } catch (err: any) {
+      expect(err.message).to.not.include("MAX_ALLOWED_PROTOCOLS");
+    }
+  });
+
+  it("rejects maxConcurrentPositions > 255 (u8 overflow)", async () => {
+    try {
+      await queuePolicyUpdate(rpc, VAULT, owner, "devnet", {
+        maxConcurrentPositions: 256,
+      });
+      expect.fail("Should have thrown");
+    } catch (err: any) {
+      expect(err.message).to.include("0-255");
+    }
+  });
+
+  it("rejects maxConcurrentPositions < 0 (u8 range)", async () => {
+    try {
+      await queuePolicyUpdate(rpc, VAULT, owner, "devnet", {
+        maxConcurrentPositions: -1,
+      });
+      expect.fail("Should have thrown");
+    } catch (err: any) {
+      expect(err.message).to.include("0-255");
+    }
+  });
+
+  it("rejects maxConcurrentPositions that is non-integer (u8 integrity)", async () => {
+    try {
+      await queuePolicyUpdate(rpc, VAULT, owner, "devnet", {
+        maxConcurrentPositions: 1.5,
+      });
+      expect.fail("Should have thrown");
+    } catch (err: any) {
+      expect(err.message).to.include("integer");
+    }
+  });
+
+  it("accepts maxConcurrentPositions === 255 (u8 max)", async () => {
+    try {
+      await queuePolicyUpdate(rpc, VAULT, owner, "devnet", {
+        maxConcurrentPositions: 255,
+      });
+      expect.fail("Should have thrown at RPC, not validation");
+    } catch (err: any) {
+      expect(err.message).to.not.include("0-255");
+    }
+  });
 });
 
 // ─── Constraint entries validation ──────────────────────────────────────────

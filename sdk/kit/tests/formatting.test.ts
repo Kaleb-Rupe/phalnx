@@ -20,6 +20,7 @@ import {
   formatTokenAmountCompact,
   toUsdNumber,
   fromUsdNumber,
+  FROM_USD_NUMBER_MAX,
 } from "../src/formatting.js";
 
 // ─── USD Formatting ──────────────────────────────────────────────────────────
@@ -297,6 +298,11 @@ describe("toUsdNumber", () => {
   it("handles 1 microdollar (smallest unit)", () => {
     expect(toUsdNumber(1n)).to.equal(0.000001);
   });
+
+  it("throws RangeError on negative input (precondition)", () => {
+    expect(() => toUsdNumber(-1n)).to.throw(RangeError);
+    expect(() => toUsdNumber(-500_000_000n)).to.throw(RangeError);
+  });
 });
 
 describe("fromUsdNumber", () => {
@@ -345,6 +351,14 @@ describe("fromUsdNumber", () => {
     // would throw RangeError from the BigInt constructor itself, but not
     // until after silent precision loss. Guard catches it first.
     expect(() => fromUsdNumber(Number.MAX_VALUE)).to.throw(RangeError);
+  });
+
+  it("throws RangeError at exactly FROM_USD_NUMBER_MAX (inclusive boundary)", () => {
+    // At |value| === FROM_USD_NUMBER_MAX, `Math.round(value * 1_000_000)`
+    // produces MAX_SAFE_INTEGER + 1 — no longer a safe integer. The check
+    // uses `>=` to reject this boundary value before precision drift.
+    expect(() => fromUsdNumber(FROM_USD_NUMBER_MAX)).to.throw(RangeError);
+    expect(() => fromUsdNumber(-FROM_USD_NUMBER_MAX)).to.throw(RangeError);
   });
 });
 
