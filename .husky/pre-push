@@ -1,0 +1,18 @@
+# Tier 1 pre-push gate — fast-fail checks before reaching the wire.
+# Target budget: <10s. Anything slower belongs in CI, not here.
+#
+# Bypass for intentional WIP pushes: `git push --no-verify`.
+# Don't bypass just because the check annoys you; fix the underlying issue.
+
+set -e
+
+echo "→ [pre-push] test-count drift + untracked location sentinel..."
+pnpm count:check
+
+echo "→ [pre-push] prettier lint..."
+pnpm lint
+
+echo "→ [pre-push] cargo fmt..."
+cargo fmt --check --manifest-path programs/sigil/Cargo.toml
+
+echo "✓ [pre-push] all gates passed"
