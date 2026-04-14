@@ -53,6 +53,12 @@ const TRACKED_PREFIXES = [
 ];
 
 // Directories skipped during the untracked-location walk.
+//
+// `.claude/` is gitignored (.gitignore:54) and typically hosts PAI agent
+// worktrees + skill templates. Those files exist only on the developer's
+// machine — they are invisible to CI and unrelated to the real test corpus,
+// so scanning them produces false-positive untracked-location errors that
+// block `git push` locally via the husky pre-push gate.
 const UNTRACKED_WALK_EXCLUDE = new Set([
   "node_modules",
   "target",
@@ -65,6 +71,7 @@ const UNTRACKED_WALK_EXCLUDE = new Set([
   ".certora-venv",
   "coverage",
   ".turbo",
+  ".claude",
 ]);
 
 function walk(dir, opts = {}) {
