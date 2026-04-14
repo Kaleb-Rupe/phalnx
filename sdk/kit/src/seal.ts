@@ -41,6 +41,7 @@ import { getSessionPDA, getAgentOverlayPDA } from "./resolve-accounts.js";
 import { composeSigilTransaction, measureTransactionSize } from "./composer.js";
 import {
   BlockhashCache,
+  getBlockhashCache,
   signAndEncode,
   sendAndConfirmTransaction,
   type Blockhash,
@@ -202,9 +203,9 @@ export function replaceAgentAtas(
 // ACTION_TYPE_KEYS removed — ActionType enum eliminated in v6.
 // Spending is now determined by amount > 0n.
 
-// ─── Shared caches (module-level singletons) ────────────────────────────────
-
-const blockhashCache = new BlockhashCache();
+// ─── Shared caches ──────────────────────────────────────────────────────────
+// Per-RPC blockhash cache lives in `rpc-helpers.getBlockhashCache(rpc)`; see
+// its JSDoc for why we no longer hold a module-level singleton.
 const altCache = new AltCache();
 
 // ─── seal() ─────────────────────────────────────────────────────────────────
@@ -330,7 +331,7 @@ export async function seal(params: SealParams): Promise<SealResult> {
       ) {
         throw new Error(
           "Top-level SPL Token Transfer not allowed in sealed transactions. " +
-            "Use the Transfer ActionType instead.",
+            "Transfers must happen via an approved DeFi program's CPI. For owner-initiated withdrawals, use OwnerClient.withdraw().",
         );
       }
       if (disc === 6 || disc === 9) {
@@ -550,7 +551,8 @@ export async function seal(params: SealParams): Promise<SealResult> {
   });
 
   // Step 10: Compose + compile + measure
-  const blockhash = params.blockhash ?? (await blockhashCache.get(params.rpc));
+  const blockhash =
+    params.blockhash ?? (await getBlockhashCache(params.rpc).get(params.rpc));
 
   // Resolve ALTs — Sigil ALT + protocol ALTs (e.g. Jupiter route-specific)
   let addressLookupTables = params.addressLookupTables;

@@ -41,6 +41,38 @@ export interface SendAndConfirmOptions {
 
 const DEFAULT_BLOCKHASH_TTL_MS = 30_000;
 
+/**
+ * Per-RPC blockhash cache registry, keyed by RPC-client identity.
+ *
+ * Module-level `new BlockhashCache()` singletons poisoned multi-network
+ * consumers: a dashboard that switches `devnet ↔ mainnet`, a CLI with a
+ * `--network` flag, or an MCP server multiplexing tenants all pulled a
+ * blockhash fetched against one RPC and sent it against another, producing
+ * intermittent `BlockhashNotFound` the 30s TTL then hid.
+ *
+ * `getBlockhashCache(rpc)` hands out a cache scoped to the supplied RPC so
+ * distinct endpoints stay isolated while a consumer reusing one RPC keeps
+ * the perf win. `WeakMap` lets entries be reclaimed when the RPC is dropped
+ * — no unbounded growth for short-lived handles.
+ */
+const blockhashCacheRegistry = new WeakMap<Rpc<SolanaRpcApi>, BlockhashCache>();
+
+/**
+ * Get (or create) the blockhash cache scoped to a specific RPC client.
+ *
+ * Use this from any SDK code path that previously held a module-level
+ * `BlockhashCache` singleton. Consumers that need forced invalidation can
+ * call `.invalidate()` on the returned cache directly.
+ */
+export function getBlockhashCache(rpc: Rpc<SolanaRpcApi>): BlockhashCache {
+  let cache = blockhashCacheRegistry.get(rpc);
+  if (!cache) {
+    cache = new BlockhashCache();
+    blockhashCacheRegistry.set(rpc, cache);
+  }
+  return cache;
+}
+
 export class BlockhashCache {
   private cached: Blockhash | null = null;
   private fetchedAt = 0;
