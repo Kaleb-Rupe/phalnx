@@ -1,6 +1,12 @@
 # Auto-generated code — formatted by codama.mjs, not prettier
 sdk/kit/src/generated/
 
+# Committed IDL + generated types (derived from anchor build, not hand-written)
+# Kept in git for reproducibility; must not be reformatted by prettier because
+# the shape is controlled by Anchor's IDL emitter + `anchor idl type`.
+target/idl/
+target/types/
+
 # Build output
 **/dist/
 **/node_modules/

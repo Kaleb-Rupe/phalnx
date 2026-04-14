@@ -1,10 +1,6 @@
 import { z } from "zod";
 import type { SigilClient } from "@usesigil/kit";
-import {
-  resolveToken,
-  toAgentError,
-  toBaseUnits,
-} from "@usesigil/kit";
+import { resolveToken, toAgentError, toBaseUnits } from "@usesigil/kit";
 import { AccountRole, type Address, type Instruction } from "@solana/kit";
 import { toResolvedNetwork } from "../types.js";
 
