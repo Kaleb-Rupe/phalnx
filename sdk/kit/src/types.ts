@@ -42,6 +42,8 @@ export const STABLECOIN_USD_FACTOR = 10n ** BigInt(USD_DECIMALS);
 // ─── Multi-agent Constants ────────────────────────────────────────────────────
 
 export const MAX_AGENTS_PER_VAULT = 10;
+/** Mirror of on-chain MAX_ALLOWED_PROTOCOLS — bounds PolicyConfig.protocols vec. */
+export const MAX_ALLOWED_PROTOCOLS = 10;
 /**
  * Capability bitmask: 2n (bits 0+1 set) — "can spend" + "can hold positions".
  * Replaces the legacy 21-bit ActionType permission bitmask.

@@ -17,8 +17,10 @@ import {
 import { getVaultPnL } from "../balance-tracker.js";
 import { getSecurityPosture } from "../security-analytics.js";
 import { evaluateAlertConditions } from "../security-analytics.js";
+import type { SecurityCheck, Alert } from "../security-analytics.js";
 import { getAgentProfile } from "../agent-analytics.js";
 import { getSpendingBreakdown } from "../spending-analytics.js";
+import type { SpendingBreakdown } from "../spending-analytics.js";
 import { getVaultActivity } from "../event-analytics.js";
 import { resolveProtocolName } from "../protocol-names.js";
 import type { Network } from "../types.js";
@@ -99,7 +101,7 @@ export async function getVaultState(
         : []),
     ];
 
-    const checks = posture.checks.map((c: any) => ({
+    const checks = posture.checks.map((c: SecurityCheck) => ({
       name: c.id,
       passed: c.passed,
     }));
@@ -280,12 +282,14 @@ export async function getSpending(
         ? Math.floor(Number(remaining) / velocityPerMs)
         : 0;
 
-    const protoBreak = breakdown.byProtocol.map((p: any) => ({
-      name: resolveProtocolName(p.protocol),
-      programId: p.protocol as string,
-      amount: p.spent24h as bigint,
-      percent: p.utilization as number,
-    }));
+    const protoBreak = breakdown.byProtocol.map(
+      (p: SpendingBreakdown["byProtocol"][number]) => ({
+        name: resolveProtocolName(p.protocol),
+        programId: p.protocol as string,
+        amount: p.spent24h,
+        percent: p.utilization,
+      }),
+    );
 
     return {
       global: { today: spent, cap, remaining, percent, rundownMs: rundown },
@@ -364,6 +368,7 @@ export async function getActivity(
           r.protocolId === filters.protocol || r.protocol === filters.protocol,
       );
     if (filters?.status) rows = rows.filter((r) => r.status === filters.status);
+    if (filters?.type) rows = rows.filter((r) => r.type === filters.type);
     if (filters?.timeRange) {
       const cutoff = Date.now() - rangeToMs(filters.timeRange);
       rows = rows.filter((r) => r.timestamp >= cutoff);
@@ -455,7 +460,7 @@ export async function getHealth(
           ? ("elevated" as const)
           : ("healthy" as const);
 
-    const critAlerts = alerts.filter((a: any) => a.severity === "critical");
+    const critAlerts = alerts.filter((a: Alert) => a.severity === "critical");
     const lastBlock =
       critAlerts.length > 0
         ? {
@@ -466,7 +471,7 @@ export async function getHealth(
           }
         : undefined;
 
-    const checks = posture.checks.map((c: any) => ({
+    const checks = posture.checks.map((c: SecurityCheck) => ({
       name: c.id,
       passed: c.passed,
     }));
@@ -500,12 +505,13 @@ export async function getPolicy(
   try {
     const [state, pendingPolicy] = await Promise.all([
       resolveVaultStateForOwner(rpc, vault, undefined, toNet(network)),
-      getPendingPolicyForVault(rpc, vault).catch((err: any) => {
+      getPendingPolicyForVault(rpc, vault).catch((err: unknown) => {
         // Account-not-found is expected (no pending update) — return null.
         // Re-throw RPC errors so they're not silently swallowed.
+        const message = err instanceof Error ? err.message : String(err);
         if (
-          err?.message?.includes("could not find") ||
-          err?.message?.includes("Account does not exist")
+          message.includes("could not find") ||
+          message.includes("Account does not exist")
         ) {
           return null;
         }

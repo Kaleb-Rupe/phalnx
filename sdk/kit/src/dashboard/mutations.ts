@@ -36,7 +36,7 @@ import {
   getPendingCloseConstraintsPDA,
 } from "../resolve-accounts.js";
 import { resolveVaultStateForOwner } from "../state-resolver.js";
-import { SIGIL_PROGRAM_ADDRESS } from "../types.js";
+import { SIGIL_PROGRAM_ADDRESS, MAX_ALLOWED_PROTOCOLS } from "../types.js";
 import type { Network } from "../types.js";
 import type { AgentVault } from "../generated/accounts/agentVault.js";
 
@@ -508,6 +508,19 @@ export async function queuePolicyUpdate(
         `Developer fee rate cannot exceed 500 BPS (0.05%). Got ${changes.developerFeeRate}.`,
       ),
     );
+  }
+  if (
+    changes.approvedApps &&
+    changes.approvedApps.length > MAX_ALLOWED_PROTOCOLS
+  ) {
+    throw toDxError(
+      new Error(
+        `approvedApps length exceeds on-chain MAX_ALLOWED_PROTOCOLS (${MAX_ALLOWED_PROTOCOLS}). Got ${changes.approvedApps.length}. On-chain rejects TooManyAllowedProtocols.`,
+      ),
+    );
+  }
+  if (changes.maxConcurrentPositions != null) {
+    requireU8(changes.maxConcurrentPositions, "maxConcurrentPositions");
   }
   const ix = await getQueuePolicyUpdateInstructionAsync({
     owner,

@@ -182,6 +182,8 @@ export interface ActivityFilters {
   protocol?: string;
   status?: "approved" | "blocked";
   timeRange?: "1h" | "6h" | "24h" | "7d" | "30d";
+  /** Filter rows by activity type (policy_change, agent_action, escrow, etc). */
+  type?: ActivityType;
   /** Max events to fetch. Default: 50. */
   limit?: number;
 }

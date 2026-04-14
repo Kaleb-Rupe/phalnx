@@ -17,6 +17,7 @@ export {
   USD_DECIMALS,
   // Multi-agent
   MAX_AGENTS_PER_VAULT,
+  MAX_ALLOWED_PROTOCOLS,
   FULL_CAPABILITY,
   FULL_PERMISSIONS,
   SWAP_ONLY,
@@ -200,6 +201,9 @@ export {
   formatAddress,
   formatTokenAmount,
   formatTokenAmountCompact,
+  // Precision helpers — convert between bigint base units and Number dollars
+  toUsdNumber,
+  fromUsdNumber,
 } from "./formatting.js";
 
 // ─── Spending Analytics ──────────────────────────────────────────────────────
