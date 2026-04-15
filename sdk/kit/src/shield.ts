@@ -55,6 +55,12 @@ import { isStablecoinMint, validateNetwork, type Network } from "./types.js";
 import { ShieldDeniedError, type PolicyViolation } from "./core/errors.js";
 export { ShieldDeniedError, type PolicyViolation };
 
+import { SigilSdkDomainError } from "./errors/sdk.js";
+import {
+  SIGIL_ERROR__SDK__INVALID_CONFIG,
+  SIGIL_ERROR__SDK__SIGNER_INVALID,
+} from "./errors/codes.js";
+
 export interface ShieldCheckResult {
   allowed: boolean;
   violations: PolicyViolation[];
@@ -693,8 +699,10 @@ export function shield(
 
     async sync(): Promise<void> {
       if (!syncConfig) {
-        throw new Error(
+        throw new SigilSdkDomainError(
+          SIGIL_ERROR__SDK__INVALID_CONFIG,
           "Cannot sync: onChainSync not configured in ShieldOptions",
+          { context: { field: "onChainSync", expected: "OnChainSyncConfig" } },
         );
       }
       const resolved = await resolveVaultState(
@@ -876,8 +884,10 @@ export function createShieldedSigner(
           },
         }));
       }
-      throw new Error(
+      throw new SigilSdkDomainError(
+        SIGIL_ERROR__SDK__SIGNER_INVALID,
         "Unsupported signer type: must implement signTransactions or modifyAndSignTransactions",
+        { context: { reason: "missing-sign-method" } },
       );
     },
   } as TransactionSigner;
