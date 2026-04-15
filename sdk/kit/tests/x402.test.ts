@@ -764,19 +764,29 @@ describe("x402/security", () => {
     expect(new X402ParseError("test").legacyNumericCode).to.equal(7024);
     expect(new X402PaymentError("test").legacyNumericCode).to.equal(7025);
     expect(new X402UnsupportedError("test").legacyNumericCode).to.equal(7026);
-    expect(new X402DestinationBlockedError(ATTACKER_PAYTO).legacyNumericCode).to.equal(7027);
+    expect(
+      new X402DestinationBlockedError(ATTACKER_PAYTO).legacyNumericCode,
+    ).to.equal(7027);
     expect(new X402ReplayError("key").legacyNumericCode).to.equal(7028);
   });
 
   it("error classes have correct canonical SigilErrorCode (.code)", () => {
     // PR 2.A: typed string-literal codes are the new programmatic discriminant.
-    expect(new X402ParseError("test").code).to.equal("SIGIL_ERROR__X402__HEADER_MALFORMED");
-    expect(new X402PaymentError("test").code).to.equal("SIGIL_ERROR__X402__PAYMENT_FAILED");
-    expect(new X402UnsupportedError("test").code).to.equal("SIGIL_ERROR__X402__UNSUPPORTED");
+    expect(new X402ParseError("test").code).to.equal(
+      "SIGIL_ERROR__X402__HEADER_MALFORMED",
+    );
+    expect(new X402PaymentError("test").code).to.equal(
+      "SIGIL_ERROR__X402__PAYMENT_FAILED",
+    );
+    expect(new X402UnsupportedError("test").code).to.equal(
+      "SIGIL_ERROR__X402__UNSUPPORTED",
+    );
     expect(new X402DestinationBlockedError(ATTACKER_PAYTO).code).to.equal(
       "SIGIL_ERROR__X402__DESTINATION_BLOCKED",
     );
-    expect(new X402ReplayError("key").code).to.equal("SIGIL_ERROR__X402__REPLAY");
+    expect(new X402ReplayError("key").code).to.equal(
+      "SIGIL_ERROR__X402__REPLAY",
+    );
   });
 
   it("codec validates accepts entry field types", () => {

@@ -30,10 +30,7 @@ function warnFuseTrip(): void {
 
 export function walk(err: unknown): Error;
 export function walk(err: unknown, fn: (e: unknown) => boolean): Error | null;
-export function walk(
-  err: unknown,
-  fn?: (e: unknown) => boolean,
-): Error | null {
+export function walk(err: unknown, fn?: (e: unknown) => boolean): Error | null {
   // Predicate variant — find first match in the chain (including non-Error causes).
   if (fn) {
     return walkPredicate(err, fn, new Set(), 0);
@@ -64,11 +61,7 @@ function walkPredicate(
   return null;
 }
 
-function walkRoot(
-  err: unknown,
-  visited: Set<unknown>,
-  depth: number,
-): Error {
+function walkRoot(err: unknown, visited: Set<unknown>, depth: number): Error {
   // For non-Error inputs, wrap so the contract (returns Error) holds.
   if (!(err instanceof Error)) {
     return new Error(typeof err === "string" ? err : "non-Error cause");

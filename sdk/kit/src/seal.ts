@@ -600,7 +600,9 @@ export async function seal(params: SealParams): Promise<SealResult> {
           SIGIL_ERROR__SDK__INVALID_PARAMS,
           `additionalAtaReplacements key ${agentAta} conflicts with canonical ` +
             `ATA replacement. Cannot override vault token account mappings.`,
-          { context: { field: "additionalAtaReplacements", received: agentAta } },
+          {
+            context: { field: "additionalAtaReplacements", received: agentAta },
+          },
         );
       }
       ataReplacements.set(agentAta, vaultAta);

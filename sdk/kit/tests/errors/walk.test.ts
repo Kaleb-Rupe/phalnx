@@ -22,13 +22,19 @@ describe("walk() — cause-chain traversal", () => {
       const top = new Error("top");
       Object.defineProperty(top, "cause", { value: middle });
 
-      const found = walkSigilCause(top, (e: unknown) => (e as Error).message === "root");
+      const found = walkSigilCause(
+        top,
+        (e: unknown) => (e as Error).message === "root",
+      );
       expect(found).to.equal(root);
     });
 
     it("returns the predicate match at the top level (no descent needed)", () => {
       const top = new Error("top");
-      const found = walkSigilCause(top, (e: unknown) => (e as Error).message === "top");
+      const found = walkSigilCause(
+        top,
+        (e: unknown) => (e as Error).message === "top",
+      );
       expect(found).to.equal(top);
     });
 
@@ -44,15 +50,24 @@ describe("walk() — cause-chain traversal", () => {
       // PR 2.A C1 fix: predicate variant now applies fn to non-Error causes
       // (e.g., undici's `cause: { code: "ECONNRESET" }` shape) instead of
       // silently dropping them. When matched, the result is wrapped in Error.
-      const matchedString = walkSigilCause("not an error", (e: unknown) => e === "not an error");
+      const matchedString = walkSigilCause(
+        "not an error",
+        (e: unknown) => e === "not an error",
+      );
       expect(matchedString).to.be.instanceOf(Error);
       expect(matchedString?.message).to.equal("not an error");
 
       // When the predicate doesn't match the non-Error value, returns null.
       expect(walkSigilCause("foo", (e: unknown) => e === "bar")).to.equal(null);
-      expect(walkSigilCause(42, (e: unknown) => e === "no match")).to.equal(null);
-      expect(walkSigilCause(null, (e: unknown) => e === "no match")).to.equal(null);
-      expect(walkSigilCause(undefined, (e: unknown) => e === "no match")).to.equal(null);
+      expect(walkSigilCause(42, (e: unknown) => e === "no match")).to.equal(
+        null,
+      );
+      expect(walkSigilCause(null, (e: unknown) => e === "no match")).to.equal(
+        null,
+      );
+      expect(
+        walkSigilCause(undefined, (e: unknown) => e === "no match"),
+      ).to.equal(null);
     });
 
     it("walks into non-Error cause objects (undici cause shape)", () => {
@@ -66,7 +81,10 @@ describe("walk() — cause-chain traversal", () => {
       const found = walkSigilCause(
         fetchErr,
         (e: unknown) =>
-          typeof e === "object" && e !== null && "code" in e && (e as { code: unknown }).code === "ECONNRESET",
+          typeof e === "object" &&
+          e !== null &&
+          "code" in e &&
+          (e as { code: unknown }).code === "ECONNRESET",
       );
       expect(found).to.not.equal(null);
     });
@@ -79,14 +97,20 @@ describe("walk() — cause-chain traversal", () => {
 
       // Should terminate (not stack-overflow) and return null since neither
       // matches a predicate that requires a third error.
-      const result = walkSigilCause(a, (e: unknown) => (e as Error).message === "c");
+      const result = walkSigilCause(
+        a,
+        (e: unknown) => (e as Error).message === "c",
+      );
       expect(result).to.equal(null);
     });
 
     it("handles self-referential cause (err.cause = err)", () => {
       const self = new Error("self");
       Object.defineProperty(self, "cause", { value: self });
-      const found = walkSigilCause(self, (e: unknown) => (e as Error).message === "self");
+      const found = walkSigilCause(
+        self,
+        (e: unknown) => (e as Error).message === "self",
+      );
       expect(found).to.equal(self);
     });
 
@@ -103,7 +127,10 @@ describe("walk() — cause-chain traversal", () => {
       const top = prev;
 
       // The level-10 error is past the max-depth fuse (>32 from the top).
-      const past = walkSigilCause(top, (e: unknown) => (e as Error).message === "level-10");
+      const past = walkSigilCause(
+        top,
+        (e: unknown) => (e as Error).message === "level-10",
+      );
       expect(past).to.equal(null);
 
       // The level-30 (close to top, depth ≤ 32) IS reachable.
@@ -158,7 +185,8 @@ describe("walk() — cause-chain traversal", () => {
       });
 
       const found = wrapper.walk(
-        (e: unknown) => e instanceof SigilError && e.code === SIGIL_ERROR__RPC__TX_FAILED,
+        (e: unknown) =>
+          e instanceof SigilError && e.code === SIGIL_ERROR__RPC__TX_FAILED,
       );
       expect(found).to.equal(inner);
     });

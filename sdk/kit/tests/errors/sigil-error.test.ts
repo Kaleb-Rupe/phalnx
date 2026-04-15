@@ -26,10 +26,7 @@ import {
 describe("SigilError — base class", () => {
   describe("constructor + field assignment", () => {
     it("stores code, shortMessage, and version", () => {
-      const err = new SigilError(
-        SIGIL_ERROR__SDK__INVALID_PARAMS,
-        "bad input",
-      );
+      const err = new SigilError(SIGIL_ERROR__SDK__INVALID_PARAMS, "bad input");
       expect(err.code).to.equal(SIGIL_ERROR__SDK__INVALID_PARAMS);
       expect(err.shortMessage).to.equal("bad input");
       expect(err.version).to.equal(SIGIL_KIT_VERSION);
@@ -69,7 +66,9 @@ describe("SigilError — base class", () => {
     it("appends Version footer to message (viem pattern)", () => {
       const err = new SigilError(SIGIL_ERROR__SDK__INVALID_PARAMS, "short");
       expect(err.message).to.include("short");
-      expect(err.message).to.include(`Version: @usesigil/kit@${SIGIL_KIT_VERSION}`);
+      expect(err.message).to.include(
+        `Version: @usesigil/kit@${SIGIL_KIT_VERSION}`,
+      );
     });
 
     it(".shortMessage preserves the original verbatim (no footer)", () => {
@@ -132,10 +131,17 @@ describe("SigilError — base class", () => {
         { context: { violations: [] } as never },
       );
       const tee = new SigilTeeError(SIGIL_ERROR__TEE__ATTESTATION_FAILED, "x");
-      const x402 = new SigilX402Error(SIGIL_ERROR__X402__HEADER_MALFORMED, "x", {
-        context: { legacyNumericCode: 7024 } as never,
-      });
-      const sdk = new SigilSdkDomainError(SIGIL_ERROR__SDK__INVALID_PARAMS, "x");
+      const x402 = new SigilX402Error(
+        SIGIL_ERROR__X402__HEADER_MALFORMED,
+        "x",
+        {
+          context: { legacyNumericCode: 7024 } as never,
+        },
+      );
+      const sdk = new SigilSdkDomainError(
+        SIGIL_ERROR__SDK__INVALID_PARAMS,
+        "x",
+      );
       const rpc = new SigilRpcError(SIGIL_ERROR__RPC__TX_FAILED, "x");
 
       for (const e of [shield, tee, x402, sdk, rpc]) {
@@ -151,15 +157,22 @@ describe("SigilError — base class", () => {
         { context: { violations: [] } as never },
       );
       const tee = new SigilTeeError(SIGIL_ERROR__TEE__ATTESTATION_FAILED, "x");
-      const x402 = new SigilX402Error(SIGIL_ERROR__X402__HEADER_MALFORMED, "x", {
-        context: { legacyNumericCode: 7024 } as never,
-      });
+      const x402 = new SigilX402Error(
+        SIGIL_ERROR__X402__HEADER_MALFORMED,
+        "x",
+        {
+          context: { legacyNumericCode: 7024 } as never,
+        },
+      );
       const compose = new SigilComposeError(
         "SIGIL_ERROR__COMPOSE__MISSING_PARAM" as never,
         "x",
         { context: { protocol: "test", fieldName: "f" } as never },
       );
-      const sdk = new SigilSdkDomainError(SIGIL_ERROR__SDK__INVALID_PARAMS, "x");
+      const sdk = new SigilSdkDomainError(
+        SIGIL_ERROR__SDK__INVALID_PARAMS,
+        "x",
+      );
       const rpc = new SigilRpcError(SIGIL_ERROR__RPC__TX_FAILED, "x");
 
       expect(shield.name).to.equal("SigilShieldError");
