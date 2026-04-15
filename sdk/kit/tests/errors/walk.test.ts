@@ -40,11 +40,35 @@ describe("walk() — cause-chain traversal", () => {
       expect(found).to.equal(null);
     });
 
-    it("returns null for non-Error input", () => {
-      expect(walkSigilCause("not an error", () => true)).to.equal(null);
-      expect(walkSigilCause(42, () => true)).to.equal(null);
-      expect(walkSigilCause(null, () => true)).to.equal(null);
-      expect(walkSigilCause(undefined, () => true)).to.equal(null);
+    it("tests non-Error inputs against the predicate (Finding 1 fix)", () => {
+      // PR 2.A C1 fix: predicate variant now applies fn to non-Error causes
+      // (e.g., undici's `cause: { code: "ECONNRESET" }` shape) instead of
+      // silently dropping them. When matched, the result is wrapped in Error.
+      const matchedString = walkSigilCause("not an error", (e: unknown) => e === "not an error");
+      expect(matchedString).to.be.instanceOf(Error);
+      expect(matchedString?.message).to.equal("not an error");
+
+      // When the predicate doesn't match the non-Error value, returns null.
+      expect(walkSigilCause("foo", (e: unknown) => e === "bar")).to.equal(null);
+      expect(walkSigilCause(42, (e: unknown) => e === "no match")).to.equal(null);
+      expect(walkSigilCause(null, (e: unknown) => e === "no match")).to.equal(null);
+      expect(walkSigilCause(undefined, (e: unknown) => e === "no match")).to.equal(null);
+    });
+
+    it("walks into non-Error cause objects (undici cause shape)", () => {
+      // Real-world pattern: undici's fetch throws `TypeError("fetch failed")`
+      // with `cause: { code: "ECONNRESET" }` (a plain object, not Error).
+      // The predicate must be able to find the .code on the non-Error cause.
+      const fetchErr = new Error("fetch failed");
+      Object.defineProperty(fetchErr, "cause", {
+        value: { code: "ECONNRESET" },
+      });
+      const found = walkSigilCause(
+        fetchErr,
+        (e: unknown) =>
+          typeof e === "object" && e !== null && "code" in e && (e as { code: unknown }).code === "ECONNRESET",
+      );
+      expect(found).to.not.equal(null);
     });
 
     it("breaks cyclic chains via the visited set (does not infinite-loop)", () => {
@@ -66,24 +90,26 @@ describe("walk() — cause-chain traversal", () => {
       expect(found).to.equal(self);
     });
 
-    it("breaks at max-depth (10 levels) to bound runtime on deep chains", () => {
-      // Build a chain of 30 errors to confirm max-depth fuse stops at 10.
+    it("breaks at max-depth (32 levels) to bound runtime on deep chains", () => {
+      // Build a chain of 50 errors to confirm max-depth fuse stops at 32.
+      // PR 2.A: depth raised from 10 → 32 per silent-failure-hunter Finding 1
+      // (real chains routinely exceed 10 with SDK + Solana + Anchor + custody).
       let prev = new Error("level-0");
-      for (let i = 1; i < 30; i++) {
+      for (let i = 1; i < 50; i++) {
         const e = new Error(`level-${i}`);
         Object.defineProperty(e, "cause", { value: prev });
         prev = e;
       }
       const top = prev;
 
-      // The level-25 error is past the max-depth fuse from the top.
-      const past = walkSigilCause(top, (e: unknown) => (e as Error).message === "level-15");
+      // The level-10 error is past the max-depth fuse (>32 from the top).
+      const past = walkSigilCause(top, (e: unknown) => (e as Error).message === "level-10");
       expect(past).to.equal(null);
 
-      // The level-25 (close to top) IS reachable.
+      // The level-30 (close to top, depth ≤ 32) IS reachable.
       const reachable = walkSigilCause(
         top,
-        (e: unknown) => (e as Error).message === "level-25",
+        (e: unknown) => (e as Error).message === "level-30",
       );
       expect(reachable).to.not.equal(null);
     });

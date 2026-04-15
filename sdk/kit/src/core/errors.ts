@@ -5,11 +5,16 @@ import {
 } from "../errors/codes.js";
 
 /**
- * Common policy rule identifiers (non-exhaustive). The canonical type is
- * `string` because shield.ts uses a rich set ("program_allowlist", "spend_limit",
- * "on_chain_*", "custom", "paused", etc.) that exceeds any closed enum.
+ * Common policy rule identifiers. The canonical type intentionally widens
+ * to `string` via the `(string & {})` escape hatch because shield.ts +
+ * velocity-tracker.ts use a rich set that exceeds any closed enum.
  * Use one of these values when raising a violation; new rule names are
  * permitted but should follow the snake_case convention for grep-discoverability.
+ *
+ * PR 2.A silent-failure-hunter fix (Finding 7): exhaustive list of every
+ * `rule:` string actually used in-tree. Each addition here ALSO requires
+ * a contributor to confirm the new rule string isn't a typo of an existing
+ * one — the open `(string & {})` does not guard against typos.
  */
 export type PolicyRule =
   | "spending_cap"
@@ -28,6 +33,13 @@ export type PolicyRule =
   | "on_chain_agent_cap"
   | "paused"
   | "custom"
+  // velocity-tracker.ts rule names
+  | "velocity_cooldown"
+  | "velocity_tx_per_minute"
+  | "velocity_tx_per_hour"
+  | "velocity_usd_per_hour"
+  | "velocity_on_chain_cap"
+  | "velocity_rapid_fire"
   | (string & {});
 
 export interface PolicyViolation {

@@ -98,11 +98,18 @@ export class TeeAttestationError extends SigilTeeError<SigilTeeErrorCode> {
     message: string,
     result?: AttestationResult,
     code: SigilTeeErrorCode = SIGIL_ERROR__TEE__ATTESTATION_FAILED,
+    extraContext?: Record<string, unknown>,
   ) {
-    // The context shape varies per code (PCR_MISMATCH carries pcrIndex /
-    // expected / actual via the subclass). Cast is safe because subclass
-    // constructors pass a complete context that satisfies the per-code shape.
-    super(code, message, { context: { result } as never });
+    // PR 2.A C1 fix (silent-failure-hunter Finding 4): subclasses must be able
+    // to merge their own context fields into the typed-context map. Without
+    // this, AttestationPcrMismatchError.pcrIndex/expected/actual were stored
+    // as sibling instance fields only — `err.context.pcrIndex` was undefined
+    // even though SigilErrorContext[SIGIL_ERROR__TEE__PCR_MISMATCH] declared
+    // it required. Subclasses now pass their context-extension fields via
+    // extraContext to satisfy the per-code context contract at runtime.
+    super(code, message, {
+      context: { result, ...(extraContext ?? {}) } as never,
+    });
     this.name = "TeeAttestationError";
     this.result = result;
   }
@@ -128,10 +135,15 @@ export class AttestationPcrMismatchError extends TeeAttestationError {
     actual: string,
     result?: AttestationResult,
   ) {
+    // PR 2.A C1 fix: pass pcrIndex/expected/actual into the typed context so
+    // `err.context.pcrIndex` etc. resolve at runtime, matching the
+    // SigilErrorContext[SIGIL_ERROR__TEE__PCR_MISMATCH] shape declared in
+    // sdk/kit/src/errors/context.ts. Direct fields preserved for back-compat.
     super(
       `PCR${pcrIndex} mismatch: expected ${expected}, got ${actual}`,
       result,
       SIGIL_ERROR__TEE__PCR_MISMATCH,
+      { pcrIndex, expected, actual },
     );
     this.name = "AttestationPcrMismatchError";
     this.pcrIndex = pcrIndex;

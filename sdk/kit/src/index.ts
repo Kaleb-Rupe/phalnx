@@ -634,6 +634,27 @@ export type ShieldErrorType =
   | import("./core/errors.js").ShieldDeniedError
   | import("./core/errors.js").ShieldConfigError;
 
+/**
+ * Per-module discriminated union for `seal()` / `SigilClient.executeAndConfirm`.
+ *
+ * NOTE on `SigilSdkError`: per UD3 + R4 deferral, that class extends `Error`
+ * directly (not `SigilError`). It IS in this union, so consumers narrowing
+ * via `SealErrorType` catch it correctly. The `| Error` tail is honest:
+ * raw `@solana/kit` `SolanaError` instances also propagate through `seal()`
+ * unwrapped today (a follow-up PR will introduce `SigilRpcError` wrapping).
+ */
+export type SealErrorType =
+  | import("./agent-errors.js").SigilSdkError
+  | import("./core/errors.js").ShieldDeniedError
+  | import("./tee/wallet-types.js").TeeAttestationError
+  | Error;
+
+/** Per-module discriminated union for OwnerClient (dashboard reads + mutations). */
+export type DashboardErrorType =
+  | import("./agent-errors.js").SigilSdkError
+  | import("./core/errors.js").ShieldDeniedError
+  | Error;
+
 // ─── Balance Tracker / P&L ──────────────────────────────────────────────────
 export {
   getVaultPnL,
