@@ -48,7 +48,7 @@ env:
   ANCHOR_VERSION: "0.32.1"
   NODE_VERSION: "24"
   # Skip heavy jobs on bot version-bump pushes (no code changes)
-  IS_VERSION_BUMP: ${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, 'chore: version packages') }}
+  IS_VERSION_BUMP: ${{ github.event_name == 'push' && startsWith(github.event.head_commit.message || '', 'chore: version packages') }}
 
 jobs:
   # ──────────────────────────────────────────────────────────────
