@@ -433,8 +433,10 @@ export function buildPolicy(ctx: OverviewContext): PolicyData {
   let pendingUpdate: PolicyData["pendingUpdate"];
   if (pendingPolicy) {
     const pp = pendingPolicy as PendingPolicyUpdate;
+    // pp.executesAt is a Solana timestamp (seconds since epoch) — always within
+    // Number.MAX_SAFE_INTEGER for realistic chain state, so Number() is safe.
     const executesAtSec = Number(pp.executesAt ?? 0);
-    const appliesAt = Number.isFinite(executesAtSec) ? executesAtSec * 1000 : 0;
+    const appliesAt = executesAtSec * 1000;
     const nowSec = Math.floor(Date.now() / 1000);
 
     // Decode each Option<T> field from PendingPolicyUpdate. Only Some fields
