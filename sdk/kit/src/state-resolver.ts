@@ -162,6 +162,39 @@ export function bytesToAddress(bytes: ReadonlyUint8Array): Address {
 }
 
 /**
+ * Find an agent's slot index + lifetime metrics from an AgentSpendOverlay.
+ *
+ * PR 3.B F038: extracted from 5 duplicate sites across agent-analytics,
+ * portfolio-analytics, and spending-analytics.
+ *
+ * @returns `{ slotIdx, lifetimeSpend, lifetimeTxCount }` or `null` if the
+ * agent is not found in the overlay entries.
+ */
+export function findAgentOverlaySlot(
+  overlay: AgentSpendOverlay | null | undefined,
+  agentAddress: Address,
+): { slotIdx: number; lifetimeSpend: bigint; lifetimeTxCount: bigint } | null {
+  if (!overlay) return null;
+  const slotIdx = overlay.entries.findIndex((e) => {
+    try {
+      return bytesToAddress(e.agent) === agentAddress;
+    } catch {
+      return false;
+    }
+  });
+  if (slotIdx < 0) return null;
+  const lifetimeSpend =
+    slotIdx < overlay.lifetimeSpend.length
+      ? overlay.lifetimeSpend[slotIdx]
+      : 0n;
+  const lifetimeTxCount =
+    slotIdx < (overlay.lifetimeTxCount?.length ?? 0)
+      ? overlay.lifetimeTxCount[slotIdx]
+      : 0n;
+  return { slotIdx, lifetimeSpend, lifetimeTxCount };
+}
+
+/**
  * Mirror of SpendTracker::get_rolling_24h_usd() from tracker.rs:103-151.
  *
  * Iterates all 144 buckets, summing those within the 24h window.
