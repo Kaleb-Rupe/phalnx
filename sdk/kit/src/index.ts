@@ -27,6 +27,13 @@ export {
   PROTOCOL_TREASURY,
   // USD
   USD_DECIMALS,
+  // Branded types (PR 2.B — H7-BRAND)
+  type UsdBaseUnits,
+  type CapabilityTier,
+  type Slot,
+  usd,
+  capability,
+  slot,
   // Multi-agent
   MAX_AGENTS_PER_VAULT,
   MAX_ALLOWED_PROTOCOLS,
@@ -90,6 +97,8 @@ export type {
   ResolvedVaultState,
   ResolvedVaultStateForOwner,
   ResolvedBudget,
+  VaultLocator,
+  /** @deprecated Use VaultLocator. Removed at v1.0. */
   DiscoveredVault,
 } from "./state-resolver.js";
 

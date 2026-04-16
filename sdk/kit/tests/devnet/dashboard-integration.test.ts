@@ -13,7 +13,7 @@ import type { Address, Rpc, SolanaRpcApi, KeyPairSigner } from "@solana/kit";
 import { createDevnetRpc, loadOwnerSigner } from "../../src/testing/devnet.js";
 
 import { OwnerClient } from "../../src/dashboard/index.js";
-import { USDC_MINT_DEVNET } from "../../src/types.js";
+import { USDC_MINT_DEVNET, capability, usd } from "../../src/types.js";
 
 const SKIP = !process.env.ANCHOR_PROVIDER_URL;
 
@@ -282,8 +282,8 @@ describe("OwnerClient Devnet Integration", function () {
       try {
         await client.addAgent(
           "11111111111111111111111111111113" as Address,
-          0n,
-          500_000_000n,
+          capability(0n),
+          usd(500_000_000n),
         );
         expect.fail("Should have thrown");
       } catch (err: any) {

@@ -21,7 +21,12 @@ import {
   getAgentOverlayPDA,
 } from "./resolve-accounts.js";
 import { findNextVaultId } from "./inscribe.js";
-import { FULL_PERMISSIONS, toInstruction } from "./types.js";
+import {
+  FULL_PERMISSIONS,
+  toInstruction,
+  type CapabilityTier,
+  type UsdBaseUnits,
+} from "./types.js";
 import { buildOwnerTransaction } from "./owner-transaction.js";
 import { signAndEncode, sendAndConfirmTransaction } from "./rpc-helpers.js";
 import type { SendAndConfirmOptions } from "./rpc-helpers.js";
@@ -38,10 +43,10 @@ export interface CreateVaultOptions {
   network: "devnet" | "mainnet";
   owner: TransactionSigner;
   agent: TransactionSigner;
-  permissions?: bigint;
-  spendingLimitUsd?: bigint;
-  dailySpendingCapUsd?: bigint;
-  maxTransactionSizeUsd?: bigint;
+  permissions?: CapabilityTier;
+  spendingLimitUsd?: UsdBaseUnits;
+  dailySpendingCapUsd?: UsdBaseUnits;
+  maxTransactionSizeUsd?: UsdBaseUnits;
   feeDestination?: Address;
   developerFeeRate?: number;
   protocols?: Address[];

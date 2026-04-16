@@ -707,10 +707,15 @@ export async function resolveVaultBudget(
 // ─── Vault Discovery ────────────────────────────────────────────────────────
 
 /** A discovered vault with its address and ID. */
-export interface DiscoveredVault {
+export interface VaultLocator {
   vaultAddress: Address;
   vaultId: bigint;
 }
+
+/**
+ * @deprecated Renamed to {@link VaultLocator} in PR 2.B. Will be removed at v1.0.
+ */
+export type DiscoveredVault = VaultLocator;
 
 /** AgentVault account size (bytes) — used for dataSize filter. */
 const AGENT_VAULT_SIZE = 634;
@@ -783,7 +788,7 @@ export async function findVaultsByOwner(
   rpc: Rpc<SolanaRpcApi>,
   owner: Address,
   maxProbe: number = 20,
-): Promise<DiscoveredVault[]> {
+): Promise<VaultLocator[]> {
   // Cap maxProbe to prevent excessive PDA derivation (V-3: DoS mitigation)
   const cappedProbe = Math.min(Math.max(0, maxProbe), 100);
   const ownerBase64 = uint8ToBase64(addressEncoder.encode(owner));
@@ -817,7 +822,7 @@ export async function findVaultsByOwner(
 
     // V-1 fix: Re-derive PDAs to verify RPC-returned pubkeys are legitimate vault addresses.
     // A malicious RPC could return fabricated pubkeys that don't correspond to real vault PDAs.
-    const verified: DiscoveredVault[] = [];
+    const verified: VaultLocator[] = [];
     for (const entry of parsed) {
       const [expectedPda] = await getVaultPDA(owner, entry.vaultId);
       if (expectedPda === entry.vaultAddress) {
@@ -859,7 +864,7 @@ export async function findVaultsByOwner(
     .getMultipleAccounts(addresses, { encoding: "base64" })
     .send();
 
-  const discovered: DiscoveredVault[] = [];
+  const discovered: VaultLocator[] = [];
   for (let i = 0; i < result.value.length; i++) {
     if (result.value[i] !== null) {
       discovered.push({

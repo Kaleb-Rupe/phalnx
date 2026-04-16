@@ -13,6 +13,7 @@ import type {
   TransactionSigner,
 } from "@solana/kit";
 import { getProgramDerivedAddress, getAddressEncoder } from "@solana/kit";
+import type { CapabilityTier, UsdBaseUnits } from "../types.js";
 import {
   pipe,
   createTransactionMessage,
@@ -232,7 +233,7 @@ export async function resumeVault(
   vault: Address,
   owner: TransactionSigner,
   network: "devnet" | "mainnet",
-  newAgent?: { address: Address; permissions: bigint },
+  newAgent?: { address: Address; permissions: CapabilityTier },
   opts?: TxOpts,
 ): Promise<TxResult> {
   const ix = getReactivateVaultInstruction({
@@ -430,8 +431,8 @@ export async function addAgent(
   owner: TransactionSigner,
   network: "devnet" | "mainnet",
   agent: Address,
-  permissions: bigint,
-  spendingLimit: bigint,
+  permissions: CapabilityTier,
+  spendingLimit: UsdBaseUnits,
   opts?: TxOpts,
 ): Promise<TxResult> {
   requireValidAddress(agent, "Agent address");
@@ -604,8 +605,8 @@ export async function queueAgentPermissions(
   owner: TransactionSigner,
   network: "devnet" | "mainnet",
   agent: Address,
-  permissions: bigint,
-  spendingLimit: bigint,
+  permissions: CapabilityTier,
+  spendingLimit: UsdBaseUnits,
   opts?: TxOpts,
 ): Promise<TxResult> {
   requireValidAddress(agent, "Agent address");

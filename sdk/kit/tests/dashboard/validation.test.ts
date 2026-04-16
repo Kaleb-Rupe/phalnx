@@ -20,6 +20,7 @@ import {
   createConstraints,
   queueConstraintsUpdate,
 } from "../../src/dashboard/mutations.js";
+import { capability, usd, type CapabilityTier } from "../../src/types.js";
 
 // ─── Test Constants ─────────────────────────────────────────────────────────
 
@@ -27,7 +28,7 @@ const VAULT = "11111111111111111111111111111112" as Address;
 const VALID_AGENT = "22222222222222222222222222222222222222222222" as Address;
 const VALID_MINT = "33333333333333333333333333333333333333333333" as Address;
 const U64_MAX = (1n << 64n) - 1n;
-const MAX_PERMISSIONS = 2n; // 0=Disabled, 1=Observer, 2=Operator
+const MAX_PERMISSIONS = capability(2n); // 0=Disabled, 1=Observer, 2=Operator
 
 function mockOwner(): TransactionSigner {
   return {
@@ -223,8 +224,8 @@ describe("Validation: requireValidPermissions", () => {
         owner,
         "devnet",
         VALID_AGENT,
-        0n,
-        500_000_000n,
+        capability(0n),
+        usd(500_000_000n),
       );
       expect.fail("Should have thrown");
     } catch (err: any) {
@@ -240,8 +241,8 @@ describe("Validation: requireValidPermissions", () => {
         owner,
         "devnet",
         VALID_AGENT,
-        -1n,
-        500_000_000n,
+        -1n as unknown as CapabilityTier, // intentionally invalid for validation test
+        usd(500_000_000n),
       );
       expect.fail("Should have thrown");
     } catch (err: any) {
@@ -257,8 +258,8 @@ describe("Validation: requireValidPermissions", () => {
         owner,
         "devnet",
         VALID_AGENT,
-        MAX_PERMISSIONS + 1n,
-        500_000_000n,
+        (MAX_PERMISSIONS + 1n) as unknown as CapabilityTier, // intentionally invalid
+        usd(500_000_000n),
       );
       expect.fail("Should have thrown");
     } catch (err: any) {
@@ -275,7 +276,7 @@ describe("Validation: requireValidPermissions", () => {
         "devnet",
         VALID_AGENT,
         MAX_PERMISSIONS,
-        500_000_000n,
+        usd(500_000_000n),
       );
     } catch (err: any) {
       expect(err.message).to.not.include("exceeds maximum");
@@ -291,8 +292,8 @@ describe("Validation: requireValidPermissions", () => {
         owner,
         "devnet",
         VALID_AGENT,
-        1n,
-        500_000_000n,
+        capability(1n),
+        usd(500_000_000n),
       );
     } catch (err: any) {
       expect(err.message).to.not.include("no permissions");

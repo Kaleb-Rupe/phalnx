@@ -11,6 +11,7 @@
 
 import type { Address } from "@solana/kit";
 import type { CreateVaultOptions } from "./create-vault.js";
+import { usd, type UsdBaseUnits } from "./types.js";
 import {
   FULL_CAPABILITY,
   PROTOCOL_MODE_ALL,
@@ -57,9 +58,9 @@ export interface VaultPreset {
    */
   permissions: bigint;
   /** Rolling 24h spending cap in USD base units (6 decimals). */
-  dailySpendingCapUsd: bigint;
+  dailySpendingCapUsd: UsdBaseUnits;
   /** Max single transaction size in USD base units. */
-  maxTransactionSizeUsd: bigint;
+  maxTransactionSizeUsd: UsdBaseUnits;
   /** Max slippage in basis points. */
   maxSlippageBps: number;
   /** Protocol mode: 0 = all, 1 = allowlist, 2 = denylist. */
@@ -81,8 +82,8 @@ export const VAULT_PRESETS = {
       "Simple swap bot using Jupiter. Operator capability, conservative caps and Jupiter-only allowlist.",
     capability: FULL_CAPABILITY,
     permissions: FULL_CAPABILITY,
-    dailySpendingCapUsd: 500_000_000n, // $500
-    maxTransactionSizeUsd: 100_000_000n, // $100
+    dailySpendingCapUsd: usd(500_000_000n), // $500
+    maxTransactionSizeUsd: usd(100_000_000n), // $100
     maxSlippageBps: 200, // 2%
     protocolMode: PROTOCOL_MODE_ALLOWLIST,
     protocols: [JUPITER_PROGRAM_ADDRESS],
@@ -95,8 +96,8 @@ export const VAULT_PRESETS = {
       "Leveraged trading on Flash Trade and Jupiter. Operator capability with position limits.",
     capability: FULL_CAPABILITY,
     permissions: FULL_CAPABILITY,
-    dailySpendingCapUsd: 5_000_000_000n, // $5,000
-    maxTransactionSizeUsd: 1_000_000_000n, // $1,000
+    dailySpendingCapUsd: usd(5_000_000_000n), // $5,000
+    maxTransactionSizeUsd: usd(1_000_000_000n), // $1,000
     maxSlippageBps: 500, // 5%
     protocolMode: PROTOCOL_MODE_ALLOWLIST,
     protocols: [JUPITER_PROGRAM_ADDRESS, FLASH_TRADE_PROGRAM],
@@ -109,8 +110,8 @@ export const VAULT_PRESETS = {
       "Deposit and withdraw across lending protocols. Operator capability, low slippage, moderate caps.",
     capability: FULL_CAPABILITY,
     permissions: FULL_CAPABILITY,
-    dailySpendingCapUsd: 2_000_000_000n, // $2,000
-    maxTransactionSizeUsd: 500_000_000n, // $500
+    dailySpendingCapUsd: usd(2_000_000_000n), // $2,000
+    maxTransactionSizeUsd: usd(500_000_000n), // $500
     maxSlippageBps: 100, // 1%
     protocolMode: PROTOCOL_MODE_ALLOWLIST,
     protocols: [
@@ -127,8 +128,8 @@ export const VAULT_PRESETS = {
       "Full capability enabled, all protocols allowed. For experienced users who need maximum flexibility.",
     capability: FULL_CAPABILITY,
     permissions: FULL_CAPABILITY,
-    dailySpendingCapUsd: 10_000_000_000n, // $10,000
-    maxTransactionSizeUsd: 5_000_000_000n, // $5,000
+    dailySpendingCapUsd: usd(10_000_000_000n), // $10,000
+    maxTransactionSizeUsd: usd(5_000_000_000n), // $5,000
     maxSlippageBps: 500, // 5%
     protocolMode: PROTOCOL_MODE_ALL,
     protocols: [],
