@@ -47,6 +47,8 @@ env:
   SOLANA_VERSION: "v2.1.14"
   ANCHOR_VERSION: "0.32.1"
   NODE_VERSION: "24"
+  # Skip heavy jobs on bot version-bump pushes (no code changes)
+  IS_VERSION_BUMP: ${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, 'chore: version packages') }}
 
 jobs:
   # ──────────────────────────────────────────────────────────────
@@ -238,7 +240,7 @@ jobs:
   rust-checks:
     name: Rust Format & Clippy
     needs: changes
-    if: needs.changes.outputs.rust == 'true' || github.event_name == 'push'
+    if: (needs.changes.outputs.rust == 'true' || github.event_name == 'push') && env.IS_VERSION_BUMP != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -280,7 +282,7 @@ jobs:
   on-chain-tests:
     name: On-Chain Tests (LiteSVM)
     needs: changes
-    if: needs.changes.outputs.rust == 'true' || github.event_name == 'push'
+    if: (needs.changes.outputs.rust == 'true' || github.event_name == 'push') && env.IS_VERSION_BUMP != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -387,7 +389,7 @@ jobs:
   build-verification:
     name: Build Verification (Feature Flags)
     needs: changes
-    if: needs.changes.outputs.rust == 'true' || github.event_name == 'push'
+    if: (needs.changes.outputs.rust == 'true' || github.event_name == 'push') && env.IS_VERSION_BUMP != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -485,7 +487,7 @@ jobs:
   surfpool-integration:
     name: Surfpool Integration Tests
     needs: [changes, on-chain-tests]
-    if: needs.changes.outputs.rust == 'true' || github.event_name == 'push'
+    if: (needs.changes.outputs.rust == 'true' || github.event_name == 'push') && env.IS_VERSION_BUMP != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -722,7 +724,7 @@ jobs:
   fuzz-test:
     name: Fuzz Test (Trident, 1000 iterations)
     needs: changes
-    if: needs.changes.outputs.rust == 'true' || github.event_name == 'push'
+    if: (needs.changes.outputs.rust == 'true' || github.event_name == 'push') && env.IS_VERSION_BUMP != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
