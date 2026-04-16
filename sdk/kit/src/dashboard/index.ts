@@ -356,8 +356,7 @@ export class OwnerClient {
   /**
    * Timelocked — queue/apply/cancel pattern.
    * Direct update_agent_permissions deleted (TOCTOU fix).
-   */
-  /**
+   *
    * @param spendingLimit — per-agent 24h cap in 6-decimal USD. Pass 0n for unlimited (NOT recommended).
    */
   async queueAgentPermissions(

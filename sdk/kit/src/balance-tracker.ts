@@ -10,6 +10,7 @@ import type { Address, Rpc, SolanaRpcApi } from "./kit-adapter.js";
 import { isStablecoinMint, type Network } from "./types.js";
 import { resolveVaultStateForOwner } from "./state-resolver.js";
 import { resolveToken } from "./tokens.js";
+import { computeUtilizationPercent } from "./math-utils.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -74,8 +75,7 @@ export function getVaultPnLFromState(state: {
     state.stablecoinBalances.usdc + state.stablecoinBalances.usdt;
   const netInvestment = totalDeposited - totalWithdrawn;
   const pnl = currentBalance - netInvestment;
-  const pnlPercent =
-    netInvestment > 0n ? Number((pnl * 10000n) / netInvestment) / 100 : 0;
+  const pnlPercent = computeUtilizationPercent(pnl, netInvestment);
 
   return {
     totalDeposited,
@@ -107,8 +107,7 @@ export async function getVaultPnL(
 
 // ─── Token balance query ────────────────────────────────────────────────────
 
-const TOKEN_PROGRAM_ADDRESS =
-  "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address;
+import { TOKEN_PROGRAM_ADDRESS } from "./types.js";
 
 /** Parsed token account data shape from jsonParsed encoding. */
 interface ParsedTokenAccountData {
@@ -297,8 +296,7 @@ export function getBalancePnL(
   const startBalance = sumStablecoins(baseline.balances);
   const currentBalance = sumStablecoins(latest.balances);
   const delta = currentBalance - startBalance;
-  const percentChange =
-    startBalance > 0n ? Number((delta * 10000n) / startBalance) / 100 : 0;
+  const percentChange = computeUtilizationPercent(delta, startBalance);
 
   return { startBalance, currentBalance, delta, percentChange };
 }
