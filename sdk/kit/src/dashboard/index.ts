@@ -22,6 +22,7 @@ import type {
 
 import { SigilSdkDomainError } from "../errors/sdk.js";
 import { SIGIL_ERROR__SDK__INVALID_CONFIG } from "../errors/codes.js";
+import type { CapabilityTier, UsdBaseUnits } from "../types.js";
 
 import type {
   OwnerClientConfig,
@@ -209,7 +210,7 @@ export class OwnerClient {
    * Reactivates a frozen vault. Optionally adds a new agent during reactivation.
    */
   async resumeVault(
-    newAgent?: { address: Address; permissions: bigint },
+    newAgent?: { address: Address; permissions: CapabilityTier },
     opts?: TxOpts,
   ): Promise<TxResult> {
     return mutations.resumeVault(
@@ -300,8 +301,8 @@ export class OwnerClient {
    */
   async addAgent(
     agent: Address,
-    permissions: bigint,
-    spendingLimit: bigint,
+    permissions: CapabilityTier,
+    spendingLimit: UsdBaseUnits,
     opts?: TxOpts,
   ): Promise<TxResult> {
     return mutations.addAgent(
@@ -361,8 +362,8 @@ export class OwnerClient {
    */
   async queueAgentPermissions(
     agent: Address,
-    permissions: bigint,
-    spendingLimit: bigint,
+    permissions: CapabilityTier,
+    spendingLimit: UsdBaseUnits,
     opts?: TxOpts,
   ): Promise<TxResult> {
     return mutations.queueAgentPermissions(

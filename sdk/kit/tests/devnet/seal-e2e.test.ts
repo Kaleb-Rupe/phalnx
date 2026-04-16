@@ -34,6 +34,7 @@ import {
   USDC_MINT_DEVNET,
   JUPITER_PROGRAM_ADDRESS,
   FULL_CAPABILITY,
+  usd,
 } from "../../src/types.js";
 import { getSetComputeUnitLimitInstruction } from "@solana-program/compute-budget";
 import {
@@ -68,10 +69,10 @@ describe("Kit SDK Devnet — seal() + createVault() E2E", function () {
         network: "devnet",
         owner,
         agent,
-        dailySpendingCapUsd: 500_000_000n, // $500
-        maxTransactionSizeUsd: 100_000_000n, // $100
+        dailySpendingCapUsd: usd(500_000_000n), // $500
+        maxTransactionSizeUsd: usd(100_000_000n), // $100
         permissions: FULL_CAPABILITY,
-        spendingLimitUsd: 0n,
+        spendingLimitUsd: usd(0n),
       });
 
       expect(result.vaultAddress).to.be.a("string");

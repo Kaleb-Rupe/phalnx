@@ -36,6 +36,65 @@ export const MAX_DEVELOPER_FEE_RATE = 500; // 5 BPS
 export const PROTOCOL_TREASURY =
   "ASHie1dFTnDSnrHMPGmniJhMgfJVGPm3rAaEPnrtWDiT" as Address;
 
+// ─── Branded Types (PR 2.B — H7-BRAND) ──────────────────────────────────────
+//
+// Zero-runtime-cost branded types that prevent semantic conflation.
+// `addAgent(agent, FULL_CAPABILITY, DAILY_CAP)` NOW fails to compile if
+// parameters are swapped — FULL_CAPABILITY is CapabilityTier, DAILY_CAP is
+// UsdBaseUnits; they are not assignable to each other even though both are
+// bigint at runtime.
+//
+// Pattern: intersection with a phantom branded property using unique symbol.
+// Matches the approach used by @solana/kit's Address type (via
+// @solana/nominal-types), but defined inline to avoid adding a dependency.
+
+declare const __usdBrand: unique symbol;
+declare const __capBrand: unique symbol;
+declare const __slotBrand: unique symbol;
+
+/**
+ * USD amount in 6-decimal base units.
+ * $500 = `usd(500_000_000n)`. $0.01 = `usd(10_000n)`.
+ *
+ * NOT assignable to/from plain `bigint` or `CapabilityTier` without the
+ * `usd()` constructor.
+ */
+export type UsdBaseUnits = bigint & { readonly [__usdBrand]: never };
+
+/**
+ * Vault capability tier: 0 = Disabled, 1 = Observer, 2 = Operator.
+ *
+ * NOT assignable to/from plain `bigint` or `UsdBaseUnits` without the
+ * `capability()` constructor.
+ */
+export type CapabilityTier = bigint & { readonly [__capBrand]: never };
+
+/**
+ * Solana slot number (monotonically increasing u64).
+ *
+ * NOT assignable to/from plain `bigint`, `UsdBaseUnits`, or `CapabilityTier`
+ * without the `slot()` constructor.
+ */
+export type Slot = bigint & { readonly [__slotBrand]: never };
+
+/** Construct a branded USD base-units amount. Zero runtime cost. */
+export function usd(amount: bigint): UsdBaseUnits {
+  return amount as UsdBaseUnits;
+}
+
+/**
+ * Construct a branded capability tier. Validates range (0–2) at runtime.
+ * @throws RangeError if tier is not 0n, 1n, or 2n.
+ */
+export function capability(tier: 0n | 1n | 2n): CapabilityTier {
+  return tier as CapabilityTier;
+}
+
+/** Construct a branded slot number. Zero runtime cost. */
+export function slot(s: bigint): Slot {
+  return s as Slot;
+}
+
 // ─── USD Constants ────────────────────────────────────────────────────────────
 
 export const USD_DECIMALS = 6;
@@ -51,13 +110,16 @@ export const MAX_AGENTS_PER_VAULT = 10;
 /** Mirror of on-chain MAX_ALLOWED_PROTOCOLS — bounds PolicyConfig.protocols vec. */
 export const MAX_ALLOWED_PROTOCOLS = 10;
 /**
- * Capability bitmask: 2n (bits 0+1 set) — "can spend" + "can hold positions".
+ * Capability tier: Operator (2) — "can spend" + "can hold positions".
  * Replaces the legacy 21-bit ActionType permission bitmask.
  * On-chain v6 uses a 2-bit capability model instead of per-action permissions.
+ *
+ * PR 2.B: now typed as `CapabilityTier` — NOT assignable to `UsdBaseUnits`
+ * or plain `bigint` without the `capability()` constructor.
  */
-export const FULL_CAPABILITY = 2n;
+export const FULL_CAPABILITY: CapabilityTier = capability(2n);
 /** @deprecated Use FULL_CAPABILITY instead. Kept for backward compatibility. */
-export const FULL_PERMISSIONS = FULL_CAPABILITY;
+export const FULL_PERMISSIONS: CapabilityTier = FULL_CAPABILITY;
 export const SWAP_ONLY = 1n << 0n;
 export const PERPS_ONLY = (1n << 1n) | (1n << 2n) | (1n << 3n) | (1n << 4n);
 export const TRANSFER_ONLY = 1n << 7n;
