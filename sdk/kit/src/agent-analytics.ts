@@ -11,6 +11,7 @@ import type { ResolvedVaultState, EffectiveBudget } from "./state-resolver.js";
 import { bytesToAddress } from "./state-resolver.js";
 import { FULL_CAPABILITY } from "./types.js";
 import { computeHerfindahl } from "./math-utils.js";
+import { computeUtilizationPercent } from "./math-utils.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -95,7 +96,7 @@ export function getAgentProfile(
   }
 
   const capUtilization =
-    budget.cap > 0n ? Number((budget.spent24h * 10000n) / budget.cap) / 100 : 0;
+    computeUtilizationPercent(budget.spent24h, budget.cap);
 
   return {
     address: agentAddress,
@@ -145,9 +146,7 @@ export function getAgentLeaderboard(state: ResolvedVaultState): AgentRanking[] {
     }
 
     const capUtilization =
-      budget.cap > 0n
-        ? Number((budget.spent24h * 10000n) / budget.cap) / 100
-        : 0;
+      computeUtilizationPercent(budget.spent24h, budget.cap);
 
     return {
       address: agentEntry.pubkey,

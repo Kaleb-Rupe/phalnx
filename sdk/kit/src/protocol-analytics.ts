@@ -7,6 +7,7 @@
 
 import type { Address, Rpc, SolanaRpcApi } from "./kit-adapter.js";
 import type { ResolvedVaultState } from "./state-resolver.js";
+import { computeUtilizationPercent } from "./math-utils.js";
 import {
   findVaultsByOwner,
   resolveVaultStateForOwner,
@@ -51,9 +52,9 @@ export function getProtocolBreakdown(
     spent24h: pb.spent24h,
     cap: pb.cap > 0n ? pb.cap : null,
     utilization:
-      pb.cap > 0n ? Number((pb.spent24h * 10000n) / pb.cap) / 100 : 0,
+      computeUtilizationPercent(pb.spent24h, pb.cap),
     percentOfTotalSpend:
-      totalSpend > 0n ? Number((pb.spent24h * 10000n) / totalSpend) / 100 : 0,
+      computeUtilizationPercent(pb.spent24h, totalSpend),
   }));
 }
 

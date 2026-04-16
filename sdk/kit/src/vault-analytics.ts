@@ -9,6 +9,7 @@
  */
 
 import type { Address, Rpc, SolanaRpcApi } from "./kit-adapter.js";
+import { computeUtilizationPercent } from "./math-utils.js";
 import type {
   ResolvedVaultState,
   ResolvedVaultStateForOwner,
@@ -124,9 +125,7 @@ export function getVaultHealth(
 
   // Cap utilization
   const capUtilization =
-    globalBudget.cap > 0n
-      ? Number((globalBudget.spent24h * 10000n) / globalBudget.cap) / 100
-      : 0;
+    computeUtilizationPercent(globalBudget.spent24h, globalBudget.cap);
 
   // Cap reset time: when does the oldest epoch in the window roll off?
   let capResetsIn = 0;

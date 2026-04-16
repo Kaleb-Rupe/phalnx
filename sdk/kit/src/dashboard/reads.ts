@@ -15,6 +15,7 @@ import { isSome } from "../kit-adapter.js";
 import type { Address, Rpc, SolanaRpcApi } from "../kit-adapter.js";
 import { toDxError, isAccountNotFoundError } from "./errors.js";
 import { redactCause } from "../network-errors.js";
+import { computeUtilizationPercent } from "../math-utils.js";
 import {
   resolveVaultStateForOwner,
   getSpendingHistory,
@@ -226,7 +227,7 @@ export function buildAgents(ctx: OverviewContext): AgentData[] {
 
     const spentAmt = budget?.spent24h ?? 0n;
     const capAmt = budget?.cap ?? 0n;
-    const pct = capAmt > 0n ? Number((spentAmt * 10000n) / capAmt) / 100 : 0;
+    const pct = computeUtilizationPercent(spentAmt, capAmt);
 
     // Items are newest-first (getSignaturesForAddress ordering).
     const agentActivity = activity.filter(
@@ -294,7 +295,7 @@ export function buildSpending(ctx: OverviewContext): SpendingData {
   }));
 
   const { spent24h: spent, cap, remaining } = state.globalBudget;
-  const percent = cap > 0n ? Number((spent * 10000n) / cap) / 100 : 0;
+  const percent = computeUtilizationPercent(spent, cap);
   const velocityPerMs = spent > 0n ? Number(spent) / (24 * 3600 * 1000) : 0;
   const rundown =
     velocityPerMs > 0 && remaining > 0n

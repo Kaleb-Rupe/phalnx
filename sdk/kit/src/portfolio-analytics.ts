@@ -6,6 +6,7 @@
  */
 
 import type { Address, Rpc, SolanaRpcApi } from "./kit-adapter.js";
+import { computeUtilizationPercent } from "./math-utils.js";
 import {
   findVaultsByOwner,
   bytesToAddress,
@@ -104,7 +105,7 @@ export function aggregatePortfolio(
 
   const netInvestment = totalDeposited - totalWithdrawn;
   const overallPnlPercent =
-    netInvestment > 0n ? Number((totalPnl * 10000n) / netInvestment) / 100 : 0;
+    computeUtilizationPercent(totalPnl, netInvestment);
 
   return {
     vaults,
@@ -217,9 +218,7 @@ export function getCrossVaultAgentRanking(
         spend24h: budget.spent24h,
         lifetimeSpend,
         capUtilization:
-          budget.cap > 0n
-            ? Number((budget.spent24h * 10000n) / budget.cap) / 100
-            : 0,
+          computeUtilizationPercent(budget.spent24h, budget.cap),
         paused: agentEntry.paused,
         rank: 0,
       });
@@ -275,9 +274,7 @@ export function getAgentLeaderboardAcrossVaults(
         spend24h: budget.spent24h,
         lifetimeSpend,
         capUtilization:
-          budget.cap > 0n
-            ? Number((budget.spent24h * 10000n) / budget.cap) / 100
-            : 0,
+          computeUtilizationPercent(budget.spent24h, budget.cap),
         paused: agentEntry.paused,
         rank: 0,
       });
@@ -354,7 +351,7 @@ export function getPortfolioTimeSeries(
     .sort((a, b) => a.timestamp - b.timestamp);
 
   const utilization =
-    totalCap24h > 0n ? Number((totalSpend24h * 10000n) / totalCap24h) / 100 : 0;
+    computeUtilizationPercent(totalSpend24h, totalCap24h);
 
   return { spendingByEpoch, totalSpend24h, totalCap24h, utilization };
 }

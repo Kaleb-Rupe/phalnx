@@ -10,6 +10,7 @@ import type { Address, Rpc, SolanaRpcApi } from "./kit-adapter.js";
 import { isStablecoinMint, type Network } from "./types.js";
 import { resolveVaultStateForOwner } from "./state-resolver.js";
 import { resolveToken } from "./tokens.js";
+import { computeUtilizationPercent } from "./math-utils.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -75,7 +76,7 @@ export function getVaultPnLFromState(state: {
   const netInvestment = totalDeposited - totalWithdrawn;
   const pnl = currentBalance - netInvestment;
   const pnlPercent =
-    netInvestment > 0n ? Number((pnl * 10000n) / netInvestment) / 100 : 0;
+    computeUtilizationPercent(pnl, netInvestment);
 
   return {
     totalDeposited,
@@ -297,7 +298,7 @@ export function getBalancePnL(
   const currentBalance = sumStablecoins(latest.balances);
   const delta = currentBalance - startBalance;
   const percentChange =
-    startBalance > 0n ? Number((delta * 10000n) / startBalance) / 100 : 0;
+    computeUtilizationPercent(delta, startBalance);
 
   return { startBalance, currentBalance, delta, percentChange };
 }

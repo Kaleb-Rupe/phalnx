@@ -14,6 +14,7 @@
 
 import type { Address } from "./kit-adapter.js";
 import type { SpendTracker, AgentSpendOverlay } from "./generated/index.js";
+import { computeUtilizationPercent } from "./math-utils.js";
 import type {
   ResolvedVaultState,
   EffectiveBudget,
@@ -191,9 +192,7 @@ export function getSpendingBreakdown(
 
   // Global utilization
   const globalUtil =
-    globalBudget.cap > 0n
-      ? Number((globalBudget.spent24h * 10000n) / globalBudget.cap) / 100
-      : 0;
+    computeUtilizationPercent(globalBudget.spent24h, globalBudget.cap);
 
   // By agent
   const byAgent: SpendingBreakdown["byAgent"] = [];
@@ -202,9 +201,7 @@ export function getSpendingBreakdown(
 
   for (const [agent, budget] of allAgentBudgets) {
     const util =
-      budget.cap > 0n
-        ? Number((budget.spent24h * 10000n) / budget.cap) / 100
-        : 0;
+      computeUtilizationPercent(budget.spent24h, budget.cap);
 
     // Find lifetime spend from overlay
     let lifetimeSpend = 0n;
@@ -242,7 +239,7 @@ export function getSpendingBreakdown(
 
   for (const pb of protocolBudgets) {
     const util =
-      pb.cap > 0n ? Number((pb.spent24h * 10000n) / pb.cap) / 100 : 0;
+      computeUtilizationPercent(pb.spent24h, pb.cap);
 
     byProtocol.push({
       protocol: pb.protocol,
