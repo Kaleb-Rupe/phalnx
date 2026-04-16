@@ -104,8 +104,7 @@ export function aggregatePortfolio(
   }
 
   const netInvestment = totalDeposited - totalWithdrawn;
-  const overallPnlPercent =
-    computeUtilizationPercent(totalPnl, netInvestment);
+  const overallPnlPercent = computeUtilizationPercent(totalPnl, netInvestment);
 
   return {
     vaults,
@@ -217,8 +216,7 @@ export function getCrossVaultAgentRanking(
         vaultId: vault.vaultId,
         spend24h: budget.spent24h,
         lifetimeSpend,
-        capUtilization:
-          computeUtilizationPercent(budget.spent24h, budget.cap),
+        capUtilization: computeUtilizationPercent(budget.spent24h, budget.cap),
         paused: agentEntry.paused,
         rank: 0,
       });
@@ -273,8 +271,7 @@ export function getAgentLeaderboardAcrossVaults(
         vaultId: state.vault.vaultId,
         spend24h: budget.spent24h,
         lifetimeSpend,
-        capUtilization:
-          computeUtilizationPercent(budget.spent24h, budget.cap),
+        capUtilization: computeUtilizationPercent(budget.spent24h, budget.cap),
         paused: agentEntry.paused,
         rank: 0,
       });
@@ -350,8 +347,7 @@ export function getPortfolioTimeSeries(
     }))
     .sort((a, b) => a.timestamp - b.timestamp);
 
-  const utilization =
-    computeUtilizationPercent(totalSpend24h, totalCap24h);
+  const utilization = computeUtilizationPercent(totalSpend24h, totalCap24h);
 
   return { spendingByEpoch, totalSpend24h, totalCap24h, utilization };
 }

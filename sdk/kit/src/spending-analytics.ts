@@ -191,8 +191,10 @@ export function getSpendingBreakdown(
     state;
 
   // Global utilization
-  const globalUtil =
-    computeUtilizationPercent(globalBudget.spent24h, globalBudget.cap);
+  const globalUtil = computeUtilizationPercent(
+    globalBudget.spent24h,
+    globalBudget.cap,
+  );
 
   // By agent
   const byAgent: SpendingBreakdown["byAgent"] = [];
@@ -200,8 +202,7 @@ export function getSpendingBreakdown(
   let topAgentSpend = 0n;
 
   for (const [agent, budget] of allAgentBudgets) {
-    const util =
-      computeUtilizationPercent(budget.spent24h, budget.cap);
+    const util = computeUtilizationPercent(budget.spent24h, budget.cap);
 
     // Find lifetime spend from overlay
     let lifetimeSpend = 0n;
@@ -238,8 +239,7 @@ export function getSpendingBreakdown(
   let topProtocolSpend = 0n;
 
   for (const pb of protocolBudgets) {
-    const util =
-      computeUtilizationPercent(pb.spent24h, pb.cap);
+    const util = computeUtilizationPercent(pb.spent24h, pb.cap);
 
     byProtocol.push({
       protocol: pb.protocol,

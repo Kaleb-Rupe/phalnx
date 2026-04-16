@@ -124,8 +124,10 @@ export function getVaultHealth(
   const pausedAgentCount = vault.agents.filter((a) => a.paused).length;
 
   // Cap utilization
-  const capUtilization =
-    computeUtilizationPercent(globalBudget.spent24h, globalBudget.cap);
+  const capUtilization = computeUtilizationPercent(
+    globalBudget.spent24h,
+    globalBudget.cap,
+  );
 
   // Cap reset time: when does the oldest epoch in the window roll off?
   let capResetsIn = 0;

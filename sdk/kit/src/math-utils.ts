@@ -16,10 +16,7 @@
  * @example computeUtilizationPercent(250_000_000n, 500_000_000n) // → 50
  * @example computeUtilizationPercent(0n, 0n)                     // → 0
  */
-export function computeUtilizationPercent(
-  spent: bigint,
-  cap: bigint,
-): number {
+export function computeUtilizationPercent(spent: bigint, cap: bigint): number {
   return cap > 0n ? Number((spent * 10000n) / cap) / 100 : 0;
 }
 

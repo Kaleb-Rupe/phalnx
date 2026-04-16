@@ -75,8 +75,7 @@ export function getVaultPnLFromState(state: {
     state.stablecoinBalances.usdc + state.stablecoinBalances.usdt;
   const netInvestment = totalDeposited - totalWithdrawn;
   const pnl = currentBalance - netInvestment;
-  const pnlPercent =
-    computeUtilizationPercent(pnl, netInvestment);
+  const pnlPercent = computeUtilizationPercent(pnl, netInvestment);
 
   return {
     totalDeposited,
@@ -297,8 +296,7 @@ export function getBalancePnL(
   const startBalance = sumStablecoins(baseline.balances);
   const currentBalance = sumStablecoins(latest.balances);
   const delta = currentBalance - startBalance;
-  const percentChange =
-    computeUtilizationPercent(delta, startBalance);
+  const percentChange = computeUtilizationPercent(delta, startBalance);
 
   return { startBalance, currentBalance, delta, percentChange };
 }

@@ -82,8 +82,7 @@ export function getAgentProfile(
   const lifetimeSpend = overlaySlot?.lifetimeSpend ?? 0n;
   const lifetimeTxCount = overlaySlot?.lifetimeTxCount ?? 0n;
 
-  const capUtilization =
-    computeUtilizationPercent(budget.spent24h, budget.cap);
+  const capUtilization = computeUtilizationPercent(budget.spent24h, budget.cap);
 
   return {
     address: agentAddress,
@@ -132,8 +131,10 @@ export function getAgentLeaderboard(state: ResolvedVaultState): AgentRanking[] {
       }
     }
 
-    const capUtilization =
-      computeUtilizationPercent(budget.spent24h, budget.cap);
+    const capUtilization = computeUtilizationPercent(
+      budget.spent24h,
+      budget.cap,
+    );
 
     return {
       address: agentEntry.pubkey,

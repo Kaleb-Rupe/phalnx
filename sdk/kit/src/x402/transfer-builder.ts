@@ -15,10 +15,7 @@ import { X402ParseError } from "./errors.js";
 
 // PR 3.B F036: use canonical constants from types.ts.
 // Re-exported here for backwards compat with consumers importing from x402/.
-import {
-  TOKEN_PROGRAM_ADDRESS,
-  ATA_PROGRAM_ADDRESS,
-} from "../types.js";
+import { TOKEN_PROGRAM_ADDRESS, ATA_PROGRAM_ADDRESS } from "../types.js";
 export const TOKEN_PROGRAM_ID = TOKEN_PROGRAM_ADDRESS;
 export const ATA_PROGRAM_ID = ATA_PROGRAM_ADDRESS;
 

@@ -51,10 +51,8 @@ export function getProtocolBreakdown(
     protocolName: resolveProtocolName(pb.protocol),
     spent24h: pb.spent24h,
     cap: pb.cap > 0n ? pb.cap : null,
-    utilization:
-      computeUtilizationPercent(pb.spent24h, pb.cap),
-    percentOfTotalSpend:
-      computeUtilizationPercent(pb.spent24h, totalSpend),
+    utilization: computeUtilizationPercent(pb.spent24h, pb.cap),
+    percentOfTotalSpend: computeUtilizationPercent(pb.spent24h, totalSpend),
   }));
 }
 

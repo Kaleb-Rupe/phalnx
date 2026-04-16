@@ -21,9 +21,17 @@ const KAMINO_LEND_PROGRAM = "KLend2g3cP87ber8CzRaqeECGwNvLFM9acPVcRkRHvM";
 // Runtime assert: all local aliases exist in the canonical registry.
 // If a protocol is removed from SUPPORTED_PROTOCOLS but the local alias
 // survives, this fires at module load.
-for (const addr of [JUPITER_PROGRAM, JUPITER_LEND_PROGRAM, FLASH_TRADE_PROGRAM, DRIFT_PROGRAM, KAMINO_LEND_PROGRAM]) {
+for (const addr of [
+  JUPITER_PROGRAM,
+  JUPITER_LEND_PROGRAM,
+  FLASH_TRADE_PROGRAM,
+  DRIFT_PROGRAM,
+  KAMINO_LEND_PROGRAM,
+]) {
   if (!SUPPORTED_PROTOCOLS[addr]) {
-    console.warn(`[priority-fees] ${addr} not in SUPPORTED_PROTOCOLS — registry drift`);
+    console.warn(
+      `[priority-fees] ${addr} not in SUPPORTED_PROTOCOLS — registry drift`,
+    );
   }
 }
 
