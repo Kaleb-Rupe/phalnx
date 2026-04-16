@@ -116,7 +116,9 @@ export function agentDataFromJSON(data: SerializedAgentData): AgentData {
 }
 
 /** Rehydrate a SpendingData from its serialized JSON representation. */
-export function spendingDataFromJSON(data: SerializedSpendingData): SpendingData {
+export function spendingDataFromJSON(
+  data: SerializedSpendingData,
+): SpendingData {
   return {
     global: {
       today: bi(data.global.today),
@@ -154,7 +156,9 @@ export function activityRowFromJSON(data: SerializedActivityRow): ActivityRow {
 }
 
 /** Rehydrate an ActivityData from its serialized JSON representation. */
-export function activityDataFromJSON(data: SerializedActivityData): ActivityData {
+export function activityDataFromJSON(
+  data: SerializedActivityData,
+): ActivityData {
   return {
     rows: data.rows.map(activityRowFromJSON),
     summary: {
@@ -229,7 +233,9 @@ export function discoveredVaultFromJSON(data: SerializedDiscoveredVault) {
  * overview JSON from the `sigil_get_overview` tool and pass it back to
  * subsequent tool calls.
  */
-export function overviewDataFromJSON(data: SerializedOverviewData): OverviewData {
+export function overviewDataFromJSON(
+  data: SerializedOverviewData,
+): OverviewData {
   return {
     vault: vaultStateFromJSON(data.vault),
     agents: data.agents.map(agentDataFromJSON),

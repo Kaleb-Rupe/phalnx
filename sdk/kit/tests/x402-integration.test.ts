@@ -40,7 +40,9 @@ describe("x402 subpath — integration smoke tests", () => {
     });
 
     it("X402DestinationBlockedError carries payTo field", () => {
-      const err = new X402DestinationBlockedError("Bad1111111111111111111111111111111111111111");
+      const err = new X402DestinationBlockedError(
+        "Bad1111111111111111111111111111111111111111",
+      );
       expect(err.code).to.equal("SIGIL_ERROR__X402__DESTINATION_BLOCKED");
       expect(err.payTo).to.equal("Bad1111111111111111111111111111111111111111");
       expect(err.legacyNumericCode).to.equal(7027);
@@ -66,9 +68,9 @@ describe("x402 subpath — integration smoke tests", () => {
     });
 
     it("rejects header missing x402Version field", () => {
-      const encoded = Buffer.from(
-        JSON.stringify({ accepts: [] }),
-      ).toString("base64");
+      const encoded = Buffer.from(JSON.stringify({ accepts: [] })).toString(
+        "base64",
+      );
       expect(() => decodePaymentRequiredHeader(encoded)).to.throw(
         X402ParseError,
       );
