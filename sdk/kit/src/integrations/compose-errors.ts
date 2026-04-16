@@ -47,8 +47,23 @@ export class ComposeError extends SigilComposeError<SigilComposeErrorCode> {
 
   constructor(protocol: string, code: ComposeErrorCode, message: string) {
     const sigilCode = COMPOSE_LEGACY_TO_SIGIL[code];
+    // H1 fix: build code-specific context instead of a single `as never`
+    // shape. Each SigilErrorContext entry declares different required fields
+    // (fieldName for missing_param, fieldName+receivedValue for invalid_bigint,
+    // protocol+action for unsupported_action). The message already contains
+    // the field/action name so we extract it best-effort.
+    const contextForCode =
+      code === "unsupported_action"
+        ? ({ protocol, action: message } as never)
+        : code === "invalid_bigint"
+          ? ({
+              protocol,
+              fieldName: message,
+              receivedValue: undefined,
+            } as never)
+          : ({ protocol, fieldName: message } as never);
     super(sigilCode, `[${protocol}] ${code}: ${message}`, {
-      context: { protocol, fieldName: "" } as never,
+      context: contextForCode,
     });
     this.name = "ComposeError";
     this.protocol = protocol;
