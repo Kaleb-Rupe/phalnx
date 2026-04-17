@@ -27,9 +27,7 @@ describe("parseUsd — happy path", () => {
   });
 
   it("$999999999999999 → 999_999_999_999_999_000_000n (15-digit whole max)", () => {
-    expect(parseUsd("$999999999999999")).to.equal(
-      999_999_999_999_999_000_000n,
-    );
+    expect(parseUsd("$999999999999999")).to.equal(999_999_999_999_999_000_000n);
   });
 
   it("$500 → 500_000_000n (plan SAFETY_PRESETS.development daily cap)", () => {

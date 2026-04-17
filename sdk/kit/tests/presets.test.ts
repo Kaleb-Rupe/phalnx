@@ -219,9 +219,7 @@ describe("SAFETY_PRESETS", () => {
   });
 
   it("development has $100 per-agent cap in base units", () => {
-    expect(SAFETY_PRESETS.development.spendingLimitUsd).to.equal(
-      100_000_000n,
-    );
+    expect(SAFETY_PRESETS.development.spendingLimitUsd).to.equal(100_000_000n);
   });
 
   it("development has $500 daily vault cap in base units", () => {

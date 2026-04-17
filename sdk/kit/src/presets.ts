@@ -268,8 +268,7 @@ export function applySafetyPreset(
   const preset = SAFETY_PRESETS[name];
   return {
     timelockDuration: overrides.timelockDuration ?? preset.timelockDuration,
-    spendingLimitUsd:
-      overrides.spendingLimitUsd ?? preset.spendingLimitUsd,
+    spendingLimitUsd: overrides.spendingLimitUsd ?? preset.spendingLimitUsd,
     dailySpendingCapUsd:
       overrides.dailySpendingCapUsd ?? preset.dailySpendingCapUsd,
   };
@@ -280,9 +279,7 @@ export function applySafetyPreset(
  * consumer must resolve them before calling createVault. This helper
  * narrows the preset type to its fully-resolved form or throws.
  */
-export function requireResolvedSafetyPreset(
-  preset: SafetyPresetFields,
-): {
+export function requireResolvedSafetyPreset(preset: SafetyPresetFields): {
   timelockDuration: number;
   spendingLimitUsd: UsdBaseUnits;
   dailySpendingCapUsd: UsdBaseUnits;
