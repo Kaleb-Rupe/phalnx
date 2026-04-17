@@ -73,6 +73,7 @@ describe("Kit SDK Devnet — seal() + createVault() E2E", function () {
         maxTransactionSizeUsd: usd(100_000_000n), // $100
         permissions: FULL_CAPABILITY,
         spendingLimitUsd: usd(0n),
+        timelockDuration: 1800,
       });
 
       expect(result.vaultAddress).to.be.a("string");
