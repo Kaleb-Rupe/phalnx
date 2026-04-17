@@ -852,8 +852,7 @@ export async function getOverview(
               getSigilModuleLogger().warn(
                 "[OwnerClient.getOverview] activity fetch failed — falling back to empty",
                 {
-                  cause:
-                    cause.message ?? cause.name ?? cause.code ?? "unknown",
+                  cause: cause.message ?? cause.name ?? cause.code ?? "unknown",
                 },
               );
               return [] as VaultActivityItem[];

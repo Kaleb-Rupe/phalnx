@@ -106,12 +106,10 @@ describe("v0.9.0 root barrel — kept exports", () => {
   it("DOES export the new A3-A9 helpers (parseUsd, initializeVaultAtas, SigilLogger primitives, validateAgentCapAggregate)", async () => {
     const { parseUsd } = await import("../src/helpers/parse-usd.js");
     const { initializeVaultAtas } = await import("../src/helpers/ata.js");
-    const { validateAgentCapAggregate } = await import(
-      "../src/helpers/validate-cap-aggregate.js"
-    );
-    const { NOOP_LOGGER, createConsoleLogger } = await import(
-      "../src/logger.js"
-    );
+    const { validateAgentCapAggregate } =
+      await import("../src/helpers/validate-cap-aggregate.js");
+    const { NOOP_LOGGER, createConsoleLogger } =
+      await import("../src/logger.js");
     expect(parseUsd).to.be.a("function");
     expect(initializeVaultAtas).to.be.a("function");
     expect(validateAgentCapAggregate).to.be.a("function");
@@ -132,9 +130,8 @@ describe("v0.9.0 root barrel — kept exports", () => {
 
 describe("v0.9.0 /errors subpath smoke", () => {
   it("import from /errors subpath resolves all 49 code constants", async () => {
-    const errorsSubpath: Record<string, unknown> = await import(
-      "../src/errors/public.js"
-    );
+    const errorsSubpath: Record<string, unknown> =
+      await import("../src/errors/public.js");
     const codes = Object.keys(errorsSubpath).filter((k) =>
       k.startsWith("SIGIL_ERROR__"),
     );
@@ -155,8 +152,10 @@ describe("v0.9.0 root barrel — total export budget", () => {
     //
     // Ceiling locked at 500 as a regression guard — any PR adding five+
     // new top-level names without reviewer attention will trip this.
-    expect(count, `root barrel has ${count} exports (was ~700 pre-A12)`).to.be
-      .lessThan(500);
+    expect(
+      count,
+      `root barrel has ${count} exports (was ~700 pre-A12)`,
+    ).to.be.lessThan(500);
   });
 
   it("root barrel count has plan-target gap documented honestly", () => {

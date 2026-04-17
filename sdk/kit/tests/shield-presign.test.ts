@@ -251,7 +251,8 @@ function makeCapture(warnings: string[]): SigilLogger {
   return {
     debug: () => {},
     info: () => {},
-    warn: (msg, ctx) => warnings.push(ctx ? `${msg} ${JSON.stringify(ctx)}` : msg),
+    warn: (msg, ctx) =>
+      warnings.push(ctx ? `${msg} ${JSON.stringify(ctx)}` : msg),
     error: () => {},
   };
 }

@@ -54,7 +54,9 @@ describe("SigilClient.create — genesis hash assertion", () => {
   });
 
   it("passes when devnet RPC returns the canonical devnet hash", async () => {
-    const { rpc, counters: _unused_counters } = makeStubRpc(SOLANA_DEVNET_GENESIS_HASH);
+    const { rpc, counters: _unused_counters } = makeStubRpc(
+      SOLANA_DEVNET_GENESIS_HASH,
+    );
     const client = await SigilClient.create({
       rpc,
       vault: VAULT,
@@ -66,7 +68,9 @@ describe("SigilClient.create — genesis hash assertion", () => {
   });
 
   it("passes when mainnet RPC returns the canonical mainnet hash", async () => {
-    const { rpc, counters: _unused_counters } = makeStubRpc(SOLANA_MAINNET_GENESIS_HASH);
+    const { rpc, counters: _unused_counters } = makeStubRpc(
+      SOLANA_MAINNET_GENESIS_HASH,
+    );
     const client = await SigilClient.create({
       rpc,
       vault: VAULT,
@@ -78,7 +82,9 @@ describe("SigilClient.create — genesis hash assertion", () => {
   });
 
   it("throws SigilRpcError when mainnet RPC returns the devnet hash", async () => {
-    const { rpc, counters: _unused_counters } = makeStubRpc(SOLANA_DEVNET_GENESIS_HASH);
+    const { rpc, counters: _unused_counters } = makeStubRpc(
+      SOLANA_DEVNET_GENESIS_HASH,
+    );
     let threw = false;
     try {
       await SigilClient.create({
@@ -179,7 +185,9 @@ describe("SigilClient.create — genesis hash assertion", () => {
       warn: (msg) => warnings.push(msg),
       error: () => {},
     });
-    const { rpc, counters: _unused_counters } = makeStubRpc(SOLANA_DEVNET_GENESIS_HASH);
+    const { rpc, counters: _unused_counters } = makeStubRpc(
+      SOLANA_DEVNET_GENESIS_HASH,
+    );
     const client = new SigilClient({
       rpc,
       vault: VAULT,
@@ -207,7 +215,9 @@ describe("SigilClient.create — config.logger injection", () => {
       warn: (msg) => events.push(`warn: ${msg}`),
       error: (msg) => events.push(`error: ${msg}`),
     };
-    const { rpc, counters: _unused_counters } = makeStubRpc(SOLANA_DEVNET_GENESIS_HASH);
+    const { rpc, counters: _unused_counters } = makeStubRpc(
+      SOLANA_DEVNET_GENESIS_HASH,
+    );
     await SigilClient.create({
       rpc,
       vault: VAULT,

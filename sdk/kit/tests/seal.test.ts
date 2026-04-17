@@ -346,9 +346,9 @@ describe("createVault()", () => {
         owner: sameKey,
         agent: sameKey,
         vaultId: 0n,
-      spendingLimitUsd: 100_000_000n as never,
-      dailySpendingCapUsd: 500_000_000n as never,
-      timelockDuration: 1800,
+        spendingLimitUsd: 100_000_000n as never,
+        dailySpendingCapUsd: 500_000_000n as never,
+        timelockDuration: 1800,
       });
       expect.fail("should throw");
     } catch (e: any) {
