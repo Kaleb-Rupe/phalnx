@@ -1334,6 +1334,14 @@ async function assertGenesisHash(
  * const client = await SigilClient.create({ rpc, vault, agent, network });
  * ```
  */
+/**
+ * Module-private construction token for SigilClient. `SigilClient.create()`
+ * is the only holder — direct `new SigilClient(config)` calls from outside
+ * the class body cannot obtain this symbol and fail the runtime guard in
+ * the private constructor.
+ */
+const CLIENT_CONSTRUCT_TOKEN: unique symbol = Symbol("SigilClient.construct");
+
 export class SigilClient {
   private readonly blockhashCacheInstance: BlockhashCache;
   private readonly altCacheInstance: AltCache;
@@ -1344,23 +1352,40 @@ export class SigilClient {
   readonly network: "devnet" | "mainnet";
 
   /**
-   * @deprecated Use the async factory {@link SigilClient.create} instead.
-   * The sync constructor skips the genesis-hash assertion and cannot
-   * verify the RPC is on the cluster the SDK was configured for. Migrate
-   * by awaiting `await SigilClient.create(config)` — signature is
-   * otherwise identical.
+   * Private constructor — Sprint 2 carryover.
    *
-   * Sync construction remains functional for back-compat and for tests
-   * using stubbed RPCs that don't honor `getGenesisHash()`. When called
-   * directly (not via `.create()`), emits a warning via the injected
-   * logger so the bypass is observable.
+   * Sprint 1 deprecated `new SigilClient(config)` in favor of the
+   * async factory `SigilClient.create(config)` which runs the
+   * genesis-hash assertion. Sprint 2 completes the migration by
+   * making the constructor `private`: external callers now get a TS
+   * compile error, and the runtime guard below throws on JS consumers
+   * that cast through `any` to bypass the compile-time check.
    *
-   * @param _skipDeprecationWarning — internal flag used by
-   *   `SigilClient.create()` to suppress the warning on the async path
-   *   (the async factory IS the recommended path; warning there would
-   *   be misleading log spam). Not part of the public API.
+   * The class remains exported so:
+   *   - `SigilClient.create()` static factory still works.
+   *   - `instanceof SigilClient` checks in tests still resolve.
+   *   - The type `SigilClient` is still a first-class position.
+   *
+   * @internal — construction token is a module-private symbol only
+   *   `SigilClient.create()` holds a reference to.
    */
-  constructor(config: SigilClientConfig, _skipDeprecationWarning = false) {
+  private constructor(
+    config: SigilClientConfig,
+    _constructToken: symbol = Symbol.for("SigilClient.forbid"),
+  ) {
+    // Runtime guard: anyone who reaches this constructor without the
+    // exact module-private token (i.e., via `any`-cast or JS bypass)
+    // gets thrown out. `.create()` passes CLIENT_CONSTRUCT_TOKEN.
+    if (_constructToken !== CLIENT_CONSTRUCT_TOKEN) {
+      throw new SigilSdkDomainError(
+        SIGIL_ERROR__SDK__INVALID_CONFIG,
+        "SigilClient: direct construction is not allowed. " +
+          "Use `await SigilClient.create(config)` — which also runs the " +
+          "genesis-hash assertion — or `createSigilClient(config)` for " +
+          "the factory variant.",
+        { context: { field: "constructor", expected: "SigilClient.create" } },
+      );
+    }
     if (!config.rpc)
       throw new SigilSdkDomainError(
         SIGIL_ERROR__SDK__INVALID_CONFIG,
@@ -1399,16 +1424,6 @@ export class SigilClient {
     // If config.logger is undefined, NOOP_LOGGER remains in place.
     if (config.logger) {
       setSigilModuleLogger(config.logger);
-    }
-    // Emit deprecation warning only when called directly (not via
-    // the `.create()` async factory, which already performs the
-    // genesis assertion the deprecation warning warns about).
-    if (!_skipDeprecationWarning) {
-      getSigilModuleLogger().warn(
-        "[SigilClient] sync constructor bypasses genesis-hash assertion. " +
-          "Use `await SigilClient.create(config)` in production to verify the " +
-          "RPC matches the configured network.",
-      );
     }
   }
 
@@ -1451,11 +1466,11 @@ export class SigilClient {
       await assertGenesisHash(config.rpc, config.network);
     }
 
-    // Pass `_skipDeprecationWarning: true` so the sync constructor
-    // doesn't emit its "sync bypasses genesis assertion" warning — we
-    // just performed the assertion above, so the warning would be
-    // misleading log spam on every .create() call (C-review C4).
-    return new SigilClient(config, true);
+    // Sprint 2 carryover: pass the module-private construction token
+    // so the private-ctor runtime guard accepts the call. External
+    // callers cannot obtain this symbol and are rejected — forcing
+    // them through `.create()` which runs the genesis-hash assertion.
+    return new SigilClient(config, CLIENT_CONSTRUCT_TOKEN);
   }
 
   /**
