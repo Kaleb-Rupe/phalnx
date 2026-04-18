@@ -30,10 +30,11 @@ import {
   composeHooks,
   type SealHookContext,
 } from "./hooks.js";
-// SigilPolicyPlugin type-ref is declared inline on SigilClientConfig via
-// `import("./plugin.js").SigilPolicyPlugin` so no top-level import is
-// needed. Plugin runner invocation (runPlugins() call after state resolve)
-// is a follow-up commit; the hooks integration above proves the plumbing.
+import {
+  runPlugins,
+  validatePluginList,
+  type SigilPolicyPlugin,
+} from "./plugin.js";
 
 import { VaultStatus } from "./generated/types/vaultStatus.js";
 import { getValidateAndAuthorizeInstructionAsync } from "./generated/instructions/validateAndAuthorize.js";
@@ -200,6 +201,21 @@ export interface SealParams {
    * generates one via `newCorrelationId()` at the top of the call.
    */
   correlationId?: string;
+  /**
+   * @internal
+   *
+   * Sprint 2 (B4): policy plugins threaded from `SigilClientConfig.plugins`
+   * via `clientSeal`. Bare-seal callers SHOULD NOT pass plugins here —
+   * plugins are client-level configuration that already goes through
+   * `validatePluginList()` at client construction. Direct use of this
+   * field bypasses that validation.
+   *
+   * Not exposed on `ClientSealOpts` (by design — prevents per-call
+   * plugin override). Only `clientSeal` injects this field after the
+   * `...opts` spread so per-call callers cannot override the set of
+   * client-level plugins for a single seal invocation.
+   */
+  plugins?: readonly SigilPolicyPlugin[];
 }
 
 export interface SealResult {
@@ -377,6 +393,46 @@ export async function seal(params: SealParams): Promise<SealResult> {
       `Agent ${params.agent.address} is paused in vault ${params.vault}`,
       { context: { vault: params.vault, agent: params.agent.address } },
     );
+  }
+
+  // ─── Sprint 2 (B4): run policy plugins ────────────────────────────────────
+  //
+  // Plugins receive a frozen, redacted snapshot of the resolved vault state.
+  // Design notes:
+  //   - Ordering: AFTER resolveVaultState + vault-active + agent-registered
+  //     + agent-not-paused gates. 2 of 3 real plugin categories (rate
+  //     limiting, compliance) require state; running before state would
+  //     degrade those to stateless-only.
+  //   - Redaction: owner pubkey, full agents[] roster, vault_id, and raw
+  //     SpendTracker epochs are intentionally NOT exposed. Plugins see
+  //     only what's needed for policy decisions (budget + capability
+  //     + vault status). Reduces malicious-plugin exfiltration surface.
+  //   - Freeze: outer state + each nested object is frozen via
+  //     Object.freeze. Mutation attempts throw in strict mode, silent
+  //     no-op in sloppy — neither is a working bypass.
+  //   - Rejection: runPlugins throws SigilSdkDomainError(PLUGIN_REJECTED)
+  //     on first { allow: false } or plugin throw. The onError hook
+  //     fires via executeAndConfirm's catch block on the way out.
+  if (params.plugins && params.plugins.length > 0) {
+    await runPlugins(params.plugins, {
+      vault: params.vault,
+      agent: params.agent.address,
+      tokenMint: params.tokenMint,
+      amount: params.amount,
+      network: params.network,
+      instructions: params.instructions,
+      correlationId: _hookCtx.correlationId,
+      state: Object.freeze({
+        globalBudget: Object.freeze({ ...state.globalBudget }),
+        agentBudget: state.agentBudget
+          ? Object.freeze({ ...state.agentBudget })
+          : null,
+        vaultStatus: state.vault.status,
+        capabilityTier: agentEntry.capability,
+        maxTransactionUsd: state.maxTransactionUsd,
+        resolvedAtTimestamp: state.resolvedAtTimestamp,
+      }),
+    });
   }
 
   // Step 3: Determine spending from amount (ActionType eliminated in v6)
@@ -815,6 +871,20 @@ export async function seal(params: SealParams): Promise<SealResult> {
     knownRecipients.add(feeDestinationTokenAccount);
   }
 
+  // ─── Sprint 2 (B3): onBeforeSign hook ──────────────────────────────────────
+  //
+  // Fires once the transaction is fully composed and size-verified, before
+  // seal() returns it to the caller (executeAndConfirm will then sign +
+  // send). Observe-only — mutations to compiledTx have no effect on what
+  // seal() returns. A hook throw is swallowed + logged via invokeHook's
+  // existing semantics (same as the other observe-only hooks).
+  //
+  // Single fire-point: composed hooks (from executeAndConfirm) propagate
+  // through clientSeal → seal() via the opts spread, so firing here
+  // covers all three entry paths (executeAndConfirm, SigilVault.execute,
+  // bare seal()) with exactly one invocation per seal.
+  await invokeHook(params.hooks, "onBeforeSign", _hookCtx, compiledTx);
+
   return {
     ok: true,
     transaction: compiledTx,
@@ -1019,6 +1089,15 @@ export function createSigilClient(config: SigilClientConfig): SigilClientApi {
       { context: { field: "network", expected: "'devnet' | 'mainnet'" } },
     );
 
+  // Sprint 2 (B4): validate plugin list at client construction.
+  // plugin.ts docstring promises this runs in createSigilClient /
+  // Sigil.quickstart / Sigil.fromVault. The facade path validates via
+  // buildInternalState; the direct createSigilClient path must too, or
+  // malformed plugins silently load and only fail at first seal().
+  if (config.plugins !== undefined) {
+    validatePluginList(config.plugins);
+  }
+
   // C3 fix: install the consumer-supplied logger so leaf utilities (alt-
   // loader, shield, dashboard, tee/verify, etc.) route their warnings
   // through it. Without this call the factory silently drops
@@ -1081,6 +1160,11 @@ export function createSigilClient(config: SigilClientConfig): SigilClientApi {
       }
     }
 
+    // Sprint 2 (B4): thread client-level plugins into bare seal(). Injected
+    // AFTER the `...opts` spread so per-call callers cannot override the
+    // client's plugin set for a single invocation. ClientSealOpts has no
+    // `plugins` field (by design) — TypeScript rejects per-call plugin
+    // passing at compile time.
     return seal({
       rpc,
       vault,
@@ -1090,6 +1174,7 @@ export function createSigilClient(config: SigilClientConfig): SigilClientApi {
       ...opts,
       blockhash: resolvedBlockhash,
       addressLookupTables,
+      ...(config.plugins ? { plugins: config.plugins } : {}),
     });
   }
 

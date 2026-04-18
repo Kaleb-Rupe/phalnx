@@ -163,12 +163,20 @@ async function buildInternalState(args: {
   // SigilClient.create() runs the genesis-hash assertion (unless
   // skipped), installs the logger on the module, and returns a
   // SigilClientApi-shaped class instance.
+  //
+  // `hooks` and `plugins` flow through here so the underlying client's
+  // clientSeal closure can thread them into bare seal(). Without this
+  // forwarding, `SigilVault.execute()` → `client.executeAndConfirm()` →
+  // clientSeal → seal() would silently no-op plugins registered on the
+  // facade — which is exactly the Sprint 2 gap this PR closes.
   const client = await SigilClient.create({
     rpc: args.rpc,
     vault: args.vault,
     agent: args.agent,
     network: args.network,
     logger: args.logger,
+    hooks: args.hooks,
+    plugins: args.plugins,
     skipGenesisAssertion: args.skipGenesisAssertion,
   });
 
