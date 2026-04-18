@@ -17,6 +17,8 @@ import {
   fixEncoderSize,
   getAddressDecoder,
   getAddressEncoder,
+  getArrayDecoder,
+  getArrayEncoder,
   getBooleanDecoder,
   getBooleanEncoder,
   getBytesDecoder,
@@ -99,6 +101,18 @@ export type SessionAuthority = {
   stablecoinBalanceBefore: bigint;
   /** Bump seed for PDA */
   bump: number;
+  /**
+   * Phase B2: Snapshots of target account bytes captured in validate_and_authorize
+   * before DeFi instruction executes. Index i corresponds to PostAssertionEntry i.
+   * Used by delta assertion modes (1=MaxDecrease, 2=MaxIncrease, 3=NoChange).
+   */
+  assertionSnapshots: Array<ReadonlyUint8Array>;
+  /**
+   * Phase B2: Actual value_len captured for each snapshot.
+   * 0 = no snapshot captured (mode 0 entries). Non-zero = snapshot was captured.
+   * finalize_session cross-checks snapshot_lens[i] == entry.value_len.
+   */
+  snapshotLens: ReadonlyUint8Array;
 };
 
 export type SessionAuthorityArgs = {
@@ -148,6 +162,18 @@ export type SessionAuthorityArgs = {
   stablecoinBalanceBefore: number | bigint;
   /** Bump seed for PDA */
   bump: number;
+  /**
+   * Phase B2: Snapshots of target account bytes captured in validate_and_authorize
+   * before DeFi instruction executes. Index i corresponds to PostAssertionEntry i.
+   * Used by delta assertion modes (1=MaxDecrease, 2=MaxIncrease, 3=NoChange).
+   */
+  assertionSnapshots: Array<ReadonlyUint8Array>;
+  /**
+   * Phase B2: Actual value_len captured for each snapshot.
+   * 0 = no snapshot captured (mode 0 entries). Non-zero = snapshot was captured.
+   * finalize_session cross-checks snapshot_lens[i] == entry.value_len.
+   */
+  snapshotLens: ReadonlyUint8Array;
 };
 
 /** Gets the encoder for {@link SessionAuthorityArgs} account data. */
@@ -171,6 +197,11 @@ export function getSessionAuthorityEncoder(): FixedSizeEncoder<SessionAuthorityA
       ["outputMint", getAddressEncoder()],
       ["stablecoinBalanceBefore", getU64Encoder()],
       ["bump", getU8Encoder()],
+      [
+        "assertionSnapshots",
+        getArrayEncoder(fixEncoderSize(getBytesEncoder(), 32), { size: 4 }),
+      ],
+      ["snapshotLens", fixEncoderSize(getBytesEncoder(), 4)],
     ]),
     (value) => ({ ...value, discriminator: SESSION_AUTHORITY_DISCRIMINATOR }),
   );
@@ -196,6 +227,11 @@ export function getSessionAuthorityDecoder(): FixedSizeDecoder<SessionAuthority>
     ["outputMint", getAddressDecoder()],
     ["stablecoinBalanceBefore", getU64Decoder()],
     ["bump", getU8Decoder()],
+    [
+      "assertionSnapshots",
+      getArrayDecoder(fixDecoderSize(getBytesDecoder(), 32), { size: 4 }),
+    ],
+    ["snapshotLens", fixDecoderSize(getBytesDecoder(), 4)],
   ]);
 }
 
@@ -274,5 +310,5 @@ export async function fetchAllMaybeSessionAuthority(
 }
 
 export function getSessionAuthoritySize(): number {
-  return 245;
+  return 377;
 }

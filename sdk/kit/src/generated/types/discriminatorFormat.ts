@@ -15,6 +15,14 @@ import {
   type FixedSizeEncoder,
 } from "@solana/kit";
 
+/**
+ * Discriminator format for the first DataConstraint in a ConstraintEntry.
+ * Controls the minimum byte length required for the instruction discriminator
+ * anchor (A5 invariant). Different Solana programs use different discriminator
+ * widths — Anchor uses 8-byte SHA-256 prefixes, SPL Token uses 1-byte enum
+ * indices. The format is checked at constraint creation time only; runtime
+ * verification in verify_data_constraints_zc() uses value_len directly.
+ */
 export enum DiscriminatorFormat {
   Anchor8,
   Spl1,

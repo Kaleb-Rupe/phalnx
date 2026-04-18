@@ -30,6 +30,7 @@ import {
   type PluginContext,
   type SigilPolicyPlugin,
 } from "../src/plugin.js";
+import { VaultStatus } from "../src/generated/types/vaultStatus.js";
 import { SigilSdkDomainError } from "../src/errors/sdk.js";
 import {
   SIGIL_ERROR__SDK__PLUGIN_REJECTED,
@@ -66,6 +67,20 @@ function makePluginCtx(): PluginContext {
     network: "devnet",
     instructions: [],
     correlationId: newCorrelationId(),
+    // Minimal frozen state fixture. Real values come from resolveVaultState
+    // in production; tests only need the shape for runPlugins unit tests.
+    state: Object.freeze({
+      globalBudget: Object.freeze({
+        spent24h: 0n,
+        cap: 500_000_000n, // $500
+        remaining: 500_000_000n,
+      }),
+      agentBudget: null,
+      vaultStatus: VaultStatus.Active,
+      capabilityTier: 2, // Operator
+      maxTransactionUsd: 0n, // uncapped
+      resolvedAtTimestamp: BigInt(Math.floor(Date.now() / 1000)),
+    }),
   };
 }
 

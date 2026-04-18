@@ -7,39 +7,53 @@
  */
 
 import {
+  addDecoderSizePrefix,
+  addEncoderSizePrefix,
   combineCodec,
   getAddressDecoder,
   getAddressEncoder,
-  getArrayDecoder,
-  getArrayEncoder,
+  getBytesDecoder,
+  getBytesEncoder,
   getI64Decoder,
   getI64Encoder,
   getStructDecoder,
   getStructEncoder,
-  getU8Decoder,
-  getU8Encoder,
+  getU32Decoder,
+  getU32Encoder,
   type Address,
   type Codec,
   type Decoder,
   type Encoder,
+  type ReadonlyUint8Array,
 } from "@solana/kit";
 
 export type ConstraintsChangeApplied = {
   vault: Address;
-  discriminatorFormats: Array<number>;
+  /**
+   * Per-entry discriminator format (0=Anchor8, 1=Spl1) from the applied entries.
+   * Emitted at apply time so monitors see the active format when it takes effect.
+   */
+  discriminatorFormats: ReadonlyUint8Array;
   appliedAt: bigint;
 };
 
 export type ConstraintsChangeAppliedArgs = {
   vault: Address;
-  discriminatorFormats: Array<number>;
+  /**
+   * Per-entry discriminator format (0=Anchor8, 1=Spl1) from the applied entries.
+   * Emitted at apply time so monitors see the active format when it takes effect.
+   */
+  discriminatorFormats: ReadonlyUint8Array;
   appliedAt: number | bigint;
 };
 
 export function getConstraintsChangeAppliedEncoder(): Encoder<ConstraintsChangeAppliedArgs> {
   return getStructEncoder([
     ["vault", getAddressEncoder()],
-    ["discriminatorFormats", getArrayEncoder(getU8Encoder())],
+    [
+      "discriminatorFormats",
+      addEncoderSizePrefix(getBytesEncoder(), getU32Encoder()),
+    ],
     ["appliedAt", getI64Encoder()],
   ]);
 }
@@ -47,7 +61,10 @@ export function getConstraintsChangeAppliedEncoder(): Encoder<ConstraintsChangeA
 export function getConstraintsChangeAppliedDecoder(): Decoder<ConstraintsChangeApplied> {
   return getStructDecoder([
     ["vault", getAddressDecoder()],
-    ["discriminatorFormats", getArrayDecoder(getU8Decoder())],
+    [
+      "discriminatorFormats",
+      addDecoderSizePrefix(getBytesDecoder(), getU32Decoder()),
+    ],
     ["appliedAt", getI64Decoder()],
   ]);
 }

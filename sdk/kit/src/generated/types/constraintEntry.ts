@@ -44,6 +44,11 @@ export type ConstraintEntry = {
   isSpending: number;
   /** Position effect: 0=None, 1=Increment, 2=Decrement. */
   positionEffect: number;
+  /**
+   * Discriminator format for this entry's target program. Controls the
+   * minimum byte length of the first DataConstraint (the A5 anchor).
+   * Default: Anchor8 (0). Use Spl1 (1) for SPL Token / Token-2022.
+   */
   discriminatorFormat: DiscriminatorFormat;
 };
 
@@ -55,6 +60,11 @@ export type ConstraintEntryArgs = {
   isSpending: number;
   /** Position effect: 0=None, 1=Increment, 2=Decrement. */
   positionEffect: number;
+  /**
+   * Discriminator format for this entry's target program. Controls the
+   * minimum byte length of the first DataConstraint (the A5 anchor).
+   * Default: Anchor8 (0). Use Spl1 (1) for SPL Token / Token-2022.
+   */
   discriminatorFormat: DiscriminatorFormatArgs;
 };
 

@@ -53,17 +53,33 @@ export type PostAssertionEntryZC = {
    * Assertion mode:
    * 0 = Absolute: check current value against expected_value
    * 1 = MaxDecrease: check (snapshot - current) ≤ expected_value (Phase B2)
+   * NOTE: If value increases (current > snapshot), check ALWAYS PASSES (saturating sub = 0).
+   * For bidirectional protection, pair with MaxIncrease or use NoChange.
    * 2 = MaxIncrease: check (current - snapshot) ≤ expected_value (Phase B2)
-   * 3 = NoChange: check current == snapshot (Phase B2)
+   * NOTE: If value decreases, check ALWAYS PASSES.
+   * 3 = NoChange: check current == snapshot — byte-for-byte equality (Phase B2)
    */
   assertionMode: number;
   /**
-   * Padding to align to 8 bytes. Total: 32 + 2 + 1 + 1 + 32 + 1 + 7 = 76
-   * Future: 4 bytes for cross-field offset_b (Phase B3 CrossFieldLte)
-   * Future: 2 bytes for cross-field multiplier (Phase B3)
-   * Future: 1 byte for cross-field flags
+   * Phase B3: Second field offset for CrossFieldLte (little-endian u16).
+   * When cross_field_flags & 0x01: read field_B at offset_b (value_len bytes) from same target.
+   * Check: field_A × 10000 ≤ multiplier_bps × field_B (using u128 arithmetic).
+   * Stored as [u8; 2] for zero-copy Pod alignment compatibility.
    */
-  padding: ReadonlyUint8Array;
+  crossFieldOffsetB: ReadonlyUint8Array;
+  /**
+   * Phase B3: Multiplier in basis points for CrossFieldLte (little-endian u32).
+   * 10000 = 1.0x, 100000 = 10x, 5000000 = 500x.
+   * Must be > 0 when cross_field_flags is enabled.
+   * Stored as [u8; 4] for zero-copy Pod alignment compatibility.
+   */
+  crossFieldMultiplierBps: ReadonlyUint8Array;
+  /**
+   * Phase B3: Flags byte. Bit 0 = enable CrossFieldLte.
+   * When enabled, assertion_mode MUST be 0 (Absolute).
+   * Unknown bits (1-7) must be 0.
+   */
+  crossFieldFlags: number;
 };
 
 export type PostAssertionEntryZCArgs = PostAssertionEntryZC;
@@ -76,7 +92,9 @@ export function getPostAssertionEntryZCEncoder(): FixedSizeEncoder<PostAssertion
     ["operator", getU8Encoder()],
     ["expectedValue", fixEncoderSize(getBytesEncoder(), 32)],
     ["assertionMode", getU8Encoder()],
-    ["padding", fixEncoderSize(getBytesEncoder(), 7)],
+    ["crossFieldOffsetB", fixEncoderSize(getBytesEncoder(), 2)],
+    ["crossFieldMultiplierBps", fixEncoderSize(getBytesEncoder(), 4)],
+    ["crossFieldFlags", getU8Encoder()],
   ]);
 }
 
@@ -88,7 +106,9 @@ export function getPostAssertionEntryZCDecoder(): FixedSizeDecoder<PostAssertion
     ["operator", getU8Decoder()],
     ["expectedValue", fixDecoderSize(getBytesDecoder(), 32)],
     ["assertionMode", getU8Decoder()],
-    ["padding", fixDecoderSize(getBytesDecoder(), 7)],
+    ["crossFieldOffsetB", fixDecoderSize(getBytesDecoder(), 2)],
+    ["crossFieldMultiplierBps", fixDecoderSize(getBytesDecoder(), 4)],
+    ["crossFieldFlags", getU8Decoder()],
   ]);
 }
 

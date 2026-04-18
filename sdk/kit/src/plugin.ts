@@ -11,12 +11,23 @@
  * Run order inside `seal()`:
  *   1. Parameter validation (basic shape checks)
  *   2. `hooks.onBeforeBuild` — may abort cleanly via `{ skipSeal: true }`
- *   3. **Plugin checks** — first `{ allow: false }` throws
- *   4. `resolveVaultState` + capability check + constraint check
- *   5. Transaction assembly
+ *   3. `resolveVaultState` — fetches AgentVault + PolicyConfig + SpendTracker + Overlay
+ *   4. Vault-active + agent-registered + agent-not-paused gates
+ *   5. **Plugin checks** — first `{ allow: false }` throws. Plugins see
+ *      the resolved on-chain state via `PluginContext.state`. NOTE: the
+ *      zero-capability check runs AFTER plugins (step 7), so a plugin
+ *      MAY observe `state.capabilityTier === 0`; plugins relying on a
+ *      non-zero capability must assert it themselves before allowing.
+ *   6. Amount/protocol/constraint checks (spending gates, allowlist, max)
+ *   7. Agent-capability zero-check + transaction assembly
+ *   8. `hooks.onBeforeSign` — final observe-only point before return
  *
- * Plugins see the vault's resolved on-chain state if they need it, but
- * they MUST NOT perform their own RPC calls — they receive the
+ * Plugins run AFTER state resolution by design — 2 of 3 real plugin
+ * categories (rate limiting, compliance) need state input. Consumers who
+ * want stateless early-exit use `onBeforeBuild` with
+ * `{ skipSeal: true, reason }` — that path runs before any RPC.
+ *
+ * Plugins MUST NOT perform their own RPC calls — they receive the
  * pre-resolved state as context. Async plugin `check()` is supported
  * for cases where the plugin delegates to an external service
  * (feature-flag servers, compliance APIs) but the plugin runner will
@@ -51,6 +62,40 @@ export interface PluginContext {
   readonly instructions: readonly Instruction[];
   /** Stable ID for this `seal()` invocation — matches `SealHookContext.correlationId`. */
   readonly correlationId: string;
+  /**
+   * Sanitized vault state snapshot, populated by `seal()` after
+   * `resolveVaultState()` completes and prerequisite checks pass
+   * (vault active + agent registered + agent not paused). Frozen —
+   * mutation attempts throw in strict mode.
+   *
+   * **Security contract (intentional redactions):**
+   *   - `owner` pubkey is NOT exposed — plugins must not make policy
+   *     decisions based on ownership identity.
+   *   - Full `agents[]` roster is NOT exposed — plugins see their
+   *     invocation agent's capability/paused state only, preventing
+   *     inter-agent side channels.
+   *   - `vault_id` is NOT exposed — internal identifier, no policy use.
+   *   - Raw `SpendTracker` epoch array is NOT exposed — denormalized
+   *     into `globalBudget.spent24h` instead.
+   *
+   * The exposed surface is sufficient for the three real use cases:
+   * rate limiting (budget remaining), compliance (vault status + agent
+   * paused), and circuit breakers (budget spent24h).
+   */
+  readonly state: {
+    /** Rolling 24h global budget: cap, spent, remaining (6-decimal USD). */
+    readonly globalBudget: import("./state-resolver.js").EffectiveBudget;
+    /** Rolling 24h per-agent budget. Null if the agent has no sub-cap. */
+    readonly agentBudget: import("./state-resolver.js").EffectiveBudget | null;
+    /** On-chain vault lifecycle status. */
+    readonly vaultStatus: import("./generated/types/vaultStatus.js").VaultStatus;
+    /** Agent capability tier (0=Disabled, 1=Observer, 2=Operator). */
+    readonly capabilityTier: number;
+    /** Policy max-transaction-size cap (6-decimal USD). 0n means uncapped. */
+    readonly maxTransactionUsd: bigint;
+    /** Unix timestamp (seconds) when state was resolved. */
+    readonly resolvedAtTimestamp: bigint;
+  };
 }
 
 // ─── Plugin result ──────────────────────────────────────────────────────────
