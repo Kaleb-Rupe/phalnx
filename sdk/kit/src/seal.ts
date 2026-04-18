@@ -24,6 +24,16 @@ import type {
 } from "./kit-adapter.js";
 import { compileTransaction, AccountRole } from "./kit-adapter.js";
 import { getSigilModuleLogger, setSigilModuleLogger } from "./logger.js";
+import {
+  newCorrelationId,
+  invokeHook,
+  composeHooks,
+  type SealHookContext,
+} from "./hooks.js";
+// SigilPolicyPlugin type-ref is declared inline on SigilClientConfig via
+// `import("./plugin.js").SigilPolicyPlugin` so no top-level import is
+// needed. Plugin runner invocation (runPlugins() call after state resolve)
+// is a follow-up commit; the hooks integration above proves the plumbing.
 
 import { VaultStatus } from "./generated/types/vaultStatus.js";
 import { getValidateAndAuthorizeInstructionAsync } from "./generated/instructions/validateAndAuthorize.js";
@@ -98,6 +108,7 @@ import {
   SIGIL_ERROR__SDK__CAP_EXCEEDED,
   SIGIL_ERROR__SDK__ATA_NON_CANONICAL,
   SIGIL_ERROR__SDK__SEAL_FAILED,
+  SIGIL_ERROR__SDK__HOOK_ABORTED,
   SIGIL_ERROR__RPC__TX_FAILED,
   SIGIL_ERROR__RPC__TX_TOO_LARGE,
 } from "./errors/codes.js";
@@ -177,6 +188,18 @@ export interface SealParams {
   maxCacheAgeMs?: number;
   /** Additional agent ATA → vault ATA replacements for multi-token DeFi routes. */
   additionalAtaReplacements?: Map<Address, Address>;
+  /**
+   * Sprint 2 (B3): optional lifecycle hooks. Observe-only except
+   * `onBeforeBuild` which may return `{ skipSeal: true, reason }` to
+   * cleanly abort before any RPC. Hook throws are caught and logged
+   * via `getSigilModuleLogger().warn` — they do NOT propagate.
+   */
+  hooks?: import("./hooks.js").SealHooks;
+  /**
+   * Sprint 2 (B3): stable correlation ID. When omitted, `seal()`
+   * generates one via `newCorrelationId()` at the top of the call.
+   */
+  correlationId?: string;
 }
 
 export interface SealResult {
@@ -251,6 +274,47 @@ export async function seal(params: SealParams): Promise<SealResult> {
   const warnings: string[] = [];
   const net = normalizeNetwork(params.network);
   validateNetwork(net);
+
+  // ─── Sprint 2 B3: build hook context + invoke onBeforeBuild ──────────────
+  //
+  // Context is populated ONCE at the top of seal() so every subsequent hook
+  // invocation references the same `correlationId`. onBeforeBuild is the
+  // only hook that may abort: returning `{ skipSeal: true, reason }` throws
+  // SigilSdkDomainError(HOOK_ABORTED) before any RPC round-trip.
+  const _hookCtx: SealHookContext = {
+    vault: params.vault,
+    agent: params.agent.address,
+    tokenMint: params.tokenMint,
+    amount: params.amount,
+    network: params.network,
+    correlationId: params.correlationId ?? newCorrelationId(),
+  };
+  if (params.hooks?.onBeforeBuild) {
+    const abortResult = await invokeHook(
+      params.hooks,
+      "onBeforeBuild",
+      _hookCtx,
+      params,
+    );
+    if (
+      abortResult &&
+      typeof abortResult === "object" &&
+      "skipSeal" in abortResult &&
+      abortResult.skipSeal === true
+    ) {
+      throw new SigilSdkDomainError(
+        SIGIL_ERROR__SDK__HOOK_ABORTED,
+        `seal() aborted by onBeforeBuild hook: ${String(abortResult.reason)}`,
+        {
+          context: {
+            hook: "onBeforeBuild",
+            reason: String(abortResult.reason),
+            correlationId: _hookCtx.correlationId,
+          },
+        },
+      );
+    }
+  }
 
   // Step 1: Resolve vault state (with stale cache detection)
   let state: ResolvedVaultState;
@@ -811,6 +875,19 @@ export interface SigilClientConfig {
    * injected logger so the bypass is observable in audit trails.
    */
   skipGenesisAssertion?: boolean;
+  /**
+   * Sprint 2 (B3): client-level seal hooks. Fire on every `seal()` +
+   * `executeAndConfirm()` call. Compose with per-call hooks
+   * (`ClientSealOpts.hooks`) via `composeHooks(clientHooks, perCall)`
+   * — client hooks run first.
+   */
+  hooks?: import("./hooks.js").SealHooks;
+  /**
+   * Sprint 2 (B4): policy plugins. Run in registration order inside
+   * `seal()` pre-flight after `resolveVaultState`; first rejection
+   * throws `SigilSdkDomainError(SIGIL_ERROR__SDK__PLUGIN_REJECTED)`.
+   */
+  plugins?: readonly import("./plugin.js").SigilPolicyPlugin[];
 }
 
 /**
@@ -832,6 +909,16 @@ export interface ClientSealOpts {
   cachedState?: ResolvedVaultState;
   maxCacheAgeMs?: number;
   additionalAtaReplacements?: Map<Address, Address>;
+  /**
+   * Sprint 2 (B3): per-call hooks. Compose with client-level hooks
+   * (`SigilClientConfig.hooks`) — client hooks run first, then per-call.
+   */
+  hooks?: import("./hooks.js").SealHooks;
+  /**
+   * Sprint 2 (B3): stable correlation ID for trace correlation.
+   * Defaults to a fresh `newCorrelationId()` if omitted.
+   */
+  correlationId?: string;
 }
 
 export interface ExecuteResult {
@@ -1015,19 +1102,53 @@ export function createSigilClient(config: SigilClientConfig): SigilClientApi {
     seal: clientSeal,
 
     async executeAndConfirm(instructions, opts) {
+      // Sprint 2 B3: compose client-level and per-call hooks. Client hooks
+      // run first at every stage (onBeforeBuild → ... → onFinalize), then
+      // per-call hooks. composeHooks handles the conditional-merge when
+      // either side is absent.
+      const composedHooks = composeHooks(config.hooks, opts.hooks);
+      const correlationId = opts.correlationId ?? newCorrelationId();
+      const hookCtx: SealHookContext = {
+        vault,
+        agent: agent.address,
+        tokenMint: opts.tokenMint,
+        amount: opts.amount,
+        network,
+        correlationId,
+      };
+
       try {
         // Calls the closure-captured clientSeal — no `this` dependency.
         // Safe to destructure: `const { executeAndConfirm } = client`.
-        const result = await clientSeal(instructions, opts);
+        const result = await clientSeal(instructions, {
+          ...opts,
+          hooks: composedHooks,
+          correlationId,
+        });
         const encoded = await signAndEncode(agent, result.transaction);
         const signature = await sendAndConfirmTransaction(
           rpc,
           encoded,
           opts.confirmOptions,
         );
+
+        // Sprint 2 B3: onAfterSend fires with the signature as soon as
+        // the RPC resolves. onFinalize fires last on the success path.
+        await invokeHook(composedHooks, "onAfterSend", hookCtx, signature);
+        await invokeHook(composedHooks, "onFinalize", hookCtx, { signature });
+
         return { signature, sealResult: result };
       } catch (err) {
         const sdkError = toSigilAgentError(err);
+        // Sprint 2 B3: onError fires in every failure path before the
+        // existing onErrorCallback telemetry hook. Error is always
+        // rethrown after both fire.
+        await invokeHook(
+          composedHooks,
+          "onError",
+          hookCtx,
+          err instanceof Error ? err : new Error(String(err)),
+        );
         onErrorCallback?.(sdkError, {
           action: opts.amount > 0n ? "spending" : "non-spending",
           tokenMint: opts.tokenMint,
