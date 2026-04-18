@@ -322,6 +322,9 @@ describe("createVault()", () => {
       owner: mockOwner(),
       agent: mockAgent(),
       vaultId: 0n,
+      spendingLimitUsd: 100_000_000n as never,
+      dailySpendingCapUsd: 500_000_000n as never,
+      timelockDuration: 1800,
     });
 
     expect(result.vaultAddress).to.be.a("string");
@@ -343,6 +346,9 @@ describe("createVault()", () => {
         owner: sameKey,
         agent: sameKey,
         vaultId: 0n,
+        spendingLimitUsd: 100_000_000n as never,
+        dailySpendingCapUsd: 500_000_000n as never,
+        timelockDuration: 1800,
       });
       expect.fail("should throw");
     } catch (e: any) {
@@ -357,6 +363,9 @@ describe("createVault()", () => {
       owner: mockOwner(),
       agent: mockAgent(),
       vaultId: 0n,
+      spendingLimitUsd: 100_000_000n as never,
+      dailySpendingCapUsd: 500_000_000n as never,
+      timelockDuration: 1800,
     });
     const r2 = await createVault({
       rpc: {} as any,
@@ -364,6 +373,9 @@ describe("createVault()", () => {
       owner: mockOwner(),
       agent: mockAgent(),
       vaultId: 0n,
+      spendingLimitUsd: 100_000_000n as never,
+      dailySpendingCapUsd: 500_000_000n as never,
+      timelockDuration: 1800,
     });
     expect(r1.vaultAddress).to.equal(r2.vaultAddress);
     expect(r1.policyAddress).to.equal(r2.policyAddress);
@@ -541,6 +553,9 @@ describe("SigilClient", () => {
       owner: mockOwner(),
       agent: mockAgent(),
       vaultId: 0n,
+      spendingLimitUsd: 100_000_000n as never,
+      dailySpendingCapUsd: 500_000_000n as never,
+      timelockDuration: 1800,
     });
 
     expect(result.vaultAddress).to.be.a("string");

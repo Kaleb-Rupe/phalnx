@@ -23,6 +23,7 @@ import type {
   TransactionSigner,
 } from "./kit-adapter.js";
 import { compileTransaction, AccountRole } from "./kit-adapter.js";
+import { getSigilModuleLogger, setSigilModuleLogger } from "./logger.js";
 
 import { VaultStatus } from "./generated/types/vaultStatus.js";
 import { getValidateAndAuthorizeInstructionAsync } from "./generated/instructions/validateAndAuthorize.js";
@@ -88,6 +89,7 @@ import {
   SIGIL_ERROR__SDK__AGENT_ZERO_CAPABILITY,
   SIGIL_ERROR__SDK__INVALID_AMOUNT,
   SIGIL_ERROR__SDK__INVALID_CONFIG,
+  SIGIL_ERROR__SDK__INVALID_NETWORK,
   SIGIL_ERROR__SDK__INVALID_PARAMS,
   SIGIL_ERROR__SDK__SPL_TOKEN_OP_BLOCKED,
   SIGIL_ERROR__SDK__PROTOCOL_NOT_ALLOWED,
@@ -96,6 +98,7 @@ import {
   SIGIL_ERROR__SDK__CAP_EXCEEDED,
   SIGIL_ERROR__SDK__ATA_NON_CANONICAL,
   SIGIL_ERROR__SDK__SEAL_FAILED,
+  SIGIL_ERROR__RPC__TX_FAILED,
   SIGIL_ERROR__RPC__TX_TOO_LARGE,
 } from "./errors/codes.js";
 
@@ -777,6 +780,37 @@ export interface SigilClientConfig {
     error: AgentError,
     context: { action: string; tokenMint: Address; amount: bigint },
   ) => void;
+  /**
+   * Structured logger for SDK-internal diagnostics (ALT cache warnings,
+   * RPC retries, shield advisories, etc.). When provided to
+   * `SigilClient.create()`, it is installed via `setSigilModuleLogger()`
+   * so every leaf utility in the SDK routes output through it.
+   *
+   * Default: `NOOP_LOGGER` — no output.
+   *
+   * For local development, pass `createConsoleLogger()`. For production,
+   * wrap your preferred structured logger (pino, bunyan, OpenTelemetry)
+   * in the `SigilLogger` interface shape.
+   */
+  logger?: import("./logger.js").SigilLogger;
+  /**
+   * Skip the `getGenesisHash()` network assertion at client construction.
+   *
+   * **Do not set this in production.** The assertion prevents a very
+   * common misconfiguration — pointing a mainnet-built SDK instance at a
+   * devnet RPC (or vice versa) — from reaching transaction submission,
+   * where it would silently succeed against the wrong cluster and drain
+   * funds that weren't supposed to move.
+   *
+   * Opt-outs are provided only for two narrow cases:
+   *   - Local Surfpool / LiteSVM test harnesses whose genesis hash does
+   *     not match the canonical devnet or mainnet hashes.
+   *   - CI jobs where the RPC is stubbed entirely.
+   *
+   * When set to `true`, a deprecation-tier warning is emitted via the
+   * injected logger so the bypass is observable in audit trails.
+   */
+  skipGenesisAssertion?: boolean;
 }
 
 /**
@@ -898,6 +932,14 @@ export function createSigilClient(config: SigilClientConfig): SigilClientApi {
       { context: { field: "network", expected: "'devnet' | 'mainnet'" } },
     );
 
+  // C3 fix: install the consumer-supplied logger so leaf utilities (alt-
+  // loader, shield, dashboard, tee/verify, etc.) route their warnings
+  // through it. Without this call the factory silently drops
+  // `config.logger` while the deprecated class constructor installs it.
+  if (config.logger) {
+    setSigilModuleLogger(config.logger);
+  }
+
   // Private state captured in closure (replaces class private fields)
   const rpc = config.rpc;
   const vault = config.vault;
@@ -942,7 +984,7 @@ export function createSigilClient(config: SigilClientConfig): SigilClientApi {
         verifySigilAlt(addressLookupTables, sigilAlt, expected);
       } catch (err: unknown) {
         const cause = redactCause(err);
-        console.debug(
+        getSigilModuleLogger().debug(
           `[seal] ALT cache verify failed — invalidating and retrying: ${cause.message ?? cause.name ?? cause.code ?? "unknown"}`,
         );
         localAltCache.invalidate();
@@ -1018,20 +1060,157 @@ export function createSigilClient(config: SigilClientConfig): SigilClientApi {
   };
 }
 
+// ─── Genesis-hash assertion (D18 — closes F10 cluster mismatch) ─────────────
+//
+// Every @ usesigil / kit transaction assumes the RPC is on the cluster the
+// SDK was configured for. A devnet-configured client hitting a mainnet
+// RPC (or vice versa) would silently submit a tx against the wrong
+// cluster, deriving ATAs from the wrong stablecoin mints and in the
+// worst case succeeding against live funds. getGenesisHash() is the
+// canonical cluster discriminant.
+
+/** Canonical devnet genesis hash — Solana cluster identifier. */
+export const SOLANA_DEVNET_GENESIS_HASH =
+  "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG";
+
+/** Canonical mainnet-beta genesis hash — Solana cluster identifier. */
+export const SOLANA_MAINNET_GENESIS_HASH =
+  "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d";
+
+/**
+ * Module-level cache of observed genesis hashes, keyed by RPC object
+ * identity. Lives for the process lifetime; tests reset with
+ * `_resetGenesisHashCache()`. Kept as a `let` binding so the reset
+ * helper can swap in a fresh WeakMap — `Map`/`WeakMap` don't support
+ * per-instance clearing in ways that would let us keep a const.
+ *
+ * NOTE on caching key (M3 from review): WeakMap uses object identity,
+ * so two independent `rpc = await createRpc(url)` calls (e.g., module
+ * reload in tests) each pay one `getGenesisHash()` RTT before hitting
+ * the cache. Acceptable for long-lived agent processes; documented
+ * here so production readers know to hold a single rpc instance.
+ */
+let _genesisHashCache = new WeakMap<object, string>();
+
+/** @internal — exposed for test resets only. */
+export function _resetGenesisHashCache(): void {
+  _genesisHashCache = new WeakMap();
+}
+
+/**
+ * Retry helper — 3 attempts, 200ms exponential backoff. Matches the
+ * behavior documented in SDK-REDESIGN-PLAN D4.
+ */
+async function withRetry<T>(
+  op: () => Promise<T>,
+  attempts = 3,
+  baseDelayMs = 200,
+): Promise<T> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await op();
+    } catch (err) {
+      lastErr = err;
+      if (i === attempts - 1) break;
+      const delayMs = baseDelayMs * 2 ** i;
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+}
+
+/**
+ * Assert that `rpc.getGenesisHash()` matches the canonical hash for
+ * `network`. Throws `SigilRpcError(SIGIL_ERROR__SDK__INVALID_NETWORK)`
+ * on mismatch or repeated RPC failure.
+ *
+ * Results are cached per-RPC-instance via WeakMap so repeated
+ * `SigilClient.create()` calls against the same RPC do not re-fetch.
+ */
+async function assertGenesisHash(
+  rpc: Rpc<SolanaRpcApi>,
+  network: "devnet" | "mainnet",
+): Promise<void> {
+  const rpcKey = rpc as unknown as object;
+  const cached = _genesisHashCache.get(rpcKey);
+  const expected =
+    network === "mainnet"
+      ? SOLANA_MAINNET_GENESIS_HASH
+      : SOLANA_DEVNET_GENESIS_HASH;
+
+  let observed = cached;
+  if (!observed) {
+    try {
+      observed = await withRetry(() => rpc.getGenesisHash().send());
+    } catch (err) {
+      // RPC transport failure (retries exhausted) → RPC domain error.
+      // This is different from C-review C1: the cluster mismatch below
+      // is an SDK-domain configuration error, not an RPC transport error.
+      throw new SigilRpcError(
+        SIGIL_ERROR__RPC__TX_FAILED,
+        `getGenesisHash() failed after 3 attempts — cannot verify RPC cluster ` +
+          `matches configured network "${network}". Set skipGenesisAssertion: true ` +
+          `only if you are using a local validator (Surfpool/LiteSVM) whose ` +
+          `genesis does not match devnet or mainnet.`,
+        { cause: err, context: { network, attempts: 3 } as never },
+      );
+    }
+    // M7 fix: reject non-string / wrong-length responses — don't cache
+    // a malformed hash that would permanently poison subsequent .create()
+    // calls for this rpc instance.
+    if (typeof observed !== "string" || observed.length < 32) {
+      throw new SigilRpcError(
+        SIGIL_ERROR__RPC__TX_FAILED,
+        `getGenesisHash() returned a malformed response — expected a 44-char ` +
+          `base58 string, got ${observed === null ? "null" : typeof observed}. ` +
+          `Check that your RPC provider implements the getGenesisHash method.`,
+        { context: { network, observed: String(observed) } as never },
+      );
+    }
+    _genesisHashCache.set(rpcKey, observed);
+  }
+
+  if (observed !== expected) {
+    // Cluster mismatch is an SDK-domain config error, not an RPC error.
+    // Consumers narrow on `SigilSdkDomainError + SIGIL_ERROR__SDK__INVALID_NETWORK`
+    // to catch this specifically.
+    throw new SigilSdkDomainError(
+      SIGIL_ERROR__SDK__INVALID_NETWORK,
+      `Genesis hash mismatch — RPC is on a different cluster than configured. ` +
+        `Expected "${network}" (${expected}) but RPC returned ${observed}. ` +
+        `A common cause: the SDK was built with --features devnet but the RPC URL ` +
+        `points at mainnet (or vice versa). Either fix the RPC URL, rebuild the ` +
+        `SDK with the matching feature flag, or set skipGenesisAssertion: true ` +
+        `(NOT recommended in production).`,
+      {
+        context: {
+          network,
+          expected,
+          observed,
+        } as never,
+      },
+    );
+  }
+}
+
 // ─── SigilClient (deprecated class) ─────────────────────────────────────
 
 /**
- * @deprecated Use `createSigilClient(config)` instead. This class will be
- * removed at v1.0. The factory returns the same API surface as a plain
- * object with closure-bound methods — no `this` binding issues, tree-
- * shakeable, and aligned with the viem/Kit functional pattern.
+ * @deprecated Use `createSigilClient(config)` or the async factory
+ * `SigilClient.create(config)` instead. This class will be removed at
+ * v1.0. The factory returns the same API surface as a plain object with
+ * closure-bound methods — no `this` binding issues, tree-shakeable, and
+ * aligned with the viem/Kit functional pattern.
  *
  * Migration:
  * ```ts
  * // Before:
  * const client = new SigilClient({ rpc, vault, agent, network });
- * // After:
+ * // After (factory):
  * const client = createSigilClient({ rpc, vault, agent, network });
+ * // After (async with genesis assertion):
+ * const client = await SigilClient.create({ rpc, vault, agent, network });
  * ```
  */
 export class SigilClient {
@@ -1043,7 +1222,24 @@ export class SigilClient {
   readonly agent: TransactionSigner;
   readonly network: "devnet" | "mainnet";
 
-  constructor(config: SigilClientConfig) {
+  /**
+   * @deprecated Use the async factory {@link SigilClient.create} instead.
+   * The sync constructor skips the genesis-hash assertion and cannot
+   * verify the RPC is on the cluster the SDK was configured for. Migrate
+   * by awaiting `await SigilClient.create(config)` — signature is
+   * otherwise identical.
+   *
+   * Sync construction remains functional for back-compat and for tests
+   * using stubbed RPCs that don't honor `getGenesisHash()`. When called
+   * directly (not via `.create()`), emits a warning via the injected
+   * logger so the bypass is observable.
+   *
+   * @param _skipDeprecationWarning — internal flag used by
+   *   `SigilClient.create()` to suppress the warning on the async path
+   *   (the async factory IS the recommended path; warning there would
+   *   be misleading log spam). Not part of the public API.
+   */
+  constructor(config: SigilClientConfig, _skipDeprecationWarning = false) {
     if (!config.rpc)
       throw new SigilSdkDomainError(
         SIGIL_ERROR__SDK__INVALID_CONFIG,
@@ -1076,6 +1272,69 @@ export class SigilClient {
     this.blockhashCacheInstance = new BlockhashCache(config.blockhashTtlMs);
     this.altCacheInstance = new AltCache();
     this.onErrorCallback = config.onError;
+
+    // Install module logger so leaf utilities (alt-loader, shield,
+    // dashboard, etc.) route warnings through the consumer's logger.
+    // If config.logger is undefined, NOOP_LOGGER remains in place.
+    if (config.logger) {
+      setSigilModuleLogger(config.logger);
+    }
+    // Emit deprecation warning only when called directly (not via
+    // the `.create()` async factory, which already performs the
+    // genesis assertion the deprecation warning warns about).
+    if (!_skipDeprecationWarning) {
+      getSigilModuleLogger().warn(
+        "[SigilClient] sync constructor bypasses genesis-hash assertion. " +
+          "Use `await SigilClient.create(config)` in production to verify the " +
+          "RPC matches the configured network.",
+      );
+    }
+  }
+
+  /**
+   * Async factory — constructs a `SigilClient` and asserts the RPC's
+   * genesis hash matches the configured `network`. Preferred entry
+   * point for production use.
+   *
+   * Throws `SigilRpcError` if:
+   *   - the RPC fails 3 consecutive `getGenesisHash()` attempts, or
+   *   - the returned genesis hash does not match the canonical devnet /
+   *     mainnet hash.
+   *
+   * Set `config.skipGenesisAssertion: true` to bypass for local test
+   * harnesses (Surfpool, LiteSVM) — a warning is emitted in that case.
+   *
+   * @example
+   * ```ts
+   * const client = await SigilClient.create({
+   *   rpc, vault, agent, network: "devnet",
+   *   logger: createConsoleLogger(),
+   * });
+   * ```
+   */
+  static async create(config: SigilClientConfig): Promise<SigilClient> {
+    // Install logger first so assertGenesisHash diagnostics route correctly.
+    if (config.logger) {
+      setSigilModuleLogger(config.logger);
+    }
+
+    if (config.skipGenesisAssertion === true) {
+      getSigilModuleLogger().warn(
+        "[SigilClient.create] skipGenesisAssertion=true — RPC cluster " +
+          `is NOT verified against configured network "${config.network}". ` +
+          "Only safe for local test harnesses.",
+      );
+    } else {
+      // Assert BEFORE constructing — if genesis check throws, no client
+      // with a misconfigured RPC is ever returned to the caller.
+      await assertGenesisHash(config.rpc, config.network);
+    }
+
+    // Pass `_skipDeprecationWarning: true` so the sync constructor
+    // doesn't emit its "sync bypasses genesis assertion" warning — we
+    // just performed the assertion above, so the warning would be
+    // misleading log spam on every .create() call (C-review C4).
+    return new SigilClient(config, true);
   }
 
   /**
@@ -1121,7 +1380,7 @@ export class SigilClient {
         // silently; if we see this in telemetry, it means the ALT on
         // chain was updated or the cache was serving stale data.
         const cause = redactCause(err);
-        console.debug(
+        getSigilModuleLogger().debug(
           `[seal] ALT cache verify failed — invalidating and retrying: ${cause.message ?? cause.name ?? cause.code ?? "unknown"}`,
         );
         this.altCacheInstance.invalidate();

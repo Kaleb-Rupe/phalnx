@@ -34,7 +34,9 @@ import { SigilSdkDomainError } from "./errors/sdk.js";
 import {
   SIGIL_ERROR__SDK__OWNER_AGENT_COLLISION,
   SIGIL_ERROR__SDK__INVALID_CAPABILITY,
+  SIGIL_ERROR__SDK__INVALID_PARAMS,
 } from "./errors/codes.js";
+import { validateAgentCapAggregate } from "./helpers/validate-cap-aggregate.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -44,8 +46,29 @@ export interface CreateVaultOptions {
   owner: TransactionSigner;
   agent: TransactionSigner;
   permissions?: CapabilityTier;
-  spendingLimitUsd?: UsdBaseUnits;
-  dailySpendingCapUsd?: UsdBaseUnits;
+  /**
+   * Per-agent spending cap in USD base units (6-decimal). Required since
+   * v0.9.0 — previously defaulted silently to `0n` which made the agent
+   * unable to spend. Closes Pentester F3 / D11: force callers to think
+   * about the cap rather than inherit an invisible default.
+   *
+   * Pass `0n` explicitly to register an Observer-class agent (read-only,
+   * no spending authority).
+   *
+   * Use `SAFETY_PRESETS.development.spendingLimitUsd` (100_000_000n =
+   * $100) for local/test envs, or set explicitly in production.
+   */
+  spendingLimitUsd: UsdBaseUnits;
+  /**
+   * Vault-wide daily cap in USD base units (6-decimal). Required since
+   * v0.9.0 — previously defaulted silently to 500_000_000n. Closes
+   * Pentester F5 / D11: force callers to specify the vault's blast
+   * radius rather than inherit the $500/day default.
+   *
+   * Constraint: `spendingLimitUsd` ≤ `dailySpendingCapUsd` — enforced
+   * by `validateAgentCapAggregate` at construction time.
+   */
+  dailySpendingCapUsd: UsdBaseUnits;
   maxTransactionSizeUsd?: UsdBaseUnits;
   feeDestination?: Address;
   developerFeeRate?: number;
@@ -54,7 +77,23 @@ export interface CreateVaultOptions {
   maxLeverageBps?: number;
   maxConcurrentPositions?: number;
   maxSlippageBps?: number;
-  timelockDuration?: number;
+  /**
+   * Timelock duration in seconds for owner-initiated policy changes.
+   * Required since v0.9.0 — previously defaulted silently to 0 (no
+   * timelock). Closes Pentester F7 / D11: force callers to specify an
+   * intentional delay between queue and apply so compromised-key attacks
+   * have a window to be noticed and canceled.
+   *
+   * Minimum: `MIN_TIMELOCK_DURATION = 1800` (30 min) enforced on-chain.
+   * Use `SAFETY_PRESETS.development.timelockDuration` (1800) for local
+   * envs, `SAFETY_PRESETS.production.timelockDuration` (86400, 24h) for
+   * prod.
+   *
+   * Pass `0` explicitly to acknowledge no timelock protection (e.g., for
+   * throwaway test vaults); the on-chain program will reject the call
+   * if MIN_TIMELOCK_DURATION is enforced for the target feature flag.
+   */
+  timelockDuration: number;
   allowedDestinations?: Address[];
   vaultId?: bigint;
 }
@@ -87,6 +126,55 @@ export async function createVault(
       },
     );
   }
+
+  // v0.9.0: validate REQUIRED fields — reject explicit undefined and
+  // reject any non-bigint for the two cap fields (runtime guard for JS
+  // consumers who bypass the TS type check).
+  if (
+    typeof options.spendingLimitUsd === "undefined" ||
+    typeof options.spendingLimitUsd !== "bigint"
+  ) {
+    throw new SigilSdkDomainError(
+      SIGIL_ERROR__SDK__INVALID_PARAMS,
+      "createVault: `spendingLimitUsd` is required (v0.9.0). Pass an " +
+        "explicit bigint in USD base units. Use `0n` for an Observer-class " +
+        "agent. See SAFETY_PRESETS for recommended values.",
+      { context: { field: "spendingLimitUsd" } },
+    );
+  }
+  if (
+    typeof options.dailySpendingCapUsd === "undefined" ||
+    typeof options.dailySpendingCapUsd !== "bigint"
+  ) {
+    throw new SigilSdkDomainError(
+      SIGIL_ERROR__SDK__INVALID_PARAMS,
+      "createVault: `dailySpendingCapUsd` is required (v0.9.0). Pass an " +
+        "explicit bigint in USD base units. See SAFETY_PRESETS for " +
+        "recommended values.",
+      { context: { field: "dailySpendingCapUsd" } },
+    );
+  }
+  if (
+    typeof options.timelockDuration === "undefined" ||
+    typeof options.timelockDuration !== "number"
+  ) {
+    throw new SigilSdkDomainError(
+      SIGIL_ERROR__SDK__INVALID_PARAMS,
+      "createVault: `timelockDuration` is required (v0.9.0). Pass an " +
+        "explicit number of seconds. Use `SAFETY_PRESETS.production." +
+        "timelockDuration` (86400) for prod.",
+      { context: { field: "timelockDuration" } },
+    );
+  }
+
+  // Aggregate cap guard (D12, Pentester F3) — this is the first agent,
+  // so `existingAgentCaps: []`. Subsequent addAgent calls (Sprint 2)
+  // pass the current vault's agent caps.
+  validateAgentCapAggregate({
+    vaultDailyCap: options.dailySpendingCapUsd,
+    existingAgentCaps: [],
+    newAgentCap: options.spendingLimitUsd,
+  });
 
   // Validate capability fits the on-chain 2-bit enum.
   //
@@ -124,10 +212,18 @@ export async function createVault(
   const [policyAddress] = await getPolicyPDA(vaultAddress);
   const [agentOverlayAddress] = await getAgentOverlayPDA(vaultAddress, 0);
 
-  // Step 3: Defaults
-  const dailySpendingCapUsd = options.dailySpendingCapUsd ?? 500_000_000n;
+  // Step 3: Resolve remaining fields with intentional defaults.
+  //
+  // `spendingLimitUsd`, `dailySpendingCapUsd`, and `timelockDuration` are
+  // REQUIRED (v0.9.0) — no defaults. The fields below retain defaults
+  // because they don't silently reduce security posture:
+  //   - maxTransactionSizeUsd defaults to dailySpendingCapUsd (caller's
+  //     explicit cap becomes the per-tx ceiling unless narrower)
+  //   - feeDestination defaults to the owner's key (same principal)
+  //   - protocols=[] + protocolMode=0 means "all protocols allowed" —
+  //     this is a policy decision, not a silent reduction
   const maxTransactionSizeUsd =
-    options.maxTransactionSizeUsd ?? dailySpendingCapUsd;
+    options.maxTransactionSizeUsd ?? options.dailySpendingCapUsd;
   const feeDestination = options.feeDestination ?? options.owner.address;
   const protocols = options.protocols ?? [];
   const protocolMode = options.protocolMode ?? 0;
@@ -138,7 +234,7 @@ export async function createVault(
     agentSpendOverlay: agentOverlayAddress,
     feeDestination,
     vaultId,
-    dailySpendingCapUsd,
+    dailySpendingCapUsd: options.dailySpendingCapUsd,
     maxTransactionSizeUsd,
     protocolMode,
     protocols,
@@ -146,7 +242,7 @@ export async function createVault(
     maxConcurrentPositions: options.maxConcurrentPositions ?? 5,
     developerFeeRate: options.developerFeeRate ?? 0,
     maxSlippageBps: options.maxSlippageBps ?? 100,
-    timelockDuration: options.timelockDuration ?? 0,
+    timelockDuration: options.timelockDuration,
     allowedDestinations: options.allowedDestinations ?? [],
     protocolCaps: protocols.map(() => 0n),
   });
@@ -158,7 +254,7 @@ export async function createVault(
     agentSpendOverlay: agentOverlayAddress,
     agent: options.agent.address,
     capability: Number(options.permissions ?? FULL_PERMISSIONS),
-    spendingLimitUsd: options.spendingLimitUsd ?? 0n,
+    spendingLimitUsd: options.spendingLimitUsd,
   });
 
   return {
