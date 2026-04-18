@@ -7,39 +7,53 @@
  */
 
 import {
+  addDecoderSizePrefix,
+  addEncoderSizePrefix,
   combineCodec,
   getAddressDecoder,
   getAddressEncoder,
-  getArrayDecoder,
-  getArrayEncoder,
+  getBytesDecoder,
+  getBytesEncoder,
   getI64Decoder,
   getI64Encoder,
   getStructDecoder,
   getStructEncoder,
-  getU8Decoder,
-  getU8Encoder,
+  getU32Decoder,
+  getU32Encoder,
   type Address,
   type Codec,
   type Decoder,
   type Encoder,
+  type ReadonlyUint8Array,
 } from "@solana/kit";
 
 export type ConstraintsChangeQueued = {
   vault: Address;
-  discriminatorFormats: Array<number>;
+  /**
+   * Per-entry discriminator format (0=Anchor8, 1=Spl1).
+   * Enables off-chain monitors to detect format changes/downgrades.
+   */
+  discriminatorFormats: ReadonlyUint8Array;
   executesAt: bigint;
 };
 
 export type ConstraintsChangeQueuedArgs = {
   vault: Address;
-  discriminatorFormats: Array<number>;
+  /**
+   * Per-entry discriminator format (0=Anchor8, 1=Spl1).
+   * Enables off-chain monitors to detect format changes/downgrades.
+   */
+  discriminatorFormats: ReadonlyUint8Array;
   executesAt: number | bigint;
 };
 
 export function getConstraintsChangeQueuedEncoder(): Encoder<ConstraintsChangeQueuedArgs> {
   return getStructEncoder([
     ["vault", getAddressEncoder()],
-    ["discriminatorFormats", getArrayEncoder(getU8Encoder())],
+    [
+      "discriminatorFormats",
+      addEncoderSizePrefix(getBytesEncoder(), getU32Encoder()),
+    ],
     ["executesAt", getI64Encoder()],
   ]);
 }
@@ -47,7 +61,10 @@ export function getConstraintsChangeQueuedEncoder(): Encoder<ConstraintsChangeQu
 export function getConstraintsChangeQueuedDecoder(): Decoder<ConstraintsChangeQueued> {
   return getStructDecoder([
     ["vault", getAddressDecoder()],
-    ["discriminatorFormats", getArrayDecoder(getU8Decoder())],
+    [
+      "discriminatorFormats",
+      addDecoderSizePrefix(getBytesDecoder(), getU32Decoder()),
+    ],
     ["executesAt", getI64Decoder()],
   ]);
 }

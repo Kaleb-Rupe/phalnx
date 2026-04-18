@@ -34,6 +34,21 @@ import {
   type DataConstraintZCArgs,
 } from "./index.js";
 
+/**
+ * BYTE LAYOUT REGISTRY — Canonical assignment of padding bytes.
+ *
+ * Both `feat/multi-format-discriminator` and `feat/actiontype-elimination`
+ * branches carve fields from the original 6-byte `_padding`. This registry
+ * is the single source of truth. When merging, the layout MUST be:
+ *
+ * byte 554: discriminator_format  (this branch)
+ * byte 555: is_spending           (actiontype-elimination branch)
+ * byte 556: position_effect       (actiontype-elimination branch)
+ * bytes 557-559: _padding[3]      (reserved for future use)
+ *
+ * Total: 32+320+200+1+1+1+1+1+3 = 560 (unchanged).
+ * The branch that merges second MUST rebase and adjust its slot to match.
+ */
 export type ConstraintEntryZC = {
   programId: ReadonlyUint8Array;
   dataConstraints: Array<DataConstraintZC>;
@@ -51,6 +66,12 @@ export type ConstraintEntryZC = {
    * Replaces ActionType.position_effect().
    */
   positionEffect: number;
+  /**
+   * DiscriminatorFormat discriminant (0=Anchor8, 1=Spl1). Write-time only —
+   * verify_data_constraints_zc() does not read this field at runtime.
+   * Zero-initialized on existing V1 PDAs → 0 → Anchor8 (backward compatible).
+   */
+  discriminatorFormat: number;
   padding: ReadonlyUint8Array;
 };
 
@@ -71,6 +92,12 @@ export type ConstraintEntryZCArgs = {
    * Replaces ActionType.position_effect().
    */
   positionEffect: number;
+  /**
+   * DiscriminatorFormat discriminant (0=Anchor8, 1=Spl1). Write-time only —
+   * verify_data_constraints_zc() does not read this field at runtime.
+   * Zero-initialized on existing V1 PDAs → 0 → Anchor8 (backward compatible).
+   */
+  discriminatorFormat: number;
   padding: ReadonlyUint8Array;
 };
 
@@ -89,7 +116,8 @@ export function getConstraintEntryZCEncoder(): FixedSizeEncoder<ConstraintEntryZ
     ["accountCount", getU8Encoder()],
     ["isSpending", getU8Encoder()],
     ["positionEffect", getU8Encoder()],
-    ["padding", fixEncoderSize(getBytesEncoder(), 4)],
+    ["discriminatorFormat", getU8Encoder()],
+    ["padding", fixEncoderSize(getBytesEncoder(), 3)],
   ]);
 }
 
@@ -108,7 +136,8 @@ export function getConstraintEntryZCDecoder(): FixedSizeDecoder<ConstraintEntryZ
     ["accountCount", getU8Decoder()],
     ["isSpending", getU8Decoder()],
     ["positionEffect", getU8Decoder()],
-    ["padding", fixDecoderSize(getBytesDecoder(), 4)],
+    ["discriminatorFormat", getU8Decoder()],
+    ["padding", fixDecoderSize(getBytesDecoder(), 3)],
   ]);
 }
 

@@ -37,6 +37,12 @@ export type PostAssertionEntry = {
   operator: number;
   expectedValue: ReadonlyUint8Array;
   assertionMode: number;
+  /** Phase B3: second field offset for CrossFieldLte (0 if unused) */
+  crossFieldOffsetB: number;
+  /** Phase B3: multiplier in BPS for CrossFieldLte (0 if unused) */
+  crossFieldMultiplierBps: number;
+  /** Phase B3: flags byte — bit 0 = enable CrossFieldLte (0 if unused) */
+  crossFieldFlags: number;
 };
 
 export type PostAssertionEntryArgs = PostAssertionEntry;
@@ -49,6 +55,9 @@ export function getPostAssertionEntryEncoder(): Encoder<PostAssertionEntryArgs> 
     ["operator", getU8Encoder()],
     ["expectedValue", addEncoderSizePrefix(getBytesEncoder(), getU32Encoder())],
     ["assertionMode", getU8Encoder()],
+    ["crossFieldOffsetB", getU16Encoder()],
+    ["crossFieldMultiplierBps", getU32Encoder()],
+    ["crossFieldFlags", getU8Encoder()],
   ]);
 }
 
@@ -60,6 +69,9 @@ export function getPostAssertionEntryDecoder(): Decoder<PostAssertionEntry> {
     ["operator", getU8Decoder()],
     ["expectedValue", addDecoderSizePrefix(getBytesDecoder(), getU32Decoder())],
     ["assertionMode", getU8Decoder()],
+    ["crossFieldOffsetB", getU16Decoder()],
+    ["crossFieldMultiplierBps", getU32Decoder()],
+    ["crossFieldFlags", getU8Decoder()],
   ]);
 }
 

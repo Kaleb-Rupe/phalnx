@@ -116,7 +116,7 @@ export const SIGIL_ERROR__INVALID_ESCROW_VAULT = 0x17a0; // 6048
 export const SIGIL_ERROR__ESCROW_CONDITIONS_NOT_MET = 0x17a1; // 6049
 /** EscrowDurationExceeded: Escrow duration exceeds maximum (30 days) */
 export const SIGIL_ERROR__ESCROW_DURATION_EXCEEDED = 0x17a2; // 6050
-/** InvalidConstraintConfig: Invalid constraint configuration */
+/** InvalidConstraintConfig: Invalid constraint configuration: bounds exceeded */
 export const SIGIL_ERROR__INVALID_CONSTRAINT_CONFIG = 0x17a3; // 6051
 /** ConstraintViolated: Instruction constraint violated */
 export const SIGIL_ERROR__CONSTRAINT_VIOLATED = 0x17a4; // 6052
@@ -170,16 +170,20 @@ export const SIGIL_ERROR__ACTIVE_SESSIONS_EXIST = 0x17bb; // 6075
 export const SIGIL_ERROR__POST_ASSERTION_FAILED = 0x17bc; // 6076
 /** InvalidPostAssertionIndex: Post-assertion constraint references invalid instruction index */
 export const SIGIL_ERROR__INVALID_POST_ASSERTION_INDEX = 0x17bd; // 6077
+/** UnauthorizedPreValidateInstruction: Non-infrastructure instruction detected before validate_and_authorize */
+export const SIGIL_ERROR__UNAUTHORIZED_PRE_VALIDATE_INSTRUCTION = 0x17be; // 6078
+/** SnapshotNotCaptured: Delta assertion snapshot was not captured in validate_and_authorize */
+export const SIGIL_ERROR__SNAPSHOT_NOT_CAPTURED = 0x17bf; // 6079
 /** ConstraintIndexOutOfBounds: Constraint entry index out of bounds for zero-copy array */
-export const SIGIL_ERROR__CONSTRAINT_INDEX_OUT_OF_BOUNDS = 0x17be; // 6078
+export const SIGIL_ERROR__CONSTRAINT_INDEX_OUT_OF_BOUNDS = 0x17c0; // 6080
 /** InvalidConstraintOperator: Constraint operator value is not a valid ConstraintOperator discriminant */
-export const SIGIL_ERROR__INVALID_CONSTRAINT_OPERATOR = 0x17bf; // 6079
+export const SIGIL_ERROR__INVALID_CONSTRAINT_OPERATOR = 0x17c1; // 6081
 /** ConstraintsVaultMismatch: Zero-copy constraints account has wrong vault */
-export const SIGIL_ERROR__CONSTRAINTS_VAULT_MISMATCH = 0x17c0; // 6080
+export const SIGIL_ERROR__CONSTRAINTS_VAULT_MISMATCH = 0x17c2; // 6082
 /** ConstraintEntryCountExceeded: Cannot pack entries: entry count exceeds MAX_CONSTRAINT_ENTRIES */
-export const SIGIL_ERROR__CONSTRAINT_ENTRY_COUNT_EXCEEDED = 0x17c1; // 6081
+export const SIGIL_ERROR__CONSTRAINT_ENTRY_COUNT_EXCEEDED = 0x17c3; // 6083
 /** BlockedSplOpcode: SPL opcode is blocked at runtime and cannot be used in constraints */
-export const SIGIL_ERROR__BLOCKED_SPL_OPCODE = 0x17c2; // 6082
+export const SIGIL_ERROR__BLOCKED_SPL_OPCODE = 0x17c4; // 6084
 
 export type SigilError =
   | typeof SIGIL_ERROR__ACTIVE_ESCROWS_EXIST
@@ -245,6 +249,7 @@ export type SigilError =
   | typeof SIGIL_ERROR__PROTOCOL_NOT_ALLOWED
   | typeof SIGIL_ERROR__SESSION_NOT_AUTHORIZED
   | typeof SIGIL_ERROR__SLIPPAGE_BPS_TOO_HIGH
+  | typeof SIGIL_ERROR__SNAPSHOT_NOT_CAPTURED
   | typeof SIGIL_ERROR__SPENDING_CAP_EXCEEDED
   | typeof SIGIL_ERROR__SWAP_SLIPPAGE_EXCEEDED
   | typeof SIGIL_ERROR__TIMELOCK_NOT_EXPIRED
@@ -257,6 +262,7 @@ export type SigilError =
   | typeof SIGIL_ERROR__UNAUTHORIZED_AGENT
   | typeof SIGIL_ERROR__UNAUTHORIZED_OWNER
   | typeof SIGIL_ERROR__UNAUTHORIZED_POST_FINALIZE_INSTRUCTION
+  | typeof SIGIL_ERROR__UNAUTHORIZED_PRE_VALIDATE_INSTRUCTION
   | typeof SIGIL_ERROR__UNAUTHORIZED_TOKEN_APPROVAL
   | typeof SIGIL_ERROR__UNAUTHORIZED_TOKEN_TRANSFER
   | typeof SIGIL_ERROR__UNCONSTRAINED_PROGRAM_BLOCKED
@@ -295,7 +301,7 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__INSUFFICIENT_BALANCE]: `Insufficient vault balance for withdrawal`,
     [SIGIL_ERROR__INSUFFICIENT_PERMISSIONS]: `Agent lacks permission for this action type`,
     [SIGIL_ERROR__INVALID_AGENT_KEY]: `Invalid agent: cannot be the zero address`,
-    [SIGIL_ERROR__INVALID_CONSTRAINT_CONFIG]: `Invalid constraint configuration`,
+    [SIGIL_ERROR__INVALID_CONSTRAINT_CONFIG]: `Invalid constraint configuration: bounds exceeded`,
     [SIGIL_ERROR__INVALID_CONSTRAINT_OPERATOR]: `Constraint operator value is not a valid ConstraintOperator discriminant`,
     [SIGIL_ERROR__INVALID_CONSTRAINTS_PDA]: `Invalid constraints PDA: wrong owner or vault`,
     [SIGIL_ERROR__INVALID_ESCROW_VAULT]: `Invalid escrow vault`,
@@ -332,6 +338,7 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__PROTOCOL_NOT_ALLOWED]: `Protocol not allowed by policy`,
     [SIGIL_ERROR__SESSION_NOT_AUTHORIZED]: `Session not authorized`,
     [SIGIL_ERROR__SLIPPAGE_BPS_TOO_HIGH]: `Slippage BPS exceeds maximum (5000 = 50%)`,
+    [SIGIL_ERROR__SNAPSHOT_NOT_CAPTURED]: `Delta assertion snapshot was not captured in validate_and_authorize`,
     [SIGIL_ERROR__SPENDING_CAP_EXCEEDED]: `Rolling 24h spending cap would be exceeded`,
     [SIGIL_ERROR__SWAP_SLIPPAGE_EXCEEDED]: `Swap slippage exceeds policy max_slippage_bps or quoted output is zero`,
     [SIGIL_ERROR__TIMELOCK_NOT_EXPIRED]: `Timelock period has not expired yet`,
@@ -344,6 +351,7 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__UNAUTHORIZED_AGENT]: `Unauthorized: signer is not the registered agent`,
     [SIGIL_ERROR__UNAUTHORIZED_OWNER]: `Unauthorized: signer is not the vault owner`,
     [SIGIL_ERROR__UNAUTHORIZED_POST_FINALIZE_INSTRUCTION]: `Instructions after finalize_session must be ComputeBudget or SystemProgram only`,
+    [SIGIL_ERROR__UNAUTHORIZED_PRE_VALIDATE_INSTRUCTION]: `Non-infrastructure instruction detected before validate_and_authorize`,
     [SIGIL_ERROR__UNAUTHORIZED_TOKEN_APPROVAL]: `Unauthorized SPL Token Approve between validate and finalize`,
     [SIGIL_ERROR__UNAUTHORIZED_TOKEN_TRANSFER]: `Top-level SPL Token transfer not allowed between validate and finalize`,
     [SIGIL_ERROR__UNCONSTRAINED_PROGRAM_BLOCKED]: `Program has no constraint entry and strict mode is enabled`,
