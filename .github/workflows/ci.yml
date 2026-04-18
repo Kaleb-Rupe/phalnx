@@ -181,9 +181,11 @@ jobs:
         run: pnpm test
 
       - name: Verify Codama staleness (all discriminators)
-        if: >-
-          needs.changes.outputs.sdk-kit == 'true' ||
-          github.event_name == 'push'
+        # Runs unconditionally. Discriminator collision is a silent
+        # correctness issue — if two instructions hash to the same
+        # 8-byte prefix, the program dispatches the wrong handler.
+        # Check takes <5 seconds and catches regressions the path-filter
+        # would miss on rust-only or docs-only changes.
         run: npx tsx scripts/verify-codama-staleness.ts
 
       - name: Verify Codama generated code is fresh
@@ -367,15 +369,29 @@ jobs:
             python3 -c "import json,sys; json.dump(json.load(open(sys.argv[1])),open('/tmp/generated.json','w'),sort_keys=True)" /tmp/generated-idl.json
 
             if ! diff -q /tmp/committed.json /tmp/generated.json > /dev/null 2>&1; then
-              echo "::warning::IDL drift detected! The committed IDL does not match the generated IDL."
+              echo "::error::IDL drift detected! The committed IDL does not match the generated IDL."
               echo "Run this locally to update:"
               echo "  RUSTUP_TOOLCHAIN=nightly anchor idl build 2>/dev/null | grep -v '^\s*Compiling\|^\s*Finished\|^\s*Running' > target/idl/sigil.json"
-              echo "  git add target/idl/sigil.json && git commit -m 'chore: regenerate IDL'"
+              echo "  anchor idl type target/idl/sigil.json -o target/types/sigil.ts"
+              echo "  git add target/idl/sigil.json target/types/sigil.ts && git commit -m 'chore: regenerate IDL + types'"
               echo ""
               echo "=== Diff ==="
               diff /tmp/committed.json /tmp/generated.json | head -50 || true
+              exit 1
             else
               echo "IDL is up to date."
+
+              # Also verify target/types/sigil.ts matches what regenerating
+              # from the JSON IDL produces. Catches the af35aa3 failure mode
+              # where JSON was regenerated but committed TS types were not.
+              anchor idl type target/idl/sigil.json -o /tmp/regenerated-types.ts 2>/dev/null
+              if ! diff -q target/types/sigil.ts /tmp/regenerated-types.ts > /dev/null 2>&1; then
+                echo "::error::target/types/sigil.ts is out of sync with target/idl/sigil.json."
+                echo "Run: anchor idl type target/idl/sigil.json -o target/types/sigil.ts"
+                exit 1
+              else
+                echo "target/types/sigil.ts matches IDL JSON."
+              fi
             fi
           else
             echo "IDL generation skipped (nightly toolchain not available or build failed). Not blocking."
