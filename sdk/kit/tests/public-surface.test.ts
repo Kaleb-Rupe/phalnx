@@ -142,31 +142,170 @@ describe("v0.9.0 /errors subpath smoke", () => {
   });
 });
 
+describe("v0.13.0 root barrel — PR B barrel closeout (54 internals hidden)", () => {
+  // Regression guard for PR B (Sprint 1 barrel closeout). Each symbol
+  // below was removed from the root barrel per docs/BARREL-AUDIT.md
+  // after the zero-consumer audit. Source files remain for internal
+  // SDK use via relative imports; only the public barrel is pruned.
+  // See .changeset/pr-b-barrel-closeout.md for rationale.
+
+  it("does NOT re-export Category 1 — internal RPC plumbing (15)", () => {
+    const removed = [
+      "BlockhashCache",
+      "getBlockhashCache",
+      "AltCache",
+      "mergeAltAddresses",
+      "SIGIL_ALT_DEVNET",
+      "SIGIL_ALT_MAINNET",
+      "getSigilAltAddress",
+      "signAndEncode",
+      "sendAndConfirmTransaction",
+      "composeSigilTransaction",
+      "validateTransactionSize",
+      "measureTransactionSize",
+      "toInstruction",
+      "bytesToAddress",
+      "resolveAccounts",
+    ];
+    for (const name of removed) {
+      expect(
+        (kit as unknown as Record<string, unknown>)[name],
+        `${name} must NOT be on root (internal RPC plumbing)`,
+      ).to.be.undefined;
+    }
+  });
+
+  it("does NOT re-export Category 2 — policy engine internals (10)", () => {
+    const removed = [
+      "evaluatePolicy",
+      "enforcePolicy",
+      "recordTransaction",
+      "toCoreAnalysis",
+      "ShieldStorage",
+      "SpendEntry",
+      "TxEntry",
+      "VelocityTracker",
+      "VelocityConfig",
+      "SpendStatus",
+    ];
+    for (const name of removed) {
+      expect(
+        (kit as unknown as Record<string, unknown>)[name],
+        `${name} must NOT be on root (use shield() / vault.budget() instead)`,
+      ).to.be.undefined;
+    }
+  });
+
+  it("does NOT re-export Category 3 — TEE internals + custody bridge (12)", () => {
+    const removed = [
+      "AttestationCache",
+      "DEFAULT_CACHE_TTL_MS",
+      "clearAttestationCache",
+      "deleteFromAttestationCache",
+      "NitroPcrValues",
+      "TurnkeyAttestationBundle",
+      "WalletLike",
+      "AttestationConfig",
+      "AttestationLevel",
+      "AttestationMetadata",
+      "custodyAdapterToTransactionSigner",
+      "CustodyAdapter",
+    ];
+    for (const name of removed) {
+      expect(
+        (kit as unknown as Record<string, unknown>)[name],
+        `${name} must NOT be on root (TEE internals or migrated to @usesigil/plugins/sak)`,
+      ).to.be.undefined;
+    }
+  });
+
+  it("DOES still expose the TEE public verification surface", () => {
+    // Redacted subset — consumers verifying Turnkey attestations use
+    // these; internal cache/config types stay private.
+    expect(kit.verifyTurnkey).to.be.a("function");
+    expect(kit.verifyCrossmint).to.be.a("function");
+    expect(kit.verifyPrivy).to.be.a("function");
+    expect(kit.verifyTeeAttestation).to.be.a("function");
+    expect(kit.isTeeWallet).to.be.a("function");
+  });
+
+  it("does NOT re-export Category 5 — redundant vault creation (8)", () => {
+    const removed = [
+      "inscribe",
+      "withVault",
+      "mapPoliciesToVaultParams",
+      "findNextVaultId",
+      "InscribeOptions",
+      "InscribeResult",
+      "WithVaultOptions",
+      "WithVaultResult",
+    ];
+    for (const name of removed) {
+      expect(
+        (kit as unknown as Record<string, unknown>)[name],
+        `${name} must NOT be on root (use createAndSendVault() / createVault() instead)`,
+      ).to.be.undefined;
+    }
+  });
+
+  it("does NOT re-export Category 6 — internal constants (10)", () => {
+    const removed = [
+      "EPOCH_DURATION",
+      "NUM_EPOCHS",
+      "OVERLAY_EPOCH_DURATION",
+      "OVERLAY_NUM_EPOCHS",
+      "ROLLING_WINDOW_SECONDS",
+      "PROTOCOL_TREASURY",
+      "PROTOCOL_FEE_RATE",
+      "MAX_DEVELOPER_FEE_RATE",
+      "FEE_RATE_DENOMINATOR",
+      "ON_CHAIN_ERROR_MAP",
+    ];
+    for (const name of removed) {
+      expect(
+        (kit as unknown as Record<string, unknown>)[name],
+        `${name} must NOT be on root (internal implementation detail)`,
+      ).to.be.undefined;
+    }
+  });
+
+  it("does NOT re-export Category 7 — duplicate TransactionExecutor (4)", () => {
+    const removed = [
+      "TransactionExecutor",
+      "ExecuteTransactionParams",
+      "ExecuteTransactionResult",
+      "TransactionExecutorOptions",
+    ];
+    for (const name of removed) {
+      expect(
+        (kit as unknown as Record<string, unknown>)[name],
+        `${name} must NOT be on root (use createSigilClient().executeAndConfirm())`,
+      ).to.be.undefined;
+    }
+  });
+});
+
 describe("v0.9.0 root barrel — total export budget", () => {
   it("root barrel symbol count is below the pre-surgery ~700 baseline", () => {
     const count = Object.keys(kit).length;
     // A12 removed the `export * from ./generated/index.js` line and the
-    // 49 SIGIL_ERROR__* constants from root, bringing count from ~700 to
-    // ~388. The original plan target was ≤125 — NOT achieved in Sprint 1
-    // because further cuts (BlockhashCache, TransactionExecutor,
-    // VelocityTracker, evaluatePolicy, KNOWN_PROTOCOLS, etc.) carry
-    // monorepo-wide risk and need dashboard build verification each
-    // change. Sprint 2 tightens further toward the ~125 goal.
+    // 49 SIGIL_ERROR__* constants from root, bringing count from ~700
+    // to ~388. PR B (v0.13.0) removed another 54 internal utilities
+    // — count is now ~334.
     //
     // Ceiling locked at 500 as a regression guard — any PR adding five+
     // new top-level names without reviewer attention will trip this.
     expect(
       count,
-      `root barrel has ${count} exports (was ~700 pre-A12)`,
+      `root barrel has ${count} exports (was ~700 pre-A12, ~388 pre-v0.13)`,
     ).to.be.lessThan(500);
   });
 
   it("root barrel count has plan-target gap documented honestly", () => {
-    // Plan said ≤ 125. Actual: ~388. Gap is 263 symbols; all are
-    // internal utilities kept public for dashboard/custody back-compat.
-    // Sprint 2 will drop them. Until then, this test exists so a
-    // reader looking for "where does the 125 target come from?" finds
-    // this explicit acknowledgment and the rationale above.
+    // Plan said ≤ 125. PR B v0.13 brought count to ~334 (from ~388).
+    // Further cuts (generated account decoder sprawl, codec/encoder/
+    // size exports) are the remaining gap; they carry dashboard build-
+    // verification risk and land in a future "generated surface trim" PR.
     const count = Object.keys(kit).length;
     expect(count).to.be.greaterThan(125); // informational, not a bug
   });

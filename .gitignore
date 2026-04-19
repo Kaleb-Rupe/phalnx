@@ -83,3 +83,7 @@ docs/archived/
 docs/FUTURE.md
 docs/audits/
 .vercel/
+
+# One-shot planning artifact from the Sprint 1 barrel audit (2026-04-18).
+# Kept locally for reference; not tracked in git. See PR B for rationale.
+docs/BARREL-AUDIT.md

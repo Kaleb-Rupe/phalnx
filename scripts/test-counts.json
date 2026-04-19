@@ -79,7 +79,7 @@
     },
     {
       "name": "Kit-native SDK (`@usesigil/kit` — includes merged core + dashboard)",
-      "count": 1413,
+      "count": 1412,
       "ciStepName": "Kit SDK tests",
       "claudePattern": "sdk/kit/tests/` (mocha + tsx, %d tests — includes core + dashboard + errors)"
     },
@@ -91,7 +91,7 @@
     },
     {
       "name": "Plugins (`@usesigil/plugins`)",
-      "count": 6,
+      "count": 14,
       "ciStepName": "Plugin tests",
       "claudePattern": "packages/plugins/tests/` (mocha + tsx, %d tests)"
     },

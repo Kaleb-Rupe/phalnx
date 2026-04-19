@@ -1,10 +1,25 @@
+/**
+ * Tests for the SAK plugin's custody bridge helper.
+ *
+ * Moved from sdk/kit/tests/custody-adapter.test.ts in v0.13.0 when the
+ * helper migrated from @usesigil/kit into the plugins package. Covers:
+ *   - Correct address propagation from adapter to signer
+ *   - signTransactions delegates to adapter.sign with messageBytes
+ *   - Signature placed at the correct address key in the result dict
+ *   - Batch signing preserves order + call count
+ *   - Adapter errors propagate cleanly
+ *   - Optional attestation() method — present vs absent
+ */
+
 import { expect } from "chai";
+import { describe, it } from "mocha";
 import type { Address } from "@solana/kit";
 import {
   custodyAdapterToTransactionSigner,
   type CustodyAdapter,
-} from "../src/custody-adapter.js";
-import { AttestationStatus, type AttestationResult } from "../src/tee/types.js";
+} from "../src/sak/signer.js";
+import type { AttestationResult } from "@usesigil/kit";
+import { AttestationStatus } from "@usesigil/kit";
 
 // ─── Test Constants ────────────────────────────────────────────────────────
 
@@ -50,7 +65,7 @@ function mockTx(messageBytes?: Uint8Array) {
 
 // ─── Tests ─────────────────────────────────────────────────────────────────
 
-describe("CustodyAdapter", () => {
+describe("CustodyAdapter (SAK plugin)", () => {
   describe("custodyAdapterToTransactionSigner", () => {
     it("returns signer with correct address", () => {
       const adapter = createMockAdapter();
@@ -60,7 +75,9 @@ describe("CustodyAdapter", () => {
 
     it("returned signer has signTransactions method", () => {
       const adapter = createMockAdapter();
-      const signer = custodyAdapterToTransactionSigner(adapter) as any;
+      const signer = custodyAdapterToTransactionSigner(
+        adapter,
+      ) as unknown as Record<string, unknown>;
       expect(typeof signer.signTransactions).to.equal("function");
     });
 
@@ -72,7 +89,11 @@ describe("CustodyAdapter", () => {
           return MOCK_SIG;
         },
       });
-      const signer = custodyAdapterToTransactionSigner(adapter) as any;
+      const signer = custodyAdapterToTransactionSigner(adapter) as unknown as {
+        signTransactions: (
+          txs: readonly { messageBytes: Uint8Array }[],
+        ) => Promise<readonly Record<string, Uint8Array>[]>;
+      };
 
       await signer.signTransactions([mockTx()]);
       expect(receivedBytes).to.deep.equal(MOCK_MESSAGE);
@@ -80,7 +101,11 @@ describe("CustodyAdapter", () => {
 
     it("signature placed at correct address key in dictionary", async () => {
       const adapter = createMockAdapter();
-      const signer = custodyAdapterToTransactionSigner(adapter) as any;
+      const signer = custodyAdapterToTransactionSigner(adapter) as unknown as {
+        signTransactions: (
+          txs: readonly { messageBytes: Uint8Array }[],
+        ) => Promise<readonly Record<string, Uint8Array>[]>;
+      };
       const [sigDict] = await signer.signTransactions([mockTx()]);
 
       expect(sigDict).to.have.property(MOCK_ADDRESS);
@@ -95,7 +120,11 @@ describe("CustodyAdapter", () => {
           return MOCK_SIG;
         },
       });
-      const signer = custodyAdapterToTransactionSigner(adapter) as any;
+      const signer = custodyAdapterToTransactionSigner(adapter) as unknown as {
+        signTransactions: (
+          txs: readonly { messageBytes: Uint8Array }[],
+        ) => Promise<readonly Record<string, Uint8Array>[]>;
+      };
 
       const results = await signer.signTransactions([
         mockTx(new Uint8Array([1])),
@@ -116,13 +145,17 @@ describe("CustodyAdapter", () => {
           throw new Error("HSM connection lost");
         },
       });
-      const signer = custodyAdapterToTransactionSigner(adapter) as any;
+      const signer = custodyAdapterToTransactionSigner(adapter) as unknown as {
+        signTransactions: (
+          txs: readonly { messageBytes: Uint8Array }[],
+        ) => Promise<readonly Record<string, Uint8Array>[]>;
+      };
 
       try {
         await signer.signTransactions([mockTx()]);
         expect.fail("Should have thrown");
-      } catch (err: any) {
-        expect(err.message).to.equal("HSM connection lost");
+      } catch (err: unknown) {
+        expect((err as Error).message).to.equal("HSM connection lost");
       }
     });
 

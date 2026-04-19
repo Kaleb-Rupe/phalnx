@@ -1,8 +1,8 @@
+import { createSigilClient } from "@usesigil/kit";
 import {
-  createSigilClient,
   custodyAdapterToTransactionSigner,
   type CustodyAdapter,
-} from "@usesigil/kit";
+} from "./signer.js";
 import type { TransactionSigner } from "@solana/kit";
 import type { SigilSakConfig } from "./types.js";
 import { swapAction } from "./actions/swap.js";
