@@ -96,8 +96,6 @@ pub struct ConstraintEntry {
     pub account_constraints: Vec<AccountConstraint>, // bounded to MAX_ACCOUNT_CONSTRAINTS_PER_ENTRY
     /// Spending classification: 1=Spending, 2=NonSpending. Required (0 rejected).
     pub is_spending: u8,
-    /// Position effect: 0=None, 1=Increment, 2=Decrement.
-    pub position_effect: u8,
     /// Discriminator format for this entry's target program. Controls the
     /// minimum byte length of the first DataConstraint (the A5 anchor).
     /// Default: Anchor8 (0). Use Spl1 (1) for SPL Token / Token-2022.
@@ -126,17 +124,17 @@ pub struct AccountConstraintZC {
 
 /// BYTE LAYOUT REGISTRY — Canonical assignment of padding bytes.
 ///
-/// Both `feat/multi-format-discriminator` and `feat/actiontype-elimination`
-/// branches carve fields from the original 6-byte `_padding`. This registry
-/// is the single source of truth. When merging, the layout MUST be:
+/// Layout (post position-counter removal, council decision 2026-04-19):
 ///
-///   byte 554: discriminator_format  (this branch)
-///   byte 555: is_spending           (actiontype-elimination branch)
-///   byte 556: position_effect       (actiontype-elimination branch)
-///   bytes 557-559: _padding[3]      (reserved for future use)
+///   byte 554: is_spending
+///   byte 555: discriminator_format
+///   bytes 556-559: _padding[4]  (reserved for future use)
 ///
-/// Total: 32+320+200+1+1+1+1+1+3 = 560 (unchanged).
-/// The branch that merges second MUST rebase and adjust its slot to match.
+/// Total: 32+320+200+1+1+1+1+4 = 560 (unchanged).
+/// Position_effect (formerly byte 555) was deleted with the entire position
+/// counter system. The freed byte is absorbed by _padding to preserve the
+/// 560-byte total — shrinking the struct would corrupt every existing
+/// on-chain InstructionConstraints PDA (35,888-byte zero-copy account).
 #[zero_copy]
 pub struct ConstraintEntryZC {
     pub program_id: [u8; 32], // 32
@@ -148,16 +146,13 @@ pub struct ConstraintEntryZC {
     /// Set by vault owner at constraint creation time. The constraint engine returns
     /// this value when it matches an entry — replaces ActionType.is_spending().
     pub is_spending: u8, // 1 (byte 554)
-    /// Position tracking: 0=None, 1=Increment (opens position), 2=Decrement (closes position).
-    /// Replaces ActionType.position_effect().
-    pub position_effect: u8, // 1 (byte 555)
     /// DiscriminatorFormat discriminant (0=Anchor8, 1=Spl1). Write-time only —
     /// verify_data_constraints_zc() does not read this field at runtime.
     /// Zero-initialized on existing V1 PDAs → 0 → Anchor8 (backward compatible).
-    pub discriminator_format: u8, // 1 (byte 556)
-    pub _padding: [u8; 3], // 3 (32+320+200+1+1+1+1+1+3=560)
+    pub discriminator_format: u8, // 1 (byte 555)
+    pub _padding: [u8; 4], // 4 (32+320+200+1+1+1+1+4=560)
 }
-// = 560 bytes (unchanged)
+// = 560 bytes (unchanged — _padding absorbed the byte freed by position_effect deletion)
 
 #[account(zero_copy)]
 pub struct InstructionConstraints {
@@ -315,11 +310,6 @@ impl InstructionConstraints {
                 entry.is_spending == 1 || entry.is_spending == 2,
                 SigilError::InvalidConstraintConfig
             );
-            // position_effect must be 0-2
-            require!(
-                entry.position_effect <= 2,
-                SigilError::InvalidConstraintConfig
-            );
         }
         Ok(())
     }
@@ -372,7 +362,6 @@ mod tests {
             data_constraints,
             account_constraints: vec![],
             is_spending: 1,
-            position_effect: 0,
             discriminator_format: DiscriminatorFormat::Anchor8,
         }
     }
@@ -392,7 +381,6 @@ mod tests {
             data_constraints,
             account_constraints: vec![],
             is_spending: 1,
-            position_effect: 0,
             discriminator_format: format,
         }
     }
@@ -407,7 +395,6 @@ mod tests {
             data_constraints,
             account_constraints: vec![],
             is_spending: 1,
-            position_effect: 0,
             discriminator_format: format,
         }
     }
@@ -421,7 +408,6 @@ mod tests {
             data_constraints,
             account_constraints,
             is_spending: 1,
-            position_effect: 0,
             discriminator_format: DiscriminatorFormat::Anchor8,
         }
     }
@@ -937,11 +923,10 @@ pub(crate) fn pack_entries(
             dst[i].account_constraints[k].index = ac.index;
         }
 
-        // Copy spending classification + position effect to zero-copy layout.
-        // Without this, fields default to 0 (Pod zero-init), silently
-        // breaking spending classification and position tracking on-chain.
+        // Copy spending classification to zero-copy layout.
+        // Without this, the field defaults to 0 (Pod zero-init), silently
+        // breaking spending classification on-chain.
         dst[i].is_spending = entry.is_spending;
-        dst[i].position_effect = entry.position_effect;
     }
     *count_out = entries.len() as u8;
     Ok(())
