@@ -4,7 +4,8 @@ import type {
   SolanaRpcApi,
   TransactionSigner,
 } from "@solana/kit";
-import type { CustodyAdapter, Network } from "@usesigil/kit";
+import type { Network } from "@usesigil/kit";
+import type { CustodyAdapter } from "./signer.js";
 
 /** Convert plugin's "mainnet" to kit's "mainnet-beta" network string. */
 export function toResolvedNetwork(network: "devnet" | "mainnet"): Network {

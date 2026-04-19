@@ -24,11 +24,6 @@ export * from "./generated/accounts/index.js";
 export {
   // Program
   SIGIL_PROGRAM_ADDRESS,
-  // Fee constants
-  FEE_RATE_DENOMINATOR,
-  PROTOCOL_FEE_RATE,
-  MAX_DEVELOPER_FEE_RATE,
-  PROTOCOL_TREASURY,
   // USD
   USD_DECIMALS,
   // Branded types (PR 2.B — H7-BRAND)
@@ -56,9 +51,6 @@ export {
   type ProtocolMeta,
   // Slippage
   MAX_SLIPPAGE_BPS,
-  // SpendTracker
-  EPOCH_DURATION,
-  NUM_EPOCHS,
   // Protocol mode
   PROTOCOL_MODE_ALL,
   PROTOCOL_MODE_ALLOWLIST,
@@ -77,11 +69,6 @@ export {
   getPositionEffect,
   validateNetwork,
   normalizeNetwork,
-  toInstruction,
-  // Overlay constants
-  OVERLAY_EPOCH_DURATION,
-  OVERLAY_NUM_EPOCHS,
-  ROLLING_WINDOW_SECONDS,
   // u64 boundary
   U64_MAX,
 } from "./types.js";
@@ -96,7 +83,6 @@ export {
   getAgentRolling24hUsd,
   getProtocolSpend,
   getSpendingHistory,
-  bytesToAddress,
   findVaultsByOwner,
   findEscrowsByVault,
   findSessionsByVault,
@@ -126,28 +112,7 @@ export {
   getAgentOverlayPDA,
   getConstraintsPDA,
   getPendingConstraintsPDA,
-  resolveAccounts,
 } from "./resolve-accounts.js";
-export type {
-  ResolveAccountsInput,
-  ResolvedAccounts,
-} from "./resolve-accounts.js";
-
-// ─── ALT (Address Lookup Table) ──────────────────────────────────────────────
-export {
-  SIGIL_ALT_DEVNET,
-  SIGIL_ALT_MAINNET,
-  getSigilAltAddress,
-} from "./alt-config.js";
-export { AltCache, mergeAltAddresses } from "./alt-loader.js";
-
-// ─── Transaction Composer ─────────────────────────────────────────────────────
-export {
-  composeSigilTransaction,
-  validateTransactionSize,
-  measureTransactionSize,
-} from "./composer.js";
-export type { ComposeTransactionParams } from "./composer.js";
 
 // ─── Event Parser ─────────────────────────────────────────────────────────────
 export {
@@ -336,7 +301,6 @@ export type {
 // ─── Policy Engine ────────────────────────────────────────────────────────────
 export {
   resolvePolicies,
-  toCoreAnalysis,
   validateSpendLimitMints,
   DEFAULT_POLICIES,
   parseSpendLimit,
@@ -351,43 +315,28 @@ export type {
   PolicyCheckResult,
 } from "./policies.js";
 
-// ─── TEE Attestation ──────────────────────────────────────────────────────────
+// ─── TEE Attestation (public verification surface) ──────────────────────────
 export {
   AttestationStatus,
-  AttestationCache,
-  DEFAULT_CACHE_TTL_MS,
   VALID_TEE_PROVIDERS,
   isTeeWallet,
   TeeAttestationError,
   AttestationCertChainError,
   AttestationPcrMismatchError,
   verifyTeeAttestation,
-  clearAttestationCache,
-  deleteFromAttestationCache,
   verifyCrossmint,
   verifyPrivy,
   verifyTurnkey,
 } from "./tee/index.js";
 export type {
-  WalletLike,
   TeeWallet,
   TeeProvider,
   AttestationResult,
-  AttestationConfig,
-  AttestationMetadata,
-  AttestationLevel,
   VerifiedTeeWallet,
-  NitroPcrValues,
-  TurnkeyAttestationBundle,
 } from "./tee/index.js";
-
-// ─── Custody Adapter ────────────────────────────────────────────────────────
-export { custodyAdapterToTransactionSigner } from "./custody-adapter.js";
-export type { CustodyAdapter } from "./custody-adapter.js";
 
 // ─── Agent Errors ─────────────────────────────────────────────────────────────
 export {
-  ON_CHAIN_ERROR_MAP,
   toAgentError,
   toSigilAgentError,
   SigilSdkError,
@@ -559,37 +508,6 @@ export type {
   OwnerTransactionResult,
 } from "./owner-transaction.js";
 
-// ─── Inscribe / withVault ─────────────────────────────────────────────────────
-export {
-  mapPoliciesToVaultParams,
-  findNextVaultId,
-  inscribe,
-  withVault,
-} from "./inscribe.js";
-export type {
-  InscribeOptions,
-  InscribeResult,
-  WithVaultOptions,
-  WithVaultResult,
-} from "./inscribe.js";
-
-// ─── Transaction Executor ──────────────────────────────────────────────────
-export { TransactionExecutor } from "./transaction-executor.js";
-export type {
-  ExecuteTransactionParams,
-  ExecuteTransactionResult,
-  TransactionExecutorOptions,
-} from "./transaction-executor.js";
-
-// ─── RPC Helpers ───────────────────────────────────────────────────────────
-export {
-  BlockhashCache,
-  getBlockhashCache,
-  signAndEncode,
-  sendAndConfirmTransaction,
-} from "./rpc-helpers.js";
-export type { Blockhash, SendAndConfirmOptions } from "./rpc-helpers.js";
-
 // ─── Error Classification (typed predicates + transport classifier) ─────────
 //
 // Shared helpers used across `seal`, `shielded-fetch`, `facilitator-verify`,
@@ -603,22 +521,14 @@ export {
   TRANSPORT_CODES,
 } from "./network-errors.js";
 
-// ─── VelocityTracker ──────────────────────────────────────────────────────
-export { VelocityTracker } from "./velocity-tracker.js";
-export type { VelocityConfig, SpendStatus } from "./velocity-tracker.js";
-
-// ─── Core Policy Engine ──────────────────────────────────────────────────────
-// Non-conflicting core exports only. Kit's shield.ts defines its own
-// ShieldState, ShieldDeniedError, PolicyViolation. Kit's policies.ts defines
-// its own ShieldPolicies, SpendLimit, TransactionAnalysis, TokenTransfer,
-// ResolvedPolicies, resolvePolicies. DEFAULT_POLICIES, parseSpendLimit,
-// RateLimitConfig, PolicyCheckResult already flow through policies.ts.
+// ─── Core Policy Engine (public surface only — internals hidden in v0.13) ───
+// Kit's shield.ts defines its own ShieldState, ShieldDeniedError, PolicyViolation.
+// Kit's policies.ts defines its own ShieldPolicies etc. evaluatePolicy /
+// enforcePolicy / recordTransaction / ShieldStorage / SpendEntry / TxEntry /
+// VelocityTracker / VelocityConfig / SpendStatus were removed from the root
+// barrel in v0.13 — they were internal orchestrators for `shield()` and
+// `vault.budget()` which consumers should call directly.
 export { ShieldConfigError } from "./core/index.js";
-export {
-  evaluatePolicy,
-  enforcePolicy,
-  recordTransaction,
-} from "./core/index.js";
 export {
   KNOWN_PROTOCOLS,
   KNOWN_TOKENS,
@@ -628,7 +538,6 @@ export {
   isKnownProtocol,
   isSystemProgram,
 } from "./core/index.js";
-export type { ShieldStorage, SpendEntry, TxEntry } from "./core/index.js";
 
 // ─── Unified Error Taxonomy (PR 2.A) ─────────────────────────────────────────
 // SigilError base class + four domain classes + canonical SigilErrorCode
