@@ -588,7 +588,13 @@ describe("devnet-routing", () => {
       // Non-stablecoin input without output ATA: InvalidTokenAccount (6022) or
       // UnsupportedToken (6003) depending on which check fires first. Stale
       // "6014" removed — never the code for either (6014 = VaultAlreadyClosed).
-      expectError(err, "InvalidTokenAccount", "UnsupportedToken", "6022", "6003");
+      expectError(
+        err,
+        "InvalidTokenAccount",
+        "UnsupportedToken",
+        "6022",
+        "6003",
+      );
     }
     console.log("    Non-stablecoin without output stablecoin rejected");
   });
