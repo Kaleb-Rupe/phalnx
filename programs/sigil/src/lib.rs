@@ -31,7 +31,6 @@ pub mod sigil {
         protocol_mode: u8,
         protocols: Vec<Pubkey>,
         max_leverage_bps: u16,
-        max_concurrent_positions: u8,
         developer_fee_rate: u16,
         max_slippage_bps: u16,
         timelock_duration: u64,
@@ -46,7 +45,6 @@ pub mod sigil {
             protocol_mode,
             protocols,
             max_leverage_bps,
-            max_concurrent_positions,
             developer_fee_rate,
             max_slippage_bps,
             timelock_duration,
@@ -134,8 +132,6 @@ pub mod sigil {
         protocol_mode: Option<u8>,
         protocols: Option<Vec<Pubkey>>,
         max_leverage_bps: Option<u16>,
-        can_open_positions: Option<bool>,
-        max_concurrent_positions: Option<u8>,
         developer_fee_rate: Option<u16>,
         max_slippage_bps: Option<u16>,
         timelock_duration: Option<u64>,
@@ -151,8 +147,6 @@ pub mod sigil {
             protocol_mode,
             protocols,
             max_leverage_bps,
-            can_open_positions,
-            max_concurrent_positions,
             developer_fee_rate,
             max_slippage_bps,
             timelock_duration,
@@ -299,10 +293,8 @@ pub mod sigil {
         instructions::cancel_agent_permissions_update::handler(ctx)
     }
 
-    /// Sync the vault's open position counter with the actual state.
-    pub fn sync_positions(ctx: Context<SyncPositions>, actual_positions: u8) -> Result<()> {
-        instructions::sync_positions::handler(ctx, actual_positions)
-    }
+    // sync_positions instruction DELETED — position counter system removed per council decision
+    // (9-1 vote, 2026-04-19). See Plans/we-need-to-plan-serialized-summit.md.
 
     /// Create an escrow deposit between two vaults.
     /// Agent-initiated, stablecoin-only, fees deducted upfront, cap-checked.

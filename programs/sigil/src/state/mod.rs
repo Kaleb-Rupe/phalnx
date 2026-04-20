@@ -241,19 +241,10 @@ pub enum VaultStatus {
     Closed,
 }
 
-/// Position effect classification for action types
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum PositionEffect {
-    /// Action opens a new position or commits capital
-    Increment,
-    /// Action closes a position or releases capital
-    Decrement,
-    /// Action has no effect on position count
-    None,
-}
-
-// ActionType enum REMOVED — spending classification and position tracking
-// now derive from matched ConstraintEntryZC fields (is_spending, position_effect).
-// See RFC-ACTIONTYPE-ELIMINATION.md for design rationale.
+// PositionEffect enum REMOVED — position counter system deleted wholesale per council
+// decision (9-1 vote, 2026-04-19). See Plans/we-need-to-plan-serialized-summit.md.
+//
+// ActionType enum REMOVED — spending classification now derives from matched
+// ConstraintEntryZC field (is_spending). See RFC-ACTIONTYPE-ELIMINATION.md.
 // Agent permissions use the 2-bit capability field (CAPABILITY_OBSERVER / CAPABILITY_OPERATOR)
 // instead of the old 21-bit bitmask.

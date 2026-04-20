@@ -33,12 +33,6 @@ pub struct PolicyConfig {
     /// DEPRECATED: Not enforced on-chain. Kept for layout stability. See Phase B3 post-assertions.
     pub max_leverage_bps: u16,
 
-    /// Whether the agent can open new positions (vs only close existing)
-    pub can_open_positions: bool,
-
-    /// Maximum number of concurrent open positions
-    pub max_concurrent_positions: u8,
-
     /// Developer fee rate (rate / 1,000,000). Applied to every finalized
     /// transaction. Max MAX_DEVELOPER_FEE_RATE (500 = 5 BPS).
     pub developer_fee_rate: u16,
@@ -95,7 +89,7 @@ impl PolicyConfig {
     /// Account discriminator (8) + vault (32) + daily_cap_usd (8) +
     /// max_tx_usd (8) + protocol_mode (1) +
     /// protocols vec (4 + 32 * MAX) +
-    /// max_leverage (2) + can_open (1) + max_positions (1) +
+    /// max_leverage (2) +
     /// developer_fee_rate (2) + max_slippage_bps (2) + timelock_duration (8) +
     /// allowed_destinations vec (4 + 32 * MAX) + has_constraints (1) +
     /// has_pending_policy (1) + has_protocol_caps (1) +
@@ -108,8 +102,6 @@ impl PolicyConfig {
         + 1
         + (4 + 32 * MAX_ALLOWED_PROTOCOLS)
         + 2
-        + 1
-        + 1
         + 2
         + 2 // max_slippage_bps
         + 8

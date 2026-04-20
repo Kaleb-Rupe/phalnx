@@ -9,7 +9,7 @@ use anchor_lang::accounts::account_loader::AccountLoader;
 
 use crate::errors::SigilError;
 use crate::events::{AgentSpendLimitChecked, DelegationRevoked, SessionFinalized};
-use crate::state::{PositionEffect, *};
+use crate::state::*;
 
 #[derive(Accounts)]
 pub struct FinalizeSession<'info> {
@@ -118,7 +118,6 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
     // Extract session data before we lose access
     let session_agent = session.agent;
     let session_is_spending = session.is_spending;
-    let session_position_effect = session.position_effect;
     let session_delegated = session.delegated;
     let session_developer_fee = session.developer_fee;
     let session_output_mint = session.output_mint;
@@ -472,31 +471,8 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
                 .ok_or(SigilError::Overflow)?;
         }
 
-        // Update position count — only when actual DeFi execution occurred.
-        // For spending actions, gate on actual_spend > 0 to prevent counter inflation.
-        let should_update_positions = !session_is_spending || actual_spend_tracked > 0;
-        if should_update_positions {
-            let position_effect = match session_position_effect {
-                1 => PositionEffect::Increment,
-                2 => PositionEffect::Decrement,
-                _ => PositionEffect::None,
-            };
-            match position_effect {
-                PositionEffect::Increment => {
-                    vault.open_positions = vault
-                        .open_positions
-                        .checked_add(1)
-                        .ok_or(SigilError::Overflow)?;
-                }
-                PositionEffect::Decrement => {
-                    vault.open_positions = vault
-                        .open_positions
-                        .checked_sub(1)
-                        .ok_or(SigilError::Overflow)?;
-                }
-                PositionEffect::None => {}
-            }
-        }
+        // Position counter mutation block REMOVED — counter system deleted wholesale
+        // per council decision (9-1 vote, 2026-04-19). See Plans/we-need-to-plan-serialized-summit.md.
     }
 
     // ─── Post-Execution Assertions (Phase B1) ─────────────────────────────
@@ -705,7 +681,6 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
         actual_spend_usd: actual_spend_tracked,
         balance_after_usd: balance_after_tracked,
         is_spending: session_is_spending,
-        position_effect: session_position_effect,
     });
 
     // --- Post-finalize instruction scan (defense-in-depth) ---

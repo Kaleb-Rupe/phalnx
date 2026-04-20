@@ -57,7 +57,6 @@ pub fn handler(ctx: Context<CloseVault>) -> Result<()> {
         vault.status != VaultStatus::Closed,
         SigilError::VaultAlreadyClosed
     );
-    require!(vault.open_positions == 0, SigilError::OpenPositionsExist);
     require!(
         vault.active_escrow_count == 0,
         SigilError::ActiveEscrowsExist

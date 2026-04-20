@@ -64,12 +64,6 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
     if let Some(leverage) = pending.max_leverage_bps {
         policy.max_leverage_bps = leverage;
     }
-    if let Some(can_open) = pending.can_open_positions {
-        policy.can_open_positions = can_open;
-    }
-    if let Some(max_pos) = pending.max_concurrent_positions {
-        policy.max_concurrent_positions = max_pos;
-    }
     if let Some(fee_rate) = pending.developer_fee_rate {
         policy.developer_fee_rate = fee_rate;
     }

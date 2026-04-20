@@ -65,8 +65,6 @@ pub struct SessionFinalized {
     pub balance_after_usd: u64,
     /// Whether this was a spending action.
     pub is_spending: bool,
-    /// Position effect: 0=None, 1=Increment, 2=Decrement.
-    pub position_effect: u8,
 }
 
 #[event]
@@ -149,14 +147,7 @@ pub struct AgentTransferExecuted {
 }
 
 // AgentPermissionsUpdated event removed — replaced by AgentPermissionsChangeApplied (queue/apply path).
-
-#[event]
-pub struct PositionsSynced {
-    pub vault: Pubkey,
-    pub old_count: u8,
-    pub new_count: u8,
-    pub timestamp: i64,
-}
+// PositionsSynced event removed — sync_positions instruction deleted with position counter (2026-04-19).
 
 #[event]
 pub struct InstructionConstraintsCreated {
