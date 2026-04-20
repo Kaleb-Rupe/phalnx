@@ -289,6 +289,5 @@ describe("OwnerClient Devnet Integration", function () {
         expect(err.message).to.include("no permissions");
       }
     });
-
   });
 });

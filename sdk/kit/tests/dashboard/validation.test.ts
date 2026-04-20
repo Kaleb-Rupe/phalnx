@@ -300,7 +300,6 @@ describe("Validation: queuePolicyUpdate", () => {
       expect(err.message).to.not.include("MAX_ALLOWED_PROTOCOLS");
     }
   });
-
 });
 
 // ─── Constraint entries validation ──────────────────────────────────────────

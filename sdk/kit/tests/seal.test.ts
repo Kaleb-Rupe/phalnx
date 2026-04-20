@@ -232,7 +232,6 @@ describe("seal()", () => {
       expect(e.message).to.include("No target protocol");
     }
   });
-
 });
 
 describe("replaceAgentAtas()", () => {
