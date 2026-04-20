@@ -449,7 +449,9 @@ const ACTION_NAMES = [
  * Ratio of granted permission bits actually exercised by each agent.
  * Shows which ActionTypes agents use vs what they're granted — security surface analysis.
  *
- * Handles both legacy (actionType enum) and new v6 (isSpending + positionEffect) event formats.
+ * Handles both legacy (actionType enum) and new v6 (isSpending) event formats.
+ * Position-effect tracking removed with the position counter deletion
+ * (council 9-1 vote, 2026-04-19).
  */
 export function getPermissionUtilizationRate(
   state: { vault: { agents: Array<{ pubkey: Address; capability: number }> } },
@@ -462,16 +464,12 @@ export function getPermissionUtilizationRate(
       const agent = e.fields.agent as string;
       if (!agentActionUsage.has(agent)) agentActionUsage.set(agent, new Set());
 
-      // v6 event format: isSpending + positionEffect
+      // v6 event format: isSpending only (positionEffect deleted with counter)
       if (e.fields.isSpending != null) {
         const label = (e.fields.isSpending as boolean)
           ? "Spending"
           : "NonSpending";
         agentActionUsage.get(agent)!.add(label);
-        const effect = e.fields.positionEffect as string | undefined;
-        if (effect && effect !== "none") {
-          agentActionUsage.get(agent)!.add(`Position:${effect}`);
-        }
       } else if (e.fields.actionType) {
         // Legacy event format
         const actionObj = e.fields.actionType as { __kind: string } | number;
