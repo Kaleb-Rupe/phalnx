@@ -65,7 +65,6 @@ function fixtureActivity(
     tokenMint: null,
     tokenSymbol: null,
     isSpending: true,
-    positionEffect: "none",
     actionType: "swap",
     protocol: JUPITER,
     protocolName: "Jupiter",
@@ -83,7 +82,6 @@ function fixtureState(): ResolvedVaultStateForOwner {
       vaultId: 1n,
       agents: [],
       status: 0,
-      openPositions: 0,
       totalVolume: 100_000_000n,
       totalFeesCollected: 500_000n,
     } as unknown as ResolvedVaultStateForOwner["vault"],
@@ -117,21 +115,6 @@ function fixturePosture(
 describe("buildActivityRows", () => {
   it("returns empty array for empty input", () => {
     expect(buildActivityRows([])).to.deep.equal([]);
-  });
-
-  it("maps v6 trade+increment event to open_position", () => {
-    const rows = buildActivityRows([
-      fixtureActivity({ positionEffect: "increment", actionType: null }),
-    ]);
-    expect(rows).to.have.length(1);
-    expect(rows[0].type).to.equal("open_position");
-  });
-
-  it("maps v6 trade+decrement event to close_position", () => {
-    const rows = buildActivityRows([
-      fixtureActivity({ positionEffect: "decrement", actionType: null }),
-    ]);
-    expect(rows[0].type).to.equal("close_position");
   });
 
   it("maps deposit category to deposit type", () => {
@@ -427,8 +410,6 @@ describe("buildPolicy", () => {
         protocolMode: 0,
         hasProtocolCaps: false,
         protocolCaps: [],
-        canOpenPositions: false,
-        maxConcurrentPositions: 0,
         maxSlippageBps: 0,
         maxLeverageBps: 0,
         allowedDestinations: [],
@@ -469,7 +450,6 @@ describe("OverviewData toJSON delegation", () => {
         status: "active",
         owner: OWNER,
         agentCount: 0,
-        openPositions: 0,
         totalVolume: 0n,
         totalFees: 0n,
       },
@@ -525,8 +505,6 @@ describe("OverviewData toJSON delegation", () => {
       protocolMode: "unrestricted",
       hasProtocolCaps: false,
       protocolCaps: [],
-      canOpenPositions: false,
-      maxConcurrentPositions: 0,
       maxSlippageBps: 0,
       leverageLimitBps: 0,
       allowedDestinations: [],

@@ -10,7 +10,6 @@ use crate::events::{ActionAuthorized, FeesCollected};
 use crate::state::*;
 
 use super::integrations::{generic_constraints, jupiter};
-use crate::state::PositionEffect;
 
 #[derive(Accounts)]
 #[instruction(token_mint: Pubkey)]
@@ -281,10 +280,9 @@ pub fn handler(
     enum ScanAction {
         FoundFinalize,
         Infrastructure,
-        /// Passed shared checks. Contains the index of the matched constraint entry (if any).
-        PassedSharedChecks {
-            matched_entry_idx: Option<usize>,
-        },
+        /// Passed shared checks (constraint entry match, if any, is used for strict-mode
+        /// side-effect only — generic_constraints returns Err if strict mode is violated).
+        PassedSharedChecks,
     }
 
     fn scan_instruction_shared(
@@ -333,8 +331,11 @@ pub fn handler(
             SigilError::ProtocolNotAllowed
         );
 
-        // Generic instruction constraints (OR across entries, zero-copy)
-        let matched_entry_idx = if let Some(constraints) = loaded_constraints {
+        // Generic instruction constraints (OR across entries, zero-copy).
+        // Return value (matched entry index) was only used by position_effect extraction,
+        // which was deleted with the counter system. Strict-mode check remains as the
+        // required side-effect.
+        if let Some(constraints) = loaded_constraints {
             let matched = generic_constraints::verify_against_entries_zc(
                 constraints,
                 &ix.program_id,
@@ -344,21 +345,15 @@ pub fn handler(
             if matched.is_none() && constraints.strict_mode != 0 {
                 return Err(error!(SigilError::UnconstrainedProgramBlocked));
             }
-            matched
-        } else {
-            None
-        };
+        }
 
-        Ok(ScanAction::PassedSharedChecks { matched_entry_idx })
+        Ok(ScanAction::PassedSharedChecks)
     }
 
     // 6. Instruction scan — validates all instructions between validate and finalize.
     // Shared checks (scan_instruction_shared): SPL/Token-2022 blocking, infrastructure
     // whitelist, protocol allowlist, generic constraints.
     // Spending-only checks (inline): recognized DeFi, ProtocolMismatch, defi_ix_count, Jupiter slippage.
-    // Track position effect from matched DeFi constraint entry (default: None = 0).
-    let mut defi_position_effect: u8 = 0;
-
     if is_spending {
         let mut defi_ix_count: u8 = 0;
         let mut found_finalize = false;
@@ -381,7 +376,7 @@ pub fn handler(
                     scan_idx = scan_idx.saturating_add(1);
                     continue;
                 }
-                ScanAction::PassedSharedChecks { matched_entry_idx } => {
+                ScanAction::PassedSharedChecks => {
                     // === SPENDING-ONLY CHECKS (must remain inline) ===
 
                     // Recognized DeFi: protocol mismatch + defi_ix_count
@@ -397,13 +392,6 @@ pub fn handler(
                             SigilError::ProtocolMismatch
                         );
                         defi_ix_count = defi_ix_count.saturating_add(1);
-
-                        // Capture position effect from matched constraint entry
-                        if let Some(idx) = matched_entry_idx {
-                            if let Some(constraints) = loaded_constraints {
-                                defi_position_effect = constraints.entries[idx].position_effect;
-                            }
-                        }
                     }
 
                     // Slippage verification on Jupiter V6 swaps
@@ -447,13 +435,8 @@ pub fn handler(
                     idx = idx.saturating_add(1);
                     continue;
                 }
-                ScanAction::PassedSharedChecks { matched_entry_idx } => {
-                    // Capture position effect for non-spending DeFi instructions too
-                    if let Some(entry_idx) = matched_entry_idx {
-                        if let Some(constraints) = loaded_constraints {
-                            defi_position_effect = constraints.entries[entry_idx].position_effect;
-                        }
-                    }
+                ScanAction::PassedSharedChecks => {
+                    // Non-spending DeFi instruction passed shared checks; no further work.
                 }
             }
             idx = idx.saturating_add(1);
@@ -462,28 +445,9 @@ pub fn handler(
         require!(found_finalize, SigilError::MissingFinalizeInstruction);
     }
 
-    // 7. Position effect checks — derived from matched constraint entry
-    let position_effect = match defi_position_effect {
-        1 => PositionEffect::Increment,
-        2 => PositionEffect::Decrement,
-        _ => PositionEffect::None,
-    };
-    match position_effect {
-        PositionEffect::Increment => {
-            require!(
-                policy.can_open_positions,
-                SigilError::PositionOpeningDisallowed
-            );
-            require!(
-                vault.open_positions < policy.max_concurrent_positions,
-                SigilError::TooManyPositions
-            );
-        }
-        PositionEffect::Decrement => {
-            require!(vault.open_positions > 0, SigilError::NoPositionsToClose);
-        }
-        PositionEffect::None => {}
-    }
+    // 7. Position counter system removed (council decision 2026-04-19, vote 9-1).
+    // Spending caps + leverage caps + protocol allowlist remain the load-bearing
+    // safety. See Plans/we-need-to-plan-serialized-summit.md for rationale.
 
     // Extract vault PDA seeds data upfront
     let owner_key = vault.owner;
@@ -606,7 +570,6 @@ pub fn handler(
     session.authorized_token = token_mint;
     session.authorized_protocol = target_protocol;
     session.is_spending = is_spending;
-    session.position_effect = defi_position_effect;
     session.expires_at_slot =
         SessionAuthority::calculate_expiry(clock.slot, policy.effective_session_expiry_slots());
     session.delegation_token_account = ctx.accounts.vault_token_account.key();

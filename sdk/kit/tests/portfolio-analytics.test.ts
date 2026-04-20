@@ -21,7 +21,6 @@ function mockVaultSummary(overrides: any = {}): VaultSummary {
       isHealthy: true,
       agentCount: 1,
       pausedAgentCount: 0,
-      openPositions: 0,
       activeEscrowCount: 0,
       capUtilization: 40,
       capRemaining: 600_000_000n,

@@ -157,7 +157,6 @@ describe("TOCTOU Security Fix", () => {
         0, // protocol mode: all
         [jupiterProgramId],
         new BN(0) as any, // max_leverage_bps
-        3, // max_concurrent_positions
         0, // developer_fee_rate
         500, // maxSlippageBps
         new BN(timelockDuration),
@@ -214,8 +213,6 @@ describe("TOCTOU Security Fix", () => {
     await program.methods
       .queuePolicyUpdate(
         dailyCap ?? null,
-        null,
-        null,
         null,
         null,
         null,
@@ -340,7 +337,6 @@ describe("TOCTOU Security Fix", () => {
           0,
           [jupiterProgramId],
           new BN(0) as any,
-          3,
           0,
           500,
           new BN(0), // timelockDuration: 0 — below minimum (NEGATIVE TEST)
@@ -378,8 +374,6 @@ describe("TOCTOU Security Fix", () => {
           null,
           null,
           null,
-          null,
-          null,
           new BN(900), // timelockDuration: 900 — below 1800 minimum
           null,
           null, // sessionExpirySlots
@@ -408,8 +402,6 @@ describe("TOCTOU Security Fix", () => {
     try {
       await program.methods
         .queuePolicyUpdate(
-          null,
-          null,
           null,
           null,
           null,

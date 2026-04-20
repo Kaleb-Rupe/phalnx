@@ -232,22 +232,6 @@ describe("seal()", () => {
       expect(e.message).to.include("No target protocol");
     }
   });
-
-  it("warns on position limit approached for spending actions", async () => {
-    const result = await seal(
-      baseSealParams({
-        amount: 100_000_000n,
-        cachedState: makeCachedState({
-          maxConcurrentPositions: 2,
-          openPositions: 2,
-        }),
-      }),
-    );
-    const posWarnings = result.warnings.filter((w) =>
-      w.includes("Position limit"),
-    );
-    expect(posWarnings.length).to.be.greaterThan(0);
-  });
 });
 
 describe("replaceAgentAtas()", () => {

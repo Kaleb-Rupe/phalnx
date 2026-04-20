@@ -44,8 +44,6 @@ pub fn handler(
     protocol_mode: Option<u8>,
     protocols: Option<Vec<Pubkey>>,
     max_leverage_bps: Option<u16>,
-    can_open_positions: Option<bool>,
-    max_concurrent_positions: Option<u8>,
     developer_fee_rate: Option<u16>,
     max_slippage_bps: Option<u16>,
     timelock_duration: Option<u64>,
@@ -150,8 +148,6 @@ pub fn handler(
     pending.protocol_mode = protocol_mode;
     pending.protocols = protocols;
     pending.max_leverage_bps = max_leverage_bps;
-    pending.can_open_positions = can_open_positions;
-    pending.max_concurrent_positions = max_concurrent_positions;
     pending.developer_fee_rate = developer_fee_rate;
     pending.max_slippage_bps = max_slippage_bps;
     pending.timelock_duration = timelock_duration;

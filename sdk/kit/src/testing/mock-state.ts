@@ -28,8 +28,6 @@ export interface MockVaultStateOverrides {
   protocolMode?: number;
   protocols?: Address[];
   developerFeeRate?: number;
-  maxConcurrentPositions?: number;
-  openPositions?: number;
   feeDestination?: Address;
   totalDepositedUsd?: bigint;
   totalWithdrawnUsd?: bigint;
@@ -79,7 +77,6 @@ export function createMockVaultState(
       createdAt: 1000n,
       totalTransactions: 0n,
       totalVolume: 0n,
-      openPositions: overrides?.openPositions ?? 0,
       activeEscrowCount: 0,
       totalFeesCollected: 0n,
       totalDepositedUsd: overrides?.totalDepositedUsd ?? 0n,
@@ -95,8 +92,6 @@ export function createMockVaultState(
       protocolMode: overrides?.protocolMode ?? 0,
       protocols: overrides?.protocols ?? [],
       maxLeverageBps: 0,
-      canOpenPositions: true,
-      maxConcurrentPositions: overrides?.maxConcurrentPositions ?? 5,
       developerFeeRate: overrides?.developerFeeRate ?? 0,
       maxSlippageBps: 100,
       timelockDuration: 0n,

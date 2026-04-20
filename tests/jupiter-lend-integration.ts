@@ -248,7 +248,6 @@ describe("jupiter-lend-integration", () => {
         1, // protocolMode: allowlist
         [lendProtocol], // protocols
         0, // max leverage (disabled)
-        1, // max concurrent positions
         0, // developer fee rate
         100, // maxSlippageBps
         new BN(1800), // timelockDuration
@@ -474,7 +473,6 @@ describe("jupiter-lend-integration", () => {
           0,
           [lendProtocol],
           0,
-          1,
           0,
           100,
           new BN(1800),
@@ -593,7 +591,6 @@ describe("jupiter-lend-integration", () => {
           0,
           [lendProtocol],
           0,
-          1,
           0,
           100,
           new BN(1800),

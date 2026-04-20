@@ -177,7 +177,6 @@ describe("sigil", () => {
           1, // protocolMode: allowlist
           [jupiterProgramId],
           new BN(0) as any, // max_leverage_bps (u16)
-          3, // max_concurrent_positions
           0, // developer_fee_rate
           100, // maxSlippageBps (1%)
           new BN(1800), // timelockDuration (MIN_TIMELOCK_DURATION)
@@ -205,7 +204,6 @@ describe("sigil", () => {
       expect(vault.vaultId.toNumber()).to.equal(1);
       expect(vault.totalTransactions.toNumber()).to.equal(0);
       expect(vault.totalVolume.toNumber()).to.equal(0);
-      expect(vault.openPositions).to.equal(0);
       expect(vault.totalFeesCollected.toNumber()).to.equal(0);
 
       // Verify policy state
@@ -218,8 +216,6 @@ describe("sigil", () => {
       expect(policy.protocols[0].toString()).to.equal(
         jupiterProgramId.toString(),
       );
-      expect(policy.canOpenPositions).to.equal(true);
-      expect(policy.maxConcurrentPositions).to.equal(3);
       expect(policy.developerFeeRate).to.equal(0);
 
       // Verify tracker state
@@ -237,7 +233,6 @@ describe("sigil", () => {
             0, // protocolMode: all
             [],
             new BN(0) as any,
-            1,
             0,
             100, // maxSlippageBps
             new BN(1800),
@@ -294,7 +289,6 @@ describe("sigil", () => {
             3,
             [],
             new BN(0) as any,
-            1,
             0,
             100, // maxSlippageBps
             new BN(1800),
@@ -455,7 +449,6 @@ describe("sigil", () => {
           0,
           [],
           new BN(0) as any,
-          1,
           0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
@@ -512,8 +505,6 @@ describe("sigil", () => {
           null, // keep protocol_mode
           null, // keep protocols
           null, // keep max_leverage_bps
-          null, // keep can_open_positions
-          null, // keep max_concurrent_positions
           null, // keep developer_fee_rate
           null, // keep maxSlippageBps
           null, // keep timelockDuration
@@ -568,8 +559,6 @@ describe("sigil", () => {
             null,
             null,
             null,
-            null,
-            null,
             null, // hasProtocolCaps
             null, // protocolCaps
           )
@@ -600,8 +589,6 @@ describe("sigil", () => {
             null,
             null,
             tooManyProtocols,
-            null,
-            null,
             null,
             null,
             null,
@@ -669,7 +656,6 @@ describe("sigil", () => {
           0,
           [],
           new BN(0) as any,
-          1,
           0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
@@ -788,7 +774,6 @@ describe("sigil", () => {
           0,
           [],
           new BN(0) as any,
-          1,
           0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
@@ -1178,9 +1163,9 @@ describe("sigil", () => {
         sendVersionedTx(svm, [validateIx, finalizeIx, splTransferIx], agent);
         expect.fail("Should have thrown");
       } catch (err: any) {
-        // Error 6069 = UnauthorizedPostFinalizeInstruction (shifted by 1 after
-        // TimelockActive removal). Checked at finalize instruction (index 1).
-        expect(err.toString()).to.include("6069");
+        // Error 6065 = UnauthorizedPostFinalizeInstruction (renumbered after
+        // position counter removal). Checked at finalize instruction (index 1).
+        expect(err.toString()).to.include("6065");
       }
     });
   });
@@ -1532,7 +1517,6 @@ describe("sigil", () => {
           0,
           [],
           new BN(0) as any,
-          1,
           0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
@@ -1608,7 +1592,6 @@ describe("sigil", () => {
           0,
           [],
           new BN(0) as any,
-          1,
           0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
@@ -1688,7 +1671,6 @@ describe("sigil", () => {
           1, // protocolMode: allowlist
           [jupiterProgramId],
           new BN(0) as any,
-          3,
           30, // developer_fee_rate = 30 (0.3 BPS)
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
@@ -1742,7 +1724,6 @@ describe("sigil", () => {
             0,
             [],
             new BN(0) as any,
-            1,
             501,
             100, // maxSlippageBps
             new BN(1800),
@@ -1774,8 +1755,6 @@ describe("sigil", () => {
       // Use the fee vault created above, first set to 0
       await program.methods
         .queuePolicyUpdate(
-          null,
-          null,
           null,
           null,
           null,
@@ -1817,8 +1796,6 @@ describe("sigil", () => {
       // Now update to 30
       await program.methods
         .queuePolicyUpdate(
-          null,
-          null,
           null,
           null,
           null,
@@ -1871,8 +1848,6 @@ describe("sigil", () => {
             null,
             null,
             null,
-            null,
-            null,
             501,
             null,
             null,
@@ -1903,8 +1878,6 @@ describe("sigil", () => {
       // Set developer fee to 0
       await program.methods
         .queuePolicyUpdate(
-          null,
-          null,
           null,
           null,
           null,
@@ -2047,8 +2020,6 @@ describe("sigil", () => {
       // Set developer fee to 500 (max, 5 BPS)
       await program.methods
         .queuePolicyUpdate(
-          null,
-          null,
           null,
           null,
           null,
@@ -2260,7 +2231,6 @@ describe("sigil", () => {
           0,
           [],
           new BN(0) as any,
-          1,
           500,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
@@ -2343,7 +2313,6 @@ describe("sigil", () => {
           1, // protocolMode: allowlist
           [jupiterProgramId],
           new BN(0) as any,
-          3,
           0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
@@ -2598,7 +2567,6 @@ describe("sigil", () => {
           0,
           [],
           new BN(0) as any,
-          1,
           0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
@@ -2758,7 +2726,6 @@ describe("sigil", () => {
           0,
           [],
           new BN(0) as any,
-          1,
           0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
@@ -2850,7 +2817,6 @@ describe("sigil", () => {
           0,
           [],
           new BN(0) as any,
-          1,
           0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
@@ -2956,7 +2922,6 @@ describe("sigil", () => {
           1,
           [jupiterProgramId],
           new BN(0) as any,
-          1,
           0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
@@ -3085,7 +3050,6 @@ describe("sigil", () => {
           1, // protocolMode: allowlist
           [jupiterProgramId],
           new BN(0) as any,
-          3,
           0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
@@ -3247,7 +3211,6 @@ describe("sigil", () => {
           1, // protocolMode: allowlist
           [jupiterProgramId],
           new BN(0) as any,
-          3,
           0, // developer_fee_rate = 0
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
@@ -3523,7 +3486,6 @@ describe("sigil", () => {
           1, // protocolMode: allowlist
           [jupiterProgramId],
           new BN(0) as any,
-          3,
           0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION (30 minutes)
@@ -3554,8 +3516,6 @@ describe("sigil", () => {
       await program.methods
         .queuePolicyUpdate(
           new BN(200_000_000), // new daily cap
-          null,
-          null,
           null,
           null,
           null,
@@ -3650,8 +3610,6 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,
-          null,
           null, // hasProtocolCaps
           null, // protocolCaps
         )
@@ -3699,8 +3657,6 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,
-          null,
           null, // hasProtocolCaps
           null, // protocolCaps
         )
@@ -3718,8 +3674,6 @@ describe("sigil", () => {
         await program.methods
           .queuePolicyUpdate(
             new BN(500_000_000),
-            null,
-            null,
             null,
             null,
             null,
@@ -3790,7 +3744,6 @@ describe("sigil", () => {
             0,
             [],
             new BN(0) as any,
-            1,
             0,
             100, // maxSlippageBps
             new BN(0), // below MIN_TIMELOCK_DURATION — should fail
@@ -3817,8 +3770,6 @@ describe("sigil", () => {
       // Queue a timelock change from 1800 to 3600
       await program.methods
         .queuePolicyUpdate(
-          null,
-          null,
           null,
           null,
           null,
@@ -3869,8 +3820,6 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,
-          null,
           new BN(1800), // back to MIN_TIMELOCK_DURATION
           null,
           null,
@@ -3906,8 +3855,6 @@ describe("sigil", () => {
       await program.methods
         .queuePolicyUpdate(
           new BN(999_000_000),
-          null,
-          null,
           null,
           null,
           null,
@@ -4014,7 +3961,6 @@ describe("sigil", () => {
           1, // protocolMode: allowlist
           [jupiterProgramId],
           new BN(0) as any,
-          3,
           0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
@@ -4159,7 +4105,6 @@ describe("sigil", () => {
           1,
           [jupiterProgramId],
           new BN(0) as any,
-          3,
           0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
@@ -4262,7 +4207,6 @@ describe("sigil", () => {
             0,
             [],
             new BN(0) as any,
-            1,
             0,
             100, // maxSlippageBps
             new BN(1800), // MIN_TIMELOCK_DURATION
@@ -4402,7 +4346,6 @@ describe("sigil", () => {
           1,
           [jupiterProgramId],
           new BN(0) as any,
-          3,
           500, // developer_fee_rate = 500 (5 BPS)
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
@@ -4540,7 +4483,6 @@ describe("sigil", () => {
           1,
           [jupiterProgramId],
           new BN(0) as any,
-          3,
           0,
           100,
           new BN(1800), // MIN_TIMELOCK_DURATION
@@ -4978,7 +4920,6 @@ describe("sigil", () => {
           1,
           [jupiterProgramId],
           new BN(0) as any,
-          3,
           0,
           100,
           new BN(1800), // MIN_TIMELOCK_DURATION
@@ -5281,7 +5222,6 @@ describe("sigil", () => {
           1, // ALLOWLIST mode
           [protocolA, protocolB],
           new BN(1800) as any,
-          3,
           0, // no dev fee
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
@@ -5411,8 +5351,6 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,
-          null,
           true, // hasProtocolCaps
           [new BN(0), new BN(200_000_000)], // protocolA: 0 (unlimited), protocolB: 200
         )
@@ -5447,8 +5385,6 @@ describe("sigil", () => {
       // Restore caps
       await program.methods
         .queuePolicyUpdate(
-          null,
-          null,
           null,
           null,
           null,
@@ -5515,8 +5451,6 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,
-          null,
           false, // hasProtocolCaps = false
           null,
         )
@@ -5551,8 +5485,6 @@ describe("sigil", () => {
       // Re-enable caps for next test
       await program.methods
         .queuePolicyUpdate(
-          null,
-          null,
           null,
           null,
           null,
@@ -5600,8 +5532,6 @@ describe("sigil", () => {
       try {
         await program.methods
           .queuePolicyUpdate(
-            null,
-            null,
             null,
             null,
             null,
@@ -5663,7 +5593,6 @@ describe("sigil", () => {
             0, // ALL mode
             [],
             new BN(0) as any,
-            3,
             0,
             100,
             new BN(1800),
@@ -5737,7 +5666,6 @@ describe("sigil", () => {
           0,
           [],
           new BN(0) as any,
-          1,
           0,
           100,
           new BN(1800), // MIN_TIMELOCK_DURATION
@@ -5961,7 +5889,6 @@ describe("sigil", () => {
           0,
           [jupiterProgramId],
           new BN(0) as any,
-          1,
           0,
           100,
           new BN(1800), // MIN_TIMELOCK_DURATION

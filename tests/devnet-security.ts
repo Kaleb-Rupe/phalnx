@@ -112,8 +112,6 @@ describe("devnet-security", () => {
           null,
           null,
           null,
-          null,
-          null,
           null, // sessionExpirySlots
           null, // hasProtocolCaps
           null, // protocolCaps
@@ -245,8 +243,6 @@ describe("devnet-security", () => {
     try {
       await program.methods
         .queuePolicyUpdate(
-          null,
-          null,
           null,
           null,
           null,

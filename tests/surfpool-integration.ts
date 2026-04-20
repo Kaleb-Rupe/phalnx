@@ -149,7 +149,6 @@ describe("surfpool-integration", function () {
           0, // protocolMode: all
           [],
           new BN(0) as any, // max_leverage_bps
-          3, // max_concurrent_positions
           0, // developer_fee_rate
           100, // maxSlippageBps (1%)
           new BN(1800), // timelockDuration
@@ -329,7 +328,6 @@ describe("surfpool-integration", function () {
           0,
           [],
           new BN(0) as any,
-          3,
           0,
           100,
           new BN(1800),
@@ -596,7 +594,6 @@ describe("surfpool-integration", function () {
           0,
           [],
           new BN(0) as any,
-          3,
           0,
           100,
           new BN(1800),
@@ -891,7 +888,6 @@ describe("surfpool-integration", function () {
           0,
           [],
           new BN(0) as any,
-          3,
           0,
           100,
           new BN(1800),
@@ -1071,7 +1067,6 @@ describe("surfpool-integration", function () {
           0,
           [],
           new BN(0) as any,
-          3,
           0,
           100,
           new BN(1800),
@@ -1220,7 +1215,6 @@ describe("surfpool-integration", function () {
           0,
           [],
           new BN(0) as any,
-          3,
           0,
           100,
           new BN(1800),
@@ -1300,7 +1294,6 @@ describe("surfpool-integration", function () {
           0,
           [],
           new BN(0) as any,
-          3,
           0,
           100,
           new BN(1800),
@@ -1355,7 +1348,6 @@ describe("surfpool-integration", function () {
           0,
           [],
           new BN(0) as any,
-          3,
           0,
           100,
           new BN(1800),
@@ -1425,7 +1417,6 @@ describe("surfpool-integration", function () {
           0,
           [],
           new BN(0) as any,
-          3,
           0,
           100,
           new BN(1800),
@@ -1485,7 +1476,6 @@ describe("surfpool-integration", function () {
           0,
           [],
           new BN(0) as any,
-          3,
           0,
           100,
           new BN(1800), // 1800s timelock (MIN_TIMELOCK_DURATION)
@@ -1509,8 +1499,6 @@ describe("surfpool-integration", function () {
       await program.methods
         .queuePolicyUpdate(
           new BN(200_000_000), // new daily cap: 200 USDC
-          null,
-          null,
           null,
           null,
           null,
@@ -1566,8 +1554,6 @@ describe("surfpool-integration", function () {
       const queueIx = await program.methods
         .queuePolicyUpdate(
           new BN(300_000_000),
-          null,
-          null,
           null,
           null,
           null,
@@ -3581,7 +3567,6 @@ describe("surfpool-integration", function () {
       ],
       accountConstraints: [],
       isSpending: 1,
-      positionEffect: 0,
       discriminatorFormat: { anchor8: {} },
     };
 
@@ -3893,7 +3878,6 @@ describe("surfpool-integration", function () {
         ],
         accountConstraints: [],
         isSpending: 1,
-        positionEffect: 0,
         discriminatorFormat: { anchor8: {} },
       };
       // Multi-IX: allocate pending + extend×3 + populate

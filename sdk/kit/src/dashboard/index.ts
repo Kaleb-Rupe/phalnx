@@ -282,8 +282,8 @@ export class OwnerClient {
 
   /**
    * Permanently closes vault and reclaims rent.
-   * Requires: all agents revoked, open_positions == 0.
-   * If OpenPositionsExist error, call syncPositions() first.
+   * Requires: all agents revoked, zero active escrows, zero active sessions,
+   * constraints closed, no pending policy update.
    * May need computeUnits: 400_000 for complex vaults (default applied).
    */
   async closeVault(opts?: TxOpts): Promise<TxResult> {
@@ -296,23 +296,8 @@ export class OwnerClient {
     );
   }
 
-  /**
-   * Resets position counter when positions drift (e.g., auto-liquidation).
-   * @param actualPositions — the real number of open positions (usually 0 after liquidation)
-   */
-  async syncPositions(
-    actualPositions: number = 0,
-    opts?: TxOpts,
-  ): Promise<TxResult> {
-    return mutations.syncPositions(
-      this.rpc,
-      this.vault,
-      this.owner,
-      this.network,
-      actualPositions,
-      opts,
-    );
-  }
+  // syncPositions method DELETED — position counter system removed per council
+  // decision (9-1 vote, 2026-04-19). See Plans/we-need-to-plan-serialized-summit.md.
 
   // ─── Fund Management ────────────────────────────────────────────────────────
 

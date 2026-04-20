@@ -183,7 +183,6 @@ describe("serializeBigints", () => {
       protocolCaps: [2_000_000_000n, 500_000_000n],
       sessionExpirySlots: 20n,
       timelock: 1800,
-      canOpenPositions: true,
       approvedApps: ["JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"],
     };
 

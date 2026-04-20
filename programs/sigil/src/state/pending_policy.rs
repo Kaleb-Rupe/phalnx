@@ -23,8 +23,6 @@ pub struct PendingPolicyUpdate {
     pub protocol_mode: Option<u8>,
     pub protocols: Option<Vec<Pubkey>>,
     pub max_leverage_bps: Option<u16>,
-    pub can_open_positions: Option<bool>,
-    pub max_concurrent_positions: Option<u8>,
     pub developer_fee_rate: Option<u16>,
     pub max_slippage_bps: Option<u16>,
     pub timelock_duration: Option<u64>,
@@ -48,8 +46,6 @@ impl PendingPolicyUpdate {
         + (1 + 1) // protocol_mode
         + (1 + 4 + 32 * MAX_ALLOWED_PROTOCOLS) // protocols
         + (1 + 2) // max_leverage_bps
-        + (1 + 1) // can_open_positions
-        + (1 + 1) // max_concurrent_positions
         + (1 + 2) // developer_fee_rate
         + (1 + 2) // max_slippage_bps
         + (1 + 8) // timelock_duration

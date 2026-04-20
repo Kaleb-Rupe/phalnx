@@ -161,7 +161,6 @@ describe("instruction-constraints", () => {
         0, // protocolMode: all
         [],
         new BN(0) as any,
-        3,
         0, // no developer fee
         100, // maxSlippageBps
         new BN(1800), // 1800s timelock (MIN_TIMELOCK_DURATION)
@@ -532,28 +531,8 @@ describe("instruction-constraints", () => {
       ]);
       const finalizeIx = await buildFinalizeIx(agent.publicKey, usdcMint);
 
-      // Need to open a position first so we can close it
-      // Actually for non-spending, we just need open_positions > 0.
-      // Let's use syncPositions to set it.
-      await program.methods
-        .syncPositions(1)
-        .accounts({
-          owner: owner.publicKey,
-          vault: vaultPda,
-        } as any)
-        .rpc();
-
       const result = sendVersionedTx(svm, [validateIx, finalizeIx], agent);
       recordCU("constraints:non_spending_with_pda", result);
-
-      // Reset position count
-      await program.methods
-        .syncPositions(0)
-        .accounts({
-          owner: owner.publicKey,
-          vault: vaultPda,
-        } as any)
-        .rpc();
     });
   });
 
@@ -615,7 +594,6 @@ describe("instruction-constraints", () => {
           0,
           [],
           new BN(0) as any,
-          3,
           0,
           100,
           new BN(1800),
@@ -926,7 +904,6 @@ describe("instruction-constraints", () => {
           0,
           [],
           new BN(0) as any,
-          3,
           0,
           100,
           new BN(1800), // 1800s timelock (MIN_TIMELOCK_DURATION)
@@ -1122,7 +1099,6 @@ describe("instruction-constraints", () => {
             0,
             [],
             new BN(0) as any,
-            3,
             0,
             100,
             new BN(0), // timelockDuration: 0 — NEGATIVE TEST (should fail)
@@ -2101,7 +2077,6 @@ describe("instruction-constraints", () => {
           0,
           [],
           new BN(0) as any,
-          3,
           0,
           100,
           new BN(1800),
@@ -2408,7 +2383,6 @@ describe("instruction-constraints", () => {
           0,
           [],
           new BN(0) as any,
-          3,
           0,
           100,
           new BN(1800),
@@ -2637,7 +2611,6 @@ describe("instruction-constraints", () => {
           0,
           [],
           new BN(0) as any,
-          3,
           0,
           100,
           new BN(1800),
@@ -3044,7 +3017,6 @@ describe("instruction-constraints", () => {
           0,
           [],
           new BN(0) as any,
-          3,
           0,
           100,
           new BN(1800),

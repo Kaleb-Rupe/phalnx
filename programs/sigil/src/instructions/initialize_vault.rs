@@ -63,7 +63,6 @@ pub fn handler(
     protocol_mode: u8,
     protocols: Vec<Pubkey>,
     max_leverage_bps: u16,
-    max_concurrent_positions: u8,
     developer_fee_rate: u16,
     max_slippage_bps: u16,
     timelock_duration: u64,
@@ -127,7 +126,6 @@ pub fn handler(
     vault.created_at = clock.unix_timestamp;
     vault.total_transactions = 0;
     vault.total_volume = 0;
-    vault.open_positions = 0;
     vault.total_fees_collected = 0;
     vault.total_deposited_usd = 0;
     vault.total_withdrawn_usd = 0;
@@ -143,8 +141,6 @@ pub fn handler(
     policy.protocol_mode = protocol_mode;
     policy.protocols = protocols;
     policy.max_leverage_bps = max_leverage_bps;
-    policy.can_open_positions = true;
-    policy.max_concurrent_positions = max_concurrent_positions;
     policy.developer_fee_rate = developer_fee_rate;
     policy.max_slippage_bps = max_slippage_bps;
     policy.timelock_duration = timelock_duration;

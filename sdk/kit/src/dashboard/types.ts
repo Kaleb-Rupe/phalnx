@@ -54,7 +54,6 @@ export interface VaultState {
     status: "active" | "frozen" | "closed";
     owner: string;
     agentCount: number;
-    openPositions: number;
     /** Lifetime USD volume (6-decimal). */
     totalVolume: bigint;
     totalFees: bigint;
@@ -151,12 +150,14 @@ export interface ProtocolBreakdownEntry {
 
 // ─── Activity Data ───────────────────────────────────────────────────────────
 
+// ActivityType: "open_position" and "close_position" literals removed with
+// position counter deletion (council 9-1 vote, 2026-04-19). All trade events
+// now categorize as "swap" by default; "lend" still discriminated for
+// deposit/withdraw flows.
 export type ActivityType =
   | "swap"
   | "lend"
   | "transfer"
-  | "open_position"
-  | "close_position"
   | "deposit"
   | "withdraw";
 
@@ -188,7 +189,7 @@ export interface ActivityFilters {
   protocol?: string;
   status?: "approved" | "blocked";
   timeRange?: "1h" | "6h" | "24h" | "7d" | "30d";
-  /** Filter rows by ActivityType (swap, open_position, close_position, transfer, deposit, withdraw, lend). */
+  /** Filter rows by ActivityType (swap, lend, transfer, deposit, withdraw). */
   type?: ActivityType;
   /** Max events to fetch. Default: 50. */
   limit?: number;
@@ -238,9 +239,6 @@ export interface PolicyData {
   hasProtocolCaps: boolean;
   /** Parallel array to approvedApps (6-decimal USD each). */
   protocolCaps: bigint[];
-  // Positions
-  canOpenPositions: boolean;
-  maxConcurrentPositions: number;
   /** Raw BPS. 50 = 0.5%. */
   maxSlippageBps: number;
   /** Raw BPS. 500 = 5x. */
@@ -393,8 +391,6 @@ export interface PolicyChanges {
   protocolMode?: "whitelist" | "blacklist" | "unrestricted";
   hasProtocolCaps?: boolean;
   protocolCaps?: bigint[];
-  canOpenPositions?: boolean;
-  maxConcurrentPositions?: number;
   maxSlippageBps?: number;
   /** BPS. */
   leverageLimit?: number;
@@ -453,7 +449,6 @@ export interface SerializedVaultState {
     status: "active" | "frozen" | "closed";
     owner: string;
     agentCount: number;
-    openPositions: number;
     totalVolume: string;
     totalFees: string;
   };
@@ -537,8 +532,6 @@ export interface SerializedPolicyData {
   protocolMode: string;
   hasProtocolCaps: boolean;
   protocolCaps: string[];
-  canOpenPositions: boolean;
-  maxConcurrentPositions: number;
   maxSlippageBps: number;
   leverageLimitBps: number;
   allowedDestinations: string[];

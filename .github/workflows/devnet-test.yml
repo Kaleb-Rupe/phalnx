@@ -9,7 +9,7 @@
 # The deploy-devnet.yml workflow handles: build → deploy → test (chained).
 # This prevents tests from running against a stale program binary.
 #
-# 148 tests across 9 files. Costs SOL — never runs on PRs.
+# 142 tests across 9 files. Costs SOL — never runs on PRs.
 
 name: Devnet Tests
 
@@ -40,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: pnpm/action-setup@078e9d416474b29c0c387560859308974f7e9c53 # v6.0.1
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
         with:
           version: 10
 
@@ -111,7 +111,7 @@ jobs:
             echo "Running single test file: tests/$FILTER"
             npx ts-mocha -p ./tsconfig.json -t 600000 "tests/$FILTER"
           else
-            echo "Running all devnet tests (148 tests, 9 files)"
+            echo "Running all devnet tests (142 tests, 9 files)"
             npx ts-mocha -p ./tsconfig.json -t 600000 \
               tests/devnet-smoke.ts \
               tests/devnet-sessions.ts \

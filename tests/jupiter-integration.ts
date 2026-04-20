@@ -277,7 +277,6 @@ describe("jupiter-integration", () => {
         1, // protocolMode: 1 = allowlist
         [jupiterProtocol], // protocols
         0, // max leverage (0 = disabled)
-        1, // max concurrent positions
         0, // developer fee rate (0 = none)
         100, // maxSlippageBps
         new BN(1800), // timelockDuration
@@ -543,7 +542,6 @@ describe("jupiter-integration", () => {
           0, // protocolMode
           [jupiterProtocol], // protocols
           0,
-          1,
           0, // developer fee rate
           100, // maxSlippageBps
           new BN(1800),
@@ -671,7 +669,6 @@ describe("jupiter-integration", () => {
           0, // protocolMode
           [jupiterProtocol], // protocols
           0,
-          1,
           0, // developer fee rate
           100, // maxSlippageBps
           new BN(1800),

@@ -198,7 +198,6 @@ describe("OwnerClient Devnet Integration", function () {
         "unrestricted",
       ]);
       expect(typeof policy.hasProtocolCaps).to.equal("boolean");
-      expect(typeof policy.canOpenPositions).to.equal("boolean");
       expect(typeof policy.sessionExpirySlots).to.equal("bigint");
       expect(typeof policy.policyVersion).to.equal("bigint");
       expect(typeof policy.timelockSeconds).to.equal("number");
@@ -288,15 +287,6 @@ describe("OwnerClient Devnet Integration", function () {
         expect.fail("Should have thrown");
       } catch (err: any) {
         expect(err.message).to.include("no permissions");
-      }
-    });
-
-    it("rejects syncPositions with value > 255", async function () {
-      try {
-        await client.syncPositions(256);
-        expect.fail("Should have thrown");
-      } catch (err: any) {
-        expect(err.message).to.include("0-255");
       }
     });
   });

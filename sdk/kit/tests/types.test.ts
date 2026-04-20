@@ -21,7 +21,6 @@ import {
   isStablecoinMint,
   parseActionType,
   isSpendingAction,
-  getPositionEffect,
   normalizeNetwork,
   validateNetwork,
 } from "../src/types.js";
@@ -212,28 +211,6 @@ describe("types", () => {
         expect(isSpendingAction(ns), `${ns} should be non-spending`).to.be
           .false;
       }
-    });
-  });
-
-  describe("getPositionEffect", () => {
-    it("openPosition returns increment", () => {
-      expect(getPositionEffect("openPosition")).to.equal("increment");
-    });
-
-    it("closePosition returns decrement", () => {
-      expect(getPositionEffect("closePosition")).to.equal("decrement");
-    });
-
-    it("swap returns none", () => {
-      expect(getPositionEffect("swap")).to.equal("none");
-    });
-
-    it("swapAndOpenPosition returns increment", () => {
-      expect(getPositionEffect("swapAndOpenPosition")).to.equal("increment");
-    });
-
-    it("closeAndSwapPosition returns decrement", () => {
-      expect(getPositionEffect("closeAndSwapPosition")).to.equal("decrement");
     });
   });
 

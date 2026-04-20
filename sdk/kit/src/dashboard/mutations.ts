@@ -50,7 +50,6 @@ import type { AgentVault } from "../generated/accounts/agentVault.js";
 import { getFreezeVaultInstruction } from "../generated/instructions/freezeVault.js";
 import { getReactivateVaultInstruction } from "../generated/instructions/reactivateVault.js";
 import { getCloseVaultInstructionAsync } from "../generated/instructions/closeVault.js";
-import { getSyncPositionsInstruction } from "../generated/instructions/syncPositions.js";
 import { getPauseAgentInstruction } from "../generated/instructions/pauseAgent.js";
 import { getUnpauseAgentInstruction } from "../generated/instructions/unpauseAgent.js";
 import { getRevokeAgentInstruction } from "../generated/instructions/revokeAgent.js";
@@ -364,18 +363,8 @@ export async function closeVault(
   });
 }
 
-export async function syncPositions(
-  rpc: Rpc<SolanaRpcApi>,
-  vault: Address,
-  owner: TransactionSigner,
-  network: "devnet" | "mainnet",
-  actualPositions: number,
-  opts?: TxOpts,
-): Promise<TxResult> {
-  requireU8(actualPositions, "actualPositions");
-  const ix = getSyncPositionsInstruction({ owner, vault, actualPositions });
-  return run(rpc, owner, network, [ix], opts);
-}
+// syncPositions mutation DELETED — position counter system removed per council
+// decision (9-1 vote, 2026-04-19). See Plans/we-need-to-plan-serialized-summit.md.
 
 export async function pauseAgent(
   rpc: Rpc<SolanaRpcApi>,
@@ -504,7 +493,6 @@ export async function withdraw(
  *   - `dailyCap`, `maxPerTrade` > 0n
  *   - `developerFeeRate` <= 500 BPS
  *   - `approvedApps.length` <= MAX_ALLOWED_PROTOCOLS
- *   - `maxConcurrentPositions` within u8 (0-255) via requireU8
  *
  * On-chain-only (silent pass through SDK, may fail on-chain):
  *   - `allowedDestinations.length` (MAX_ALLOWED_DESTINATIONS on-chain)
@@ -551,9 +539,6 @@ export async function queuePolicyUpdate(
       ),
     );
   }
-  if (changes.maxConcurrentPositions != null) {
-    requireU8(changes.maxConcurrentPositions, "maxConcurrentPositions");
-  }
   const ix = await getQueuePolicyUpdateInstructionAsync({
     owner,
     vault,
@@ -564,8 +549,6 @@ export async function queuePolicyUpdate(
       : null,
     protocols: changes.approvedApps ?? null,
     maxLeverageBps: changes.leverageLimit ?? null,
-    canOpenPositions: changes.canOpenPositions ?? null,
-    maxConcurrentPositions: changes.maxConcurrentPositions ?? null,
     developerFeeRate: changes.developerFeeRate ?? null,
     maxSlippageBps: changes.maxSlippageBps ?? null,
     timelockDuration:

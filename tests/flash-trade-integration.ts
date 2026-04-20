@@ -28,13 +28,11 @@ const CU_FLASH_TRADE = 800_000;
 import {
   createTestEnv,
   airdropSol,
-  createMintHelper,
   createMintAtAddress,
   DEVNET_USDC_MINT,
   createAtaHelper,
   createAtaIdempotentHelper,
   mintToHelper,
-  getTokenBalance,
   sendVersionedTx,
   VersionedTxResult,
   recordCU,
@@ -42,7 +40,6 @@ import {
   advanceTime,
   TestEnv,
   LiteSVM,
-  FailedTransactionMetadata,
 } from "./helpers/litesvm-setup";
 
 const FULL_CAPABILITY = 2; // CAPABILITY_OPERATOR
@@ -59,8 +56,7 @@ const FULL_CAPABILITY = 2; // CAPABILITY_OPERATOR
  *
  * Key behaviors tested:
  * - action_type stored in SessionAuthority and recorded correctly in audit log
- * - open_positions counter incremented/decremented in vault
- * - Policy enforcement: leverage limits, max concurrent positions, frozen vault
+ * - Policy enforcement: leverage limits, frozen vault
  */
 describe("flash-trade-integration", () => {
   let env: TestEnv;
@@ -190,43 +186,6 @@ describe("flash-trade-integration", () => {
     return result;
   }
 
-  /**
-   * Sync position count via the owner's sync_positions instruction.
-   * Needed because LiteSVM mock DeFi instructions don't move real tokens,
-   * so the position guard (actual_spend > 0) prevents auto-increment.
-   * In production, real DeFi instructions move tokens and actual_spend > 0.
-   */
-  function syncPositionCount(vault: PublicKey, count: number): void {
-    const ix = program.methods
-      .syncPositions(count)
-      .accounts({
-        owner: (owner as any).payer.publicKey,
-        vault,
-      } as any)
-      .instruction();
-
-    // syncPositions is a sync method on the Anchor builder but instruction() is async
-    // Use the sendVersionedTx helper with the owner signer
-    const syncIx = new TransactionInstruction({
-      programId: program.programId,
-      keys: [
-        {
-          pubkey: (owner as any).payer.publicKey,
-          isSigner: true,
-          isWritable: false,
-        },
-        { pubkey: vault, isSigner: false, isWritable: true },
-      ],
-      data: Buffer.concat([
-        // sync_positions discriminator
-        Buffer.from([255, 102, 161, 80, 185, 74, 140, 60]),
-        // count as u8
-        Buffer.from([count]),
-      ]),
-    });
-    sendVersionedTx(svm, [syncIx], (owner as any).payer);
-  }
-
   after(() => printCUSummary());
 
   before(async () => {
@@ -287,7 +246,6 @@ describe("flash-trade-integration", () => {
         0, // protocolMode
         [flashProtocol], // protocols
         10000, // max leverage: 100x (10000 bps)
-        3, // max concurrent positions
         0, // developer fee rate
         100, // maxSlippageBps
         new BN(1800), // timelockDuration (mandatory minimum: 30 min)
@@ -365,94 +323,10 @@ describe("flash-trade-integration", () => {
 
       expect(sig.signature).to.be.a("string");
 
-      // Mock DeFi doesn't move tokens → actual_spend=0 → position not auto-incremented.
-      // Use sync_positions to simulate what a real DeFi open would do.
-      syncPositionCount(vaultPda, 1);
-
       const vault = await program.account.agentVault.fetch(vaultPda);
-      expect(vault.openPositions).to.equal(1);
       expect(vault.totalTransactions.toNumber()).to.equal(1);
       // totalVolume uses actual_spend_tracked; mock DeFi is no-op → 0
       expect(vault.totalVolume.toNumber()).to.equal(0);
-    });
-  });
-
-  // =========================================================================
-  // Exceeds max concurrent positions
-  // =========================================================================
-  describe("max concurrent positions", () => {
-    it.skip("rejects when exceeding max concurrent positions -- blocked: position counter updates require InstructionConstraints with matching discriminator for SystemProgram.transfer mock (see #209)", async () => {
-      // Already have 1 open position from the first test.
-      // Open 2 more (max is 3).
-      await sendComposedAction(
-        vaultPda,
-        policyPda,
-        trackerPda,
-        agent,
-        usdcMint,
-        new BN(50_000_000),
-        flashProtocol,
-      );
-
-      await sendComposedAction(
-        vaultPda,
-        policyPda,
-        trackerPda,
-        agent,
-        usdcMint,
-        new BN(50_000_000),
-        flashProtocol,
-      );
-
-      // Mock DeFi doesn't move tokens → sync positions manually
-      syncPositionCount(vaultPda, 3);
-
-      let vault = await program.account.agentVault.fetch(vaultPda);
-      expect(vault.openPositions).to.equal(3);
-
-      // 4th should fail
-      try {
-        await sendComposedAction(
-          vaultPda,
-          policyPda,
-          trackerPda,
-          agent,
-          usdcMint,
-          new BN(50_000_000),
-          flashProtocol,
-        );
-        expect.fail("Should have thrown");
-      } catch (err: any) {
-        if (err.message === "Should have thrown") throw err;
-        expect(err.message || err.toString()).to.include("TooManyPositions");
-      }
-
-      // Verify still at 3
-      vault = await program.account.agentVault.fetch(vaultPda);
-      expect(vault.openPositions).to.equal(3);
-    });
-  });
-
-  // =========================================================================
-  // Close position decrements counter
-  // =========================================================================
-  describe("close position", () => {
-    it.skip("closes a position and decrements open_positions counter -- blocked: position counter updates require InstructionConstraints with matching discriminator for SystemProgram.transfer mock (see #209)", async () => {
-      const vaultBefore = await program.account.agentVault.fetch(vaultPda);
-      const positionsBefore = vaultBefore.openPositions;
-
-      await sendComposedAction(
-        vaultPda,
-        policyPda,
-        trackerPda,
-        agent,
-        usdcMint,
-        new BN(0),
-        flashProtocol,
-      );
-
-      const vaultAfter = await program.account.agentVault.fetch(vaultPda);
-      expect(vaultAfter.openPositions).to.equal(positionsBefore - 1);
     });
   });
 
@@ -551,7 +425,6 @@ describe("flash-trade-integration", () => {
           0, // protocolMode
           [flashProtocol], // protocols
           10000,
-          3,
           0, // developer fee rate
           100, // maxSlippageBps
           new BN(1800),
@@ -620,174 +493,6 @@ describe("flash-trade-integration", () => {
           (s: string) =>
             s.includes("UnauthorizedAgent") || s.includes("ConstraintRaw"),
           `Expected an unauthorized-agent error but got: ${msg}`,
-        );
-      }
-    });
-  });
-
-  // =========================================================================
-  // Position opening disabled
-  // =========================================================================
-  describe("position opening disabled", () => {
-    const disabledVaultId = new BN(302);
-    let disabledVault: PublicKey;
-    let disabledPolicy: PublicKey;
-    let disabledTracker: PublicKey;
-    let disabledVaultUsdcAta: PublicKey;
-
-    before(async () => {
-      [disabledVault] = PublicKey.findProgramAddressSync(
-        [
-          Buffer.from("vault"),
-          owner.publicKey.toBuffer(),
-          disabledVaultId.toArrayLike(Buffer, "le", 8),
-        ],
-        program.programId,
-      );
-      [disabledPolicy] = PublicKey.findProgramAddressSync(
-        [Buffer.from("policy"), disabledVault.toBuffer()],
-        program.programId,
-      );
-      [disabledTracker] = PublicKey.findProgramAddressSync(
-        [Buffer.from("tracker"), disabledVault.toBuffer()],
-        program.programId,
-      );
-
-      const [disabledOverlay] = PublicKey.findProgramAddressSync(
-        [
-          Buffer.from("agent_spend"),
-          disabledVault.toBuffer(),
-          Buffer.from([0]),
-        ],
-        program.programId,
-      );
-
-      await program.methods
-        .initializeVault(
-          disabledVaultId,
-          new BN(1_000_000_000),
-          new BN(500_000_000),
-          0, // protocolMode
-          [flashProtocol], // protocols
-          10000,
-          3,
-          0, // developer fee rate
-          100, // maxSlippageBps
-          new BN(1800), // timelockDuration (mandatory minimum: 30 min)
-          [],
-          [], // protocolCaps
-        )
-        .accountsPartial({
-          owner: owner.publicKey,
-          vault: disabledVault,
-          policy: disabledPolicy,
-          tracker: disabledTracker,
-          agentSpendOverlay: disabledOverlay,
-          feeDestination: feeDestination.publicKey,
-          systemProgram: SystemProgram.programId,
-        })
-        .rpc();
-
-      await program.methods
-        .registerAgent(agent.publicKey, FULL_CAPABILITY, new BN(0))
-        .accountsPartial({
-          owner: owner.publicKey,
-          vault: disabledVault,
-          agentSpendOverlay: disabledOverlay,
-        })
-        .rpc();
-
-      // Deposit funds so vault token account exists (needed for delegation)
-      disabledVaultUsdcAta = getAssociatedTokenAddressSync(
-        usdcMint,
-        disabledVault,
-        true,
-      );
-      await program.methods
-        .depositFunds(new BN(100_000_000)) // 100 USDC
-        .accountsPartial({
-          owner: owner.publicKey,
-          vault: disabledVault,
-          mint: usdcMint,
-          ownerTokenAccount: ownerUsdcAta,
-          vaultTokenAccount: disabledVaultUsdcAta,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-          systemProgram: SystemProgram.programId,
-        })
-        .rpc();
-
-      // Disable position opening via queue/apply (updatePolicy deleted)
-      const [disabledPendingPolicy] = PublicKey.findProgramAddressSync(
-        [Buffer.from("pending_policy"), disabledVault.toBuffer()],
-        program.programId,
-      );
-
-      await program.methods
-        .queuePolicyUpdate(
-          null, // dailySpendingCapUsd
-          null, // maxTransactionSizeUsd
-          null, // protocolMode
-          null, // protocols
-          null, // maxLeverageBps
-          false, // canOpenPositions = false
-          null, // maxConcurrentPositions
-          null, // developerFeeRate
-          null, // maxSlippageBps
-          null, // timelockDuration
-          null, // allowedDestinations
-          null, // sessionExpirySlots
-          null, // hasProtocolCaps
-          null, // protocolCaps
-        )
-        .accountsPartial({
-          owner: owner.publicKey,
-          vault: disabledVault,
-          policy: disabledPolicy,
-          pendingPolicy: disabledPendingPolicy,
-          systemProgram: SystemProgram.programId,
-        })
-        .rpc();
-
-      // Advance time past the 1800s timelock
-      advanceTime(svm, 1801);
-
-      await program.methods
-        .applyPendingPolicy()
-        .accounts({
-          owner: owner.publicKey,
-          vault: disabledVault,
-          policy: disabledPolicy,
-          pendingPolicy: disabledPendingPolicy,
-        } as any)
-        .rpc();
-
-      const policyState =
-        await program.account.policyConfig.fetch(disabledPolicy);
-      if (policyState.canOpenPositions !== false) {
-        throw new Error(
-          `Expected canOpenPositions=false but got ${policyState.canOpenPositions}`,
-        );
-      }
-    });
-
-    it.skip("rejects open position when can_open_positions is false -- blocked: position counter updates require InstructionConstraints with matching discriminator for SystemProgram.transfer mock (see #209)", async () => {
-      try {
-        await sendComposedAction(
-          disabledVault,
-          disabledPolicy,
-          disabledTracker,
-          agent,
-          usdcMint,
-          new BN(50_000_000),
-          flashProtocol,
-          disabledVaultUsdcAta,
-        );
-        expect.fail("Should have thrown");
-      } catch (err: any) {
-        if (err.message === "Should have thrown") throw err;
-        expect(err.message || err.toString()).to.include(
-          "PositionOpeningDisallowed",
         );
       }
     });
@@ -890,7 +595,6 @@ describe("flash-trade-integration", () => {
           0, // protocol mode: all allowed
           [],
           10000, // 100x leverage
-          3,
           0, // no dev fee
           100, // maxSlippageBps
           new BN(1800), // timelockDuration (mandatory minimum: 30 min)
@@ -949,7 +653,7 @@ describe("flash-trade-integration", () => {
         })
         .rpc();
 
-      // Open position for 100 USDC (uses 100/200 cap, open_positions = 1)
+      // Open position for 100 USDC (uses 100/200 cap)
       await sendComposedAction(
         capVault,
         capPolicy,
@@ -972,37 +676,6 @@ describe("flash-trade-integration", () => {
         mockProtocol,
         capVaultUsdcAta,
       );
-
-      // Mock DeFi doesn't increment positions. Sync manually.
-      syncPositionCount(capVault, 1);
-      const vault = await program.account.agentVault.fetch(capVault);
-      expect(vault.openPositions).to.equal(1);
-    });
-
-    it.skip("ClosePosition at daily cap succeeds — non-spending bypasses cap -- blocked: position counter updates require InstructionConstraints with matching discriminator for SystemProgram.transfer mock (see #209)", async () => {
-      // At 200/200 cap. Close with amount=0 (non-spending, risk-reducing).
-      // Risk-reducing actions bypass cap entirely — no spending tracked.
-      // P1 #14: Verify vault balance unchanged (cap-exempt = no balance movement)
-      const balBefore = getTokenBalance(svm, capVaultUsdcAta);
-
-      const sig = await sendComposedAction(
-        capVault,
-        capPolicy,
-        capTracker,
-        capAgentKp,
-        usdcMint,
-        new BN(0),
-        mockProtocol,
-        capVaultUsdcAta,
-      );
-      expect(sig.signature).to.be.a("string");
-
-      // P1 #14: Non-spending action should NOT move vault balance (except protocol fee on amount=0 = 0)
-      const balAfter = getTokenBalance(svm, capVaultUsdcAta);
-      expect(balAfter).to.equal(balBefore);
-
-      const vault = await program.account.agentVault.fetch(capVault);
-      expect(vault.openPositions).to.equal(0);
     });
 
     it("DecreasePosition at daily cap succeeds — non-spending bypasses cap", async () => {
@@ -1032,11 +705,6 @@ describe("flash-trade-integration", () => {
         mockProtocol,
         capVaultUsdcAta,
       );
-
-      // Mock DeFi doesn't increment positions. Sync manually.
-      syncPositionCount(capVault, 1);
-      const vaultBefore = await program.account.agentVault.fetch(capVault);
-      expect(vaultBefore.openPositions).to.equal(1);
 
       // Now decrease with amount=0 (non-spending, risk-reducing) — bypasses cap
       const sig = await sendComposedAction(
@@ -1069,11 +737,6 @@ describe("flash-trade-integration", () => {
         flashProtocol,
       );
       expect(sig.signature).to.be.a("string");
-
-      // Position counter should NOT change
-      const vault = await program.account.agentVault.fetch(vaultPda);
-      // open_positions unchanged (addCollateral has PositionEffect::None)
-      expect(vault.openPositions).to.equal(vault.openPositions);
     });
   });
 
@@ -1134,10 +797,7 @@ describe("flash-trade-integration", () => {
   });
 
   describe("limit orders", () => {
-    it("should authorize placeLimitOrder with spending + position increment", async () => {
-      const vaultBefore = await program.account.agentVault.fetch(vaultPda);
-      const positionsBefore = vaultBefore.openPositions;
-
+    it("should authorize placeLimitOrder with spending", async () => {
       const sig = await sendComposedAction(
         vaultPda,
         policyPda,
@@ -1148,32 +808,6 @@ describe("flash-trade-integration", () => {
         flashProtocol,
       );
       expect(sig.signature).to.be.a("string");
-
-      // Mock DeFi → actual_spend=0 → position not auto-incremented. Sync manually.
-      syncPositionCount(vaultPda, positionsBefore + 1);
-
-      const vaultAfter = await program.account.agentVault.fetch(vaultPda);
-      expect(vaultAfter.openPositions).to.equal(positionsBefore + 1);
-    });
-
-    it.skip("should authorize cancelLimitOrder with position decrement -- blocked: position counter updates require InstructionConstraints with matching discriminator for SystemProgram.transfer mock (see #209)", async () => {
-      const vaultBefore = await program.account.agentVault.fetch(vaultPda);
-      const positionsBefore = vaultBefore.openPositions;
-      expect(positionsBefore).to.be.greaterThan(0);
-
-      const sig = await sendComposedAction(
-        vaultPda,
-        policyPda,
-        trackerPda,
-        agent,
-        usdcMint,
-        new BN(0), // non-spending
-        flashProtocol,
-      );
-      expect(sig.signature).to.be.a("string");
-
-      const vaultAfter = await program.account.agentVault.fetch(vaultPda);
-      expect(vaultAfter.openPositions).to.equal(positionsBefore - 1);
     });
 
     it("should authorize editLimitOrder with amount=0", async () => {
@@ -1191,10 +825,7 @@ describe("flash-trade-integration", () => {
   });
 
   describe("swap-and-open / close-and-swap", () => {
-    it("should authorize swapAndOpenPosition with spending + position increment", async () => {
-      const vaultBefore = await program.account.agentVault.fetch(vaultPda);
-      const positionsBefore = vaultBefore.openPositions;
-
+    it("should authorize swapAndOpenPosition with spending", async () => {
       const sig = await sendComposedAction(
         vaultPda,
         policyPda,
@@ -1205,182 +836,6 @@ describe("flash-trade-integration", () => {
         flashProtocol,
       );
       expect(sig.signature).to.be.a("string");
-
-      // Mock DeFi → actual_spend=0 → position not auto-incremented. Sync manually.
-      syncPositionCount(vaultPda, positionsBefore + 1);
-
-      const vaultAfter = await program.account.agentVault.fetch(vaultPda);
-      expect(vaultAfter.openPositions).to.equal(positionsBefore + 1);
-    });
-
-    it.skip("should authorize closeAndSwapPosition with non-spending + position decrement -- blocked: position counter updates require InstructionConstraints with matching discriminator for SystemProgram.transfer mock (see #209)", async () => {
-      const vaultBefore = await program.account.agentVault.fetch(vaultPda);
-      const positionsBefore = vaultBefore.openPositions;
-      expect(positionsBefore).to.be.greaterThan(0);
-
-      const sig = await sendComposedAction(
-        vaultPda,
-        policyPda,
-        trackerPda,
-        agent,
-        usdcMint,
-        new BN(0), // non-spending (risk-reducing close)
-        flashProtocol,
-      );
-      expect(sig.signature).to.be.a("string");
-
-      const vaultAfter = await program.account.agentVault.fetch(vaultPda);
-      expect(vaultAfter.openPositions).to.equal(positionsBefore - 1);
-    });
-  });
-
-  describe("sync_positions (owner-only)", () => {
-    it("should allow owner to sync positions", async () => {
-      // Set up: ensure vault has some open positions
-      await sendComposedAction(
-        vaultPda,
-        policyPda,
-        trackerPda,
-        agent,
-        usdcMint,
-        new BN(50_000_000),
-        flashProtocol,
-      );
-
-      // Mock DeFi doesn't increment positions. Sync to simulate real open.
-      syncPositionCount(vaultPda, 1);
-      const vaultBefore = await program.account.agentVault.fetch(vaultPda);
-      expect(vaultBefore.openPositions).to.be.greaterThan(0);
-
-      // Owner syncs positions to 0
-      await program.methods
-        .syncPositions(0)
-        .accounts({
-          owner: owner.publicKey,
-          vault: vaultPda,
-        } as any)
-        .rpc();
-
-      const vaultAfter = await program.account.agentVault.fetch(vaultPda);
-      expect(vaultAfter.openPositions).to.equal(0);
-    });
-
-    it("should reject sync_positions by agent", async () => {
-      try {
-        await program.methods
-          .syncPositions(5)
-          .accounts({
-            owner: agent.publicKey,
-            vault: vaultPda,
-          } as any)
-          .signers([agent])
-          .rpc();
-        expect.fail("Should have thrown");
-      } catch (e: any) {
-        expect(e.toString()).to.include("UnauthorizedOwner");
-      }
-    });
-  });
-
-  describe("position limit enforcement (new action types)", () => {
-    it.skip("should reject placeLimitOrder at max positions -- blocked: position counter updates require InstructionConstraints with matching discriminator for SystemProgram.transfer mock (see #209)", async () => {
-      // Sync to max positions - 1 to set up the test
-      const policy = await program.account.policyConfig.fetch(policyPda);
-      const maxPos = policy.maxConcurrentPositions;
-
-      // Sync to max positions (already at capacity)
-      await program.methods
-        .syncPositions(maxPos)
-        .accounts({
-          owner: owner.publicKey,
-          vault: vaultPda,
-        } as any)
-        .rpc();
-
-      try {
-        await sendComposedAction(
-          vaultPda,
-          policyPda,
-          trackerPda,
-          agent,
-          usdcMint,
-          new BN(50_000_000),
-          flashProtocol,
-        );
-        expect.fail("Should have thrown");
-      } catch (e: any) {
-        expect(e.toString()).to.include("TooManyPositions");
-      }
-
-      // Reset for subsequent tests
-      await program.methods
-        .syncPositions(0)
-        .accounts({
-          owner: owner.publicKey,
-          vault: vaultPda,
-        } as any)
-        .rpc();
-    });
-
-    it.skip("should reject cancelLimitOrder with 0 positions -- blocked: position counter updates require InstructionConstraints with matching discriminator for SystemProgram.transfer mock (see #209)", async () => {
-      // Ensure 0 positions
-      await program.methods
-        .syncPositions(0)
-        .accounts({
-          owner: owner.publicKey,
-          vault: vaultPda,
-        } as any)
-        .rpc();
-
-      try {
-        await sendComposedAction(
-          vaultPda,
-          policyPda,
-          trackerPda,
-          agent,
-          usdcMint,
-          new BN(0),
-          flashProtocol,
-        );
-        expect.fail("Should have thrown");
-      } catch (e: any) {
-        expect(e.toString()).to.include("NoPositionsToClose");
-      }
-    });
-
-    it.skip("should reject swapAndOpenPosition at max positions -- blocked: position counter updates require InstructionConstraints with matching discriminator for SystemProgram.transfer mock (see #209)", async () => {
-      const policy = await program.account.policyConfig.fetch(policyPda);
-      await program.methods
-        .syncPositions(policy.maxConcurrentPositions)
-        .accounts({
-          owner: owner.publicKey,
-          vault: vaultPda,
-        } as any)
-        .rpc();
-
-      try {
-        await sendComposedAction(
-          vaultPda,
-          policyPda,
-          trackerPda,
-          agent,
-          usdcMint,
-          new BN(50_000_000),
-          flashProtocol,
-        );
-        expect.fail("Should have thrown");
-      } catch (e: any) {
-        expect(e.toString()).to.include("TooManyPositions");
-      }
-
-      // Reset
-      await program.methods
-        .syncPositions(0)
-        .accounts({
-          owner: owner.publicKey,
-          vault: vaultPda,
-        } as any)
-        .rpc();
     });
   });
 
