@@ -119,238 +119,222 @@ const ANCHOR_ERROR_MAP: Record<number, { name: string; suggestion: string }> = {
   },
   6007: { name: "LeverageTooHigh", suggestion: "Reduce leverage." },
   6008: {
-    name: "TooManyPositions",
-    suggestion: "Close an existing position first.",
-  },
-  6009: {
-    name: "PositionOpeningDisallowed",
-    suggestion: "Policy disallows opening new positions.",
-  },
-  6010: {
     name: "SessionNotAuthorized",
     suggestion: "Call validate_and_authorize first.",
   },
-  6011: {
+  6009: {
     name: "InvalidSession",
     suggestion: "Session does not belong to this vault.",
   },
-  6012: {
-    name: "OpenPositionsExist",
-    suggestion: "Close all positions before closing vault.",
-  },
-  6013: {
+  6010: {
     name: "TooManyAllowedProtocols",
     suggestion: "Reduce allowed protocols (max 10).",
   },
-  6014: {
+  6011: {
     name: "AgentAlreadyRegistered",
     suggestion: "Agent is already registered for this vault.",
   },
-  6015: { name: "NoAgentRegistered", suggestion: "Register an agent first." },
-  6016: {
+  6012: { name: "NoAgentRegistered", suggestion: "Register an agent first." },
+  6013: {
     name: "VaultNotFrozen",
     suggestion: "Vault must be frozen to reactivate.",
   },
-  6017: { name: "VaultAlreadyClosed", suggestion: "Vault is already closed." },
-  6018: {
+  6014: { name: "VaultAlreadyClosed", suggestion: "Vault is already closed." },
+  6015: {
     name: "InsufficientBalance",
     suggestion: "Insufficient vault balance for withdrawal.",
   },
-  6019: {
+  6016: {
     name: "DeveloperFeeTooHigh",
     suggestion: "Developer fee rate exceeds max (5 BPS).",
   },
-  6020: {
+  6017: {
     name: "InvalidFeeDestination",
     suggestion: "Fee destination account invalid.",
   },
-  6021: {
+  6018: {
     name: "InvalidProtocolTreasury",
     suggestion: "Protocol treasury does not match expected address.",
   },
-  6022: {
+  6019: {
     name: "InvalidAgentKey",
     suggestion: "Agent cannot be the zero address.",
   },
-  6023: {
+  6020: {
     name: "AgentIsOwner",
     suggestion: "Agent cannot be the vault owner.",
   },
-  6024: {
+  6021: {
     name: "Overflow",
     suggestion: "Arithmetic overflow — amount too large.",
   },
-  6025: {
+  6022: {
     name: "InvalidTokenAccount",
     suggestion: "Token account wrong owner or mint.",
   },
-  6026: {
+  6023: {
     name: "TimelockNotExpired",
     suggestion: "Wait for timelock period to expire.",
   },
-  6027: {
+  6024: {
     name: "TimelockActive",
     suggestion: "Use queue_policy_update instead.",
   },
-  6028: {
+  6025: {
     name: "NoTimelockConfigured",
     suggestion: "No timelock configured on this vault.",
   },
-  6029: {
+  6026: {
     name: "DestinationNotAllowed",
     suggestion: "Destination not in allowed list.",
   },
-  6030: {
+  6027: {
     name: "TooManyDestinations",
     suggestion: "Too many destinations (max 10).",
   },
-  6031: {
+  6028: {
     name: "InvalidProtocolMode",
     suggestion: "Protocol mode must be 0, 1, or 2.",
   },
-  6032: {
+  6029: {
     name: "InvalidNonSpendingAmount",
     suggestion: "Non-spending action must have amount = 0.",
   },
-  6033: {
-    name: "NoPositionsToClose",
-    suggestion: "No open positions to close or cancel.",
-  },
-  6034: {
+  6030: {
     name: "CpiCallNotAllowed",
     suggestion: "Must be top-level instruction (no CPI).",
   },
-  6035: {
+  6031: {
     name: "MissingFinalizeInstruction",
     suggestion: "Include finalize_session in transaction.",
   },
-  6036: {
+  6032: {
     name: "NonTrackedSwapMustReturnStablecoin",
     suggestion: "Non-stablecoin swap must return stablecoin.",
   },
-  6037: {
+  6033: {
     name: "SwapSlippageExceeded",
     suggestion: "Slippage exceeds policy max_slippage_bps.",
   },
-  6038: {
+  6034: {
     name: "InvalidJupiterInstruction",
     suggestion: "Cannot parse Jupiter swap instruction.",
   },
-  6039: {
+  6035: {
     name: "UnauthorizedTokenTransfer",
     suggestion:
       "Top-level SPL Token transfer not allowed between validate and finalize.",
   },
-  6040: {
+  6036: {
     name: "SlippageBpsTooHigh",
     suggestion: "Slippage BPS exceeds maximum (5000 = 50%).",
   },
-  6041: {
+  6037: {
     name: "ProtocolMismatch",
     suggestion:
       "DeFi instruction program doesn't match declared target_protocol.",
   },
-  6042: {
+  6038: {
     name: "TooManyDeFiInstructions",
     suggestion: "Non-stablecoin swap allows exactly one DeFi instruction.",
   },
-  6043: {
+  6039: {
     name: "MaxAgentsReached",
     suggestion: "Remove an agent first (max 10).",
   },
-  6044: {
+  6040: {
     name: "InsufficientPermissions",
     suggestion: "Agent lacks permission for this action type.",
   },
-  6045: {
+  6041: {
     name: "InvalidPermissions",
     suggestion: "Permission bitmask contains invalid bits.",
   },
-  6046: {
+  6042: {
     name: "EscrowNotActive",
     suggestion: "Escrow is not in Active status.",
   },
-  6047: { name: "EscrowExpired", suggestion: "Escrow has expired." },
-  6048: {
+  6043: { name: "EscrowExpired", suggestion: "Escrow has expired." },
+  6044: {
     name: "EscrowNotExpired",
     suggestion: "Escrow has not expired yet — wait for expiry.",
   },
-  6049: { name: "InvalidEscrowVault", suggestion: "Invalid escrow vault." },
-  6050: {
+  6045: { name: "InvalidEscrowVault", suggestion: "Invalid escrow vault." },
+  6046: {
     name: "EscrowConditionsNotMet",
     suggestion: "Escrow conditions not met.",
   },
-  6051: {
+  6047: {
     name: "EscrowDurationExceeded",
     suggestion: "Escrow duration exceeds max (30 days).",
   },
-  6052: {
+  6048: {
     name: "InvalidConstraintConfig",
     suggestion: "Constraint configuration exceeds bounds.",
   },
-  6053: {
+  6049: {
     name: "ConstraintViolated",
     suggestion: "Instruction violates a constraint.",
   },
-  6054: {
+  6050: {
     name: "InvalidConstraintsPda",
     suggestion: "Wrong constraints PDA owner or vault.",
   },
-  6055: {
+  6051: {
     name: "InvalidPendingConstraintsPda",
     suggestion: "Wrong pending constraints PDA.",
   },
-  6056: {
+  6052: {
     name: "AgentSpendLimitExceeded",
     suggestion: "Agent rolling 24h spend exceeds per-agent limit.",
   },
-  6057: {
+  6053: {
     name: "OverlaySlotExhausted",
     suggestion:
       "Per-agent overlay full — cannot register agent with spending limit.",
   },
-  6058: {
+  6054: {
     name: "AgentSlotNotFound",
     suggestion: "Agent has spending limit but no overlay tracking slot.",
   },
-  6059: {
+  6055: {
     name: "UnauthorizedTokenApproval",
     suggestion: "Unauthorized SPL Token Approve between validate and finalize.",
   },
-  6060: {
+  6056: {
     name: "InvalidSessionExpiry",
     suggestion: "Session expiry slots out of range (10-450).",
   },
-  6061: {
+  6057: {
     name: "UnconstrainedProgramBlocked",
     suggestion: "Program has no constraint entry and strict mode is enabled.",
   },
-  6062: {
+  6058: {
     name: "ProtocolCapExceeded",
     suggestion: "Per-protocol rolling 24h spending cap exceeded.",
   },
-  6063: {
+  6059: {
     name: "ProtocolCapsMismatch",
     suggestion: "protocol_caps length must match protocols length.",
   },
-  6064: {
+  6060: {
     name: "ActiveEscrowsExist",
     suggestion: "Close active escrow deposits before closing vault.",
   },
-  6065: {
+  6061: {
     name: "ConstraintsNotClosed",
     suggestion: "Close instruction constraints before closing vault.",
   },
-  6066: {
+  6062: {
     name: "PendingPolicyExists",
     suggestion: "Apply or cancel pending policy update before closing vault.",
   },
-  6067: {
+  6063: {
     name: "AgentPaused",
     suggestion: "Agent is paused — unpause before executing actions.",
   },
-  6068: { name: "AgentAlreadyPaused", suggestion: "Agent is already paused." },
-  6069: { name: "AgentNotPaused", suggestion: "Agent is not paused." },
+  6064: { name: "AgentAlreadyPaused", suggestion: "Agent is already paused." },
+  6065: { name: "AgentNotPaused", suggestion: "Agent is not paused." },
 };
 
 // ─── Core Simulation ─────────────────────────────────────────────────────────
