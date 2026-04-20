@@ -26,20 +26,11 @@ pub enum SigilError {
     #[msg("Leverage exceeds maximum allowed")]
     LeverageTooHigh,
 
-    #[msg("Maximum concurrent open positions reached")]
-    TooManyPositions,
-
-    #[msg("Cannot open new positions (policy disallows)")]
-    PositionOpeningDisallowed,
-
     #[msg("Session not authorized")]
     SessionNotAuthorized,
 
     #[msg("Invalid session: does not belong to this vault")]
     InvalidSession,
-
-    #[msg("Vault has open positions, cannot close")]
-    OpenPositionsExist,
 
     #[msg("Policy configuration invalid: too many allowed protocols")]
     TooManyAllowedProtocols,
@@ -102,9 +93,6 @@ pub enum SigilError {
     // --- Transaction validation errors ---
     #[msg("Non-spending action must have amount = 0")]
     InvalidNonSpendingAmount,
-
-    #[msg("No open positions to close or cancel")]
-    NoPositionsToClose,
 
     #[msg("Instruction must be top-level (CPI calls not allowed)")]
     CpiCallNotAllowed,

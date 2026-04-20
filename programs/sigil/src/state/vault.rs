@@ -49,15 +49,6 @@ pub struct AgentVault {
     /// Total volume processed in token base units
     pub total_volume: u64,
 
-    /// Number of currently open positions (for perps tracking).
-    /// DESIGN DECISION: Counter-only. Does not store per-position details
-    /// (entry price, size, liquidation price). Individual position data is
-    /// protocol-specific (Flash Trade vs Drift vs Jupiter perps have different
-    /// layouts). The SDK reads position details via RPC. sync_positions
-    /// corrects counter drift from auto-liquidation.
-    /// Found by: Persona test (Perps Developer "Jake")
-    pub open_positions: u8,
-
     /// Number of active (unsettled/unrefunded) escrow deposits from this vault
     pub active_escrow_count: u8,
 
@@ -103,7 +94,7 @@ impl AgentVault {
     /// agents vec prefix (4) + agents data (49 * 10) +
     /// fee_destination (32) + status (1) + bump (1) +
     /// created_at (8) + total_transactions (8) + total_volume (8) +
-    /// open_positions (1) + active_escrow_count (1) + total_fees_collected (8) +
+    /// active_escrow_count (1) + total_fees_collected (8) +
     /// total_deposited_usd (8) + total_withdrawn_usd (8) + total_failed_transactions (8) +
     /// active_sessions (1)
     pub const SIZE: usize = 8
@@ -118,13 +109,12 @@ impl AgentVault {
         + 8
         + 8
         + 1
-        + 1
         + 8
         + 8
         + 8
         + 8
         + 1;
-    // = 635
+    // = 634 (was 635; open_positions u8 removed)
 
     pub fn is_active(&self) -> bool {
         self.status == VaultStatus::Active

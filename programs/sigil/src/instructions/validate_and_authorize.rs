@@ -280,10 +280,9 @@ pub fn handler(
     enum ScanAction {
         FoundFinalize,
         Infrastructure,
-        /// Passed shared checks. Contains the index of the matched constraint entry (if any).
-        PassedSharedChecks {
-            matched_entry_idx: Option<usize>,
-        },
+        /// Passed shared checks (constraint entry match, if any, is used for strict-mode
+        /// side-effect only — generic_constraints returns Err if strict mode is violated).
+        PassedSharedChecks,
     }
 
     fn scan_instruction_shared(
@@ -332,8 +331,11 @@ pub fn handler(
             SigilError::ProtocolNotAllowed
         );
 
-        // Generic instruction constraints (OR across entries, zero-copy)
-        let matched_entry_idx = if let Some(constraints) = loaded_constraints {
+        // Generic instruction constraints (OR across entries, zero-copy).
+        // Return value (matched entry index) was only used by position_effect extraction,
+        // which was deleted with the counter system. Strict-mode check remains as the
+        // required side-effect.
+        if let Some(constraints) = loaded_constraints {
             let matched = generic_constraints::verify_against_entries_zc(
                 constraints,
                 &ix.program_id,
@@ -343,12 +345,9 @@ pub fn handler(
             if matched.is_none() && constraints.strict_mode != 0 {
                 return Err(error!(SigilError::UnconstrainedProgramBlocked));
             }
-            matched
-        } else {
-            None
-        };
+        }
 
-        Ok(ScanAction::PassedSharedChecks { matched_entry_idx })
+        Ok(ScanAction::PassedSharedChecks)
     }
 
     // 6. Instruction scan — validates all instructions between validate and finalize.
@@ -377,7 +376,7 @@ pub fn handler(
                     scan_idx = scan_idx.saturating_add(1);
                     continue;
                 }
-                ScanAction::PassedSharedChecks { .. } => {
+                ScanAction::PassedSharedChecks => {
                     // === SPENDING-ONLY CHECKS (must remain inline) ===
 
                     // Recognized DeFi: protocol mismatch + defi_ix_count
@@ -436,7 +435,7 @@ pub fn handler(
                     idx = idx.saturating_add(1);
                     continue;
                 }
-                ScanAction::PassedSharedChecks { .. } => {
+                ScanAction::PassedSharedChecks => {
                     // Non-spending DeFi instruction passed shared checks; no further work.
                 }
             }
