@@ -97,7 +97,6 @@ async function createVault(opts: {
       0, // protocolMode: allow all
       [],
       new BN(0) as any,
-      5, // max positions
       opts.devFeeRate ?? 0,
       500, // maxSlippageBps
       new BN(1800),
@@ -825,7 +824,6 @@ describe("🔥 SIGIL DEVNET STRESS TEST — Real Tokens, Real Limits", function 
           0,
           [],
           new BN(0) as any,
-          5,
           0,
           500,
           new BN(0),

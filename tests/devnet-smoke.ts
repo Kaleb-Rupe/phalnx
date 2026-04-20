@@ -146,7 +146,6 @@ describe("devnet-smoke-test", () => {
         1, // protocolMode: allowlist
         [jupiterProgramId],
         new BN(0) as any, // max_leverage_bps
-        3, // max_concurrent_positions
         0, // developer_fee_rate: 0 bps
         500, // maxSlippageBps: 5%
         new BN(1800), // timelockDuration (mandatory minimum: 30 min)
@@ -221,8 +220,6 @@ describe("devnet-smoke-test", () => {
         null, // keep protocolMode
         null, // keep protocols
         new BN(5000) as any, // set leverage to 50x
-        null, // keep can_open_positions
-        null, // keep max_concurrent_positions
         null, // keep developer_fee_rate
         null, // keep maxSlippageBps
         null, // keep timelockDuration

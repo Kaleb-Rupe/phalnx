@@ -284,7 +284,6 @@ describe("escrow-integration", () => {
         0, // protocol_mode = ALL
         [], // protocols (empty for mode ALL)
         10000, // max_leverage_bps
-        5, // max_concurrent_positions
         100, // developer_fee_rate (0.01%)
         500, // max_slippage_bps
         new BN(1800), // timelock_duration (0 = no timelock)
@@ -357,7 +356,6 @@ describe("escrow-integration", () => {
         0, // protocol_mode = ALL
         [], // protocols (empty for mode ALL)
         10000, // max_leverage_bps
-        5, // max_concurrent_positions
         100, // developer_fee_rate (0.01%)
         500, // max_slippage_bps
         new BN(1800), // timelock_duration (0 = no timelock)

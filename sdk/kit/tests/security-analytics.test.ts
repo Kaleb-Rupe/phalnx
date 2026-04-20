@@ -26,7 +26,6 @@ function mockSecurityState(overrides: any = {}) {
       ],
       status: VaultStatus.Active,
       feeDestination: "fee_dest_real" as Address,
-      openPositions: 0,
       activeEscrowCount: 0,
       ...(overrides.vault ?? {}),
     },
@@ -90,8 +89,7 @@ describe("getSecurityPosture", () => {
         ],
         status: VaultStatus.Active,
         feeDestination: "fee" as Address,
-        openPositions: 0,
-        activeEscrowCount: 0,
+          activeEscrowCount: 0,
       },
     });
     const posture = getSecurityPosture(state);
@@ -123,8 +121,7 @@ describe("getSecurityPosture", () => {
         ],
         status: VaultStatus.Active,
         feeDestination: "11111111111111111111111111111111" as Address,
-        openPositions: 0,
-        activeEscrowCount: 0,
+          activeEscrowCount: 0,
       },
     });
     const posture = getSecurityPosture(state);
@@ -182,8 +179,7 @@ describe("evaluateAlertConditions", () => {
         agents: [],
         status: VaultStatus.Frozen,
         feeDestination: "f" as Address,
-        openPositions: 0,
-        activeEscrowCount: 0,
+          activeEscrowCount: 0,
       },
     });
     const alerts = evaluateAlertConditions(state, "vault1" as Address);
@@ -196,8 +192,7 @@ describe("evaluateAlertConditions", () => {
         agents: [],
         status: VaultStatus.Active,
         feeDestination: "f" as Address,
-        openPositions: 0,
-        activeEscrowCount: 0,
+          activeEscrowCount: 0,
       },
     });
     const alerts = evaluateAlertConditions(state, "vault1" as Address);
@@ -217,8 +212,7 @@ describe("evaluateAlertConditions", () => {
         ],
         status: VaultStatus.Frozen,
         feeDestination: "f" as Address,
-        openPositions: 0,
-        activeEscrowCount: 0,
+          activeEscrowCount: 0,
       },
       globalBudget: {
         spent24h: 960_000_000n,
@@ -268,8 +262,7 @@ describe("evaluateAlertConditions", () => {
         ],
         status: VaultStatus.Active,
         feeDestination: "f" as Address,
-        openPositions: 0,
-        activeEscrowCount: 0,
+          activeEscrowCount: 0,
       },
     });
     const alerts = evaluateAlertConditions(state, "vault1" as Address);
@@ -400,8 +393,7 @@ describe("Step 8 security checks", () => {
         ],
         status: 0,
         feeDestination: "fee" as Address,
-        openPositions: 0,
-        activeEscrowCount: 0,
+          activeEscrowCount: 0,
       },
     });
     const posture = getSecurityPosture(state);
@@ -425,8 +417,7 @@ describe("Step 8 security checks", () => {
         ],
         status: 0,
         feeDestination: "fee" as Address,
-        openPositions: 0,
-        activeEscrowCount: 0,
+          activeEscrowCount: 0,
       },
     });
     const posture = getSecurityPosture(state);

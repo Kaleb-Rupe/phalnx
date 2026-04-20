@@ -232,8 +232,6 @@ export interface CreateFullVaultOpts {
   protocolMode?: number;
   allowedProtocols?: PublicKey[];
   maxLevBps?: number;
-  maxPositions?: number;
-  canOpenPositions?: boolean;
   devFeeRate?: number;
   maxSlippageBps?: number;
   timelockDuration?: BN;
@@ -271,7 +269,6 @@ export async function createFullVault(
     protocolMode = 1, // allowlist
     allowedProtocols = [Keypair.generate().publicKey],
     maxLevBps = 0,
-    maxPositions = 3,
     devFeeRate = 0,
     maxSlippageBps = 500,
     timelockDuration = new BN(1800), // mandatory minimum: 30 min
@@ -331,7 +328,7 @@ export async function createFullVault(
     feeDestinationAta = feeAtaAccount.address;
   }
 
-  // Initialize vault (11 args — includes maxSlippageBps)
+  // Initialize vault
   const [overlayPda] = PublicKey.findProgramAddressSync(
     [Buffer.from("agent_spend"), pdas.vaultPda.toBuffer(), Buffer.from([0])],
     program.programId,
@@ -344,7 +341,6 @@ export async function createFullVault(
       protocolMode,
       allowedProtocols,
       new BN(maxLevBps) as any,
-      maxPositions,
       devFeeRate,
       maxSlippageBps,
       timelockDuration,

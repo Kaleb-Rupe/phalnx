@@ -140,8 +140,8 @@ describe("events", () => {
   });
 
   describe("getEventNames", () => {
-    it("returns 38 names", () => {
-      expect(getEventNames()).to.have.length(38);
+    it("returns 37 names", () => {
+      expect(getEventNames()).to.have.length(37);
     });
 
     it("includes known names", () => {
@@ -228,7 +228,6 @@ describe("events", () => {
         actualSpendUsd: 500_000_000n,
         balanceAfterUsd: 1_200_000_000n,
         isSpending: true,
-        positionEffect: 0,
       });
 
       const event: SigilEvent = {
@@ -360,7 +359,6 @@ describe("events", () => {
         actualSpendUsd: 0n,
         balanceAfterUsd: 0n,
         isSpending: true,
-        positionEffect: 0,
       });
       const validBytes = new Uint8Array([
         ...discBytes,
@@ -405,7 +403,7 @@ describe("events", () => {
       }
       // The runtime sync assertion in events.ts would have thrown at import time
       // if any entry was missing, so reaching this point proves completeness
-      expect(discriminatorNames.size).to.equal(38);
+      expect(discriminatorNames.size).to.equal(37);
     });
   });
 });

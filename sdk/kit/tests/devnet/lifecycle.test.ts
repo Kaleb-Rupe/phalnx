@@ -130,8 +130,6 @@ describe("Kit SDK Devnet — Vault Lifecycle", function () {
       protocolMode: null,
       protocols: null,
       maxLeverageBps: null,
-      canOpenPositions: null,
-      maxConcurrentPositions: null,
       developerFeeRate: null,
       maxSlippageBps: null,
       timelockDuration: null,

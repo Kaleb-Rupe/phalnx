@@ -222,7 +222,6 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
           1, // protocolMode: allowlist
           [FLASH_TRADE_DEVNET, FLASH_COMPOSABILITY_DEVNET], // allowed protocols
           new BN(50000) as any, // max_leverage_bps (500x for testing)
-          5, // max_concurrent_positions
           0, // developer_fee_rate
           5000, // maxSlippageBps (50%)
           new BN(1800), // timelock
@@ -595,7 +594,6 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
           1,
           [FLASH_TRADE_DEVNET, FLASH_COMPOSABILITY_DEVNET],
           new BN(50000) as any,
-          5,
           0,
           5000,
           new BN(0),
@@ -812,7 +810,6 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
           1,
           [FLASH_TRADE_DEVNET], // Only Flash Trade main program
           new BN(0) as any,
-          5,
           0,
           5000,
           new BN(0),
@@ -952,7 +949,6 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
           1,
           [FLASH_TRADE_DEVNET], // Only Flash Trade allowed
           new BN(0) as any,
-          5,
           0,
           5000,
           new BN(0),

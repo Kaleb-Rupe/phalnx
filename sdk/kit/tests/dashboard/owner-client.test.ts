@@ -89,13 +89,12 @@ describe("OwnerClient", () => {
       }
     });
 
-    it("has 23 mutation methods", () => {
+    it("has 22 mutation methods", () => {
       const client = new OwnerClient(validConfig());
       const mutations = [
         "freezeVault",
         "resumeVault",
         "closeVault",
-        "syncPositions",
         "deposit",
         "withdraw",
         "addAgent",

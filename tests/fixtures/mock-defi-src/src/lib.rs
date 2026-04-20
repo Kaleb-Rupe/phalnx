@@ -2,11 +2,9 @@
 //!
 //! Exists solely to give Sigil's LiteSVM integration tests a real Anchor
 //! program (with stable 8-byte discriminators) to route instruction-sysvar
-//! matching against. Two no-op instructions — `open_position` and
-//! `close_position` — let tests configure `InstructionConstraints` with
-//! `position_effect = Increment` (open) and `position_effect = Decrement`
-//! (close) respectively, so `vault.open_positions` auto-updates in
-//! `finalize_session` without needing `sync_positions` as a workaround.
+//! matching against. Two no-op instructions (`open_position`,
+//! `close_position`) provide stable discriminators for
+//! `InstructionConstraints` matching tests.
 //!
 //! Not deployed to devnet or mainnet. The fixed `declare_id!` is
 //! deterministic across builds so test constraint entries can hard-code the

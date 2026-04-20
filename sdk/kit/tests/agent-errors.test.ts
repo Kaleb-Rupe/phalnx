@@ -17,15 +17,15 @@ describe("agent-errors", () => {
   // ─── On-chain error map completeness ──────────────────────────────────────
 
   describe("ON_CHAIN_ERROR_MAP completeness", () => {
-    it("maps all 85 error codes (6000-6084)", () => {
+    it("maps all 81 error codes (6000-6080)", () => {
       const codes = getAllOnChainErrorCodes();
-      expect(codes).to.have.lengthOf(85);
+      expect(codes).to.have.lengthOf(81);
       expect(codes[0]).to.equal(6000);
-      expect(codes[codes.length - 1]).to.equal(6084);
+      expect(codes[codes.length - 1]).to.equal(6080);
     });
 
-    it("every code from 6000-6084 is present with no gaps", () => {
-      for (let code = 6000; code <= 6084; code++) {
+    it("every code from 6000-6080 is present with no gaps", () => {
+      for (let code = 6000; code <= 6080; code++) {
         const entry = ON_CHAIN_ERROR_MAP[code];
         expect(entry, `Missing error code ${code}`).to.exist;
         expect(entry.name).to.be.a("string").and.not.be.empty;
@@ -84,10 +84,10 @@ describe("agent-errors", () => {
       expect(err!.context.error_name).to.equal("VaultNotActive");
     });
 
-    it("parses numeric code 6069 (UnauthorizedPostFinalizeInstruction)", () => {
-      const err = parseOnChainErrorCode(6069);
+    it("parses numeric code 6065 (UnauthorizedPostFinalizeInstruction)", () => {
+      const err = parseOnChainErrorCode(6065);
       expect(err).to.not.be.null;
-      expect(err!.code).to.equal("6069");
+      expect(err!.code).to.equal("6065");
       expect(err!.category).to.equal("POLICY_VIOLATION");
       expect(err!.context.error_name).to.equal(
         "UnauthorizedPostFinalizeInstruction",
@@ -101,10 +101,10 @@ describe("agent-errors", () => {
       expect(err!.context.error_name).to.equal("VaultNotActive");
     });
 
-    it("parses hex string 0x17AD (= 6061 ProtocolCapExceeded)", () => {
-      const err = parseOnChainErrorCode("0x17AD");
+    it("parses hex string 0x17A9 (= 6057 ProtocolCapExceeded)", () => {
+      const err = parseOnChainErrorCode("0x17A9");
       expect(err).to.not.be.null;
-      expect(err!.code).to.equal("6061");
+      expect(err!.code).to.equal("6057");
       expect(err!.context.error_name).to.equal("ProtocolCapExceeded");
     });
 
@@ -131,14 +131,14 @@ describe("agent-errors", () => {
       expect(dailyCap!.retryable).to.be.true;
       expect(dailyCap!.retry_after_ms).to.equal(3_600_000);
 
-      const timelockNotExpired = parseOnChainErrorCode(6026);
+      const timelockNotExpired = parseOnChainErrorCode(6023);
       expect(timelockNotExpired).to.not.be.null;
       expect(timelockNotExpired!.retryable).to.be.true;
       expect(timelockNotExpired!.retry_after_ms).to.equal(60_000);
     });
 
     it("non-retryable errors do not include retry_after_ms", () => {
-      const overflow = parseOnChainErrorCode(6024);
+      const overflow = parseOnChainErrorCode(6021);
       expect(overflow).to.not.be.null;
       expect(overflow!.retryable).to.be.false;
       expect(overflow!.retry_after_ms).to.be.undefined;
@@ -190,9 +190,9 @@ describe("agent-errors", () => {
     });
 
     it("converts object with code property in on-chain range", () => {
-      const err = { code: 6024, message: "Overflow" };
+      const err = { code: 6021, message: "Overflow" };
       const agent = toAgentError(err);
-      expect(agent.code).to.equal("6024");
+      expect(agent.code).to.equal("6021");
       expect(agent.category).to.equal("FATAL");
       expect(agent.context.error_name).to.equal("Overflow");
     });
@@ -390,7 +390,7 @@ describe("agent-errors", () => {
 
   // ─── toSigilAgentError ────────────────────────────────────────────────────
 
-  // ─── toSigilAgentError — tests all 11 SDK_ERROR_PATTERNS ──────────────────
+  // ─── toSigilAgentError — tests all 10 SDK_ERROR_PATTERNS ──────────────────
 
   describe("toSigilAgentError", () => {
     // Pattern 1: Vault not active
@@ -450,15 +450,7 @@ describe("agent-errors", () => {
       expect(result.recovery_actions[0].action).to.equal("add_alts");
     });
 
-    // Pattern 7: Position limit (retryable)
-    it("pattern 7: position-limit → POLICY_VIOLATION, retryable with close_position", () => {
-      const result = toSigilAgentError(
-        new Error("Position limit reached: 5/5"),
-      );
-      expect(result.category).to.equal("POLICY_VIOLATION");
-      expect(result.retryable).to.equal(true);
-      expect(result.recovery_actions[0].action).to.equal("close_position");
-    });
+    // Pattern 7 (position-limit) removed — position counter system deleted.
 
     // Pattern 8: Spending action amount
     it("pattern 8: spending-amount-zero → INPUT_VALIDATION", () => {
@@ -498,18 +490,20 @@ describe("agent-errors", () => {
       expect(result.recovery_actions[0].action).to.equal("use_escrow_api");
     });
 
-    // SigilSdkError contract
+    // SigilSdkError contract — exercised via the spending-amount pattern
     it("SigilSdkError has all 7 AgentError fields with correct values", () => {
       const result = toSigilAgentError(
-        new Error("Position limit reached: 5/5"),
+        new Error('Spending action "swap" requires amount > 0'),
       );
       expect(result).to.be.instanceOf(Error);
       expect(result).to.be.instanceOf(SigilSdkError);
       expect(result.name).to.equal("SigilSdkError");
-      expect(result.code).to.equal("SDK_POLICY_VIOLATION");
-      expect(result.message).to.equal("Position limit reached: 5/5");
-      expect(result.category).to.equal("POLICY_VIOLATION");
-      expect(result.retryable).to.equal(true);
+      expect(result.code).to.equal("SDK_INPUT_VALIDATION");
+      expect(result.message).to.equal(
+        'Spending action "swap" requires amount > 0',
+      );
+      expect(result.category).to.equal("INPUT_VALIDATION");
+      expect(result.retryable).to.equal(false);
       expect(result.recovery_actions)
         .to.be.an("array")
         .with.length.greaterThan(0);

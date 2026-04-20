@@ -200,7 +200,6 @@ describe("presetToCreateVaultFields()", () => {
     expect(fields.protocolMode).to.equal(PROTOCOL_MODE_ALLOWLIST);
     expect(fields.protocols).to.deep.equal([JUPITER_PROGRAM_ADDRESS]);
     expect(fields.maxLeverageBps).to.equal(0);
-    expect(fields.maxConcurrentPositions).to.equal(0);
   });
 
   it("returns a copy of protocols array (not a reference)", () => {

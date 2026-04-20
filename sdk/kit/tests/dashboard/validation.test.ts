@@ -13,7 +13,6 @@ import type { Address, TransactionSigner } from "@solana/kit";
 import {
   deposit,
   withdraw,
-  syncPositions,
   addAgent,
   queuePolicyUpdate,
   pauseAgent,
@@ -97,71 +96,6 @@ describe("Validation: requirePositiveAmount", () => {
       expect.fail("Should have thrown");
     } catch (err: any) {
       expect(err.message).to.include("must be positive");
-    }
-  });
-});
-
-// ─── requireU8 ──────────────────────────────────────────────────────────────
-
-describe("Validation: requireU8 (syncPositions)", () => {
-  it("rejects 256 (u8 overflow)", async () => {
-    try {
-      await syncPositions(rpc, VAULT, owner, "devnet", 256);
-      expect.fail("Should have thrown");
-    } catch (err: any) {
-      expect(err.message).to.include("0-255");
-    }
-  });
-
-  it("rejects -1", async () => {
-    try {
-      await syncPositions(rpc, VAULT, owner, "devnet", -1);
-      expect.fail("Should have thrown");
-    } catch (err: any) {
-      expect(err.message).to.include("0-255");
-    }
-  });
-
-  it("rejects NaN", async () => {
-    try {
-      await syncPositions(rpc, VAULT, owner, "devnet", NaN);
-      expect.fail("Should have thrown");
-    } catch (err: any) {
-      expect(err.message).to.include("0-255");
-    }
-  });
-
-  it("rejects Infinity", async () => {
-    try {
-      await syncPositions(rpc, VAULT, owner, "devnet", Infinity);
-      expect.fail("Should have thrown");
-    } catch (err: any) {
-      expect(err.message).to.include("0-255");
-    }
-  });
-
-  it("rejects float (1.5)", async () => {
-    try {
-      await syncPositions(rpc, VAULT, owner, "devnet", 1.5);
-      expect.fail("Should have thrown");
-    } catch (err: any) {
-      expect(err.message).to.include("0-255");
-    }
-  });
-
-  it("accepts 0 (minimum valid)", async () => {
-    try {
-      await syncPositions(rpc, VAULT, owner, "devnet", 0);
-    } catch (err: any) {
-      expect(err.message).to.not.include("0-255");
-    }
-  });
-
-  it("accepts 255 (maximum valid)", async () => {
-    try {
-      await syncPositions(rpc, VAULT, owner, "devnet", 255);
-    } catch (err: any) {
-      expect(err.message).to.not.include("0-255");
     }
   });
 });
@@ -367,49 +301,6 @@ describe("Validation: queuePolicyUpdate", () => {
     }
   });
 
-  it("rejects maxConcurrentPositions > 255 (u8 overflow)", async () => {
-    try {
-      await queuePolicyUpdate(rpc, VAULT, owner, "devnet", {
-        maxConcurrentPositions: 256,
-      });
-      expect.fail("Should have thrown");
-    } catch (err: any) {
-      expect(err.message).to.include("0-255");
-    }
-  });
-
-  it("rejects maxConcurrentPositions < 0 (u8 range)", async () => {
-    try {
-      await queuePolicyUpdate(rpc, VAULT, owner, "devnet", {
-        maxConcurrentPositions: -1,
-      });
-      expect.fail("Should have thrown");
-    } catch (err: any) {
-      expect(err.message).to.include("0-255");
-    }
-  });
-
-  it("rejects maxConcurrentPositions that is non-integer (u8 integrity)", async () => {
-    try {
-      await queuePolicyUpdate(rpc, VAULT, owner, "devnet", {
-        maxConcurrentPositions: 1.5,
-      });
-      expect.fail("Should have thrown");
-    } catch (err: any) {
-      expect(err.message).to.include("integer");
-    }
-  });
-
-  it("accepts maxConcurrentPositions === 255 (u8 max)", async () => {
-    try {
-      await queuePolicyUpdate(rpc, VAULT, owner, "devnet", {
-        maxConcurrentPositions: 255,
-      });
-      expect.fail("Should have thrown at RPC, not validation");
-    } catch (err: any) {
-      expect(err.message).to.not.include("0-255");
-    }
-  });
 });
 
 // ─── Constraint entries validation ──────────────────────────────────────────

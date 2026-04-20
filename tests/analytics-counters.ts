@@ -137,7 +137,6 @@ describe("analytics-counters", () => {
         0, // protocol mode: all
         [], // protocols
         new BN(0) as any, // max_leverage_bps (u16)
-        10, // max_concurrent_positions
         0, // developer_fee_rate
         5000, // maxSlippageBps (50%)
         new BN(1800), // timelockDuration (mandatory minimum: 30 min)
