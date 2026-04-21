@@ -7,6 +7,10 @@
  * - Deletion of direct-mutation instructions (updatePolicy, etc.)
  * - Version bump on apply_pending_policy and apply_constraints_update
  */
+// Strict error helpers — LOCAL SHIM (see tests/helpers/strict-errors.ts header
+// for why LiteSVM tests can't import from @usesigil/kit/testing directly).
+// Council decision: MEMORY/WORK/20260420-201121_test-assertion-precision-council/
+import { expectSigilError } from "./helpers/strict-errors";
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { Sigil } from "../target/types/sigil";
@@ -32,7 +36,6 @@ import {
   mintToHelper,
   advanceTime,
   sendVersionedTx,
-  expectSigilErrorLegacy,
   createConstraintsAccount,
   queueConstraintsUpdateMultiIx,
   TestEnv,
@@ -317,7 +320,7 @@ describe("TOCTOU Security Fix", () => {
       sendVersionedTx(svm, [validateIx, finalizeIx], agent);
       expect.fail("Should have thrown");
     } catch (err: any) {
-      expectSigilErrorLegacy(err.toString(), "PolicyVersionMismatch");
+      expectSigilError(err, { name: "PolicyVersionMismatch", code: 6068 });
     }
   });
 
@@ -355,7 +358,7 @@ describe("TOCTOU Security Fix", () => {
         .rpc();
       expect.fail("Should have thrown");
     } catch (err: any) {
-      expectSigilErrorLegacy(err.toString(), "TimelockTooShort");
+      expectSigilError(err, { name: "TimelockTooShort", code: 6067 });
     }
   });
 
@@ -390,7 +393,7 @@ describe("TOCTOU Security Fix", () => {
         .rpc();
       expect.fail("Should have thrown");
     } catch (err: any) {
-      expectSigilErrorLegacy(err.toString(), "TimelockTooShort");
+      expectSigilError(err, { name: "TimelockTooShort", code: 6067 });
     }
   });
 
@@ -425,7 +428,7 @@ describe("TOCTOU Security Fix", () => {
         .rpc();
       expect.fail("Should have thrown");
     } catch (err: any) {
-      expectSigilErrorLegacy(err.toString(), "TimelockTooShort");
+      expectSigilError(err, { name: "TimelockTooShort", code: 6067 });
     }
   });
 

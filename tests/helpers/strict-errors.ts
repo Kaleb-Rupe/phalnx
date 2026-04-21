@@ -1,121 +1,216 @@
 /**
- * Strict error-assertion helpers for Sigil tests.
+ * Strict error-assertion helpers for LiteSVM/on-chain tests.
  *
- * Replaces the legacy `expectError(err, ...keywords)` and variadic
- * `expectSigilError(errString, ...names)` helpers.
+ * This file is an INLINED COPY of `sdk/kit/src/testing/errors/` —
+ * deliberately duplicated (NOT re-exported) because:
+ *
+ *   1. `@usesigil/kit` has `"type": "module"` in its package.json,
+ *      making every subpath ESM-only.
+ *   2. LiteSVM tests run via `ts-mocha -p ./tsconfig.json` with
+ *      `module: "commonjs"` — compiles tests to CJS.
+ *   3. CJS `require("@usesigil/kit/testing")` would hit the ESM
+ *      boundary, either failing with ERR_REQUIRE_ESM or (on Node 24)
+ *      cascading into ESM-mode resolution where extensionless imports
+ *      like `import { Sigil } from "../target/types/sigil"` break
+ *      with ERR_MODULE_NOT_FOUND.
+ *   4. A relative re-export shim doesn't help — the SDK source uses
+ *      `.js` internal imports (ESM convention) which ts-mocha's CJS
+ *      resolver can't map back to `.ts`.
+ *
+ * So we inline. If this file drifts from the SDK source, the CI
+ * drift-check (`scripts/verify-error-drift.ts`) catches any SIGIL_ERRORS
+ * table divergence; the helper LOGIC drift is caught by the SDK meta-
+ * tests at `sdk/kit/tests/errors/expect-assertion.test.ts`.
  *
  * Council decision: 7-0 STRICT (2026-04-20). See:
  *   MEMORY/WORK/20260420-201121_test-assertion-precision-council/COUNCIL_DECISION.md
  *
- * Design tenets:
- *   1. Coupled {name, code} pairs via IDL-generated types.
- *      A typo on the name fails tsc.
- *   2. No substring matching on error names. Match against structured
- *      Anchor error log formats.
- *   3. CPI-origin guard (MIKE G-1): assertions never pass for Anchor errors
- *      thrown by CPI callees (e.g., Jupiter) that happen to share a code
- *      number with a Sigil error. Extract origin from the Solana runtime's
- *      `Program <id> invoke|failed` log lines (NOT the Anchor error line —
- *      those do not carry program id per anchor-lang-0.32.1/src/error.rs).
- *   4. @solana/kit log-fetch awareness (MIKE G-2): SendTransactionError
- *      from kit simulation has `logs === undefined` until `.getLogs()` is
- *      awaited. Diagnostic output calls this out explicitly.
- *   5. Diagnostic failure messages. When an assertion fails, the message
- *      says exactly what was expected, what was received, and where to
- *      look for the logs.
+ * Any behavioral change to assertions should be made HERE AND in
+ * `sdk/kit/src/testing/errors/expect.ts` simultaneously.
  */
 
-import {
-  ANCHOR_FRAMEWORK_ERRORS,
-  SIGIL_ERRORS,
-  type AnchorFrameworkCodeFor,
-  type AnchorFrameworkName,
-  type SigilErrorCodeFor,
-  type SigilErrorName,
-} from "./names.generated.js";
+// ────────────────────────────────────────────────────────────────
+// Sigil error names → codes (mirror of sdk/kit/src/testing/errors/names.generated.ts)
+// ────────────────────────────────────────────────────────────────
+
+export const SIGIL_ERRORS = {
+  VaultNotActive: 6000,
+  UnauthorizedAgent: 6001,
+  UnauthorizedOwner: 6002,
+  UnsupportedToken: 6003,
+  ProtocolNotAllowed: 6004,
+  TransactionTooLarge: 6005,
+  SpendingCapExceeded: 6006,
+  LeverageTooHigh: 6007,
+  SessionNotAuthorized: 6008,
+  InvalidSession: 6009,
+  TooManyAllowedProtocols: 6010,
+  AgentAlreadyRegistered: 6011,
+  NoAgentRegistered: 6012,
+  VaultNotFrozen: 6013,
+  VaultAlreadyClosed: 6014,
+  InsufficientBalance: 6015,
+  DeveloperFeeTooHigh: 6016,
+  InvalidFeeDestination: 6017,
+  InvalidProtocolTreasury: 6018,
+  InvalidAgentKey: 6019,
+  AgentIsOwner: 6020,
+  Overflow: 6021,
+  InvalidTokenAccount: 6022,
+  TimelockNotExpired: 6023,
+  NoTimelockConfigured: 6024,
+  DestinationNotAllowed: 6025,
+  TooManyDestinations: 6026,
+  InvalidProtocolMode: 6027,
+  InvalidNonSpendingAmount: 6028,
+  CpiCallNotAllowed: 6029,
+  MissingFinalizeInstruction: 6030,
+  NonTrackedSwapMustReturnStablecoin: 6031,
+  SwapSlippageExceeded: 6032,
+  InvalidJupiterInstruction: 6033,
+  UnauthorizedTokenTransfer: 6034,
+  SlippageBpsTooHigh: 6035,
+  ProtocolMismatch: 6036,
+  TooManyDeFiInstructions: 6037,
+  MaxAgentsReached: 6038,
+  InsufficientPermissions: 6039,
+  InvalidPermissions: 6040,
+  EscrowNotActive: 6041,
+  EscrowExpired: 6042,
+  EscrowNotExpired: 6043,
+  InvalidEscrowVault: 6044,
+  EscrowConditionsNotMet: 6045,
+  EscrowDurationExceeded: 6046,
+  InvalidConstraintConfig: 6047,
+  ConstraintViolated: 6048,
+  InvalidConstraintsPda: 6049,
+  InvalidPendingConstraintsPda: 6050,
+  AgentSpendLimitExceeded: 6051,
+  OverlaySlotExhausted: 6052,
+  AgentSlotNotFound: 6053,
+  UnauthorizedTokenApproval: 6054,
+  InvalidSessionExpiry: 6055,
+  UnconstrainedProgramBlocked: 6056,
+  ProtocolCapExceeded: 6057,
+  ProtocolCapsMismatch: 6058,
+  ActiveEscrowsExist: 6059,
+  ConstraintsNotClosed: 6060,
+  PendingPolicyExists: 6061,
+  AgentPaused: 6062,
+  AgentAlreadyPaused: 6063,
+  AgentNotPaused: 6064,
+  UnauthorizedPostFinalizeInstruction: 6065,
+  UnexpectedBalanceDecrease: 6066,
+  TimelockTooShort: 6067,
+  PolicyVersionMismatch: 6068,
+  PendingAgentPermsExists: 6069,
+  PendingCloseConstraintsExists: 6070,
+  ActiveSessionsExist: 6071,
+  PostAssertionFailed: 6072,
+  InvalidPostAssertionIndex: 6073,
+  UnauthorizedPreValidateInstruction: 6074,
+  SnapshotNotCaptured: 6075,
+  ConstraintIndexOutOfBounds: 6076,
+  InvalidConstraintOperator: 6077,
+  ConstraintsVaultMismatch: 6078,
+  ConstraintEntryCountExceeded: 6079,
+  BlockedSplOpcode: 6080,
+} as const;
+
+export type SigilErrorName = keyof typeof SIGIL_ERRORS;
+export type SigilErrorCode = (typeof SIGIL_ERRORS)[SigilErrorName];
+export type SigilErrorCodeFor<N extends SigilErrorName> =
+  (typeof SIGIL_ERRORS)[N];
+
+export const ANCHOR_FRAMEWORK_ERRORS = {
+  InstructionMissing: 100,
+  InstructionFallbackNotFound: 101,
+  InstructionDidNotDeserialize: 102,
+  InstructionDidNotSerialize: 103,
+  IdlInstructionStub: 1000,
+  IdlInstructionInvalidProgram: 1001,
+  IdlAccountNotEmpty: 1002,
+  ConstraintMut: 2000,
+  ConstraintHasOne: 2001,
+  ConstraintSigner: 2002,
+  ConstraintRaw: 2003,
+  ConstraintOwner: 2004,
+  ConstraintRentExempt: 2005,
+  ConstraintSeeds: 2006,
+  ConstraintExecutable: 2007,
+  ConstraintState: 2008,
+  ConstraintAssociated: 2009,
+  ConstraintAssociatedInit: 2010,
+  ConstraintClose: 2011,
+  ConstraintAddress: 2012,
+  ConstraintZero: 2013,
+  ConstraintTokenMint: 2014,
+  ConstraintTokenOwner: 2015,
+  ConstraintMintMintAuthority: 2016,
+  ConstraintMintFreezeAuthority: 2017,
+  ConstraintMintDecimals: 2018,
+  ConstraintSpace: 2019,
+  ConstraintAccountIsNone: 2020,
+  ConstraintTokenTokenProgram: 2021,
+  ConstraintMintTokenProgram: 2022,
+  ConstraintAssociatedTokenTokenProgram: 2023,
+  AccountDiscriminatorAlreadySet: 3000,
+  AccountDiscriminatorNotFound: 3001,
+  AccountDiscriminatorMismatch: 3002,
+  AccountDidNotDeserialize: 3003,
+  AccountDidNotSerialize: 3004,
+  AccountNotEnoughKeys: 3005,
+  AccountNotMutable: 3006,
+  AccountOwnedByWrongProgram: 3007,
+  InvalidProgramId: 3008,
+  InvalidProgramExecutable: 3009,
+  AccountNotSigner: 3010,
+  AccountNotSystemOwned: 3011,
+  AccountNotInitialized: 3012,
+  AccountNotProgramData: 3013,
+  AccountNotAssociatedTokenAccount: 3014,
+  AccountSysvarMismatch: 3015,
+  AccountReallocExceedsLimit: 3016,
+  AccountDuplicateReallocs: 3017,
+  StateInvalidAddress: 4000,
+  DeclaredProgramIdMismatch: 4100,
+  TryingToInitPayerAsProgramAccount: 4101,
+  InvalidNumericConversion: 4102,
+  Deprecated: 5000,
+} as const;
+
+export type AnchorFrameworkName = keyof typeof ANCHOR_FRAMEWORK_ERRORS;
+export type AnchorFrameworkCodeFor<N extends AnchorFrameworkName> =
+  (typeof ANCHOR_FRAMEWORK_ERRORS)[N];
 
 // ────────────────────────────────────────────────────────────────
-// Sigil program ID — canonical mainnet/devnet/localnet address.
-// Used for CPI-origin guard (G-1).
+// Program ID + parser (mirror of sdk/kit/src/testing/errors/expect.ts)
 // ────────────────────────────────────────────────────────────────
 
 export const SIGIL_PROGRAM_ID_BASE58 =
   "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL";
 
-// ────────────────────────────────────────────────────────────────
-// ParsedAnchorError — structured extraction from raw error / logs.
-// ────────────────────────────────────────────────────────────────
-
 interface ParsedAnchorError {
-  /** Numeric error code (6000+ for Sigil, 2000-5999 for Anchor framework). */
   code: number;
-  /** Error name as declared in Rust `#[error_code]` or Anchor framework. */
   name: string;
-  /**
-   * Base58 program ID that emitted the error, extracted from the
-   * Solana runtime's `Program <id> failed` log line (NOT the Anchor
-   * error log, which does not carry program id per Anchor 0.32.1).
-   * `undefined` means we could not resolve the origin — treat as
-   * unverified.
-   */
   originProgramId?: string;
-  /** Raw log lines (best-effort; may be empty). */
   logs: string[];
 }
 
-/**
- * Real Anchor 0.32.1 emits EXACTLY three log shapes for an AnchorError.
- * Source: https://github.com/coral-xyz/anchor/blob/v0.32.1/lang/src/error.rs#L499-L541
- *
- *   1. ErrorOrigin::None        → "AnchorError occurred. Error Code: X. Error Number: N. Error Message: Y."
- *   2. ErrorOrigin::Source      → "AnchorError thrown in <file>:<line>. Error Code: X. Error Number: N. Error Message: Y."
- *   3. ErrorOrigin::AccountName → "AnchorError caused by account: <name>. Error Code: X. Error Number: N. Error Message: Y."
- *
- * The Solana runtime wraps the error in `Program <base58> failed: ...`
- * so we extract origin from those lines separately.
- */
-// ReDoS-hardened patterns. Every unbounded repetition is constrained to
-// either (a) a character class that excludes whitespace (so no backtracking
-// over log-line boundaries) OR (b) a {min,max} length bound (so worst-case
-// is linear). The filename portion of format #2 is bounded at 256 chars —
-// longer than any realistic Rust source path — to kill polynomial
-// backtracking on adversarial `err.logs` input (CodeQL js/polynomial-redos).
+// ReDoS-hardened patterns — bounded quantifiers prevent polynomial backtracking.
 const ANCHOR_ERROR_RES: Array<RegExp> = [
-  // Source variant — produced by `error!()` / `require!()` (most common).
-  // `[^:\s]{1,256}` = non-whitespace, non-colon filename, max 256 chars.
   /AnchorError thrown in [^:\s]{1,256}:\d{1,10}\.\s{0,8}Error Code:\s{0,8}(\w{1,64})\.\s{0,8}Error Number:\s{0,8}(\d{1,10})\./,
-  // AccountName variant — produced by `#[account(..., constraint = ... @ E)]`.
   /AnchorError caused by account:\s{0,8}\w{1,64}\.\s{0,8}Error Code:\s{0,8}(\w{1,64})\.\s{0,8}Error Number:\s{0,8}(\d{1,10})\./,
-  // None variant.
   /AnchorError occurred\.\s{0,8}Error Code:\s{0,8}(\w{1,64})\.\s{0,8}Error Number:\s{0,8}(\d{1,10})\./,
 ];
-
-/** `Program <base58> invoke [<depth>]` — Solana runtime CPI log. */
 const PROGRAM_INVOKE_RE =
   /Program ([1-9A-HJ-NP-Za-km-z]{32,44}) invoke \[(\d+)\]/;
-
-/**
- * `Program <base58> failed: ...` — Solana runtime failure log. The LAST
- * occurrence before the Anchor error identifies the program that
- * actually emitted the error.
- */
 const PROGRAM_FAILED_RE = /Program ([1-9A-HJ-NP-Za-km-z]{32,44}) failed:/;
-
-/** Raw hex custom program error (fallback when logs are missing). */
 const CUSTOM_PROGRAM_ERROR_RE = /custom program error:\s*0x([0-9a-f]+)/i;
 
-/**
- * Extract structured {code, name, originProgramId} from a thrown error
- * or error-string. Returns null if the error is not parseable as an
- * Anchor/Sigil error.
- *
- * Safe to call with any thrown value — string, Error, SendTransactionError,
- * AnchorError, unknown. Never throws.
- */
 export function parseAnchorError(err: unknown): ParsedAnchorError | null {
   if (err === null || err === undefined) return null;
 
-  // Stage 1: collect all strings we can probe.
   const logs: string[] = [];
   const textSources: string[] = [];
 
@@ -144,17 +239,12 @@ export function parseAnchorError(err: unknown): ParsedAnchorError | null {
 
   const haystack = [...logs, ...textSources].join("\n");
 
-  // Stage 2: identify the origin program from Solana runtime logs.
-  // Walk lines in order; remember the last `Program X failed:` (that is
-  // the program that actually threw). Fall back to the deepest-invoked
-  // program if no explicit failure line is present.
+  // Identify the origin program from Solana runtime logs.
   let originProgramId: string | undefined;
   let deepestInvoke: { programId: string; depth: number } | undefined;
   for (const line of logs) {
     const failed = line.match(PROGRAM_FAILED_RE);
-    if (failed) {
-      originProgramId = failed[1];
-    }
+    if (failed) originProgramId = failed[1];
     const invoked = line.match(PROGRAM_INVOKE_RE);
     if (invoked) {
       const depth = Number(invoked[2]);
@@ -167,7 +257,7 @@ export function parseAnchorError(err: unknown): ParsedAnchorError | null {
     originProgramId = deepestInvoke.programId;
   }
 
-  // Stage 3: match any of the three real Anchor error formats.
+  // Match any of the three real Anchor error formats.
   for (const re of ANCHOR_ERROR_RES) {
     const match = haystack.match(re);
     if (match) {
@@ -180,7 +270,7 @@ export function parseAnchorError(err: unknown): ParsedAnchorError | null {
     }
   }
 
-  // Stage 4: fall back to raw custom hex code. Resolve name by code.
+  // Fall back to raw custom hex code.
   const hex = haystack.match(CUSTOM_PROGRAM_ERROR_RE);
   if (hex) {
     const code = parseInt(hex[1], 16);
@@ -197,8 +287,6 @@ export function parseAnchorError(err: unknown): ParsedAnchorError | null {
 }
 
 function nameForCode(code: number): string | undefined {
-  // Check Sigil range first (6000+) — no overlap with Anchor framework (≤5999),
-  // but we assert the range to be explicit if that ever changes.
   if (code >= 6000) {
     for (const [name, c] of Object.entries(SIGIL_ERRORS)) {
       if (c === code) return name;
@@ -211,14 +299,6 @@ function nameForCode(code: number): string | undefined {
   return undefined;
 }
 
-/**
- * Enforce that a parsed error originated from the Sigil program, not a
- * CPI callee. Throws {@link SigilAssertionError} on CPI origin mismatch.
- *
- * If the origin could not be resolved (unparseable logs, raw hex-only
- * fallback), we do NOT fail the assertion — the guard is best-effort,
- * not fail-closed — but the diagnostic notes the unverified state.
- */
 function assertSigilOrigin(
   parsed: ParsedAnchorError,
   contextExpected: string,
@@ -241,23 +321,6 @@ function assertSigilOrigin(
 // Public helpers
 // ────────────────────────────────────────────────────────────────
 
-/**
- * Assert that `err` is a Sigil program error matching the given name
- * (and optionally code).
- *
- * @param err   The thrown error — any shape. Raw Error, AnchorError,
- *              SendTransactionError, string, unknown.
- * @param expected.name  Sigil error name. Typed — typos fail tsc.
- * @param expected.code  Optional numeric code. If passed, must match
- *              the name's canonical code. Lets authors document intent;
- *              CI drift-check ensures name↔code coupling.
- *
- * Throws {@link SigilAssertionError} if:
- *   - error is unparseable as an Anchor/Sigil error
- *   - error name does not match
- *   - error code does not match (when provided)
- *   - error was thrown by a CPI callee (not Sigil program) — G-1 guard
- */
 export function expectSigilError<N extends SigilErrorName>(
   err: unknown,
   expected: { name: N; code?: SigilErrorCodeFor<N> },
@@ -275,8 +338,6 @@ export function expectSigilError<N extends SigilErrorName>(
   const claimedCode = expected.code ?? canonicalCode;
 
   if (claimedCode !== canonicalCode) {
-    // Author passed an explicit code that disagrees with the name.
-    // This is a programming error — fail loudly even before touching `err`.
     throw new SigilAssertionError(
       `helper misuse: expected.name '${expected.name}' maps to code ` +
         `${canonicalCode}, but expected.code was ${claimedCode}. ` +
@@ -284,8 +345,6 @@ export function expectSigilError<N extends SigilErrorName>(
     );
   }
 
-  // G-1 CPI-origin guard — check BEFORE name match so a Jupiter
-  // coincidentally-coded UnauthorizedAgent doesn't silently pass.
   assertSigilOrigin(parsed, `expected Sigil error '${expected.name}'`, err);
 
   if (parsed.name !== expected.name || parsed.code !== canonicalCode) {
@@ -297,14 +356,6 @@ export function expectSigilError<N extends SigilErrorName>(
   }
 }
 
-/**
- * Assert that `err` is an Anchor framework error (2000-5999) matching
- * the given name, and was thrown by the Sigil program (not a CPI callee).
- *
- * Only for tests that *intentionally* verify framework-layer behavior —
- * seed derivation, account init, has_one constraints, etc. If the test
- * is about Sigil business logic, use {@link expectSigilError} instead.
- */
 export function expectAnchorError<N extends AnchorFrameworkName>(
   err: unknown,
   expected: { name: N; code?: AnchorFrameworkCodeFor<N> },
@@ -328,9 +379,6 @@ export function expectAnchorError<N extends AnchorFrameworkName>(
     );
   }
 
-  // G-1 applies to framework errors too — Anchor codes are emitted by
-  // every Anchor program, so Jupiter's `ConstraintSeeds` would otherwise
-  // satisfy a Sigil-scoped assertion.
   assertSigilOrigin(
     parsed,
     `expected Anchor framework error '${expected.name}'`,
@@ -346,17 +394,6 @@ export function expectAnchorError<N extends AnchorFrameworkName>(
   }
 }
 
-/**
- * Assert that `err` is ONE of a tight set of Sigil errors.
- *
- * Tuple-typed at ≤3 elements (YULIA amendment). Use only for tests where
- * the error path is legitimately multi-valued AND both outcomes are
- * equally valid specifications — e.g., a race condition between two
- * independent checks where either firing first is acceptable.
- *
- * If you find yourself reaching for this helper on a single code path,
- * the underlying code has a non-determinism smell. Split the test.
- */
 export type OneOfSigilErrors =
   | readonly [SigilErrorName]
   | readonly [SigilErrorName, SigilErrorName]
@@ -387,20 +424,6 @@ export function expectOneOfSigilErrors(
   );
 }
 
-/**
- * Assert that `err` is ONE of a tight set of Anchor framework errors,
- * thrown by the Sigil program (not a CPI callee).
- *
- * Tuple-typed at ≤3 elements, symmetric with {@link expectOneOfSigilErrors}.
- * Use only for tests where Anchor's check-order can legitimately produce
- * more than one constraint failure — e.g., "non-owner cannot X" tests
- * where either `ConstraintSeeds` (PDA derivation) or `ConstraintHasOne`
- * (`has_one = owner`) fires first depending on account ordering.
- *
- * If both constraints fire deterministically on one path, prefer the
- * specific {@link expectAnchorError} — this helper is for the genuine
- * multi-valued case.
- */
 export type OneOfAnchorErrors =
   | readonly [AnchorFrameworkName]
   | readonly [AnchorFrameworkName, AnchorFrameworkName]
@@ -440,17 +463,6 @@ export function expectOneOfAnchorErrors(
   );
 }
 
-/**
- * Assert that `err` is a raw Solana/system-program error with the given
- * numeric code. For cases where no Anchor wrapper is involved — system
- * program, SPL Token, ComputeBudget, or explicit `custom program error:
- * 0x...` patterns.
- *
- * Matches against structured parse first (hex code or Anchor-parsed
- * numeric code). Only falls back to WORD-BOUNDED decimal/hex match in
- * the raw message, never to substring match — to avoid `code 1` matching
- * `instruction 1` or `index 1`.
- */
 export function expectSystemError(err: unknown, code: number): void {
   const parsed = parseAnchorError(err);
   if (parsed && parsed.code === code) return;
@@ -470,22 +482,12 @@ export function expectSystemError(err: unknown, code: number): void {
   );
 }
 
-// ────────────────────────────────────────────────────────────────
-// Helper error type + diagnostic formatter
-// ────────────────────────────────────────────────────────────────
-
-/**
- * Thrown by the `expect*Error` helpers when an assertion fails.
- * A distinct class so test runners can format it specially if desired.
- * Preserves `cause` with the original error for root-cause triage.
- */
 export class SigilAssertionError extends Error {
   constructor(message: string, cause?: unknown) {
     // @ts-ignore — ErrorOptions is ES2022+ but our target is ES2022.
     super(message, cause !== undefined ? { cause } : undefined);
     this.name = "SigilAssertionError";
     if (cause !== undefined && this.cause === undefined) {
-      // Polyfill for runtimes that ignore ErrorOptions.
       Object.defineProperty(this, "cause", {
         value: cause,
         writable: true,
