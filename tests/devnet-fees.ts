@@ -302,7 +302,7 @@ describe("devnet-fees", () => {
       });
       expect.fail("should have rejected dust amount");
     } catch (err) {
-      expectSigilError(err, { name: "Overflow", code: 6021 });
+      expectSigilError(err, { name: "Overflow", code: 6020 });
     }
     console.log("    Dust amount: ceiling fees exceed amount, rejected");
   });

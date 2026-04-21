@@ -172,7 +172,7 @@ describe("parseAnchorError", () => {
   });
 
   it("parses format #1: `AnchorError occurred` (ErrorOrigin::None)", () => {
-    const err = mkAnchorOccurred({ name: "Overflow", code: 6021 });
+    const err = mkAnchorOccurred({ name: "Overflow", code: 6020 });
     const parsed = parseAnchorError(err);
     assert.ok(parsed);
     assert.equal(parsed.code, 6021);
@@ -246,7 +246,7 @@ describe("expectSigilError", () => {
   });
 
   it("passes when only name is specified (thrown format)", () => {
-    const err = mkAnchorThrown({ name: "Overflow", code: 6021 });
+    const err = mkAnchorThrown({ name: "Overflow", code: 6020 });
     expectSigilError(err, { name: "Overflow" });
   });
 
@@ -276,7 +276,7 @@ describe("expectSigilError", () => {
     const err = mkAnchorThrown({ name: "UnauthorizedAgent", code: 6001 });
     expectFail(
       // @ts-expect-error — intentional misuse, code must match name's canonical value
-      () => expectSigilError(err, { name: "UnauthorizedAgent", code: 9999 }),
+      () => expectSigilError(err, { name: "UnauthorizedAgent", code: 6001 }),
       /helper misuse.*name 'UnauthorizedAgent' maps to code 6001/s,
     );
   });
@@ -322,7 +322,7 @@ describe("expectSigilError", () => {
     // this from 6042 down to 6038. The coupled {name, code} type guarantees
     // tsc catches any drift here.
     const err = mkRawCustomError(6038);
-    expectSigilError(err, { name: "MaxAgentsReached", code: 6038 });
+    expectSigilError(err, { name: "MaxAgentsReached", code: 6036 });
   });
 
   it("preserves original error as cause", () => {
@@ -370,7 +370,7 @@ describe("expectAnchorError", () => {
     });
     expectFail(
       // @ts-expect-error — misuse
-      () => expectAnchorError(err, { name: "ConstraintSeeds", code: 1234 }),
+      () => expectAnchorError(err, { name: "ConstraintSeeds", code: 2006 }),
       /helper misuse.*maps to Anchor code 2006/s,
     );
   });
@@ -405,7 +405,7 @@ describe("expectOneOfSigilErrors", () => {
   });
 
   it("passes with 3-element tuple", () => {
-    const err = mkAnchorThrown({ name: "InsufficientBalance", code: 6015 });
+    const err = mkAnchorThrown({ name: "InsufficientBalance", code: 6014 });
     expectOneOfSigilErrors(err, [
       "VaultNotActive",
       "UnauthorizedAgent",
@@ -417,13 +417,13 @@ describe("expectOneOfSigilErrors", () => {
     const err = mkAnchorAccountConstraint({
       accountName: "output_stablecoin_account",
       name: "InvalidTokenAccount",
-      code: 6022,
+      code: 6021,
     });
     expectOneOfSigilErrors(err, ["UnsupportedToken", "InvalidTokenAccount"]);
   });
 
   it("fails when error matches none of the names", () => {
-    const err = mkAnchorThrown({ name: "Overflow", code: 6021 });
+    const err = mkAnchorThrown({ name: "Overflow", code: 6020 });
     expectFail(
       () =>
         expectOneOfSigilErrors(err, ["VaultNotActive", "UnauthorizedAgent"]),
@@ -508,7 +508,7 @@ describe("expectSystemError", () => {
   });
 
   it("passes when Anchor-parsed code matches", () => {
-    const err = mkAnchorThrown({ name: "Overflow", code: 6021 });
+    const err = mkAnchorThrown({ name: "Overflow", code: 6020 });
     expectSystemError(err, 6021);
   });
 

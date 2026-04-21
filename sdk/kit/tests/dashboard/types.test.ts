@@ -231,7 +231,6 @@ describe("Dashboard types — toJSON serialization", () => {
       hasProtocolCaps: true,
       protocolCaps: [2_000_000_000n],
       maxSlippageBps: 50,
-      leverageLimitBps: 500,
       allowedDestinations: [],
       developerFeeRate: 200,
       sessionExpirySlots: 20n,
@@ -245,7 +244,6 @@ describe("Dashboard types — toJSON serialization", () => {
         hasProtocolCaps: true,
         protocolCaps: ["2000000000"],
         maxSlippageBps: 50,
-        leverageLimitBps: 500,
         allowedDestinations: [],
         developerFeeRate: 200,
         sessionExpirySlots: "20",
@@ -261,7 +259,6 @@ describe("Dashboard types — toJSON serialization", () => {
     expect(json.protocolCaps[0]).to.equal("2000000000");
     // Non-bigint fields stay as numbers
     expect(json.timelockSeconds).to.equal(1800);
-    expect(json.leverageLimitBps).to.equal(500);
   });
 
   it("DiscoveredVault.toJSON() converts vaultId bigint", () => {
@@ -318,7 +315,6 @@ describe("Dashboard types — type shapes (compile-time)", () => {
       hasProtocolCaps: true,
       protocolCaps: [],
       maxSlippageBps: 50,
-      leverageLimit: 500,
       allowedDestinations: [],
       developerFeeRate: 200,
       sessionExpirySlots: 20n,

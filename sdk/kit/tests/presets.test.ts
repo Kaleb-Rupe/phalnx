@@ -117,10 +117,6 @@ describe("preset values", () => {
     expect(protocols.length).to.be.greaterThan(1);
   });
 
-  it("perps-trader has non-zero leverage", () => {
-    expect(VAULT_PRESETS["perps-trader"].maxLeverageBps).to.be.greaterThan(0);
-  });
-
   it("lending-optimizer has FULL_CAPABILITY (Operator)", () => {
     expect(VAULT_PRESETS["lending-optimizer"].capability).to.equal(
       FULL_CAPABILITY,
@@ -199,7 +195,6 @@ describe("presetToCreateVaultFields()", () => {
     expect(fields.maxSlippageBps).to.equal(200);
     expect(fields.protocolMode).to.equal(PROTOCOL_MODE_ALLOWLIST);
     expect(fields.protocols).to.deep.equal([JUPITER_PROGRAM_ADDRESS]);
-    expect(fields.maxLeverageBps).to.equal(0);
   });
 
   it("returns a copy of protocols array (not a reference)", () => {

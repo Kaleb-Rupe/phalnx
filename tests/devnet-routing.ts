@@ -437,7 +437,7 @@ describe("devnet-routing", () => {
       // Non-stablecoin input path requires exactly one DeFi instruction, so validate
       // rejects with TooManyDeFiInstructions (6037) — proves non-stablecoin input
       // with stablecoin output enters the non-stablecoin code path (not rejected outright).
-      expectSigilError(err, { name: "TooManyDeFiInstructions", code: 6037 });
+      expectSigilError(err, { name: "TooManyDeFiInstructions", code: 6035 });
     }
     console.log(
       "    Non-stablecoin input with stablecoin output: rejected without DeFi instruction (6037)",

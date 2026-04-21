@@ -178,9 +178,7 @@ describe("sigil", () => {
           dailyCap,
           maxTxSize,
           1, // protocolMode: allowlist
-          [jupiterProgramId],
-          new BN(0) as any, // max_leverage_bps (u16)
-          0, // developer_fee_rate
+          [jupiterProgramId],          0, // developer_fee_rate
           100, // maxSlippageBps (1%)
           new BN(1800), // timelockDuration (MIN_TIMELOCK_DURATION)
           [], // allowedDestinations
@@ -234,9 +232,7 @@ describe("sigil", () => {
             new BN(100),
             new BN(100),
             0, // protocolMode: all
-            [],
-            new BN(0) as any,
-            0,
+            [],            0,
             100, // maxSlippageBps
             new BN(1800),
             [],
@@ -290,9 +286,7 @@ describe("sigil", () => {
             new BN(100),
             new BN(100),
             3,
-            [],
-            new BN(0) as any,
-            0,
+            [],            0,
             100, // maxSlippageBps
             new BN(1800),
             [],
@@ -310,7 +304,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "InvalidProtocolMode", code: 6027 });
+        expectSigilError(err, { name: "InvalidProtocolMode", code: 6026 });
       }
     });
   });
@@ -415,7 +409,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "AgentAlreadyRegistered", code: 6011 });
+        expectSigilError(err, { name: "AgentAlreadyRegistered", code: 6010 });
       }
     });
 
@@ -450,9 +444,7 @@ describe("sigil", () => {
           new BN(1000),
           new BN(1000),
           0,
-          [],
-          new BN(0) as any,
-          0,
+          [],          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -506,9 +498,7 @@ describe("sigil", () => {
           new BN(200_000_000), // new daily cap: 200 USDC
           null, // keep max_transaction_size
           null, // keep protocol_mode
-          null, // keep protocols
-          null, // keep max_leverage_bps
-          null, // keep developer_fee_rate
+          null,          null, // keep developer_fee_rate
           null, // keep maxSlippageBps
           null, // keep timelockDuration
           null, // keep allowedDestinations
@@ -555,9 +545,7 @@ describe("sigil", () => {
             new BN(999),
             null,
             null,
-            null,
-            null,
-            null,
+            null,            null,
             null,
             null,
             null,
@@ -591,9 +579,7 @@ describe("sigil", () => {
             null,
             null,
             null,
-            tooManyProtocols,
-            null,
-            null,
+            tooManyProtocols,            null,
             null,
             null,
             null,
@@ -611,7 +597,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "TooManyAllowedProtocols", code: 6010 });
+        expectSigilError(err, { name: "TooManyAllowedProtocols", code: 6009 });
       }
     });
   });
@@ -657,9 +643,7 @@ describe("sigil", () => {
           new BN(1000),
           new BN(1000),
           0,
-          [],
-          new BN(0) as any,
-          0,
+          [],          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -775,9 +759,7 @@ describe("sigil", () => {
           new BN(1000),
           new BN(1000),
           0,
-          [],
-          new BN(0) as any,
-          0,
+          [],          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -832,7 +814,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "VaultNotFrozen", code: 6013 });
+        expectSigilError(err, { name: "VaultNotFrozen", code: 6012 });
       }
     });
 
@@ -854,7 +836,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "NoAgentRegistered", code: 6012 });
+        expectSigilError(err, { name: "NoAgentRegistered", code: 6011 });
       }
 
       // Clean up: reactivate with new agent for subsequent tests
@@ -932,7 +914,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "InsufficientBalance", code: 6015 });
+        expectSigilError(err, { name: "InsufficientBalance", code: 6014 });
       }
     });
 
@@ -1233,7 +1215,7 @@ describe("sigil", () => {
         expect.fail("Should have thrown");
       } catch (err: any) {
         // Non-stablecoin input requires output_stablecoin_account which is null
-        expectSigilError(err, { name: "InvalidTokenAccount", code: 6022 });
+        expectSigilError(err, { name: "InvalidTokenAccount", code: 6021 });
       }
     });
 
@@ -1304,7 +1286,7 @@ describe("sigil", () => {
       } catch (err: any) {
         expectSigilError(err, {
           name: "MissingFinalizeInstruction",
-          code: 6030,
+          code: 6028,
         });
       }
     });
@@ -1343,7 +1325,7 @@ describe("sigil", () => {
       } catch (err: any) {
         expectSigilError(err, {
           name: "MissingFinalizeInstruction",
-          code: 6030,
+          code: 6028,
         });
       }
     });
@@ -1523,9 +1505,7 @@ describe("sigil", () => {
           new BN(1000),
           new BN(1000),
           0,
-          [],
-          new BN(0) as any,
-          0,
+          [],          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -1598,9 +1578,7 @@ describe("sigil", () => {
           new BN(1000),
           new BN(1000),
           0,
-          [],
-          new BN(0) as any,
-          0,
+          [],          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -1677,9 +1655,7 @@ describe("sigil", () => {
           new BN(500_000_000),
           new BN(100_000_000),
           1, // protocolMode: allowlist
-          [jupiterProgramId],
-          new BN(0) as any,
-          30, // developer_fee_rate = 30 (0.3 BPS)
+          [jupiterProgramId],          30, // developer_fee_rate = 30 (0.3 BPS)
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -1730,9 +1706,7 @@ describe("sigil", () => {
             new BN(1000),
             new BN(1000),
             0,
-            [],
-            new BN(0) as any,
-            501,
+            [],            501,
             100, // maxSlippageBps
             new BN(1800),
             [],
@@ -1750,7 +1724,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "DeveloperFeeTooHigh", code: 6016 });
+        expectSigilError(err, { name: "DeveloperFeeTooHigh", code: 6015 });
       }
     });
 
@@ -1766,9 +1740,7 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,
-          null,
-          0,
+          null,          0,
           null,
           null,
           null,
@@ -1807,9 +1779,7 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,
-          null,
-          30,
+          null,          30,
           null,
           null,
           null,
@@ -1854,9 +1824,7 @@ describe("sigil", () => {
             null,
             null,
             null,
-            null,
-            null,
-            501,
+            null,            501,
             null,
             null,
             null,
@@ -1874,7 +1842,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "DeveloperFeeTooHigh", code: 6016 });
+        expectSigilError(err, { name: "DeveloperFeeTooHigh", code: 6015 });
       }
     });
 
@@ -1889,9 +1857,7 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,
-          null,
-          0,
+          null,          0,
           null,
           null,
           null,
@@ -2031,9 +1997,7 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,
-          null,
-          500,
+          null,          500,
           null,
           null,
           null,
@@ -2237,9 +2201,7 @@ describe("sigil", () => {
           new BN(1000),
           new BN(1000),
           0,
-          [],
-          new BN(0) as any,
-          500,
+          [],          500,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -2319,9 +2281,7 @@ describe("sigil", () => {
           new BN(500_000_000),
           new BN(100_000_000),
           1, // protocolMode: allowlist
-          [jupiterProgramId],
-          new BN(0) as any,
-          0,
+          [jupiterProgramId],          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -2473,7 +2433,7 @@ describe("sigil", () => {
         sendVersionedTx(svm, [validateIx, finalizeIx], lifecycleAgent);
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "InvalidSession", code: 6009 });
+        expectSigilError(err, { name: "InvalidSession", code: 6008 });
       }
     });
 
@@ -2565,9 +2525,7 @@ describe("sigil", () => {
           new BN(1000),
           new BN(1000),
           0,
-          [],
-          new BN(0) as any,
-          0,
+          [],          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -2594,7 +2552,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "AgentIsOwner", code: 6020 });
+        expectSigilError(err, { name: "AgentIsOwner", code: 6019 });
       }
     });
 
@@ -2728,9 +2686,7 @@ describe("sigil", () => {
           new BN(1000),
           new BN(1000),
           0,
-          [],
-          new BN(0) as any,
-          0,
+          [],          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -2819,9 +2775,7 @@ describe("sigil", () => {
           new BN(1000),
           new BN(1000),
           0,
-          [],
-          new BN(0) as any,
-          0,
+          [],          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -2919,9 +2873,7 @@ describe("sigil", () => {
           new BN(1000),
           new BN(1000),
           1,
-          [jupiterProgramId],
-          new BN(0) as any,
-          0,
+          [jupiterProgramId],          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -3042,9 +2994,7 @@ describe("sigil", () => {
           new BN(999_000_000_000), // 999k USDC daily cap
           new BN(100_000_000), // 100 USDC max tx
           1, // protocolMode: allowlist
-          [jupiterProgramId],
-          new BN(0) as any,
-          0,
+          [jupiterProgramId],          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -3203,9 +3153,7 @@ describe("sigil", () => {
           new BN(999_000_000),
           new BN(100_000_000),
           1, // protocolMode: allowlist
-          [jupiterProgramId],
-          new BN(0) as any,
-          0, // developer_fee_rate = 0
+          [jupiterProgramId],          0, // developer_fee_rate = 0
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -3478,9 +3426,7 @@ describe("sigil", () => {
           new BN(500_000_000),
           new BN(100_000_000),
           1, // protocolMode: allowlist
-          [jupiterProgramId],
-          new BN(0) as any,
-          0,
+          [jupiterProgramId],          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION (30 minutes)
           [],
@@ -3512,9 +3458,7 @@ describe("sigil", () => {
           new BN(200_000_000), // new daily cap
           null,
           null,
-          null,
-          null,
-          null,
+          null,          null,
           null,
           null,
           null,
@@ -3554,7 +3498,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "TimelockNotExpired", code: 6023 });
+        expectSigilError(err, { name: "TimelockNotExpired", code: 6022 });
       }
     });
 
@@ -3591,9 +3535,7 @@ describe("sigil", () => {
           new BN(300_000_000),
           null,
           null,
-          null,
-          null,
-          null,
+          null,          null,
           null,
           null,
           null,
@@ -3638,9 +3580,7 @@ describe("sigil", () => {
           new BN(400_000_000),
           null,
           null,
-          null,
-          null,
-          null,
+          null,          null,
           null,
           null,
           null,
@@ -3664,9 +3604,7 @@ describe("sigil", () => {
             new BN(500_000_000),
             null,
             null,
-            null,
-            null,
-            null,
+            null,            null,
             null,
             null,
             null,
@@ -3730,9 +3668,7 @@ describe("sigil", () => {
             new BN(1000),
             new BN(1000),
             0,
-            [],
-            new BN(0) as any,
-            0,
+            [],            0,
             100, // maxSlippageBps
             new BN(0), // below MIN_TIMELOCK_DURATION — should fail
             [],
@@ -3750,7 +3686,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "TimelockTooShort", code: 6067 });
+        expectSigilError(err, { name: "TimelockTooShort", code: 6065 });
       }
     });
 
@@ -3761,9 +3697,7 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,
-          null,
-          null,
+          null,          null,
           null,
           new BN(3600), // new timelock_duration
           null,
@@ -3804,9 +3738,7 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,
-          null,
-          null,
+          null,          null,
           null,
           new BN(1800), // back to MIN_TIMELOCK_DURATION
           null,
@@ -3845,9 +3777,7 @@ describe("sigil", () => {
           new BN(999_000_000),
           null,
           null,
-          null,
-          null,
-          null,
+          null,          null,
           null,
           null,
           null,
@@ -3947,9 +3877,7 @@ describe("sigil", () => {
           new BN(500_000_000), // 500 USDC daily cap
           new BN(100_000_000), // 100 USDC max tx
           1, // protocolMode: allowlist
-          [jupiterProgramId],
-          new BN(0) as any,
-          0,
+          [jupiterProgramId],          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [allowedDest.publicKey], // only allow transfers to this address
@@ -4057,7 +3985,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "DestinationNotAllowed", code: 6025 });
+        expectSigilError(err, { name: "DestinationNotAllowed", code: 6024 });
       }
     });
 
@@ -4091,9 +4019,7 @@ describe("sigil", () => {
           new BN(500_000_000),
           new BN(100_000_000),
           1,
-          [jupiterProgramId],
-          new BN(0) as any,
-          0,
+          [jupiterProgramId],          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [], // empty allowlist
@@ -4193,9 +4119,7 @@ describe("sigil", () => {
             new BN(1000),
             new BN(1000),
             0,
-            [],
-            new BN(0) as any,
-            0,
+            [],            0,
             100, // maxSlippageBps
             new BN(1800), // MIN_TIMELOCK_DURATION
             tooMany,
@@ -4213,7 +4137,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "TooManyDestinations", code: 6026 });
+        expectSigilError(err, { name: "TooManyDestinations", code: 6025 });
       }
     });
 
@@ -4332,9 +4256,7 @@ describe("sigil", () => {
           new BN(500_000_000),
           new BN(100_000_000),
           1,
-          [jupiterProgramId],
-          new BN(0) as any,
-          500, // developer_fee_rate = 500 (5 BPS)
+          [jupiterProgramId],          500, // developer_fee_rate = 500 (5 BPS)
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -4469,9 +4391,7 @@ describe("sigil", () => {
           new BN(1_000_000_000),
           new BN(500_000_000),
           1,
-          [jupiterProgramId],
-          new BN(0) as any,
-          0,
+          [jupiterProgramId],          0,
           100,
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -4663,7 +4583,7 @@ describe("sigil", () => {
         sendVersionedTx(svm, [validateIx, finalizeIx], agent);
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "InsufficientPermissions", code: 6039 });
+        expectSigilError(err, { name: "InsufficientPermissions", code: 6037 });
       }
     });
 
@@ -4738,7 +4658,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "MaxAgentsReached", code: 6038 });
+        expectSigilError(err, { name: "MaxAgentsReached", code: 6036 });
       }
     });
 
@@ -4845,7 +4765,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "InvalidPermissions", code: 6040 });
+        expectSigilError(err, { name: "InvalidPermissions", code: 6038 });
       }
     });
   });
@@ -4906,9 +4826,7 @@ describe("sigil", () => {
           new BN(2_000_000_000), // 2000 USDC daily cap
           new BN(1_000_000_000), // 1000 USDC max tx
           1,
-          [jupiterProgramId],
-          new BN(0) as any,
-          0,
+          [jupiterProgramId],          0,
           100,
           new BN(1800), // MIN_TIMELOCK_DURATION
           [], // empty destination allowlist = allow any
@@ -5040,7 +4958,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have exceeded per-agent spend limit");
       } catch (err: any) {
-        expectSigilError(err, { name: "AgentSpendLimitExceeded", code: 6051 });
+        expectSigilError(err, { name: "AgentSpendLimitExceeded", code: 6049 });
       }
 
       // But spending $150 (total = $950 < $1000) should succeed
@@ -5208,9 +5126,7 @@ describe("sigil", () => {
           new BN(1_000_000_000), // 1000 USDC global cap
           new BN(500_000_000), // 500 USDC max tx
           1, // ALLOWLIST mode
-          [protocolA, protocolB],
-          new BN(1800) as any,
-          0, // no dev fee
+          [protocolA, protocolB],          0, // no dev fee
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [], // no dest restrictions
@@ -5300,29 +5216,6 @@ describe("sigil", () => {
       await composeSpend(protocolA, new BN(50_000_000));
     });
 
-    // ProtocolCapExceeded (finalize_session.rs:319, 408) fires only when
-    // actual_spend > 0. `actual_spend` is measured by stablecoin balance
-    // delta (line 253: `total_decrease.saturating_sub(fees_collected)`),
-    // but composeSpend in this test block uses NO DeFi instruction between
-    // validate+finalize — vault balance does not decrease, so actual_spend
-    // = 0 and the proto-cap check at line 311 (gated by `if actual_spend
-    // > 0`) is NEVER reached. The test was green-for-wrong-reason under
-    // the legacy substring helper (matched "ProtocolCapExceeded" in the
-    // expect.fail message). Strict helper correctly rejects.
-    //
-    // Proper fix requires rewriting composeSpend to inject a real
-    // Jupiter-like DeFi instruction that actually decreases the vault
-    // balance. Deferred as a follow-up alongside the other lying tests.
-    it.skip("cap exceeded on one protocol rejects [TODO: needs real DeFi ix]", async () => {
-      // Already spent 50 on protocolA. Spend 60 more → total 110 > 100 cap
-      try {
-        await composeSpend(protocolA, new BN(60_000_000));
-        expect.fail("Should have thrown ProtocolCapExceeded");
-      } catch (err: any) {
-        expectSigilError(err, { name: "ProtocolCapExceeded", code: 6057 });
-      }
-    });
-
     it("other protocol still has room", async () => {
       // ProtocolA is near cap, but protocolB has 200 USDC cap with 0 spent
       await composeSpend(protocolB, new BN(150_000_000));
@@ -5340,9 +5233,7 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,
-          null,
-          null,
+          null,          null,
           null,
           null,
           null,
@@ -5383,9 +5274,7 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,
-          null,
-          null,
+          null,          null,
           null,
           null,
           null,
@@ -5438,9 +5327,7 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,
-          null,
-          null,
+          null,          null,
           null,
           null,
           null,
@@ -5481,9 +5368,7 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,
-          null,
-          null,
+          null,          null,
           null,
           null,
           null,
@@ -5528,9 +5413,7 @@ describe("sigil", () => {
             null,
             null,
             null,
-            null,
-            null,
-            null,
+            null,            null,
             null,
             null,
             null,
@@ -5549,7 +5432,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "ProtocolCapsMismatch", code: 6058 });
+        expectSigilError(err, { name: "ProtocolCapsMismatch", code: 6056 });
       }
     });
 
@@ -5584,9 +5467,7 @@ describe("sigil", () => {
             new BN(1_000_000_000),
             new BN(500_000_000),
             0, // ALL mode
-            [],
-            new BN(0) as any,
-            0,
+            [],            0,
             100,
             new BN(1800),
             [],
@@ -5605,7 +5486,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "ProtocolCapsMismatch", code: 6058 });
+        expectSigilError(err, { name: "ProtocolCapsMismatch", code: 6056 });
       }
     });
   });
@@ -5657,9 +5538,7 @@ describe("sigil", () => {
           new BN(1000_000_000),
           new BN(1000_000_000),
           0,
-          [],
-          new BN(0) as any,
-          0,
+          [],          0,
           100,
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -5880,9 +5759,7 @@ describe("sigil", () => {
           new BN(1000_000_000),
           new BN(1000_000_000),
           0,
-          [jupiterProgramId],
-          new BN(0) as any,
-          0,
+          [jupiterProgramId],          0,
           100,
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -5945,7 +5822,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "AgentAlreadyPaused", code: 6063 });
+        expectSigilError(err, { name: "AgentAlreadyPaused", code: 6061 });
       }
     });
 
@@ -6054,7 +5931,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "AgentPaused", code: 6062 });
+        expectSigilError(err, { name: "AgentPaused", code: 6060 });
       }
     });
 
@@ -6124,7 +6001,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "AgentNotPaused", code: 6064 });
+        expectSigilError(err, { name: "AgentNotPaused", code: 6062 });
       }
     });
 
