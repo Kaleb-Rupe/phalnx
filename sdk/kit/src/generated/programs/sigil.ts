@@ -212,6 +212,22 @@ import {
   type ValidateAndAuthorizeAsyncInput,
   type WithdrawFundsAsyncInput,
 } from "../instructions/index.js";
+import {
+  findConstraintsPda,
+  findCreateEscrowEscrowPda,
+  findCreateEscrowPolicyPda,
+  findCreateEscrowTrackerPda,
+  findEscrowPda,
+  findPendingAgentPermsPda,
+  findPendingCloseConstraintsPda,
+  findPendingConstraintsPda,
+  findPendingPolicyPda,
+  findPolicyPda,
+  findPostAssertionsPda,
+  findSessionPda,
+  findTrackerPda,
+  findVaultPda,
+} from "../pdas.js";
 
 export const SIGIL_PROGRAM_ADDRESS =
   "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL" as Address<"4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL">;
@@ -1176,6 +1192,7 @@ export function parseSigilInstruction<TProgram extends string>(
 export type SigilPlugin = {
   accounts: SigilPluginAccounts;
   instructions: SigilPluginInstructions;
+  pdas: SigilPluginPdas;
 };
 
 export type SigilPluginAccounts = {
@@ -1348,6 +1365,23 @@ export type SigilPluginInstructions = {
     input: WithdrawFundsAsyncInput,
   ) => ReturnType<typeof getWithdrawFundsInstructionAsync> &
     SelfPlanAndSendFunctions;
+};
+
+export type SigilPluginPdas = {
+  policy: typeof findPolicyPda;
+  tracker: typeof findTrackerPda;
+  constraints: typeof findConstraintsPda;
+  pendingConstraints: typeof findPendingConstraintsPda;
+  pendingCloseConstraints: typeof findPendingCloseConstraintsPda;
+  pendingPolicy: typeof findPendingPolicyPda;
+  postAssertions: typeof findPostAssertionsPda;
+  escrow: typeof findEscrowPda;
+  createEscrowPolicy: typeof findCreateEscrowPolicyPda;
+  createEscrowTracker: typeof findCreateEscrowTrackerPda;
+  createEscrowEscrow: typeof findCreateEscrowEscrowPda;
+  vault: typeof findVaultPda;
+  pendingAgentPerms: typeof findPendingAgentPermsPda;
+  session: typeof findSessionPda;
 };
 
 export type SigilPluginRequirements = ClientWithRpc<
@@ -1576,6 +1610,22 @@ export function sigilProgram() {
               client,
               getWithdrawFundsInstructionAsync(input),
             ),
+        },
+        pdas: {
+          policy: findPolicyPda,
+          tracker: findTrackerPda,
+          constraints: findConstraintsPda,
+          pendingConstraints: findPendingConstraintsPda,
+          pendingCloseConstraints: findPendingCloseConstraintsPda,
+          pendingPolicy: findPendingPolicyPda,
+          postAssertions: findPostAssertionsPda,
+          escrow: findEscrowPda,
+          createEscrowPolicy: findCreateEscrowPolicyPda,
+          createEscrowTracker: findCreateEscrowTrackerPda,
+          createEscrowEscrow: findCreateEscrowEscrowPda,
+          vault: findVaultPda,
+          pendingAgentPerms: findPendingAgentPermsPda,
+          session: findSessionPda,
         },
       },
     };

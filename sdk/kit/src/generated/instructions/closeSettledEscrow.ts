@@ -10,10 +10,8 @@ import {
   combineCodec,
   fixDecoderSize,
   fixEncoderSize,
-  getAddressEncoder,
   getBytesDecoder,
   getBytesEncoder,
-  getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -42,6 +40,7 @@ import {
   getNonNullResolvedInstructionInput,
   type ResolvedInstructionAccount,
 } from "@solana/program-client-core";
+import { findEscrowPda } from "../pdas.js";
 import { SIGIL_PROGRAM_ADDRESS } from "../programs/index.js";
 
 export const CLOSE_SETTLED_ESCROW_DISCRIMINATOR = new Uint8Array([
@@ -184,26 +183,16 @@ export async function getCloseSettledEscrowInstructionAsync<
 
   // Resolve default values.
   if (!accounts.escrow.value) {
-    accounts.escrow.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(new Uint8Array([101, 115, 99, 114, 111, 119])),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            "sourceVault",
-            accounts.sourceVault.value,
-          ),
-        ),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            "destinationVaultKey",
-            accounts.destinationVaultKey.value,
-          ),
-        ),
-        getU64Encoder().encode(
-          getNonNullResolvedInstructionInput("escrowId", args.escrowId),
-        ),
-      ],
+    accounts.escrow.value = await findEscrowPda({
+      sourceVault: getAddressFromResolvedInstructionAccount(
+        "sourceVault",
+        accounts.sourceVault.value,
+      ),
+      destinationVaultKey: getAddressFromResolvedInstructionAccount(
+        "destinationVaultKey",
+        accounts.destinationVaultKey.value,
+      ),
+      escrowId: getNonNullResolvedInstructionInput("escrowId", args.escrowId),
     });
   }
 

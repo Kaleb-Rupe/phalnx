@@ -20,7 +20,6 @@ import {
   getBytesEncoder,
   getOptionDecoder,
   getOptionEncoder,
-  getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
   getU16Decoder,
@@ -54,6 +53,7 @@ import {
   getAddressFromResolvedInstructionAccount,
   type ResolvedInstructionAccount,
 } from "@solana/program-client-core";
+import { findPendingPolicyPda, findPolicyPda } from "../pdas.js";
 import { SIGIL_PROGRAM_ADDRESS } from "../programs/index.js";
 
 export const QUEUE_POLICY_UPDATE_DISCRIMINATOR = new Uint8Array([
@@ -105,7 +105,6 @@ export type QueuePolicyUpdateInstructionData = {
   maxTransactionAmountUsd: Option<bigint>;
   protocolMode: Option<number>;
   protocols: Option<Array<Address>>;
-  maxLeverageBps: Option<number>;
   developerFeeRate: Option<number>;
   maxSlippageBps: Option<number>;
   timelockDuration: Option<bigint>;
@@ -120,7 +119,6 @@ export type QueuePolicyUpdateInstructionDataArgs = {
   maxTransactionAmountUsd: OptionOrNullable<number | bigint>;
   protocolMode: OptionOrNullable<number>;
   protocols: OptionOrNullable<Array<Address>>;
-  maxLeverageBps: OptionOrNullable<number>;
   developerFeeRate: OptionOrNullable<number>;
   maxSlippageBps: OptionOrNullable<number>;
   timelockDuration: OptionOrNullable<number | bigint>;
@@ -138,7 +136,6 @@ export function getQueuePolicyUpdateInstructionDataEncoder(): Encoder<QueuePolic
       ["maxTransactionAmountUsd", getOptionEncoder(getU64Encoder())],
       ["protocolMode", getOptionEncoder(getU8Encoder())],
       ["protocols", getOptionEncoder(getArrayEncoder(getAddressEncoder()))],
-      ["maxLeverageBps", getOptionEncoder(getU16Encoder())],
       ["developerFeeRate", getOptionEncoder(getU16Encoder())],
       ["maxSlippageBps", getOptionEncoder(getU16Encoder())],
       ["timelockDuration", getOptionEncoder(getU64Encoder())],
@@ -161,7 +158,6 @@ export function getQueuePolicyUpdateInstructionDataDecoder(): Decoder<QueuePolic
     ["maxTransactionAmountUsd", getOptionDecoder(getU64Decoder())],
     ["protocolMode", getOptionDecoder(getU8Decoder())],
     ["protocols", getOptionDecoder(getArrayDecoder(getAddressDecoder()))],
-    ["maxLeverageBps", getOptionDecoder(getU16Decoder())],
     ["developerFeeRate", getOptionDecoder(getU16Decoder())],
     ["maxSlippageBps", getOptionDecoder(getU16Decoder())],
     ["timelockDuration", getOptionDecoder(getU64Decoder())],
@@ -201,7 +197,6 @@ export type QueuePolicyUpdateAsyncInput<
   maxTransactionAmountUsd: QueuePolicyUpdateInstructionDataArgs["maxTransactionAmountUsd"];
   protocolMode: QueuePolicyUpdateInstructionDataArgs["protocolMode"];
   protocols: QueuePolicyUpdateInstructionDataArgs["protocols"];
-  maxLeverageBps: QueuePolicyUpdateInstructionDataArgs["maxLeverageBps"];
   developerFeeRate: QueuePolicyUpdateInstructionDataArgs["developerFeeRate"];
   maxSlippageBps: QueuePolicyUpdateInstructionDataArgs["maxSlippageBps"];
   timelockDuration: QueuePolicyUpdateInstructionDataArgs["timelockDuration"];
@@ -258,35 +253,19 @@ export async function getQueuePolicyUpdateInstructionAsync<
 
   // Resolve default values.
   if (!accounts.policy.value) {
-    accounts.policy.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(new Uint8Array([112, 111, 108, 105, 99, 121])),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            "vault",
-            accounts.vault.value,
-          ),
-        ),
-      ],
+    accounts.policy.value = await findPolicyPda({
+      vault: getAddressFromResolvedInstructionAccount(
+        "vault",
+        accounts.vault.value,
+      ),
     });
   }
   if (!accounts.pendingPolicy.value) {
-    accounts.pendingPolicy.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(
-          new Uint8Array([
-            112, 101, 110, 100, 105, 110, 103, 95, 112, 111, 108, 105, 99, 121,
-          ]),
-        ),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            "vault",
-            accounts.vault.value,
-          ),
-        ),
-      ],
+    accounts.pendingPolicy.value = await findPendingPolicyPda({
+      vault: getAddressFromResolvedInstructionAccount(
+        "vault",
+        accounts.vault.value,
+      ),
     });
   }
   if (!accounts.systemProgram.value) {
@@ -333,7 +312,6 @@ export type QueuePolicyUpdateInput<
   maxTransactionAmountUsd: QueuePolicyUpdateInstructionDataArgs["maxTransactionAmountUsd"];
   protocolMode: QueuePolicyUpdateInstructionDataArgs["protocolMode"];
   protocols: QueuePolicyUpdateInstructionDataArgs["protocols"];
-  maxLeverageBps: QueuePolicyUpdateInstructionDataArgs["maxLeverageBps"];
   developerFeeRate: QueuePolicyUpdateInstructionDataArgs["developerFeeRate"];
   maxSlippageBps: QueuePolicyUpdateInstructionDataArgs["maxSlippageBps"];
   timelockDuration: QueuePolicyUpdateInstructionDataArgs["timelockDuration"];

@@ -10,10 +10,8 @@ import {
   combineCodec,
   fixDecoderSize,
   fixEncoderSize,
-  getAddressEncoder,
   getBytesDecoder,
   getBytesEncoder,
-  getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
   SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
@@ -39,6 +37,7 @@ import {
   getAddressFromResolvedInstructionAccount,
   type ResolvedInstructionAccount,
 } from "@solana/program-client-core";
+import { findPolicyPda, findTrackerPda } from "../pdas.js";
 import { SIGIL_PROGRAM_ADDRESS } from "../programs/index.js";
 
 export const CLOSE_VAULT_DISCRIMINATOR = new Uint8Array([
@@ -182,33 +181,19 @@ export async function getCloseVaultInstructionAsync<
 
   // Resolve default values.
   if (!accounts.policy.value) {
-    accounts.policy.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(new Uint8Array([112, 111, 108, 105, 99, 121])),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            "vault",
-            accounts.vault.value,
-          ),
-        ),
-      ],
+    accounts.policy.value = await findPolicyPda({
+      vault: getAddressFromResolvedInstructionAccount(
+        "vault",
+        accounts.vault.value,
+      ),
     });
   }
   if (!accounts.tracker.value) {
-    accounts.tracker.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(
-          new Uint8Array([116, 114, 97, 99, 107, 101, 114]),
-        ),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            "vault",
-            accounts.vault.value,
-          ),
-        ),
-      ],
+    accounts.tracker.value = await findTrackerPda({
+      vault: getAddressFromResolvedInstructionAccount(
+        "vault",
+        accounts.vault.value,
+      ),
     });
   }
   if (!accounts.systemProgram.value) {

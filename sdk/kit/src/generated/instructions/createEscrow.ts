@@ -44,6 +44,11 @@ import {
   getNonNullResolvedInstructionInput,
   type ResolvedInstructionAccount,
 } from "@solana/program-client-core";
+import {
+  findCreateEscrowEscrowPda,
+  findCreateEscrowPolicyPda,
+  findCreateEscrowTrackerPda,
+} from "../pdas.js";
 import { SIGIL_PROGRAM_ADDRESS } from "../programs/index.js";
 
 export const CREATE_ESCROW_DISCRIMINATOR = new Uint8Array([
@@ -324,56 +329,32 @@ export async function getCreateEscrowInstructionAsync<
 
   // Resolve default values.
   if (!accounts.policy.value) {
-    accounts.policy.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(new Uint8Array([112, 111, 108, 105, 99, 121])),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            "sourceVault",
-            accounts.sourceVault.value,
-          ),
-        ),
-      ],
+    accounts.policy.value = await findCreateEscrowPolicyPda({
+      sourceVault: getAddressFromResolvedInstructionAccount(
+        "sourceVault",
+        accounts.sourceVault.value,
+      ),
     });
   }
   if (!accounts.tracker.value) {
-    accounts.tracker.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(
-          new Uint8Array([116, 114, 97, 99, 107, 101, 114]),
-        ),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            "sourceVault",
-            accounts.sourceVault.value,
-          ),
-        ),
-      ],
+    accounts.tracker.value = await findCreateEscrowTrackerPda({
+      sourceVault: getAddressFromResolvedInstructionAccount(
+        "sourceVault",
+        accounts.sourceVault.value,
+      ),
     });
   }
   if (!accounts.escrow.value) {
-    accounts.escrow.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(new Uint8Array([101, 115, 99, 114, 111, 119])),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            "sourceVault",
-            accounts.sourceVault.value,
-          ),
-        ),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            "destinationVault",
-            accounts.destinationVault.value,
-          ),
-        ),
-        getU64Encoder().encode(
-          getNonNullResolvedInstructionInput("escrowId", args.escrowId),
-        ),
-      ],
+    accounts.escrow.value = await findCreateEscrowEscrowPda({
+      sourceVault: getAddressFromResolvedInstructionAccount(
+        "sourceVault",
+        accounts.sourceVault.value,
+      ),
+      destinationVault: getAddressFromResolvedInstructionAccount(
+        "destinationVault",
+        accounts.destinationVault.value,
+      ),
+      escrowId: getNonNullResolvedInstructionInput("escrowId", args.escrowId),
     });
   }
   if (!accounts.escrowAta.value) {

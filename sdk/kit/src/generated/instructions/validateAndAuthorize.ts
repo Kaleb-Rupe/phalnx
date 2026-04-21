@@ -14,7 +14,6 @@ import {
   getAddressEncoder,
   getBytesDecoder,
   getBytesEncoder,
-  getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -43,6 +42,7 @@ import {
   getNonNullResolvedInstructionInput,
   type ResolvedInstructionAccount,
 } from "@solana/program-client-core";
+import { findPolicyPda, findSessionPda, findTrackerPda } from "../pdas.js";
 import { SIGIL_PROGRAM_ADDRESS } from "../programs/index.js";
 
 export const VALIDATE_AND_AUTHORIZE_DISCRIMINATOR = new Uint8Array([
@@ -337,58 +337,35 @@ export async function getValidateAndAuthorizeInstructionAsync<
 
   // Resolve default values.
   if (!accounts.policy.value) {
-    accounts.policy.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(new Uint8Array([112, 111, 108, 105, 99, 121])),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            "vault",
-            accounts.vault.value,
-          ),
-        ),
-      ],
+    accounts.policy.value = await findPolicyPda({
+      vault: getAddressFromResolvedInstructionAccount(
+        "vault",
+        accounts.vault.value,
+      ),
     });
   }
   if (!accounts.tracker.value) {
-    accounts.tracker.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(
-          new Uint8Array([116, 114, 97, 99, 107, 101, 114]),
-        ),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            "vault",
-            accounts.vault.value,
-          ),
-        ),
-      ],
+    accounts.tracker.value = await findTrackerPda({
+      vault: getAddressFromResolvedInstructionAccount(
+        "vault",
+        accounts.vault.value,
+      ),
     });
   }
   if (!accounts.session.value) {
-    accounts.session.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(
-          new Uint8Array([115, 101, 115, 115, 105, 111, 110]),
-        ),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            "vault",
-            accounts.vault.value,
-          ),
-        ),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            "agent",
-            accounts.agent.value,
-          ),
-        ),
-        getAddressEncoder().encode(
-          getNonNullResolvedInstructionInput("tokenMint", args.tokenMint),
-        ),
-      ],
+    accounts.session.value = await findSessionPda({
+      vault: getAddressFromResolvedInstructionAccount(
+        "vault",
+        accounts.vault.value,
+      ),
+      agent: getAddressFromResolvedInstructionAccount(
+        "agent",
+        accounts.agent.value,
+      ),
+      tokenMint: getNonNullResolvedInstructionInput(
+        "tokenMint",
+        args.tokenMint,
+      ),
     });
   }
   if (!accounts.tokenProgram.value) {

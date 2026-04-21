@@ -16,7 +16,6 @@ import {
   getArrayEncoder,
   getBytesDecoder,
   getBytesEncoder,
-  getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
   getU16Decoder,
@@ -49,6 +48,7 @@ import {
   getNonNullResolvedInstructionInput,
   type ResolvedInstructionAccount,
 } from "@solana/program-client-core";
+import { findPolicyPda, findTrackerPda, findVaultPda } from "../pdas.js";
 import { SIGIL_PROGRAM_ADDRESS } from "../programs/index.js";
 
 export const INITIALIZE_VAULT_DISCRIMINATOR = new Uint8Array([
@@ -109,7 +109,6 @@ export type InitializeVaultInstructionData = {
   maxTransactionSizeUsd: bigint;
   protocolMode: number;
   protocols: Array<Address>;
-  maxLeverageBps: number;
   developerFeeRate: number;
   maxSlippageBps: number;
   timelockDuration: bigint;
@@ -123,7 +122,6 @@ export type InitializeVaultInstructionDataArgs = {
   maxTransactionSizeUsd: number | bigint;
   protocolMode: number;
   protocols: Array<Address>;
-  maxLeverageBps: number;
   developerFeeRate: number;
   maxSlippageBps: number;
   timelockDuration: number | bigint;
@@ -140,7 +138,6 @@ export function getInitializeVaultInstructionDataEncoder(): Encoder<InitializeVa
       ["maxTransactionSizeUsd", getU64Encoder()],
       ["protocolMode", getU8Encoder()],
       ["protocols", getArrayEncoder(getAddressEncoder())],
-      ["maxLeverageBps", getU16Encoder()],
       ["developerFeeRate", getU16Encoder()],
       ["maxSlippageBps", getU16Encoder()],
       ["timelockDuration", getU64Encoder()],
@@ -159,7 +156,6 @@ export function getInitializeVaultInstructionDataDecoder(): Decoder<InitializeVa
     ["maxTransactionSizeUsd", getU64Decoder()],
     ["protocolMode", getU8Decoder()],
     ["protocols", getArrayDecoder(getAddressDecoder())],
-    ["maxLeverageBps", getU16Decoder()],
     ["developerFeeRate", getU16Decoder()],
     ["maxSlippageBps", getU16Decoder()],
     ["timelockDuration", getU64Decoder()],
@@ -201,7 +197,6 @@ export type InitializeVaultAsyncInput<
   maxTransactionSizeUsd: InitializeVaultInstructionDataArgs["maxTransactionSizeUsd"];
   protocolMode: InitializeVaultInstructionDataArgs["protocolMode"];
   protocols: InitializeVaultInstructionDataArgs["protocols"];
-  maxLeverageBps: InitializeVaultInstructionDataArgs["maxLeverageBps"];
   developerFeeRate: InitializeVaultInstructionDataArgs["developerFeeRate"];
   maxSlippageBps: InitializeVaultInstructionDataArgs["maxSlippageBps"];
   timelockDuration: InitializeVaultInstructionDataArgs["timelockDuration"];
@@ -267,50 +262,28 @@ export async function getInitializeVaultInstructionAsync<
 
   // Resolve default values.
   if (!accounts.vault.value) {
-    accounts.vault.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(new Uint8Array([118, 97, 117, 108, 116])),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            "owner",
-            accounts.owner.value,
-          ),
-        ),
-        getU64Encoder().encode(
-          getNonNullResolvedInstructionInput("vaultId", args.vaultId),
-        ),
-      ],
+    accounts.vault.value = await findVaultPda({
+      owner: getAddressFromResolvedInstructionAccount(
+        "owner",
+        accounts.owner.value,
+      ),
+      vaultId: getNonNullResolvedInstructionInput("vaultId", args.vaultId),
     });
   }
   if (!accounts.policy.value) {
-    accounts.policy.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(new Uint8Array([112, 111, 108, 105, 99, 121])),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            "vault",
-            accounts.vault.value,
-          ),
-        ),
-      ],
+    accounts.policy.value = await findPolicyPda({
+      vault: getAddressFromResolvedInstructionAccount(
+        "vault",
+        accounts.vault.value,
+      ),
     });
   }
   if (!accounts.tracker.value) {
-    accounts.tracker.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(
-          new Uint8Array([116, 114, 97, 99, 107, 101, 114]),
-        ),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            "vault",
-            accounts.vault.value,
-          ),
-        ),
-      ],
+    accounts.tracker.value = await findTrackerPda({
+      vault: getAddressFromResolvedInstructionAccount(
+        "vault",
+        accounts.vault.value,
+      ),
     });
   }
   if (!accounts.systemProgram.value) {
@@ -368,7 +341,6 @@ export type InitializeVaultInput<
   maxTransactionSizeUsd: InitializeVaultInstructionDataArgs["maxTransactionSizeUsd"];
   protocolMode: InitializeVaultInstructionDataArgs["protocolMode"];
   protocols: InitializeVaultInstructionDataArgs["protocols"];
-  maxLeverageBps: InitializeVaultInstructionDataArgs["maxLeverageBps"];
   developerFeeRate: InitializeVaultInstructionDataArgs["developerFeeRate"];
   maxSlippageBps: InitializeVaultInstructionDataArgs["maxSlippageBps"];
   timelockDuration: InitializeVaultInstructionDataArgs["timelockDuration"];

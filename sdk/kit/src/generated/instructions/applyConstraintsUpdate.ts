@@ -10,10 +10,8 @@ import {
   combineCodec,
   fixDecoderSize,
   fixEncoderSize,
-  getAddressEncoder,
   getBytesDecoder,
   getBytesEncoder,
-  getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
   SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
@@ -39,6 +37,11 @@ import {
   getAddressFromResolvedInstructionAccount,
   type ResolvedInstructionAccount,
 } from "@solana/program-client-core";
+import {
+  findConstraintsPda,
+  findPendingConstraintsPda,
+  findPolicyPda,
+} from "../pdas.js";
 import { SIGIL_PROGRAM_ADDRESS } from "../programs/index.js";
 
 export const APPLY_CONSTRAINTS_UPDATE_DISCRIMINATOR = new Uint8Array([
@@ -177,52 +180,27 @@ export async function getApplyConstraintsUpdateInstructionAsync<
 
   // Resolve default values.
   if (!accounts.policy.value) {
-    accounts.policy.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(new Uint8Array([112, 111, 108, 105, 99, 121])),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            "vault",
-            accounts.vault.value,
-          ),
-        ),
-      ],
+    accounts.policy.value = await findPolicyPda({
+      vault: getAddressFromResolvedInstructionAccount(
+        "vault",
+        accounts.vault.value,
+      ),
     });
   }
   if (!accounts.constraints.value) {
-    accounts.constraints.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(
-          new Uint8Array([99, 111, 110, 115, 116, 114, 97, 105, 110, 116, 115]),
-        ),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            "vault",
-            accounts.vault.value,
-          ),
-        ),
-      ],
+    accounts.constraints.value = await findConstraintsPda({
+      vault: getAddressFromResolvedInstructionAccount(
+        "vault",
+        accounts.vault.value,
+      ),
     });
   }
   if (!accounts.pendingConstraints.value) {
-    accounts.pendingConstraints.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(
-          new Uint8Array([
-            112, 101, 110, 100, 105, 110, 103, 95, 99, 111, 110, 115, 116, 114,
-            97, 105, 110, 116, 115,
-          ]),
-        ),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            "vault",
-            accounts.vault.value,
-          ),
-        ),
-      ],
+    accounts.pendingConstraints.value = await findPendingConstraintsPda({
+      vault: getAddressFromResolvedInstructionAccount(
+        "vault",
+        accounts.vault.value,
+      ),
     });
   }
 

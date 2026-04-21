@@ -73,7 +73,6 @@ export type PendingPolicyUpdate = {
   maxTransactionAmountUsd: Option<bigint>;
   protocolMode: Option<number>;
   protocols: Option<Array<Address>>;
-  maxLeverageBps: Option<number>;
   developerFeeRate: Option<number>;
   maxSlippageBps: Option<number>;
   timelockDuration: Option<bigint>;
@@ -96,7 +95,6 @@ export type PendingPolicyUpdateArgs = {
   maxTransactionAmountUsd: OptionOrNullable<number | bigint>;
   protocolMode: OptionOrNullable<number>;
   protocols: OptionOrNullable<Array<Address>>;
-  maxLeverageBps: OptionOrNullable<number>;
   developerFeeRate: OptionOrNullable<number>;
   maxSlippageBps: OptionOrNullable<number>;
   timelockDuration: OptionOrNullable<number | bigint>;
@@ -120,7 +118,6 @@ export function getPendingPolicyUpdateEncoder(): Encoder<PendingPolicyUpdateArgs
       ["maxTransactionAmountUsd", getOptionEncoder(getU64Encoder())],
       ["protocolMode", getOptionEncoder(getU8Encoder())],
       ["protocols", getOptionEncoder(getArrayEncoder(getAddressEncoder()))],
-      ["maxLeverageBps", getOptionEncoder(getU16Encoder())],
       ["developerFeeRate", getOptionEncoder(getU16Encoder())],
       ["maxSlippageBps", getOptionEncoder(getU16Encoder())],
       ["timelockDuration", getOptionEncoder(getU64Encoder())],
@@ -151,7 +148,6 @@ export function getPendingPolicyUpdateDecoder(): Decoder<PendingPolicyUpdate> {
     ["maxTransactionAmountUsd", getOptionDecoder(getU64Decoder())],
     ["protocolMode", getOptionDecoder(getU8Decoder())],
     ["protocols", getOptionDecoder(getArrayDecoder(getAddressDecoder()))],
-    ["maxLeverageBps", getOptionDecoder(getU16Decoder())],
     ["developerFeeRate", getOptionDecoder(getU16Decoder())],
     ["maxSlippageBps", getOptionDecoder(getU16Decoder())],
     ["timelockDuration", getOptionDecoder(getU64Decoder())],
