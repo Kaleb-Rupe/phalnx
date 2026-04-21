@@ -1036,13 +1036,11 @@ describe("sigil", () => {
       // With no-op DeFi, the ONLY balance change is the protocol fee (0.02% of declared amount)
       expect(balanceDelta).to.equal(10_000n); // 50M * 200 / 1M = 10K (protocol fee)
 
-      // Session should be closed after atomic validate+finalize. Use
-      // Anchor 0.32.1's `fetchNullable` API — returns null for closed
-      // accounts, avoiding any substring matching on error messages
-      // (per council H-2).
-      const closedSession =
-        await program.account.sessionAuthority.fetchNullable(sessionPda);
-      expect(closedSession).to.be.null;
+      // Session should be closed after atomic validate+finalize. Verify
+      // by raw LiteSVM account lookup — bypasses Anchor's client which
+      // throws "Could not find ..." through our LiteSVMConnectionProxy
+      // instead of returning null.
+      expect(svm.getAccount(sessionPda)).to.be.null;
 
       // Verify vault stats updated
       const vault = await program.account.agentVault.fetch(vaultPda);
@@ -2417,13 +2415,9 @@ describe("sigil", () => {
 
       sendVersionedTx(svm, [validateIx, finalizeIx], lifecycleAgent);
 
-      // Session should be closed after atomic validate+finalize. Use
-      // fetchNullable — returns null on closed accounts without throwing.
-      const closedLifecycleSession =
-        await program.account.sessionAuthority.fetchNullable(
-          lifecycleSessionPda,
-        );
-      expect(closedLifecycleSession).to.be.null;
+      // Session should be closed after atomic validate+finalize. Verify
+      // by raw LiteSVM account lookup (see first site for context).
+      expect(svm.getAccount(lifecycleSessionPda)).to.be.null;
 
       // Vault stats should be updated
       const vault = await program.account.agentVault.fetch(lifecycleVaultPda);
@@ -3584,11 +3578,10 @@ describe("sigil", () => {
       expect(policy.dailySpendingCapUsd.toNumber()).to.equal(200_000_000);
 
       // Pending PDA should be closed
-      // fetchNullable returns null for closed accounts — cleaner than
-      // try/catch + substring match.
-      const closedPending =
-        await program.account.pendingPolicyUpdate.fetchNullable(tlPendingPda);
-      expect(closedPending).to.be.null;
+      // Verify PendingPolicyUpdate was closed via raw LiteSVM account
+      // lookup — the Anchor client's fetchNullable path throws on our
+      // LiteSVMConnectionProxy instead of returning null.
+      expect(svm.getAccount(tlPendingPda)).to.be.null;
     });
 
     it("cancel pending policy succeeds and returns rent", async () => {
@@ -5306,15 +5299,16 @@ describe("sigil", () => {
     };
 
     it("happy path: spend under protocol cap succeeds", async () => {
-      // Spend 50 USDC on protocolA (cap: 100) — should succeed
-      const result = composeSpend(protocolA, new BN(50_000_000));
-      expect(result.error).to.be.undefined;
+      // Spend 50 USDC on protocolA (cap: 100) — should succeed.
+      // composeSpend returns Promise<VersionedTxResult> (uses await on
+      // .instruction() internally). Must await to surface tx rejection.
+      await composeSpend(protocolA, new BN(50_000_000));
     });
 
     it("cap exceeded on one protocol rejects", async () => {
       // Already spent 50 on protocolA. Spend 60 more → total 110 > 100 cap
       try {
-        composeSpend(protocolA, new BN(60_000_000));
+        await composeSpend(protocolA, new BN(60_000_000));
         expect.fail("Should have thrown ProtocolCapExceeded");
       } catch (err: any) {
         expectSigilError(err, { name: "ProtocolCapExceeded", code: 6057 });
@@ -5323,8 +5317,7 @@ describe("sigil", () => {
 
     it("other protocol still has room", async () => {
       // ProtocolA is near cap, but protocolB has 200 USDC cap with 0 spent
-      const result = composeSpend(protocolB, new BN(150_000_000));
-      expect(result.error).to.be.undefined;
+      await composeSpend(protocolB, new BN(150_000_000));
     });
 
     it("cap of 0 means unlimited per-protocol", async () => {
@@ -5374,8 +5367,7 @@ describe("sigil", () => {
         .rpc();
 
       // Now spend any amount on protocolA — should succeed (cap=0 means unlimited)
-      const result = composeSpend(protocolA, new BN(200_000_000));
-      expect(result.error).to.be.undefined;
+      await composeSpend(protocolA, new BN(200_000_000));
 
       // Restore caps
       await program.methods
@@ -5423,8 +5415,7 @@ describe("sigil", () => {
       advanceTime(svm, 87000);
 
       // After window expiry, protocolA spend resets to 0. Can spend up to cap again.
-      const result = composeSpend(protocolA, new BN(90_000_000));
-      expect(result.error).to.be.undefined;
+      await composeSpend(protocolA, new BN(90_000_000));
     });
 
     it("caps disabled means no per-protocol checks", async () => {
@@ -5474,8 +5465,7 @@ describe("sigil", () => {
         .rpc();
 
       // Even though we spent near cap on protocolA, with caps disabled it should succeed
-      const result = composeSpend(protocolA, new BN(200_000_000));
-      expect(result.error).to.be.undefined;
+      await composeSpend(protocolA, new BN(200_000_000));
 
       // Re-enable caps for next test
       await program.methods
