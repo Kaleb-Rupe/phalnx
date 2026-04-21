@@ -548,7 +548,6 @@ export async function queuePolicyUpdate(
       ? mapProtocolMode(changes.protocolMode)
       : null,
     protocols: changes.approvedApps ?? null,
-    maxLeverageBps: changes.leverageLimit ?? null,
     developerFeeRate: changes.developerFeeRate ?? null,
     maxSlippageBps: changes.maxSlippageBps ?? null,
     timelockDuration:

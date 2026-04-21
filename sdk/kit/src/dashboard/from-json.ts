@@ -218,7 +218,6 @@ export function policyDataFromJSON(data: SerializedPolicyData): PolicyData {
     hasProtocolCaps: data.hasProtocolCaps,
     protocolCaps: data.protocolCaps.map(bi),
     maxSlippageBps: data.maxSlippageBps,
-    leverageLimitBps: data.leverageLimitBps,
     allowedDestinations: data.allowedDestinations.map(addr),
     developerFeeRate: data.developerFeeRate,
     sessionExpirySlots: bi(data.sessionExpirySlots),

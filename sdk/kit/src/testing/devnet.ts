@@ -269,7 +269,6 @@ export async function provisionVault(
     maxTransactionSizeUsd: maxTx,
     protocolMode,
     protocols: [],
-    maxLeverageBps: 0,
     developerFeeRate: 0,
     maxSlippageBps: 500,
     timelockDuration: opts?.timelockDuration ?? 1800n, // MIN_TIMELOCK_DURATION (TOCTOU fix)

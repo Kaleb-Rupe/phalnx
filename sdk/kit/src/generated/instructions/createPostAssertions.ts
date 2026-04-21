@@ -10,10 +10,12 @@ import {
   combineCodec,
   fixDecoderSize,
   fixEncoderSize,
+  getAddressEncoder,
   getArrayDecoder,
   getArrayEncoder,
   getBytesDecoder,
   getBytesEncoder,
+  getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
   SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
@@ -39,7 +41,6 @@ import {
   getAddressFromResolvedInstructionAccount,
   type ResolvedInstructionAccount,
 } from "@solana/program-client-core";
-import { findPolicyPda, findPostAssertionsPda } from "../pdas.js";
 import { SIGIL_PROGRAM_ADDRESS } from "../programs/index.js";
 import {
   getPostAssertionEntryDecoder,
@@ -192,19 +193,36 @@ export async function getCreatePostAssertionsInstructionAsync<
 
   // Resolve default values.
   if (!accounts.policy.value) {
-    accounts.policy.value = await findPolicyPda({
-      vault: getAddressFromResolvedInstructionAccount(
-        "vault",
-        accounts.vault.value,
-      ),
+    accounts.policy.value = await getProgramDerivedAddress({
+      programAddress,
+      seeds: [
+        getBytesEncoder().encode(new Uint8Array([112, 111, 108, 105, 99, 121])),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            "vault",
+            accounts.vault.value,
+          ),
+        ),
+      ],
     });
   }
   if (!accounts.postAssertions.value) {
-    accounts.postAssertions.value = await findPostAssertionsPda({
-      vault: getAddressFromResolvedInstructionAccount(
-        "vault",
-        accounts.vault.value,
-      ),
+    accounts.postAssertions.value = await getProgramDerivedAddress({
+      programAddress,
+      seeds: [
+        getBytesEncoder().encode(
+          new Uint8Array([
+            112, 111, 115, 116, 95, 97, 115, 115, 101, 114, 116, 105, 111, 110,
+            115,
+          ]),
+        ),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            "vault",
+            accounts.vault.value,
+          ),
+        ),
+      ],
     });
   }
   if (!accounts.systemProgram.value) {

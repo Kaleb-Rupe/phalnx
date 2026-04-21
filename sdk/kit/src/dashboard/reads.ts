@@ -455,8 +455,6 @@ export function buildPolicy(ctx: OverviewContext): PolicyData {
     if (isSome(pp.protocolCaps)) changes.protocolCaps = pp.protocolCaps.value;
     if (isSome(pp.maxSlippageBps))
       changes.maxSlippageBps = pp.maxSlippageBps.value;
-    if (isSome(pp.maxLeverageBps))
-      changes.leverageLimit = pp.maxLeverageBps.value;
     if (isSome(pp.allowedDestinations))
       changes.allowedDestinations = pp.allowedDestinations.value;
     if (isSome(pp.developerFeeRate))
@@ -482,7 +480,6 @@ export function buildPolicy(ctx: OverviewContext): PolicyData {
     hasProtocolCaps: p.hasProtocolCaps as boolean,
     protocolCaps,
     maxSlippageBps: p.maxSlippageBps as number,
-    leverageLimitBps: p.maxLeverageBps as number,
     allowedDestinations: (p.allowedDestinations || []) as string[],
     developerFeeRate: p.developerFeeRate as number,
     sessionExpirySlots: sessionExpiry,
@@ -497,7 +494,6 @@ export function buildPolicy(ctx: OverviewContext): PolicyData {
       hasProtocolCaps: p.hasProtocolCaps,
       protocolCaps: protocolCaps.map(bs),
       maxSlippageBps: p.maxSlippageBps,
-      leverageLimitBps: p.maxLeverageBps,
       allowedDestinations: (p.allowedDestinations || []) as string[],
       developerFeeRate: p.developerFeeRate,
       sessionExpirySlots: bs(sessionExpiry),

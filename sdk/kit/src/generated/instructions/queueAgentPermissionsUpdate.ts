@@ -14,6 +14,7 @@ import {
   getAddressEncoder,
   getBytesDecoder,
   getBytesEncoder,
+  getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -44,7 +45,6 @@ import {
   getNonNullResolvedInstructionInput,
   type ResolvedInstructionAccount,
 } from "@solana/program-client-core";
-import { findPendingAgentPermsPda, findPolicyPda } from "../pdas.js";
 import { SIGIL_PROGRAM_ADDRESS } from "../programs/index.js";
 
 export const QUEUE_AGENT_PERMISSIONS_UPDATE_DISCRIMINATOR = new Uint8Array([
@@ -204,20 +204,39 @@ export async function getQueueAgentPermissionsUpdateInstructionAsync<
 
   // Resolve default values.
   if (!accounts.policy.value) {
-    accounts.policy.value = await findPolicyPda({
-      vault: getAddressFromResolvedInstructionAccount(
-        "vault",
-        accounts.vault.value,
-      ),
+    accounts.policy.value = await getProgramDerivedAddress({
+      programAddress,
+      seeds: [
+        getBytesEncoder().encode(new Uint8Array([112, 111, 108, 105, 99, 121])),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            "vault",
+            accounts.vault.value,
+          ),
+        ),
+      ],
     });
   }
   if (!accounts.pendingAgentPerms.value) {
-    accounts.pendingAgentPerms.value = await findPendingAgentPermsPda({
-      vault: getAddressFromResolvedInstructionAccount(
-        "vault",
-        accounts.vault.value,
-      ),
-      agent: getNonNullResolvedInstructionInput("agent", args.agent),
+    accounts.pendingAgentPerms.value = await getProgramDerivedAddress({
+      programAddress,
+      seeds: [
+        getBytesEncoder().encode(
+          new Uint8Array([
+            112, 101, 110, 100, 105, 110, 103, 95, 97, 103, 101, 110, 116, 95,
+            112, 101, 114, 109, 115,
+          ]),
+        ),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            "vault",
+            accounts.vault.value,
+          ),
+        ),
+        getAddressEncoder().encode(
+          getNonNullResolvedInstructionInput("agent", args.agent),
+        ),
+      ],
     });
   }
   if (!accounts.systemProgram.value) {

@@ -91,7 +91,6 @@ export function createMockVaultState(
       maxTransactionSizeUsd: maxTx,
       protocolMode: overrides?.protocolMode ?? 0,
       protocols: overrides?.protocols ?? [],
-      maxLeverageBps: 0,
       developerFeeRate: overrides?.developerFeeRate ?? 0,
       maxSlippageBps: 100,
       timelockDuration: 0n,

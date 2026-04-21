@@ -68,8 +68,6 @@ export interface VaultPreset {
   protocolMode: number;
   /** Allowed/denied protocol addresses (empty if mode = all). */
   protocols: Address[];
-  /** Max leverage in basis points (0 = no leverage). */
-  maxLeverageBps: number;
 }
 
 // ─── Presets ────────────────────────────────────────────────────────────────
@@ -86,7 +84,6 @@ export const VAULT_PRESETS = {
     maxSlippageBps: 200, // 2%
     protocolMode: PROTOCOL_MODE_ALLOWLIST,
     protocols: [JUPITER_PROGRAM_ADDRESS],
-    maxLeverageBps: 0,
   },
   "perps-trader": {
     label: "Perps Trader",
@@ -99,7 +96,6 @@ export const VAULT_PRESETS = {
     maxSlippageBps: 500, // 5%
     protocolMode: PROTOCOL_MODE_ALLOWLIST,
     protocols: [JUPITER_PROGRAM_ADDRESS, FLASH_TRADE_PROGRAM],
-    maxLeverageBps: 10_000, // 10x
   },
   "lending-optimizer": {
     label: "Lending Optimizer",
@@ -116,7 +112,6 @@ export const VAULT_PRESETS = {
       JUPITER_LEND_PROGRAM,
       KAMINO_LEND_PROGRAM,
     ],
-    maxLeverageBps: 0,
   },
   "full-access": {
     label: "Full Access",
@@ -129,7 +124,6 @@ export const VAULT_PRESETS = {
     maxSlippageBps: 500, // 5%
     protocolMode: PROTOCOL_MODE_ALL,
     protocols: [],
-    maxLeverageBps: 20_000, // 20x
   },
 } as const satisfies Record<string, VaultPreset>;
 
@@ -175,7 +169,6 @@ export function presetToCreateVaultFields(
   | "maxSlippageBps"
   | "protocolMode"
   | "protocols"
-  | "maxLeverageBps"
 > {
   const preset = VAULT_PRESETS[name];
   return {
@@ -185,7 +178,6 @@ export function presetToCreateVaultFields(
     maxSlippageBps: preset.maxSlippageBps,
     protocolMode: preset.protocolMode,
     protocols: [...preset.protocols],
-    maxLeverageBps: preset.maxLeverageBps,
   };
 }
 

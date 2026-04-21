@@ -241,8 +241,6 @@ export interface PolicyData {
   protocolCaps: bigint[];
   /** Raw BPS. 50 = 0.5%. */
   maxSlippageBps: number;
-  /** Raw BPS. 500 = 5x. */
-  leverageLimitBps: number;
   // Destinations
   allowedDestinations: string[];
   // Fees
@@ -392,8 +390,6 @@ export interface PolicyChanges {
   hasProtocolCaps?: boolean;
   protocolCaps?: bigint[];
   maxSlippageBps?: number;
-  /** BPS. */
-  leverageLimit?: number;
   allowedDestinations?: Address[];
   /** BPS. */
   developerFeeRate?: number;
@@ -533,7 +529,6 @@ export interface SerializedPolicyData {
   hasProtocolCaps: boolean;
   protocolCaps: string[];
   maxSlippageBps: number;
-  leverageLimitBps: number;
   allowedDestinations: string[];
   developerFeeRate: number;
   sessionExpirySlots: string;
