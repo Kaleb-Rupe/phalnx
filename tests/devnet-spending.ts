@@ -470,7 +470,8 @@ describe("devnet-spending", () => {
         new BN(1_000_000_000), // queued cap: 1B
         null,
         null,
-        null,        null,
+        null,
+        null,
         null,
         null,
         null,

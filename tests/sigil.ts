@@ -178,7 +178,8 @@ describe("sigil", () => {
           dailyCap,
           maxTxSize,
           1, // protocolMode: allowlist
-          [jupiterProgramId],          0, // developer_fee_rate
+          [jupiterProgramId],
+          0, // developer_fee_rate
           100, // maxSlippageBps (1%)
           new BN(1800), // timelockDuration (MIN_TIMELOCK_DURATION)
           [], // allowedDestinations
@@ -232,7 +233,8 @@ describe("sigil", () => {
             new BN(100),
             new BN(100),
             0, // protocolMode: all
-            [],            0,
+            [],
+            0,
             100, // maxSlippageBps
             new BN(1800),
             [],
@@ -286,7 +288,8 @@ describe("sigil", () => {
             new BN(100),
             new BN(100),
             3,
-            [],            0,
+            [],
+            0,
             100, // maxSlippageBps
             new BN(1800),
             [],
@@ -444,7 +447,8 @@ describe("sigil", () => {
           new BN(1000),
           new BN(1000),
           0,
-          [],          0,
+          [],
+          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -498,7 +502,8 @@ describe("sigil", () => {
           new BN(200_000_000), // new daily cap: 200 USDC
           null, // keep max_transaction_size
           null, // keep protocol_mode
-          null,          null, // keep developer_fee_rate
+          null,
+          null, // keep developer_fee_rate
           null, // keep maxSlippageBps
           null, // keep timelockDuration
           null, // keep allowedDestinations
@@ -545,7 +550,8 @@ describe("sigil", () => {
             new BN(999),
             null,
             null,
-            null,            null,
+            null,
+            null,
             null,
             null,
             null,
@@ -579,7 +585,8 @@ describe("sigil", () => {
             null,
             null,
             null,
-            tooManyProtocols,            null,
+            tooManyProtocols,
+            null,
             null,
             null,
             null,
@@ -643,7 +650,8 @@ describe("sigil", () => {
           new BN(1000),
           new BN(1000),
           0,
-          [],          0,
+          [],
+          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -759,7 +767,8 @@ describe("sigil", () => {
           new BN(1000),
           new BN(1000),
           0,
-          [],          0,
+          [],
+          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -1505,7 +1514,8 @@ describe("sigil", () => {
           new BN(1000),
           new BN(1000),
           0,
-          [],          0,
+          [],
+          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -1578,7 +1588,8 @@ describe("sigil", () => {
           new BN(1000),
           new BN(1000),
           0,
-          [],          0,
+          [],
+          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -1655,7 +1666,8 @@ describe("sigil", () => {
           new BN(500_000_000),
           new BN(100_000_000),
           1, // protocolMode: allowlist
-          [jupiterProgramId],          30, // developer_fee_rate = 30 (0.3 BPS)
+          [jupiterProgramId],
+          30, // developer_fee_rate = 30 (0.3 BPS)
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -1706,7 +1718,8 @@ describe("sigil", () => {
             new BN(1000),
             new BN(1000),
             0,
-            [],            501,
+            [],
+            501,
             100, // maxSlippageBps
             new BN(1800),
             [],
@@ -1740,7 +1753,8 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,          0,
+          null,
+          0,
           null,
           null,
           null,
@@ -1779,7 +1793,8 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,          30,
+          null,
+          30,
           null,
           null,
           null,
@@ -1824,7 +1839,8 @@ describe("sigil", () => {
             null,
             null,
             null,
-            null,            501,
+            null,
+            501,
             null,
             null,
             null,
@@ -1857,7 +1873,8 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,          0,
+          null,
+          0,
           null,
           null,
           null,
@@ -1997,7 +2014,8 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,          500,
+          null,
+          500,
           null,
           null,
           null,
@@ -2201,7 +2219,8 @@ describe("sigil", () => {
           new BN(1000),
           new BN(1000),
           0,
-          [],          500,
+          [],
+          500,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -2281,7 +2300,8 @@ describe("sigil", () => {
           new BN(500_000_000),
           new BN(100_000_000),
           1, // protocolMode: allowlist
-          [jupiterProgramId],          0,
+          [jupiterProgramId],
+          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -2525,7 +2545,8 @@ describe("sigil", () => {
           new BN(1000),
           new BN(1000),
           0,
-          [],          0,
+          [],
+          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -2686,7 +2707,8 @@ describe("sigil", () => {
           new BN(1000),
           new BN(1000),
           0,
-          [],          0,
+          [],
+          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -2775,7 +2797,8 @@ describe("sigil", () => {
           new BN(1000),
           new BN(1000),
           0,
-          [],          0,
+          [],
+          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -2873,7 +2896,8 @@ describe("sigil", () => {
           new BN(1000),
           new BN(1000),
           1,
-          [jupiterProgramId],          0,
+          [jupiterProgramId],
+          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -2994,7 +3018,8 @@ describe("sigil", () => {
           new BN(999_000_000_000), // 999k USDC daily cap
           new BN(100_000_000), // 100 USDC max tx
           1, // protocolMode: allowlist
-          [jupiterProgramId],          0,
+          [jupiterProgramId],
+          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -3153,7 +3178,8 @@ describe("sigil", () => {
           new BN(999_000_000),
           new BN(100_000_000),
           1, // protocolMode: allowlist
-          [jupiterProgramId],          0, // developer_fee_rate = 0
+          [jupiterProgramId],
+          0, // developer_fee_rate = 0
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -3426,7 +3452,8 @@ describe("sigil", () => {
           new BN(500_000_000),
           new BN(100_000_000),
           1, // protocolMode: allowlist
-          [jupiterProgramId],          0,
+          [jupiterProgramId],
+          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION (30 minutes)
           [],
@@ -3458,7 +3485,8 @@ describe("sigil", () => {
           new BN(200_000_000), // new daily cap
           null,
           null,
-          null,          null,
+          null,
+          null,
           null,
           null,
           null,
@@ -3535,7 +3563,8 @@ describe("sigil", () => {
           new BN(300_000_000),
           null,
           null,
-          null,          null,
+          null,
+          null,
           null,
           null,
           null,
@@ -3580,7 +3609,8 @@ describe("sigil", () => {
           new BN(400_000_000),
           null,
           null,
-          null,          null,
+          null,
+          null,
           null,
           null,
           null,
@@ -3604,7 +3634,8 @@ describe("sigil", () => {
             new BN(500_000_000),
             null,
             null,
-            null,            null,
+            null,
+            null,
             null,
             null,
             null,
@@ -3668,7 +3699,8 @@ describe("sigil", () => {
             new BN(1000),
             new BN(1000),
             0,
-            [],            0,
+            [],
+            0,
             100, // maxSlippageBps
             new BN(0), // below MIN_TIMELOCK_DURATION — should fail
             [],
@@ -3697,7 +3729,8 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,          null,
+          null,
+          null,
           null,
           new BN(3600), // new timelock_duration
           null,
@@ -3738,7 +3771,8 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,          null,
+          null,
+          null,
           null,
           new BN(1800), // back to MIN_TIMELOCK_DURATION
           null,
@@ -3777,7 +3811,8 @@ describe("sigil", () => {
           new BN(999_000_000),
           null,
           null,
-          null,          null,
+          null,
+          null,
           null,
           null,
           null,
@@ -3877,7 +3912,8 @@ describe("sigil", () => {
           new BN(500_000_000), // 500 USDC daily cap
           new BN(100_000_000), // 100 USDC max tx
           1, // protocolMode: allowlist
-          [jupiterProgramId],          0,
+          [jupiterProgramId],
+          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [allowedDest.publicKey], // only allow transfers to this address
@@ -4019,7 +4055,8 @@ describe("sigil", () => {
           new BN(500_000_000),
           new BN(100_000_000),
           1,
-          [jupiterProgramId],          0,
+          [jupiterProgramId],
+          0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [], // empty allowlist
@@ -4119,7 +4156,8 @@ describe("sigil", () => {
             new BN(1000),
             new BN(1000),
             0,
-            [],            0,
+            [],
+            0,
             100, // maxSlippageBps
             new BN(1800), // MIN_TIMELOCK_DURATION
             tooMany,
@@ -4256,7 +4294,8 @@ describe("sigil", () => {
           new BN(500_000_000),
           new BN(100_000_000),
           1,
-          [jupiterProgramId],          500, // developer_fee_rate = 500 (5 BPS)
+          [jupiterProgramId],
+          500, // developer_fee_rate = 500 (5 BPS)
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -4391,7 +4430,8 @@ describe("sigil", () => {
           new BN(1_000_000_000),
           new BN(500_000_000),
           1,
-          [jupiterProgramId],          0,
+          [jupiterProgramId],
+          0,
           100,
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -4826,7 +4866,8 @@ describe("sigil", () => {
           new BN(2_000_000_000), // 2000 USDC daily cap
           new BN(1_000_000_000), // 1000 USDC max tx
           1,
-          [jupiterProgramId],          0,
+          [jupiterProgramId],
+          0,
           100,
           new BN(1800), // MIN_TIMELOCK_DURATION
           [], // empty destination allowlist = allow any
@@ -5126,7 +5167,8 @@ describe("sigil", () => {
           new BN(1_000_000_000), // 1000 USDC global cap
           new BN(500_000_000), // 500 USDC max tx
           1, // ALLOWLIST mode
-          [protocolA, protocolB],          0, // no dev fee
+          [protocolA, protocolB],
+          0, // no dev fee
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
           [], // no dest restrictions
@@ -5233,7 +5275,8 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,          null,
+          null,
+          null,
           null,
           null,
           null,
@@ -5274,7 +5317,8 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,          null,
+          null,
+          null,
           null,
           null,
           null,
@@ -5327,7 +5371,8 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,          null,
+          null,
+          null,
           null,
           null,
           null,
@@ -5368,7 +5413,8 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null,          null,
+          null,
+          null,
           null,
           null,
           null,
@@ -5413,7 +5459,8 @@ describe("sigil", () => {
             null,
             null,
             null,
-            null,            null,
+            null,
+            null,
             null,
             null,
             null,
@@ -5467,7 +5514,8 @@ describe("sigil", () => {
             new BN(1_000_000_000),
             new BN(500_000_000),
             0, // ALL mode
-            [],            0,
+            [],
+            0,
             100,
             new BN(1800),
             [],
@@ -5538,7 +5586,8 @@ describe("sigil", () => {
           new BN(1000_000_000),
           new BN(1000_000_000),
           0,
-          [],          0,
+          [],
+          0,
           100,
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],
@@ -5759,7 +5808,8 @@ describe("sigil", () => {
           new BN(1000_000_000),
           new BN(1000_000_000),
           0,
-          [jupiterProgramId],          0,
+          [jupiterProgramId],
+          0,
           100,
           new BN(1800), // MIN_TIMELOCK_DURATION
           [],

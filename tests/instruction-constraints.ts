@@ -162,7 +162,8 @@ describe("instruction-constraints", () => {
         new BN(500_000_000), // 500 USDC daily cap
         new BN(100_000_000), // 100 USDC max tx
         0, // protocolMode: all
-        [],        0, // no developer fee
+        [],
+        0, // no developer fee
         100, // maxSlippageBps
         new BN(1800), // 1800s timelock (MIN_TIMELOCK_DURATION)
         [],
@@ -593,7 +594,8 @@ describe("instruction-constraints", () => {
           new BN(500_000_000),
           new BN(100_000_000),
           0,
-          [],          0,
+          [],
+          0,
           100,
           new BN(1800),
           [],
@@ -901,7 +903,8 @@ describe("instruction-constraints", () => {
           new BN(500_000_000),
           new BN(100_000_000),
           0,
-          [],          0,
+          [],
+          0,
           100,
           new BN(1800), // 1800s timelock (MIN_TIMELOCK_DURATION)
           [],
@@ -1094,7 +1097,8 @@ describe("instruction-constraints", () => {
             new BN(500_000_000),
             new BN(100_000_000),
             0,
-            [],            0,
+            [],
+            0,
             100,
             new BN(0), // timelockDuration: 0 — NEGATIVE TEST (should fail)
             [],
@@ -2070,7 +2074,8 @@ describe("instruction-constraints", () => {
           new BN(1_000_000_000),
           new BN(500_000_000),
           0,
-          [],          0,
+          [],
+          0,
           100,
           new BN(1800),
           [],
@@ -2377,7 +2382,8 @@ describe("instruction-constraints", () => {
           new BN(1_000_000_000),
           new BN(500_000_000),
           0,
-          [],          0,
+          [],
+          0,
           100,
           new BN(1800),
           [],
@@ -2603,7 +2609,8 @@ describe("instruction-constraints", () => {
           new BN(500_000_000),
           new BN(100_000_000),
           0,
-          [],          0,
+          [],
+          0,
           100,
           new BN(1800),
           [],
@@ -3007,7 +3014,8 @@ describe("instruction-constraints", () => {
           new BN(500_000_000),
           new BN(100_000_000),
           0,
-          [],          0,
+          [],
+          0,
           100,
           new BN(1800),
           [],

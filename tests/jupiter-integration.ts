@@ -275,7 +275,8 @@ describe("jupiter-integration", () => {
         new BN(500_000_000), // daily cap
         new BN(200_000_000), // max tx size
         1, // protocolMode: 1 = allowlist
-        [jupiterProtocol],        0, // developer fee rate (0 = none)
+        [jupiterProtocol],
+        0, // developer fee rate (0 = none)
         100, // maxSlippageBps
         new BN(1800), // timelockDuration
         [], // allowedDestinations
@@ -538,7 +539,8 @@ describe("jupiter-integration", () => {
           new BN(500_000_000),
           new BN(200_000_000),
           0, // protocolMode
-          [jupiterProtocol],          0, // developer fee rate
+          [jupiterProtocol],
+          0, // developer fee rate
           100, // maxSlippageBps
           new BN(1800),
           [],
@@ -663,7 +665,8 @@ describe("jupiter-integration", () => {
           new BN(100_000_000), // 100 USDC daily cap
           new BN(60_000_000), // 60 USDC max tx
           0, // protocolMode
-          [jupiterProtocol],          0, // developer fee rate
+          [jupiterProtocol],
+          0, // developer fee rate
           100, // maxSlippageBps
           new BN(1800),
           [],

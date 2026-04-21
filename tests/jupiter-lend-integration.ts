@@ -244,7 +244,8 @@ describe("jupiter-lend-integration", () => {
         new BN(500_000_000), // daily cap: 500 USDC
         new BN(200_000_000), // max tx: 200 USDC
         1, // protocolMode: allowlist
-        [lendProtocol],        0, // developer fee rate
+        [lendProtocol],
+        0, // developer fee rate
         100, // maxSlippageBps
         new BN(1800), // timelockDuration
         [], // allowedDestinations
@@ -467,7 +468,8 @@ describe("jupiter-lend-integration", () => {
           new BN(500_000_000),
           new BN(200_000_000),
           0,
-          [lendProtocol],          0,
+          [lendProtocol],
+          0,
           100,
           new BN(1800),
           [],
@@ -583,7 +585,8 @@ describe("jupiter-lend-integration", () => {
           new BN(100_000_000), // 100 USDC daily cap
           new BN(60_000_000), // 60 USDC max tx
           0,
-          [lendProtocol],          0,
+          [lendProtocol],
+          0,
           100,
           new BN(1800),
           [],

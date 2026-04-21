@@ -220,7 +220,8 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
           new BN(500_000_000), // $500 daily cap
           new BN(100_000_000), // $100 max tx
           1, // protocolMode: allowlist
-          [FLASH_TRADE_DEVNET, FLASH_COMPOSABILITY_DEVNET],          0, // developer_fee_rate
+          [FLASH_TRADE_DEVNET, FLASH_COMPOSABILITY_DEVNET],
+          0, // developer_fee_rate
           5000, // maxSlippageBps (50%)
           new BN(1800), // timelock
           [], // destinations
@@ -590,7 +591,8 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
           new BN(500_000_000),
           new BN(100_000_000),
           1,
-          [FLASH_TRADE_DEVNET, FLASH_COMPOSABILITY_DEVNET],          0,
+          [FLASH_TRADE_DEVNET, FLASH_COMPOSABILITY_DEVNET],
+          0,
           5000,
           new BN(0),
           [],
@@ -804,7 +806,8 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
           new BN(500_000_000),
           new BN(100_000_000),
           1,
-          [FLASH_TRADE_DEVNET],          0,
+          [FLASH_TRADE_DEVNET],
+          0,
           5000,
           new BN(0),
           [],
@@ -941,7 +944,8 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
           new BN(500_000_000),
           new BN(100_000_000),
           1,
-          [FLASH_TRADE_DEVNET],          0,
+          [FLASH_TRADE_DEVNET],
+          0,
           5000,
           new BN(0),
           [],

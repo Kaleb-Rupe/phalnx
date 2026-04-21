@@ -144,7 +144,8 @@ describe("devnet-smoke-test", () => {
         new BN(500_000_000), // daily cap: 500
         new BN(100_000_000), // max tx: 100
         1, // protocolMode: allowlist
-        [jupiterProgramId],        0, // developer_fee_rate: 0 bps
+        [jupiterProgramId],
+        0, // developer_fee_rate: 0 bps
         500, // maxSlippageBps: 5%
         new BN(1800), // timelockDuration (mandatory minimum: 30 min)
         [], // allowedDestinations
@@ -216,7 +217,8 @@ describe("devnet-smoke-test", () => {
         null, // keep daily cap
         null, // keep max tx
         null, // keep protocolMode
-        null,        null, // keep developer_fee_rate
+        null,
+        null, // keep developer_fee_rate
         null, // keep maxSlippageBps
         null, // keep timelockDuration
         null, // keep allowedDestinations

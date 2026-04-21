@@ -158,7 +158,8 @@ describe("TOCTOU Security Fix", () => {
         new BN(500_000_000), // daily cap: 500 USDC
         new BN(100_000_000), // max tx: 100 USDC
         0, // protocol mode: all
-        [jupiterProgramId],        0, // developer_fee_rate
+        [jupiterProgramId],
+        0, // developer_fee_rate
         500, // maxSlippageBps
         new BN(timelockDuration),
         [], // allowedDestinations
@@ -216,7 +217,8 @@ describe("TOCTOU Security Fix", () => {
         dailyCap ?? null,
         null,
         null,
-        null,        null,
+        null,
+        null,
         null,
         null,
         null,
@@ -334,7 +336,8 @@ describe("TOCTOU Security Fix", () => {
           new BN(500_000_000),
           new BN(100_000_000),
           0,
-          [jupiterProgramId],          0,
+          [jupiterProgramId],
+          0,
           500,
           new BN(0), // timelockDuration: 0 — below minimum (NEGATIVE TEST)
           [],
@@ -367,7 +370,8 @@ describe("TOCTOU Security Fix", () => {
           null,
           null,
           null,
-          null,          null,
+          null,
+          null,
           null,
           new BN(900), // timelockDuration: 900 — below 1800 minimum
           null,
@@ -400,7 +404,8 @@ describe("TOCTOU Security Fix", () => {
           null,
           null,
           null,
-          null,          null,
+          null,
+          null,
           null,
           new BN(0), // timelockDuration: 0 — removal blocked (NEGATIVE TEST)
           null,

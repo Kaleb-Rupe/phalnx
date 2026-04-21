@@ -786,7 +786,8 @@ export async function setupVaultWithAgent(
       dailyCap,
       maxTxSize,
       0, // protocolMode: all
-      [],      developerFeeRate,
+      [],
+      developerFeeRate,
       maxSlippageBps,
       timelockDuration,
       allowedDestinations,

@@ -282,7 +282,8 @@ describe("escrow-integration", () => {
         new BN(500_000_000), // daily_spending_cap_usd ($500)
         new BN(100_000_000), // max_transaction_size_usd ($100)
         0, // protocol_mode = ALL
-        [],        100, // developer_fee_rate (0.01%)
+        [],
+        100, // developer_fee_rate (0.01%)
         500, // max_slippage_bps
         new BN(1800), // timelock_duration (0 = no timelock)
         [], // allowed_destinations
@@ -352,7 +353,8 @@ describe("escrow-integration", () => {
         new BN(500_000_000), // daily_spending_cap_usd ($500)
         new BN(100_000_000), // max_transaction_size_usd ($100)
         0, // protocol_mode = ALL
-        [],        100, // developer_fee_rate (0.01%)
+        [],
+        100, // developer_fee_rate (0.01%)
         500, // max_slippage_bps
         new BN(1800), // timelock_duration (0 = no timelock)
         [], // allowed_destinations
