@@ -260,6 +260,7 @@ function fixBareDirectoryImports(dir) {
     "accounts",
     "errors",
     "instructions",
+    "pdas",
     "programs",
     "types",
   ]);

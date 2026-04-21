@@ -2969,10 +2969,6 @@ export type Sigil = {
           }
         },
         {
-          "name": "maxLeverageBps",
-          "type": "u16"
-        },
-        {
           "name": "developerFeeRate",
           "type": "u16"
         },
@@ -3646,12 +3642,6 @@ export type Sigil = {
             "option": {
               "vec": "pubkey"
             }
-          }
-        },
-        {
-          "name": "maxLeverageBps",
-          "type": {
-            "option": "u16"
           }
         },
         {
@@ -5536,371 +5526,341 @@ export type Sigil = {
     },
     {
       "code": 6007,
-      "name": "leverageTooHigh",
-      "msg": "Leverage exceeds maximum allowed"
-    },
-    {
-      "code": 6008,
       "name": "sessionNotAuthorized",
       "msg": "Session not authorized"
     },
     {
-      "code": 6009,
+      "code": 6008,
       "name": "invalidSession",
       "msg": "Invalid session: does not belong to this vault"
     },
     {
-      "code": 6010,
+      "code": 6009,
       "name": "tooManyAllowedProtocols",
       "msg": "Policy configuration invalid: too many allowed protocols"
     },
     {
-      "code": 6011,
+      "code": 6010,
       "name": "agentAlreadyRegistered",
       "msg": "Agent already registered for this vault"
     },
     {
-      "code": 6012,
+      "code": 6011,
       "name": "noAgentRegistered",
       "msg": "No agent registered for this vault"
     },
     {
-      "code": 6013,
+      "code": 6012,
       "name": "vaultNotFrozen",
       "msg": "Vault is not frozen (expected frozen for reactivation)"
     },
     {
-      "code": 6014,
+      "code": 6013,
       "name": "vaultAlreadyClosed",
       "msg": "Vault is already closed"
     },
     {
-      "code": 6015,
+      "code": 6014,
       "name": "insufficientBalance",
       "msg": "Insufficient vault balance for withdrawal"
     },
     {
-      "code": 6016,
+      "code": 6015,
       "name": "developerFeeTooHigh",
       "msg": "Developer fee rate exceeds maximum (500 / 1,000,000 = 5 BPS)"
     },
     {
-      "code": 6017,
+      "code": 6016,
       "name": "invalidFeeDestination",
       "msg": "Fee destination account invalid"
     },
     {
-      "code": 6018,
+      "code": 6017,
       "name": "invalidProtocolTreasury",
       "msg": "Protocol treasury account does not match expected address"
     },
     {
-      "code": 6019,
+      "code": 6018,
       "name": "invalidAgentKey",
       "msg": "Invalid agent: cannot be the zero address"
     },
     {
-      "code": 6020,
+      "code": 6019,
       "name": "agentIsOwner",
       "msg": "Invalid agent: agent cannot be the vault owner"
     },
     {
-      "code": 6021,
+      "code": 6020,
       "name": "overflow",
       "msg": "Arithmetic overflow"
     },
     {
-      "code": 6022,
+      "code": 6021,
       "name": "invalidTokenAccount",
       "msg": "Token account does not belong to vault or has wrong mint"
     },
     {
-      "code": 6023,
+      "code": 6022,
       "name": "timelockNotExpired",
       "msg": "Timelock period has not expired yet"
     },
     {
-      "code": 6024,
+      "code": 6023,
       "name": "noTimelockConfigured",
       "msg": "No timelock configured on this vault"
     },
     {
-      "code": 6025,
+      "code": 6024,
       "name": "destinationNotAllowed",
       "msg": "Destination not in allowed list"
     },
     {
-      "code": 6026,
+      "code": 6025,
       "name": "tooManyDestinations",
       "msg": "Too many destinations (max 10)"
     },
     {
-      "code": 6027,
+      "code": 6026,
       "name": "invalidProtocolMode",
       "msg": "Invalid protocol mode (must be 0, 1, or 2)"
     },
     {
-      "code": 6028,
-      "name": "invalidNonSpendingAmount",
-      "msg": "Non-spending action must have amount = 0"
-    },
-    {
-      "code": 6029,
+      "code": 6027,
       "name": "cpiCallNotAllowed",
       "msg": "Instruction must be top-level (CPI calls not allowed)"
     },
     {
-      "code": 6030,
+      "code": 6028,
       "name": "missingFinalizeInstruction",
       "msg": "Transaction must include finalize_session after validate"
     },
     {
-      "code": 6031,
+      "code": 6029,
       "name": "nonTrackedSwapMustReturnStablecoin",
       "msg": "Non-stablecoin swap must return stablecoin (balance did not increase)"
     },
     {
-      "code": 6032,
+      "code": 6030,
       "name": "swapSlippageExceeded",
       "msg": "Swap slippage exceeds policy max_slippage_bps or quoted output is zero"
     },
     {
-      "code": 6033,
+      "code": 6031,
       "name": "invalidJupiterInstruction",
       "msg": "Cannot parse Jupiter swap instruction data"
     },
     {
-      "code": 6034,
+      "code": 6032,
       "name": "unauthorizedTokenTransfer",
       "msg": "Top-level SPL Token transfer not allowed between validate and finalize"
     },
     {
-      "code": 6035,
+      "code": 6033,
       "name": "slippageBpsTooHigh",
       "msg": "Slippage BPS exceeds maximum (5000 = 50%)"
     },
     {
-      "code": 6036,
+      "code": 6034,
       "name": "protocolMismatch",
       "msg": "DeFi instruction program does not match declared target_protocol"
     },
     {
-      "code": 6037,
+      "code": 6035,
       "name": "tooManyDeFiInstructions",
       "msg": "Spending allows at most one DeFi instruction"
     },
     {
-      "code": 6038,
+      "code": 6036,
       "name": "maxAgentsReached",
       "msg": "Maximum agents per vault reached (limit: 10)"
     },
     {
-      "code": 6039,
+      "code": 6037,
       "name": "insufficientPermissions",
       "msg": "Agent lacks permission for this action type"
     },
     {
-      "code": 6040,
+      "code": 6038,
       "name": "invalidPermissions",
       "msg": "Permission bitmask contains invalid bits"
     },
     {
-      "code": 6041,
+      "code": 6039,
       "name": "escrowNotActive",
       "msg": "Escrow is not in Active status"
     },
     {
-      "code": 6042,
+      "code": 6040,
       "name": "escrowExpired",
       "msg": "Escrow has expired"
     },
     {
-      "code": 6043,
+      "code": 6041,
       "name": "escrowNotExpired",
       "msg": "Escrow has not expired yet"
     },
     {
-      "code": 6044,
+      "code": 6042,
       "name": "invalidEscrowVault",
       "msg": "Invalid escrow vault"
     },
     {
-      "code": 6045,
+      "code": 6043,
       "name": "escrowConditionsNotMet",
       "msg": "Escrow conditions not met"
     },
     {
-      "code": 6046,
+      "code": 6044,
       "name": "escrowDurationExceeded",
       "msg": "Escrow duration exceeds maximum (30 days)"
     },
     {
-      "code": 6047,
+      "code": 6045,
       "name": "invalidConstraintConfig",
       "msg": "Invalid constraint configuration: bounds exceeded"
     },
     {
-      "code": 6048,
+      "code": 6046,
       "name": "constraintViolated",
       "msg": "Instruction constraint violated"
     },
     {
-      "code": 6049,
+      "code": 6047,
       "name": "invalidConstraintsPda",
       "msg": "Invalid constraints PDA: wrong owner or vault"
     },
     {
-      "code": 6050,
+      "code": 6048,
       "name": "invalidPendingConstraintsPda",
       "msg": "Invalid pending constraints PDA: wrong owner or vault"
     },
     {
-      "code": 6051,
+      "code": 6049,
       "name": "agentSpendLimitExceeded",
       "msg": "Agent rolling 24h spend exceeds per-agent spending limit"
     },
     {
-      "code": 6052,
+      "code": 6050,
       "name": "overlaySlotExhausted",
       "msg": "Per-agent overlay is full; cannot register agent with spending limit"
     },
     {
-      "code": 6053,
+      "code": 6051,
       "name": "agentSlotNotFound",
       "msg": "Agent has per-agent spending limit but no overlay tracking slot"
     },
     {
-      "code": 6054,
+      "code": 6052,
       "name": "unauthorizedTokenApproval",
       "msg": "Unauthorized SPL Token Approve between validate and finalize"
     },
     {
-      "code": 6055,
+      "code": 6053,
       "name": "invalidSessionExpiry",
       "msg": "Session expiry slots out of range (10-450)"
     },
     {
-      "code": 6056,
+      "code": 6054,
       "name": "unconstrainedProgramBlocked",
       "msg": "Program has no constraint entry and strict mode is enabled"
     },
     {
-      "code": 6057,
+      "code": 6055,
       "name": "protocolCapExceeded",
       "msg": "Per-protocol rolling 24h spending cap would be exceeded"
     },
     {
-      "code": 6058,
+      "code": 6056,
       "name": "protocolCapsMismatch",
       "msg": "protocol_caps length must match protocols length when has_protocol_caps is true"
     },
     {
-      "code": 6059,
+      "code": 6057,
       "name": "activeEscrowsExist",
       "msg": "Cannot close vault with active escrow deposits"
     },
     {
-      "code": 6060,
+      "code": 6058,
       "name": "constraintsNotClosed",
       "msg": "Instruction constraints must be closed before closing vault"
     },
     {
-      "code": 6061,
+      "code": 6059,
       "name": "pendingPolicyExists",
       "msg": "Pending policy update must be applied or cancelled before closing vault"
     },
     {
-      "code": 6062,
+      "code": 6060,
       "name": "agentPaused",
       "msg": "Agent is paused and cannot execute actions"
     },
     {
-      "code": 6063,
+      "code": 6061,
       "name": "agentAlreadyPaused",
       "msg": "Agent is already paused"
     },
     {
-      "code": 6064,
+      "code": 6062,
       "name": "agentNotPaused",
       "msg": "Agent is not paused"
     },
     {
-      "code": 6065,
+      "code": 6063,
       "name": "unauthorizedPostFinalizeInstruction",
       "msg": "Instructions after finalize_session must be ComputeBudget or SystemProgram only"
     },
     {
-      "code": 6066,
+      "code": 6064,
       "name": "unexpectedBalanceDecrease",
       "msg": "Vault balance decreased more than delegated amount — potential CPI attack"
     },
     {
-      "code": 6067,
+      "code": 6065,
       "name": "timelockTooShort",
       "msg": "Timelock duration below minimum (1800 seconds / 30 minutes)"
     },
     {
-      "code": 6068,
+      "code": 6066,
       "name": "policyVersionMismatch",
       "msg": "Policy version mismatch — policy changed since agent's last RPC read"
     },
     {
-      "code": 6069,
-      "name": "pendingAgentPermsExists",
-      "msg": "A pending agent permissions update already exists for this agent"
-    },
-    {
-      "code": 6070,
-      "name": "pendingCloseConstraintsExists",
-      "msg": "A pending close constraints operation already exists for this vault"
-    },
-    {
-      "code": 6071,
+      "code": 6067,
       "name": "activeSessionsExist",
       "msg": "Cannot close vault with active sessions (finalize pending sessions first)"
     },
     {
-      "code": 6072,
+      "code": 6068,
       "name": "postAssertionFailed",
       "msg": "Post-execution assertion failed: account state did not satisfy constraint"
     },
     {
-      "code": 6073,
+      "code": 6069,
       "name": "invalidPostAssertionIndex",
       "msg": "Post-assertion constraint references invalid instruction index"
     },
     {
-      "code": 6074,
+      "code": 6070,
       "name": "unauthorizedPreValidateInstruction",
       "msg": "Non-infrastructure instruction detected before validate_and_authorize"
     },
     {
-      "code": 6075,
+      "code": 6071,
       "name": "snapshotNotCaptured",
       "msg": "Delta assertion snapshot was not captured in validate_and_authorize"
     },
     {
-      "code": 6076,
-      "name": "constraintIndexOutOfBounds",
-      "msg": "Constraint entry index out of bounds for zero-copy array"
-    },
-    {
-      "code": 6077,
+      "code": 6072,
       "name": "invalidConstraintOperator",
       "msg": "Constraint operator value is not a valid ConstraintOperator discriminant"
     },
     {
-      "code": 6078,
+      "code": 6073,
       "name": "constraintsVaultMismatch",
       "msg": "Zero-copy constraints account has wrong vault"
     },
     {
-      "code": 6079,
-      "name": "constraintEntryCountExceeded",
-      "msg": "Cannot pack entries: entry count exceeds MAX_CONSTRAINT_ENTRIES"
-    },
-    {
-      "code": 6080,
+      "code": 6074,
       "name": "blockedSplOpcode",
       "msg": "SPL opcode is blocked at runtime and cannot be used in constraints"
     }
@@ -7606,12 +7566,6 @@ export type Sigil = {
             }
           },
           {
-            "name": "maxLeverageBps",
-            "type": {
-              "option": "u16"
-            }
-          },
-          {
             "name": "developerFeeRate",
             "type": {
               "option": "u16"
@@ -7757,13 +7711,6 @@ export type Sigil = {
             "type": {
               "vec": "pubkey"
             }
-          },
-          {
-            "name": "maxLeverageBps",
-            "docs": [
-              "DEPRECATED: Not enforced on-chain. Kept for layout stability. See Phase B3 post-assertions."
-            ],
-            "type": "u16"
           },
           {
             "name": "developerFeeRate",

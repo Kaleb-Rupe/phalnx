@@ -129,7 +129,6 @@ describe("Kit SDK Devnet — Vault Lifecycle", function () {
       maxTransactionAmountUsd: null,
       protocolMode: null,
       protocols: null,
-      maxLeverageBps: null,
       developerFeeRate: null,
       maxSlippageBps: null,
       timelockDuration: null,

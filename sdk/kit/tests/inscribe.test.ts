@@ -83,12 +83,10 @@ describe("inscribe", () => {
       const resolved = resolvePolicies({});
       const params = mapPoliciesToVaultParams(resolved, 0n, FEE_DEST, {
         developerFeeRate: 200,
-        maxLeverageBps: 5000,
         timelockDuration: 3600,
         maxSlippageBps: 250,
       });
       expect(params.developerFeeRate).to.equal(200);
-      expect(params.maxLeverageBps).to.equal(5000);
       expect(params.timelockDuration).to.equal(3600);
       expect(params.maxSlippageBps).to.equal(250);
     });
@@ -97,7 +95,6 @@ describe("inscribe", () => {
       const resolved = resolvePolicies({});
       const params = mapPoliciesToVaultParams(resolved, 0n, FEE_DEST);
       expect(params.developerFeeRate).to.equal(0);
-      expect(params.maxLeverageBps).to.equal(0);
       expect(params.timelockDuration).to.equal(0);
       expect(params.maxSlippageBps).to.equal(100);
     });

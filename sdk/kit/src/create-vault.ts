@@ -74,7 +74,6 @@ export interface CreateVaultOptions {
   developerFeeRate?: number;
   protocols?: Address[];
   protocolMode?: number;
-  maxLeverageBps?: number;
   maxSlippageBps?: number;
   /**
    * Timelock duration in seconds for owner-initiated policy changes.
@@ -233,7 +232,6 @@ export async function createVault(
     maxTransactionSizeUsd,
     protocolMode,
     protocols,
-    maxLeverageBps: options.maxLeverageBps ?? 0,
     developerFeeRate: options.developerFeeRate ?? 0,
     maxSlippageBps: options.maxSlippageBps ?? 100,
     timelockDuration: options.timelockDuration,

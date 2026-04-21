@@ -135,8 +135,7 @@ describe("analytics-counters", () => {
         new BN(1_000_000_000), // 1000 USDC daily cap
         new BN(500_000_000), // 500 USDC max tx
         0, // protocol mode: all
-        [], // protocols
-        new BN(0) as any, // max_leverage_bps (u16)
+        [],
         0, // developer_fee_rate
         5000, // maxSlippageBps (50%)
         new BN(1800), // timelockDuration (mandatory minimum: 30 min)

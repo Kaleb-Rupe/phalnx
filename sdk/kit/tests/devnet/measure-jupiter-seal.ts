@@ -97,7 +97,6 @@ function mockState(): ResolvedVaultState {
       maxTransactionSizeUsd: 10_000_000_000n,
       protocolMode: 0,
       protocols: [],
-      maxLeverageBps: 0,
       developerFeeRate: 0,
       maxSlippageBps: 500,
       timelockDuration: 0n,

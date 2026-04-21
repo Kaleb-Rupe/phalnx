@@ -244,8 +244,7 @@ describe("flash-trade-integration", () => {
         new BN(1_000_000_000), // daily cap: 1000 USDC
         new BN(500_000_000), // max tx: 500 USDC
         0, // protocolMode
-        [flashProtocol], // protocols
-        10000, // max leverage: 100x (10000 bps)
+        [flashProtocol],
         0, // developer fee rate
         100, // maxSlippageBps
         new BN(1800), // timelockDuration (mandatory minimum: 30 min)
@@ -423,8 +422,7 @@ describe("flash-trade-integration", () => {
           new BN(1_000_000_000),
           new BN(500_000_000),
           0, // protocolMode
-          [flashProtocol], // protocols
-          10000,
+          [flashProtocol],
           0, // developer fee rate
           100, // maxSlippageBps
           new BN(1800),
@@ -594,7 +592,6 @@ describe("flash-trade-integration", () => {
           new BN(200_000_000), // $200 max tx
           0, // protocol mode: all allowed
           [],
-          10000, // 100x leverage
           0, // no dev fee
           100, // maxSlippageBps
           new BN(1800), // timelockDuration (mandatory minimum: 30 min)

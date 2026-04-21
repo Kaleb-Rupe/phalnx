@@ -90,7 +90,6 @@ describe("devnet-timelock", () => {
         null,
         null,
         null,
-        null,
         null, // sessionExpirySlots
         null, // hasProtocolCaps
         null, // protocolCaps
@@ -140,7 +139,6 @@ describe("devnet-timelock", () => {
         null,
         null,
         null,
-        null,
         null, // sessionExpirySlots
         null, // hasProtocolCaps
         null, // protocolCaps
@@ -167,7 +165,7 @@ describe("devnet-timelock", () => {
         .rpc();
       expect.fail("Should have thrown");
     } catch (err: any) {
-      expectSigilError(err, { name: "TimelockNotExpired", code: 6023 });
+      expectSigilError(err, { name: "TimelockNotExpired", code: 6022 });
     }
 
     // Clean up — cancel the pending update
@@ -190,7 +188,6 @@ describe("devnet-timelock", () => {
     await program.methods
       .queuePolicyUpdate(
         new BN(777_000_000),
-        null,
         null,
         null,
         null,

@@ -5,7 +5,7 @@
  * Every error includes a category, retryability flag, and
  * recovery actions that tell the agent exactly what to do next.
  *
- * Maps all 81 on-chain error codes (6000-6080) plus 34 SDK
+ * Maps all 75 on-chain error codes (6000-6074) plus 34 SDK
  * error codes (7000-7033) to AgentError with machine-readable metadata.
  *
  * Zero dependency on @solana/web3.js or @coral-xyz/anchor.
@@ -57,7 +57,7 @@ export interface AgentError {
 }
 
 // ---------------------------------------------------------------------------
-// On-chain error code mapping (6000-6080)
+// On-chain error code mapping (6000-6074)
 // ---------------------------------------------------------------------------
 
 interface ErrorMapping {
@@ -191,23 +191,6 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
     ],
   },
   6007: {
-    name: "LeverageTooHigh",
-    message: "Leverage exceeds maximum allowed by policy",
-    category: "POLICY_VIOLATION",
-    retryable: false,
-    recovery_actions: [
-      {
-        action: "reduce_leverage",
-        description: "Reduce leverage to within maxLeverageBps",
-      },
-      {
-        action: "check_limits",
-        description: "Check the vault's maxLeverageBps policy",
-        tool: "sigil_check_vault",
-      },
-    ],
-  },
-  6008: {
     name: "SessionNotAuthorized",
     message: "Session authority not authorized for this action",
     category: "PERMISSION",
@@ -219,7 +202,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6009: {
+  6008: {
     name: "InvalidSession",
     message: "Session does not belong to this vault or is invalid",
     category: "PERMISSION",
@@ -231,7 +214,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6010: {
+  6009: {
     name: "TooManyAllowedProtocols",
     message: "Policy configuration has too many allowed protocols (max 10)",
     category: "INPUT_VALIDATION",
@@ -243,7 +226,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6011: {
+  6010: {
     name: "AgentAlreadyRegistered",
     message: "Agent is already registered on this vault",
     category: "INPUT_VALIDATION",
@@ -256,7 +239,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6012: {
+  6011: {
     name: "NoAgentRegistered",
     message: "No agent registered on this vault",
     category: "RESOURCE_NOT_FOUND",
@@ -269,7 +252,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6013: {
+  6012: {
     name: "VaultNotFrozen",
     message: "Vault is not frozen (expected frozen for reactivation)",
     category: "INPUT_VALIDATION",
@@ -282,7 +265,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6014: {
+  6013: {
     name: "VaultAlreadyClosed",
     message: "Vault is permanently closed",
     category: "INPUT_VALIDATION",
@@ -295,7 +278,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6015: {
+  6014: {
     name: "InsufficientBalance",
     message: "Insufficient vault balance for this operation",
     category: "SPENDING_CAP",
@@ -316,7 +299,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6016: {
+  6015: {
     name: "DeveloperFeeTooHigh",
     message: "Developer fee rate exceeds maximum (500 / 1,000,000 = 5 BPS)",
     category: "INPUT_VALIDATION",
@@ -328,7 +311,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6017: {
+  6016: {
     name: "InvalidFeeDestination",
     message: "Fee destination account is invalid",
     category: "INPUT_VALIDATION",
@@ -340,7 +323,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6018: {
+  6017: {
     name: "InvalidProtocolTreasury",
     message: "Protocol treasury account does not match expected address",
     category: "INPUT_VALIDATION",
@@ -352,7 +335,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6019: {
+  6018: {
     name: "InvalidAgentKey",
     message: "Agent cannot be the zero address",
     category: "INPUT_VALIDATION",
@@ -364,7 +347,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6020: {
+  6019: {
     name: "AgentIsOwner",
     message: "Agent cannot be the vault owner",
     category: "INPUT_VALIDATION",
@@ -377,7 +360,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6021: {
+  6020: {
     name: "Overflow",
     message: "Arithmetic overflow in on-chain computation",
     category: "FATAL",
@@ -389,7 +372,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6022: {
+  6021: {
     name: "InvalidTokenAccount",
     message: "Token account does not belong to vault or has wrong mint",
     category: "INPUT_VALIDATION",
@@ -404,7 +387,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
   },
 
   // --- Timelock + Destination errors ---
-  6023: {
+  6022: {
     name: "TimelockNotExpired",
     message: "Timelock period has not expired yet",
     category: "POLICY_VIOLATION",
@@ -418,7 +401,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6024: {
+  6023: {
     name: "NoTimelockConfigured",
     message: "No timelock configured on this vault",
     category: "INPUT_VALIDATION",
@@ -430,7 +413,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6025: {
+  6024: {
     name: "DestinationNotAllowed",
     message: "Destination address not in vault's allowed destinations list",
     category: "POLICY_VIOLATION",
@@ -447,7 +430,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6026: {
+  6025: {
     name: "TooManyDestinations",
     message: "Too many destinations in allowlist (max 10)",
     category: "INPUT_VALIDATION",
@@ -459,7 +442,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6027: {
+  6026: {
     name: "InvalidProtocolMode",
     message:
       "Invalid protocol mode (must be 0=all, 1=allowlist, or 2=denylist)",
@@ -475,20 +458,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
   },
 
   // --- Flash Trade expansion errors ---
-  6028: {
-    name: "InvalidNonSpendingAmount",
-    message: "Non-spending action must have amount = 0",
-    category: "INPUT_VALIDATION",
-    retryable: false,
-    recovery_actions: [
-      {
-        action: "set_zero_amount",
-        description:
-          "Set amount to 0 for non-spending actions (close, cancel, etc.)",
-      },
-    ],
-  },
-  6029: {
+  6027: {
     name: "CpiCallNotAllowed",
     message:
       "Instruction must be top-level (CPI calls not allowed for validate/finalize)",
@@ -502,7 +472,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6030: {
+  6028: {
     name: "MissingFinalizeInstruction",
     message:
       "Transaction must include finalize_session after validate_and_authorize",
@@ -518,7 +488,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
   },
 
   // --- Stablecoin-only enforcement errors ---
-  6031: {
+  6029: {
     name: "NonTrackedSwapMustReturnStablecoin",
     message:
       "Non-stablecoin swap must return stablecoin (vault stablecoin balance did not increase)",
@@ -532,7 +502,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6032: {
+  6030: {
     name: "SwapSlippageExceeded",
     message:
       "Swap slippage exceeds policy max_slippage_bps or quoted output is zero",
@@ -551,7 +521,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6033: {
+  6031: {
     name: "InvalidJupiterInstruction",
     message: "Cannot parse Jupiter swap instruction data",
     category: "INPUT_VALIDATION",
@@ -564,7 +534,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6034: {
+  6032: {
     name: "UnauthorizedTokenTransfer",
     message:
       "Top-level SPL Token transfer not allowed between validate and finalize",
@@ -578,7 +548,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6035: {
+  6033: {
     name: "SlippageBpsTooHigh",
     message: "Slippage BPS exceeds maximum allowed (5000 = 50%)",
     category: "INPUT_VALIDATION",
@@ -590,7 +560,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6036: {
+  6034: {
     name: "ProtocolMismatch",
     message:
       "DeFi instruction program does not match the declared target_protocol",
@@ -604,7 +574,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6037: {
+  6035: {
     name: "TooManyDeFiInstructions",
     message: "Non-stablecoin swap allows exactly one DeFi instruction",
     category: "INPUT_VALIDATION",
@@ -618,7 +588,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
   },
 
   // --- Multi-Agent errors ---
-  6038: {
+  6036: {
     name: "MaxAgentsReached",
     message: "Maximum agents per vault reached (limit: 10)",
     category: "INPUT_VALIDATION",
@@ -631,7 +601,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6039: {
+  6037: {
     name: "InsufficientPermissions",
     message: "Agent lacks permission for this action type",
     category: "PERMISSION",
@@ -648,7 +618,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6040: {
+  6038: {
     name: "InvalidPermissions",
     message:
       "Capability exceeds the on-chain maximum (valid values: 0 = Disabled, 1 = Observer, 2 = Operator)",
@@ -664,7 +634,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
   },
 
   // --- Escrow errors ---
-  6041: {
+  6039: {
     name: "EscrowNotActive",
     message: "Escrow is not in Active status",
     category: "RESOURCE_NOT_FOUND",
@@ -676,7 +646,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6042: {
+  6040: {
     name: "EscrowExpired",
     message: "Escrow has expired — can only be refunded now",
     category: "RESOURCE_NOT_FOUND",
@@ -689,7 +659,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6043: {
+  6041: {
     name: "EscrowNotExpired",
     message: "Escrow has not expired yet — cannot refund before expiry",
     category: "INPUT_VALIDATION",
@@ -706,7 +676,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6044: {
+  6042: {
     name: "InvalidEscrowVault",
     message: "Invalid escrow vault — source or destination vault mismatch",
     category: "INPUT_VALIDATION",
@@ -719,7 +689,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6045: {
+  6043: {
     name: "EscrowConditionsNotMet",
     message: "Escrow settlement conditions not met (SHA-256 proof invalid)",
     category: "INPUT_VALIDATION",
@@ -732,7 +702,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6046: {
+  6044: {
     name: "EscrowDurationExceeded",
     message: "Escrow duration exceeds maximum (30 days)",
     category: "INPUT_VALIDATION",
@@ -747,7 +717,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
   },
 
   // --- Instruction constraints errors ---
-  6047: {
+  6045: {
     name: "InvalidConstraintConfig",
     message: "Invalid constraint configuration: bounds exceeded",
     category: "INPUT_VALIDATION",
@@ -760,7 +730,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6048: {
+  6046: {
     name: "ConstraintViolated",
     message: "Instruction violated a configured constraint",
     category: "POLICY_VIOLATION",
@@ -779,7 +749,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6049: {
+  6047: {
     name: "InvalidConstraintsPda",
     message: "Invalid constraints PDA: wrong owner or vault",
     category: "INPUT_VALIDATION",
@@ -791,7 +761,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6050: {
+  6048: {
     name: "InvalidPendingConstraintsPda",
     message: "Invalid pending constraints PDA: wrong owner or vault",
     category: "INPUT_VALIDATION",
@@ -806,7 +776,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
   },
 
   // --- Per-agent spend limit errors ---
-  6051: {
+  6049: {
     name: "AgentSpendLimitExceeded",
     message:
       "Agent's rolling 24h spend exceeds their individual spending limit",
@@ -831,7 +801,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6052: {
+  6050: {
     name: "OverlaySlotExhausted",
     message:
       "Per-agent overlay is full — cannot register agent with spending limit",
@@ -845,7 +815,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6053: {
+  6051: {
     name: "AgentSlotNotFound",
     message: "Agent has per-agent spending limit but no overlay tracking slot",
     category: "RESOURCE_NOT_FOUND",
@@ -858,7 +828,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6054: {
+  6052: {
     name: "UnauthorizedTokenApproval",
     message:
       "Unauthorized SPL Token Approve detected between validate and finalize",
@@ -872,7 +842,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6055: {
+  6053: {
     name: "InvalidSessionExpiry",
     message: "Session expiry slots out of range (10-450)",
     category: "INPUT_VALIDATION",
@@ -884,7 +854,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6056: {
+  6054: {
     name: "UnconstrainedProgramBlocked",
     message: "Program has no constraint entry and strict mode is enabled",
     category: "POLICY_VIOLATION",
@@ -904,7 +874,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
   },
 
   // --- Per-protocol spend cap errors ---
-  6057: {
+  6055: {
     name: "ProtocolCapExceeded",
     message: "Per-protocol rolling 24h spending cap would be exceeded",
     category: "SPENDING_CAP",
@@ -927,7 +897,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6058: {
+  6056: {
     name: "ProtocolCapsMismatch",
     message:
       "protocol_caps length must match protocols length when has_protocol_caps is true",
@@ -943,7 +913,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
   },
 
   // --- Vault closure guard errors ---
-  6059: {
+  6057: {
     name: "ActiveEscrowsExist",
     message: "Active escrow deposits exist — close them before closing vault",
     category: "RESOURCE_NOT_FOUND",
@@ -956,7 +926,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6060: {
+  6058: {
     name: "ConstraintsNotClosed",
     message:
       "Instruction constraints PDA still exists — close it before closing vault",
@@ -970,7 +940,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6061: {
+  6059: {
     name: "PendingPolicyExists",
     message:
       "A pending policy update exists — apply or cancel it before closing vault",
@@ -986,7 +956,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
   },
 
   // --- Agent pause errors ---
-  6062: {
+  6060: {
     name: "AgentPaused",
     message: "Agent is paused — unpause before executing actions",
     category: "PERMISSION",
@@ -998,7 +968,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6063: {
+  6061: {
     name: "AgentAlreadyPaused",
     message: "Agent is already paused",
     category: "INPUT_VALIDATION",
@@ -1010,7 +980,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6064: {
+  6062: {
     name: "AgentNotPaused",
     message: "Agent is not paused — cannot unpause",
     category: "INPUT_VALIDATION",
@@ -1022,7 +992,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6065: {
+  6063: {
     name: "UnauthorizedPostFinalizeInstruction",
     message:
       "Instructions after finalize_session must be ComputeBudget or SystemProgram only",
@@ -1036,7 +1006,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6066: {
+  6064: {
     name: "UnexpectedBalanceDecrease",
     message:
       "Vault stablecoin balance decreased more than the session authorized amount. " +
@@ -1060,7 +1030,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
   },
 
   // --- TOCTOU + timelock hardening errors ---
-  6067: {
+  6065: {
     name: "TimelockTooShort",
     message:
       "Timelock duration is below the minimum (1800 seconds / 30 minutes).",
@@ -1074,7 +1044,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6068: {
+  6066: {
     name: "PolicyVersionMismatch",
     message:
       "Policy version changed since agent's last RPC read. Re-resolve vault state and retry.",
@@ -1089,35 +1059,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6069: {
-    name: "PendingAgentPermsExists",
-    message:
-      "A pending agent permissions update already exists for this agent.",
-    category: "RESOURCE_NOT_FOUND",
-    retryable: false,
-    recovery_actions: [
-      {
-        action: "apply_or_cancel_pending",
-        description:
-          "Apply or cancel the existing pending update before queuing a new one.",
-      },
-    ],
-  },
-  6070: {
-    name: "PendingCloseConstraintsExists",
-    message:
-      "A pending close constraints operation already exists for this vault.",
-    category: "RESOURCE_NOT_FOUND",
-    retryable: false,
-    recovery_actions: [
-      {
-        action: "apply_or_cancel_pending",
-        description:
-          "Apply or cancel the existing pending close constraints before queuing a new one.",
-      },
-    ],
-  },
-  6071: {
+  6067: {
     name: "ActiveSessionsExist",
     message:
       "Cannot close vault with active sessions. Finalize all pending sessions first.",
@@ -1134,7 +1076,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
   },
 
   // --- Post-execution assertions (Phase B scaffolding) ---
-  6072: {
+  6068: {
     name: "PostAssertionFailed",
     message:
       "Post-execution assertion failed: account state did not satisfy constraint.",
@@ -1148,7 +1090,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6073: {
+  6069: {
     name: "InvalidPostAssertionIndex",
     message: "Post-assertion references an invalid instruction index.",
     category: "INPUT_VALIDATION",
@@ -1161,7 +1103,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6074: {
+  6070: {
     name: "UnauthorizedPreValidateInstruction",
     message:
       "Non-infrastructure instruction detected before validate_and_authorize.",
@@ -1175,7 +1117,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6075: {
+  6071: {
     name: "SnapshotNotCaptured",
     message:
       "Delta assertion snapshot was not captured in validate_and_authorize.",
@@ -1189,19 +1131,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6076: {
-    name: "ConstraintIndexOutOfBounds",
-    message: "Constraint entry index out of bounds for zero-copy array.",
-    category: "INPUT_VALIDATION",
-    retryable: false,
-    recovery_actions: [
-      {
-        action: "fix_constraints",
-        description: "Ensure constraint entries do not exceed max 64 entries.",
-      },
-    ],
-  },
-  6077: {
+  6072: {
     name: "InvalidConstraintOperator",
     message:
       "Constraint operator value is not a valid ConstraintOperator discriminant.",
@@ -1214,7 +1144,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6078: {
+  6073: {
     name: "ConstraintsVaultMismatch",
     message: "Zero-copy constraints account has wrong vault.",
     category: "INPUT_VALIDATION",
@@ -1226,20 +1156,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  6079: {
-    name: "ConstraintEntryCountExceeded",
-    message:
-      "Cannot pack entries: entry count exceeds MAX_CONSTRAINT_ENTRIES (64).",
-    category: "INPUT_VALIDATION",
-    retryable: false,
-    recovery_actions: [
-      {
-        action: "reduce_entries",
-        description: "Reduce the number of constraint entries to 64 or fewer.",
-      },
-    ],
-  },
-  6080: {
+  6074: {
     name: "BlockedSplOpcode",
     message:
       "SPL opcode is blocked at runtime and cannot be used in constraints.",
@@ -1774,7 +1691,7 @@ const SDK_ERRORS: Record<string, ErrorMapping> = {
  * Convert any error into a structured AgentError.
  *
  * Handles:
- * - On-chain Anchor errors (code 6000-6080)
+ * - On-chain Anchor errors (code 6000-6074)
  * - SDK errors (code 7000-7033)
  * - Network/RPC errors (from message patterns)
  * - Unknown errors (wrapped as FATAL)
@@ -2127,7 +2044,7 @@ function extractErrorCode(error: unknown): number | null {
   const e = error as Record<string, unknown>;
 
   // Direct code property
-  if (typeof e.code === "number" && e.code >= 6000 && e.code <= 6080)
+  if (typeof e.code === "number" && e.code >= 6000 && e.code <= 6074)
     return e.code;
 
   // Anchor error structure
@@ -2144,7 +2061,7 @@ function extractErrorCode(error: unknown): number | null {
     const match = e.message.match(/custom program error: 0x([0-9a-fA-F]+)/);
     if (match) {
       const code = parseInt(match[1], 16);
-      if (code >= 6000 && code <= 6080) return code;
+      if (code >= 6000 && code <= 6074) return code;
     }
   }
 
@@ -2385,7 +2302,7 @@ export class SigilSdkError extends Error implements AgentError {
  * Returns a SigilSdkError (extends Error) so instanceof Error checks still work.
  *
  * Processing order:
- * 1. Try on-chain error extraction via toAgentError() (numeric codes 6000-6080)
+ * 1. Try on-chain error extraction via toAgentError() (numeric codes 6000-6074)
  * 2. Pattern-match SDK error messages (11 patterns from seal.ts throw sites)
  * 3. Fallback to UNKNOWN/FATAL
  */

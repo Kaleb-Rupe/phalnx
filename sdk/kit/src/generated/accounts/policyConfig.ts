@@ -78,8 +78,6 @@ export type PolicyConfig = {
    * Bounded to MAX_ALLOWED_PROTOCOLS entries.
    */
   protocols: Array<Address>;
-  /** DEPRECATED: Not enforced on-chain. Kept for layout stability. See Phase B3 post-assertions. */
-  maxLeverageBps: number;
   /**
    * Developer fee rate (rate / 1,000,000). Applied to every finalized
    * transaction. Max MAX_DEVELOPER_FEE_RATE (500 = 5 BPS).
@@ -163,8 +161,6 @@ export type PolicyConfigArgs = {
    * Bounded to MAX_ALLOWED_PROTOCOLS entries.
    */
   protocols: Array<Address>;
-  /** DEPRECATED: Not enforced on-chain. Kept for layout stability. See Phase B3 post-assertions. */
-  maxLeverageBps: number;
   /**
    * Developer fee rate (rate / 1,000,000). Applied to every finalized
    * transaction. Max MAX_DEVELOPER_FEE_RATE (500 = 5 BPS).
@@ -236,7 +232,6 @@ export function getPolicyConfigEncoder(): Encoder<PolicyConfigArgs> {
       ["maxTransactionSizeUsd", getU64Encoder()],
       ["protocolMode", getU8Encoder()],
       ["protocols", getArrayEncoder(getAddressEncoder())],
-      ["maxLeverageBps", getU16Encoder()],
       ["developerFeeRate", getU16Encoder()],
       ["maxSlippageBps", getU16Encoder()],
       ["timelockDuration", getU64Encoder()],
@@ -263,7 +258,6 @@ export function getPolicyConfigDecoder(): Decoder<PolicyConfig> {
     ["maxTransactionSizeUsd", getU64Decoder()],
     ["protocolMode", getU8Decoder()],
     ["protocols", getArrayDecoder(getAddressDecoder())],
-    ["maxLeverageBps", getU16Decoder()],
     ["developerFeeRate", getU16Decoder()],
     ["maxSlippageBps", getU16Decoder()],
     ["timelockDuration", getU64Decoder()],

@@ -95,7 +95,6 @@ async function createVault(opts: {
       opts.maxTx,
       0, // protocolMode: allow all
       [],
-      new BN(0) as any,
       opts.devFeeRate ?? 0,
       500, // maxSlippageBps
       new BN(1800),
@@ -542,7 +541,6 @@ describe("🔥 SIGIL DEVNET STRESS TEST — Real Tokens, Real Limits", function 
         v.overlay,
         v.vaultAta,
         new BN(50_000_000),
-        true,
       );
       const vault = await program.account.agentVault.fetch(v.vault);
       expect(vault.totalTransactions.toNumber()).to.equal(1);
@@ -578,7 +576,6 @@ describe("🔥 SIGIL DEVNET STRESS TEST — Real Tokens, Real Limits", function 
           v.overlay,
           v.vaultAta,
           new BN(10_000_000),
-          true,
         );
       }
       const vault = await program.account.agentVault.fetch(v.vault);
@@ -822,7 +819,6 @@ describe("🔥 SIGIL DEVNET STRESS TEST — Real Tokens, Real Limits", function 
           new BN(200_000_000),
           0,
           [],
-          new BN(0) as any,
           0,
           500,
           new BN(0),

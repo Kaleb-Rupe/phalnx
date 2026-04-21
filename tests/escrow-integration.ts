@@ -282,8 +282,7 @@ describe("escrow-integration", () => {
         new BN(500_000_000), // daily_spending_cap_usd ($500)
         new BN(100_000_000), // max_transaction_size_usd ($100)
         0, // protocol_mode = ALL
-        [], // protocols (empty for mode ALL)
-        10000, // max_leverage_bps
+        [],
         100, // developer_fee_rate (0.01%)
         500, // max_slippage_bps
         new BN(1800), // timelock_duration (0 = no timelock)
@@ -354,8 +353,7 @@ describe("escrow-integration", () => {
         new BN(500_000_000), // daily_spending_cap_usd ($500)
         new BN(100_000_000), // max_transaction_size_usd ($100)
         0, // protocol_mode = ALL
-        [], // protocols (empty for mode ALL)
-        10000, // max_leverage_bps
+        [],
         100, // developer_fee_rate (0.01%)
         500, // max_slippage_bps
         new BN(1800), // timelock_duration (0 = no timelock)
@@ -595,13 +593,13 @@ describe("escrow-integration", () => {
       await program.account.spendTracker.fetch(sourceTrackerPda);
     // The tracker's rolling 24h spend should still include the escrow amount
     // (it was charged at creation time and must NOT be reversed on refund).
-    const rolling24h = trackerAfterRefund.get_rolling_24h_usd
-      ? trackerAfterRefund.get_rolling_24h_usd()
-      : trackerAfterRefund.buckets.reduce(
-          (sum: bigint, b: { usdAmount: { toNumber: () => number } }) =>
-            sum + BigInt(b.usdAmount.toNumber()),
-          0n,
-        );
+    // SpendTracker is a zero-copy account with no accessor methods — sum the
+    // buckets directly.
+    const rolling24h = trackerAfterRefund.buckets.reduce(
+      (sum: bigint, b: { usdAmount: { toNumber: () => number } }) =>
+        sum + BigInt(b.usdAmount.toNumber()),
+      0n,
+    );
     expect(Number(rolling24h)).to.be.greaterThanOrEqual(
       escrowAmount.toNumber(),
     );

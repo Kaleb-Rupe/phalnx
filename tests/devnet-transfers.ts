@@ -164,7 +164,7 @@ describe("devnet-transfers", () => {
         .rpc();
       expect.fail("Should have thrown");
     } catch (err: any) {
-      expectSigilError(err, { name: "DestinationNotAllowed", code: 6025 });
+      expectSigilError(err, { name: "DestinationNotAllowed", code: 6024 });
     }
     console.log("    Non-allowed destination correctly rejected");
   });

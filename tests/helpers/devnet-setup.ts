@@ -340,7 +340,6 @@ export async function createFullVault(
       maxTx,
       protocolMode,
       allowedProtocols,
-      new BN(maxLevBps) as any,
       devFeeRate,
       maxSlippageBps,
       timelockDuration,

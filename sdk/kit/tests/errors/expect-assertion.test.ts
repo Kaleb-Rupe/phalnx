@@ -172,10 +172,10 @@ describe("parseAnchorError", () => {
   });
 
   it("parses format #1: `AnchorError occurred` (ErrorOrigin::None)", () => {
-    const err = mkAnchorOccurred({ name: "Overflow", code: 6021 });
+    const err = mkAnchorOccurred({ name: "Overflow", code: 6020 });
     const parsed = parseAnchorError(err);
     assert.ok(parsed);
-    assert.equal(parsed.code, 6021);
+    assert.equal(parsed.code, 6020);
     assert.equal(parsed.name, "Overflow");
     assert.equal(parsed.originProgramId, SIGIL_PROGRAM_ID_BASE58);
   });
@@ -246,7 +246,7 @@ describe("expectSigilError", () => {
   });
 
   it("passes when only name is specified (thrown format)", () => {
-    const err = mkAnchorThrown({ name: "Overflow", code: 6021 });
+    const err = mkAnchorThrown({ name: "Overflow", code: 6020 });
     expectSigilError(err, { name: "Overflow" });
   });
 
@@ -318,11 +318,10 @@ describe("expectSigilError", () => {
   });
 
   it("works on raw hex custom program error (no logs)", () => {
-    // MaxAgentsReached — post-position-counter-deletion renumber shifted
-    // this from 6042 down to 6038. The coupled {name, code} type guarantees
-    // tsc catches any drift here.
-    const err = mkRawCustomError(6038);
-    expectSigilError(err, { name: "MaxAgentsReached", code: 6038 });
+    // MaxAgentsReached — canonical code is 6036 after phantom-error cleanup.
+    // The coupled {name, code} type guarantees tsc catches any drift here.
+    const err = mkRawCustomError(6036);
+    expectSigilError(err, { name: "MaxAgentsReached", code: 6036 });
   });
 
   it("preserves original error as cause", () => {
@@ -405,7 +404,7 @@ describe("expectOneOfSigilErrors", () => {
   });
 
   it("passes with 3-element tuple", () => {
-    const err = mkAnchorThrown({ name: "InsufficientBalance", code: 6015 });
+    const err = mkAnchorThrown({ name: "InsufficientBalance", code: 6014 });
     expectOneOfSigilErrors(err, [
       "VaultNotActive",
       "UnauthorizedAgent",
@@ -417,13 +416,13 @@ describe("expectOneOfSigilErrors", () => {
     const err = mkAnchorAccountConstraint({
       accountName: "output_stablecoin_account",
       name: "InvalidTokenAccount",
-      code: 6022,
+      code: 6021,
     });
     expectOneOfSigilErrors(err, ["UnsupportedToken", "InvalidTokenAccount"]);
   });
 
   it("fails when error matches none of the names", () => {
-    const err = mkAnchorThrown({ name: "Overflow", code: 6021 });
+    const err = mkAnchorThrown({ name: "Overflow", code: 6020 });
     expectFail(
       () =>
         expectOneOfSigilErrors(err, ["VaultNotActive", "UnauthorizedAgent"]),
@@ -508,8 +507,8 @@ describe("expectSystemError", () => {
   });
 
   it("passes when Anchor-parsed code matches", () => {
-    const err = mkAnchorThrown({ name: "Overflow", code: 6021 });
-    expectSystemError(err, 6021);
+    const err = mkAnchorThrown({ name: "Overflow", code: 6020 });
+    expectSystemError(err, 6020);
   });
 
   it("rejects substring-coincidence matches (H-1 regression guard)", () => {
@@ -547,12 +546,12 @@ describe("expectSystemError", () => {
 // ────────────────────────────────────────────────────────────────
 
 describe("SIGIL_ERRORS table integrity", () => {
-  it("has ≥ 80 entries (sanity)", async () => {
+  it("has ≥ 75 entries (sanity)", async () => {
     const { SIGIL_ERRORS, SIGIL_ERROR_COUNT } =
       await import("../../src/testing/errors/names.generated.js");
     assert.ok(
-      SIGIL_ERROR_COUNT >= 80,
-      `expected ≥ 80 Sigil error entries, got ${SIGIL_ERROR_COUNT}`,
+      SIGIL_ERROR_COUNT >= 75,
+      `expected ≥ 75 Sigil error entries, got ${SIGIL_ERROR_COUNT}`,
     );
     assert.equal(SIGIL_ERRORS.VaultNotActive, 6000);
   });
