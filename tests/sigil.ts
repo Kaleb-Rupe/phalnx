@@ -5253,12 +5253,7 @@ describe("sigil", () => {
       );
 
       const validateIx = await program.methods
-        .validateAndAuthorize(
-          usdcMint,
-          amount,
-          protocol,
-          await pv(protoCapPolicyPda),
-        )
+        .validateAndAuthorize(usdcMint, amount, protocol, await pv(pcPolicy))
         .accountsPartial({
           agent: protoCapAgent.publicKey,
           vault: pcVault,
