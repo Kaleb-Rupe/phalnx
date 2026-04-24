@@ -27,6 +27,20 @@ export {
 } from "./cross-field-lte.js";
 export type { LeverageCapLteOpts } from "./cross-field-lte.js";
 
+// Protocol-specific presets — one file per protocol under `./presets/`.
+// Each preset is backed by a committed IDL source with a drift-check test so
+// any future SDK bump that shifts field offsets fails before shipping.
+export {
+  FLASH_TRADE_PROGRAM_ADDRESS,
+  FLASH_TRADE_POSITION_SIZE_USD_OFFSET,
+  FLASH_TRADE_POSITION_COLLATERAL_USD_OFFSET,
+  MIN_LEVERAGE_X,
+  MAX_LEVERAGE_X,
+  FlashTradeLeverageOutOfRangeError,
+  flashTradeLeverageCap,
+} from "./presets/flash-trade.js";
+export type { FlashTradeLeverageCapOpts } from "./presets/flash-trade.js";
+
 // Re-export the underlying entry type so callers don't have to import from
 // two places when composing a batch of entries to pass to
 // `createPostAssertions(...)`.
