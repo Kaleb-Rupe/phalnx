@@ -77,21 +77,34 @@ export type NonConstrainableReason =
 export type IdlSource = "registry" | "on_chain_metadata" | "solanafm" | "helius";
 
 /**
- * Result of the async constrainability check. Shape is the SAME object
- * FE consumes from `/api/resolve-protocol` on the dashboard today; kit
- * simply codifies the interface so non-dashboard consumers can build
- * against it.
+ * Result of the async constrainability check. Discriminated union on
+ * `constrainable` — compile-time enforces the "reason iff false /
+ * idlSource iff true" invariant. TypeScript will reject invalid
+ * combinations like `{ constrainable: true, reason: "missing_idl" }`
+ * at construction time; before this was a union the invariant was
+ * prose-only.
+ *
+ * Shape mirrors what the dashboard's `/api/resolve-protocol` route
+ * returns today; kit codifies the interface so mobile, MCP, and CLI
+ * consumers build against the same contract.
  */
-export interface ConstrainabilityResult {
-  /** True iff the constraint parser produced a usable `ParsedInstruction[]`. */
-  readonly constrainable: boolean;
-  /** Why the parser couldn't constrain — present iff `constrainable === false`. */
-  readonly reason?: NonConstrainableReason;
-  /** Where the IDL was fetched from — present iff `constrainable === true`. */
-  readonly idlSource?: IdlSource;
-  /** Human-safe context line. Always safe to render in a toast or banner. */
-  readonly detail?: string;
-}
+export type ConstrainabilityResult =
+  | {
+      /** Parser produced a usable `ParsedInstruction[]`. */
+      readonly constrainable: true;
+      /** Where the IDL was fetched from. Required when constrainable. */
+      readonly idlSource: IdlSource;
+      /** Optional human-safe context line, safe to render in a toast. */
+      readonly detail?: string;
+    }
+  | {
+      /** Parser failed — programId is Non-constrainable in the 3-tier model. */
+      readonly constrainable: false;
+      /** Why the parser couldn't constrain. Required when not constrainable. */
+      readonly reason: NonConstrainableReason;
+      /** Optional human-safe context line, safe to render in a toast. */
+      readonly detail?: string;
+    };
 
 /**
  * The signature every caller MUST provide for the async path. Must be

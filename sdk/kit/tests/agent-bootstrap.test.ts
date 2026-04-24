@@ -206,3 +206,75 @@ describe("composeAgentBootstrap — network variants", () => {
     expect(r.onboardingPrompt).to.include("Sigil vault on mainnet-beta");
   });
 });
+
+describe("composeAgentBootstrap — injection + input validation (review fixes)", () => {
+  // Adversarial code-review caught that sequential String.prototype.replace
+  // exposes dollar-sign special sequences ($&, $', $`, $1…$9) in the
+  // REPLACEMENT strings. `approvedProtocols` is untrusted (MCP / partner
+  // input), so a protocol name containing `$1` or `$&` would be reinterpreted
+  // by the NEXT replacement call. The fix uses callback-form replaceAll
+  // which bypasses dollar-sign interpretation entirely.
+
+  it("protocol name containing '$&' renders literally (no back-reference substitution)", () => {
+    const r = composeAgentBootstrap({
+      ...SAMPLE,
+      approvedProtocols: ["Evil$&protocol"],
+    });
+    expect(r.onboardingPrompt).to.include("Evil$&protocol");
+    expect(r.onboardingPrompt).to.not.include("${protocolNames}");
+  });
+
+  it("protocol name containing '${capabilityNames}' does NOT get substituted", () => {
+    // The attack: a protocol name that looks like a later placeholder
+    // would, under naive sequential replace, get re-substituted by the
+    // `capabilityNames` pass. replaceAll-callback form blocks it.
+    const r = composeAgentBootstrap({
+      ...SAMPLE,
+      approvedProtocols: ["LegitProto", "${capabilityNames} pwned"],
+    });
+    expect(r.onboardingPrompt).to.include(
+      "LegitProto, ${capabilityNames} pwned",
+    );
+    // The ACTUAL capability slot should ALSO be filled correctly —
+    // proves the template didn't get over-substituted.
+    expect(r.onboardingPrompt).to.include(
+      "Permissions: Spending, NonSpending",
+    );
+  });
+
+  it("address containing a $ sign renders literally", () => {
+    // Solana base58 can't contain `$` — but defensive anyway since the
+    // kit's type is `string` not a branded Address.
+    const r = composeAgentBootstrap({
+      ...SAMPLE,
+      ownerAddress: "$0wn3r$pubkey",
+    });
+    expect(r.onboardingPrompt).to.include("$0wn3r$pubkey");
+  });
+
+  it("throws RangeError on negative dailyLimitUsd", () => {
+    expect(() =>
+      composeAgentBootstrap({
+        ...SAMPLE,
+        dailyLimitUsd: -100_000_000n,
+      }),
+    ).to.throw(RangeError, /dailyLimitUsd must be >= 0/);
+  });
+
+  it("throws RangeError on dailyLimitUsd = -1n (boundary)", () => {
+    expect(() =>
+      composeAgentBootstrap({
+        ...SAMPLE,
+        dailyLimitUsd: -1n,
+      }),
+    ).to.throw(RangeError);
+  });
+
+  it("accepts 0n dailyLimitUsd (zero is a valid config — observer-like)", () => {
+    const r = composeAgentBootstrap({
+      ...SAMPLE,
+      dailyLimitUsd: 0n,
+    });
+    expect(r.onboardingPrompt).to.include("Daily spending limit: $0");
+  });
+});

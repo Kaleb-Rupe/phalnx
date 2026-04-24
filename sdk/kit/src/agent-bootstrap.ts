@@ -138,13 +138,24 @@ export interface AgentBootstrap {
  *
  *   500_000_000n → "$500"
  *   750_000_000n → "$750"
- *     100_500_000n → "$100.50"
+ *    100_500_000n → "$100.5"
  *
  * Keeps fractional cents only when non-zero; avoids `"$500.00"` visual
  * noise for round amounts. Not a general-purpose formatter — caller
  * should use `formatUsd()` elsewhere.
+ *
+ * Rejects negative amounts loudly. A negative daily-limit in an LLM
+ * system prompt is a user-visible garbage signal ("$-100.-5"), and
+ * negative 6-decimal USD is never a legitimate config in the vault
+ * setup flow. Fail-fast here protects every downstream prompt
+ * consumer (CLI, MCP, dashboard) uniformly.
  */
 function formatDailyLimitUsd(amount: bigint): string {
+  if (amount < 0n) {
+    throw new RangeError(
+      `composeAgentBootstrap: dailyLimitUsd must be >= 0 (got ${amount.toString()}). Negative USD limits are not a valid vault config.`,
+    );
+  }
   const dollars = amount / 1_000_000n;
   const fractional = amount % 1_000_000n;
   if (fractional === 0n) return `$${dollars.toString()}`;
@@ -199,16 +210,52 @@ export function composeAgentBootstrap(
   const protocolNames = config.approvedProtocols.join(", ");
   const capabilityNames = capabilities.join(", ");
 
+  // Substitution table. Keyed on the BARE placeholder name (no `${...}`
+  // wrapper) so we can build one regex that matches every slot in one
+  // pass.
+  const subs: Readonly<Record<string, string>> = {
+    network: config.network,
+    agentAddress: config.agentAddress,
+    vaultAddress: config.vaultAddress,
+    ownerAddress: config.ownerAddress,
+    dailyLimitUsd,
+    protocolNames,
+    capabilityNames,
+  };
+
+  // SINGLE-PASS substitution. Two layered injection vectors this guards:
+  //
+  //   1. Dollar-sign back-references (`$&`, `$'`, `` $` ``, `$1`…`$9`)
+  //      in the REPLACEMENT string would, under
+  //      `String.prototype.replace(regex, str)`, be interpreted as
+  //      match-context references. The callback form bypasses that —
+  //      the callback's return value is inserted literally.
+  //
+  //   2. `${placeholder}` LITERAL INSIDE a value would, under SEQUENTIAL
+  //      `.replaceAll(placeholder, value)` passes, get re-substituted by
+  //      a LATER pass (e.g., `protocolNames = "X ${capabilityNames} Y"`
+  //      gets rewritten when the capabilityNames pass runs). A single
+  //      pass that resolves every placeholder once and only once makes
+  //      the substitution idempotent — values are inserted literally,
+  //      never re-scanned.
+  //
+  // `approvedProtocols` is free-form (MCP callers, third-party partners)
+  // so protocol names containing `$&` or `${capabilityNames}` or
+  // anything else render literally, regardless of caller trust.
+  const PLACEHOLDER_RE = /\$\{(\w+)\}/g;
   const onboardingPrompt = HANDOFF_PROMPT_TEMPLATE.replace(
-    /\$\{network\}/g,
-    config.network,
-  )
-    .replace(/\$\{agentAddress\}/g, config.agentAddress)
-    .replace(/\$\{vaultAddress\}/g, config.vaultAddress)
-    .replace(/\$\{ownerAddress\}/g, config.ownerAddress)
-    .replace(/\$\{dailyLimitUsd\}/g, dailyLimitUsd)
-    .replace(/\$\{protocolNames\}/g, protocolNames)
-    .replace(/\$\{capabilityNames\}/g, capabilityNames);
+    PLACEHOLDER_RE,
+    (match, name: string) => {
+      // Unknown placeholder → keep the original. The template is a
+      // module-level constant, so unknown placeholders indicate a
+      // template+subs mismatch (bug in THIS file, not caller input) —
+      // preserving the `${...}` marker makes such bugs visible in the
+      // rendered output instead of silently swallowed.
+      return Object.prototype.hasOwnProperty.call(subs, name)
+        ? subs[name]!
+        : match;
+    },
+  );
 
   return {
     agentWallet: config.agentAddress,

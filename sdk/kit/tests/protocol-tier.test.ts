@@ -40,7 +40,7 @@ describe("resolveProtocolTier — verified short-circuit", () => {
     const jupiter = PROTOCOL_ANNOTATIONS.find((a) => a.name === "Jupiter");
     expect(jupiter, "Jupiter annotation present").to.exist;
 
-    const spy = makeCheckSpy({ constrainable: true }); // would return 'unverified' if called
+    const spy = makeCheckSpy({ constrainable: true, idlSource: "registry" }); // would return 'unverified' if called
     const tier = await resolveProtocolTier(jupiter!.programId, spy.fn);
 
     expect(tier).to.equal("verified");
@@ -50,7 +50,7 @@ describe("resolveProtocolTier — verified short-circuit", () => {
   it("returns 'verified' for every registered annotation", async () => {
     // Parametric — the spy SHOULD never be called because every one of these
     // is in the verified registry.
-    const spy = makeCheckSpy({ constrainable: false });
+    const spy = makeCheckSpy({ constrainable: false, reason: "missing_idl" });
     for (const a of PROTOCOL_ANNOTATIONS) {
       const tier = await resolveProtocolTier(a.programId, spy.fn);
       expect(tier, `${a.name} resolves to verified`).to.equal("verified");
