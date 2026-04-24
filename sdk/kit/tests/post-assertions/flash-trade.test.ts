@@ -78,8 +78,7 @@ function typeSize(t: IdlType): number {
     return size;
   }
   if ("defined" in t) {
-    const name =
-      typeof t.defined === "string" ? t.defined : t.defined.name;
+    const name = typeof t.defined === "string" ? t.defined : t.defined.name;
     const size = CUSTOM_TYPE_SIZES[name];
     if (size === undefined) {
       throw new Error(

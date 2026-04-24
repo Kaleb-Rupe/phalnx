@@ -118,7 +118,9 @@ describe("leverageCapLteBps — output passes validatePostAssertionEntries", () 
       crossFieldOffsetB: 0,
       crossFieldMultiplierBps: 0,
       crossFieldFlags: 0,
-      expectedValue: new Uint8Array(8).fill(0x42) as unknown as (typeof crossField)["expectedValue"],
+      expectedValue: new Uint8Array(8).fill(
+        0x42,
+      ) as unknown as (typeof crossField)["expectedValue"],
     };
     expect(() =>
       validatePostAssertionEntries([absolute, crossField]),

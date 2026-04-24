@@ -74,8 +74,7 @@ function bytes(length: number, fill = 0): ReadonlyUint8Array {
 
 function validAbsoluteEntry(): PostAssertionEntry {
   return {
-    targetAccount:
-      "11111111111111111111111111111111" as unknown as Address,
+    targetAccount: "11111111111111111111111111111111" as unknown as Address,
     offset: 140,
     valueLen: 8,
     operator: 3,
@@ -143,7 +142,11 @@ describe("createPostAssertions — DxError-compatible typed errors", () => {
 
     let caught: unknown;
     try {
-      await createPostAssertions(rpc, VAULT, owner, "devnet", [good, good, bad]);
+      await createPostAssertions(rpc, VAULT, owner, "devnet", [
+        good,
+        good,
+        bad,
+      ]);
     } catch (err) {
       caught = err;
     }

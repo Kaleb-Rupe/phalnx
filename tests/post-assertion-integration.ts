@@ -157,7 +157,6 @@ function expectPostAssertionFailed(err: unknown) {
   expectSigilError(err, { name: "PostAssertionFailed" });
 }
 
-
 describe("post-assertion-integration", () => {
   let env: TestEnv;
   let svm: LiteSVM;
@@ -427,9 +426,8 @@ describe("post-assertion-integration", () => {
 
       // Zero-copy account structure: fetch via Anchor decoder + introspect
       // the first entry's fields at the byte level we compiled them for.
-      const acct = await program.account.postExecutionAssertions.fetch(
-        postAssertionsPda,
-      );
+      const acct =
+        await program.account.postExecutionAssertions.fetch(postAssertionsPda);
       expect(acct.entryCount).to.equal(1);
       const e0 = acct.entries[0];
 
@@ -454,7 +452,9 @@ describe("post-assertion-integration", () => {
 
       // Policy feature flag flipped.
       const policy = await program.account.policyConfig.fetch(policyPda);
-      expect((policy as { hasPostAssertions?: number }).hasPostAssertions).to.equal(1);
+      expect(
+        (policy as { hasPostAssertions?: number }).hasPostAssertions,
+      ).to.equal(1);
     });
   });
 
@@ -477,7 +477,9 @@ describe("post-assertion-integration", () => {
       expect(accountExists(svm, postAssertionsPda)).to.equal(false);
 
       const policy = await program.account.policyConfig.fetch(policyPda);
-      expect((policy as { hasPostAssertions?: number }).hasPostAssertions).to.equal(0);
+      expect(
+        (policy as { hasPostAssertions?: number }).hasPostAssertions,
+      ).to.equal(0);
     });
   });
 
@@ -543,10 +545,7 @@ describe("post-assertion-integration", () => {
     it("composed tx reverts without silent wrap at u128 safe-math boundary", async () => {
       // u64::MAX = 18_446_744_073_709_551_615. size × 10000 in u128 is safe;
       // this probe proves the math widens to u128 on-chain (not a wrap bug).
-      plantMockPosition(
-        18_446_744_073_709_551_615n /* u64::MAX */,
-        1n,
-      );
+      plantMockPosition(18_446_744_073_709_551_615n /* u64::MAX */, 1n);
       const ixs = await buildComposedTx(new BN(1_000_000));
       try {
         sendVersionedTx(svm, ixs, agent);

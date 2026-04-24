@@ -26,8 +26,7 @@ import {
 
 // ─── Fixture helpers ──────────────────────────────────────────────────────
 
-const DUMMY_TARGET =
-  "11111111111111111111111111111111" as unknown as Address;
+const DUMMY_TARGET = "11111111111111111111111111111111" as unknown as Address;
 
 function bytes(length: number, fill = 0): ReadonlyUint8Array {
   return new Uint8Array(length).fill(fill) as unknown as ReadonlyUint8Array;
@@ -287,11 +286,7 @@ describe("validatePostAssertionEntries — CrossFieldLte enabled", () => {
   it("rejects CrossFieldLte with multiplier_bps=0", () => {
     const e = validCrossFieldEntry();
     e.crossFieldMultiplierBps = 0;
-    const err = expectReject(
-      [e],
-      "cross_field_multiplier_must_be_positive",
-      0,
-    );
+    const err = expectReject([e], "cross_field_multiplier_must_be_positive", 0);
     expect(err.message).to.include("multiplier_bps must be > 0");
   });
 
@@ -528,11 +523,7 @@ describe("validatePostAssertionEntries — entry index reporting", () => {
     bad1.operator = 99;
     const bad2 = validAbsoluteEntry();
     bad2.assertionMode = 99;
-    const err = expectReject(
-      [bad0, bad1, bad2],
-      "value_len_out_of_range",
-      0,
-    );
+    const err = expectReject([bad0, bad1, bad2], "value_len_out_of_range", 0);
     expect(err.entryIndex).to.equal(0);
   });
 });

@@ -215,7 +215,13 @@ function validateSingleEntry(entry: PostAssertionEntry, index: number): void {
   // Strict numeric shape checks — integer, non-negative, fits the on-chain
   // field width. Catch non-integer (e.g. 8.5) and negative (-1) inputs that
   // one-sided `> MAX` comparisons would miss.
-  requireUintInRange(entry.offset, "offset", 0xffff, "offset_out_of_range", index);
+  requireUintInRange(
+    entry.offset,
+    "offset",
+    0xffff,
+    "offset_out_of_range",
+    index,
+  );
   requireUintInRange(
     entry.valueLen,
     "value_len",
