@@ -641,3 +641,21 @@ export type {
   VaultPnL,
   BalancePnL,
 } from "./balance-tracker.js";
+
+// ─── Protocol Registry + Tier Resolver (v2.2 FE↔BE contract C6) ─────────────
+// Hand-curated Verified-tier programId annotations plus the three-tier
+// classifier primitives. See FRONTEND-BACKEND-CONTRACT.md §5c.
+export {
+  PROTOCOL_ANNOTATIONS,
+  VERIFIED_PROGRAMS,
+  lookupProtocolAnnotation,
+} from "./protocol-registry/index.js";
+export type { ProtocolAnnotation } from "./protocol-registry/index.js";
+export { resolveProtocolTier } from "./protocol-tier.js";
+export type {
+  ProtocolTrustTier,
+  NonConstrainableReason,
+  IdlSource,
+  ConstrainabilityResult,
+  CheckConstrainabilityFn,
+} from "./protocol-tier.js";
