@@ -641,3 +641,34 @@ export type {
   VaultPnL,
   BalancePnL,
 } from "./balance-tracker.js";
+
+// ─── Protocol Registry + Tier Resolver (v2.2 FE↔BE contract C6) ─────────────
+// Hand-curated Verified-tier programId annotations plus the three-tier
+// classifier primitives. See FRONTEND-BACKEND-CONTRACT.md §5c.
+export {
+  PROTOCOL_ANNOTATIONS,
+  VERIFIED_PROGRAMS,
+  lookupProtocolAnnotation,
+} from "./protocol-registry/index.js";
+export type { ProtocolAnnotation } from "./protocol-registry/index.js";
+export { resolveProtocolTier } from "./protocol-tier.js";
+export type {
+  ProtocolTrustTier,
+  NonConstrainableReason,
+  IdlSource,
+  ConstrainabilityResult,
+  CheckConstrainabilityFn,
+} from "./protocol-tier.js";
+
+// ─── Agent handoff bootstrap (v2.2 FE↔BE contract C5) ───────────────────────
+// Canonical handoff-prompt composition for Claude Desktop / ChatGPT / CLI.
+// See FRONTEND-BACKEND-CONTRACT.md §3.4 + §5a C5.
+export {
+  composeAgentBootstrap,
+  getHandoffPromptTemplate,
+  capabilityTierToNames,
+} from "./agent-bootstrap.js";
+export type {
+  AgentBootstrap,
+  AgentBootstrapConfig,
+} from "./agent-bootstrap.js";
