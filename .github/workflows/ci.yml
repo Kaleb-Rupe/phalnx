@@ -406,7 +406,8 @@ jobs:
             tests/jupiter-integration.ts \
             tests/jupiter-lend-integration.ts \
             tests/flash-trade-integration.ts \
-            tests/security-exploits.ts
+            tests/security-exploits.ts \
+            tests/cu-budget.ts
 
       - name: Check for IDL drift
         run: |

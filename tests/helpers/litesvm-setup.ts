@@ -575,6 +575,16 @@ export interface VersionedTxResult {
   logs: string[];
 }
 
+/**
+ * Narrower contract for tools that only need the CU number.
+ * `VersionedTxResult` satisfies this structurally, as do bench helpers
+ * (e.g., `cu-budget.ts`'s `sendAndMeasureCU`) that return shapes without
+ * a signature field.
+ */
+export interface CUMeasurement {
+  computeUnitsConsumed: number;
+}
+
 export function sendVersionedTx(
   svm: LiteSVM,
   instructions: TransactionInstruction[],
@@ -613,7 +623,7 @@ const cuMeasurements: Map<string, number[]> = new Map();
  * Record CU consumption for a named operation (call after sendVersionedTx).
  * Accumulates measurements across multiple calls for the same label.
  */
-export function recordCU(label: string, result: VersionedTxResult): void {
+export function recordCU(label: string, result: CUMeasurement): void {
   const existing = cuMeasurements.get(label) ?? [];
   existing.push(result.computeUnitsConsumed);
   cuMeasurements.set(label, existing);
