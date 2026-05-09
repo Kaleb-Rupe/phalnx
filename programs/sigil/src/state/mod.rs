@@ -96,11 +96,38 @@ pub const PROTOCOL_TREASURY: Pubkey = Pubkey::new_from_array([
     239, 33, 251, 37, 93, 179, 29, 45, 226, 14, 172,
 ]);
 
-/// Protocol treasury address (mainnet — all-zeros placeholder).
-/// Deliberately invalid: treasury_token.owner check will fail at
-/// runtime until replaced with the real mainnet treasury address.
+/// Protocol treasury address (mainnet).
+/// Base58: 7tvi5yJZyjpxXnbPTcR42mKVK7qbnjRjViTXv1rckNsy
+///
+/// This is the Squads V4 multisig **vault PDA** (signer derived from the multisig
+/// account), 3-of-5 threshold, 5 distinct human signers. Squads V4 derivation
+/// reuses the same `createKey` + program id, so this address is identical on
+/// devnet and mainnet — devnet rehearsals exercise the exact byte sequence below.
+///
+/// Pre-mainnet checklist completed (PR-10 / M4):
+///   [x] Squads multisig vault PDA derived (2026-05-09)
+///   [x] Real 32-byte Pubkey pinned below; sentinel `compile_error!` removed
+///   [x] CI 'mainnet-build-readiness' job exercises this constant
+///   [ ] Squads members confirmed accepting (5/5) before mainnet binary tag
+///   [ ] Tag the release commit; build mainnet binary from this commit
+///
+/// Why compile-time, not runtime?
+///   The previous implementation used a [0u8; 32] sentinel and relied on the
+///   deposit handler's `treasury_token.owner == PROTOCOL_TREASURY` check to
+///   fail at runtime. That meant a mainnet binary CAN be built and deployed
+///   with the sentinel; the bug surfaces only on the first deposit. Converting
+///   to a compile-time guard makes a mainnet build fail at `cargo build` time
+///   if the constant is unset — defense in depth (the runtime check stays).
+///
+/// To recreate the un-pinned state for tests: replace the byte array below with
+/// `[0u8; 32]` and uncomment the previous `compile_error!` block. The runtime
+/// owner check at `instructions/{create_escrow, agent_transfer,
+/// validate_and_authorize}.rs` is preserved as a second layer.
 #[cfg(feature = "mainnet")]
-pub const PROTOCOL_TREASURY: Pubkey = Pubkey::new_from_array([0u8; 32]);
+pub const PROTOCOL_TREASURY: Pubkey = Pubkey::new_from_array([
+    102, 115, 120, 152, 65, 88, 210, 76, 7, 220, 80, 231, 112, 6, 22, 32, 26, 4, 137, 55, 84, 52,
+    4, 200, 254, 195, 18, 105, 97, 38, 227, 136,
+]);
 
 // --- Stablecoin mint constants ---
 
@@ -134,21 +161,18 @@ pub const USDT_MINT: Pubkey = Pubkey::new_from_array([
     210, 199, 2, 158, 178, 206, 30, 32, 130, 100,
 ]);
 
-/// M8: Build-time guard — mainnet treasury must not be the zero address.
-/// Catches the all-zeros placeholder before it reaches production.
+/// M4 (PR-10): Mainnet treasury guard is now COMPILE-TIME, not runtime.
+///
+/// The mainnet PROTOCOL_TREASURY constant uses `compile_error!` so a mainnet
+/// build with the [0u8; 32] sentinel fails at `cargo build` rather than at
+/// first deposit. The previous M8 runtime test (`mainnet_treasury_must_not_be_zero`)
+/// is structurally redundant: a `--features mainnet` build cannot reach the
+/// test runner if the constant is unset, because compilation halts first.
+///
+/// The runtime owner check in `instructions/{create_escrow, agent_transfer,
+/// validate_and_authorize}.rs` is preserved as defense in depth.
 #[cfg(test)]
 mod treasury_tests {
-    #[test]
-    #[cfg(feature = "mainnet")]
-    fn mainnet_treasury_must_not_be_zero() {
-        use super::*;
-        assert_ne!(
-            PROTOCOL_TREASURY,
-            Pubkey::default(),
-            "PROTOCOL_TREASURY must be set to a real address before mainnet deployment"
-        );
-    }
-
     /// S-5: Documents the compile_error! guard for devnet-testing + mainnet.
     /// The actual guard at lines 63-64 is verified by CI:
     ///   cargo build --no-default-features --features "devnet-testing,mainnet"

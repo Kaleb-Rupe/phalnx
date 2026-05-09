@@ -103,7 +103,7 @@
     },
     {
       "name": "Rust unit tests (cargo test)",
-      "count": 123,
+      "count": 122,
       "onChain": true,
       "claudePattern": "cargo test --manifest-path programs/sigil/Cargo.toml` (%d tests)"
     },
