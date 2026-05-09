@@ -243,7 +243,6 @@ export type SigilError =
   | typeof SIGIL_ERROR__SNAPSHOT_NOT_CAPTURED
   | typeof SIGIL_ERROR__SPENDING_CAP_EXCEEDED
   | typeof SIGIL_ERROR__SWAP_SLIPPAGE_EXCEEDED
-  | typeof SIGIL_ERROR__SYSVAR_SCAN_BOUND_EXCEEDED
   | typeof SIGIL_ERROR__TIMELOCK_NOT_EXPIRED
   | typeof SIGIL_ERROR__TIMELOCK_TOO_SHORT
   | typeof SIGIL_ERROR__TOO_MANY_ALLOWED_PROTOCOLS
@@ -329,7 +328,6 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__SNAPSHOT_NOT_CAPTURED]: `Delta assertion snapshot was not captured in validate_and_authorize`,
     [SIGIL_ERROR__SPENDING_CAP_EXCEEDED]: `Rolling 24h spending cap would be exceeded`,
     [SIGIL_ERROR__SWAP_SLIPPAGE_EXCEEDED]: `Swap slippage exceeds policy max_slippage_bps or quoted output is zero`,
-    [SIGIL_ERROR__SYSVAR_SCAN_BOUND_EXCEEDED]: `Sysvar instruction scan exceeded the per-tx safety bound`,
     [SIGIL_ERROR__TIMELOCK_NOT_EXPIRED]: `Timelock period has not expired yet`,
     [SIGIL_ERROR__TIMELOCK_TOO_SHORT]: `Timelock duration below minimum (1800 seconds / 30 minutes)`,
     [SIGIL_ERROR__TOO_MANY_ALLOWED_PROTOCOLS]: `Policy configuration invalid: too many allowed protocols`,
