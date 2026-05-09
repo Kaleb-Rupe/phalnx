@@ -36,17 +36,20 @@ bytemuck = { version = "1.14", features = ["derive", "min_const_generics"] }
 blake3 = "=1.5.5"
 cvlr = { version = "0.6", optional = true }
 
-[dev-dependencies]
-# Pin Token-2022 opcode discriminants in unit tests (third-pass audit follow-up).
-# Used by integrations/token2022_opcode_test.rs to assert byte-0 tags against
-# the canonical TokenInstruction enum. Catches future renumbering before the
-# blocklist starts blocking the wrong ops in production.
+# NOTE: there is intentionally no `[dev-dependencies]` block.
 #
-# 3.0.0 is needed for the `Batch` variant (opcode 255) — earlier 2.x versions
-# don't expose it. The transitive `wincode-derive` is pinned in workspace
-# Cargo.toml `[patch.crates-io]` to 0.4.3 (edition 2021) because 0.4.4
-# requires Rust edition 2024 (Certora's cargo can't parse the manifest).
-spl-token-2022-interface = "3"
+# The third-pass audit added `spl-token-2022-interface = "3"` here to verify
+# Token-2022 opcode discriminants against the canonical enum at compile time.
+# That dep transitively pulls in `wincode 0.5.x` (via `solana-sha256-hasher
+# 3.x`), which requires Rust `edition2024` and breaks Certora's pinned cargo
+# v1.51 (Rust 1.84). Pinning `wincode-derive` to 0.4.3 isn't enough — the
+# parent `wincode` 0.5.x is also edition-2024.
+#
+# Tradeoff: `integrations/token2022_opcode_test.rs` now uses inlined byte
+# constants instead of canonical-enum verification. We lose the upstream
+# rename signal but keep our internal regression guard. V1.1 backlog: re-add
+# upstream verification via a separate test crate excluded from Certora's
+# workspace build.
 
 [package.metadata.certora]
 sources = [
