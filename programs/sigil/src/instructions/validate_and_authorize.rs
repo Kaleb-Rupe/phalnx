@@ -352,13 +352,14 @@ pub fn handler(
 
         // Token-2022: same SPL-shared opcodes (3, 4, 6, 8, 9, 12, 13, 15) plus
         // Token-2022-specific opcode 26 (TransferFeeExtension prefix — covers
-        // TransferCheckedWithFee and the rest of the fee-transfer family) and
+        // TransferCheckedWithFee and the rest of the fee-transfer family),
         // opcode 27 (ConfidentialTransferExtension prefix — encrypted transfers
-        // bypass plaintext SPL Transfer/Approve blocking entirely).
+        // bypass plaintext SPL Transfer/Approve blocking entirely), and the
+        // Pentester HIGH/MED follow-up batch: 35, 36, 38, 42, 45.
         //
         // Audit table — opcodes 27-46 (cross-referenced against
         // solana-program/token-2022/interface/src/instruction.rs main):
-        //   27 ConfidentialTransferExtension       → BLOCKED here (M3, this PR)
+        //   27 ConfidentialTransferExtension       → BLOCKED (M3, PR 7)
         //   28 DefaultAccountStateExtension        → allowed (mint config; no
         //      value movement at top-level)
         //   29 Reallocate                          → allowed (resize only)
@@ -366,43 +367,52 @@ pub fn handler(
         //   31 CreateNativeMint                    → allowed (system-level)
         //   32 InitializeNonTransferableMint       → allowed (mint config)
         //   33 InterestBearingMintExtension        → allowed (mint config)
-        //   34 CpiGuardExtension                   → flagged for follow-up
-        //      (toggles a security flag on the user's token account; an agent
-        //      flipping it would weaken downstream CPI protections)
-        //   35 InitializePermanentDelegate         → flagged for follow-up
-        //      (permanent delegate bypasses Approve flow; mint-time op, but
-        //      blocking conservatively at top-level mid-tx is defensible)
-        //   36 TransferHookExtension               → flagged for follow-up
-        //      (installs/changes a transfer hook program — could redirect
-        //      future transfers)
-        //   37 ConfidentialTransferFeeExtension    → flagged for follow-up
-        //      (encrypted-balance fee accounting; pairs with 27)
-        //   38 WithdrawExcessLamports              → flagged for follow-up
-        //      (drains lamports out of a token account)
+        //   34 CpiGuardExtension                   → DEFERRED (toggles a
+        //      security flag on the user's token account; an agent flipping
+        //      it weakens downstream CPI protections — needs explicit
+        //      owner-allowlist UX, blocking now would break setup flows)
+        //   35 InitializePermanentDelegate         → BLOCKED (Pentester MED:
+        //      permanent delegate can transfer-from any holder of the mint
+        //      without Approve; one-shot install survives session expiry)
+        //   36 TransferHookExtension               → BLOCKED (Pentester MED:
+        //      installs hostile hook program on the user's mint that survives
+        //      session expiry and routes all future transfers through it)
+        //   37 ConfidentialTransferFeeExtension    → DEFERRED (encrypted-balance
+        //      fee accounting; pairs with 27 but is downstream-dependent —
+        //      blocking 27 already neuters the value-flow path)
+        //   38 WithdrawExcessLamports              → BLOCKED (Pentester MED:
+        //      transfers lamports out of token accounts, bypassing the
+        //      plaintext SPL transfer blocks entirely)
         //   39 MetadataPointerExtension            → allowed (metadata)
         //   40 GroupPointerExtension               → allowed (metadata)
         //   41 GroupMemberPointerExtension         → allowed (metadata)
-        //   42 ConfidentialMintBurnExtension       → flagged for follow-up
-        //      (confidential mint/burn — value flow under encryption)
+        //   42 ConfidentialMintBurnExtension       → BLOCKED (Pentester HIGH:
+        //      drains pre-existing confidential balance — plaintext snapshot
+        //      diff won't trip; reuses ConfidentialTransferBlocked since this
+        //      is the same confidential-transfer-extension class)
         //   43 ScaledUiAmountExtension             → allowed (UI scaling)
         //   44 PausableExtension                   → allowed (pause toggle;
         //      mint-level DoS but no drain)
-        //   45 UnwrapLamports                      → flagged for follow-up
-        //      (transfers lamports from a native SOL token account)
-        //   46 PermissionedBurnExtension           → flagged for follow-up
-        //      (third-party-permissioned burn — value flow)
+        //   45 UnwrapLamports                      → BLOCKED (Pentester MED:
+        //      same lamport-drain class as 38 — transfers lamports out of a
+        //      native SOL token account)
+        //   46 PermissionedBurnExtension           → DEFERRED (third-party-
+        //      permissioned burn; setup-only on the mint and not directly
+        //      callable as a top-level value-flow ix in the same way as 35/42)
         //
-        // The "flagged for follow-up" group above (34, 35, 36, 37, 38, 42,
-        // 45, 46) is intentionally NOT blocked in this PR. The minimum-scope
-        // M3 fix is opcode 27. Expanding the blocklist requires a separate
-        // change with explicit owner-allowlist UX so legitimate mint
-        // configuration flows aren't silently broken.
+        // The DEFERRED group (34, 37, 46) is intentionally not blocked here.
+        // Each has a legitimate use case (CpiGuard setup, ConfTransferFee setup,
+        // PermissionedBurn admin) and requires explicit owner-allowlist UX
+        // before mass-blocking would not break legitimate flows.
         if ix.program_id == TOKEN_2022_PROGRAM_ID && !ix.data.is_empty() {
             match ix.data[0] {
                 4 | 13 => return Err(error!(SigilError::UnauthorizedTokenApproval)),
                 3 | 12 | 26 => return Err(error!(SigilError::UnauthorizedTokenTransfer)),
                 6 | 8 | 9 | 15 => return Err(error!(SigilError::UnauthorizedTokenTransfer)),
-                27 => return Err(error!(SigilError::ConfidentialTransferBlocked)),
+                27 | 42 => return Err(error!(SigilError::ConfidentialTransferBlocked)),
+                35 => return Err(error!(SigilError::PermanentDelegateBlocked)),
+                36 => return Err(error!(SigilError::TransferHookBlocked)),
+                38 | 45 => return Err(error!(SigilError::LamportDrainBlocked)),
                 _ => {}
             }
         }

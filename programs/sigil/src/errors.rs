@@ -274,4 +274,19 @@ pub enum SigilError {
     // --- Token-2022 ConfidentialTransfer block (M3) ---
     #[msg("Token-2022 ConfidentialTransfer not permitted between validate and finalize")]
     ConfidentialTransferBlocked,
+
+    // --- Token-2022 follow-up blocks (Pentester HIGH/MED) ---
+    // Opcodes 35/36/38/42/45 — see validate_and_authorize.rs Token-2022 match arm.
+    #[msg("Token-2022 PermanentDelegate not permitted between validate and finalize")]
+    PermanentDelegateBlocked,
+
+    #[msg("Token-2022 TransferHook not permitted between validate and finalize")]
+    TransferHookBlocked,
+
+    #[msg("Token-2022 destructive-balance ix (opcodes 38/45/46) not permitted between validate and finalize")]
+    LamportDrainBlocked,
+
+    // --- Token-2022 third-pass audit additions ---
+    #[msg("Token-2022 Batch instruction (opcode 255) is blocked outright — wraps inner instructions and bypasses byte-0 blocklist")]
+    BatchInstructionBlocked,
 }
