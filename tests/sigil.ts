@@ -507,7 +507,7 @@ describe("sigil", () => {
           null, // keep maxSlippageBps
           null, // keep timelockDuration
           null, // keep allowedDestinations
-          null, // keep sessionExpirySlots
+          null, // keep sessionExpirySeconds
           null, // hasProtocolCaps
           null, // protocolCaps
         )

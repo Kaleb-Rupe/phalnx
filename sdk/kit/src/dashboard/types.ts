@@ -247,7 +247,7 @@ export interface PolicyData {
   /** BPS, capped at MAX_DEVELOPER_FEE_RATE (500). */
   developerFeeRate: number;
   // Session
-  sessionExpirySlots: bigint;
+  sessionExpirySeconds: bigint;
   // Governance
   /** Minimum 1800 (MIN_TIMELOCK_DURATION, TOCTOU fix). */
   timelockSeconds: number;
@@ -393,7 +393,7 @@ export interface PolicyChanges {
   allowedDestinations?: Address[];
   /** BPS. */
   developerFeeRate?: number;
-  sessionExpirySlots?: bigint;
+  sessionExpirySeconds?: bigint;
   /** Seconds. Minimum 1800 on-chain. */
   timelock?: number;
 }
@@ -554,7 +554,7 @@ export interface SerializedPolicyData {
   maxSlippageBps: number;
   allowedDestinations: string[];
   developerFeeRate: number;
-  sessionExpirySlots: string;
+  sessionExpirySeconds: string;
   timelockSeconds: number;
   policyVersion: string;
   pendingUpdate?: {

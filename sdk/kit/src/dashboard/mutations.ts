@@ -502,7 +502,7 @@ export async function withdraw(
  *   - `allowedDestinations.length` (MAX_ALLOWED_DESTINATIONS on-chain)
  *   - `protocolCaps.length` must equal `approvedApps.length` when has_protocol_caps
  *   - `maxSlippageBps` <= MAX_SLIPPAGE_BPS on-chain
- *   - `sessionExpirySlots` range (10..=450 when > 0)
+ *   - `sessionExpirySeconds` range (5..=90 when > 0; audit F5-H1)
  */
 export async function queuePolicyUpdate(
   rpc: Rpc<SolanaRpcApi>,
@@ -557,7 +557,7 @@ export async function queuePolicyUpdate(
     timelockDuration:
       changes.timelock != null ? BigInt(changes.timelock) : null,
     allowedDestinations: changes.allowedDestinations ?? null,
-    sessionExpirySlots: changes.sessionExpirySlots ?? null,
+    sessionExpirySeconds: changes.sessionExpirySeconds ?? null,
     hasProtocolCaps: changes.hasProtocolCaps ?? null,
     protocolCaps: changes.protocolCaps ?? null,
   });

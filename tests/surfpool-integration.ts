@@ -35,7 +35,7 @@ import {
   PROTOCOL_TREASURY,
   PROTOCOL_FEE_RATE,
   FEE_RATE_DENOMINATOR,
-  SESSION_EXPIRY_SLOTS,
+  SESSION_DURATION_SECONDS,
   setAccountLamports,
   createWallet,
   fundWithTokens,
@@ -1496,7 +1496,7 @@ describe("surfpool-integration", function () {
           null,
           null,
           null,
-          null, // sessionExpirySlots
+          null, // sessionExpirySeconds
           null, // hasProtocolCaps
           null, // protocolCaps
         )
@@ -1550,7 +1550,7 @@ describe("surfpool-integration", function () {
           null,
           null,
           null,
-          null, // sessionExpirySlots
+          null, // sessionExpirySeconds
           null, // hasProtocolCaps
           null, // protocolCaps
         )

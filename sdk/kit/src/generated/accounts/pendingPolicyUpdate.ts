@@ -83,7 +83,7 @@ export type PendingPolicyUpdate = {
   maxSlippageBps: Option<number>;
   timelockDuration: Option<bigint>;
   allowedDestinations: Option<Array<Address>>;
-  sessionExpirySlots: Option<bigint>;
+  sessionExpirySeconds: Option<bigint>;
   hasProtocolCaps: Option<boolean>;
   protocolCaps: Option<Array<bigint>>;
   /** Bump seed for PDA */
@@ -111,7 +111,7 @@ export type PendingPolicyUpdateArgs = {
   maxSlippageBps: OptionOrNullable<number>;
   timelockDuration: OptionOrNullable<number | bigint>;
   allowedDestinations: OptionOrNullable<Array<Address>>;
-  sessionExpirySlots: OptionOrNullable<number | bigint>;
+  sessionExpirySeconds: OptionOrNullable<number | bigint>;
   hasProtocolCaps: OptionOrNullable<boolean>;
   protocolCaps: OptionOrNullable<Array<number | bigint>>;
   /** Bump seed for PDA */
@@ -138,7 +138,7 @@ export function getPendingPolicyUpdateEncoder(): Encoder<PendingPolicyUpdateArgs
         "allowedDestinations",
         getOptionEncoder(getArrayEncoder(getAddressEncoder())),
       ],
-      ["sessionExpirySlots", getOptionEncoder(getU64Encoder())],
+      ["sessionExpirySeconds", getOptionEncoder(getU64Encoder())],
       ["hasProtocolCaps", getOptionEncoder(getBooleanEncoder())],
       ["protocolCaps", getOptionEncoder(getArrayEncoder(getU64Encoder()))],
       ["bump", getU8Encoder()],
@@ -169,7 +169,7 @@ export function getPendingPolicyUpdateDecoder(): Decoder<PendingPolicyUpdate> {
       "allowedDestinations",
       getOptionDecoder(getArrayDecoder(getAddressDecoder())),
     ],
-    ["sessionExpirySlots", getOptionDecoder(getU64Decoder())],
+    ["sessionExpirySeconds", getOptionDecoder(getU64Decoder())],
     ["hasProtocolCaps", getOptionDecoder(getBooleanDecoder())],
     ["protocolCaps", getOptionDecoder(getArrayDecoder(getU64Decoder()))],
     ["bump", getU8Decoder()],

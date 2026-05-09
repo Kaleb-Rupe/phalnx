@@ -31,7 +31,7 @@ pub struct PendingPolicyUpdate {
     pub max_slippage_bps: Option<u16>,
     pub timelock_duration: Option<u64>,
     pub allowed_destinations: Option<Vec<Pubkey>>,
-    pub session_expiry_slots: Option<u64>,
+    pub session_expiry_seconds: Option<u64>,
     pub has_protocol_caps: Option<bool>,
     pub protocol_caps: Option<Vec<u64>>,
 
@@ -54,7 +54,7 @@ impl PendingPolicyUpdate {
         + (1 + 2) // max_slippage_bps
         + (1 + 8) // timelock_duration
         + (1 + 4 + 32 * MAX_ALLOWED_DESTINATIONS) // allowed_destinations
-        + (1 + 8) // session_expiry_slots
+        + (1 + 8) // session_expiry_seconds
         + (1 + 1) // has_protocol_caps
         + (1 + 4 + 8 * MAX_ALLOWED_PROTOCOLS) // protocol_caps
         + 1; // bump

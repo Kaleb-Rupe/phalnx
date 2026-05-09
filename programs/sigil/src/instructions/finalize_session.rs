@@ -97,7 +97,8 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
     let session = &ctx.accounts.session;
     let clock = Clock::get()?;
 
-    let is_expired = session.is_expired(clock.slot);
+    // Wall-clock expiry check (F5-H1): unaffected by slot-time variance.
+    let is_expired = session.is_expired(clock.unix_timestamp);
 
     // Rent recipient must be the session's agent
     require!(

@@ -146,7 +146,7 @@ pub fn handler(
     policy.has_constraints = false;
     policy.has_protocol_caps = !protocol_caps.is_empty();
     policy.protocol_caps = protocol_caps;
-    policy.session_expiry_slots = 0;
+    policy.session_expiry_seconds = 0;
     policy.bump = ctx.bumps.policy;
     policy.policy_version = 0;
     policy.has_post_assertions = 0;

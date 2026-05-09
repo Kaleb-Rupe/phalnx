@@ -198,7 +198,7 @@ describe("OwnerClient Devnet Integration", function () {
         "unrestricted",
       ]);
       expect(typeof policy.hasProtocolCaps).to.equal("boolean");
-      expect(typeof policy.sessionExpirySlots).to.equal("bigint");
+      expect(typeof policy.sessionExpirySeconds).to.equal("bigint");
       expect(typeof policy.policyVersion).to.equal("bigint");
       expect(typeof policy.timelockSeconds).to.equal("number");
     });

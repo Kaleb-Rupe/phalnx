@@ -116,7 +116,7 @@ describe("devnet-security", () => {
           null,
           null,
           null,
-          null, // sessionExpirySlots
+          null, // sessionExpirySeconds
           null, // hasProtocolCaps
           null, // protocolCaps
         )
@@ -255,7 +255,7 @@ describe("devnet-security", () => {
           null,
           null,
           null,
-          null, // sessionExpirySlots
+          null, // sessionExpirySeconds
           null, // hasProtocolCaps
           null, // protocolCaps
         )

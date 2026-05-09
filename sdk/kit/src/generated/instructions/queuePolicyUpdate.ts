@@ -109,7 +109,7 @@ export type QueuePolicyUpdateInstructionData = {
   maxSlippageBps: Option<number>;
   timelockDuration: Option<bigint>;
   allowedDestinations: Option<Array<Address>>;
-  sessionExpirySlots: Option<bigint>;
+  sessionExpirySeconds: Option<bigint>;
   hasProtocolCaps: Option<boolean>;
   protocolCaps: Option<Array<bigint>>;
 };
@@ -123,7 +123,7 @@ export type QueuePolicyUpdateInstructionDataArgs = {
   maxSlippageBps: OptionOrNullable<number>;
   timelockDuration: OptionOrNullable<number | bigint>;
   allowedDestinations: OptionOrNullable<Array<Address>>;
-  sessionExpirySlots: OptionOrNullable<number | bigint>;
+  sessionExpirySeconds: OptionOrNullable<number | bigint>;
   hasProtocolCaps: OptionOrNullable<boolean>;
   protocolCaps: OptionOrNullable<Array<number | bigint>>;
 };
@@ -143,7 +143,7 @@ export function getQueuePolicyUpdateInstructionDataEncoder(): Encoder<QueuePolic
         "allowedDestinations",
         getOptionEncoder(getArrayEncoder(getAddressEncoder())),
       ],
-      ["sessionExpirySlots", getOptionEncoder(getU64Encoder())],
+      ["sessionExpirySeconds", getOptionEncoder(getU64Encoder())],
       ["hasProtocolCaps", getOptionEncoder(getBooleanEncoder())],
       ["protocolCaps", getOptionEncoder(getArrayEncoder(getU64Encoder()))],
     ]),
@@ -165,7 +165,7 @@ export function getQueuePolicyUpdateInstructionDataDecoder(): Decoder<QueuePolic
       "allowedDestinations",
       getOptionDecoder(getArrayDecoder(getAddressDecoder())),
     ],
-    ["sessionExpirySlots", getOptionDecoder(getU64Decoder())],
+    ["sessionExpirySeconds", getOptionDecoder(getU64Decoder())],
     ["hasProtocolCaps", getOptionDecoder(getBooleanDecoder())],
     ["protocolCaps", getOptionDecoder(getArrayDecoder(getU64Decoder()))],
   ]);
@@ -201,7 +201,7 @@ export type QueuePolicyUpdateAsyncInput<
   maxSlippageBps: QueuePolicyUpdateInstructionDataArgs["maxSlippageBps"];
   timelockDuration: QueuePolicyUpdateInstructionDataArgs["timelockDuration"];
   allowedDestinations: QueuePolicyUpdateInstructionDataArgs["allowedDestinations"];
-  sessionExpirySlots: QueuePolicyUpdateInstructionDataArgs["sessionExpirySlots"];
+  sessionExpirySeconds: QueuePolicyUpdateInstructionDataArgs["sessionExpirySeconds"];
   hasProtocolCaps: QueuePolicyUpdateInstructionDataArgs["hasProtocolCaps"];
   protocolCaps: QueuePolicyUpdateInstructionDataArgs["protocolCaps"];
 };
@@ -332,7 +332,7 @@ export type QueuePolicyUpdateInput<
   maxSlippageBps: QueuePolicyUpdateInstructionDataArgs["maxSlippageBps"];
   timelockDuration: QueuePolicyUpdateInstructionDataArgs["timelockDuration"];
   allowedDestinations: QueuePolicyUpdateInstructionDataArgs["allowedDestinations"];
-  sessionExpirySlots: QueuePolicyUpdateInstructionDataArgs["sessionExpirySlots"];
+  sessionExpirySeconds: QueuePolicyUpdateInstructionDataArgs["sessionExpirySeconds"];
   hasProtocolCaps: QueuePolicyUpdateInstructionDataArgs["hasProtocolCaps"];
   protocolCaps: QueuePolicyUpdateInstructionDataArgs["protocolCaps"];
 };

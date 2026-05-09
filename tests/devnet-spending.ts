@@ -475,7 +475,7 @@ describe("devnet-spending", () => {
         null,
         null,
         null,
-        null, // sessionExpirySlots
+        null, // sessionExpirySeconds
         null, // hasProtocolCaps
         null, // protocolCaps
       )

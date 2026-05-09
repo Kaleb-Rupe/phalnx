@@ -220,7 +220,7 @@ export function policyDataFromJSON(data: SerializedPolicyData): PolicyData {
     maxSlippageBps: data.maxSlippageBps,
     allowedDestinations: data.allowedDestinations.map(addr),
     developerFeeRate: data.developerFeeRate,
-    sessionExpirySlots: bi(data.sessionExpirySlots),
+    sessionExpirySeconds: bi(data.sessionExpirySeconds),
     timelockSeconds: data.timelockSeconds,
     policyVersion: bi(data.policyVersion),
     pendingUpdate: data.pendingUpdate,

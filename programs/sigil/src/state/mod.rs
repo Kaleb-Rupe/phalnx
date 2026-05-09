@@ -37,8 +37,28 @@ pub const MAX_ALLOWED_PROTOCOLS: usize = 10;
 /// Maximum number of allowed destination addresses for agent transfers
 pub const MAX_ALLOWED_DESTINATIONS: usize = 10;
 
-/// Session expiry in slots (~20 slots ≈ 8 seconds)
-pub const SESSION_EXPIRY_SLOTS: u64 = 20;
+/// Default session duration in seconds (when `policy.session_expiry_seconds == 0`).
+///
+/// **Why timestamp-based, not slot-based:** Solana slot times vary 400ms-1.5s
+/// under congestion. The previous slot-based bound (20 slots) ranged from 8s
+/// (target) to 30s (worst-case observed) — a 3.75x variance window. Audit
+/// finding F5-H1 (third-pass adversarial review) flagged this as HIGH severity
+/// because the documented "8 seconds" assumption was load-bearing for
+/// agent-permission risk modeling.
+///
+/// `Clock::unix_timestamp` is wall-clock and unaffected by congestion.
+pub const SESSION_DURATION_SECONDS: i64 = 30;
+
+/// Minimum owner-configurable session duration. Sessions shorter than this
+/// are rejected at `queue_policy_update` (a 1-second window is unusable in
+/// practice and indicates misconfiguration).
+pub const MIN_SESSION_DURATION_SECONDS: u64 = 5;
+
+/// Maximum owner-configurable session duration. Bounded to defend against
+/// misconfiguration that would leave delegations live for minutes. Previous
+/// slot-based bound (450) at 1.5s/slot would have permitted **11 minutes** of
+/// live token delegation under congestion. 90 seconds is a hard worst-case.
+pub const MAX_OWNER_SESSION_DURATION_SECONDS: u64 = 90;
 
 /// Fee rate denominator — fee_rate / 1,000,000 = fractional fee
 pub const FEE_RATE_DENOMINATOR: u64 = 1_000_000;
@@ -197,7 +217,14 @@ mod treasury_tests {
     #[test]
     fn devnet_testing_mainnet_guard_constants_sane() {
         use super::*;
-        assert_ne!(SESSION_EXPIRY_SLOTS, 0, "session expiry must be non-zero");
+        assert!(
+            SESSION_DURATION_SECONDS > 0,
+            "session duration must be positive"
+        );
+        assert!(
+            MIN_SESSION_DURATION_SECONDS < MAX_OWNER_SESSION_DURATION_SECONDS,
+            "min must be below max owner-configurable bound"
+        );
         assert!(MAX_AGENTS_PER_VAULT > 0, "must allow at least one agent");
         assert!(FULL_CAPABILITY > 0, "capability value must be non-zero");
     }

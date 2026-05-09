@@ -133,7 +133,7 @@ pub mod sigil {
         max_slippage_bps: Option<u16>,
         timelock_duration: Option<u64>,
         allowed_destinations: Option<Vec<Pubkey>>,
-        session_expiry_slots: Option<u64>,
+        session_expiry_seconds: Option<u64>,
         has_protocol_caps: Option<bool>,
         protocol_caps: Option<Vec<u64>>,
     ) -> Result<()> {
@@ -147,7 +147,7 @@ pub mod sigil {
             max_slippage_bps,
             timelock_duration,
             allowed_destinations,
-            session_expiry_slots,
+            session_expiry_seconds,
             has_protocol_caps,
             protocol_caps,
         )
