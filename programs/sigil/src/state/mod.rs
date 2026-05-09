@@ -217,7 +217,10 @@ mod treasury_tests {
     #[test]
     fn devnet_testing_mainnet_guard_constants_sane() {
         use super::*;
-        assert!(SESSION_DURATION_SECONDS > 0, "session duration must be positive");
+        assert!(
+            SESSION_DURATION_SECONDS > 0,
+            "session duration must be positive"
+        );
         assert!(
             MIN_SESSION_DURATION_SECONDS < MAX_OWNER_SESSION_DURATION_SECONDS,
             "min must be below max owner-configurable bound"

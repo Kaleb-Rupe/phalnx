@@ -23,8 +23,7 @@ use cvlr::prelude::*;
 pub fn rule_expiry_at_least_now_ts() {
     let now_ts: i64 = nondet();
     cvlr_assume!(now_ts >= 0); // Solana unix_timestamp is always non-negative.
-    let expires =
-        SessionAuthority::calculate_expiry(now_ts, SESSION_DURATION_SECONDS as u64);
+    let expires = SessionAuthority::calculate_expiry(now_ts, SESSION_DURATION_SECONDS as u64);
     cvlr_assert!(expires >= now_ts);
 }
 
@@ -40,8 +39,7 @@ pub fn rule_expiry_at_least_now_ts() {
 pub fn rule_expiry_equals_saturating_add() {
     let now_ts: i64 = nondet();
     cvlr_assume!(now_ts >= 0);
-    let expires =
-        SessionAuthority::calculate_expiry(now_ts, SESSION_DURATION_SECONDS as u64);
+    let expires = SessionAuthority::calculate_expiry(now_ts, SESSION_DURATION_SECONDS as u64);
     cvlr_assert!(expires == now_ts.saturating_add(SESSION_DURATION_SECONDS));
 }
 
@@ -96,15 +94,12 @@ pub fn rule_session_valid_at_creation() {
 #[rule]
 pub fn rule_expiry_saturates_at_max() {
     // i64::MAX itself must saturate
-    let expires_max =
-        SessionAuthority::calculate_expiry(i64::MAX, SESSION_DURATION_SECONDS as u64);
+    let expires_max = SessionAuthority::calculate_expiry(i64::MAX, SESSION_DURATION_SECONDS as u64);
     cvlr_assert!(expires_max == i64::MAX);
 
     // i64::MAX - 10 is within the saturation zone (< SESSION_DURATION_SECONDS away from MAX)
-    let expires_near = SessionAuthority::calculate_expiry(
-        i64::MAX - 10,
-        SESSION_DURATION_SECONDS as u64,
-    );
+    let expires_near =
+        SessionAuthority::calculate_expiry(i64::MAX - 10, SESSION_DURATION_SECONDS as u64);
     cvlr_assert!(expires_near == i64::MAX);
 }
 

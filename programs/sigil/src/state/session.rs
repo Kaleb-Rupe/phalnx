@@ -111,8 +111,7 @@ mod f5h1_tests {
 
     use super::*;
     use crate::state::{
-        MAX_OWNER_SESSION_DURATION_SECONDS, MIN_SESSION_DURATION_SECONDS,
-        SESSION_DURATION_SECONDS,
+        MAX_OWNER_SESSION_DURATION_SECONDS, MIN_SESSION_DURATION_SECONDS, SESSION_DURATION_SECONDS,
     };
 
     /// Helper — build a SessionAuthority with only `expires_at_timestamp` set.
@@ -149,15 +148,14 @@ mod f5h1_tests {
     #[test]
     fn f5h1_calculate_expiry_uses_only_wall_clock() {
         let now_ts: i64 = 1_700_000_000; // arbitrary realistic mainnet timestamp
-        let expires =
-            SessionAuthority::calculate_expiry(now_ts, SESSION_DURATION_SECONDS as u64);
+        let expires = SessionAuthority::calculate_expiry(now_ts, SESSION_DURATION_SECONDS as u64);
         assert_eq!(expires, now_ts + SESSION_DURATION_SECONDS);
 
         let session = session_with_expiry(expires);
 
         assert!(!session.is_expired(expires - 1)); // 1s before expiry
-        assert!(!session.is_expired(expires));     // exactly at expiry: boundary is strict `>`
-        assert!(session.is_expired(expires + 1));  // 1s after expiry
+        assert!(!session.is_expired(expires)); // exactly at expiry: boundary is strict `>`
+        assert!(session.is_expired(expires + 1)); // 1s after expiry
     }
 
     /// Defense-in-depth: even if a caller bypassed `queue_policy_update`
@@ -179,7 +177,10 @@ mod f5h1_tests {
 
         // u64::MAX gets capped to MAX_OWNER_SESSION_DURATION_SECONDS, not saturating.
         let max_attempt = SessionAuthority::calculate_expiry(now_ts, u64::MAX);
-        assert_eq!(max_attempt, now_ts + MAX_OWNER_SESSION_DURATION_SECONDS as i64);
+        assert_eq!(
+            max_attempt,
+            now_ts + MAX_OWNER_SESSION_DURATION_SECONDS as i64
+        );
     }
 
     /// Lower-bound sanity: 5s is the floor enforced by queue_policy_update,
@@ -188,10 +189,7 @@ mod f5h1_tests {
     #[test]
     fn f5h1_min_session_duration_arithmetically_valid() {
         let now_ts: i64 = 1_700_000_000;
-        let expires = SessionAuthority::calculate_expiry(
-            now_ts,
-            MIN_SESSION_DURATION_SECONDS,
-        );
+        let expires = SessionAuthority::calculate_expiry(now_ts, MIN_SESSION_DURATION_SECONDS);
         assert_eq!(expires, now_ts + MIN_SESSION_DURATION_SECONDS as i64);
         assert_eq!(expires - now_ts, 5);
     }
@@ -202,8 +200,7 @@ mod f5h1_tests {
     #[test]
     fn f5h1_calculate_expiry_saturates_near_i64_max() {
         let near_max = i64::MAX - 10;
-        let expires =
-            SessionAuthority::calculate_expiry(near_max, SESSION_DURATION_SECONDS as u64);
+        let expires = SessionAuthority::calculate_expiry(near_max, SESSION_DURATION_SECONDS as u64);
         assert_eq!(expires, i64::MAX, "must saturate, not wrap");
     }
 
@@ -213,7 +210,7 @@ mod f5h1_tests {
     fn f5h1_is_expired_strict_inequality() {
         let session = session_with_expiry(1_700_000_030);
         assert!(!session.is_expired(1_700_000_030)); // exactly at: not expired
-        assert!(session.is_expired(1_700_000_031));  // 1s after: expired
+        assert!(session.is_expired(1_700_000_031)); // 1s after: expired
         assert!(!session.is_expired(1_700_000_029)); // 1s before: not expired
     }
 
@@ -229,4 +226,3 @@ mod f5h1_tests {
         assert!(!session.is_valid(1_700_000_000)); // not authorized
     }
 }
-
