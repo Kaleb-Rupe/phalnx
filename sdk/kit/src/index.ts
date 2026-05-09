@@ -507,6 +507,17 @@ export type {
   OwnerTransactionResult,
 } from "./owner-transaction.js";
 
+// ─── Build Unsigned (S21) ────────────────────────────────────────────────────
+// Public composer for offline signing. Wraps `buildOwnerTransaction()` so
+// callers without a `TransactionSigner` (Squads multisig flows, CLI cold-key
+// signing, cost-preview UIs) can pass a plain `Address` and receive a
+// serialized unsigned-tx buffer + decoded message in one call.
+export { buildUnsigned } from "./build-unsigned.js";
+export type {
+  BuildUnsignedInput,
+  BuildUnsignedResult,
+} from "./build-unsigned.js";
+
 // ─── Preview Create Vault (v2.2 FE↔BE contract C1) ──────────────────────────
 // Wraps `createVault` + `buildOwnerTransaction` into a single preview call
 // that returns rent + PDA list + cost + unsigned tx in one shot. Drives the
