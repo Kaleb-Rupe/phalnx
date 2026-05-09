@@ -560,6 +560,7 @@ export async function queuePolicyUpdate(
     sessionExpirySeconds: changes.sessionExpirySeconds ?? null,
     hasProtocolCaps: changes.hasProtocolCaps ?? null,
     protocolCaps: changes.protocolCaps ?? null,
+    destinationMode: changes.destinationMode ?? null,
   });
   return run(rpc, owner, network, [ix], opts);
 }
