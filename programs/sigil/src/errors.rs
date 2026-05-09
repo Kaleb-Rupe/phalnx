@@ -256,4 +256,8 @@ pub enum SigilError {
     // --- M11 SIMD-0296 pad-attack DoS guard ---
     #[msg("Sysvar instruction scan exceeded the per-tx safety bound")]
     SysvarScanBoundExceeded,
+
+    // --- C4 audit fix: async-fulfillment programs ---
+    #[msg("Async-fulfillment program is not permitted in V1 (Jupiter Perps, Drift, Drift JIT). Spending cannot be measured because keeper submits the actual transfer in a separate transaction after finalize_session returns.")]
+    AsyncFulfillmentNotPermitted,
 }

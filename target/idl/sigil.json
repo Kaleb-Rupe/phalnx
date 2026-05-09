@@ -5879,6 +5879,11 @@
       "code": 6077,
       "name": "SysvarScanBoundExceeded",
       "msg": "Sysvar instruction scan exceeded the per-tx safety bound"
+    },
+    {
+      "code": 6078,
+      "name": "AsyncFulfillmentNotPermitted",
+      "msg": "Async-fulfillment program is not permitted in V1 (Jupiter Perps, Drift, Drift JIT). Spending cannot be measured because keeper submits the actual transfer in a separate transaction after finalize_session returns."
     }
   ],
   "types": [

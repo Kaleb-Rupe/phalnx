@@ -170,6 +170,8 @@ export const SIGIL_ERROR__QUEUED_UPDATE_EXPIRED = 0x17bb; // 6075
 export const SIGIL_ERROR__ACCOUNT_WRITABILITY_MISMATCH = 0x17bc; // 6076
 /** SysvarScanBoundExceeded: Sysvar instruction scan exceeded the per-tx safety bound */
 export const SIGIL_ERROR__SYSVAR_SCAN_BOUND_EXCEEDED = 0x17bd; // 6077
+/** AsyncFulfillmentNotPermitted: Async-fulfillment program is not permitted in V1 (Jupiter Perps, Drift, Drift JIT). Spending cannot be measured because keeper submits the actual transfer in a separate transaction after finalize_session returns. */
+export const SIGIL_ERROR__ASYNC_FULFILLMENT_NOT_PERMITTED = 0x17be; // 6078
 
 export type SigilError =
   | typeof SIGIL_ERROR__ACCOUNT_WRITABILITY_MISMATCH
@@ -182,6 +184,7 @@ export type SigilError =
   | typeof SIGIL_ERROR__AGENT_PAUSED
   | typeof SIGIL_ERROR__AGENT_SLOT_NOT_FOUND
   | typeof SIGIL_ERROR__AGENT_SPEND_LIMIT_EXCEEDED
+  | typeof SIGIL_ERROR__ASYNC_FULFILLMENT_NOT_PERMITTED
   | typeof SIGIL_ERROR__BLOCKED_SPL_OPCODE
   | typeof SIGIL_ERROR__CONSTRAINTS_NOT_CLOSED
   | typeof SIGIL_ERROR__CONSTRAINTS_VAULT_MISMATCH
@@ -264,6 +267,7 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__AGENT_PAUSED]: `Agent is paused and cannot execute actions`,
     [SIGIL_ERROR__AGENT_SLOT_NOT_FOUND]: `Agent has per-agent spending limit but no overlay tracking slot`,
     [SIGIL_ERROR__AGENT_SPEND_LIMIT_EXCEEDED]: `Agent rolling 24h spend exceeds per-agent spending limit`,
+    [SIGIL_ERROR__ASYNC_FULFILLMENT_NOT_PERMITTED]: `Async-fulfillment program is not permitted in V1 (Jupiter Perps, Drift, Drift JIT). Spending cannot be measured because keeper submits the actual transfer in a separate transaction after finalize_session returns.`,
     [SIGIL_ERROR__BLOCKED_SPL_OPCODE]: `SPL opcode is blocked at runtime and cannot be used in constraints`,
     [SIGIL_ERROR__CONSTRAINTS_NOT_CLOSED]: `Instruction constraints must be closed before closing vault`,
     [SIGIL_ERROR__CONSTRAINTS_VAULT_MISMATCH]: `Zero-copy constraints account has wrong vault`,

@@ -112,6 +112,7 @@ export const SIGIL_ERRORS = {
   QueuedUpdateExpired: 6075,
   AccountWritabilityMismatch: 6076,
   SysvarScanBoundExceeded: 6077,
+  AsyncFulfillmentNotPermitted: 6078,
 } as const;
 
 export type SigilErrorName = keyof typeof SIGIL_ERRORS;

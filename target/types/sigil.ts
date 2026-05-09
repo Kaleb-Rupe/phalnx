@@ -5885,6 +5885,11 @@ export type Sigil = {
       "code": 6077,
       "name": "sysvarScanBoundExceeded",
       "msg": "Sysvar instruction scan exceeded the per-tx safety bound"
+    },
+    {
+      "code": 6078,
+      "name": "asyncFulfillmentNotPermitted",
+      "msg": "Async-fulfillment program is not permitted in V1 (Jupiter Perps, Drift, Drift JIT). Spending cannot be measured because keeper submits the actual transfer in a separate transaction after finalize_session returns."
     }
   ],
   "types": [

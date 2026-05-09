@@ -280,6 +280,56 @@ pub const JUPITER_BORROW_PROGRAM: Pubkey = Pubkey::new_from_array([
     31, 214, 135, 58, 119, 204, 220, 113, 143, 17, 51,
 ]);
 
+// --- Async-fulfillment programs (C4 audit fix) ---
+//
+// These three protocols use a request/fulfillment model: the user submits a
+// `request*` instruction and the keeper submits the actual SPL transfer in a
+// SEPARATE transaction 5-45s later. Because the transfer happens after
+// `finalize_session` returns, Sigil's stablecoin balance-delta measurement is
+// always 0, so daily caps + per-protocol caps + spend tracker never record
+// the real spend, and the vault drains silently.
+//
+// V1 mitigation (Option C): hardcode-reject these program IDs in the
+// instruction scan. A future release may re-enable them via the constraints
+// PDA + post-execution assertions once we can prove keeper-tx accounting
+// across atomic boundaries.
+//
+// Source: Sigil security audit C4 (2026-05). See also:
+// - Jupiter Perps:    PERPHjGBqRHArX4DySjwM6UJHiR3sWAatqfdBS2qQJu
+// - Drift v2:         dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH
+// - Drift JIT proxy:  J1TnP8zvVxbtF5KFp5xRmWuvG9McnhzmBd9XGfCyuxFP
+
+/// Jupiter Perpetuals program
+/// Base58: PERPHjGBqRHArX4DySjwM6UJHiR3sWAatqfdBS2qQJu
+pub const JUPITER_PERPS_PROGRAM: Pubkey = Pubkey::new_from_array([
+    5, 177, 243, 202, 241, 148, 98, 239, 135, 96, 240, 171, 222, 117, 205, 61, 158, 227, 27, 58,
+    50, 198, 32, 232, 148, 18, 46, 156, 155, 129, 69, 250,
+]);
+
+/// Drift v2 protocol program
+/// Base58: dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH
+pub const DRIFT_V2_PROGRAM: Pubkey = Pubkey::new_from_array([
+    9, 84, 219, 190, 158, 201, 96, 201, 138, 122, 41, 63, 226, 19, 54, 150, 111, 225, 128, 209, 81,
+    174, 75, 129, 121, 86, 31, 137, 133, 74, 83, 246,
+]);
+
+/// Drift JIT proxy program
+/// Base58: J1TnP8zvVxbtF5KFp5xRmWuvG9McnhzmBd9XGfCyuxFP
+pub const DRIFT_JIT_PROXY_PROGRAM: Pubkey = Pubkey::new_from_array([
+    252, 180, 245, 243, 227, 226, 41, 248, 219, 192, 203, 167, 225, 83, 228, 133, 83, 109, 79, 110,
+    62, 225, 115, 177, 71, 201, 141, 78, 240, 248, 168, 126,
+]);
+
+/// Programs whose spending Sigil cannot measure synchronously inside
+/// `validate_and_authorize` because they use a request/fulfillment model
+/// (the keeper submits the actual SPL transfer 5-45s later in a separate
+/// transaction). Hardcode-rejected in V1; see C4 audit finding above.
+pub const KNOWN_ASYNC_FULFILLMENT_PROGRAMS: [Pubkey; 3] = [
+    JUPITER_PERPS_PROGRAM,
+    DRIFT_V2_PROGRAM,
+    DRIFT_JIT_PROXY_PROGRAM,
+];
+
 /// Token-2022 program ID
 /// Base58: TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb
 pub const TOKEN_2022_PROGRAM_ID: Pubkey = Pubkey::new_from_array([

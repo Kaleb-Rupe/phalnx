@@ -14,7 +14,7 @@
  */
 
 // ────────────────────────────────────────────────────────────────
-// Sigil program errors (6000-6077)
+// Sigil program errors (6000-6078)
 // ────────────────────────────────────────────────────────────────
 
 export const SIGIL_ERRORS = {
@@ -96,6 +96,7 @@ export const SIGIL_ERRORS = {
   QueuedUpdateExpired: 6075,
   AccountWritabilityMismatch: 6076,
   SysvarScanBoundExceeded: 6077,
+  AsyncFulfillmentNotPermitted: 6078,
 } as const;
 
 /**

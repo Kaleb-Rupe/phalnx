@@ -228,7 +228,7 @@ cargo fmt --check --manifest-path programs/sigil/Cargo.toml
 | Jupiter integration (composed swaps)                                    | 8        |
 | Jupiter Lend integration (deposit/withdraw)                             | 6        |
 | Flash Trade integration (leveraged perps)                               | 15       |
-| Security exploit scenarios                                              | 165      |
+| Security exploit scenarios                                              | 171      |
 | Instruction constraints (generic enforcement)                           | 65       |
 | Escrow integration (deposit/settle/refund)                              | 15       |
 | TOCTOU security (policy version + timelock)                             | 7        |
@@ -241,7 +241,7 @@ cargo fmt --check --manifest-path programs/sigil/Cargo.toml
 | Kit-native SDK (`@usesigil/kit` — includes merged core + dashboard)     | 1683     |
 | Kit SDK devnet tests (`@usesigil/kit` devnet)                           | 33       |
 | Plugins (`@usesigil/plugins`)                                           | 14       |
-| Rust unit tests (cargo test)                                            | 134      |
+| Rust unit tests (cargo test)                                            | 128      |
 | Devnet extended scenarios (flash-trade + stress)                        | 45       |
 | Trident fuzz tests (1K iterations)                                      | 16       |
 | **Total**                                                               | **2564** |

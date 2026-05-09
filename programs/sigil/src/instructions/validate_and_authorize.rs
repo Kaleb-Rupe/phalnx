@@ -367,6 +367,19 @@ pub fn handler(
             return Ok(ScanAction::Infrastructure);
         }
 
+        // C4 async-fulfillment deny — applies to BOTH spending and non-spending paths
+        // because scan_instruction_shared is called from both. Closes the amount=0
+        // bypass at validate.rs:381 / :442.
+        //
+        // These protocols (Jupiter Perps, Drift v2, Drift JIT proxy) use a
+        // request/fulfillment model where the keeper submits the actual SPL
+        // transfer 5-45s after finalize_session returns. Sigil's stablecoin
+        // balance-delta measurement is always 0 at finalize, so daily caps +
+        // protocol caps + spend tracker never record the real spend.
+        if KNOWN_ASYNC_FULFILLMENT_PROGRAMS.contains(&ix.program_id) {
+            return Err(error!(SigilError::AsyncFulfillmentNotPermitted));
+        }
+
         // Protocol allowlist
         require!(
             policy.is_protocol_allowed(&ix.program_id),
