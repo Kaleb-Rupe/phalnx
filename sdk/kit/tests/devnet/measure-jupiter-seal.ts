@@ -105,7 +105,7 @@ function mockState(): ResolvedVaultState {
       hasPendingPolicy: false,
       hasProtocolCaps: false,
       protocolCaps: [],
-      sessionExpirySlots: 0n,
+      sessionExpirySeconds: 0n,
       bump: 255,
       policyVersion: 0n,
       hasPostAssertions: 0,

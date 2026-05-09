@@ -426,7 +426,7 @@ export function buildPolicy(ctx: OverviewContext): PolicyData {
   const dailyCap = p.dailySpendingCapUsd as bigint;
   const maxPerTrade = p.maxTransactionSizeUsd ?? 0n;
   const protocolCaps = (p.protocolCaps || []) as bigint[];
-  const sessionExpiry = p.sessionExpirySlots as bigint;
+  const sessionExpiry = p.sessionExpirySeconds as bigint;
   const policyVer = (p.policyVersion ?? 0n) as bigint;
   const timelockSec = Number(p.timelockDuration);
 
@@ -459,8 +459,8 @@ export function buildPolicy(ctx: OverviewContext): PolicyData {
       changes.allowedDestinations = pp.allowedDestinations.value;
     if (isSome(pp.developerFeeRate))
       changes.developerFeeRate = pp.developerFeeRate.value;
-    if (isSome(pp.sessionExpirySlots))
-      changes.sessionExpirySlots = pp.sessionExpirySlots.value;
+    if (isSome(pp.sessionExpirySeconds))
+      changes.sessionExpirySeconds = pp.sessionExpirySeconds.value;
     if (isSome(pp.timelockDuration))
       changes.timelock = Number(pp.timelockDuration.value);
 
@@ -482,7 +482,7 @@ export function buildPolicy(ctx: OverviewContext): PolicyData {
     maxSlippageBps: p.maxSlippageBps as number,
     allowedDestinations: (p.allowedDestinations || []) as string[],
     developerFeeRate: p.developerFeeRate as number,
-    sessionExpirySlots: sessionExpiry,
+    sessionExpirySeconds: sessionExpiry,
     timelockSeconds: timelockSec,
     policyVersion: policyVer,
     pendingUpdate,
@@ -496,7 +496,7 @@ export function buildPolicy(ctx: OverviewContext): PolicyData {
       maxSlippageBps: p.maxSlippageBps,
       allowedDestinations: (p.allowedDestinations || []) as string[],
       developerFeeRate: p.developerFeeRate,
-      sessionExpirySlots: bs(sessionExpiry),
+      sessionExpirySeconds: bs(sessionExpiry),
       timelockSeconds: timelockSec,
       policyVersion: bs(policyVer),
       pendingUpdate: pendingUpdate

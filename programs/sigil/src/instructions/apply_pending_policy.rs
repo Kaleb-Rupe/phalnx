@@ -83,8 +83,8 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
     if let Some(ref destinations) = pending.allowed_destinations {
         policy.allowed_destinations = destinations.clone();
     }
-    if let Some(expiry) = pending.session_expiry_slots {
-        policy.session_expiry_slots = expiry;
+    if let Some(expiry) = pending.session_expiry_seconds {
+        policy.session_expiry_seconds = expiry;
     }
     if let Some(hpc) = pending.has_protocol_caps {
         policy.has_protocol_caps = hpc;

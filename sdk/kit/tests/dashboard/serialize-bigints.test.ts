@@ -181,7 +181,7 @@ describe("serializeBigints", () => {
       dailyCap: 5_000_000_000n,
       maxPerTrade: 1_000_000_000n,
       protocolCaps: [2_000_000_000n, 500_000_000n],
-      sessionExpirySlots: 20n,
+      sessionExpirySeconds: 20n,
       timelock: 1800,
       approvedApps: ["JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"],
     };

@@ -222,7 +222,7 @@ describe("TOCTOU Security Fix", () => {
         null,
         null,
         null,
-        null, // sessionExpirySlots
+        null, // sessionExpirySeconds
         null, // hasProtocolCaps
         null, // protocolCaps
       )
@@ -375,7 +375,7 @@ describe("TOCTOU Security Fix", () => {
           null,
           new BN(900), // timelockDuration: 900 — below 1800 minimum
           null,
-          null, // sessionExpirySlots
+          null, // sessionExpirySeconds
           null, // hasProtocolCaps
           null, // protocolCaps
         )
@@ -409,7 +409,7 @@ describe("TOCTOU Security Fix", () => {
           null,
           new BN(0), // timelockDuration: 0 — removal blocked (NEGATIVE TEST)
           null,
-          null, // sessionExpirySlots
+          null, // sessionExpirySeconds
           null, // hasProtocolCaps
           null, // protocolCaps
         )

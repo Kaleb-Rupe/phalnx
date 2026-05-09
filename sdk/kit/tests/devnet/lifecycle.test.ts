@@ -133,7 +133,7 @@ describe("Kit SDK Devnet — Vault Lifecycle", function () {
       maxSlippageBps: null,
       timelockDuration: null,
       allowedDestinations: null,
-      sessionExpirySlots: null,
+      sessionExpirySeconds: null,
       hasProtocolCaps: null,
       protocolCaps: null,
     });

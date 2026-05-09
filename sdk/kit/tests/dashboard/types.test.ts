@@ -233,7 +233,7 @@ describe("Dashboard types — toJSON serialization", () => {
       maxSlippageBps: 50,
       allowedDestinations: [],
       developerFeeRate: 200,
-      sessionExpirySlots: 20n,
+      sessionExpirySeconds: 20n,
       timelockSeconds: 1800,
       policyVersion: 5n,
       toJSON: () => ({
@@ -246,7 +246,7 @@ describe("Dashboard types — toJSON serialization", () => {
         maxSlippageBps: 50,
         allowedDestinations: [],
         developerFeeRate: 200,
-        sessionExpirySlots: "20",
+        sessionExpirySeconds: "20",
         timelockSeconds: 1800,
         policyVersion: "5",
       }),
@@ -254,7 +254,7 @@ describe("Dashboard types — toJSON serialization", () => {
 
     const json = JSON.parse(JSON.stringify(policy));
     expect(json.dailyCap).to.equal("5000000000");
-    expect(json.sessionExpirySlots).to.equal("20");
+    expect(json.sessionExpirySeconds).to.equal("20");
     expect(json.policyVersion).to.equal("5");
     expect(json.protocolCaps[0]).to.equal("2000000000");
     // Non-bigint fields stay as numbers
@@ -319,7 +319,7 @@ describe("Dashboard types — type shapes (compile-time)", () => {
       maxSlippageBps: 50,
       allowedDestinations: [],
       developerFeeRate: 200,
-      sessionExpirySlots: 20n,
+      sessionExpirySeconds: 20n,
       timelock: 1800,
     };
     expect(empty).to.deep.equal({});

@@ -663,8 +663,12 @@ pub fn handler(
     session.authorized_token = token_mint;
     session.authorized_protocol = target_protocol;
     session.is_spending = is_spending;
-    session.expires_at_slot =
-        SessionAuthority::calculate_expiry(clock.slot, policy.effective_session_expiry_slots());
+    // Wall-clock based — congestion-immune (audit F5-H1).
+    // The slot is no longer load-bearing for expiry; only Clock::unix_timestamp.
+    session.expires_at_timestamp = SessionAuthority::calculate_expiry(
+        clock.unix_timestamp,
+        policy.effective_session_expiry_seconds(),
+    );
     session.delegation_token_account = ctx.accounts.vault_token_account.key();
     session.protocol_fee = protocol_fee;
     session.developer_fee = developer_fee;

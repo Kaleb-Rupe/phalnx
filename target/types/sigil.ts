@@ -3678,7 +3678,7 @@ export type Sigil = {
           }
         },
         {
-          "name": "sessionExpirySlots",
+          "name": "sessionExpirySeconds",
           "type": {
             "option": "u64"
           }
@@ -7673,7 +7673,7 @@ export type Sigil = {
             }
           },
           {
-            "name": "sessionExpirySlots",
+            "name": "sessionExpirySeconds",
             "type": {
               "option": "u64"
             }
@@ -7863,10 +7863,12 @@ export type Sigil = {
             }
           },
           {
-            "name": "sessionExpirySlots",
+            "name": "sessionExpirySeconds",
             "docs": [
-              "Configurable session expiry in slots. 0 = use default (SESSION_EXPIRY_SLOTS = 20).",
-              "Valid range when non-zero: 10-450 slots."
+              "Configurable session duration in seconds. 0 = use default",
+              "(`SESSION_DURATION_SECONDS` = 30s). Valid range when non-zero:",
+              "`MIN_SESSION_DURATION_SECONDS..=MAX_OWNER_SESSION_DURATION_SECONDS`",
+              "(currently 5..=90s). Wall-clock based — see audit F5-H1."
             ],
             "type": "u64"
           },
@@ -8300,11 +8302,16 @@ export type Sigil = {
             "type": "bool"
           },
           {
-            "name": "expiresAtSlot",
+            "name": "expiresAtTimestamp",
             "docs": [
-              "Slot-based expiry: session is valid until this slot"
+              "Wall-clock expiry: session is valid until this `Clock::unix_timestamp`.",
+              "",
+              "**Why timestamp, not slot:** Solana slot times vary 400ms-1.5s under",
+              "congestion. Slot-based expiry produced a 3.75x variance window between",
+              "the documented and worst-case session lifetime — see audit F5-H1.",
+              "Wall-clock enforcement is congestion-immune."
             ],
-            "type": "u64"
+            "type": "i64"
           },
           {
             "name": "delegated",

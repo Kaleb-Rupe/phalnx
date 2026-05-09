@@ -57,7 +57,7 @@ export const PROTOCOL_TREASURY = new PublicKey(
 
 export const PROTOCOL_FEE_RATE = 200;
 export const FEE_RATE_DENOMINATOR = 1_000_000;
-export const SESSION_EXPIRY_SLOTS = 20;
+export const SESSION_DURATION_SECONDS = 30;
 export const ROLLING_WINDOW_SECONDS = 86_400;
 
 // ─── Surfnet RPC cheatcode caller ───────────────────────────────────────────

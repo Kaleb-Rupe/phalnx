@@ -118,10 +118,11 @@ export type PolicyConfig = {
    */
   protocolCaps: Array<bigint>;
   /**
-   * Configurable session expiry in slots. 0 = use default (SESSION_EXPIRY_SLOTS = 20).
-   * Valid range when non-zero: 10-450 slots.
+   * Configurable session duration in seconds. 0 = use default
+   * (SESSION_DURATION_SECONDS = 30s).
+   * Valid range when non-zero: 5..=90 seconds (audit F5-H1).
    */
-  sessionExpirySlots: bigint;
+  sessionExpirySeconds: bigint;
   /** Bump seed for PDA */
   bump: number;
   /**
@@ -201,10 +202,11 @@ export type PolicyConfigArgs = {
    */
   protocolCaps: Array<number | bigint>;
   /**
-   * Configurable session expiry in slots. 0 = use default (SESSION_EXPIRY_SLOTS = 20).
-   * Valid range when non-zero: 10-450 slots.
+   * Configurable session duration in seconds. 0 = use default
+   * (SESSION_DURATION_SECONDS = 30s).
+   * Valid range when non-zero: 5..=90 seconds (audit F5-H1).
    */
-  sessionExpirySlots: number | bigint;
+  sessionExpirySeconds: number | bigint;
   /** Bump seed for PDA */
   bump: number;
   /**
@@ -240,7 +242,7 @@ export function getPolicyConfigEncoder(): Encoder<PolicyConfigArgs> {
       ["hasPendingPolicy", getBooleanEncoder()],
       ["hasProtocolCaps", getBooleanEncoder()],
       ["protocolCaps", getArrayEncoder(getU64Encoder())],
-      ["sessionExpirySlots", getU64Encoder()],
+      ["sessionExpirySeconds", getU64Encoder()],
       ["bump", getU8Encoder()],
       ["policyVersion", getU64Encoder()],
       ["hasPostAssertions", getU8Encoder()],
@@ -266,7 +268,7 @@ export function getPolicyConfigDecoder(): Decoder<PolicyConfig> {
     ["hasPendingPolicy", getBooleanDecoder()],
     ["hasProtocolCaps", getBooleanDecoder()],
     ["protocolCaps", getArrayDecoder(getU64Decoder())],
-    ["sessionExpirySlots", getU64Decoder()],
+    ["sessionExpirySeconds", getU64Decoder()],
     ["bump", getU8Decoder()],
     ["policyVersion", getU64Decoder()],
     ["hasPostAssertions", getU8Decoder()],
