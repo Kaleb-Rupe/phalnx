@@ -1200,6 +1200,8 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
+
+  // M11 SIMD-0296 pad-attack DoS guard
   6077: {
     name: "SysvarScanBoundExceeded",
     message:

@@ -5880,6 +5880,11 @@ export type Sigil = {
       "code": 6076,
       "name": "accountWritabilityMismatch",
       "msg": "Account writability flag does not match constraint requirement"
+    },
+    {
+      "code": 6077,
+      "name": "sysvarScanBoundExceeded",
+      "msg": "Sysvar instruction scan exceeded the per-tx safety bound"
     }
   ],
   "types": [
