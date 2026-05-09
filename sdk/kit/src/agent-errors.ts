@@ -5,7 +5,7 @@
  * Every error includes a category, retryability flag, and
  * recovery actions that tell the agent exactly what to do next.
  *
- * Maps all 76 on-chain error codes (6000-6075) plus 34 SDK
+ * Maps all 77 on-chain error codes (6000-6076) plus 34 SDK
  * error codes (7000-7033) to AgentError with machine-readable metadata.
  *
  * Zero dependency on @solana/web3.js or @coral-xyz/anchor.
@@ -57,7 +57,7 @@ export interface AgentError {
 }
 
 // ---------------------------------------------------------------------------
-// On-chain error code mapping (6000-6075)
+// On-chain error code mapping (6000-6076)
 // ---------------------------------------------------------------------------
 
 interface ErrorMapping {
@@ -1170,7 +1170,6 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-<<<<<<< HEAD
 
   // F-10 audit fix: durable-nonce pre-signing defense
   6075: {
@@ -1184,8 +1183,10 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
         action: "requeue",
         description:
           "Re-queue the update via queue_policy_update / queue_constraints_update / queue_close_constraints / queue_agent_permissions_update — the original queued update is past the freshness window.",
-=======
-  6075: {
+      },
+    ],
+  },
+  6076: {
     name: "AccountWritabilityMismatch",
     message:
       "Account writability flag does not match the constraint requirement (read-only vs writable).",
@@ -1196,7 +1197,6 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
         action: "fix_constraints",
         description:
           "Match the writability flag (read-only or writable) of the account passed to the instruction with the constraint's is_writable_required value.",
->>>>>>> 5fbbf2a (chore(pr-9): add 6075 AccountWritabilityMismatch + regenerate codama)
       },
     ],
   },
@@ -1721,7 +1721,7 @@ const SDK_ERRORS: Record<string, ErrorMapping> = {
  * Convert any error into a structured AgentError.
  *
  * Handles:
- * - On-chain Anchor errors (code 6000-6075)
+ * - On-chain Anchor errors (code 6000-6076)
  * - SDK errors (code 7000-7033)
  * - Network/RPC errors (from message patterns)
  * - Unknown errors (wrapped as FATAL)
@@ -2074,7 +2074,7 @@ function extractErrorCode(error: unknown): number | null {
   const e = error as Record<string, unknown>;
 
   // Direct code property
-  if (typeof e.code === "number" && e.code >= 6000 && e.code <= 6075)
+  if (typeof e.code === "number" && e.code >= 6000 && e.code <= 6076)
     return e.code;
 
   // Anchor error structure
@@ -2091,7 +2091,7 @@ function extractErrorCode(error: unknown): number | null {
     const match = e.message.match(/custom program error: 0x([0-9a-fA-F]+)/);
     if (match) {
       const code = parseInt(match[1], 16);
-      if (code >= 6000 && code <= 6075) return code;
+      if (code >= 6000 && code <= 6076) return code;
     }
   }
 
@@ -2332,7 +2332,7 @@ export class SigilSdkError extends Error implements AgentError {
  * Returns a SigilSdkError (extends Error) so instanceof Error checks still work.
  *
  * Processing order:
- * 1. Try on-chain error extraction via toAgentError() (numeric codes 6000-6075)
+ * 1. Try on-chain error extraction via toAgentError() (numeric codes 6000-6076)
  * 2. Pattern-match SDK error messages (11 patterns from seal.ts throw sites)
  * 3. Fallback to UNKNOWN/FATAL
  */

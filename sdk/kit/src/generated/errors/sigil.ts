@@ -164,13 +164,10 @@ export const SIGIL_ERROR__INVALID_CONSTRAINT_OPERATOR = 0x17b8; // 6072
 export const SIGIL_ERROR__CONSTRAINTS_VAULT_MISMATCH = 0x17b9; // 6073
 /** BlockedSplOpcode: SPL opcode is blocked at runtime and cannot be used in constraints */
 export const SIGIL_ERROR__BLOCKED_SPL_OPCODE = 0x17ba; // 6074
-<<<<<<< HEAD
 /** QueuedUpdateExpired: Queued update is too old (>MAX_APPLY_AGE_SLOTS) — re-queue to apply. Defends against durable-nonce pre-signing. */
 export const SIGIL_ERROR__QUEUED_UPDATE_EXPIRED = 0x17bb; // 6075
-=======
 /** AccountWritabilityMismatch: Account writability flag does not match constraint requirement */
-export const SIGIL_ERROR__ACCOUNT_WRITABILITY_MISMATCH = 0x17bb; // 6075
->>>>>>> 08fec1f (feat(sigil): add AccountConstraint.is_writable_required (M5 — Squads SAP parity))
+export const SIGIL_ERROR__ACCOUNT_WRITABILITY_MISMATCH = 0x17bc; // 6076
 
 export type SigilError =
   | typeof SIGIL_ERROR__ACCOUNT_WRITABILITY_MISMATCH

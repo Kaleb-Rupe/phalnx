@@ -109,11 +109,8 @@ export const SIGIL_ERRORS = {
   InvalidConstraintOperator: 6072,
   ConstraintsVaultMismatch: 6073,
   BlockedSplOpcode: 6074,
-<<<<<<< HEAD
   QueuedUpdateExpired: 6075,
-=======
-  AccountWritabilityMismatch: 6075,
->>>>>>> 08fec1f (feat(sigil): add AccountConstraint.is_writable_required (M5 — Squads SAP parity))
+  AccountWritabilityMismatch: 6076,
 } as const;
 
 export type SigilErrorName = keyof typeof SIGIL_ERRORS;

@@ -93,15 +93,8 @@ export const SIGIL_ERRORS = {
   InvalidConstraintOperator: 6072,
   ConstraintsVaultMismatch: 6073,
   BlockedSplOpcode: 6074,
-<<<<<<< HEAD
   QueuedUpdateExpired: 6075,
-=======
-  // NOTE: code 6075 is a merge-time-allocated slot. PR 2b (SysvarScanBoundExceeded),
-  // PR 7 (ConfidentialTransferBlocked), and this PR 9 all currently claim 6075.
-  // Whichever lands first keeps it; the others rebase to 6076/6077 and update
-  // all 4 drift layers (errors.rs, IDL, this file, tests/helpers/strict-errors.ts).
-  AccountWritabilityMismatch: 6075,
->>>>>>> 2c2576b (fix(pr-9): close drift-layer gap — add AccountWritabilityMismatch to names.generated.ts)
+  AccountWritabilityMismatch: 6076,
 } as const;
 
 /**

@@ -5866,13 +5866,13 @@ export type Sigil = {
     },
     {
       "code": 6075,
-<<<<<<< HEAD
       "name": "queuedUpdateExpired",
       "msg": "Queued update is too old (>MAX_APPLY_AGE_SLOTS) — re-queue to apply. Defends against durable-nonce pre-signing."
-=======
+    },
+    {
+      "code": 6076,
       "name": "accountWritabilityMismatch",
       "msg": "Account writability flag does not match constraint requirement"
->>>>>>> 08fec1f (feat(sigil): add AccountConstraint.is_writable_required (M5 — Squads SAP parity))
     }
   ],
   "types": [
