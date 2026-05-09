@@ -6024,6 +6024,31 @@
       "code": 6081,
       "name": "OrphanPdaPopulated",
       "msg": "PDA is fully populated; not an orphan"
+    },
+    {
+      "code": 6082,
+      "name": "ConfidentialTransferBlocked",
+      "msg": "Token-2022 ConfidentialTransfer not permitted between validate and finalize"
+    },
+    {
+      "code": 6083,
+      "name": "PermanentDelegateBlocked",
+      "msg": "Token-2022 PermanentDelegate not permitted between validate and finalize"
+    },
+    {
+      "code": 6084,
+      "name": "TransferHookBlocked",
+      "msg": "Token-2022 TransferHook not permitted between validate and finalize"
+    },
+    {
+      "code": 6085,
+      "name": "LamportDrainBlocked",
+      "msg": "Token-2022 destructive-balance ix (opcodes 38/45/46) not permitted between validate and finalize"
+    },
+    {
+      "code": 6086,
+      "name": "BatchInstructionBlocked",
+      "msg": "Token-2022 Batch instruction (opcode 255) is blocked outright — wraps inner instructions and bypasses byte-0 blocklist"
     }
   ],
   "types": [
