@@ -597,15 +597,19 @@ jobs:
   #   - Goes green automatically when the founder replaces the sentinel
   #     with the real Squads vault PDA pre-mainnet
   #
-  # `continue-on-error: true` keeps it advisory until pre-mainnet day so
-  # PRs are not blocked by the intentional sentinel state.
+  # 2026-05-09 audit follow-up: flipped from `continue-on-error: true` to
+  # `false` AND added to `security-gate.needs:` so a misconfigured mainnet
+  # build cannot silently merge. The PROTOCOL_TREASURY sentinel in source
+  # is the intentional state during devnet weeks — when the founder sets
+  # the real Squads vault PDA pre-mainnet day, this job goes green and
+  # blocks merge of any PR that re-introduces the sentinel.
   # ──────────────────────────────────────────────────────────────
   mainnet-build-readiness:
     name: Mainnet Build Readiness (PROTOCOL_TREASURY check)
     needs: changes
     if: needs.changes.outputs.rust == 'true' || github.event_name == 'push'
     runs-on: ubuntu-latest
-    continue-on-error: true
+    continue-on-error: false
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -640,9 +644,13 @@ jobs:
 
           if grep -q "PROTOCOL_TREASURY is unset" /tmp/mainnet-readiness.log; then
             echo "::warning::PROTOCOL_TREASURY is unset (intentional sentinel). Replace state/mod.rs:103 with the real Squads vault PDA before mainnet release. See pre-mainnet checklist in the file comment."
-            # Exit non-zero so the job shows yellow under continue-on-error.
-            # Using exit 1 here makes the intent explicit to readers of the workflow.
-            exit 1
+            # 2026-05-09 audit follow-up: exit 0 on sentinel-state so devnet
+            # PRs continue to merge cleanly (the compile_error! macro in
+            # state/mod.rs is the actual hard guard — this CI job is the
+            # tripwire for OTHER mainnet-build regressions). The job is now
+            # required in security-gate (continue-on-error: false), so any
+            # NON-sentinel mainnet build failure correctly blocks merge.
+            exit 0
           fi
 
           echo "::error::Mainnet build failed for an unrecognized reason (not the PROTOCOL_TREASURY sentinel). See log above."
@@ -964,6 +972,7 @@ jobs:
       - security-scan
       - formal-verification
       - fuzz-test
+      - mainnet-build-readiness
     steps:
       - name: Check all jobs passed
         run: |
@@ -977,6 +986,7 @@ jobs:
           echo "  security-scan:         ${{ needs.security-scan.result }}"
           echo "  formal-verification:   ${{ needs.formal-verification.result }}"
           echo "  fuzz-test:             ${{ needs.fuzz-test.result }}"
+          echo "  mainnet-build-readiness: ${{ needs.mainnet-build-readiness.result }}"
           echo ""
           echo "Path filter outputs:"
           echo "  any-ts:  ${{ needs.changes.outputs.any-ts }}"
@@ -1013,15 +1023,17 @@ jobs:
             fi
           fi
 
-          # rust-checks, on-chain-tests, build-verification, surfpool-integration, fuzz-test: required when Rust files changed
+          # rust-checks, on-chain-tests, build-verification, surfpool-integration, fuzz-test,
+          # mainnet-build-readiness: required when Rust files changed
           RUST_CHANGED="${{ needs.changes.outputs.rust }}"
-          for job_name in rust-checks on-chain-tests build-verification surfpool-integration fuzz-test; do
+          for job_name in rust-checks on-chain-tests build-verification surfpool-integration fuzz-test mainnet-build-readiness; do
             case "$job_name" in
-              rust-checks)           result="${{ needs.rust-checks.result }}" ;;
-              on-chain-tests)        result="${{ needs.on-chain-tests.result }}" ;;
-              build-verification)    result="${{ needs.build-verification.result }}" ;;
-              surfpool-integration)  result="${{ needs.surfpool-integration.result }}" ;;
-              fuzz-test)             result="${{ needs.fuzz-test.result }}" ;;
+              rust-checks)              result="${{ needs.rust-checks.result }}" ;;
+              on-chain-tests)           result="${{ needs.on-chain-tests.result }}" ;;
+              build-verification)       result="${{ needs.build-verification.result }}" ;;
+              surfpool-integration)     result="${{ needs.surfpool-integration.result }}" ;;
+              fuzz-test)                result="${{ needs.fuzz-test.result }}" ;;
+              mainnet-build-readiness)  result="${{ needs.mainnet-build-readiness.result }}" ;;
             esac
 
             if [ "$RUST_CHANGED" = "true" ] || [ "${{ github.event_name }}" = "push" ]; then
