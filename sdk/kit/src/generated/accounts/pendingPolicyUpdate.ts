@@ -69,6 +69,12 @@ export type PendingPolicyUpdate = {
   queuedAt: bigint;
   /** Unix timestamp when this update becomes executable */
   executesAt: bigint;
+  /**
+   * Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`
+   * to enforce a freshness ceiling — defends against durable-nonce pre-signing
+   * attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog).
+   */
+  queuedAtSlot: bigint;
   dailySpendingCapUsd: Option<bigint>;
   maxTransactionAmountUsd: Option<bigint>;
   protocolMode: Option<number>;
@@ -91,6 +97,12 @@ export type PendingPolicyUpdateArgs = {
   queuedAt: number | bigint;
   /** Unix timestamp when this update becomes executable */
   executesAt: number | bigint;
+  /**
+   * Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`
+   * to enforce a freshness ceiling — defends against durable-nonce pre-signing
+   * attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog).
+   */
+  queuedAtSlot: number | bigint;
   dailySpendingCapUsd: OptionOrNullable<number | bigint>;
   maxTransactionAmountUsd: OptionOrNullable<number | bigint>;
   protocolMode: OptionOrNullable<number>;
@@ -114,6 +126,7 @@ export function getPendingPolicyUpdateEncoder(): Encoder<PendingPolicyUpdateArgs
       ["vault", getAddressEncoder()],
       ["queuedAt", getI64Encoder()],
       ["executesAt", getI64Encoder()],
+      ["queuedAtSlot", getU64Encoder()],
       ["dailySpendingCapUsd", getOptionEncoder(getU64Encoder())],
       ["maxTransactionAmountUsd", getOptionEncoder(getU64Encoder())],
       ["protocolMode", getOptionEncoder(getU8Encoder())],
@@ -144,6 +157,7 @@ export function getPendingPolicyUpdateDecoder(): Decoder<PendingPolicyUpdate> {
     ["vault", getAddressDecoder()],
     ["queuedAt", getI64Decoder()],
     ["executesAt", getI64Decoder()],
+    ["queuedAtSlot", getU64Decoder()],
     ["dailySpendingCapUsd", getOptionDecoder(getU64Decoder())],
     ["maxTransactionAmountUsd", getOptionDecoder(getU64Decoder())],
     ["protocolMode", getOptionDecoder(getU8Decoder())],

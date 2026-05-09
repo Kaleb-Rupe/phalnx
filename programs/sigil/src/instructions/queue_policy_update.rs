@@ -142,6 +142,8 @@ pub fn handler(
     pending.vault = vault.key();
     pending.queued_at = clock.unix_timestamp;
     pending.executes_at = executes_at;
+    // F-10 audit fix: capture queue slot for slot-bounded freshness check.
+    pending.queued_at_slot = clock.slot;
     pending.daily_spending_cap_usd = daily_spending_cap_usd;
     pending.max_transaction_amount_usd = max_transaction_amount_usd;
     pending.protocol_mode = protocol_mode;

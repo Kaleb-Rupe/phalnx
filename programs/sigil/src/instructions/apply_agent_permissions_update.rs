@@ -60,6 +60,16 @@ pub fn handler(ctx: Context<ApplyAgentPermissionsUpdate>) -> Result<()> {
         SigilError::TimelockNotExpired
     );
 
+    // F-10 audit fix: slot-bounded freshness check defends against durable-nonce
+    // pre-signing attacks (Drift Protocol April 2026 $285M analog).
+    require!(
+        clock
+            .slot
+            .saturating_sub(pending.queued_at_slot)
+            < MAX_APPLY_AGE_SLOTS,
+        SigilError::QueuedUpdateExpired,
+    );
+
     let agent = pending.agent;
     let new_capability = pending.new_capability;
     let spending_limit_usd = pending.spending_limit_usd;

@@ -61,6 +61,23 @@ pub const MAX_ESCROW_DURATION: i64 = 2_592_000;
 /// Once a vault has a timelock, it can never be reduced below this floor.
 pub const MIN_TIMELOCK_DURATION: u64 = 1800;
 
+/// F-10 audit fix: maximum age (in slots) between queue and apply for any
+/// pending administrative update.
+///
+/// Defends against durable-nonce pre-signing attacks where an attacker
+/// pre-signs `apply_*` and submits weeks/months later — the Drift Protocol
+/// April 2026 $285M analog. The on-chain queue already enforces a minimum
+/// delay (`MIN_TIMELOCK_DURATION`) before apply, but had no upper bound:
+/// a durable-nonce holder could sit on a signed `apply_*` indefinitely and
+/// fire it at the moment that hurts the vault most (e.g. right after a
+/// loosening policy change clears).
+///
+/// 216,000 slots = ~24h at 400ms slots, ~90h at 1.5s slots — large enough
+/// to absorb any legitimate timelock + execution window, small enough to
+/// kill the "weeks later" attack surface. Beyond this window, the queued
+/// update is stale and must be re-queued by the owner.
+pub const MAX_APPLY_AGE_SLOTS: u64 = 216_000;
+
 /// sha256("global:finalize_session")[0..8] — used by validate_and_authorize
 /// to identify finalize_session instructions in the transaction.
 pub const FINALIZE_SESSION_DISCRIMINATOR: [u8; 8] = [34, 148, 144, 47, 37, 130, 206, 161];

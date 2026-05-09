@@ -109,6 +109,7 @@ export const SIGIL_ERRORS = {
   InvalidConstraintOperator: 6072,
   ConstraintsVaultMismatch: 6073,
   BlockedSplOpcode: 6074,
+  QueuedUpdateExpired: 6075,
 } as const;
 
 export type SigilErrorName = keyof typeof SIGIL_ERRORS;

@@ -675,16 +675,17 @@ export function resetCUMeasurements(): void {
 // See: MEMORY/WORK/20260420-201121_test-assertion-precision-council/COUNCIL_DECISION.md
 
 // ─── Multi-instruction PDA creation helpers ─────────────────────────────────
-// InstructionConstraints (35,888 bytes) and PendingConstraintsUpdate (35,904
-// bytes) exceed the 10,240-byte CPI limit. These helpers compose allocate +
-// extend + populate into a single atomic VersionedTransaction.
+// InstructionConstraints (35,888 bytes) and PendingConstraintsUpdate (35,912
+// bytes post-F-10 audit fix; was 35,904 before adding queued_at_slot) exceed
+// the 10,240-byte CPI limit. These helpers compose allocate + extend +
+// populate into a single atomic VersionedTransaction.
 
 import { createHash } from "crypto";
 import { Program } from "@coral-xyz/anchor";
 import { Sigil } from "../../target/types/sigil";
 
 const CONSTRAINTS_SIZE = 35_888;
-const PENDING_CONSTRAINTS_SIZE = 35_904;
+const PENDING_CONSTRAINTS_SIZE = 35_912;
 const MAX_CPI_SIZE = 10_240;
 
 function anchorDisc(name: string): Buffer {

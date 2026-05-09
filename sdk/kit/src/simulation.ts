@@ -401,6 +401,12 @@ const ANCHOR_ERROR_MAP: Record<number, { name: string; suggestion: string }> = {
     name: "BlockedSplOpcode",
     suggestion: "BlockedSplOpcode — see Sigil error-code documentation.",
   },
+  // F-10 audit fix: durable-nonce pre-signing defense
+  6075: {
+    name: "QueuedUpdateExpired",
+    suggestion:
+      "Queued update is too old — re-queue via queue_policy_update / queue_constraints_update / queue_close_constraints / queue_agent_permissions_update.",
+  },
 };
 
 // ─── Core Simulation ─────────────────────────────────────────────────────────

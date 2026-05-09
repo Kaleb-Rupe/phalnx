@@ -81,6 +81,8 @@ pub fn handler(
         .unix_timestamp
         .checked_add(policy.timelock_duration as i64)
         .ok_or(error!(SigilError::Overflow))?;
+    // F-10 audit fix: capture queue slot for slot-bounded freshness check.
+    pending.queued_at_slot = clock.slot;
     pending.bump = ctx.bumps.pending_agent_perms;
 
     emit!(AgentPermissionsChangeQueued {

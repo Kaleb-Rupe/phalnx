@@ -3642,7 +3642,7 @@ describe("surfpool-integration", function () {
           })
           .instruction();
         const extendIxs = await Promise.all(
-          [20480, 30720, 35904].map((t) =>
+          [20480, 30720, 35912].map((t) =>
             (program.methods.extendPda(t) as any)
               .accounts({
                 owner: env.payer.publicKey,
@@ -3883,7 +3883,7 @@ describe("surfpool-integration", function () {
           })
           .instruction();
         const extendIxs = await Promise.all(
-          [20480, 30720, 35904].map((t) =>
+          [20480, 30720, 35912].map((t) =>
             (program.methods.extendPda(t) as any)
               .accounts({
                 owner: env.payer.publicKey,
@@ -4010,7 +4010,7 @@ describe("surfpool-integration", function () {
           })
           .instruction();
         const extendIxs = await Promise.all(
-          [20480, 30720, 35904].map((t) =>
+          [20480, 30720, 35912].map((t) =>
             (program.methods.extendPda(t) as any)
               .accounts({
                 owner: env.payer.publicKey,

@@ -5,7 +5,7 @@
  * Every error includes a category, retryability flag, and
  * recovery actions that tell the agent exactly what to do next.
  *
- * Maps all 75 on-chain error codes (6000-6074) plus 34 SDK
+ * Maps all 76 on-chain error codes (6000-6075) plus 34 SDK
  * error codes (7000-7033) to AgentError with machine-readable metadata.
  *
  * Zero dependency on @solana/web3.js or @coral-xyz/anchor.
@@ -1167,6 +1167,22 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
         action: "fix_constraints",
         description:
           "Remove blocked SPL opcode from the constraint entry — use allowlisted opcodes only.",
+      },
+    ],
+  },
+
+  // F-10 audit fix: durable-nonce pre-signing defense
+  6075: {
+    name: "QueuedUpdateExpired",
+    message:
+      "Queued update is too old (>MAX_APPLY_AGE_SLOTS) — re-queue to apply. Defends against durable-nonce pre-signing.",
+    category: "POLICY_VIOLATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "requeue",
+        description:
+          "Re-queue the update via queue_policy_update / queue_constraints_update / queue_close_constraints / queue_agent_permissions_update — the original queued update is past the freshness window.",
       },
     ],
   },

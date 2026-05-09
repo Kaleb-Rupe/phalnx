@@ -17,6 +17,11 @@ pub struct PendingPolicyUpdate {
     /// Unix timestamp when this update becomes executable
     pub executes_at: i64,
 
+    /// Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`
+    /// to enforce a freshness ceiling — defends against durable-nonce pre-signing
+    /// attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog).
+    pub queued_at_slot: u64,
+
     // All policy fields as Option<T> — only non-None fields are applied
     pub daily_spending_cap_usd: Option<u64>,
     pub max_transaction_amount_usd: Option<u64>,
@@ -38,8 +43,9 @@ impl PendingPolicyUpdate {
     /// Worst-case size with all Option fields populated at max capacity.
     pub const SIZE: usize = 8
         + 32
-        + 8
-        + 8
+        + 8 // queued_at
+        + 8 // executes_at
+        + 8 // queued_at_slot (F-10 audit fix)
         + (1 + 8) // daily_spending_cap_usd
         + (1 + 8) // max_transaction_amount_usd
         + (1 + 1) // protocol_mode

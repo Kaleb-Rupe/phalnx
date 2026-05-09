@@ -23,6 +23,8 @@ import {
   getI64Encoder,
   getStructDecoder,
   getStructEncoder,
+  getU64Decoder,
+  getU64Encoder,
   getU8Decoder,
   getU8Encoder,
   transformEncoder,
@@ -54,6 +56,12 @@ export type PendingCloseConstraints = {
   vault: Address;
   queuedAt: bigint;
   executesAt: bigint;
+  /**
+   * Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`
+   * to enforce a freshness ceiling — defends against durable-nonce pre-signing
+   * attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog).
+   */
+  queuedAtSlot: bigint;
   bump: number;
 };
 
@@ -61,6 +69,12 @@ export type PendingCloseConstraintsArgs = {
   vault: Address;
   queuedAt: number | bigint;
   executesAt: number | bigint;
+  /**
+   * Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`
+   * to enforce a freshness ceiling — defends against durable-nonce pre-signing
+   * attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog).
+   */
+  queuedAtSlot: number | bigint;
   bump: number;
 };
 
@@ -72,6 +86,7 @@ export function getPendingCloseConstraintsEncoder(): FixedSizeEncoder<PendingClo
       ["vault", getAddressEncoder()],
       ["queuedAt", getI64Encoder()],
       ["executesAt", getI64Encoder()],
+      ["queuedAtSlot", getU64Encoder()],
       ["bump", getU8Encoder()],
     ]),
     (value) => ({
@@ -88,6 +103,7 @@ export function getPendingCloseConstraintsDecoder(): FixedSizeDecoder<PendingClo
     ["vault", getAddressDecoder()],
     ["queuedAt", getI64Decoder()],
     ["executesAt", getI64Decoder()],
+    ["queuedAtSlot", getU64Decoder()],
     ["bump", getU8Decoder()],
   ]);
 }
@@ -173,5 +189,5 @@ export async function fetchAllMaybePendingCloseConstraints(
 }
 
 export function getPendingCloseConstraintsSize(): number {
-  return 57;
+  return 65;
 }

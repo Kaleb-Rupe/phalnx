@@ -5863,6 +5863,11 @@ export type Sigil = {
       "code": 6074,
       "name": "blockedSplOpcode",
       "msg": "SPL opcode is blocked at runtime and cannot be used in constraints"
+    },
+    {
+      "code": 6075,
+      "name": "queuedUpdateExpired",
+      "msg": "Queued update is too old (>MAX_APPLY_AGE_SLOTS) — re-queue to apply. Defends against durable-nonce pre-signing."
     }
   ],
   "types": [
@@ -7372,6 +7377,15 @@ export type Sigil = {
             "type": "i64"
           },
           {
+            "name": "queuedAtSlot",
+            "docs": [
+              "Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`",
+              "to enforce a freshness ceiling — defends against durable-nonce pre-signing",
+              "attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog)."
+            ],
+            "type": "u64"
+          },
+          {
             "name": "bump",
             "type": "u8"
           }
@@ -7398,6 +7412,15 @@ export type Sigil = {
           {
             "name": "executesAt",
             "type": "i64"
+          },
+          {
+            "name": "queuedAtSlot",
+            "docs": [
+              "Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`",
+              "to enforce a freshness ceiling — defends against durable-nonce pre-signing",
+              "attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog)."
+            ],
+            "type": "u64"
           },
           {
             "name": "bump",
@@ -7498,6 +7521,16 @@ export type Sigil = {
               "Unix timestamp when this update becomes executable"
             ],
             "type": "i64"
+          },
+          {
+            "name": "queuedAtSlot",
+            "docs": [
+              "Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`",
+              "to enforce a freshness ceiling — defends against durable-nonce pre-signing",
+              "attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog).",
+              "Already 8-byte aligned (follows two i64 fields)."
+            ],
+            "type": "u64"
           }
         ]
       }
@@ -7534,6 +7567,15 @@ export type Sigil = {
               "Unix timestamp when this update becomes executable"
             ],
             "type": "i64"
+          },
+          {
+            "name": "queuedAtSlot",
+            "docs": [
+              "Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`",
+              "to enforce a freshness ceiling — defends against durable-nonce pre-signing",
+              "attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog)."
+            ],
+            "type": "u64"
           },
           {
             "name": "dailySpendingCapUsd",

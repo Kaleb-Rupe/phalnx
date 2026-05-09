@@ -46,6 +46,18 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
         SigilError::TimelockNotExpired
     );
 
+    // F-10 audit fix: slot-bounded freshness check defends against durable-nonce
+    // pre-signing attacks (Drift Protocol April 2026 $285M analog). Limits the
+    // time between queue and apply to MAX_APPLY_AGE_SLOTS — beyond that, the
+    // queued update is stale and must be re-queued by the owner.
+    require!(
+        clock
+            .slot
+            .saturating_sub(pending.queued_at_slot)
+            < MAX_APPLY_AGE_SLOTS,
+        SigilError::QueuedUpdateExpired,
+    );
+
     let policy = &mut ctx.accounts.policy;
 
     // Apply each non-None field

@@ -244,4 +244,8 @@ pub enum SigilError {
 
     #[msg("SPL opcode is blocked at runtime and cannot be used in constraints")]
     BlockedSplOpcode,
+
+    // --- F-10 audit fix: durable-nonce pre-signing defense ---
+    #[msg("Queued update is too old (>MAX_APPLY_AGE_SLOTS) — re-queue to apply. Defends against durable-nonce pre-signing.")]
+    QueuedUpdateExpired,
 }

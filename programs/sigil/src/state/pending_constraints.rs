@@ -34,12 +34,19 @@ pub struct PendingConstraintsUpdate {
 
     /// Unix timestamp when this update becomes executable
     pub executes_at: i64,
+
+    /// Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`
+    /// to enforce a freshness ceiling — defends against durable-nonce pre-signing
+    /// attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog).
+    /// Already 8-byte aligned (follows two i64 fields).
+    pub queued_at_slot: u64,
 }
 
 impl PendingConstraintsUpdate {
-    // SIZE = 8 (disc) + 32 (vault) + 64*560 (entries) + 1+1+1+5 (flags+pad) + 8+8 (timestamps)
-    // = 8 + 32 + 35840 + 8 + 16 = 35,904 bytes
-    pub const SIZE: usize = 8 + 32 + (560 * MAX_CONSTRAINT_ENTRIES) + 1 + 1 + 1 + 5 + 8 + 8;
+    // SIZE = 8 (disc) + 32 (vault) + 64*560 (entries) + 1+1+1+5 (flags+pad)
+    //      + 8 (queued_at) + 8 (executes_at) + 8 (queued_at_slot)
+    // = 8 + 32 + 35840 + 8 + 24 = 35,912 bytes
+    pub const SIZE: usize = 8 + 32 + (560 * MAX_CONSTRAINT_ENTRIES) + 1 + 1 + 1 + 5 + 8 + 8 + 8;
 
     /// Returns true if the timelock period has expired and the update
     /// can be applied.

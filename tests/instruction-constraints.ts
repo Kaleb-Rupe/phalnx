@@ -2645,7 +2645,7 @@ describe("instruction-constraints", () => {
       },
     ];
 
-    it("extend_pda rejects target > max PDA size (35,904)", async () => {
+    it("extend_pda rejects target > max PDA size (35,912)", async () => {
       const f = await setupFreshVault(9001);
 
       // Allocate at MAX_CPI_SIZE
@@ -2658,7 +2658,7 @@ describe("instruction-constraints", () => {
       );
       sendVersionedTx(svm, [allocIx], owner.payer);
 
-      // Try extend with target = 40000 (exceeds max of 35,904)
+      // Try extend with target = 40000 (exceeds max of 35,912)
       const extendIx = buildExtendPdaIx(
         program.programId,
         owner.publicKey,

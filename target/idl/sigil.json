@@ -5857,6 +5857,11 @@
       "code": 6074,
       "name": "BlockedSplOpcode",
       "msg": "SPL opcode is blocked at runtime and cannot be used in constraints"
+    },
+    {
+      "code": 6075,
+      "name": "QueuedUpdateExpired",
+      "msg": "Queued update is too old (>MAX_APPLY_AGE_SLOTS) — re-queue to apply. Defends against durable-nonce pre-signing."
     }
   ],
   "types": [
@@ -7366,6 +7371,15 @@
             "type": "i64"
           },
           {
+            "name": "queued_at_slot",
+            "docs": [
+              "Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`",
+              "to enforce a freshness ceiling — defends against durable-nonce pre-signing",
+              "attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog)."
+            ],
+            "type": "u64"
+          },
+          {
             "name": "bump",
             "type": "u8"
           }
@@ -7392,6 +7406,15 @@
           {
             "name": "executes_at",
             "type": "i64"
+          },
+          {
+            "name": "queued_at_slot",
+            "docs": [
+              "Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`",
+              "to enforce a freshness ceiling — defends against durable-nonce pre-signing",
+              "attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog)."
+            ],
+            "type": "u64"
           },
           {
             "name": "bump",
@@ -7492,6 +7515,16 @@
               "Unix timestamp when this update becomes executable"
             ],
             "type": "i64"
+          },
+          {
+            "name": "queued_at_slot",
+            "docs": [
+              "Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`",
+              "to enforce a freshness ceiling — defends against durable-nonce pre-signing",
+              "attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog).",
+              "Already 8-byte aligned (follows two i64 fields)."
+            ],
+            "type": "u64"
           }
         ]
       }
@@ -7528,6 +7561,15 @@
               "Unix timestamp when this update becomes executable"
             ],
             "type": "i64"
+          },
+          {
+            "name": "queued_at_slot",
+            "docs": [
+              "Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`",
+              "to enforce a freshness ceiling — defends against durable-nonce pre-signing",
+              "attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog)."
+            ],
+            "type": "u64"
           },
           {
             "name": "daily_spending_cap_usd",

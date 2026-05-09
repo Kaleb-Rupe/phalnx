@@ -164,6 +164,8 @@ export const SIGIL_ERROR__INVALID_CONSTRAINT_OPERATOR = 0x17b8; // 6072
 export const SIGIL_ERROR__CONSTRAINTS_VAULT_MISMATCH = 0x17b9; // 6073
 /** BlockedSplOpcode: SPL opcode is blocked at runtime and cannot be used in constraints */
 export const SIGIL_ERROR__BLOCKED_SPL_OPCODE = 0x17ba; // 6074
+/** QueuedUpdateExpired: Queued update is too old (>MAX_APPLY_AGE_SLOTS) — re-queue to apply. Defends against durable-nonce pre-signing. */
+export const SIGIL_ERROR__QUEUED_UPDATE_EXPIRED = 0x17bb; // 6075
 
 export type SigilError =
   | typeof SIGIL_ERROR__ACTIVE_ESCROWS_EXIST
@@ -218,6 +220,7 @@ export type SigilError =
   | typeof SIGIL_ERROR__PROTOCOL_CAPS_MISMATCH
   | typeof SIGIL_ERROR__PROTOCOL_MISMATCH
   | typeof SIGIL_ERROR__PROTOCOL_NOT_ALLOWED
+  | typeof SIGIL_ERROR__QUEUED_UPDATE_EXPIRED
   | typeof SIGIL_ERROR__SESSION_NOT_AUTHORIZED
   | typeof SIGIL_ERROR__SLIPPAGE_BPS_TOO_HIGH
   | typeof SIGIL_ERROR__SNAPSHOT_NOT_CAPTURED
@@ -297,6 +300,7 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__PROTOCOL_CAPS_MISMATCH]: `protocol_caps length must match protocols length when has_protocol_caps is true`,
     [SIGIL_ERROR__PROTOCOL_MISMATCH]: `DeFi instruction program does not match declared target_protocol`,
     [SIGIL_ERROR__PROTOCOL_NOT_ALLOWED]: `Protocol not allowed by policy`,
+    [SIGIL_ERROR__QUEUED_UPDATE_EXPIRED]: `Queued update is too old (>MAX_APPLY_AGE_SLOTS) — re-queue to apply. Defends against durable-nonce pre-signing.`,
     [SIGIL_ERROR__SESSION_NOT_AUTHORIZED]: `Session not authorized`,
     [SIGIL_ERROR__SLIPPAGE_BPS_TOO_HIGH]: `Slippage BPS exceeds maximum (5000 = 50%)`,
     [SIGIL_ERROR__SNAPSHOT_NOT_CAPTURED]: `Delta assertion snapshot was not captured in validate_and_authorize`,
