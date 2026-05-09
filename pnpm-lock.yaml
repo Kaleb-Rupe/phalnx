@@ -39,8 +39,8 @@ importers:
         specifier: ^1.98.4
         version: 1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       flash-sdk:
-        specifier: ^15.16.1
-        version: 15.16.1(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10)
+        specifier: ^15.16.8
+        version: 15.16.8(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10)
     devDependencies:
       '@changesets/changelog-github':
         specifier: ^0.6.0
@@ -98,10 +98,10 @@ importers:
     dependencies:
       solana-agent-kit:
         specifier: '>=2.0.0'
-        version: 2.0.10(@cfworker/json-schema@4.1.1)(@opentelemetry/api@1.9.0)(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(openai@5.23.2(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.3.6))(typescript@5.9.3)(utf-8-validate@5.0.10)(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))
+        version: 2.0.10(@cfworker/json-schema@4.1.1)(@opentelemetry/api@1.9.0)(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(openai@5.23.2(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(typescript@5.9.3)(utf-8-validate@5.0.10)(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))
       zod:
-        specifier: ^4.3.6
-        version: 4.3.6
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@types/chai':
         specifier: ^5.2.3
@@ -212,7 +212,7 @@ importers:
         version: 11.7.5
       ts-node:
         specifier: ^10.9.2
-        version: 10.9.2(@types/node@25.6.0)(typescript@5.9.3)
+        version: 10.9.2(@types/node@25.6.2)(typescript@5.9.3)
       tsx:
         specifier: ^4.21.0
         version: 4.21.0
@@ -246,7 +246,7 @@ importers:
         version: 21.0.2
       ts-node:
         specifier: ^10.9.2
-        version: 10.9.2(@types/node@25.6.0)(typescript@5.9.3)
+        version: 10.9.2(@types/node@25.6.2)(typescript@5.9.3)
       typescript:
         specifier: ^5.3.3
         version: 5.9.3
@@ -1392,14 +1392,14 @@ packages:
   '@types/node@12.20.55':
     resolution: {integrity: sha512-J8xLz7q2OFulZ2cyGTLE1TbbZcjpno7FaN6zdJNrgAdrJ+DZzh/uFR6YrTb4C+nXakvud8Q4+rbhoIWlYQbUFQ==}
 
-  '@types/node@20.19.39':
-    resolution: {integrity: sha512-orrrD74MBUyK8jOAD/r0+lfa1I2MO6I+vAkmAWzMYbCcgrN4lCrmK52gRFQq/JRxfYPfonkr4b0jcY7Olqdqbw==}
+  '@types/node@20.19.40':
+    resolution: {integrity: sha512-xxx6M2IpSTnnKcR0cMvIiohkiCx20/oRPtWGbenFygKCGl3zqUzdNjQ/1V4solq1LU+dgv0nQzeGOuqkqZGg0Q==}
 
   '@types/node@25.5.0':
     resolution: {integrity: sha512-jp2P3tQMSxWugkCUKLRPVUpGaL5MVFwF8RDuSRztfwgN1wmqJeMSbKlnEtQqU8UrhTmzEmZdu2I6v2dpp7XIxw==}
 
-  '@types/node@25.6.0':
-    resolution: {integrity: sha512-+qIYRKdNYJwY3vRCZMdJbPLJAtGjQBudzZzdzwQYkEPQd+PJGixUL5QfvCLDaULoLv+RhT3LDkwEfKaAkgSmNQ==}
+  '@types/node@25.6.2':
+    resolution: {integrity: sha512-sokuT28dxf9JT5Kady1fsXOvI4HVpjZa95NKT5y9PNTIrs2AsobR4GFAA90ZG8M+nxVRLysCXsVj6eGC7Vbrlw==}
 
   '@types/retry@0.12.0':
     resolution: {integrity: sha512-wWKOClTTiizcZhXnPY4wikVAwmdYHp8q6DmC+EJUzAMsycb7HB32Kh9RN4+0gExjmPmZSAQjgURXIGATPegAvA==}
@@ -1531,8 +1531,8 @@ packages:
     peerDependencies:
       axios: 0.x || 1.x
 
-  axios@1.15.1:
-    resolution: {integrity: sha512-WOG+Jj8ZOvR0a3rAn+Tuf1UQJRxw5venr6DgdbJzngJE3qG7X0kL83CZGpdHMxEm+ZK3seAbvFsw4FfOfP9vxg==}
+  axios@1.16.0:
+    resolution: {integrity: sha512-6hp5CwvTPlN2A31g5dxnwAX0orzM7pmCRDLnZSX772mv8WDqICwFjowHuPs04Mc8deIld1+ejhtaMn5vp6b+1w==}
 
   balanced-match@1.0.2:
     resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
@@ -1943,8 +1943,8 @@ packages:
     resolution: {integrity: sha512-78/PXT1wlLLDgTzDs7sjq9hzz0vXD+zn+7wypEe4fXQxCmdmqfGsEPQxmiCSQI3ajFV91bVSsvNtrJRiW6nGng==}
     engines: {node: '>=10'}
 
-  flash-sdk@15.16.1:
-    resolution: {integrity: sha512-XKt7VgvfqhQBMwAS0Fr4UmMHUQA9xMWFOKGgijrjc/6mkoFz0liE4sl4LUCjd45MOMzVkvYnCRpw/mWzaGG3Og==}
+  flash-sdk@15.16.8:
+    resolution: {integrity: sha512-05nsbjiRwa2PaP7Cfe1tsBYWX0vXZmRJWTy9DvKANzS/FWZcwdeBdvxNNLLH9ghC65ElPeFPSWhzAD4eix/vVg==}
 
   flat@5.0.2:
     resolution: {integrity: sha512-b6suED+5/3rTpUBdG1gupIl8MPFCAMA0QXwmljLhvCUKcUvdE4gWky9zpuGCcXHOsz4J9wPGNWq6OKpmIzz3hQ==}
@@ -2869,6 +2869,7 @@ packages:
 
   uuid@10.0.0:
     resolution: {integrity: sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   uuid@11.1.0:
@@ -2877,10 +2878,12 @@ packages:
 
   uuid@8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   uuid@9.0.1:
     resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   v8-compile-cache-lib@3.0.1:
@@ -3015,8 +3018,8 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
-  zod@4.3.6:
-    resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
+  zod@4.4.3:
+    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
 
 snapshots:
 
@@ -3587,14 +3590,14 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@langchain/core@0.3.80(@opentelemetry/api@1.9.0)(openai@5.23.2(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.3.6))(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))':
+  '@langchain/core@0.3.80(@opentelemetry/api@1.9.0)(openai@5.23.2(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))':
     dependencies:
       '@cfworker/json-schema': 4.1.1
       ansi-styles: 5.2.0
       camelcase: 6.3.0
       decamelize: 1.2.0
       js-tiktoken: 1.0.21
-      langsmith: 0.5.20(@opentelemetry/api@1.9.0)(openai@5.23.2(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.3.6))(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))
+      langsmith: 0.5.20(@opentelemetry/api@1.9.0)(openai@5.23.2(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))
       mustache: 4.2.0
       p-queue: 6.6.2
       p-retry: 4.6.2
@@ -3738,8 +3741,8 @@ snapshots:
     dependencies:
       '@pythnetwork/price-service-sdk': 1.9.0
       '@types/ws': 8.18.1
-      axios: 1.15.1
-      axios-retry: 4.5.0(axios@1.15.1)
+      axios: 1.16.0
+      axios-retry: 4.5.0(axios@1.16.0)
       isomorphic-ws: 4.0.1(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))
       ts-log: 2.2.7
       ws: 8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -4546,7 +4549,7 @@ snapshots:
 
   '@types/node@12.20.55': {}
 
-  '@types/node@20.19.39':
+  '@types/node@20.19.40':
     dependencies:
       undici-types: 6.21.0
 
@@ -4554,7 +4557,7 @@ snapshots:
     dependencies:
       undici-types: 7.18.2
 
-  '@types/node@25.6.0':
+  '@types/node@25.6.2':
     dependencies:
       undici-types: 7.19.2
 
@@ -4665,12 +4668,12 @@ snapshots:
 
   asynckit@0.4.0: {}
 
-  axios-retry@4.5.0(axios@1.15.1):
+  axios-retry@4.5.0(axios@1.16.0):
     dependencies:
-      axios: 1.15.1
+      axios: 1.16.0
       is-retry-allowed: 2.2.0
 
-  axios@1.15.1:
+  axios@1.16.0:
     dependencies:
       follow-redirects: 1.16.0
       form-data: 4.0.5
@@ -5130,13 +5133,13 @@ snapshots:
       locate-path: 6.0.0
       path-exists: 4.0.0
 
-  flash-sdk@15.16.1(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10):
+  flash-sdk@15.16.8(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10):
     dependencies:
       '@coral-xyz/anchor': 0.32.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@pythnetwork/price-service-client': 1.11.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       '@solana/spl-token': 0.4.14(@solana/web3.js@1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@solana/web3.js': 1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
-      '@types/node': 20.19.39
+      '@types/node': 20.19.40
       bignumber.js: 9.3.1
       bs58: 5.0.0
       dotenv: 16.6.1
@@ -5145,7 +5148,7 @@ snapshots:
       jsbi: 4.3.2
       node-fetch: 3.3.2
       rimraf: 5.0.10
-      ts-node: 10.9.2(@types/node@20.19.39)(typescript@5.9.3)
+      ts-node: 10.9.2(@types/node@20.19.40)(typescript@5.9.3)
       tweetnacl: 1.0.3
     transitivePeerDependencies:
       - '@swc/core'
@@ -5446,13 +5449,13 @@ snapshots:
 
   kleur@3.0.3: {}
 
-  langsmith@0.5.20(@opentelemetry/api@1.9.0)(openai@5.23.2(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.3.6))(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)):
+  langsmith@0.5.20(@opentelemetry/api@1.9.0)(openai@5.23.2(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)):
     dependencies:
       p-queue: 6.6.2
       uuid: 10.0.0
     optionalDependencies:
       '@opentelemetry/api': 1.9.0
-      openai: 5.23.2(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.3.6)
+      openai: 5.23.2(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3)
       ws: 8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
 
   litesvm-darwin-arm64@0.6.0:
@@ -5623,10 +5626,10 @@ snapshots:
       ws: 8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       zod: 3.25.76
 
-  openai@5.23.2(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.3.6):
+  openai@5.23.2(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3):
     optionalDependencies:
       ws: 8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
-      zod: 4.3.6
+      zod: 4.4.3
     optional: true
 
   outdent@0.5.0: {}
@@ -5964,9 +5967,9 @@ snapshots:
 
   slash@3.0.0: {}
 
-  solana-agent-kit@2.0.10(@cfworker/json-schema@4.1.1)(@opentelemetry/api@1.9.0)(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(openai@5.23.2(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.3.6))(typescript@5.9.3)(utf-8-validate@5.0.10)(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)):
+  solana-agent-kit@2.0.10(@cfworker/json-schema@4.1.1)(@opentelemetry/api@1.9.0)(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(openai@5.23.2(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(typescript@5.9.3)(utf-8-validate@5.0.10)(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)):
     dependencies:
-      '@langchain/core': 0.3.80(@opentelemetry/api@1.9.0)(openai@5.23.2(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.3.6))(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))
+      '@langchain/core': 0.3.80(@opentelemetry/api@1.9.0)(openai@5.23.2(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))
       '@openai/agents': 0.0.7(@cfworker/json-schema@4.1.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10)(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@3.25.76)
       '@solana/spl-token': 0.4.14(@solana/web3.js@1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@solana/web3.js': 1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
@@ -6065,14 +6068,14 @@ snapshots:
     optionalDependencies:
       tsconfig-paths: 4.2.0
 
-  ts-node@10.9.2(@types/node@20.19.39)(typescript@5.9.3):
+  ts-node@10.9.2(@types/node@20.19.40)(typescript@5.9.3):
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
       '@tsconfig/node10': 1.0.12
       '@tsconfig/node12': 1.0.11
       '@tsconfig/node14': 1.0.3
       '@tsconfig/node16': 1.0.4
-      '@types/node': 20.19.39
+      '@types/node': 20.19.40
       acorn: 8.15.0
       acorn-walk: 8.3.4
       arg: 4.1.3
@@ -6101,14 +6104,14 @@ snapshots:
       v8-compile-cache-lib: 3.0.1
       yn: 3.1.1
 
-  ts-node@10.9.2(@types/node@25.6.0)(typescript@5.9.3):
+  ts-node@10.9.2(@types/node@25.6.2)(typescript@5.9.3):
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
       '@tsconfig/node10': 1.0.12
       '@tsconfig/node12': 1.0.11
       '@tsconfig/node14': 1.0.3
       '@tsconfig/node16': 1.0.4
-      '@types/node': 25.6.0
+      '@types/node': 25.6.2
       acorn: 8.15.0
       acorn-walk: 8.3.4
       arg: 4.1.3
@@ -6315,4 +6318,4 @@ snapshots:
 
   zod@3.25.76: {}
 
-  zod@4.3.6: {}
+  zod@4.4.3: {}
