@@ -4154,7 +4154,9 @@ describe("sigil", () => {
           } as any)
           .signers([destAgent])
           .rpc();
-        expect.fail("Should have thrown DestinationNotAllowed (F-4 default-deny)");
+        expect.fail(
+          "Should have thrown DestinationNotAllowed (F-4 default-deny)",
+        );
       } catch (err: any) {
         expectSigilError(err, { name: "DestinationNotAllowed", code: 6024 });
       }
@@ -4217,8 +4219,7 @@ describe("sigil", () => {
         .rpc();
 
       // Verify mode flipped.
-      const updatedPolicy =
-        await program.account.policyConfig.fetch(anyPolicy);
+      const updatedPolicy = await program.account.policyConfig.fetch(anyPolicy);
       expect((updatedPolicy as any).destinationMode).to.equal(1);
 
       // Now agent_transfer to the previously blocked destination must succeed.

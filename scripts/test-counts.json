@@ -2,7 +2,7 @@
   "suites": [
     {
       "name": "Core vault management & permission engine",
-      "count": 106,
+      "count": 109,
       "onChain": true,
       "claudePattern": "tests/sigil.ts` (ts-mocha + LiteSVM, no validator needed, %d tests)"
     },

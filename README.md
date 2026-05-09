@@ -224,7 +224,7 @@ cargo fmt --check --manifest-path programs/sigil/Cargo.toml
 
 | Suite                                                                   | Tests    |
 | ----------------------------------------------------------------------- | -------- |
-| Core vault management & permission engine                               | 106      |
+| Core vault management & permission engine                               | 109      |
 | Jupiter integration (composed swaps)                                    | 8        |
 | Jupiter Lend integration (deposit/withdraw)                             | 6        |
 | Flash Trade integration (leveraged perps)                               | 15       |

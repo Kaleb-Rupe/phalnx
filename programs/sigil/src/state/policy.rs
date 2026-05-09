@@ -159,9 +159,7 @@ impl PolicyConfig {
     pub fn is_destination_allowed(&self, destination_owner: &Pubkey) -> bool {
         match self.destination_mode {
             DESTINATION_MODE_OPEN_WITH_CAP => true,
-            DESTINATION_MODE_RESTRICTED => {
-                self.allowed_destinations.contains(destination_owner)
-            }
+            DESTINATION_MODE_RESTRICTED => self.allowed_destinations.contains(destination_owner),
             _ => false,
         }
     }
