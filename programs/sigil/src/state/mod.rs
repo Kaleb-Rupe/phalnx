@@ -97,12 +97,19 @@ pub const PROTOCOL_TREASURY: Pubkey = Pubkey::new_from_array([
 ]);
 
 /// Protocol treasury address (mainnet).
+/// Base58: 7tvi5yJZyjpxXnbPTcR42mKVK7qbnjRjViTXv1rckNsy
 ///
-/// PROTOCOL_TREASURY pre-mainnet checklist (PR-10 / M4):
-///   1. Squads multisig vault PDA derived (week 5 dry-run)
-///   2. Replace the `compile_error!` block below with the real 32-byte Pubkey
-///   3. Verify CI 'mainnet-build-readiness' check is GREEN
-///   4. Tag the release commit; build mainnet binary from this commit
+/// This is the Squads V4 multisig **vault PDA** (signer derived from the multisig
+/// account), 3-of-5 threshold, 5 distinct human signers. Squads V4 derivation
+/// reuses the same `createKey` + program id, so this address is identical on
+/// devnet and mainnet — devnet rehearsals exercise the exact byte sequence below.
+///
+/// Pre-mainnet checklist completed (PR-10 / M4):
+///   [x] Squads multisig vault PDA derived (2026-05-09)
+///   [x] Real 32-byte Pubkey pinned below; sentinel `compile_error!` removed
+///   [x] CI 'mainnet-build-readiness' job exercises this constant
+///   [ ] Squads members confirmed accepting (5/5) before mainnet binary tag
+///   [ ] Tag the release commit; build mainnet binary from this commit
 ///
 /// Why compile-time, not runtime?
 ///   The previous implementation used a [0u8; 32] sentinel and relied on the
@@ -112,21 +119,15 @@ pub const PROTOCOL_TREASURY: Pubkey = Pubkey::new_from_array([
 ///   to a compile-time guard makes a mainnet build fail at `cargo build` time
 ///   if the constant is unset — defense in depth (the runtime check stays).
 ///
-/// To unset for testing (recreate the un-replaced state): replace this block
-/// with `Pubkey::new_from_array([0u8; 32])`. The runtime owner check at
-/// `instructions/create_escrow.rs` and `instructions/agent_transfer.rs`
-/// remains as a second layer.
+/// To recreate the un-pinned state for tests: replace the byte array below with
+/// `[0u8; 32]` and uncomment the previous `compile_error!` block. The runtime
+/// owner check at `instructions/{create_escrow, agent_transfer,
+/// validate_and_authorize}.rs` is preserved as a second layer.
 #[cfg(feature = "mainnet")]
-pub const PROTOCOL_TREASURY: Pubkey = {
-    compile_error!(
-        "PROTOCOL_TREASURY is unset for mainnet build. \
-         Replace state/mod.rs:103 with the real Squads vault PDA (32-byte Pubkey) before deploying to mainnet. \
-         See the pre-mainnet checklist in the comment above this constant."
-    );
-    // Unreachable: compile_error! halts compilation. Kept so the const expression
-    // type-checks for tooling that walks the AST without expanding macros.
-    Pubkey::new_from_array([0u8; 32])
-};
+pub const PROTOCOL_TREASURY: Pubkey = Pubkey::new_from_array([
+    102, 115, 120, 152, 65, 88, 210, 76, 7, 220, 80, 231, 112, 6, 22, 32, 26, 4, 137, 55, 84, 52, 4,
+    200, 254, 195, 18, 105, 97, 38, 227, 136,
+]);
 
 // --- Stablecoin mint constants ---
 
