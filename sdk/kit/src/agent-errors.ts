@@ -5,7 +5,7 @@
  * Every error includes a category, retryability flag, and
  * recovery actions that tell the agent exactly what to do next.
  *
- * Maps all 78 on-chain error codes (6000-6077) plus 34 SDK
+ * Maps all 79 on-chain error codes (6000-6078) plus 34 SDK
  * error codes (7000-7033) to AgentError with machine-readable metadata.
  *
  * Zero dependency on @solana/web3.js or @coral-xyz/anchor.
@@ -57,7 +57,7 @@ export interface AgentError {
 }
 
 // ---------------------------------------------------------------------------
-// On-chain error code mapping (6000-6077)
+// On-chain error code mapping (6000-6078)
 // ---------------------------------------------------------------------------
 
 interface ErrorMapping {
@@ -1216,6 +1216,22 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
+
+  // C4 audit fix: async-fulfillment program deny
+  6078: {
+    name: "AsyncFulfillmentNotPermitted",
+    message:
+      "Async-fulfillment programs (Jupiter Perps, Drift v2, Drift JIT) are not permitted in V1 — keeper-driven settlement happens after finalize_session returns and cannot be measured against the spending cap.",
+    category: "POLICY_VIOLATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "use_supported_protocol",
+        description:
+          "Use a synchronous protocol (Jupiter swap, Jupiter Lend, etc.). V1.1 will add a sanctioned async-friendly path with settlement-tracked counters or post-execution attestation.",
+      },
+    ],
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -1737,7 +1753,7 @@ const SDK_ERRORS: Record<string, ErrorMapping> = {
  * Convert any error into a structured AgentError.
  *
  * Handles:
- * - On-chain Anchor errors (code 6000-6077)
+ * - On-chain Anchor errors (code 6000-6078)
  * - SDK errors (code 7000-7033)
  * - Network/RPC errors (from message patterns)
  * - Unknown errors (wrapped as FATAL)
@@ -2090,7 +2106,7 @@ function extractErrorCode(error: unknown): number | null {
   const e = error as Record<string, unknown>;
 
   // Direct code property
-  if (typeof e.code === "number" && e.code >= 6000 && e.code <= 6077)
+  if (typeof e.code === "number" && e.code >= 6000 && e.code <= 6078)
     return e.code;
 
   // Anchor error structure
@@ -2107,7 +2123,7 @@ function extractErrorCode(error: unknown): number | null {
     const match = e.message.match(/custom program error: 0x([0-9a-fA-F]+)/);
     if (match) {
       const code = parseInt(match[1], 16);
-      if (code >= 6000 && code <= 6077) return code;
+      if (code >= 6000 && code <= 6078) return code;
     }
   }
 
@@ -2348,7 +2364,7 @@ export class SigilSdkError extends Error implements AgentError {
  * Returns a SigilSdkError (extends Error) so instanceof Error checks still work.
  *
  * Processing order:
- * 1. Try on-chain error extraction via toAgentError() (numeric codes 6000-6077)
+ * 1. Try on-chain error extraction via toAgentError() (numeric codes 6000-6078)
  * 2. Pattern-match SDK error messages (11 patterns from seal.ts throw sites)
  * 3. Fallback to UNKNOWN/FATAL
  */
