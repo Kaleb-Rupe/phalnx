@@ -51,10 +51,7 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
     // time between queue and apply to MAX_APPLY_AGE_SLOTS — beyond that, the
     // queued update is stale and must be re-queued by the owner.
     require!(
-        clock
-            .slot
-            .saturating_sub(pending.queued_at_slot)
-            < MAX_APPLY_AGE_SLOTS,
+        clock.slot.saturating_sub(pending.queued_at_slot) < MAX_APPLY_AGE_SLOTS,
         SigilError::QueuedUpdateExpired,
     );
 
