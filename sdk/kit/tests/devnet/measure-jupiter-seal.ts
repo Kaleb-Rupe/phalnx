@@ -109,6 +109,7 @@ function mockState(): ResolvedVaultState {
       bump: 255,
       policyVersion: 0n,
       hasPostAssertions: 0,
+      destinationMode: 0,
     },
     tracker: null,
     overlay: null,
