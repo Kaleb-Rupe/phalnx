@@ -26,6 +26,7 @@ import {
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
+  type ReadonlyAccount,
   type ReadonlySignerAccount,
   type ReadonlyUint8Array,
   type TransactionSigner,
@@ -51,6 +52,8 @@ export type FreezeVaultInstruction<
   TProgram extends string = typeof SIGIL_PROGRAM_ADDRESS,
   TAccountOwner extends string | AccountMeta<string> = string,
   TAccountVault extends string | AccountMeta<string> = string,
+  TAccountTokenProgram extends string | AccountMeta<string> =
+    "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
@@ -63,6 +66,9 @@ export type FreezeVaultInstruction<
       TAccountVault extends string
         ? WritableAccount<TAccountVault>
         : TAccountVault,
+      TAccountTokenProgram extends string
+        ? ReadonlyAccount<TAccountTokenProgram>
+        : TAccountTokenProgram,
       ...TRemainingAccounts,
     ]
   >;
@@ -97,19 +103,27 @@ export function getFreezeVaultInstructionDataCodec(): FixedSizeCodec<
 export type FreezeVaultInput<
   TAccountOwner extends string = string,
   TAccountVault extends string = string,
+  TAccountTokenProgram extends string = string,
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
+  tokenProgram?: Address<TAccountTokenProgram>;
 };
 
 export function getFreezeVaultInstruction<
   TAccountOwner extends string,
   TAccountVault extends string,
+  TAccountTokenProgram extends string,
   TProgramAddress extends Address = typeof SIGIL_PROGRAM_ADDRESS,
 >(
-  input: FreezeVaultInput<TAccountOwner, TAccountVault>,
+  input: FreezeVaultInput<TAccountOwner, TAccountVault, TAccountTokenProgram>,
   config?: { programAddress?: TProgramAddress },
-): FreezeVaultInstruction<TProgramAddress, TAccountOwner, TAccountVault> {
+): FreezeVaultInstruction<
+  TProgramAddress,
+  TAccountOwner,
+  TAccountVault,
+  TAccountTokenProgram
+> {
   // Program address.
   const programAddress = config?.programAddress ?? SIGIL_PROGRAM_ADDRESS;
 
@@ -117,21 +131,34 @@ export function getFreezeVaultInstruction<
   const originalAccounts = {
     owner: { value: input.owner ?? null, isWritable: false },
     vault: { value: input.vault ?? null, isWritable: true },
+    tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
     ResolvedInstructionAccount
   >;
 
+  // Resolve default values.
+  if (!accounts.tokenProgram.value) {
+    accounts.tokenProgram.value =
+      "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address<"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA">;
+  }
+
   const getAccountMeta = getAccountMetaFactory(programAddress, "programId");
   return Object.freeze({
     accounts: [
       getAccountMeta("owner", accounts.owner),
       getAccountMeta("vault", accounts.vault),
+      getAccountMeta("tokenProgram", accounts.tokenProgram),
     ],
     data: getFreezeVaultInstructionDataEncoder().encode({}),
     programAddress,
-  } as FreezeVaultInstruction<TProgramAddress, TAccountOwner, TAccountVault>);
+  } as FreezeVaultInstruction<
+    TProgramAddress,
+    TAccountOwner,
+    TAccountVault,
+    TAccountTokenProgram
+  >);
 }
 
 export type ParsedFreezeVaultInstruction<
@@ -142,6 +169,7 @@ export type ParsedFreezeVaultInstruction<
   accounts: {
     owner: TAccountMetas[0];
     vault: TAccountMetas[1];
+    tokenProgram: TAccountMetas[2];
   };
   data: FreezeVaultInstructionData;
 };
@@ -154,12 +182,12 @@ export function parseFreezeVaultInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedFreezeVaultInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 2) {
+  if (instruction.accounts.length < 3) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 2,
+        expectedAccountMetas: 3,
       },
     );
   }
@@ -171,7 +199,11 @@ export function parseFreezeVaultInstruction<
   };
   return {
     programAddress: instruction.programAddress,
-    accounts: { owner: getNextAccount(), vault: getNextAccount() },
+    accounts: {
+      owner: getNextAccount(),
+      vault: getNextAccount(),
+      tokenProgram: getNextAccount(),
+    },
     data: getFreezeVaultInstructionDataDecoder().decode(instruction.data),
   };
 }
