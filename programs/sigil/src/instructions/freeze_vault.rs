@@ -44,10 +44,7 @@ pub fn handler<'a, 'b, 'c, 'info>(
     // Allow freezing only from Active status (matches pre-fix behavior).
     // Already-frozen / closed vaults reject with VaultNotActive — preserves
     // existing test contract and prevents idempotent re-revoke attempts.
-    require!(
-        ctx.accounts.vault.is_active(),
-        SigilError::VaultNotActive
-    );
+    require!(ctx.accounts.vault.is_active(), SigilError::VaultNotActive);
 
     // Snapshot vault PDA seeds so we can sign Revoke CPIs without holding a
     // borrow on `ctx.accounts.vault` while iterating remaining_accounts.
