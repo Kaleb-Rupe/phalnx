@@ -114,9 +114,7 @@ pub fn verify_against_entries(
                 any_passed = true;
                 break;
             }
-            (Err(e), true)
-                if *e == error!(SigilError::AccountWritabilityMismatch) =>
-            {
+            (Err(e), true) if *e == error!(SigilError::AccountWritabilityMismatch) => {
                 writability_failure_seen = true;
             }
             _ => {}
@@ -306,9 +304,7 @@ pub fn verify_against_entries_zc(
             // Diagnostic refinement: data matched but accounts failed
             // specifically on writability — remember so we can surface the
             // precise error when no entry passes.
-            (Err(e), true)
-                if *e == error!(SigilError::AccountWritabilityMismatch) =>
-            {
+            (Err(e), true) if *e == error!(SigilError::AccountWritabilityMismatch) => {
                 writability_failure_seen = true;
             }
             _ => {}

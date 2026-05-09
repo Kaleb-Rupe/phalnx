@@ -127,14 +127,14 @@ pub struct DataConstraintZC {
 
 #[zero_copy]
 pub struct AccountConstraintZC {
-    pub expected: [u8; 32],       // 32
-    pub index: u8,                // 1
+    pub expected: [u8; 32], // 32
+    pub index: u8,          // 1
     /// 0=any, 1=must-be-read-only, 2=must-be-writable. See AccountConstraint
     /// docs for full semantics. Zero-initialized on existing V1 PDAs → 0 →
     /// "any" (backwards-compatible — runtime ignores the writable flag for
     /// pre-PR-9 entries that never set this byte).
     pub is_writable_required: u8, // 1 (M5 — Squads SAP parity)
-    pub _padding: [u8; 6],        // 6 (align to 8 bytes: 32+1+1+6=40)
+    pub _padding: [u8; 6],  // 6 (align to 8 bytes: 32+1+1+6=40)
 }
 // = 40 bytes (preserved — _padding reduced by 1 to absorb is_writable_required)
 
