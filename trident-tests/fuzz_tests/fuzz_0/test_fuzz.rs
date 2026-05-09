@@ -590,6 +590,7 @@ impl FuzzTest {
             session_expiry_seconds: None,
             has_protocol_caps: None,
             protocol_caps: None,
+            destination_mode: None,
         };
 
         let queue_accounts = sigil::accounts::QueuePolicyUpdate {
@@ -1063,6 +1064,7 @@ impl FuzzTest {
             session_expiry_seconds: None,
             has_protocol_caps: None,
             protocol_caps: None,
+            destination_mode: None,
         };
 
         let accounts = sigil::accounts::QueuePolicyUpdate {

@@ -121,6 +121,8 @@ export const SIGIL_ERRORS = {
   TransferHookBlocked: 6084,
   LamportDrainBlocked: 6085,
   BatchInstructionBlocked: 6086,
+  // F-4 audit fix: explicit destination mode (default Restricted closes default-allow drain)
+  InvalidDestinationMode: 6087,
 } as const;
 
 export type SigilErrorName = keyof typeof SIGIL_ERRORS;

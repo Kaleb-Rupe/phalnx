@@ -92,6 +92,14 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
     if let Some(ref caps) = pending.protocol_caps {
         policy.protocol_caps = caps.clone();
     }
+    if let Some(mode) = pending.destination_mode {
+        // Validate again at apply time — defence in depth.
+        require!(
+            mode <= DESTINATION_MODE_OPEN_WITH_CAP,
+            SigilError::InvalidDestinationMode
+        );
+        policy.destination_mode = mode;
+    }
 
     policy.has_pending_policy = false;
 

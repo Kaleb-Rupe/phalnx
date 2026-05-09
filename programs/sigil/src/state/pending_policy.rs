@@ -35,6 +35,10 @@ pub struct PendingPolicyUpdate {
     pub has_protocol_caps: Option<bool>,
     pub protocol_caps: Option<Vec<u64>>,
 
+    /// Destination access control mode update (F-4 audit fix).
+    /// Some(0) = Restricted, Some(1) = OpenWithCap, None = leave unchanged.
+    pub destination_mode: Option<u8>,
+
     /// Bump seed for PDA
     pub bump: u8,
 }
@@ -57,6 +61,7 @@ impl PendingPolicyUpdate {
         + (1 + 8) // session_expiry_seconds
         + (1 + 1) // has_protocol_caps
         + (1 + 4 + 8 * MAX_ALLOWED_PROTOCOLS) // protocol_caps
+        + (1 + 1) // destination_mode (Option<u8>)
         + 1; // bump
 
     /// Returns true if the timelock period has expired and the update

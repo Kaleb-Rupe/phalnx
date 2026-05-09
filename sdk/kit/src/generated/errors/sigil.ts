@@ -188,6 +188,8 @@ export const SIGIL_ERROR__TRANSFER_HOOK_BLOCKED = 0x17c4; // 6084
 export const SIGIL_ERROR__LAMPORT_DRAIN_BLOCKED = 0x17c5; // 6085
 /** BatchInstructionBlocked: Token-2022 Batch instruction (opcode 255) is blocked outright — wraps inner instructions and bypasses byte-0 blocklist */
 export const SIGIL_ERROR__BATCH_INSTRUCTION_BLOCKED = 0x17c6; // 6086
+/** InvalidDestinationMode: Invalid destination mode (must be 0 = Restricted or 1 = OpenWithCap) */
+export const SIGIL_ERROR__INVALID_DESTINATION_MODE = 0x17c7; // 6087
 
 export type SigilError =
   | typeof SIGIL_ERROR__ACCOUNT_WRITABILITY_MISMATCH
@@ -222,6 +224,7 @@ export type SigilError =
   | typeof SIGIL_ERROR__INVALID_CONSTRAINT_CONFIG
   | typeof SIGIL_ERROR__INVALID_CONSTRAINT_OPERATOR
   | typeof SIGIL_ERROR__INVALID_CONSTRAINTS_PDA
+  | typeof SIGIL_ERROR__INVALID_DESTINATION_MODE
   | typeof SIGIL_ERROR__INVALID_ESCROW_VAULT
   | typeof SIGIL_ERROR__INVALID_FEE_DESTINATION
   | typeof SIGIL_ERROR__INVALID_JUPITER_INSTRUCTION
@@ -313,6 +316,7 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__INVALID_CONSTRAINT_CONFIG]: `Invalid constraint configuration: bounds exceeded`,
     [SIGIL_ERROR__INVALID_CONSTRAINT_OPERATOR]: `Constraint operator value is not a valid ConstraintOperator discriminant`,
     [SIGIL_ERROR__INVALID_CONSTRAINTS_PDA]: `Invalid constraints PDA: wrong owner or vault`,
+    [SIGIL_ERROR__INVALID_DESTINATION_MODE]: `Invalid destination mode (must be 0 = Restricted or 1 = OpenWithCap)`,
     [SIGIL_ERROR__INVALID_ESCROW_VAULT]: `Invalid escrow vault`,
     [SIGIL_ERROR__INVALID_FEE_DESTINATION]: `Fee destination account invalid`,
     [SIGIL_ERROR__INVALID_JUPITER_INSTRUCTION]: `Cannot parse Jupiter swap instruction data`,

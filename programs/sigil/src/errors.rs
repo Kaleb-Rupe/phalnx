@@ -289,4 +289,9 @@ pub enum SigilError {
     // --- Token-2022 third-pass audit additions ---
     #[msg("Token-2022 Batch instruction (opcode 255) is blocked outright — wraps inner instructions and bypasses byte-0 blocklist")]
     BatchInstructionBlocked,
+
+    // --- F-4 audit fix: explicit destination mode ---
+    // Added at the END of the enum so existing error codes are not renumbered.
+    #[msg("Invalid destination mode (must be 0 = Restricted or 1 = OpenWithCap)")]
+    InvalidDestinationMode,
 }

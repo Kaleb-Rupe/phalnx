@@ -3808,6 +3808,12 @@ export type Sigil = {
               "vec": "u64"
             }
           }
+        },
+        {
+          "name": "destinationMode",
+          "type": {
+            "option": "u8"
+          }
         }
       ]
     },
@@ -6055,6 +6061,11 @@ export type Sigil = {
       "code": 6086,
       "name": "batchInstructionBlocked",
       "msg": "Token-2022 Batch instruction (opcode 255) is blocked outright — wraps inner instructions and bypasses byte-0 blocklist"
+    },
+    {
+      "code": 6087,
+      "name": "invalidDestinationMode",
+      "msg": "Invalid destination mode (must be 0 = Restricted or 1 = OpenWithCap)"
     }
   ],
   "types": [
@@ -7883,6 +7894,16 @@ export type Sigil = {
             }
           },
           {
+            "name": "destinationMode",
+            "docs": [
+              "Destination access control mode update (F-4 audit fix).",
+              "Some(0) = Restricted, Some(1) = OpenWithCap, None = leave unchanged."
+            ],
+            "type": {
+              "option": "u8"
+            }
+          },
+          {
             "name": "bump",
             "docs": [
               "Bump seed for PDA"
@@ -8085,6 +8106,18 @@ export type Sigil = {
               "Whether native PostExecutionAssertions are configured for this vault.",
               "When true, finalize_session requires the assertions PDA in remaining_accounts.",
               "0 = no assertions, non-zero = assertions required."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "destinationMode",
+            "docs": [
+              "Destination access control mode for `agent_transfer`:",
+              "0 = Restricted (DEFAULT) — destination MUST be in `allowed_destinations`.",
+              "1 = OpenWithCap — destination unrestricted; only `daily_spending_cap_usd` throttles drain.",
+              "Closes F-4 (third-pass audit): empty `allowed_destinations` no longer",
+              "implies default-allow. Owners must explicitly opt into OpenWithCap via",
+              "queue_policy_update / apply_pending_policy."
             ],
             "type": "u8"
           }

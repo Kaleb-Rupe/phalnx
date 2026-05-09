@@ -136,6 +136,7 @@ pub mod sigil {
         session_expiry_seconds: Option<u64>,
         has_protocol_caps: Option<bool>,
         protocol_caps: Option<Vec<u64>>,
+        destination_mode: Option<u8>,
     ) -> Result<()> {
         instructions::queue_policy_update::handler(
             ctx,
@@ -150,6 +151,7 @@ pub mod sigil {
             session_expiry_seconds,
             has_protocol_caps,
             protocol_caps,
+            destination_mode,
         )
     }
 

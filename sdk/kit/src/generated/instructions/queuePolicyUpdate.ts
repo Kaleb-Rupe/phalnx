@@ -112,6 +112,7 @@ export type QueuePolicyUpdateInstructionData = {
   sessionExpirySeconds: Option<bigint>;
   hasProtocolCaps: Option<boolean>;
   protocolCaps: Option<Array<bigint>>;
+  destinationMode: Option<number>;
 };
 
 export type QueuePolicyUpdateInstructionDataArgs = {
@@ -126,6 +127,7 @@ export type QueuePolicyUpdateInstructionDataArgs = {
   sessionExpirySeconds: OptionOrNullable<number | bigint>;
   hasProtocolCaps: OptionOrNullable<boolean>;
   protocolCaps: OptionOrNullable<Array<number | bigint>>;
+  destinationMode: OptionOrNullable<number>;
 };
 
 export function getQueuePolicyUpdateInstructionDataEncoder(): Encoder<QueuePolicyUpdateInstructionDataArgs> {
@@ -146,6 +148,7 @@ export function getQueuePolicyUpdateInstructionDataEncoder(): Encoder<QueuePolic
       ["sessionExpirySeconds", getOptionEncoder(getU64Encoder())],
       ["hasProtocolCaps", getOptionEncoder(getBooleanEncoder())],
       ["protocolCaps", getOptionEncoder(getArrayEncoder(getU64Encoder()))],
+      ["destinationMode", getOptionEncoder(getU8Encoder())],
     ]),
     (value) => ({ ...value, discriminator: QUEUE_POLICY_UPDATE_DISCRIMINATOR }),
   );
@@ -168,6 +171,7 @@ export function getQueuePolicyUpdateInstructionDataDecoder(): Decoder<QueuePolic
     ["sessionExpirySeconds", getOptionDecoder(getU64Decoder())],
     ["hasProtocolCaps", getOptionDecoder(getBooleanDecoder())],
     ["protocolCaps", getOptionDecoder(getArrayDecoder(getU64Decoder()))],
+    ["destinationMode", getOptionDecoder(getU8Decoder())],
   ]);
 }
 
@@ -204,6 +208,7 @@ export type QueuePolicyUpdateAsyncInput<
   sessionExpirySeconds: QueuePolicyUpdateInstructionDataArgs["sessionExpirySeconds"];
   hasProtocolCaps: QueuePolicyUpdateInstructionDataArgs["hasProtocolCaps"];
   protocolCaps: QueuePolicyUpdateInstructionDataArgs["protocolCaps"];
+  destinationMode: QueuePolicyUpdateInstructionDataArgs["destinationMode"];
 };
 
 export async function getQueuePolicyUpdateInstructionAsync<
@@ -335,6 +340,7 @@ export type QueuePolicyUpdateInput<
   sessionExpirySeconds: QueuePolicyUpdateInstructionDataArgs["sessionExpirySeconds"];
   hasProtocolCaps: QueuePolicyUpdateInstructionDataArgs["hasProtocolCaps"];
   protocolCaps: QueuePolicyUpdateInstructionDataArgs["protocolCaps"];
+  destinationMode: QueuePolicyUpdateInstructionDataArgs["destinationMode"];
 };
 
 export function getQueuePolicyUpdateInstruction<

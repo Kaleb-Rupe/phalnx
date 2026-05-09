@@ -396,6 +396,13 @@ export interface PolicyChanges {
   sessionExpirySeconds?: bigint;
   /** Seconds. Minimum 1800 on-chain. */
   timelock?: number;
+  /**
+   * Destination access-control mode for `agent_transfer` (F-4).
+   * `0` = Restricted (default — destination must be in `allowedDestinations`).
+   * `1` = OpenWithCap (destination unrestricted; only the daily cap throttles).
+   * Owner must explicitly opt into OpenWithCap via the timelocked path.
+   */
+  destinationMode?: number;
 }
 
 /**

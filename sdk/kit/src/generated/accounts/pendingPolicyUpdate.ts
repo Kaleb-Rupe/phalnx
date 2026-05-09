@@ -86,6 +86,11 @@ export type PendingPolicyUpdate = {
   sessionExpirySeconds: Option<bigint>;
   hasProtocolCaps: Option<boolean>;
   protocolCaps: Option<Array<bigint>>;
+  /**
+   * Destination access control mode update (F-4 audit fix).
+   * Some(0) = Restricted, Some(1) = OpenWithCap, None = leave unchanged.
+   */
+  destinationMode: Option<number>;
   /** Bump seed for PDA */
   bump: number;
 };
@@ -114,6 +119,11 @@ export type PendingPolicyUpdateArgs = {
   sessionExpirySeconds: OptionOrNullable<number | bigint>;
   hasProtocolCaps: OptionOrNullable<boolean>;
   protocolCaps: OptionOrNullable<Array<number | bigint>>;
+  /**
+   * Destination access control mode update (F-4 audit fix).
+   * Some(0) = Restricted, Some(1) = OpenWithCap, None = leave unchanged.
+   */
+  destinationMode: OptionOrNullable<number>;
   /** Bump seed for PDA */
   bump: number;
 };
@@ -141,6 +151,7 @@ export function getPendingPolicyUpdateEncoder(): Encoder<PendingPolicyUpdateArgs
       ["sessionExpirySeconds", getOptionEncoder(getU64Encoder())],
       ["hasProtocolCaps", getOptionEncoder(getBooleanEncoder())],
       ["protocolCaps", getOptionEncoder(getArrayEncoder(getU64Encoder()))],
+      ["destinationMode", getOptionEncoder(getU8Encoder())],
       ["bump", getU8Encoder()],
     ]),
     (value) => ({
@@ -172,6 +183,7 @@ export function getPendingPolicyUpdateDecoder(): Decoder<PendingPolicyUpdate> {
     ["sessionExpirySeconds", getOptionDecoder(getU64Decoder())],
     ["hasProtocolCaps", getOptionDecoder(getBooleanDecoder())],
     ["protocolCaps", getOptionDecoder(getArrayDecoder(getU64Decoder()))],
+    ["destinationMode", getOptionDecoder(getU8Decoder())],
     ["bump", getU8Decoder()],
   ]);
 }

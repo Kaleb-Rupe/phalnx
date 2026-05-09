@@ -50,6 +50,7 @@ pub fn handler(
     session_expiry_seconds: Option<u64>,
     has_protocol_caps: Option<bool>,
     protocol_caps: Option<Vec<u64>>,
+    destination_mode: Option<u8>,
 ) -> Result<()> {
     crate::reject_cpi!();
 
@@ -72,6 +73,12 @@ pub fn handler(
         require!(
             *mode <= PROTOCOL_MODE_DENYLIST,
             SigilError::InvalidProtocolMode
+        );
+    }
+    if let Some(ref mode) = destination_mode {
+        require!(
+            *mode <= DESTINATION_MODE_OPEN_WITH_CAP,
+            SigilError::InvalidDestinationMode
         );
     }
     if let Some(ref protos) = protocols {
@@ -159,6 +166,7 @@ pub fn handler(
     pending.session_expiry_seconds = session_expiry_seconds;
     pending.has_protocol_caps = has_protocol_caps;
     pending.protocol_caps = protocol_caps;
+    pending.destination_mode = destination_mode;
     pending.bump = ctx.bumps.pending_policy;
 
     ctx.accounts.policy.has_pending_policy = true;

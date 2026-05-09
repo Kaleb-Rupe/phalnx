@@ -14,7 +14,7 @@
  */
 
 // ────────────────────────────────────────────────────────────────
-// Sigil program errors (6000-6086)
+// Sigil program errors (6000-6087)
 // ────────────────────────────────────────────────────────────────
 
 export const SIGIL_ERRORS = {
@@ -105,6 +105,7 @@ export const SIGIL_ERRORS = {
   TransferHookBlocked: 6084,
   LamportDrainBlocked: 6085,
   BatchInstructionBlocked: 6086,
+  InvalidDestinationMode: 6087,
 } as const;
 
 /**

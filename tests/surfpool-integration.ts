@@ -1499,6 +1499,7 @@ describe("surfpool-integration", function () {
           null, // sessionExpirySeconds
           null, // hasProtocolCaps
           null, // protocolCaps
+          null, // destinationMode
         )
         .accounts({
           owner: env.payer.publicKey,
@@ -1553,6 +1554,7 @@ describe("surfpool-integration", function () {
           null, // sessionExpirySeconds
           null, // hasProtocolCaps
           null, // protocolCaps
+          null, // destinationMode
         )
         .accounts({
           owner: env.payer.publicKey,

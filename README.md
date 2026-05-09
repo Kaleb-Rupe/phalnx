@@ -9,7 +9,7 @@
 Your policies are enforced by Solana validators, not software promises.
 
 [![CI](https://github.com/Sigil-Trade/sigil/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Sigil-Trade/sigil/actions/workflows/ci.yml)
-![Tests](https://img.shields.io/badge/tests-2585-brightgreen)
+![Tests](https://img.shields.io/badge/tests-2588-brightgreen)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 
 </div>
@@ -206,7 +206,7 @@ anchor build --no-idl
 # Generate IDL separately (requires nightly Rust — anchor-syn 0.32.1 bug)
 RUSTUP_TOOLCHAIN=nightly anchor idl build -o target/idl/sigil.json
 
-# Run on-chain tests (574 LiteSVM tests — no validator needed)
+# Run on-chain tests (577 LiteSVM tests — no validator needed)
 npx ts-mocha -p ./tsconfig.json -t 300000 \
   tests/sigil.ts tests/jupiter-integration.ts \
   tests/flash-trade-integration.ts tests/security-exploits.ts \
@@ -224,7 +224,7 @@ cargo fmt --check --manifest-path programs/sigil/Cargo.toml
 
 | Suite                                                                   | Tests    |
 | ----------------------------------------------------------------------- | -------- |
-| Core vault management & permission engine                               | 106      |
+| Core vault management & permission engine                               | 109      |
 | Jupiter integration (composed swaps)                                    | 8        |
 | Jupiter Lend integration (deposit/withdraw)                             | 6        |
 | Flash Trade integration (leveraged perps)                               | 15       |
@@ -244,7 +244,7 @@ cargo fmt --check --manifest-path programs/sigil/Cargo.toml
 | Rust unit tests (cargo test)                                            | 138      |
 | Devnet extended scenarios (flash-trade + stress)                        | 45       |
 | Trident fuzz tests (1K iterations)                                      | 16       |
-| **Total**                                                               | **2585** |
+| **Total**                                                               | **2588** |
 
 ## Security
 

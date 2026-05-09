@@ -139,6 +139,15 @@ export type PolicyConfig = {
    * 0 = no assertions, non-zero = assertions required.
    */
   hasPostAssertions: number;
+  /**
+   * Destination access control mode for `agent_transfer`:
+   * 0 = Restricted (DEFAULT) — destination MUST be in `allowed_destinations`.
+   * 1 = OpenWithCap — destination unrestricted; only `daily_spending_cap_usd` throttles drain.
+   * Closes F-4 (third-pass audit): empty `allowed_destinations` no longer
+   * implies default-allow. Owners must explicitly opt into OpenWithCap via
+   * queue_policy_update / apply_pending_policy.
+   */
+  destinationMode: number;
 };
 
 export type PolicyConfigArgs = {
@@ -224,6 +233,15 @@ export type PolicyConfigArgs = {
    * 0 = no assertions, non-zero = assertions required.
    */
   hasPostAssertions: number;
+  /**
+   * Destination access control mode for `agent_transfer`:
+   * 0 = Restricted (DEFAULT) — destination MUST be in `allowed_destinations`.
+   * 1 = OpenWithCap — destination unrestricted; only `daily_spending_cap_usd` throttles drain.
+   * Closes F-4 (third-pass audit): empty `allowed_destinations` no longer
+   * implies default-allow. Owners must explicitly opt into OpenWithCap via
+   * queue_policy_update / apply_pending_policy.
+   */
+  destinationMode: number;
 };
 
 /** Gets the encoder for {@link PolicyConfigArgs} account data. */
@@ -248,6 +266,7 @@ export function getPolicyConfigEncoder(): Encoder<PolicyConfigArgs> {
       ["bump", getU8Encoder()],
       ["policyVersion", getU64Encoder()],
       ["hasPostAssertions", getU8Encoder()],
+      ["destinationMode", getU8Encoder()],
     ]),
     (value) => ({ ...value, discriminator: POLICY_CONFIG_DISCRIMINATOR }),
   );
@@ -274,6 +293,7 @@ export function getPolicyConfigDecoder(): Decoder<PolicyConfig> {
     ["bump", getU8Decoder()],
     ["policyVersion", getU64Decoder()],
     ["hasPostAssertions", getU8Decoder()],
+    ["destinationMode", getU8Decoder()],
   ]);
 }
 
