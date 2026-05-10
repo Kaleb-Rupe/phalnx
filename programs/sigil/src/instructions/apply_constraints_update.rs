@@ -47,7 +47,7 @@ pub fn handler(ctx: Context<ApplyConstraintsUpdate>) -> Result<()> {
     let clock = Clock::get()?;
     let vault_key = ctx.accounts.vault.key();
 
-    // Read pending: verify vault + timelock, extract scalar fields
+    // Read pending: verify vault + timelock + slot freshness, extract scalar fields
     let (new_entry_count, new_strict_mode) = {
         let pending = ctx.accounts.pending_constraints.load()?;
         require!(
@@ -57,6 +57,12 @@ pub fn handler(ctx: Context<ApplyConstraintsUpdate>) -> Result<()> {
         require!(
             pending.is_ready(clock.unix_timestamp),
             SigilError::TimelockNotExpired
+        );
+        // F-10 audit fix: slot-bounded freshness check defends against durable-nonce
+        // pre-signing attacks (Drift Protocol April 2026 $285M analog).
+        require!(
+            clock.slot.saturating_sub(pending.queued_at_slot) < MAX_APPLY_AGE_SLOTS,
+            SigilError::QueuedUpdateExpired,
         );
         (pending.entry_count, pending.strict_mode)
     };

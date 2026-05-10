@@ -14,7 +14,7 @@
  */
 
 // ────────────────────────────────────────────────────────────────
-// Sigil program errors (6000-6074)
+// Sigil program errors (6000-6087)
 // ────────────────────────────────────────────────────────────────
 
 export const SIGIL_ERRORS = {
@@ -93,6 +93,19 @@ export const SIGIL_ERRORS = {
   InvalidConstraintOperator: 6072,
   ConstraintsVaultMismatch: 6073,
   BlockedSplOpcode: 6074,
+  QueuedUpdateExpired: 6075,
+  AccountWritabilityMismatch: 6076,
+  SysvarScanBoundExceeded: 6077,
+  AsyncFulfillmentNotPermitted: 6078,
+  ConstraintsAlreadyPopulated: 6079,
+  OrphanPdaWrongOwner: 6080,
+  OrphanPdaPopulated: 6081,
+  ConfidentialTransferBlocked: 6082,
+  PermanentDelegateBlocked: 6083,
+  TransferHookBlocked: 6084,
+  LamportDrainBlocked: 6085,
+  BatchInstructionBlocked: 6086,
+  InvalidDestinationMode: 6087,
 } as const;
 
 /**

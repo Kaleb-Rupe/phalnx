@@ -7,7 +7,8 @@
 
 use crate::state::{
     EPOCH_DURATION, MAX_ALLOWED_DESTINATIONS, MAX_ALLOWED_PROTOCOLS, MAX_DEVELOPER_FEE_RATE,
-    NUM_EPOCHS, ROLLING_WINDOW_SECONDS, SESSION_EXPIRY_SLOTS,
+    MAX_OWNER_SESSION_DURATION_SECONDS, NUM_EPOCHS, ROLLING_WINDOW_SECONDS,
+    SESSION_DURATION_SECONDS,
 };
 use cvlr::prelude::*;
 
@@ -25,16 +26,22 @@ pub fn rule_max_fee_rate_is_500() {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Rule 2: Session expiry window is 20 slots
+// Rule 2: Session duration is 30 seconds (wall-clock)
 //
-// SESSION_EXPIRY_SLOTS must be 20 (~8 seconds at 400ms/slot).
-// Changing this constant affects the atomicity guarantee of
-// composed transactions.
+// Audit F5-H1: replaces the prior slot-based 20 (~8s at 400ms/slot,
+// ~30s at 1.5s/slot). Wall-clock enforcement is congestion-immune.
+// MAX_OWNER_SESSION_DURATION_SECONDS bounds owner-configurable values
+// (was 450 slots, now 90 seconds).
 // ─────────────────────────────────────────────────────────────────
 
 #[rule]
-pub fn rule_session_expiry_is_20_slots() {
-    cvlr_assert!(SESSION_EXPIRY_SLOTS == 20);
+pub fn rule_session_duration_is_30_seconds() {
+    cvlr_assert!(SESSION_DURATION_SECONDS == 30);
+}
+
+#[rule]
+pub fn rule_max_owner_session_duration_is_90_seconds() {
+    cvlr_assert!(MAX_OWNER_SESSION_DURATION_SECONDS == 90);
 }
 
 // ─────────────────────────────────────────────────────────────────

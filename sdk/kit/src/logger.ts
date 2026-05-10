@@ -175,3 +175,103 @@ export function setSigilModuleLogger(logger: SigilLogger): void {
 export function getSigilModuleLogger(): SigilLogger {
   return _sigilModuleLogger;
 }
+
+// ---------------------------------------------------------------------------
+// Structured warn/error — Sentry-safe payloads (F-9 Slope wallet analog)
+// ---------------------------------------------------------------------------
+//
+// The Slope wallet incident (Aug 2022, ~$8M lost) leaked seed phrases through
+// Sentry breadcrumbs because raw mnemonic strings were passed into the
+// in-app logger and forwarded verbatim to the observability backend. Any
+// structured-warn payload that flows toward Sentry / Datadog / OpenTelemetry
+// MUST be sanitized at the callsite, not "later" — once a payload reaches the
+// logger transport it is too late.
+//
+// The third-pass adversarial review (F-9) flagged that the existing
+// `SigilLogger.warn(msg, context?)` shape made `context` optional, so a
+// callsite could quietly forget to redact. Forgetting is the failure mode
+// that caused the Slope incident.
+//
+// `structuredWarn` / `structuredError` make sanitization a *type-level
+// requirement*: the caller passes a `sanitize` function that returns the
+// safe-to-log shape, plus the raw payload. The helper invokes `sanitize`
+// on the raw payload before calling through to `logger.warn`/`logger.error`.
+// There is no overload that lets a caller pass `raw` without `sanitize`.
+//
+// For payloads that are genuinely safe to log verbatim (already-redacted
+// strings, pure status enums, etc.), the helper exports `sanitizeNoop` —
+// a typed identity function — so the callsite still explicitly opts into
+// "no sanitization needed". This keeps the audit trail visible: a
+// `sanitizeNoop` import in a file is grep-able and reviewable; an absent
+// `context` argument is not.
+
+/**
+ * Sanitizer for a structured-warn payload. Takes the raw payload and
+ * returns a `Record<string, unknown>` that is safe to ship to an
+ * observability backend (Sentry, Datadog, OpenTelemetry).
+ *
+ * **Contract:**
+ * - MUST NOT include secrets (seed phrases, private keys, signed-but-not-
+ *   yet-broadcast transactions, raw user input that may contain tokens).
+ * - MUST NOT include PII unless the consumer's data-residency policy
+ *   explicitly permits it for this backend.
+ * - MAY include base58 vault PDAs, mint addresses, slot numbers, error
+ *   codes, status enums — these are public on-chain data.
+ * - SHOULD truncate long base58 strings (e.g., `"4ZeV...wrHL"`) when the
+ *   backend has display-width constraints.
+ */
+export type StructuredWarnSanitizer<TRaw> = (
+  raw: TRaw,
+) => Record<string, unknown>;
+
+/**
+ * Identity sanitizer for payloads that are already safe to log verbatim.
+ *
+ * Use this ONLY when the raw payload is, by construction, free of secrets
+ * and PII — for example, a pre-built `{ status: "degraded", code: 1234 }`
+ * record. Importing `sanitizeNoop` makes the "no sanitization needed"
+ * decision explicit and grep-able in code review.
+ */
+export const sanitizeNoop: StructuredWarnSanitizer<Record<string, unknown>> = (
+  raw,
+) => raw;
+
+/**
+ * Emit a structured warning with a *mandatory* sanitization step.
+ *
+ * The `sanitize` function runs on `raw` before the result is passed to
+ * `logger.warn`. The TypeScript signature requires `sanitize` — there is
+ * no overload that accepts a raw payload without one. For payloads that
+ * are already safe to log verbatim, pass `sanitizeNoop`.
+ *
+ * @example Sentry-safe vault-mismatch warning
+ * ```ts
+ * structuredWarn(logger, "vault-mismatch", redactPubkey, {
+ *   expected: vault.address,
+ *   actual: tx.accounts.vault,
+ * });
+ * ```
+ */
+export function structuredWarn<TRaw>(
+  logger: SigilLogger,
+  message: string,
+  sanitize: StructuredWarnSanitizer<TRaw>,
+  raw: TRaw,
+): void {
+  logger.warn(message, sanitize(raw));
+}
+
+/**
+ * Emit a structured error with a *mandatory* sanitization step. Same
+ * contract as {@link structuredWarn} but routes to `logger.error` and
+ * preserves the originating `err` for stack-trace capture.
+ */
+export function structuredError<TRaw>(
+  logger: SigilLogger,
+  message: string,
+  err: unknown,
+  sanitize: StructuredWarnSanitizer<TRaw>,
+  raw: TRaw,
+): void {
+  logger.error(message, err, sanitize(raw));
+}

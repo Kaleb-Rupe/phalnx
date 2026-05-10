@@ -70,7 +70,7 @@ describe("OwnerClient", () => {
   });
 
   describe("method count", () => {
-    it("has 7 read methods", () => {
+    it("has 10 read methods", () => {
       const client = new OwnerClient(validConfig());
       const reads = [
         "getVaultState",
@@ -80,6 +80,9 @@ describe("OwnerClient", () => {
         "getHealth",
         "getPolicy",
         "getOverview",
+        "getAgentDetail",
+        "getRiskMetrics",
+        "getAuditTrail",
       ];
       for (const name of reads) {
         expect(typeof (client as any)[name]).to.equal(

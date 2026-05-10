@@ -11,6 +11,24 @@ use crate::state::*;
 
 use super::integrations::{generic_constraints, jupiter};
 
+/// Maximum instructions to scan from any sysvar introspection loop.
+///
+/// Solana's per-tx instruction count is bounded at 64 by the v0 transaction
+/// message format (1-byte length, but in practice limited by tx size and the
+/// sysvar instructions accounting). This constant is a defense-in-depth cap
+/// against SIMD-0296-class pad-attack DoS where an adversary fills a tx with
+/// cheap ComputeBudget no-ops to inflate the cost of O(n) sysvar scans.
+///
+/// The constant is shared by:
+///   - validate_and_authorize: backward pre-validate scan (5a)
+///   - validate_and_authorize: forward spending/non-spending scans (6, 6b)
+///   - finalize_session: post-finalize defense-in-depth scan
+///
+/// At 64, this is unreachable in legitimate flows (Solana caps tx ix count
+/// at 64 already); only an attacker pushing ix beyond the protocol limit
+/// would trip this.
+pub const MAX_SYSVAR_SCAN_ITERATIONS: usize = 64;
+
 #[derive(Accounts)]
 #[instruction(token_mint: Pubkey)]
 pub struct ValidateAndAuthorize<'info> {
@@ -150,6 +168,18 @@ pub fn handler(
             data.len() >= 8 + struct_size,
             SigilError::InvalidConstraintsPda
         );
+        // F-1 audit fix: verify Anchor discriminator before bytemuck cast.
+        // Cashio/Crema lesson — owner + PDA derivation alone are insufficient
+        // when multiple zero-copy types share byte layout. Without this check,
+        // a future Sigil instruction that introduces a different
+        // #[account(zero_copy)] type owned by crate::ID with the same byte
+        // layout as InstructionConstraints could be type-punned through this
+        // load. The discriminator is the 4th defense-in-depth check
+        // (alongside owner / length / PDA-derivation / vault).
+        require!(
+            data[..8] == *<InstructionConstraints as anchor_lang::Discriminator>::DISCRIMINATOR,
+            SigilError::InvalidConstraintsPda,
+        );
         // SAFETY: InstructionConstraints is #[account(zero_copy)] = #[repr(C)] + Pod.
         // The 8-byte Anchor discriminator precedes the struct data.
         let constraints: &InstructionConstraints = bytemuck::from_bytes(&data[8..8 + struct_size]);
@@ -263,7 +293,18 @@ pub fn handler(
     // Reject any non-infrastructure instructions BEFORE validate_and_authorize.
     // Prevents DeFi-before-validate ordering attack where an agent places the
     // DeFi instruction first to make snapshot capture post-modification state.
+    //
+    // M11 hardening (SIMD-0296 pad-attack DoS guard): cap iterations at
+    // MAX_SYSVAR_SCAN_ITERATIONS. In legitimate flows current_idx_usize <= 64
+    // (Solana v0 tx caps at 64 ix), so the cap is unreachable; only an attacker
+    // would trip it, in which case we return an explicit error rather than
+    // silently truncating the scan (the unscanned ixs could be hostile).
+    let mut pre_iter_count: usize = 0;
     for pre_idx in 0..current_idx_usize {
+        require!(
+            pre_iter_count < MAX_SYSVAR_SCAN_ITERATIONS,
+            SigilError::SysvarScanBoundExceeded
+        );
         if let Ok(ix) = load_instruction_at_checked(pre_idx, &ix_sysvar) {
             require!(
                 ix.program_id == compute_budget_id
@@ -271,6 +312,7 @@ pub fn handler(
                 SigilError::UnauthorizedPreValidateInstruction
             );
         }
+        pre_iter_count = pre_iter_count.saturating_add(1);
     }
     let finalize_hash = FINALIZE_SESSION_DISCRIMINATOR;
 
@@ -308,12 +350,77 @@ pub fn handler(
             }
         }
 
-        // Token-2022: same blocked set + disc 26 (TransferCheckedWithFee)
+        // Token-2022: same SPL-shared opcodes (3, 4, 6, 8, 9, 12, 13, 15) plus
+        // Token-2022-specific opcode 26 (TransferFeeExtension prefix — covers
+        // TransferCheckedWithFee and the rest of the fee-transfer family),
+        // opcode 27 (ConfidentialTransferExtension prefix — encrypted transfers
+        // bypass plaintext SPL Transfer/Approve blocking entirely), and the
+        // Pentester HIGH/MED follow-up batch: 35, 36, 38, 42, 45.
+        //
+        // Audit table — opcodes 27-46 (cross-referenced against
+        // solana-program/token-2022/interface/src/instruction.rs main):
+        //   27 ConfidentialTransferExtension       → BLOCKED (M3, PR 7)
+        //   28 DefaultAccountStateExtension        → allowed (mint config; no
+        //      value movement at top-level)
+        //   29 Reallocate                          → allowed (resize only)
+        //   30 MemoTransferExtension               → allowed (memo flag)
+        //   31 CreateNativeMint                    → allowed (system-level)
+        //   32 InitializeNonTransferableMint       → allowed (mint config)
+        //   33 InterestBearingMintExtension        → allowed (mint config)
+        //   34 CpiGuardExtension                   → DEFERRED (toggles a
+        //      security flag on the user's token account; an agent flipping
+        //      it weakens downstream CPI protections — needs explicit
+        //      owner-allowlist UX, blocking now would break setup flows)
+        //   35 InitializePermanentDelegate         → BLOCKED (Pentester MED:
+        //      permanent delegate can transfer-from any holder of the mint
+        //      without Approve; one-shot install survives session expiry)
+        //   36 TransferHookExtension               → BLOCKED (Pentester MED:
+        //      installs hostile hook program on the user's mint that survives
+        //      session expiry and routes all future transfers through it)
+        //   37 ConfidentialTransferFeeExtension    → DEFERRED (encrypted-balance
+        //      fee accounting; pairs with 27 but is downstream-dependent —
+        //      blocking 27 already neuters the value-flow path)
+        //   38 WithdrawExcessLamports              → BLOCKED (Pentester MED:
+        //      transfers lamports out of token accounts, bypassing the
+        //      plaintext SPL transfer blocks entirely)
+        //   39 MetadataPointerExtension            → allowed (metadata)
+        //   40 GroupPointerExtension               → allowed (metadata)
+        //   41 GroupMemberPointerExtension         → allowed (metadata)
+        //   42 ConfidentialMintBurnExtension       → BLOCKED (Pentester HIGH:
+        //      drains pre-existing confidential balance — plaintext snapshot
+        //      diff won't trip; reuses ConfidentialTransferBlocked since this
+        //      is the same confidential-transfer-extension class)
+        //   43 ScaledUiAmountExtension             → allowed (UI scaling)
+        //   44 PausableExtension                   → allowed (pause toggle;
+        //      mint-level DoS but no drain)
+        //   45 UnwrapLamports                      → BLOCKED (Pentester MED:
+        //      same lamport-drain class as 38 — transfers lamports out of a
+        //      native SOL token account)
+        //   46 PermissionedBurnExtension           → BLOCKED (third-pass audit
+        //      — third-party-permissioned forced burn; reuses LamportDrainBlocked
+        //      semantically as a destructive-balance-mutation class)
+        //  255 Batch                                → BLOCKED (third-pass audit
+        //      — Token-2022 wraps a vector of inner TokenInstructions inside a
+        //      single Batch ix. Without this guard, an attacker can wrap a
+        //      blocked op (Withdraw 38, ConfidentialTransfer::Withdraw 27/sub=6,
+        //      etc.) inside Batch (255) and the byte-0 check sees 255, not the
+        //      inner opcode. Block outright; until a legitimate Batch use-case
+        //      is identified for vault flows, no allowlist UX is offered.)
+        //
+        // The DEFERRED group (34 CpiGuard, 37 ConfTransferFee) is intentionally
+        // not blocked here. Each has a legitimate setup-only use case and
+        // requires explicit owner-allowlist UX before mass-blocking would
+        // not break legitimate flows.
         if ix.program_id == TOKEN_2022_PROGRAM_ID && !ix.data.is_empty() {
             match ix.data[0] {
                 4 | 13 => return Err(error!(SigilError::UnauthorizedTokenApproval)),
                 3 | 12 | 26 => return Err(error!(SigilError::UnauthorizedTokenTransfer)),
                 6 | 8 | 9 | 15 => return Err(error!(SigilError::UnauthorizedTokenTransfer)),
+                27 | 42 => return Err(error!(SigilError::ConfidentialTransferBlocked)),
+                35 => return Err(error!(SigilError::PermanentDelegateBlocked)),
+                36 => return Err(error!(SigilError::TransferHookBlocked)),
+                38 | 45 | 46 => return Err(error!(SigilError::LamportDrainBlocked)),
+                255 => return Err(error!(SigilError::BatchInstructionBlocked)),
                 _ => {}
             }
         }
@@ -323,6 +430,19 @@ pub fn handler(
             || ix.program_id == anchor_lang::solana_program::system_program::ID
         {
             return Ok(ScanAction::Infrastructure);
+        }
+
+        // C4 async-fulfillment deny — applies to BOTH spending and non-spending paths
+        // because scan_instruction_shared is called from both. Closes the amount=0
+        // bypass at validate.rs:381 / :442.
+        //
+        // These protocols (Jupiter Perps, Drift v2, Drift JIT proxy) use a
+        // request/fulfillment model where the keeper submits the actual SPL
+        // transfer 5-45s after finalize_session returns. Sigil's stablecoin
+        // balance-delta measurement is always 0 at finalize, so daily caps +
+        // protocol caps + spend tracker never record the real spend.
+        if KNOWN_ASYNC_FULFILLMENT_PROGRAMS.contains(&ix.program_id) {
+            return Err(error!(SigilError::AsyncFulfillmentNotPermitted));
         }
 
         // Protocol allowlist
@@ -350,16 +470,46 @@ pub fn handler(
         Ok(ScanAction::PassedSharedChecks)
     }
 
+    // ── Jupiter slippage enforcement helper ─────────────────────────────
+    // Pentester finding (MED): the spending branch's inline `verify_jupiter_slippage`
+    // call left a gap — agents calling Sigil with `amount=0` (taking the
+    // non-spending branch) could pass a Jupiter swap and bypass slippage policy.
+    // Extracting the check into a helper called from BOTH branches closes the bypass
+    // unconditionally, regardless of the `is_spending = amount > 0` derivation.
+    //
+    // Note: kept as a separate helper (not folded into `scan_instruction_shared`)
+    // so the spending branch can preserve its existing check ordering — the
+    // `is_recognized_defi` / `ProtocolMismatch` check must run BEFORE slippage
+    // (existing test `target_protocol=FlashTrade but Jupiter ix → ProtocolMismatch`
+    // sends a Jupiter ix with dummy data and expects ProtocolMismatch, not
+    // InvalidJupiterInstruction).
+    fn enforce_jupiter_slippage_if_jupiter(
+        ix: &Instruction,
+        max_slippage_bps: u16,
+    ) -> anchor_lang::Result<()> {
+        if ix.program_id == JUPITER_PROGRAM {
+            jupiter::verify_jupiter_slippage(&ix.data, max_slippage_bps)?;
+        }
+        Ok(())
+    }
+
     // 6. Instruction scan — validates all instructions between validate and finalize.
     // Shared checks (scan_instruction_shared): SPL/Token-2022 blocking, infrastructure
     // whitelist, protocol allowlist, generic constraints.
-    // Spending-only checks (inline): recognized DeFi, ProtocolMismatch, defi_ix_count, Jupiter slippage.
+    // Spending-only checks (inline): recognized DeFi, ProtocolMismatch, defi_ix_count.
+    // Jupiter slippage: enforced via `enforce_jupiter_slippage_if_jupiter` in BOTH branches.
     if is_spending {
         let mut defi_ix_count: u8 = 0;
         let mut found_finalize = false;
         let mut scan_idx = current_idx_usize.saturating_add(1);
+        // M11 hardening (SIMD-0296 pad-attack DoS): bound iteration count.
+        let mut iter_count: usize = 0;
 
         while let Ok(ix) = load_instruction_at_checked(scan_idx, &ix_sysvar) {
+            require!(
+                iter_count < MAX_SYSVAR_SCAN_ITERATIONS,
+                SigilError::SysvarScanBoundExceeded
+            );
             match scan_instruction_shared(
                 &ix,
                 &spl_token_id,
@@ -374,6 +524,7 @@ pub fn handler(
                 }
                 ScanAction::Infrastructure => {
                     scan_idx = scan_idx.saturating_add(1);
+                    iter_count = iter_count.saturating_add(1);
                     continue;
                 }
                 ScanAction::PassedSharedChecks => {
@@ -394,13 +545,15 @@ pub fn handler(
                         defi_ix_count = defi_ix_count.saturating_add(1);
                     }
 
-                    // Slippage verification on Jupiter V6 swaps
-                    if ix.program_id == JUPITER_PROGRAM {
-                        jupiter::verify_jupiter_slippage(&ix.data, policy.max_slippage_bps)?;
-                    }
+                    // Slippage verification on Jupiter V6 swaps.
+                    // Runs AFTER ProtocolMismatch so target/program-id mismatches surface
+                    // first (preserves existing test expectations). Same call also runs
+                    // unconditionally in the non-spending branch — see helper docs above.
+                    enforce_jupiter_slippage_if_jupiter(&ix, policy.max_slippage_bps)?;
                 }
             }
             scan_idx = scan_idx.saturating_add(1);
+            iter_count = iter_count.saturating_add(1);
         }
 
         // DeFi instruction count enforcement
@@ -417,8 +570,14 @@ pub fn handler(
     if !is_spending {
         let mut found_finalize = false;
         let mut idx = current_idx_usize.saturating_add(1);
+        // M11 hardening (SIMD-0296 pad-attack DoS): bound iteration count.
+        let mut iter_count: usize = 0;
 
         while let Ok(ix) = load_instruction_at_checked(idx, &ix_sysvar) {
+            require!(
+                iter_count < MAX_SYSVAR_SCAN_ITERATIONS,
+                SigilError::SysvarScanBoundExceeded
+            );
             match scan_instruction_shared(
                 &ix,
                 &spl_token_id,
@@ -433,13 +592,22 @@ pub fn handler(
                 }
                 ScanAction::Infrastructure => {
                     idx = idx.saturating_add(1);
+                    iter_count = iter_count.saturating_add(1);
                     continue;
                 }
                 ScanAction::PassedSharedChecks => {
-                    // Non-spending DeFi instruction passed shared checks; no further work.
+                    // Pentester MED — non-spending forward scan must enforce Jupiter
+                    // slippage too. Without this call, an agent could send a
+                    // `validate_and_authorize` with `amount=0` (taking the
+                    // `is_spending=false` path) followed by a Jupiter swap with
+                    // arbitrary slippage and fully bypass the policy's
+                    // `max_slippage_bps` cap. Same helper as the spending branch
+                    // — single source of truth for slippage enforcement.
+                    enforce_jupiter_slippage_if_jupiter(&ix, policy.max_slippage_bps)?;
                 }
             }
             idx = idx.saturating_add(1);
+            iter_count = iter_count.saturating_add(1);
         }
 
         require!(found_finalize, SigilError::MissingFinalizeInstruction);
@@ -573,8 +741,12 @@ pub fn handler(
     session.authorized_token = token_mint;
     session.authorized_protocol = target_protocol;
     session.is_spending = is_spending;
-    session.expires_at_slot =
-        SessionAuthority::calculate_expiry(clock.slot, policy.effective_session_expiry_slots());
+    // Wall-clock based — congestion-immune (audit F5-H1).
+    // The slot is no longer load-bearing for expiry; only Clock::unix_timestamp.
+    session.expires_at_timestamp = SessionAuthority::calculate_expiry(
+        clock.unix_timestamp,
+        policy.effective_session_expiry_seconds(),
+    );
     session.delegation_token_account = ctx.accounts.vault_token_account.key();
     session.protocol_fee = protocol_fee;
     session.developer_fee = developer_fee;
@@ -610,6 +782,13 @@ pub fn handler(
             require!(
                 assertions_data.len() >= 8 + struct_size,
                 SigilError::PostAssertionFailed
+            );
+            // F-1 audit fix: verify Anchor discriminator before bytemuck cast.
+            // Same Cashio/Crema lesson as the InstructionConstraints load above.
+            require!(
+                assertions_data[..8]
+                    == *<PostExecutionAssertions as anchor_lang::Discriminator>::DISCRIMINATOR,
+                SigilError::PostAssertionFailed,
             );
             let assertions: &PostExecutionAssertions =
                 bytemuck::from_bytes(&assertions_data[8..8 + struct_size]);

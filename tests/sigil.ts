@@ -507,9 +507,10 @@ describe("sigil", () => {
           null, // keep maxSlippageBps
           null, // keep timelockDuration
           null, // keep allowedDestinations
-          null, // keep sessionExpirySlots
+          null, // keep sessionExpirySeconds
           null, // hasProtocolCaps
           null, // protocolCaps
+          null, // destinationMode
         )
         .accounts({
           owner: owner.publicKey,
@@ -558,6 +559,7 @@ describe("sigil", () => {
             null,
             null, // hasProtocolCaps
             null, // protocolCaps
+            null, // destinationMode
           )
           .accounts({
             owner: unauthorizedUser.publicKey,
@@ -593,6 +595,7 @@ describe("sigil", () => {
             null,
             null, // hasProtocolCaps
             null, // protocolCaps
+            null, // destinationMode
           )
           .accounts({
             owner: owner.publicKey,
@@ -1762,6 +1765,7 @@ describe("sigil", () => {
           null,
           null, // hasProtocolCaps
           null, // protocolCaps
+          null, // destinationMode
         )
         .accounts({
           owner: owner.publicKey,
@@ -1802,6 +1806,7 @@ describe("sigil", () => {
           null,
           null, // hasProtocolCaps
           null, // protocolCaps
+          null, // destinationMode
         )
         .accounts({
           owner: owner.publicKey,
@@ -1848,6 +1853,7 @@ describe("sigil", () => {
             null,
             null, // hasProtocolCaps
             null, // protocolCaps
+            null, // destinationMode
           )
           .accounts({
             owner: owner.publicKey,
@@ -1882,6 +1888,7 @@ describe("sigil", () => {
           null,
           null, // hasProtocolCaps
           null, // protocolCaps
+          null, // destinationMode
         )
         .accounts({
           owner: owner.publicKey,
@@ -2023,6 +2030,7 @@ describe("sigil", () => {
           null,
           null, // hasProtocolCaps
           null, // protocolCaps
+          null, // destinationMode
         )
         .accounts({
           owner: owner.publicKey,
@@ -3494,6 +3502,7 @@ describe("sigil", () => {
           null,
           null, // hasProtocolCaps
           null, // protocolCaps
+          null, // destinationMode
         )
         .accounts({
           owner: owner.publicKey,
@@ -3572,6 +3581,7 @@ describe("sigil", () => {
           null,
           null, // hasProtocolCaps
           null, // protocolCaps
+          null, // destinationMode
         )
         .accounts({
           owner: owner.publicKey,
@@ -3618,6 +3628,7 @@ describe("sigil", () => {
           null,
           null, // hasProtocolCaps
           null, // protocolCaps
+          null, // destinationMode
         )
         .accounts({
           owner: owner.publicKey,
@@ -3643,6 +3654,7 @@ describe("sigil", () => {
             null,
             null, // hasProtocolCaps
             null, // protocolCaps
+            null, // destinationMode
           )
           .accounts({
             owner: owner.publicKey,
@@ -3738,6 +3750,7 @@ describe("sigil", () => {
           null,
           null, // hasProtocolCaps
           null, // protocolCaps
+          null, // destinationMode
         )
         .accounts({
           owner: owner.publicKey,
@@ -3780,6 +3793,7 @@ describe("sigil", () => {
           null,
           null, // hasProtocolCaps
           null, // protocolCaps
+          null, // destinationMode
         )
         .accounts({
           owner: owner.publicKey,
@@ -3820,6 +3834,7 @@ describe("sigil", () => {
           null,
           null, // hasProtocolCaps
           null, // protocolCaps
+          null, // destinationMode
         )
         .accounts({
           owner: owner.publicKey,
@@ -3877,6 +3892,16 @@ describe("sigil", () => {
     const allowedDest = Keypair.generate();
     const blockedDest = Keypair.generate();
     let destVaultUsdcAta: PublicKey;
+    // Shared state between the F-4 default-deny test and the OpenWithCap
+    // opt-in follow-up test (so we can flip mode on the same vault without
+    // re-deploying the deposit + agent registration).
+    const sharedAnyDest: {
+      vault?: PublicKey;
+      policy?: PublicKey;
+      tracker?: PublicKey;
+      overlay?: PublicKey;
+      vaultAta?: PublicKey;
+    } = {};
     let allowedDestAta: PublicKey;
     let blockedDestAta: PublicKey;
 
@@ -4026,7 +4051,10 @@ describe("sigil", () => {
       }
     });
 
-    it("empty allowlist = any destination allowed", async () => {
+    // F-4 fix: empty allowlist now defaults to Restricted mode (default-deny).
+    // Owners must explicitly opt into OpenWithCap via queue+apply to allow any
+    // destination. This block exercises both branches.
+    it("empty allowlist + default Restricted mode rejects any destination (F-4)", async () => {
       // Create vault with empty allowlist
       const anyDestVaultId = new BN(511);
       const [anyVault] = PublicKey.findProgramAddressSync(
@@ -4060,7 +4088,7 @@ describe("sigil", () => {
           0,
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
-          [], // empty allowlist
+          [], // empty allowlist — under default Restricted mode this rejects everything
           [], // protocolCaps
         )
         .accounts({
@@ -4101,9 +4129,107 @@ describe("sigil", () => {
         } as any)
         .rpc();
 
-      // Transfer to any destination should work
+      // Sanity: default mode is Restricted (0).
+      const policy = await program.account.policyConfig.fetch(anyPolicy);
+      expect((policy as any).destinationMode).to.equal(0);
+
+      // Under default Restricted mode + empty allowlist, every destination is
+      // rejected. This is the F-4 fix: previously this transfer would have
+      // succeeded and drained up to the daily cap.
+      try {
+        await program.methods
+          .agentTransfer(new BN(5_000_000), new BN(0))
+          .accounts({
+            agent: destAgent.publicKey,
+            vault: anyVault,
+            policy: anyPolicy,
+            tracker: anyTracker,
+            agentSpendOverlay: anyOverlay,
+            vaultTokenAccount: anyVaultAta,
+            tokenMintAccount: usdcMint,
+            destinationTokenAccount: blockedDestAta,
+            feeDestinationTokenAccount: null,
+            protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          } as any)
+          .signers([destAgent])
+          .rpc();
+        expect.fail(
+          "Should have thrown DestinationNotAllowed (F-4 default-deny)",
+        );
+      } catch (err: any) {
+        expectSigilError(err, { name: "DestinationNotAllowed", code: 6024 });
+      }
+
+      // Stash for the OpenWithCap follow-up test below.
+      (sharedAnyDest as any).vault = anyVault;
+      (sharedAnyDest as any).policy = anyPolicy;
+      (sharedAnyDest as any).tracker = anyTracker;
+      (sharedAnyDest as any).overlay = anyOverlay;
+      (sharedAnyDest as any).vaultAta = anyVaultAta;
+    });
+
+    it("OpenWithCap mode allows any destination after queue+apply (F-4 opt-in)", async () => {
+      const anyVault = (sharedAnyDest as any).vault as PublicKey;
+      const anyPolicy = (sharedAnyDest as any).policy as PublicKey;
+      const anyTracker = (sharedAnyDest as any).tracker as PublicKey;
+      const anyOverlay = (sharedAnyDest as any).overlay as PublicKey;
+      const anyVaultAta = (sharedAnyDest as any).vaultAta as PublicKey;
+      const [anyPendingPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("pending_policy"), anyVault.toBuffer()],
+        program.programId,
+      );
+
+      // Owner queues destination_mode = 1 (OpenWithCap)
       await program.methods
-        .agentTransfer(new BN(5_000_000), new BN(0))
+        .queuePolicyUpdate(
+          null, // dailyCap
+          null, // maxTx
+          null, // protocolMode
+          null, // protocols
+          null, // devFeeRate
+          null, // maxSlippageBps
+          null, // timelock
+          null, // allowedDestinations
+          null, // sessionExpirySlots
+          null, // hasProtocolCaps
+          null, // protocolCaps
+          1, // destinationMode = OpenWithCap
+        )
+        .accounts({
+          owner: owner.publicKey,
+          vault: anyVault,
+          policy: anyPolicy,
+          pendingPolicy: anyPendingPda,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+
+      advanceTime(svm, 1801);
+
+      await program.methods
+        .applyPendingPolicy()
+        .accounts({
+          owner: owner.publicKey,
+          vault: anyVault,
+          policy: anyPolicy,
+          tracker: anyTracker,
+          pendingPolicy: anyPendingPda,
+        } as any)
+        .rpc();
+
+      // Verify mode flipped.
+      const updatedPolicy = await program.account.policyConfig.fetch(anyPolicy);
+      expect((updatedPolicy as any).destinationMode).to.equal(1);
+
+      // Now agent_transfer to the previously blocked destination must succeed.
+      // Daily cap remains the throttle.
+      const balBefore = getTokenBalance(svm, blockedDestAta);
+      await program.methods
+        .agentTransfer(
+          new BN(5_000_000),
+          (updatedPolicy as any).policyVersion ?? new BN(0),
+        )
         .accounts({
           agent: destAgent.publicKey,
           vault: anyVault,
@@ -4119,6 +4245,47 @@ describe("sigil", () => {
         } as any)
         .signers([destAgent])
         .rpc();
+
+      const balAfter = getTokenBalance(svm, blockedDestAta);
+      expect(Number(balAfter)).to.be.greaterThan(Number(balBefore));
+    });
+
+    it("queue with destination_mode=2 (invalid) rejects with InvalidDestinationMode", async () => {
+      const anyVault = (sharedAnyDest as any).vault as PublicKey;
+      const anyPolicy = (sharedAnyDest as any).policy as PublicKey;
+      const [anyPendingPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("pending_policy"), anyVault.toBuffer()],
+        program.programId,
+      );
+
+      try {
+        await program.methods
+          .queuePolicyUpdate(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            2, // destinationMode out of range
+          )
+          .accounts({
+            owner: owner.publicKey,
+            vault: anyVault,
+            policy: anyPolicy,
+            pendingPolicy: anyPendingPda,
+            systemProgram: SystemProgram.programId,
+          } as any)
+          .rpc();
+        expect.fail("Should have thrown InvalidDestinationMode");
+      } catch (err: any) {
+        expectSigilError(err, { name: "InvalidDestinationMode" });
+      }
     });
 
     it("too many destinations on init fails", async () => {
@@ -4299,7 +4466,7 @@ describe("sigil", () => {
           500, // developer_fee_rate = 500 (5 BPS)
           100, // maxSlippageBps
           new BN(1800), // MIN_TIMELOCK_DURATION
-          [],
+          [allowedDest.publicKey], // F-4 fix: explicit allowlist required under default Restricted
           [], // protocolCaps
         )
         .accounts({
@@ -4871,7 +5038,7 @@ describe("sigil", () => {
           0,
           100,
           new BN(1800), // MIN_TIMELOCK_DURATION
-          [], // empty destination allowlist = allow any
+          [epochDest.publicKey], // F-4 fix: must explicitly allow this destination under default Restricted mode
           [], // protocolCaps
         )
         .accounts({
@@ -5284,6 +5451,7 @@ describe("sigil", () => {
           null,
           true, // hasProtocolCaps
           [new BN(0), new BN(200_000_000)], // protocolA: 0 (unlimited), protocolB: 200
+          null, // destinationMode
         )
         .accounts({
           owner: protoCapOwner.publicKey,
@@ -5326,6 +5494,7 @@ describe("sigil", () => {
           null,
           true,
           [new BN(100_000_000), new BN(200_000_000)],
+          null, // destinationMode
         )
         .accounts({
           owner: protoCapOwner.publicKey,
@@ -5380,6 +5549,7 @@ describe("sigil", () => {
           null,
           false, // hasProtocolCaps = false
           null,
+          null, // destinationMode
         )
         .accounts({
           owner: protoCapOwner.publicKey,
@@ -5422,6 +5592,7 @@ describe("sigil", () => {
           null,
           true,
           [new BN(100_000_000), new BN(200_000_000)],
+          null, // destinationMode
         )
         .accounts({
           owner: protoCapOwner.publicKey,
@@ -5468,6 +5639,7 @@ describe("sigil", () => {
             null,
             true,
             [new BN(100_000_000)], // only 1 cap but 2 protocols
+            null, // destinationMode
           )
           .accounts({
             owner: protoCapOwner.publicKey,

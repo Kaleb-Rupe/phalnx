@@ -17,6 +17,11 @@ pub struct PendingPolicyUpdate {
     /// Unix timestamp when this update becomes executable
     pub executes_at: i64,
 
+    /// Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`
+    /// to enforce a freshness ceiling — defends against durable-nonce pre-signing
+    /// attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog).
+    pub queued_at_slot: u64,
+
     // All policy fields as Option<T> — only non-None fields are applied
     pub daily_spending_cap_usd: Option<u64>,
     pub max_transaction_amount_usd: Option<u64>,
@@ -26,9 +31,13 @@ pub struct PendingPolicyUpdate {
     pub max_slippage_bps: Option<u16>,
     pub timelock_duration: Option<u64>,
     pub allowed_destinations: Option<Vec<Pubkey>>,
-    pub session_expiry_slots: Option<u64>,
+    pub session_expiry_seconds: Option<u64>,
     pub has_protocol_caps: Option<bool>,
     pub protocol_caps: Option<Vec<u64>>,
+
+    /// Destination access control mode update (F-4 audit fix).
+    /// Some(0) = Restricted, Some(1) = OpenWithCap, None = leave unchanged.
+    pub destination_mode: Option<u8>,
 
     /// Bump seed for PDA
     pub bump: u8,
@@ -38,8 +47,9 @@ impl PendingPolicyUpdate {
     /// Worst-case size with all Option fields populated at max capacity.
     pub const SIZE: usize = 8
         + 32
-        + 8
-        + 8
+        + 8 // queued_at
+        + 8 // executes_at
+        + 8 // queued_at_slot (F-10 audit fix)
         + (1 + 8) // daily_spending_cap_usd
         + (1 + 8) // max_transaction_amount_usd
         + (1 + 1) // protocol_mode
@@ -48,9 +58,10 @@ impl PendingPolicyUpdate {
         + (1 + 2) // max_slippage_bps
         + (1 + 8) // timelock_duration
         + (1 + 4 + 32 * MAX_ALLOWED_DESTINATIONS) // allowed_destinations
-        + (1 + 8) // session_expiry_slots
+        + (1 + 8) // session_expiry_seconds
         + (1 + 1) // has_protocol_caps
         + (1 + 4 + 8 * MAX_ALLOWED_PROTOCOLS) // protocol_caps
+        + (1 + 1) // destination_mode (Option<u8>)
         + 1; // bump
 
     /// Returns true if the timelock period has expired and the update

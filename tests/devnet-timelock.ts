@@ -79,7 +79,7 @@ describe("devnet-timelock", () => {
     const vault = await createTimelockVault(1800);
     const newDailyCap = new BN(999_000_000);
 
-    // Queue policy change (12 args — includes sessionExpirySlots)
+    // Queue policy change (12 args — includes sessionExpirySeconds)
     await program.methods
       .queuePolicyUpdate(
         newDailyCap,
@@ -90,7 +90,7 @@ describe("devnet-timelock", () => {
         null,
         null,
         null,
-        null, // sessionExpirySlots
+        null, // sessionExpirySeconds
         null, // hasProtocolCaps
         null, // protocolCaps
       )
@@ -139,7 +139,7 @@ describe("devnet-timelock", () => {
         null,
         null,
         null,
-        null, // sessionExpirySlots
+        null, // sessionExpirySeconds
         null, // hasProtocolCaps
         null, // protocolCaps
       )
@@ -195,7 +195,7 @@ describe("devnet-timelock", () => {
         null,
         null,
         null,
-        null, // sessionExpirySlots
+        null, // sessionExpirySeconds
         null, // hasProtocolCaps
         null, // protocolCaps
       )

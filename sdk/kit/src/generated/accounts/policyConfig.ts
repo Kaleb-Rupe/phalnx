@@ -118,10 +118,12 @@ export type PolicyConfig = {
    */
   protocolCaps: Array<bigint>;
   /**
-   * Configurable session expiry in slots. 0 = use default (SESSION_EXPIRY_SLOTS = 20).
-   * Valid range when non-zero: 10-450 slots.
+   * Configurable session duration in seconds. 0 = use default
+   * (`SESSION_DURATION_SECONDS` = 30s). Valid range when non-zero:
+   * `MIN_SESSION_DURATION_SECONDS..=MAX_OWNER_SESSION_DURATION_SECONDS`
+   * (currently 5..=90s). Wall-clock based — see audit F5-H1.
    */
-  sessionExpirySlots: bigint;
+  sessionExpirySeconds: bigint;
   /** Bump seed for PDA */
   bump: number;
   /**
@@ -137,6 +139,15 @@ export type PolicyConfig = {
    * 0 = no assertions, non-zero = assertions required.
    */
   hasPostAssertions: number;
+  /**
+   * Destination access control mode for `agent_transfer`:
+   * 0 = Restricted (DEFAULT) — destination MUST be in `allowed_destinations`.
+   * 1 = OpenWithCap — destination unrestricted; only `daily_spending_cap_usd` throttles drain.
+   * Closes F-4 (third-pass audit): empty `allowed_destinations` no longer
+   * implies default-allow. Owners must explicitly opt into OpenWithCap via
+   * queue_policy_update / apply_pending_policy.
+   */
+  destinationMode: number;
 };
 
 export type PolicyConfigArgs = {
@@ -201,10 +212,12 @@ export type PolicyConfigArgs = {
    */
   protocolCaps: Array<number | bigint>;
   /**
-   * Configurable session expiry in slots. 0 = use default (SESSION_EXPIRY_SLOTS = 20).
-   * Valid range when non-zero: 10-450 slots.
+   * Configurable session duration in seconds. 0 = use default
+   * (`SESSION_DURATION_SECONDS` = 30s). Valid range when non-zero:
+   * `MIN_SESSION_DURATION_SECONDS..=MAX_OWNER_SESSION_DURATION_SECONDS`
+   * (currently 5..=90s). Wall-clock based — see audit F5-H1.
    */
-  sessionExpirySlots: number | bigint;
+  sessionExpirySeconds: number | bigint;
   /** Bump seed for PDA */
   bump: number;
   /**
@@ -220,6 +233,15 @@ export type PolicyConfigArgs = {
    * 0 = no assertions, non-zero = assertions required.
    */
   hasPostAssertions: number;
+  /**
+   * Destination access control mode for `agent_transfer`:
+   * 0 = Restricted (DEFAULT) — destination MUST be in `allowed_destinations`.
+   * 1 = OpenWithCap — destination unrestricted; only `daily_spending_cap_usd` throttles drain.
+   * Closes F-4 (third-pass audit): empty `allowed_destinations` no longer
+   * implies default-allow. Owners must explicitly opt into OpenWithCap via
+   * queue_policy_update / apply_pending_policy.
+   */
+  destinationMode: number;
 };
 
 /** Gets the encoder for {@link PolicyConfigArgs} account data. */
@@ -240,10 +262,11 @@ export function getPolicyConfigEncoder(): Encoder<PolicyConfigArgs> {
       ["hasPendingPolicy", getBooleanEncoder()],
       ["hasProtocolCaps", getBooleanEncoder()],
       ["protocolCaps", getArrayEncoder(getU64Encoder())],
-      ["sessionExpirySlots", getU64Encoder()],
+      ["sessionExpirySeconds", getU64Encoder()],
       ["bump", getU8Encoder()],
       ["policyVersion", getU64Encoder()],
       ["hasPostAssertions", getU8Encoder()],
+      ["destinationMode", getU8Encoder()],
     ]),
     (value) => ({ ...value, discriminator: POLICY_CONFIG_DISCRIMINATOR }),
   );
@@ -266,10 +289,11 @@ export function getPolicyConfigDecoder(): Decoder<PolicyConfig> {
     ["hasPendingPolicy", getBooleanDecoder()],
     ["hasProtocolCaps", getBooleanDecoder()],
     ["protocolCaps", getArrayDecoder(getU64Decoder())],
-    ["sessionExpirySlots", getU64Decoder()],
+    ["sessionExpirySeconds", getU64Decoder()],
     ["bump", getU8Decoder()],
     ["policyVersion", getU64Decoder()],
     ["hasPostAssertions", getU8Decoder()],
+    ["destinationMode", getU8Decoder()],
   ]);
 }
 

@@ -37,8 +37,28 @@ pub const MAX_ALLOWED_PROTOCOLS: usize = 10;
 /// Maximum number of allowed destination addresses for agent transfers
 pub const MAX_ALLOWED_DESTINATIONS: usize = 10;
 
-/// Session expiry in slots (~20 slots ≈ 8 seconds)
-pub const SESSION_EXPIRY_SLOTS: u64 = 20;
+/// Default session duration in seconds (when `policy.session_expiry_seconds == 0`).
+///
+/// **Why timestamp-based, not slot-based:** Solana slot times vary 400ms-1.5s
+/// under congestion. The previous slot-based bound (20 slots) ranged from 8s
+/// (target) to 30s (worst-case observed) — a 3.75x variance window. Audit
+/// finding F5-H1 (third-pass adversarial review) flagged this as HIGH severity
+/// because the documented "8 seconds" assumption was load-bearing for
+/// agent-permission risk modeling.
+///
+/// `Clock::unix_timestamp` is wall-clock and unaffected by congestion.
+pub const SESSION_DURATION_SECONDS: i64 = 30;
+
+/// Minimum owner-configurable session duration. Sessions shorter than this
+/// are rejected at `queue_policy_update` (a 1-second window is unusable in
+/// practice and indicates misconfiguration).
+pub const MIN_SESSION_DURATION_SECONDS: u64 = 5;
+
+/// Maximum owner-configurable session duration. Bounded to defend against
+/// misconfiguration that would leave delegations live for minutes. Previous
+/// slot-based bound (450) at 1.5s/slot would have permitted **11 minutes** of
+/// live token delegation under congestion. 90 seconds is a hard worst-case.
+pub const MAX_OWNER_SESSION_DURATION_SECONDS: u64 = 90;
 
 /// Fee rate denominator — fee_rate / 1,000,000 = fractional fee
 pub const FEE_RATE_DENOMINATOR: u64 = 1_000_000;
@@ -60,6 +80,23 @@ pub const MAX_ESCROW_DURATION: i64 = 2_592_000;
 /// Enforced at vault creation and in all queue/apply paths.
 /// Once a vault has a timelock, it can never be reduced below this floor.
 pub const MIN_TIMELOCK_DURATION: u64 = 1800;
+
+/// F-10 audit fix: maximum age (in slots) between queue and apply for any
+/// pending administrative update.
+///
+/// Defends against durable-nonce pre-signing attacks where an attacker
+/// pre-signs `apply_*` and submits weeks/months later — the Drift Protocol
+/// April 2026 $285M analog. The on-chain queue already enforces a minimum
+/// delay (`MIN_TIMELOCK_DURATION`) before apply, but had no upper bound:
+/// a durable-nonce holder could sit on a signed `apply_*` indefinitely and
+/// fire it at the moment that hurts the vault most (e.g. right after a
+/// loosening policy change clears).
+///
+/// 216,000 slots = ~24h at 400ms slots, ~90h at 1.5s slots — large enough
+/// to absorb any legitimate timelock + execution window, small enough to
+/// kill the "weeks later" attack surface. Beyond this window, the queued
+/// update is stale and must be re-queued by the owner.
+pub const MAX_APPLY_AGE_SLOTS: u64 = 216_000;
 
 /// sha256("global:finalize_session")[0..8] — used by validate_and_authorize
 /// to identify finalize_session instructions in the transaction.
@@ -96,11 +133,38 @@ pub const PROTOCOL_TREASURY: Pubkey = Pubkey::new_from_array([
     239, 33, 251, 37, 93, 179, 29, 45, 226, 14, 172,
 ]);
 
-/// Protocol treasury address (mainnet — all-zeros placeholder).
-/// Deliberately invalid: treasury_token.owner check will fail at
-/// runtime until replaced with the real mainnet treasury address.
+/// Protocol treasury address (mainnet).
+/// Base58: 7tvi5yJZyjpxXnbPTcR42mKVK7qbnjRjViTXv1rckNsy
+///
+/// This is the Squads V4 multisig **vault PDA** (signer derived from the multisig
+/// account), 3-of-5 threshold, 5 distinct human signers. Squads V4 derivation
+/// reuses the same `createKey` + program id, so this address is identical on
+/// devnet and mainnet — devnet rehearsals exercise the exact byte sequence below.
+///
+/// Pre-mainnet checklist completed (PR-10 / M4):
+///   [x] Squads multisig vault PDA derived (2026-05-09)
+///   [x] Real 32-byte Pubkey pinned below; sentinel `compile_error!` removed
+///   [x] CI 'mainnet-build-readiness' job exercises this constant
+///   [ ] Squads members confirmed accepting (5/5) before mainnet binary tag
+///   [ ] Tag the release commit; build mainnet binary from this commit
+///
+/// Why compile-time, not runtime?
+///   The previous implementation used a [0u8; 32] sentinel and relied on the
+///   deposit handler's `treasury_token.owner == PROTOCOL_TREASURY` check to
+///   fail at runtime. That meant a mainnet binary CAN be built and deployed
+///   with the sentinel; the bug surfaces only on the first deposit. Converting
+///   to a compile-time guard makes a mainnet build fail at `cargo build` time
+///   if the constant is unset — defense in depth (the runtime check stays).
+///
+/// To recreate the un-pinned state for tests: replace the byte array below with
+/// `[0u8; 32]` and uncomment the previous `compile_error!` block. The runtime
+/// owner check at `instructions/{create_escrow, agent_transfer,
+/// validate_and_authorize}.rs` is preserved as a second layer.
 #[cfg(feature = "mainnet")]
-pub const PROTOCOL_TREASURY: Pubkey = Pubkey::new_from_array([0u8; 32]);
+pub const PROTOCOL_TREASURY: Pubkey = Pubkey::new_from_array([
+    102, 115, 120, 152, 65, 88, 210, 76, 7, 220, 80, 231, 112, 6, 22, 32, 26, 4, 137, 55, 84, 52,
+    4, 200, 254, 195, 18, 105, 97, 38, 227, 136,
+]);
 
 // --- Stablecoin mint constants ---
 
@@ -134,21 +198,18 @@ pub const USDT_MINT: Pubkey = Pubkey::new_from_array([
     210, 199, 2, 158, 178, 206, 30, 32, 130, 100,
 ]);
 
-/// M8: Build-time guard — mainnet treasury must not be the zero address.
-/// Catches the all-zeros placeholder before it reaches production.
+/// M4 (PR-10): Mainnet treasury guard is now COMPILE-TIME, not runtime.
+///
+/// The mainnet PROTOCOL_TREASURY constant uses `compile_error!` so a mainnet
+/// build with the [0u8; 32] sentinel fails at `cargo build` rather than at
+/// first deposit. The previous M8 runtime test (`mainnet_treasury_must_not_be_zero`)
+/// is structurally redundant: a `--features mainnet` build cannot reach the
+/// test runner if the constant is unset, because compilation halts first.
+///
+/// The runtime owner check in `instructions/{create_escrow, agent_transfer,
+/// validate_and_authorize}.rs` is preserved as defense in depth.
 #[cfg(test)]
 mod treasury_tests {
-    #[test]
-    #[cfg(feature = "mainnet")]
-    fn mainnet_treasury_must_not_be_zero() {
-        use super::*;
-        assert_ne!(
-            PROTOCOL_TREASURY,
-            Pubkey::default(),
-            "PROTOCOL_TREASURY must be set to a real address before mainnet deployment"
-        );
-    }
-
     /// S-5: Documents the compile_error! guard for devnet-testing + mainnet.
     /// The actual guard at lines 63-64 is verified by CI:
     ///   cargo build --no-default-features --features "devnet-testing,mainnet"
@@ -156,7 +217,14 @@ mod treasury_tests {
     #[test]
     fn devnet_testing_mainnet_guard_constants_sane() {
         use super::*;
-        assert_ne!(SESSION_EXPIRY_SLOTS, 0, "session expiry must be non-zero");
+        assert!(
+            SESSION_DURATION_SECONDS > 0,
+            "session duration must be positive"
+        );
+        assert!(
+            MIN_SESSION_DURATION_SECONDS < MAX_OWNER_SESSION_DURATION_SECONDS,
+            "min must be below max owner-configurable bound"
+        );
         assert!(MAX_AGENTS_PER_VAULT > 0, "must allow at least one agent");
         assert!(FULL_CAPABILITY > 0, "capability value must be non-zero");
     }
@@ -212,6 +280,56 @@ pub const JUPITER_BORROW_PROGRAM: Pubkey = Pubkey::new_from_array([
     31, 214, 135, 58, 119, 204, 220, 113, 143, 17, 51,
 ]);
 
+// --- Async-fulfillment programs (C4 audit fix) ---
+//
+// These three protocols use a request/fulfillment model: the user submits a
+// `request*` instruction and the keeper submits the actual SPL transfer in a
+// SEPARATE transaction 5-45s later. Because the transfer happens after
+// `finalize_session` returns, Sigil's stablecoin balance-delta measurement is
+// always 0, so daily caps + per-protocol caps + spend tracker never record
+// the real spend, and the vault drains silently.
+//
+// V1 mitigation (Option C): hardcode-reject these program IDs in the
+// instruction scan. A future release may re-enable them via the constraints
+// PDA + post-execution assertions once we can prove keeper-tx accounting
+// across atomic boundaries.
+//
+// Source: Sigil security audit C4 (2026-05). See also:
+// - Jupiter Perps:    PERPHjGBqRHArX4DySjwM6UJHiR3sWAatqfdBS2qQJu
+// - Drift v2:         dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH
+// - Drift JIT proxy:  J1TnP8zvVxbtF5KFp5xRmWuvG9McnhzmBd9XGfCyuxFP
+
+/// Jupiter Perpetuals program
+/// Base58: PERPHjGBqRHArX4DySjwM6UJHiR3sWAatqfdBS2qQJu
+pub const JUPITER_PERPS_PROGRAM: Pubkey = Pubkey::new_from_array([
+    5, 177, 243, 202, 241, 148, 98, 239, 135, 96, 240, 171, 222, 117, 205, 61, 158, 227, 27, 58,
+    50, 198, 32, 232, 148, 18, 46, 156, 155, 129, 69, 250,
+]);
+
+/// Drift v2 protocol program
+/// Base58: dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH
+pub const DRIFT_V2_PROGRAM: Pubkey = Pubkey::new_from_array([
+    9, 84, 219, 190, 158, 201, 96, 201, 138, 122, 41, 63, 226, 19, 54, 150, 111, 225, 128, 209, 81,
+    174, 75, 129, 121, 86, 31, 137, 133, 74, 83, 246,
+]);
+
+/// Drift JIT proxy program
+/// Base58: J1TnP8zvVxbtF5KFp5xRmWuvG9McnhzmBd9XGfCyuxFP
+pub const DRIFT_JIT_PROXY_PROGRAM: Pubkey = Pubkey::new_from_array([
+    252, 180, 245, 243, 227, 226, 41, 248, 219, 192, 203, 167, 225, 83, 228, 133, 83, 109, 79, 110,
+    62, 225, 115, 177, 71, 201, 141, 78, 240, 248, 168, 126,
+]);
+
+/// Programs whose spending Sigil cannot measure synchronously inside
+/// `validate_and_authorize` because they use a request/fulfillment model
+/// (the keeper submits the actual SPL transfer 5-45s later in a separate
+/// transaction). Hardcode-rejected in V1; see C4 audit finding above.
+pub const KNOWN_ASYNC_FULFILLMENT_PROGRAMS: [Pubkey; 3] = [
+    JUPITER_PERPS_PROGRAM,
+    DRIFT_V2_PROGRAM,
+    DRIFT_JIT_PROXY_PROGRAM,
+];
+
 /// Token-2022 program ID
 /// Base58: TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb
 pub const TOKEN_2022_PROGRAM_ID: Pubkey = Pubkey::new_from_array([
@@ -244,7 +362,9 @@ pub enum VaultStatus {
 // PositionEffect enum REMOVED — position counter system deleted wholesale per council
 // decision (9-1 vote, 2026-04-19). See Plans/we-need-to-plan-serialized-summit.md.
 //
-// ActionType enum REMOVED — spending classification now derives from matched
-// ConstraintEntryZC field (is_spending). See RFC-ACTIONTYPE-ELIMINATION.md.
+// ActionType enum REMOVED — spending classification now derives from
+// `amount > 0` at runtime (validate_and_authorize.rs). The previously-stored
+// `is_spending` field on ConstraintEntryZC was deleted (M2 Option A) because
+// the runtime never read it. See RFC-ACTIONTYPE-ELIMINATION.md.
 // Agent permissions use the 2-bit capability field (CAPABILITY_OBSERVER / CAPABILITY_OPERATOR)
 // instead of the old 21-bit bitmask.

@@ -82,6 +82,7 @@ import {
   getCancelCloseConstraintsInstructionAsync,
   getCancelConstraintsUpdateInstructionAsync,
   getCancelPendingPolicyInstructionAsync,
+  getCleanupOrphanConstraintsPdaInstructionAsync,
   getClosePostAssertionsInstructionAsync,
   getCloseSettledEscrowInstructionAsync,
   getCloseVaultInstructionAsync,
@@ -117,6 +118,7 @@ import {
   parseCancelCloseConstraintsInstruction,
   parseCancelConstraintsUpdateInstruction,
   parseCancelPendingPolicyInstruction,
+  parseCleanupOrphanConstraintsPdaInstruction,
   parseClosePostAssertionsInstruction,
   parseCloseSettledEscrowInstruction,
   parseCloseVaultInstruction,
@@ -152,6 +154,7 @@ import {
   type CancelCloseConstraintsAsyncInput,
   type CancelConstraintsUpdateAsyncInput,
   type CancelPendingPolicyAsyncInput,
+  type CleanupOrphanConstraintsPdaAsyncInput,
   type ClosePostAssertionsAsyncInput,
   type CloseSettledEscrowAsyncInput,
   type CloseVaultAsyncInput,
@@ -174,6 +177,7 @@ import {
   type ParsedCancelCloseConstraintsInstruction,
   type ParsedCancelConstraintsUpdateInstruction,
   type ParsedCancelPendingPolicyInstruction,
+  type ParsedCleanupOrphanConstraintsPdaInstruction,
   type ParsedClosePostAssertionsInstruction,
   type ParsedCloseSettledEscrowInstruction,
   type ParsedCloseVaultInstruction,
@@ -385,6 +389,7 @@ export enum SigilInstruction {
   CancelCloseConstraints,
   CancelConstraintsUpdate,
   CancelPendingPolicy,
+  CleanupOrphanConstraintsPda,
   ClosePostAssertions,
   CloseSettledEscrow,
   CloseVault,
@@ -535,6 +540,17 @@ export function identifySigilInstruction(
     )
   ) {
     return SigilInstruction.CancelPendingPolicy;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([69, 181, 93, 235, 116, 229, 116, 4]),
+      ),
+      0,
+    )
+  ) {
+    return SigilInstruction.CleanupOrphanConstraintsPda;
   }
   if (
     containsBytes(
@@ -843,6 +859,9 @@ export type ParsedSigilInstruction<
       instructionType: SigilInstruction.CancelPendingPolicy;
     } & ParsedCancelPendingPolicyInstruction<TProgram>)
   | ({
+      instructionType: SigilInstruction.CleanupOrphanConstraintsPda;
+    } & ParsedCleanupOrphanConstraintsPdaInstruction<TProgram>)
+  | ({
       instructionType: SigilInstruction.ClosePostAssertions;
     } & ParsedClosePostAssertionsInstruction<TProgram>)
   | ({
@@ -995,6 +1014,13 @@ export function parseSigilInstruction<TProgram extends string>(
       return {
         instructionType: SigilInstruction.CancelPendingPolicy,
         ...parseCancelPendingPolicyInstruction(instruction),
+      };
+    }
+    case SigilInstruction.CleanupOrphanConstraintsPda: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: SigilInstruction.CleanupOrphanConstraintsPda,
+        ...parseCleanupOrphanConstraintsPdaInstruction(instruction),
       };
     }
     case SigilInstruction.ClosePostAssertions: {
@@ -1257,6 +1283,10 @@ export type SigilPluginInstructions = {
     input: CancelPendingPolicyAsyncInput,
   ) => ReturnType<typeof getCancelPendingPolicyInstructionAsync> &
     SelfPlanAndSendFunctions;
+  cleanupOrphanConstraintsPda: (
+    input: CleanupOrphanConstraintsPdaAsyncInput,
+  ) => ReturnType<typeof getCleanupOrphanConstraintsPdaInstructionAsync> &
+    SelfPlanAndSendFunctions;
   closePostAssertions: (
     input: ClosePostAssertionsAsyncInput,
   ) => ReturnType<typeof getClosePostAssertionsInstructionAsync> &
@@ -1455,6 +1485,11 @@ export function sigilProgram() {
             addSelfPlanAndSendFunctions(
               client,
               getCancelPendingPolicyInstructionAsync(input),
+            ),
+          cleanupOrphanConstraintsPda: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getCleanupOrphanConstraintsPdaInstructionAsync(input),
             ),
           closePostAssertions: (input) =>
             addSelfPlanAndSendFunctions(

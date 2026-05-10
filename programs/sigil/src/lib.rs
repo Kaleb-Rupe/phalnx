@@ -133,9 +133,10 @@ pub mod sigil {
         max_slippage_bps: Option<u16>,
         timelock_duration: Option<u64>,
         allowed_destinations: Option<Vec<Pubkey>>,
-        session_expiry_slots: Option<u64>,
+        session_expiry_seconds: Option<u64>,
         has_protocol_caps: Option<bool>,
         protocol_caps: Option<Vec<u64>>,
+        destination_mode: Option<u8>,
     ) -> Result<()> {
         instructions::queue_policy_update::handler(
             ctx,
@@ -147,9 +148,10 @@ pub mod sigil {
             max_slippage_bps,
             timelock_duration,
             allowed_destinations,
-            session_expiry_slots,
+            session_expiry_seconds,
             has_protocol_caps,
             protocol_caps,
+            destination_mode,
         )
     }
 
@@ -231,6 +233,13 @@ pub mod sigil {
     /// Cancel a queued constraint closure.
     pub fn cancel_close_constraints(ctx: Context<CancelCloseConstraints>) -> Result<()> {
         instructions::cancel_close_constraints::handler(ctx)
+    }
+
+    /// Cleanup an orphan InstructionConstraints PDA from a partial
+    /// allocate+extend chain that never reached create_instruction_constraints.
+    /// Owner-only. Drains rent back to owner. F3-H1 audit fix.
+    pub fn cleanup_orphan_constraints_pda(ctx: Context<CleanupOrphanConstraintsPda>) -> Result<()> {
+        instructions::cleanup_orphan_constraints_pda::handler(ctx)
     }
 
     // ─── Post-Execution Assertions (Phase B) ─────────────────────────────────
@@ -323,7 +332,12 @@ pub mod sigil {
 
     /// Freeze the vault immediately. Preserves all agent entries.
     /// Only the owner can call this. Use reactivate_vault to unfreeze.
-    pub fn freeze_vault(ctx: Context<FreezeVault>) -> Result<()> {
+    /// F2-H1 fix: pairs of (session_pda, vault_token_account) in remaining_accounts
+    /// are revoked so a runaway agent cannot continue spending against an
+    /// in-flight session window.
+    pub fn freeze_vault<'a, 'b, 'c, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, FreezeVault<'info>>,
+    ) -> Result<()> {
         instructions::freeze_vault::handler(ctx)
     }
 

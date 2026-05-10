@@ -23,6 +23,8 @@ import {
   getI64Encoder,
   getStructDecoder,
   getStructEncoder,
+  getU64Decoder,
+  getU64Encoder,
   getU8Decoder,
   getU8Encoder,
   transformEncoder,
@@ -73,6 +75,13 @@ export type PendingConstraintsUpdate = {
   queuedAt: bigint;
   /** Unix timestamp when this update becomes executable */
   executesAt: bigint;
+  /**
+   * Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`
+   * to enforce a freshness ceiling — defends against durable-nonce pre-signing
+   * attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog).
+   * Already 8-byte aligned (follows two i64 fields).
+   */
+  queuedAtSlot: bigint;
 };
 
 export type PendingConstraintsUpdateArgs = {
@@ -92,6 +101,13 @@ export type PendingConstraintsUpdateArgs = {
   queuedAt: number | bigint;
   /** Unix timestamp when this update becomes executable */
   executesAt: number | bigint;
+  /**
+   * Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`
+   * to enforce a freshness ceiling — defends against durable-nonce pre-signing
+   * attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog).
+   * Already 8-byte aligned (follows two i64 fields).
+   */
+  queuedAtSlot: number | bigint;
 };
 
 /** Gets the encoder for {@link PendingConstraintsUpdateArgs} account data. */
@@ -107,6 +123,7 @@ export function getPendingConstraintsUpdateEncoder(): FixedSizeEncoder<PendingCo
       ["padding", fixEncoderSize(getBytesEncoder(), 5)],
       ["queuedAt", getI64Encoder()],
       ["executesAt", getI64Encoder()],
+      ["queuedAtSlot", getU64Encoder()],
     ]),
     (value) => ({
       ...value,
@@ -127,6 +144,7 @@ export function getPendingConstraintsUpdateDecoder(): FixedSizeDecoder<PendingCo
     ["padding", fixDecoderSize(getBytesDecoder(), 5)],
     ["queuedAt", getI64Decoder()],
     ["executesAt", getI64Decoder()],
+    ["queuedAtSlot", getU64Decoder()],
   ]);
 }
 
@@ -217,5 +235,5 @@ export async function fetchAllMaybePendingConstraintsUpdate(
 }
 
 export function getPendingConstraintsUpdateSize(): number {
-  return 35904;
+  return 35912;
 }

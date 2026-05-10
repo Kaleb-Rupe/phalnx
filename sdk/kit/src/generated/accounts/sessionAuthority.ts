@@ -23,6 +23,8 @@ import {
   getBooleanEncoder,
   getBytesDecoder,
   getBytesEncoder,
+  getI64Decoder,
+  getI64Encoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -70,8 +72,15 @@ export type SessionAuthority = {
    * Derived from amount > 0 in validate_and_authorize.
    */
   isSpending: boolean;
-  /** Slot-based expiry: session is valid until this slot */
-  expiresAtSlot: bigint;
+  /**
+   * Wall-clock expiry: session is valid until this `Clock::unix_timestamp`.
+   *
+   * **Why timestamp, not slot:** Solana slot times vary 400ms-1.5s under
+   * congestion. Slot-based expiry produced a 3.75x variance window between
+   * the documented and worst-case session lifetime — see audit F5-H1.
+   * Wall-clock enforcement is congestion-immune.
+   */
+  expiresAtTimestamp: bigint;
   /** Whether token delegation was set up (approve CPI) */
   delegated: boolean;
   /**
@@ -129,8 +138,15 @@ export type SessionAuthorityArgs = {
    * Derived from amount > 0 in validate_and_authorize.
    */
   isSpending: boolean;
-  /** Slot-based expiry: session is valid until this slot */
-  expiresAtSlot: number | bigint;
+  /**
+   * Wall-clock expiry: session is valid until this `Clock::unix_timestamp`.
+   *
+   * **Why timestamp, not slot:** Solana slot times vary 400ms-1.5s under
+   * congestion. Slot-based expiry produced a 3.75x variance window between
+   * the documented and worst-case session lifetime — see audit F5-H1.
+   * Wall-clock enforcement is congestion-immune.
+   */
+  expiresAtTimestamp: number | bigint;
   /** Whether token delegation was set up (approve CPI) */
   delegated: boolean;
   /**
@@ -184,7 +200,7 @@ export function getSessionAuthorityEncoder(): FixedSizeEncoder<SessionAuthorityA
       ["authorizedToken", getAddressEncoder()],
       ["authorizedProtocol", getAddressEncoder()],
       ["isSpending", getBooleanEncoder()],
-      ["expiresAtSlot", getU64Encoder()],
+      ["expiresAtTimestamp", getI64Encoder()],
       ["delegated", getBooleanEncoder()],
       ["delegationTokenAccount", getAddressEncoder()],
       ["protocolFee", getU64Encoder()],
@@ -213,7 +229,7 @@ export function getSessionAuthorityDecoder(): FixedSizeDecoder<SessionAuthority>
     ["authorizedToken", getAddressDecoder()],
     ["authorizedProtocol", getAddressDecoder()],
     ["isSpending", getBooleanDecoder()],
-    ["expiresAtSlot", getU64Decoder()],
+    ["expiresAtTimestamp", getI64Decoder()],
     ["delegated", getBooleanDecoder()],
     ["delegationTokenAccount", getAddressDecoder()],
     ["protocolFee", getU64Decoder()],

@@ -20,14 +20,33 @@ import {
   type FixedSizeEncoder,
 } from "@solana/kit";
 
-/** Account-index constraint: requires a specific pubkey at a specific account index. */
-export type AccountConstraint = { index: number; expected: Address };
+/**
+ * Account-index constraint: requires a specific pubkey at a specific account index,
+ * and optionally enforces the account-meta `is_writable` flag.
+ *
+ * `is_writable_required` encoding (M5 — Squads SAP parity):
+ * 0 = "any"          — do not check the writable flag (backwards-compatible default;
+ * existing on-chain PDAs zero-init this byte → 0 → any)
+ * 1 = "must be read-only" — require account_meta.is_writable == false
+ * 2 = "must be writable"  — require account_meta.is_writable == true
+ * 3+ = invalid (rejected at create/queue time by validate_entries)
+ *
+ * Closes the attack class where an owner pins a pubkey expecting read-only access
+ * but the agent submits the same pubkey with `is_writable: true`, gaining write
+ * access to the constrained account without breaking the pubkey check.
+ */
+export type AccountConstraint = {
+  index: number;
+  isWritableRequired: number;
+  expected: Address;
+};
 
 export type AccountConstraintArgs = AccountConstraint;
 
 export function getAccountConstraintEncoder(): FixedSizeEncoder<AccountConstraintArgs> {
   return getStructEncoder([
     ["index", getU8Encoder()],
+    ["isWritableRequired", getU8Encoder()],
     ["expected", getAddressEncoder()],
   ]);
 }
@@ -35,6 +54,7 @@ export function getAccountConstraintEncoder(): FixedSizeEncoder<AccountConstrain
 export function getAccountConstraintDecoder(): FixedSizeDecoder<AccountConstraint> {
   return getStructDecoder([
     ["index", getU8Decoder()],
+    ["isWritableRequired", getU8Decoder()],
     ["expected", getAddressDecoder()],
   ]);
 }

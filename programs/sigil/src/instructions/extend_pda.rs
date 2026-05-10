@@ -61,9 +61,10 @@ pub fn handler(ctx: Context<ExtendPda>, target_size: u32) -> Result<()> {
     let current_size = pda_info.data_len();
     let target = target_size as usize;
 
-    // Cap at largest known PDA type (PendingConstraintsUpdate::SIZE = 35,904).
+    // Cap at largest known PDA type (PendingConstraintsUpdate::SIZE = 35,912
+    // post-F-10 audit fix; was 35,904 before adding queued_at_slot).
     // Prevents accidentally extending SpendTracker or other program-owned PDAs.
-    require!(target <= 35_904, SigilError::InvalidConstraintConfig);
+    require!(target <= 35_912, SigilError::InvalidConstraintConfig);
 
     // Must be growing, not shrinking
     require!(target > current_size, SigilError::InvalidConstraintConfig);

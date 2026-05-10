@@ -2,7 +2,7 @@
   "suites": [
     {
       "name": "Core vault management & permission engine",
-      "count": 106,
+      "count": 109,
       "onChain": true,
       "claudePattern": "tests/sigil.ts` (ts-mocha + LiteSVM, no validator needed, %d tests)"
     },
@@ -26,13 +26,13 @@
     },
     {
       "name": "Security exploit scenarios",
-      "count": 148,
+      "count": 177,
       "onChain": true,
       "claudePattern": "tests/security-exploits.ts` (ts-mocha + LiteSVM, %d tests)"
     },
     {
       "name": "Instruction constraints (generic enforcement)",
-      "count": 55,
+      "count": 70,
       "onChain": true,
       "claudePattern": "tests/instruction-constraints.ts` (ts-mocha + LiteSVM, %d tests)"
     },
@@ -85,7 +85,7 @@
     },
     {
       "name": "Kit-native SDK (`@usesigil/kit` — includes merged core + dashboard)",
-      "count": 1683,
+      "count": 1784,
       "ciStepName": "Kit SDK tests",
       "claudePattern": "sdk/kit/tests/` (mocha + tsx, %d tests — includes core + dashboard + errors + post-assertions + protocol-registry + protocol-tier + agent-bootstrap + preview-create-vault)"
     },
@@ -103,7 +103,7 @@
     },
     {
       "name": "Rust unit tests (cargo test)",
-      "count": 123,
+      "count": 138,
       "onChain": true,
       "claudePattern": "cargo test --manifest-path programs/sigil/Cargo.toml` (%d tests)"
     },

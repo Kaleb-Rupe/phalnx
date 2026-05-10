@@ -1362,6 +1362,118 @@ export type Sigil = {
       "args": []
     },
     {
+      "name": "cleanupOrphanConstraintsPda",
+      "docs": [
+        "Cleanup an orphan InstructionConstraints PDA from a partial",
+        "allocate+extend chain that never reached create_instruction_constraints.",
+        "Owner-only. Drains rent back to owner. F3-H1 audit fix."
+      ],
+      "discriminator": [
+        69,
+        181,
+        93,
+        235,
+        116,
+        229,
+        116,
+        4
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "vault.vault_id",
+                "account": "agentVault"
+              }
+            ]
+          },
+          "relations": [
+            "policy"
+          ]
+        },
+        {
+          "name": "policy",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "orphanPda",
+          "docs": [
+            "by this program, and discriminator zero (orphan from incomplete",
+            "allocate+extend+populate chain)."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  115,
+                  116,
+                  114,
+                  97,
+                  105,
+                  110,
+                  116,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "closePostAssertions",
       "docs": [
         "Close post-execution assertions for a vault. Returns rent to owner."
@@ -2781,7 +2893,10 @@ export type Sigil = {
       "name": "freezeVault",
       "docs": [
         "Freeze the vault immediately. Preserves all agent entries.",
-        "Only the owner can call this. Use reactivate_vault to unfreeze."
+        "Only the owner can call this. Use reactivate_vault to unfreeze.",
+        "F2-H1 fix: pairs of (session_pda, vault_token_account) in remaining_accounts",
+        "are revoked so a runaway agent cannot continue spending against an",
+        "in-flight session window."
       ],
       "discriminator": [
         144,
@@ -2827,6 +2942,10 @@ export type Sigil = {
               }
             ]
           }
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         }
       ],
       "args": []
@@ -3671,7 +3790,7 @@ export type Sigil = {
           }
         },
         {
-          "name": "sessionExpirySlots",
+          "name": "sessionExpirySeconds",
           "type": {
             "option": "u64"
           }
@@ -3688,6 +3807,12 @@ export type Sigil = {
             "option": {
               "vec": "u64"
             }
+          }
+        },
+        {
+          "name": "destinationMode",
+          "type": {
+            "option": "u8"
           }
         }
       ]
@@ -5319,6 +5444,19 @@ export type Sigil = {
       ]
     },
     {
+      "name": "orphanConstraintsPdaCleaned",
+      "discriminator": [
+        161,
+        234,
+        147,
+        131,
+        31,
+        163,
+        145,
+        25
+      ]
+    },
+    {
       "name": "pdaAllocated",
       "discriminator": [
         27,
@@ -5863,19 +6001,100 @@ export type Sigil = {
       "code": 6074,
       "name": "blockedSplOpcode",
       "msg": "SPL opcode is blocked at runtime and cannot be used in constraints"
+    },
+    {
+      "code": 6075,
+      "name": "queuedUpdateExpired",
+      "msg": "Queued update is too old (>MAX_APPLY_AGE_SLOTS) — re-queue to apply. Defends against durable-nonce pre-signing."
+    },
+    {
+      "code": 6076,
+      "name": "accountWritabilityMismatch",
+      "msg": "Account writability flag does not match constraint requirement"
+    },
+    {
+      "code": 6077,
+      "name": "sysvarScanBoundExceeded",
+      "msg": "Sysvar instruction scan exceeded the per-tx safety bound"
+    },
+    {
+      "code": 6078,
+      "name": "asyncFulfillmentNotPermitted",
+      "msg": "Async-fulfillment program is not permitted in V1 (Jupiter Perps, Drift, Drift JIT). Spending cannot be measured because keeper submits the actual transfer in a separate transaction after finalize_session returns."
+    },
+    {
+      "code": 6079,
+      "name": "constraintsAlreadyPopulated",
+      "msg": "Cannot clean an active constraints PDA; use queue+apply_close_constraints"
+    },
+    {
+      "code": 6080,
+      "name": "orphanPdaWrongOwner",
+      "msg": "PDA at constraints seeds is not program-owned"
+    },
+    {
+      "code": 6081,
+      "name": "orphanPdaPopulated",
+      "msg": "PDA is fully populated; not an orphan"
+    },
+    {
+      "code": 6082,
+      "name": "confidentialTransferBlocked",
+      "msg": "Token-2022 ConfidentialTransfer not permitted between validate and finalize"
+    },
+    {
+      "code": 6083,
+      "name": "permanentDelegateBlocked",
+      "msg": "Token-2022 PermanentDelegate not permitted between validate and finalize"
+    },
+    {
+      "code": 6084,
+      "name": "transferHookBlocked",
+      "msg": "Token-2022 TransferHook not permitted between validate and finalize"
+    },
+    {
+      "code": 6085,
+      "name": "lamportDrainBlocked",
+      "msg": "Token-2022 destructive-balance ix (opcodes 38/45/46) not permitted between validate and finalize"
+    },
+    {
+      "code": 6086,
+      "name": "batchInstructionBlocked",
+      "msg": "Token-2022 Batch instruction (opcode 255) is blocked outright — wraps inner instructions and bypasses byte-0 blocklist"
+    },
+    {
+      "code": 6087,
+      "name": "invalidDestinationMode",
+      "msg": "Invalid destination mode (must be 0 = Restricted or 1 = OpenWithCap)"
     }
   ],
   "types": [
     {
       "name": "accountConstraint",
       "docs": [
-        "Account-index constraint: requires a specific pubkey at a specific account index."
+        "Account-index constraint: requires a specific pubkey at a specific account index,",
+        "and optionally enforces the account-meta `is_writable` flag.",
+        "",
+        "`is_writable_required` encoding (M5 — Squads SAP parity):",
+        "0 = \"any\"          — do not check the writable flag (backwards-compatible default;",
+        "existing on-chain PDAs zero-init this byte → 0 → any)",
+        "1 = \"must be read-only\" — require account_meta.is_writable == false",
+        "2 = \"must be writable\"  — require account_meta.is_writable == true",
+        "3+ = invalid (rejected at create/queue time by validate_entries)",
+        "",
+        "Closes the attack class where an owner pins a pubkey expecting read-only access",
+        "but the agent submits the same pubkey with `is_writable: true`, gaining write",
+        "access to the constrained account without breaking the pubkey check."
       ],
       "type": {
         "kind": "struct",
         "fields": [
           {
             "name": "index",
+            "type": "u8"
+          },
+          {
+            "name": "isWritableRequired",
             "type": "u8"
           },
           {
@@ -5908,11 +6127,21 @@ export type Sigil = {
             "type": "u8"
           },
           {
+            "name": "isWritableRequired",
+            "docs": [
+              "0=any, 1=must-be-read-only, 2=must-be-writable. See AccountConstraint",
+              "docs for full semantics. Zero-initialized on existing V1 PDAs → 0 →",
+              "\"any\" (backwards-compatible — runtime ignores the writable flag for",
+              "pre-PR-9 entries that never set this byte)."
+            ],
+            "type": "u8"
+          },
+          {
             "name": "padding",
             "type": {
               "array": [
                 "u8",
-                7
+                6
               ]
             }
           }
@@ -6569,13 +6798,6 @@ export type Sigil = {
             }
           },
           {
-            "name": "isSpending",
-            "docs": [
-              "Spending classification: 1=Spending, 2=NonSpending. Required (0 rejected)."
-            ],
-            "type": "u8"
-          },
-          {
             "name": "discriminatorFormat",
             "docs": [
               "Discriminator format for this entry's target program. Controls the",
@@ -6596,15 +6818,16 @@ export type Sigil = {
       "docs": [
         "BYTE LAYOUT REGISTRY — Canonical assignment of padding bytes.",
         "",
-        "Layout (post position-counter removal, council decision 2026-04-19):",
+        "Layout (post is_spending removal, M2 Option A — runtime never read it):",
         "",
-        "byte 554: is_spending",
+        "byte 554: _reserved_was_is_spending  (was: is_spending; deleted M2 Option A)",
         "byte 555: discriminator_format",
         "bytes 556-559: _padding[4]  (reserved for future use)",
         "",
         "Total: 32+320+200+1+1+1+1+4 = 560 (unchanged).",
-        "Position_effect (formerly byte 555) was deleted with the entire position",
-        "counter system. The freed byte is absorbed by _padding to preserve the",
+        "is_spending (formerly byte 554) was deleted because the runtime never reads",
+        "it — `validate_and_authorize.rs:134` derives spending from `amount > 0`.",
+        "The freed byte is held as `_reserved_was_is_spending` to preserve the",
         "560-byte total — shrinking the struct would corrupt every existing",
         "on-chain InstructionConstraints PDA (35,888-byte zero-copy account)."
       ],
@@ -6659,11 +6882,13 @@ export type Sigil = {
             "type": "u8"
           },
           {
-            "name": "isSpending",
+            "name": "reservedWasIsSpending",
             "docs": [
-              "Spending classification: 0=Unset (treated as spending), 1=Spending, 2=NonSpending.",
-              "Set by vault owner at constraint creation time. The constraint engine returns",
-              "this value when it matches an entry — replaces ActionType.is_spending()."
+              "Reserved byte — formerly `is_spending` (deleted M2 Option A: runtime",
+              "never read it; spending is derived from `amount > 0`). Held as",
+              "padding to preserve the 560-byte ConstraintEntryZC invariant; existing",
+              "on-chain PDAs zero-init this byte. Do not repurpose without a",
+              "migration plan — old PDAs will read 0/1/2 here from prior writes."
             ],
             "type": "u8"
           },
@@ -7285,6 +7510,26 @@ export type Sigil = {
       }
     },
     {
+      "name": "orphanConstraintsPdaCleaned",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "rentRecovered",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
       "name": "pdaAllocated",
       "type": {
         "kind": "struct",
@@ -7376,6 +7621,15 @@ export type Sigil = {
             "type": "i64"
           },
           {
+            "name": "queuedAtSlot",
+            "docs": [
+              "Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`",
+              "to enforce a freshness ceiling — defends against durable-nonce pre-signing",
+              "attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog)."
+            ],
+            "type": "u64"
+          },
+          {
             "name": "bump",
             "type": "u8"
           }
@@ -7402,6 +7656,15 @@ export type Sigil = {
           {
             "name": "executesAt",
             "type": "i64"
+          },
+          {
+            "name": "queuedAtSlot",
+            "docs": [
+              "Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`",
+              "to enforce a freshness ceiling — defends against durable-nonce pre-signing",
+              "attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog)."
+            ],
+            "type": "u64"
           },
           {
             "name": "bump",
@@ -7502,6 +7765,16 @@ export type Sigil = {
               "Unix timestamp when this update becomes executable"
             ],
             "type": "i64"
+          },
+          {
+            "name": "queuedAtSlot",
+            "docs": [
+              "Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`",
+              "to enforce a freshness ceiling — defends against durable-nonce pre-signing",
+              "attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog).",
+              "Already 8-byte aligned (follows two i64 fields)."
+            ],
+            "type": "u64"
           }
         ]
       }
@@ -7538,6 +7811,15 @@ export type Sigil = {
               "Unix timestamp when this update becomes executable"
             ],
             "type": "i64"
+          },
+          {
+            "name": "queuedAtSlot",
+            "docs": [
+              "Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`",
+              "to enforce a freshness ceiling — defends against durable-nonce pre-signing",
+              "attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog)."
+            ],
+            "type": "u64"
           },
           {
             "name": "dailySpendingCapUsd",
@@ -7592,7 +7874,7 @@ export type Sigil = {
             }
           },
           {
-            "name": "sessionExpirySlots",
+            "name": "sessionExpirySeconds",
             "type": {
               "option": "u64"
             }
@@ -7609,6 +7891,16 @@ export type Sigil = {
               "option": {
                 "vec": "u64"
               }
+            }
+          },
+          {
+            "name": "destinationMode",
+            "docs": [
+              "Destination access control mode update (F-4 audit fix).",
+              "Some(0) = Restricted, Some(1) = OpenWithCap, None = leave unchanged."
+            ],
+            "type": {
+              "option": "u8"
             }
           },
           {
@@ -7782,10 +8074,12 @@ export type Sigil = {
             }
           },
           {
-            "name": "sessionExpirySlots",
+            "name": "sessionExpirySeconds",
             "docs": [
-              "Configurable session expiry in slots. 0 = use default (SESSION_EXPIRY_SLOTS = 20).",
-              "Valid range when non-zero: 10-450 slots."
+              "Configurable session duration in seconds. 0 = use default",
+              "(`SESSION_DURATION_SECONDS` = 30s). Valid range when non-zero:",
+              "`MIN_SESSION_DURATION_SECONDS..=MAX_OWNER_SESSION_DURATION_SECONDS`",
+              "(currently 5..=90s). Wall-clock based — see audit F5-H1."
             ],
             "type": "u64"
           },
@@ -7812,6 +8106,18 @@ export type Sigil = {
               "Whether native PostExecutionAssertions are configured for this vault.",
               "When true, finalize_session requires the assertions PDA in remaining_accounts.",
               "0 = no assertions, non-zero = assertions required."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "destinationMode",
+            "docs": [
+              "Destination access control mode for `agent_transfer`:",
+              "0 = Restricted (DEFAULT) — destination MUST be in `allowed_destinations`.",
+              "1 = OpenWithCap — destination unrestricted; only `daily_spending_cap_usd` throttles drain.",
+              "Closes F-4 (third-pass audit): empty `allowed_destinations` no longer",
+              "implies default-allow. Owners must explicitly opt into OpenWithCap via",
+              "queue_policy_update / apply_pending_policy."
             ],
             "type": "u8"
           }
@@ -8219,11 +8525,16 @@ export type Sigil = {
             "type": "bool"
           },
           {
-            "name": "expiresAtSlot",
+            "name": "expiresAtTimestamp",
             "docs": [
-              "Slot-based expiry: session is valid until this slot"
+              "Wall-clock expiry: session is valid until this `Clock::unix_timestamp`.",
+              "",
+              "**Why timestamp, not slot:** Solana slot times vary 400ms-1.5s under",
+              "congestion. Slot-based expiry produced a 3.75x variance window between",
+              "the documented and worst-case session lifetime — see audit F5-H1.",
+              "Wall-clock enforcement is congestion-immune."
             ],
-            "type": "u64"
+            "type": "i64"
           },
           {
             "name": "delegated",
@@ -8512,6 +8823,15 @@ export type Sigil = {
           {
             "name": "agentsPreserved",
             "type": "u8"
+          },
+          {
+            "name": "sessionsRevoked",
+            "docs": [
+              "Number of active session SPL delegations revoked during freeze (F2-H1 fix).",
+              "Caller passes (session_pda, vault_token_account) pairs in remaining_accounts;",
+              "each pair whose session_pda matches the expected derivation is revoked."
+            ],
+            "type": "u32"
           },
           {
             "name": "timestamp",

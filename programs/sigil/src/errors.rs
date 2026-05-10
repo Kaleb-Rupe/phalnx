@@ -244,4 +244,54 @@ pub enum SigilError {
 
     #[msg("SPL opcode is blocked at runtime and cannot be used in constraints")]
     BlockedSplOpcode,
+
+    // --- F-10 audit fix: durable-nonce pre-signing defense ---
+    #[msg("Queued update is too old (>MAX_APPLY_AGE_SLOTS) — re-queue to apply. Defends against durable-nonce pre-signing.")]
+    QueuedUpdateExpired,
+
+    // --- M5: Squads SAP parity — account writability enforcement ---
+    #[msg("Account writability flag does not match constraint requirement")]
+    AccountWritabilityMismatch,
+
+    // --- M11 SIMD-0296 pad-attack DoS guard ---
+    #[msg("Sysvar instruction scan exceeded the per-tx safety bound")]
+    SysvarScanBoundExceeded,
+
+    // --- C4 audit fix: async-fulfillment programs ---
+    #[msg("Async-fulfillment program is not permitted in V1 (Jupiter Perps, Drift, Drift JIT). Spending cannot be measured because keeper submits the actual transfer in a separate transaction after finalize_session returns.")]
+    AsyncFulfillmentNotPermitted,
+
+    // --- Orphan constraints PDA cleanup (F3-H1 audit fix) ---
+    #[msg("Cannot clean an active constraints PDA; use queue+apply_close_constraints")]
+    ConstraintsAlreadyPopulated,
+
+    #[msg("PDA at constraints seeds is not program-owned")]
+    OrphanPdaWrongOwner,
+
+    #[msg("PDA is fully populated; not an orphan")]
+    OrphanPdaPopulated,
+
+    // --- Token-2022 ConfidentialTransfer block (M3) ---
+    #[msg("Token-2022 ConfidentialTransfer not permitted between validate and finalize")]
+    ConfidentialTransferBlocked,
+
+    // --- Token-2022 follow-up blocks (Pentester HIGH/MED) ---
+    // Opcodes 35/36/38/42/45 — see validate_and_authorize.rs Token-2022 match arm.
+    #[msg("Token-2022 PermanentDelegate not permitted between validate and finalize")]
+    PermanentDelegateBlocked,
+
+    #[msg("Token-2022 TransferHook not permitted between validate and finalize")]
+    TransferHookBlocked,
+
+    #[msg("Token-2022 destructive-balance ix (opcodes 38/45/46) not permitted between validate and finalize")]
+    LamportDrainBlocked,
+
+    // --- Token-2022 third-pass audit additions ---
+    #[msg("Token-2022 Batch instruction (opcode 255) is blocked outright — wraps inner instructions and bypasses byte-0 blocklist")]
+    BatchInstructionBlocked,
+
+    // --- F-4 audit fix: explicit destination mode ---
+    // Added at the END of the enum so existing error codes are not renumbered.
+    #[msg("Invalid destination mode (must be 0 = Restricted or 1 = OpenWithCap)")]
+    InvalidDestinationMode,
 }

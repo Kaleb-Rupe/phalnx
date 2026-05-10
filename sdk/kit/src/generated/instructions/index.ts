@@ -17,6 +17,7 @@ export * from "./cancelAgentPermissionsUpdate.js";
 export * from "./cancelCloseConstraints.js";
 export * from "./cancelConstraintsUpdate.js";
 export * from "./cancelPendingPolicy.js";
+export * from "./cleanupOrphanConstraintsPda.js";
 export * from "./closePostAssertions.js";
 export * from "./closeSettledEscrow.js";
 export * from "./closeVault.js";

@@ -236,6 +236,10 @@ pub struct VaultFrozen {
     pub vault: Pubkey,
     pub owner: Pubkey,
     pub agents_preserved: u8,
+    /// Number of active session SPL delegations revoked during freeze (F2-H1 fix).
+    /// Caller passes (session_pda, vault_token_account) pairs in remaining_accounts;
+    /// each pair whose session_pda matches the expected derivation is revoked.
+    pub sessions_revoked: u32,
     pub timestamp: i64,
 }
 
@@ -312,5 +316,14 @@ pub struct PostAssertionChecked {
     pub vault: Pubkey,
     pub entry_index: u8,
     pub passed: bool,
+    pub timestamp: i64,
+}
+
+// --- Orphan constraints PDA cleanup (F3-H1 audit fix) ---
+
+#[event]
+pub struct OrphanConstraintsPdaCleaned {
+    pub vault: Pubkey,
+    pub rent_recovered: u64,
     pub timestamp: i64,
 }

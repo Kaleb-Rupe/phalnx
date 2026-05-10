@@ -39,6 +39,7 @@ import {
   getAgentOverlayPDA,
   getPendingPolicyPDA,
   getPendingCloseConstraintsPDA,
+  getPolicyPDA,
 } from "../resolve-accounts.js";
 import { resolveVaultStateForOwner } from "../state-resolver.js";
 import { redactCause } from "../network-errors.js";
@@ -64,8 +65,6 @@ import { getCancelPendingPolicyInstructionAsync } from "../generated/instruction
 import { getQueueAgentPermissionsUpdateInstructionAsync } from "../generated/instructions/queueAgentPermissionsUpdate.js";
 import { getApplyAgentPermissionsUpdateInstructionAsync } from "../generated/instructions/applyAgentPermissionsUpdate.js";
 import { getCancelAgentPermissionsUpdateInstruction } from "../generated/instructions/cancelAgentPermissionsUpdate.js";
-import { getCreateInstructionConstraintsInstructionAsync } from "../generated/instructions/createInstructionConstraints.js";
-import { getQueueConstraintsUpdateInstructionAsync } from "../generated/instructions/queueConstraintsUpdate.js";
 import { getApplyConstraintsUpdateInstructionAsync } from "../generated/instructions/applyConstraintsUpdate.js";
 import { getCancelConstraintsUpdateInstructionAsync } from "../generated/instructions/cancelConstraintsUpdate.js";
 import { getQueueCloseConstraintsInstructionAsync } from "../generated/instructions/queueCloseConstraints.js";
@@ -75,6 +74,10 @@ import { getCreatePostAssertionsInstructionAsync } from "../generated/instructio
 import { getClosePostAssertionsInstructionAsync } from "../generated/instructions/closePostAssertions.js";
 import type { PostAssertionEntry } from "../generated/types/postAssertionEntry.js";
 import { validatePostAssertionEntries } from "./post-assertion-validation.js";
+import {
+  buildCreateConstraintsIxs,
+  buildQueueConstraintsUpdateIxs,
+} from "./constraint-builders.js";
 
 import type {
   TxResult,
@@ -502,7 +505,7 @@ export async function withdraw(
  *   - `allowedDestinations.length` (MAX_ALLOWED_DESTINATIONS on-chain)
  *   - `protocolCaps.length` must equal `approvedApps.length` when has_protocol_caps
  *   - `maxSlippageBps` <= MAX_SLIPPAGE_BPS on-chain
- *   - `sessionExpirySlots` range (10..=450 when > 0)
+ *   - `sessionExpirySeconds` range (5..=90 when > 0; audit F5-H1)
  */
 export async function queuePolicyUpdate(
   rpc: Rpc<SolanaRpcApi>,
@@ -557,9 +560,10 @@ export async function queuePolicyUpdate(
     timelockDuration:
       changes.timelock != null ? BigInt(changes.timelock) : null,
     allowedDestinations: changes.allowedDestinations ?? null,
-    sessionExpirySlots: changes.sessionExpirySlots ?? null,
+    sessionExpirySeconds: changes.sessionExpirySeconds ?? null,
     hasProtocolCaps: changes.hasProtocolCaps ?? null,
     protocolCaps: changes.protocolCaps ?? null,
+    destinationMode: changes.destinationMode ?? null,
   });
   return run(rpc, owner, network, [ix], opts);
 }
@@ -646,6 +650,16 @@ export async function cancelAgentPermissions(
   return run(rpc, owner, network, [ix], opts);
 }
 
+/**
+ * Allocate the constraints PDA and write the entries.
+ *
+ * Day-0 fix: this used to send only the `create_instruction_constraints`
+ * instruction, which always failed because the PDA needs to be pre-allocated
+ * to `InstructionConstraints::SIZE` (35,888 bytes) before the populate handler
+ * runs. We now send the full 5-instruction chain (allocate + 3 extends +
+ * populate) in one atomic transaction. See `constraint-builders.ts` for the
+ * tx-size guardrail (~3 fully-populated entries per call).
+ */
 export async function createConstraints(
   rpc: Rpc<SolanaRpcApi>,
   vault: Address,
@@ -656,15 +670,28 @@ export async function createConstraints(
 ): Promise<TxResult> {
   if (!entries || entries.length === 0)
     throw toDxError(new Error("Constraint entries must be a non-empty array"));
-  const ix = await getCreateInstructionConstraintsInstructionAsync({
-    owner,
-    vault,
-    entries,
-    strictMode: opts?.strictMode ?? true,
-  });
-  return run(rpc, owner, network, [ix], opts);
+  try {
+    const [policy] = await getPolicyPDA(vault);
+    const ixs = await buildCreateConstraintsIxs({
+      owner,
+      vault,
+      policy,
+      entries,
+      strictMode: opts?.strictMode ?? true,
+    });
+    return run(rpc, owner, network, ixs, opts);
+  } catch (err: unknown) {
+    throw toDxError(err);
+  }
 }
 
+/**
+ * Allocate the pending constraints PDA and queue an update.
+ *
+ * Same Day-0 fix as `createConstraints` but targets the `pending_constraints`
+ * PDA at 35,904 bytes (16 more than `InstructionConstraints` for the extra
+ * timestamp fields in `PendingConstraintsUpdate`).
+ */
 export async function queueConstraintsUpdate(
   rpc: Rpc<SolanaRpcApi>,
   vault: Address,
@@ -675,13 +702,19 @@ export async function queueConstraintsUpdate(
 ): Promise<TxResult> {
   if (!entries || entries.length === 0)
     throw toDxError(new Error("Constraint entries must be a non-empty array"));
-  const ix = await getQueueConstraintsUpdateInstructionAsync({
-    owner,
-    vault,
-    entries,
-    strictMode: opts?.strictMode ?? true,
-  });
-  return run(rpc, owner, network, [ix], opts);
+  try {
+    const [policy] = await getPolicyPDA(vault);
+    const ixs = await buildQueueConstraintsUpdateIxs({
+      owner,
+      vault,
+      policy,
+      entries,
+      strictMode: opts?.strictMode ?? true,
+    });
+    return run(rpc, owner, network, ixs, opts);
+  } catch (err: unknown) {
+    throw toDxError(err);
+  }
 }
 
 export async function applyConstraintsUpdate(

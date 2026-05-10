@@ -12,13 +12,18 @@ pub struct PendingAgentPermissionsUpdate {
     pub spending_limit_usd: u64,
     pub queued_at: i64,
     pub executes_at: i64,
+    /// Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`
+    /// to enforce a freshness ceiling — defends against durable-nonce pre-signing
+    /// attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog).
+    pub queued_at_slot: u64,
     pub bump: u8,
 }
 
 impl PendingAgentPermissionsUpdate {
     /// 8 (discriminator) + 32 (vault) + 32 (agent) + 8 (new_capability + reserved)
-    /// + 8 (spending_limit_usd) + 8 (queued_at) + 8 (executes_at) + 1 (bump)
-    pub const SIZE: usize = 105;
+    /// + 8 (spending_limit_usd) + 8 (queued_at) + 8 (executes_at)
+    /// + 8 (queued_at_slot, F-10) + 1 (bump)
+    pub const SIZE: usize = 113;
 
     pub fn is_ready(&self, current_timestamp: i64) -> bool {
         current_timestamp >= self.executes_at

@@ -60,6 +60,12 @@ export type PendingAgentPermissionsUpdate = {
   spendingLimitUsd: bigint;
   queuedAt: bigint;
   executesAt: bigint;
+  /**
+   * Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`
+   * to enforce a freshness ceiling — defends against durable-nonce pre-signing
+   * attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog).
+   */
+  queuedAtSlot: bigint;
   bump: number;
 };
 
@@ -71,6 +77,12 @@ export type PendingAgentPermissionsUpdateArgs = {
   spendingLimitUsd: number | bigint;
   queuedAt: number | bigint;
   executesAt: number | bigint;
+  /**
+   * Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`
+   * to enforce a freshness ceiling — defends against durable-nonce pre-signing
+   * attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog).
+   */
+  queuedAtSlot: number | bigint;
   bump: number;
 };
 
@@ -86,6 +98,7 @@ export function getPendingAgentPermissionsUpdateEncoder(): FixedSizeEncoder<Pend
       ["spendingLimitUsd", getU64Encoder()],
       ["queuedAt", getI64Encoder()],
       ["executesAt", getI64Encoder()],
+      ["queuedAtSlot", getU64Encoder()],
       ["bump", getU8Encoder()],
     ]),
     (value) => ({
@@ -106,6 +119,7 @@ export function getPendingAgentPermissionsUpdateDecoder(): FixedSizeDecoder<Pend
     ["spendingLimitUsd", getU64Decoder()],
     ["queuedAt", getI64Decoder()],
     ["executesAt", getI64Decoder()],
+    ["queuedAtSlot", getU64Decoder()],
     ["bump", getU8Decoder()],
   ]);
 }
@@ -197,5 +211,5 @@ export async function fetchAllMaybePendingAgentPermissionsUpdate(
 }
 
 export function getPendingAgentPermissionsUpdateSize(): number {
-  return 105;
+  return 113;
 }

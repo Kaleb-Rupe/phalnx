@@ -47,9 +47,10 @@ pub fn handler(
     max_slippage_bps: Option<u16>,
     timelock_duration: Option<u64>,
     allowed_destinations: Option<Vec<Pubkey>>,
-    session_expiry_slots: Option<u64>,
+    session_expiry_seconds: Option<u64>,
     has_protocol_caps: Option<bool>,
     protocol_caps: Option<Vec<u64>>,
+    destination_mode: Option<u8>,
 ) -> Result<()> {
     crate::reject_cpi!();
 
@@ -72,6 +73,12 @@ pub fn handler(
         require!(
             *mode <= PROTOCOL_MODE_DENYLIST,
             SigilError::InvalidProtocolMode
+        );
+    }
+    if let Some(ref mode) = destination_mode {
+        require!(
+            *mode <= DESTINATION_MODE_OPEN_WITH_CAP,
+            SigilError::InvalidDestinationMode
         );
     }
     if let Some(ref protos) = protocols {
@@ -101,10 +108,14 @@ pub fn handler(
     if let Some(ref tl) = timelock_duration {
         require!(*tl >= MIN_TIMELOCK_DURATION, SigilError::TimelockTooShort);
     }
-    if let Some(ref expiry) = session_expiry_slots {
+    if let Some(ref expiry) = session_expiry_seconds {
         if *expiry > 0 {
+            // Bounds: 5..=90 seconds. 0 reserved for "use default" (30s).
+            // Tight upper bound defends against misconfiguration that would
+            // leave delegations live for minutes (audit F5-H1).
             require!(
-                *expiry >= 10 && *expiry <= 450,
+                *expiry >= MIN_SESSION_DURATION_SECONDS
+                    && *expiry <= MAX_OWNER_SESSION_DURATION_SECONDS,
                 SigilError::InvalidSessionExpiry
             );
         }
@@ -142,6 +153,8 @@ pub fn handler(
     pending.vault = vault.key();
     pending.queued_at = clock.unix_timestamp;
     pending.executes_at = executes_at;
+    // F-10 audit fix: capture queue slot for slot-bounded freshness check.
+    pending.queued_at_slot = clock.slot;
     pending.daily_spending_cap_usd = daily_spending_cap_usd;
     pending.max_transaction_amount_usd = max_transaction_amount_usd;
     pending.protocol_mode = protocol_mode;
@@ -150,9 +163,10 @@ pub fn handler(
     pending.max_slippage_bps = max_slippage_bps;
     pending.timelock_duration = timelock_duration;
     pending.allowed_destinations = allowed_destinations;
-    pending.session_expiry_slots = session_expiry_slots;
+    pending.session_expiry_seconds = session_expiry_seconds;
     pending.has_protocol_caps = has_protocol_caps;
     pending.protocol_caps = protocol_caps;
+    pending.destination_mode = destination_mode;
     pending.bump = ctx.bumps.pending_policy;
 
     ctx.accounts.policy.has_pending_policy = true;

@@ -49,7 +49,11 @@ import {
   type EffectiveBudget,
   type ResolvedBudget,
 } from "./state-resolver.js";
-import { getSessionPDA, getAgentOverlayPDA } from "./resolve-accounts.js";
+import {
+  getSessionPDA,
+  getAgentOverlayPDA,
+  getConstraintsPDA,
+} from "./resolve-accounts.js";
 import { composeSigilTransaction, measureTransactionSize } from "./composer.js";
 import {
   BlockhashCache,
@@ -727,7 +731,7 @@ export async function seal(params: SealParams): Promise<SealResult> {
   );
 
   // Step 8: Build validate_and_authorize instruction
-  const validateIx = await getValidateAndAuthorizeInstructionAsync({
+  const validateIxBase = await getValidateAndAuthorizeInstructionAsync({
     agent: params.agent,
     vault: params.vault,
     agentSpendOverlay: agentOverlayPda,
@@ -741,6 +745,31 @@ export async function seal(params: SealParams): Promise<SealResult> {
     targetProtocol,
     expectedPolicyVersion: state.policy.policyVersion ?? 0n,
   });
+
+  // Step 8b: When the vault has instruction constraints configured, the on-chain
+  // matcher reads the InstructionConstraints PDA from `ctx.remaining_accounts[0]`
+  // (programs/sigil/src/instructions/validate_and_authorize.rs:141-177). If this
+  // PDA is not appended, the matcher is silently skipped — and the on-chain
+  // handler hard-fails with InvalidConstraintsPda when has_constraints == true
+  // and remaining_accounts is empty (rs:175). Append it as a READONLY remaining
+  // account so constraint enforcement is reachable.
+  //
+  // The codama-generated instruction is Object.freeze'd (see validateAndAuthorize.ts
+  // line 408), so we cannot mutate its `accounts` array in place. We construct a
+  // new Instruction object that copies the existing accounts and appends the
+  // constraints PDA as the first (and only) remaining account — matching the
+  // on-chain handler's positional read at index 0 of remaining_accounts.
+  let validateIx = validateIxBase as Instruction;
+  if (state.policy.hasConstraints) {
+    const [constraintsPda] = await getConstraintsPDA(params.vault);
+    validateIx = {
+      ...validateIxBase,
+      accounts: [
+        ...(validateIxBase.accounts ?? []),
+        { address: constraintsPda, role: AccountRole.READONLY },
+      ],
+    } as Instruction;
+  }
 
   const finalizeIx = await getFinalizeSessionInstructionAsync({
     payer: params.agent,

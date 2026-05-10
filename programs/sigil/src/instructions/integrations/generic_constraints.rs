@@ -37,8 +37,32 @@ pub fn verify_data_constraints(ix_data: &[u8], constraints: &[DataConstraint]) -
     Ok(())
 }
 
+/// Check `account_meta.is_writable` against an `is_writable_required` byte
+/// (M5 — Squads SAP parity). Encoding:
+///   0 = no writable check (backwards-compatible default; existing on-chain
+///       PDAs zero-init this byte and runtime ignores the flag)
+///   1 = require is_writable == false
+///   2 = require is_writable == true
+///   anything else = InvalidConstraintConfig (validate_entries rejects 3+
+///                   at create time; this is defense-in-depth at runtime)
+fn check_writable_flag(actual_writable: bool, required: u8) -> Result<()> {
+    match required {
+        0 => Ok(()),
+        1 => {
+            require!(!actual_writable, SigilError::AccountWritabilityMismatch);
+            Ok(())
+        }
+        2 => {
+            require!(actual_writable, SigilError::AccountWritabilityMismatch);
+            Ok(())
+        }
+        _ => Err(error!(SigilError::InvalidConstraintConfig)),
+    }
+}
+
 /// Verify account-index constraints against instruction accounts.
-/// Each constraint requires a specific pubkey at a specific account index.
+/// Each constraint requires a specific pubkey at a specific account index,
+/// and optionally enforces the is_writable flag (M5 — see check_writable_flag).
 pub fn verify_account_constraints(
     ix_accounts: &[AccountMeta],
     constraints: &[AccountConstraint],
@@ -50,6 +74,7 @@ pub fn verify_account_constraints(
             ix_accounts[idx].pubkey == ac.expected,
             SigilError::ConstraintViolated
         );
+        check_writable_flag(ix_accounts[idx].is_writable, ac.is_writable_required)?;
     }
     Ok(())
 }
@@ -66,6 +91,10 @@ pub fn find_constraint_entry<'a>(
 /// Multiple entries with the same program_id are ORed: if ANY entry passes, the instruction is allowed.
 /// Within each entry, data_constraints and account_constraints are ANDed (all must pass).
 /// Returns Ok(true) if at least one entry matched and passed, Ok(false) if no entries matched.
+///
+/// Error surfacing (M5): when no entry passes, distinguish writability
+/// mismatches from generic constraint failures. See verify_against_entries_zc
+/// for the rationale — owners get diagnostic clarity on the kind of failure.
 pub fn verify_against_entries(
     entries: &[ConstraintEntry],
     program_id: &Pubkey,
@@ -74,14 +103,21 @@ pub fn verify_against_entries(
 ) -> Result<bool> {
     let mut found_any = false;
     let mut any_passed = false;
+    let mut writability_failure_seen = false;
 
     for entry in entries.iter().filter(|e| e.program_id == *program_id) {
         found_any = true;
         let data_ok = verify_data_constraints(ix_data, &entry.data_constraints).is_ok();
-        let acct_ok = verify_account_constraints(ix_accounts, &entry.account_constraints).is_ok();
-        if data_ok && acct_ok {
-            any_passed = true;
-            break;
+        let acct_result = verify_account_constraints(ix_accounts, &entry.account_constraints);
+        match (&acct_result, data_ok) {
+            (Ok(()), true) => {
+                any_passed = true;
+                break;
+            }
+            (Err(e), true) if *e == error!(SigilError::AccountWritabilityMismatch) => {
+                writability_failure_seen = true;
+            }
+            _ => {}
         }
     }
 
@@ -89,7 +125,12 @@ pub fn verify_against_entries(
         return Ok(false); // No entries for this program — caller decides policy
     }
 
-    require!(any_passed, SigilError::ConstraintViolated);
+    if !any_passed {
+        if writability_failure_seen {
+            return Err(error!(SigilError::AccountWritabilityMismatch));
+        }
+        return Err(error!(SigilError::ConstraintViolated));
+    }
     Ok(true)
 }
 
@@ -200,6 +241,8 @@ pub fn verify_data_constraints_zc(ix_data: &[u8], entry: &ConstraintEntryZC) -> 
 }
 
 /// Zero-copy variant: verify account constraints from a ConstraintEntryZC.
+/// Enforces both pubkey match and (M5) the is_writable flag —
+/// see check_writable_flag for encoding.
 pub fn verify_account_constraints_zc(
     ix_accounts: &[AccountMeta],
     entry: &ConstraintEntryZC,
@@ -213,6 +256,7 @@ pub fn verify_account_constraints_zc(
             ix_accounts[idx].pubkey == expected_pk,
             SigilError::ConstraintViolated
         );
+        check_writable_flag(ix_accounts[idx].is_writable, ac.is_writable_required)?;
     }
     Ok(())
 }
@@ -220,6 +264,15 @@ pub fn verify_account_constraints_zc(
 /// Zero-copy variant: verify an instruction against all constraint entries.
 /// Multiple entries with the same program_id are ORed.
 /// Returns Ok(None) if no entries matched, Ok(Some(index)) with the matched entry index.
+///
+/// Error surfacing (M5): when no entry passes, distinguish writability
+/// mismatches from generic constraint failures. If at least one entry's
+/// data constraint matched but its account-writability check failed, surface
+/// `AccountWritabilityMismatch` rather than the generic `ConstraintViolated`.
+/// This gives owners diagnostic clarity that the *kind* of constraint that
+/// failed was the writable-flag check, not a pubkey/data mismatch. OR
+/// semantics are preserved — if any other entry passes entirely, that entry
+/// is matched and the writability error is suppressed.
 pub fn verify_against_entries_zc(
     constraints: &InstructionConstraints,
     program_id: &Pubkey,
@@ -230,6 +283,10 @@ pub fn verify_against_entries_zc(
     let count = constraints.entry_count as usize;
     let mut found_any = false;
     let mut matched_index: Option<usize> = None;
+    // Track whether any entry's data matched but its accounts failed
+    // SPECIFICALLY on writability (vs pubkey/index mismatch). Used to
+    // surface AccountWritabilityMismatch when nothing else matched.
+    let mut writability_failure_seen = false;
 
     for i in 0..count {
         let entry = &constraints.entries[i];
@@ -238,17 +295,31 @@ pub fn verify_against_entries_zc(
         }
         found_any = true;
         let data_ok = verify_data_constraints_zc(ix_data, entry).is_ok();
-        let acct_ok = verify_account_constraints_zc(ix_accounts, entry).is_ok();
-        if data_ok && acct_ok {
-            matched_index = Some(i);
-            break;
+        let acct_result = verify_account_constraints_zc(ix_accounts, entry);
+        match (&acct_result, data_ok) {
+            (Ok(()), true) => {
+                matched_index = Some(i);
+                break;
+            }
+            // Diagnostic refinement: data matched but accounts failed
+            // specifically on writability — remember so we can surface the
+            // precise error when no entry passes.
+            (Err(e), true) if *e == error!(SigilError::AccountWritabilityMismatch) => {
+                writability_failure_seen = true;
+            }
+            _ => {}
         }
     }
 
     if !found_any {
         return Ok(None);
     }
-    require!(matched_index.is_some(), SigilError::ConstraintViolated);
+    if matched_index.is_none() {
+        if writability_failure_seen {
+            return Err(error!(SigilError::AccountWritabilityMismatch));
+        }
+        return Err(error!(SigilError::ConstraintViolated));
+    }
     Ok(matched_index)
 }
 
@@ -383,14 +454,12 @@ mod tests {
                 program_id: pk1,
                 data_constraints: vec![],
                 account_constraints: vec![],
-                is_spending: 1,
                 discriminator_format: DiscriminatorFormat::Anchor8,
             },
             ConstraintEntry {
                 program_id: pk2,
                 data_constraints: vec![],
                 account_constraints: vec![],
-                is_spending: 1,
                 discriminator_format: DiscriminatorFormat::Anchor8,
             },
         ];
@@ -407,14 +476,12 @@ mod tests {
                 program_id: pk,
                 data_constraints: vec![dc(0, ConstraintOperator::Eq, vec![0xFF])],
                 account_constraints: vec![],
-                is_spending: 1,
                 discriminator_format: DiscriminatorFormat::Anchor8,
             },
             ConstraintEntry {
                 program_id: pk,
                 data_constraints: vec![dc(0, ConstraintOperator::Eq, vec![0xAA])],
                 account_constraints: vec![],
-                is_spending: 1,
                 discriminator_format: DiscriminatorFormat::Anchor8,
             },
         ];
@@ -434,14 +501,12 @@ mod tests {
                 program_id: pk,
                 data_constraints: vec![dc(0, ConstraintOperator::Eq, vec![0xFF])],
                 account_constraints: vec![],
-                is_spending: 1,
                 discriminator_format: DiscriminatorFormat::Anchor8,
             },
             ConstraintEntry {
                 program_id: pk,
                 data_constraints: vec![dc(0, ConstraintOperator::Eq, vec![0xEE])],
                 account_constraints: vec![],
-                is_spending: 1,
                 discriminator_format: DiscriminatorFormat::Anchor8,
             },
         ];
@@ -457,7 +522,6 @@ mod tests {
             program_id: pk,
             data_constraints: vec![dc(0, ConstraintOperator::Eq, vec![0xAA])],
             account_constraints: vec![],
-            is_spending: 1,
             discriminator_format: DiscriminatorFormat::Anchor8,
         }];
         let ix_data = vec![0xAA];
@@ -475,7 +539,6 @@ mod tests {
             program_id: pk1,
             data_constraints: vec![dc(0, ConstraintOperator::Eq, vec![0xAA])],
             account_constraints: vec![],
-            is_spending: 1,
             discriminator_format: DiscriminatorFormat::Anchor8,
         }];
         let ix_data = vec![0xAA];

@@ -26,12 +26,11 @@ mod fuzz_accounts;
 
 use anchor_lang::prelude::Pubkey;
 use anchor_lang::{AccountDeserialize, InstructionData, ToAccountMetas};
-use sigil::state::{
-    AgentVault, PolicyConfig, SessionAuthority, SpendTracker, VaultStatus,
-};
+use sigil::state::{AgentVault, PolicyConfig, SessionAuthority, SpendTracker, VaultStatus};
 
 const MAX_DEVELOPER_FEE_RATE: u16 = 500;
-const SESSION_EXPIRY_SLOTS: u64 = 20;
+// F5-H1: schema renamed slot-bound to wall-clock seconds.
+const SESSION_DURATION_SECONDS: i64 = 8;
 const TOKEN_DECIMALS_A: u8 = 6;
 const TOKEN_DECIMALS_B: u8 = 9;
 const TOKEN_DECIMALS_C: u8 = 9;
@@ -588,9 +587,10 @@ impl FuzzTest {
             timelock_duration: None,
             allowed_destinations: None,
             max_slippage_bps: None,
-            session_expiry_slots: None,
+            session_expiry_seconds: None,
             has_protocol_caps: None,
             protocol_caps: None,
+            destination_mode: None,
         };
 
         let queue_accounts = sigil::accounts::QueuePolicyUpdate {
@@ -1061,9 +1061,10 @@ impl FuzzTest {
             timelock_duration: None,
             allowed_destinations: None,
             max_slippage_bps: None,
-            session_expiry_slots: None,
+            session_expiry_seconds: None,
             has_protocol_caps: None,
             protocol_caps: None,
+            destination_mode: None,
         };
 
         let accounts = sigil::accounts::QueuePolicyUpdate {
@@ -1215,9 +1216,13 @@ impl FuzzTest {
         let session_data = session_state.unwrap();
         let session_token = session_data.authorized_token;
 
-        // Warp past expiry
-        let expired_slot = session_data.expires_at_slot + 1;
-        self.current_slot = expired_slot;
+        // F5-H1: session expiry is now wall-clock-based (`expires_at_timestamp`),
+        // not slot-based. Trident's `warp_to_slot` advances the validator clock
+        // alongside the slot (~400ms/slot), so advancing far enough in slots
+        // guarantees the unix timestamp clears `expires_at_timestamp`. We bound
+        // the advance to a safe ceiling rather than computing the exact slot —
+        // the only thing this flow needs is "session is now past expiry."
+        self.current_slot = self.current_slot.saturating_add(10_000);
         self.trident.warp_to_slot(self.current_slot);
 
         let vault_ata = self
@@ -1488,16 +1493,27 @@ fn check_inv2_agent_cannot_modify_policy(
     }
 }
 
-/// INV-3: Session PDA expires within SESSION_EXPIRY_SLOTS of creation.
+/// INV-3: Session PDA expires within SESSION_DURATION_SECONDS of creation.
+///
+/// F5-H1: schema is now timestamp-based (`expires_at_timestamp`, seconds).
+/// The fuzz harness still tracks `current_slot` as its time axis, so we
+/// translate slot → approx-seconds (~0.4 s/slot) to bound the invariant.
+/// The check stays a pure upper bound — being slack on the conversion is
+/// fine, since INV-3 fails only if `expires_at_timestamp` is *grossly* out
+/// of range, not by single-slot rounding.
 fn check_inv3_session_expiry(session: &Option<SessionAuthority>, current_slot: u64) {
     if let Some(s) = session {
+        // Approximate "now" timestamp from slot (slots are 0.4s on average).
+        let approx_now_ts = (current_slot * 2 / 5) as i64;
+        let max_allowed_ts = approx_now_ts.saturating_add(SESSION_DURATION_SECONDS);
         assert!(
-            s.expires_at_slot <= current_slot.saturating_add(SESSION_EXPIRY_SLOTS),
-            "INV-3 violated: session expires at {} but max allowed is {} (current_slot={}, window={})",
-            s.expires_at_slot,
-            current_slot.saturating_add(SESSION_EXPIRY_SLOTS),
+            s.expires_at_timestamp <= max_allowed_ts,
+            "INV-3 violated: session expires at ts={} but max allowed is {} (current_slot={}, approx_now_ts={}, window_secs={})",
+            s.expires_at_timestamp,
+            max_allowed_ts,
             current_slot,
-            SESSION_EXPIRY_SLOTS,
+            approx_now_ts,
+            SESSION_DURATION_SECONDS,
         );
     }
 }

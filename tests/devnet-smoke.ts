@@ -222,7 +222,7 @@ describe("devnet-smoke-test", () => {
         null, // keep maxSlippageBps
         null, // keep timelockDuration
         null, // keep allowedDestinations
-        null, // sessionExpirySlots
+        null, // sessionExpirySeconds
         null, // hasProtocolCaps
         null, // protocolCaps
       )

@@ -25,6 +25,13 @@ import {
 export type AccountConstraintZC = {
   expected: ReadonlyUint8Array;
   index: number;
+  /**
+   * 0=any, 1=must-be-read-only, 2=must-be-writable. See AccountConstraint
+   * docs for full semantics. Zero-initialized on existing V1 PDAs → 0 →
+   * "any" (backwards-compatible — runtime ignores the writable flag for
+   * pre-PR-9 entries that never set this byte).
+   */
+  isWritableRequired: number;
   padding: ReadonlyUint8Array;
 };
 
@@ -34,7 +41,8 @@ export function getAccountConstraintZCEncoder(): FixedSizeEncoder<AccountConstra
   return getStructEncoder([
     ["expected", fixEncoderSize(getBytesEncoder(), 32)],
     ["index", getU8Encoder()],
-    ["padding", fixEncoderSize(getBytesEncoder(), 7)],
+    ["isWritableRequired", getU8Encoder()],
+    ["padding", fixEncoderSize(getBytesEncoder(), 6)],
   ]);
 }
 
@@ -42,7 +50,8 @@ export function getAccountConstraintZCDecoder(): FixedSizeDecoder<AccountConstra
   return getStructDecoder([
     ["expected", fixDecoderSize(getBytesDecoder(), 32)],
     ["index", getU8Decoder()],
-    ["padding", fixDecoderSize(getBytesDecoder(), 7)],
+    ["isWritableRequired", getU8Decoder()],
+    ["padding", fixDecoderSize(getBytesDecoder(), 6)],
   ]);
 }
 

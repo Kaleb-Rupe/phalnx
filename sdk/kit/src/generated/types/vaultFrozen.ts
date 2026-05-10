@@ -14,6 +14,8 @@ import {
   getI64Encoder,
   getStructDecoder,
   getStructEncoder,
+  getU32Decoder,
+  getU32Encoder,
   getU8Decoder,
   getU8Encoder,
   type Address,
@@ -26,6 +28,12 @@ export type VaultFrozen = {
   vault: Address;
   owner: Address;
   agentsPreserved: number;
+  /**
+   * Number of active session SPL delegations revoked during freeze (F2-H1 fix).
+   * Caller passes (session_pda, vault_token_account) pairs in remaining_accounts;
+   * each pair whose session_pda matches the expected derivation is revoked.
+   */
+  sessionsRevoked: number;
   timestamp: bigint;
 };
 
@@ -33,6 +41,12 @@ export type VaultFrozenArgs = {
   vault: Address;
   owner: Address;
   agentsPreserved: number;
+  /**
+   * Number of active session SPL delegations revoked during freeze (F2-H1 fix).
+   * Caller passes (session_pda, vault_token_account) pairs in remaining_accounts;
+   * each pair whose session_pda matches the expected derivation is revoked.
+   */
+  sessionsRevoked: number;
   timestamp: number | bigint;
 };
 
@@ -41,6 +55,7 @@ export function getVaultFrozenEncoder(): FixedSizeEncoder<VaultFrozenArgs> {
     ["vault", getAddressEncoder()],
     ["owner", getAddressEncoder()],
     ["agentsPreserved", getU8Encoder()],
+    ["sessionsRevoked", getU32Encoder()],
     ["timestamp", getI64Encoder()],
   ]);
 }
@@ -50,6 +65,7 @@ export function getVaultFrozenDecoder(): FixedSizeDecoder<VaultFrozen> {
     ["vault", getAddressDecoder()],
     ["owner", getAddressDecoder()],
     ["agentsPreserved", getU8Decoder()],
+    ["sessionsRevoked", getU32Decoder()],
     ["timestamp", getI64Decoder()],
   ]);
 }

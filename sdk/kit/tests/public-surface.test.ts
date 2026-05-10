@@ -108,13 +108,22 @@ describe("v0.9.0 root barrel — kept exports", () => {
     const { initializeVaultAtas } = await import("../src/helpers/ata.js");
     const { validateAgentCapAggregate } =
       await import("../src/helpers/validate-cap-aggregate.js");
-    const { NOOP_LOGGER, createConsoleLogger } =
-      await import("../src/logger.js");
+    const {
+      NOOP_LOGGER,
+      createConsoleLogger,
+      sanitizeNoop,
+      structuredWarn,
+      structuredError,
+    } = await import("../src/logger.js");
     expect(parseUsd).to.be.a("function");
     expect(initializeVaultAtas).to.be.a("function");
     expect(validateAgentCapAggregate).to.be.a("function");
     expect(NOOP_LOGGER).to.be.an("object");
     expect(createConsoleLogger).to.be.a("function");
+    // F-9 (third-pass audit): mandatory-sanitize structured-warn/error helpers
+    expect(sanitizeNoop).to.be.a("function");
+    expect(structuredWarn).to.be.a("function");
+    expect(structuredError).to.be.a("function");
   });
 
   it("DOES expose SigilClient.create async factory (A7)", () => {

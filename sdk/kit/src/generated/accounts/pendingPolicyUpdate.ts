@@ -69,6 +69,12 @@ export type PendingPolicyUpdate = {
   queuedAt: bigint;
   /** Unix timestamp when this update becomes executable */
   executesAt: bigint;
+  /**
+   * Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`
+   * to enforce a freshness ceiling — defends against durable-nonce pre-signing
+   * attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog).
+   */
+  queuedAtSlot: bigint;
   dailySpendingCapUsd: Option<bigint>;
   maxTransactionAmountUsd: Option<bigint>;
   protocolMode: Option<number>;
@@ -77,9 +83,14 @@ export type PendingPolicyUpdate = {
   maxSlippageBps: Option<number>;
   timelockDuration: Option<bigint>;
   allowedDestinations: Option<Array<Address>>;
-  sessionExpirySlots: Option<bigint>;
+  sessionExpirySeconds: Option<bigint>;
   hasProtocolCaps: Option<boolean>;
   protocolCaps: Option<Array<bigint>>;
+  /**
+   * Destination access control mode update (F-4 audit fix).
+   * Some(0) = Restricted, Some(1) = OpenWithCap, None = leave unchanged.
+   */
+  destinationMode: Option<number>;
   /** Bump seed for PDA */
   bump: number;
 };
@@ -91,6 +102,12 @@ export type PendingPolicyUpdateArgs = {
   queuedAt: number | bigint;
   /** Unix timestamp when this update becomes executable */
   executesAt: number | bigint;
+  /**
+   * Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`
+   * to enforce a freshness ceiling — defends against durable-nonce pre-signing
+   * attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog).
+   */
+  queuedAtSlot: number | bigint;
   dailySpendingCapUsd: OptionOrNullable<number | bigint>;
   maxTransactionAmountUsd: OptionOrNullable<number | bigint>;
   protocolMode: OptionOrNullable<number>;
@@ -99,9 +116,14 @@ export type PendingPolicyUpdateArgs = {
   maxSlippageBps: OptionOrNullable<number>;
   timelockDuration: OptionOrNullable<number | bigint>;
   allowedDestinations: OptionOrNullable<Array<Address>>;
-  sessionExpirySlots: OptionOrNullable<number | bigint>;
+  sessionExpirySeconds: OptionOrNullable<number | bigint>;
   hasProtocolCaps: OptionOrNullable<boolean>;
   protocolCaps: OptionOrNullable<Array<number | bigint>>;
+  /**
+   * Destination access control mode update (F-4 audit fix).
+   * Some(0) = Restricted, Some(1) = OpenWithCap, None = leave unchanged.
+   */
+  destinationMode: OptionOrNullable<number>;
   /** Bump seed for PDA */
   bump: number;
 };
@@ -114,6 +136,7 @@ export function getPendingPolicyUpdateEncoder(): Encoder<PendingPolicyUpdateArgs
       ["vault", getAddressEncoder()],
       ["queuedAt", getI64Encoder()],
       ["executesAt", getI64Encoder()],
+      ["queuedAtSlot", getU64Encoder()],
       ["dailySpendingCapUsd", getOptionEncoder(getU64Encoder())],
       ["maxTransactionAmountUsd", getOptionEncoder(getU64Encoder())],
       ["protocolMode", getOptionEncoder(getU8Encoder())],
@@ -125,9 +148,10 @@ export function getPendingPolicyUpdateEncoder(): Encoder<PendingPolicyUpdateArgs
         "allowedDestinations",
         getOptionEncoder(getArrayEncoder(getAddressEncoder())),
       ],
-      ["sessionExpirySlots", getOptionEncoder(getU64Encoder())],
+      ["sessionExpirySeconds", getOptionEncoder(getU64Encoder())],
       ["hasProtocolCaps", getOptionEncoder(getBooleanEncoder())],
       ["protocolCaps", getOptionEncoder(getArrayEncoder(getU64Encoder()))],
+      ["destinationMode", getOptionEncoder(getU8Encoder())],
       ["bump", getU8Encoder()],
     ]),
     (value) => ({
@@ -144,6 +168,7 @@ export function getPendingPolicyUpdateDecoder(): Decoder<PendingPolicyUpdate> {
     ["vault", getAddressDecoder()],
     ["queuedAt", getI64Decoder()],
     ["executesAt", getI64Decoder()],
+    ["queuedAtSlot", getU64Decoder()],
     ["dailySpendingCapUsd", getOptionDecoder(getU64Decoder())],
     ["maxTransactionAmountUsd", getOptionDecoder(getU64Decoder())],
     ["protocolMode", getOptionDecoder(getU8Decoder())],
@@ -155,9 +180,10 @@ export function getPendingPolicyUpdateDecoder(): Decoder<PendingPolicyUpdate> {
       "allowedDestinations",
       getOptionDecoder(getArrayDecoder(getAddressDecoder())),
     ],
-    ["sessionExpirySlots", getOptionDecoder(getU64Decoder())],
+    ["sessionExpirySeconds", getOptionDecoder(getU64Decoder())],
     ["hasProtocolCaps", getOptionDecoder(getBooleanDecoder())],
     ["protocolCaps", getOptionDecoder(getArrayDecoder(getU64Decoder()))],
+    ["destinationMode", getOptionDecoder(getU8Decoder())],
     ["bump", getU8Decoder()],
   ]);
 }

@@ -164,8 +164,35 @@ export const SIGIL_ERROR__INVALID_CONSTRAINT_OPERATOR = 0x17b8; // 6072
 export const SIGIL_ERROR__CONSTRAINTS_VAULT_MISMATCH = 0x17b9; // 6073
 /** BlockedSplOpcode: SPL opcode is blocked at runtime and cannot be used in constraints */
 export const SIGIL_ERROR__BLOCKED_SPL_OPCODE = 0x17ba; // 6074
+/** QueuedUpdateExpired: Queued update is too old (>MAX_APPLY_AGE_SLOTS) — re-queue to apply. Defends against durable-nonce pre-signing. */
+export const SIGIL_ERROR__QUEUED_UPDATE_EXPIRED = 0x17bb; // 6075
+/** AccountWritabilityMismatch: Account writability flag does not match constraint requirement */
+export const SIGIL_ERROR__ACCOUNT_WRITABILITY_MISMATCH = 0x17bc; // 6076
+/** SysvarScanBoundExceeded: Sysvar instruction scan exceeded the per-tx safety bound */
+export const SIGIL_ERROR__SYSVAR_SCAN_BOUND_EXCEEDED = 0x17bd; // 6077
+/** AsyncFulfillmentNotPermitted: Async-fulfillment program is not permitted in V1 (Jupiter Perps, Drift, Drift JIT). Spending cannot be measured because keeper submits the actual transfer in a separate transaction after finalize_session returns. */
+export const SIGIL_ERROR__ASYNC_FULFILLMENT_NOT_PERMITTED = 0x17be; // 6078
+/** ConstraintsAlreadyPopulated: Cannot clean an active constraints PDA; use queue+apply_close_constraints */
+export const SIGIL_ERROR__CONSTRAINTS_ALREADY_POPULATED = 0x17bf; // 6079
+/** OrphanPdaWrongOwner: PDA at constraints seeds is not program-owned */
+export const SIGIL_ERROR__ORPHAN_PDA_WRONG_OWNER = 0x17c0; // 6080
+/** OrphanPdaPopulated: PDA is fully populated; not an orphan */
+export const SIGIL_ERROR__ORPHAN_PDA_POPULATED = 0x17c1; // 6081
+/** ConfidentialTransferBlocked: Token-2022 ConfidentialTransfer not permitted between validate and finalize */
+export const SIGIL_ERROR__CONFIDENTIAL_TRANSFER_BLOCKED = 0x17c2; // 6082
+/** PermanentDelegateBlocked: Token-2022 PermanentDelegate not permitted between validate and finalize */
+export const SIGIL_ERROR__PERMANENT_DELEGATE_BLOCKED = 0x17c3; // 6083
+/** TransferHookBlocked: Token-2022 TransferHook not permitted between validate and finalize */
+export const SIGIL_ERROR__TRANSFER_HOOK_BLOCKED = 0x17c4; // 6084
+/** LamportDrainBlocked: Token-2022 destructive-balance ix (opcodes 38/45/46) not permitted between validate and finalize */
+export const SIGIL_ERROR__LAMPORT_DRAIN_BLOCKED = 0x17c5; // 6085
+/** BatchInstructionBlocked: Token-2022 Batch instruction (opcode 255) is blocked outright — wraps inner instructions and bypasses byte-0 blocklist */
+export const SIGIL_ERROR__BATCH_INSTRUCTION_BLOCKED = 0x17c6; // 6086
+/** InvalidDestinationMode: Invalid destination mode (must be 0 = Restricted or 1 = OpenWithCap) */
+export const SIGIL_ERROR__INVALID_DESTINATION_MODE = 0x17c7; // 6087
 
 export type SigilError =
+  | typeof SIGIL_ERROR__ACCOUNT_WRITABILITY_MISMATCH
   | typeof SIGIL_ERROR__ACTIVE_ESCROWS_EXIST
   | typeof SIGIL_ERROR__ACTIVE_SESSIONS_EXIST
   | typeof SIGIL_ERROR__AGENT_ALREADY_PAUSED
@@ -175,7 +202,11 @@ export type SigilError =
   | typeof SIGIL_ERROR__AGENT_PAUSED
   | typeof SIGIL_ERROR__AGENT_SLOT_NOT_FOUND
   | typeof SIGIL_ERROR__AGENT_SPEND_LIMIT_EXCEEDED
+  | typeof SIGIL_ERROR__ASYNC_FULFILLMENT_NOT_PERMITTED
+  | typeof SIGIL_ERROR__BATCH_INSTRUCTION_BLOCKED
   | typeof SIGIL_ERROR__BLOCKED_SPL_OPCODE
+  | typeof SIGIL_ERROR__CONFIDENTIAL_TRANSFER_BLOCKED
+  | typeof SIGIL_ERROR__CONSTRAINTS_ALREADY_POPULATED
   | typeof SIGIL_ERROR__CONSTRAINTS_NOT_CLOSED
   | typeof SIGIL_ERROR__CONSTRAINTS_VAULT_MISMATCH
   | typeof SIGIL_ERROR__CONSTRAINT_VIOLATED
@@ -193,6 +224,7 @@ export type SigilError =
   | typeof SIGIL_ERROR__INVALID_CONSTRAINT_CONFIG
   | typeof SIGIL_ERROR__INVALID_CONSTRAINT_OPERATOR
   | typeof SIGIL_ERROR__INVALID_CONSTRAINTS_PDA
+  | typeof SIGIL_ERROR__INVALID_DESTINATION_MODE
   | typeof SIGIL_ERROR__INVALID_ESCROW_VAULT
   | typeof SIGIL_ERROR__INVALID_FEE_DESTINATION
   | typeof SIGIL_ERROR__INVALID_JUPITER_INSTRUCTION
@@ -204,31 +236,38 @@ export type SigilError =
   | typeof SIGIL_ERROR__INVALID_SESSION
   | typeof SIGIL_ERROR__INVALID_SESSION_EXPIRY
   | typeof SIGIL_ERROR__INVALID_TOKEN_ACCOUNT
+  | typeof SIGIL_ERROR__LAMPORT_DRAIN_BLOCKED
   | typeof SIGIL_ERROR__MAX_AGENTS_REACHED
   | typeof SIGIL_ERROR__MISSING_FINALIZE_INSTRUCTION
   | typeof SIGIL_ERROR__NO_AGENT_REGISTERED
   | typeof SIGIL_ERROR__NON_TRACKED_SWAP_MUST_RETURN_STABLECOIN
   | typeof SIGIL_ERROR__NO_TIMELOCK_CONFIGURED
+  | typeof SIGIL_ERROR__ORPHAN_PDA_POPULATED
+  | typeof SIGIL_ERROR__ORPHAN_PDA_WRONG_OWNER
   | typeof SIGIL_ERROR__OVERFLOW
   | typeof SIGIL_ERROR__OVERLAY_SLOT_EXHAUSTED
   | typeof SIGIL_ERROR__PENDING_POLICY_EXISTS
+  | typeof SIGIL_ERROR__PERMANENT_DELEGATE_BLOCKED
   | typeof SIGIL_ERROR__POLICY_VERSION_MISMATCH
   | typeof SIGIL_ERROR__POST_ASSERTION_FAILED
   | typeof SIGIL_ERROR__PROTOCOL_CAP_EXCEEDED
   | typeof SIGIL_ERROR__PROTOCOL_CAPS_MISMATCH
   | typeof SIGIL_ERROR__PROTOCOL_MISMATCH
   | typeof SIGIL_ERROR__PROTOCOL_NOT_ALLOWED
+  | typeof SIGIL_ERROR__QUEUED_UPDATE_EXPIRED
   | typeof SIGIL_ERROR__SESSION_NOT_AUTHORIZED
   | typeof SIGIL_ERROR__SLIPPAGE_BPS_TOO_HIGH
   | typeof SIGIL_ERROR__SNAPSHOT_NOT_CAPTURED
   | typeof SIGIL_ERROR__SPENDING_CAP_EXCEEDED
   | typeof SIGIL_ERROR__SWAP_SLIPPAGE_EXCEEDED
+  | typeof SIGIL_ERROR__SYSVAR_SCAN_BOUND_EXCEEDED
   | typeof SIGIL_ERROR__TIMELOCK_NOT_EXPIRED
   | typeof SIGIL_ERROR__TIMELOCK_TOO_SHORT
   | typeof SIGIL_ERROR__TOO_MANY_ALLOWED_PROTOCOLS
   | typeof SIGIL_ERROR__TOO_MANY_DE_FI_INSTRUCTIONS
   | typeof SIGIL_ERROR__TOO_MANY_DESTINATIONS
   | typeof SIGIL_ERROR__TRANSACTION_TOO_LARGE
+  | typeof SIGIL_ERROR__TRANSFER_HOOK_BLOCKED
   | typeof SIGIL_ERROR__UNAUTHORIZED_AGENT
   | typeof SIGIL_ERROR__UNAUTHORIZED_OWNER
   | typeof SIGIL_ERROR__UNAUTHORIZED_POST_FINALIZE_INSTRUCTION
@@ -245,6 +284,7 @@ export type SigilError =
 let sigilErrorMessages: Record<SigilError, string> | undefined;
 if (process.env.NODE_ENV !== "production") {
   sigilErrorMessages = {
+    [SIGIL_ERROR__ACCOUNT_WRITABILITY_MISMATCH]: `Account writability flag does not match constraint requirement`,
     [SIGIL_ERROR__ACTIVE_ESCROWS_EXIST]: `Cannot close vault with active escrow deposits`,
     [SIGIL_ERROR__ACTIVE_SESSIONS_EXIST]: `Cannot close vault with active sessions (finalize pending sessions first)`,
     [SIGIL_ERROR__AGENT_ALREADY_PAUSED]: `Agent is already paused`,
@@ -254,7 +294,11 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__AGENT_PAUSED]: `Agent is paused and cannot execute actions`,
     [SIGIL_ERROR__AGENT_SLOT_NOT_FOUND]: `Agent has per-agent spending limit but no overlay tracking slot`,
     [SIGIL_ERROR__AGENT_SPEND_LIMIT_EXCEEDED]: `Agent rolling 24h spend exceeds per-agent spending limit`,
+    [SIGIL_ERROR__ASYNC_FULFILLMENT_NOT_PERMITTED]: `Async-fulfillment program is not permitted in V1 (Jupiter Perps, Drift, Drift JIT). Spending cannot be measured because keeper submits the actual transfer in a separate transaction after finalize_session returns.`,
+    [SIGIL_ERROR__BATCH_INSTRUCTION_BLOCKED]: `Token-2022 Batch instruction (opcode 255) is blocked outright — wraps inner instructions and bypasses byte-0 blocklist`,
     [SIGIL_ERROR__BLOCKED_SPL_OPCODE]: `SPL opcode is blocked at runtime and cannot be used in constraints`,
+    [SIGIL_ERROR__CONFIDENTIAL_TRANSFER_BLOCKED]: `Token-2022 ConfidentialTransfer not permitted between validate and finalize`,
+    [SIGIL_ERROR__CONSTRAINTS_ALREADY_POPULATED]: `Cannot clean an active constraints PDA; use queue+apply_close_constraints`,
     [SIGIL_ERROR__CONSTRAINTS_NOT_CLOSED]: `Instruction constraints must be closed before closing vault`,
     [SIGIL_ERROR__CONSTRAINTS_VAULT_MISMATCH]: `Zero-copy constraints account has wrong vault`,
     [SIGIL_ERROR__CONSTRAINT_VIOLATED]: `Instruction constraint violated`,
@@ -272,6 +316,7 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__INVALID_CONSTRAINT_CONFIG]: `Invalid constraint configuration: bounds exceeded`,
     [SIGIL_ERROR__INVALID_CONSTRAINT_OPERATOR]: `Constraint operator value is not a valid ConstraintOperator discriminant`,
     [SIGIL_ERROR__INVALID_CONSTRAINTS_PDA]: `Invalid constraints PDA: wrong owner or vault`,
+    [SIGIL_ERROR__INVALID_DESTINATION_MODE]: `Invalid destination mode (must be 0 = Restricted or 1 = OpenWithCap)`,
     [SIGIL_ERROR__INVALID_ESCROW_VAULT]: `Invalid escrow vault`,
     [SIGIL_ERROR__INVALID_FEE_DESTINATION]: `Fee destination account invalid`,
     [SIGIL_ERROR__INVALID_JUPITER_INSTRUCTION]: `Cannot parse Jupiter swap instruction data`,
@@ -283,31 +328,38 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__INVALID_SESSION]: `Invalid session: does not belong to this vault`,
     [SIGIL_ERROR__INVALID_SESSION_EXPIRY]: `Session expiry slots out of range (10-450)`,
     [SIGIL_ERROR__INVALID_TOKEN_ACCOUNT]: `Token account does not belong to vault or has wrong mint`,
+    [SIGIL_ERROR__LAMPORT_DRAIN_BLOCKED]: `Token-2022 destructive-balance ix (opcodes 38/45/46) not permitted between validate and finalize`,
     [SIGIL_ERROR__MAX_AGENTS_REACHED]: `Maximum agents per vault reached (limit: 10)`,
     [SIGIL_ERROR__MISSING_FINALIZE_INSTRUCTION]: `Transaction must include finalize_session after validate`,
     [SIGIL_ERROR__NO_AGENT_REGISTERED]: `No agent registered for this vault`,
     [SIGIL_ERROR__NON_TRACKED_SWAP_MUST_RETURN_STABLECOIN]: `Non-stablecoin swap must return stablecoin (balance did not increase)`,
     [SIGIL_ERROR__NO_TIMELOCK_CONFIGURED]: `No timelock configured on this vault`,
+    [SIGIL_ERROR__ORPHAN_PDA_POPULATED]: `PDA is fully populated; not an orphan`,
+    [SIGIL_ERROR__ORPHAN_PDA_WRONG_OWNER]: `PDA at constraints seeds is not program-owned`,
     [SIGIL_ERROR__OVERFLOW]: `Arithmetic overflow`,
     [SIGIL_ERROR__OVERLAY_SLOT_EXHAUSTED]: `Per-agent overlay is full; cannot register agent with spending limit`,
     [SIGIL_ERROR__PENDING_POLICY_EXISTS]: `Pending policy update must be applied or cancelled before closing vault`,
+    [SIGIL_ERROR__PERMANENT_DELEGATE_BLOCKED]: `Token-2022 PermanentDelegate not permitted between validate and finalize`,
     [SIGIL_ERROR__POLICY_VERSION_MISMATCH]: `Policy version mismatch — policy changed since agent's last RPC read`,
     [SIGIL_ERROR__POST_ASSERTION_FAILED]: `Post-execution assertion failed: account state did not satisfy constraint`,
     [SIGIL_ERROR__PROTOCOL_CAP_EXCEEDED]: `Per-protocol rolling 24h spending cap would be exceeded`,
     [SIGIL_ERROR__PROTOCOL_CAPS_MISMATCH]: `protocol_caps length must match protocols length when has_protocol_caps is true`,
     [SIGIL_ERROR__PROTOCOL_MISMATCH]: `DeFi instruction program does not match declared target_protocol`,
     [SIGIL_ERROR__PROTOCOL_NOT_ALLOWED]: `Protocol not allowed by policy`,
+    [SIGIL_ERROR__QUEUED_UPDATE_EXPIRED]: `Queued update is too old (>MAX_APPLY_AGE_SLOTS) — re-queue to apply. Defends against durable-nonce pre-signing.`,
     [SIGIL_ERROR__SESSION_NOT_AUTHORIZED]: `Session not authorized`,
     [SIGIL_ERROR__SLIPPAGE_BPS_TOO_HIGH]: `Slippage BPS exceeds maximum (5000 = 50%)`,
     [SIGIL_ERROR__SNAPSHOT_NOT_CAPTURED]: `Delta assertion snapshot was not captured in validate_and_authorize`,
     [SIGIL_ERROR__SPENDING_CAP_EXCEEDED]: `Rolling 24h spending cap would be exceeded`,
     [SIGIL_ERROR__SWAP_SLIPPAGE_EXCEEDED]: `Swap slippage exceeds policy max_slippage_bps or quoted output is zero`,
+    [SIGIL_ERROR__SYSVAR_SCAN_BOUND_EXCEEDED]: `Sysvar instruction scan exceeded the per-tx safety bound`,
     [SIGIL_ERROR__TIMELOCK_NOT_EXPIRED]: `Timelock period has not expired yet`,
     [SIGIL_ERROR__TIMELOCK_TOO_SHORT]: `Timelock duration below minimum (1800 seconds / 30 minutes)`,
     [SIGIL_ERROR__TOO_MANY_ALLOWED_PROTOCOLS]: `Policy configuration invalid: too many allowed protocols`,
     [SIGIL_ERROR__TOO_MANY_DE_FI_INSTRUCTIONS]: `Spending allows at most one DeFi instruction`,
     [SIGIL_ERROR__TOO_MANY_DESTINATIONS]: `Too many destinations (max 10)`,
     [SIGIL_ERROR__TRANSACTION_TOO_LARGE]: `Transaction exceeds maximum single transaction size`,
+    [SIGIL_ERROR__TRANSFER_HOOK_BLOCKED]: `Token-2022 TransferHook not permitted between validate and finalize`,
     [SIGIL_ERROR__UNAUTHORIZED_AGENT]: `Unauthorized: signer is not the registered agent`,
     [SIGIL_ERROR__UNAUTHORIZED_OWNER]: `Unauthorized: signer is not the vault owner`,
     [SIGIL_ERROR__UNAUTHORIZED_POST_FINALIZE_INSTRUCTION]: `Instructions after finalize_session must be ComputeBudget or SystemProgram only`,

@@ -35,7 +35,7 @@ import {
   PROTOCOL_TREASURY,
   PROTOCOL_FEE_RATE,
   FEE_RATE_DENOMINATOR,
-  SESSION_EXPIRY_SLOTS,
+  SESSION_DURATION_SECONDS,
   setAccountLamports,
   createWallet,
   fundWithTokens,
@@ -480,10 +480,10 @@ describe("surfpool-integration", function () {
         const errStr = err.message || JSON.stringify(err);
         expect(
           errStr.includes("MissingFinalizeInstruction") ||
-            errStr.includes("6034"),
+            errStr.includes("6028"),
         ).to.equal(
           true,
-          `Expected MissingFinalizeInstruction (6034) but got: ${errStr.slice(0, 200)}`,
+          `Expected MissingFinalizeInstruction (6028) but got: ${errStr.slice(0, 200)}`,
         );
       }
     });
@@ -1496,9 +1496,10 @@ describe("surfpool-integration", function () {
           null,
           null,
           null,
-          null, // sessionExpirySlots
+          null, // sessionExpirySeconds
           null, // hasProtocolCaps
           null, // protocolCaps
+          null, // destinationMode
         )
         .accounts({
           owner: env.payer.publicKey,
@@ -1550,9 +1551,10 @@ describe("surfpool-integration", function () {
           null,
           null,
           null,
-          null, // sessionExpirySlots
+          null, // sessionExpirySeconds
           null, // hasProtocolCaps
           null, // protocolCaps
+          null, // destinationMode
         )
         .accounts({
           owner: env.payer.publicKey,
@@ -3642,7 +3644,7 @@ describe("surfpool-integration", function () {
           })
           .instruction();
         const extendIxs = await Promise.all(
-          [20480, 30720, 35904].map((t) =>
+          [20480, 30720, 35912].map((t) =>
             (program.methods.extendPda(t) as any)
               .accounts({
                 owner: env.payer.publicKey,
@@ -3883,7 +3885,7 @@ describe("surfpool-integration", function () {
           })
           .instruction();
         const extendIxs = await Promise.all(
-          [20480, 30720, 35904].map((t) =>
+          [20480, 30720, 35912].map((t) =>
             (program.methods.extendPda(t) as any)
               .accounts({
                 owner: env.payer.publicKey,
@@ -4010,7 +4012,7 @@ describe("surfpool-integration", function () {
           })
           .instruction();
         const extendIxs = await Promise.all(
-          [20480, 30720, 35904].map((t) =>
+          [20480, 30720, 35912].map((t) =>
             (program.methods.extendPda(t) as any)
               .accounts({
                 owner: env.payer.publicKey,

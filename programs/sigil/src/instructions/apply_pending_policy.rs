@@ -46,6 +46,15 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
         SigilError::TimelockNotExpired
     );
 
+    // F-10 audit fix: slot-bounded freshness check defends against durable-nonce
+    // pre-signing attacks (Drift Protocol April 2026 $285M analog). Limits the
+    // time between queue and apply to MAX_APPLY_AGE_SLOTS — beyond that, the
+    // queued update is stale and must be re-queued by the owner.
+    require!(
+        clock.slot.saturating_sub(pending.queued_at_slot) < MAX_APPLY_AGE_SLOTS,
+        SigilError::QueuedUpdateExpired,
+    );
+
     let policy = &mut ctx.accounts.policy;
 
     // Apply each non-None field
@@ -74,14 +83,22 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
     if let Some(ref destinations) = pending.allowed_destinations {
         policy.allowed_destinations = destinations.clone();
     }
-    if let Some(expiry) = pending.session_expiry_slots {
-        policy.session_expiry_slots = expiry;
+    if let Some(expiry) = pending.session_expiry_seconds {
+        policy.session_expiry_seconds = expiry;
     }
     if let Some(hpc) = pending.has_protocol_caps {
         policy.has_protocol_caps = hpc;
     }
     if let Some(ref caps) = pending.protocol_caps {
         policy.protocol_caps = caps.clone();
+    }
+    if let Some(mode) = pending.destination_mode {
+        // Validate again at apply time — defence in depth.
+        require!(
+            mode <= DESTINATION_MODE_OPEN_WITH_CAP,
+            SigilError::InvalidDestinationMode
+        );
+        policy.destination_mode = mode;
     }
 
     policy.has_pending_policy = false;

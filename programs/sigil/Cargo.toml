@@ -36,6 +36,21 @@ bytemuck = { version = "1.14", features = ["derive", "min_const_generics"] }
 blake3 = "=1.5.5"
 cvlr = { version = "0.6", optional = true }
 
+# NOTE: there is intentionally no `[dev-dependencies]` block.
+#
+# The third-pass audit added `spl-token-2022-interface = "3"` here to verify
+# Token-2022 opcode discriminants against the canonical enum at compile time.
+# That dep transitively pulls in `wincode 0.5.x` (via `solana-sha256-hasher
+# 3.x`), which requires Rust `edition2024` and breaks Certora's pinned cargo
+# v1.51 (Rust 1.84). Pinning `wincode-derive` to 0.4.3 isn't enough — the
+# parent `wincode` 0.5.x is also edition-2024.
+#
+# Tradeoff: `integrations/token2022_opcode_test.rs` now uses inlined byte
+# constants instead of canonical-enum verification. We lose the upstream
+# rename signal but keep our internal regression guard. V1.1 backlog: re-add
+# upstream verification via a separate test crate excluded from Certora's
+# workspace build.
+
 [package.metadata.certora]
 sources = [
     "Cargo.toml",

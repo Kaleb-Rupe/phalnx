@@ -5,7 +5,7 @@
  * Every error includes a category, retryability flag, and
  * recovery actions that tell the agent exactly what to do next.
  *
- * Maps all 75 on-chain error codes (6000-6074) plus 34 SDK
+ * Maps all 88 on-chain error codes (6000-6087) plus 34 SDK
  * error codes (7000-7033) to AgentError with machine-readable metadata.
  *
  * Zero dependency on @solana/web3.js or @coral-xyz/anchor.
@@ -57,7 +57,7 @@ export interface AgentError {
 }
 
 // ---------------------------------------------------------------------------
-// On-chain error code mapping (6000-6074)
+// On-chain error code mapping (6000-6087)
 // ---------------------------------------------------------------------------
 
 interface ErrorMapping {
@@ -1170,6 +1170,198 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
+
+  // F-10 audit fix: durable-nonce pre-signing defense
+  6075: {
+    name: "QueuedUpdateExpired",
+    message:
+      "Queued update is too old (>MAX_APPLY_AGE_SLOTS) — re-queue to apply. Defends against durable-nonce pre-signing.",
+    category: "POLICY_VIOLATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "requeue",
+        description:
+          "Re-queue the update via queue_policy_update / queue_constraints_update / queue_close_constraints / queue_agent_permissions_update — the original queued update is past the freshness window.",
+      },
+    ],
+  },
+  6076: {
+    name: "AccountWritabilityMismatch",
+    message:
+      "Account writability flag does not match the constraint requirement (read-only vs writable).",
+    category: "INPUT_VALIDATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "fix_constraints",
+        description:
+          "Match the writability flag (read-only or writable) of the account passed to the instruction with the constraint's is_writable_required value.",
+      },
+    ],
+  },
+
+  // M11 SIMD-0296 pad-attack DoS guard
+  6077: {
+    name: "SysvarScanBoundExceeded",
+    message:
+      "Sysvar instruction scan exceeded the per-tx safety bound (MAX_SYSVAR_SCAN_ITERATIONS=64).",
+    category: "INPUT_VALIDATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "fix_transaction_shape",
+        description:
+          "Reduce the number of instructions in the transaction. The on-chain sysvar walk is bounded at 64 ix to defend against pad-attack DoS (M11 / SIMD-0296). Legitimate flows fit well under this cap.",
+      },
+    ],
+  },
+
+  // C4 audit fix: async-fulfillment program deny
+  6078: {
+    name: "AsyncFulfillmentNotPermitted",
+    message:
+      "Async-fulfillment programs (Jupiter Perps, Drift v2, Drift JIT) are not permitted in V1 — keeper-driven settlement happens after finalize_session returns and cannot be measured against the spending cap.",
+    category: "POLICY_VIOLATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "use_supported_protocol",
+        description:
+          "Use a synchronous protocol (Jupiter swap, Jupiter Lend, etc.). V1.1 will add a sanctioned async-friendly path with settlement-tracked counters or post-execution attestation.",
+      },
+    ],
+  },
+
+  // Orphan constraints PDA cleanup (F3-H1 audit fix)
+  6079: {
+    name: "ConstraintsAlreadyPopulated",
+    message:
+      "Cannot clean an active constraints PDA via cleanup_orphan_constraints_pda — use queue_close_constraints + apply_close_constraints instead.",
+    category: "INPUT_VALIDATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "use_close_path",
+        description:
+          "Route through the timelocked close-constraints path; the orphan-cleanup instruction only operates on never-populated PDAs (partial allocate+extend chain).",
+      },
+    ],
+  },
+  6080: {
+    name: "OrphanPdaWrongOwner",
+    message: "PDA at the constraints seeds is not owned by the Sigil program.",
+    category: "INPUT_VALIDATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "verify_pda",
+        description:
+          "Verify the PDA derivation: it must be owned by the Sigil program and match seeds (vault, constraints).",
+      },
+    ],
+  },
+  6081: {
+    name: "OrphanPdaPopulated",
+    message:
+      "PDA is fully populated (carries the Anchor discriminator) — not an orphan; cannot be cleaned.",
+    category: "INPUT_VALIDATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "use_close_path",
+        description:
+          "Route fully-populated constraints PDAs through queue_close_constraints + apply_close_constraints.",
+      },
+    ],
+  },
+
+  // PR 7: Token-2022 opcode blocks (M3 + Pentester HIGH/MED + third-pass audit)
+  6082: {
+    name: "ConfidentialTransferBlocked",
+    message:
+      "Token-2022 ConfidentialTransfer is not permitted between validate_and_authorize and finalize_session.",
+    category: "POLICY_VIOLATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "use_supported_protocol",
+        description:
+          "Token-2022 ConfidentialTransfer (opcode 27/42) hides spending amounts from sysvar accounting and cannot be tracked. Use the standard SPL Token transfer or Jupiter swap path instead.",
+      },
+    ],
+  },
+  6083: {
+    name: "PermanentDelegateBlocked",
+    message:
+      "Token-2022 PermanentDelegate is not permitted between validate_and_authorize and finalize_session.",
+    category: "POLICY_VIOLATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "use_supported_protocol",
+        description:
+          "Token-2022 PermanentDelegate (opcode 35) installs a session-bound delegate that survives finalize. Reject up-front; use a per-tx Approve instead.",
+      },
+    ],
+  },
+  6084: {
+    name: "TransferHookBlocked",
+    message:
+      "Token-2022 TransferHook is not permitted between validate_and_authorize and finalize_session.",
+    category: "POLICY_VIOLATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "use_supported_protocol",
+        description:
+          "Token-2022 TransferHook (opcode 36) routes mid-tx control to attacker-chosen code. Use a non-hook mint or whitelist the hook program in V1.1.",
+      },
+    ],
+  },
+  6085: {
+    name: "LamportDrainBlocked",
+    message:
+      "Token-2022 destructive-balance instruction (opcode 38/45/46) is not permitted between validate_and_authorize and finalize_session.",
+    category: "POLICY_VIOLATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "use_supported_protocol",
+        description:
+          "WithdrawExcessLamports/UnwrapLamports/PermissionedBurnExtension drain SOL or balances outside the spending-cap path. Block at the gate; V1.1 may add an owner-allowlist for legitimate uses.",
+      },
+    ],
+  },
+  6086: {
+    name: "BatchInstructionBlocked",
+    message:
+      "Token-2022 Batch instruction (opcode 255) is blocked outright — wraps inner instructions and bypasses the byte-0 blocklist.",
+    category: "POLICY_VIOLATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "use_supported_protocol",
+        description:
+          "Token-2022 Batch (opcode 255) wraps inner TokenInstructions; the byte-0 blocklist cannot see them. Submit each inner ix as its own top-level instruction so guards can inspect each.",
+      },
+    ],
+  },
+  // F-4 audit fix: explicit destination_mode (default Restricted closes default-allow drain)
+  6087: {
+    name: "InvalidDestinationMode",
+    message:
+      "Invalid destination mode (must be 0 = Restricted or 1 = OpenWithCap).",
+    category: "INPUT_VALIDATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "fix_policy",
+        description:
+          "Pass destination_mode = 0 (Restricted, default) or 1 (OpenWithCap, explicit opt-in to drain blast radius).",
+      },
+    ],
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -1691,7 +1883,7 @@ const SDK_ERRORS: Record<string, ErrorMapping> = {
  * Convert any error into a structured AgentError.
  *
  * Handles:
- * - On-chain Anchor errors (code 6000-6074)
+ * - On-chain Anchor errors (code 6000-6087)
  * - SDK errors (code 7000-7033)
  * - Network/RPC errors (from message patterns)
  * - Unknown errors (wrapped as FATAL)
@@ -2044,7 +2236,7 @@ function extractErrorCode(error: unknown): number | null {
   const e = error as Record<string, unknown>;
 
   // Direct code property
-  if (typeof e.code === "number" && e.code >= 6000 && e.code <= 6074)
+  if (typeof e.code === "number" && e.code >= 6000 && e.code <= 6087)
     return e.code;
 
   // Anchor error structure
@@ -2061,7 +2253,7 @@ function extractErrorCode(error: unknown): number | null {
     const match = e.message.match(/custom program error: 0x([0-9a-fA-F]+)/);
     if (match) {
       const code = parseInt(match[1], 16);
-      if (code >= 6000 && code <= 6074) return code;
+      if (code >= 6000 && code <= 6087) return code;
     }
   }
 
@@ -2302,7 +2494,7 @@ export class SigilSdkError extends Error implements AgentError {
  * Returns a SigilSdkError (extends Error) so instanceof Error checks still work.
  *
  * Processing order:
- * 1. Try on-chain error extraction via toAgentError() (numeric codes 6000-6074)
+ * 1. Try on-chain error extraction via toAgentError() (numeric codes 6000-6087)
  * 2. Pattern-match SDK error messages (11 patterns from seal.ts throw sites)
  * 3. Fallback to UNKNOWN/FATAL
  */

@@ -28,9 +28,10 @@ import { evaluateAlertConditions } from "../security-analytics.js";
 import type { SecurityCheck, Alert } from "../security-analytics.js";
 import { getAgentProfile } from "../agent-analytics.js";
 import { getSpendingBreakdown } from "../spending-analytics.js";
+import { getSpendingVelocity } from "../spending-analytics.js";
 import type { SpendingBreakdown } from "../spending-analytics.js";
 import { getVaultActivity } from "../event-analytics.js";
-import type { VaultActivityItem } from "../event-analytics.js";
+import type { VaultActivityItem, EventCategory } from "../event-analytics.js";
 import { resolveProtocolName } from "../protocol-names.js";
 import type { Network } from "../types.js";
 import type { ResolvedVaultState } from "../state-resolver.js";
@@ -61,7 +62,14 @@ import type {
   OverviewContext,
   OverviewData,
   GetOverviewOptions,
+  RiskMetrics,
+  AuditTrailEntry,
+  AuditTrailOptions,
+  AuditEventType,
 } from "./types.js";
+
+import { SigilSdkDomainError } from "../errors/sdk.js";
+import { SIGIL_ERROR__SDK__INVALID_PARAMS } from "../errors/codes.js";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -426,7 +434,7 @@ export function buildPolicy(ctx: OverviewContext): PolicyData {
   const dailyCap = p.dailySpendingCapUsd as bigint;
   const maxPerTrade = p.maxTransactionSizeUsd ?? 0n;
   const protocolCaps = (p.protocolCaps || []) as bigint[];
-  const sessionExpiry = p.sessionExpirySlots as bigint;
+  const sessionExpiry = p.sessionExpirySeconds as bigint;
   const policyVer = (p.policyVersion ?? 0n) as bigint;
   const timelockSec = Number(p.timelockDuration);
 
@@ -459,8 +467,8 @@ export function buildPolicy(ctx: OverviewContext): PolicyData {
       changes.allowedDestinations = pp.allowedDestinations.value;
     if (isSome(pp.developerFeeRate))
       changes.developerFeeRate = pp.developerFeeRate.value;
-    if (isSome(pp.sessionExpirySlots))
-      changes.sessionExpirySlots = pp.sessionExpirySlots.value;
+    if (isSome(pp.sessionExpirySeconds))
+      changes.sessionExpirySeconds = pp.sessionExpirySeconds.value;
     if (isSome(pp.timelockDuration))
       changes.timelock = Number(pp.timelockDuration.value);
 
@@ -482,7 +490,7 @@ export function buildPolicy(ctx: OverviewContext): PolicyData {
     maxSlippageBps: p.maxSlippageBps as number,
     allowedDestinations: (p.allowedDestinations || []) as string[],
     developerFeeRate: p.developerFeeRate as number,
-    sessionExpirySlots: sessionExpiry,
+    sessionExpirySeconds: sessionExpiry,
     timelockSeconds: timelockSec,
     policyVersion: policyVer,
     pendingUpdate,
@@ -496,7 +504,7 @@ export function buildPolicy(ctx: OverviewContext): PolicyData {
       maxSlippageBps: p.maxSlippageBps,
       allowedDestinations: (p.allowedDestinations || []) as string[],
       developerFeeRate: p.developerFeeRate,
-      sessionExpirySlots: bs(sessionExpiry),
+      sessionExpirySeconds: bs(sessionExpiry),
       timelockSeconds: timelockSec,
       policyVersion: bs(policyVer),
       pendingUpdate: pendingUpdate
@@ -883,5 +891,281 @@ export async function getOverview(
     };
   } catch (err) {
     throw toDxError(err, "OwnerClient.getOverview");
+  }
+}
+
+// ─── getAgentDetail (S10) ────────────────────────────────────────────────────
+
+/**
+ * Compose a single {@link AgentData} from a pre-fetched {@link OverviewContext}.
+ *
+ * Reuses {@link buildAgents} and filters to the requested address. Returns
+ * `null` when the agent is not registered in the vault — callers that want
+ * the throwing surface use `getAgentDetail` instead.
+ *
+ * Activity-derived fields (`lastActionType` / `lastActionProtocol` /
+ * `lastActionTimestamp` / `blockedCount24h`) follow the same defaulting rules
+ * as `buildAgents`: empty/zero when `ctx.activity` is undefined.
+ *
+ * @experimental Part of the `build*` composition surface (S10). Signature and
+ * JSON shape may shift before v1.0.
+ *
+ * @see OwnerClient.getAgentDetail — the stable single-call alternative.
+ */
+export function buildAgentDetail(
+  ctx: OverviewContext,
+  agent: Address,
+): AgentData | null {
+  const all = buildAgents(ctx);
+  return all.find((a) => a.address === agent) ?? null;
+}
+
+/**
+ * Single-agent detail wrapper around {@link getAgentProfile} + activity
+ * enrichment. Resolves vault state, fetches the same 100-event activity
+ * window as `getAgents`, and returns the {@link AgentData} for the requested
+ * agent.
+ *
+ * Throws a typed {@link SigilSdkDomainError} (mapped through `toDxError` to
+ * `SIGIL_ERROR__SDK__INVALID_PARAMS`) when the agent is not registered in
+ * the vault. Same graceful-degradation pattern as `getAgents` for activity
+ * fetch failures: enrichment fields default to empty/zero rather than
+ * propagating the failure.
+ */
+export async function getAgentDetail(
+  rpc: Rpc<SolanaRpcApi>,
+  vault: Address,
+  agent: Address,
+  network: "devnet" | "mainnet",
+): Promise<AgentData> {
+  try {
+    const [state, activity] = await Promise.all([
+      resolveVaultStateForOwner(rpc, vault, undefined, toNet(network)),
+      getVaultActivity(rpc, vault, 100, toNet(network)).catch(
+        (err: unknown) => {
+          // Same redaction discipline as getAgents (PR 1.B).
+          const cause = redactCause(err);
+          getSigilModuleLogger().warn(
+            "[OwnerClient.getAgentDetail] activity enrichment failed — falling back to empty last-action fields",
+            { cause: cause.message ?? cause.name ?? cause.code ?? "unknown" },
+          );
+          return [];
+        },
+      ),
+    ]);
+
+    const detail = buildAgentDetail({ vault, state, activity }, agent);
+    if (!detail) {
+      throw new SigilSdkDomainError(
+        SIGIL_ERROR__SDK__INVALID_PARAMS,
+        `Agent ${agent} is not registered in vault ${vault}`,
+        { context: { field: "agent", received: agent } },
+      );
+    }
+    return detail;
+  } catch (err) {
+    throw toDxError(err, "OwnerClient.getAgentDetail");
+  }
+}
+
+// ─── getRiskMetrics (S11) ────────────────────────────────────────────────────
+
+/**
+ * Map an {@link Alert}[] to the four-level UI risk badge. Critical wins over
+ * warning, warning wins over info; absence of any alerts is "low".
+ *
+ * Pure helper — exposed for direct testing. Most consumers use
+ * {@link getRiskMetrics}.
+ */
+export function deriveRiskLevel(
+  alerts: readonly Alert[],
+): RiskMetrics["riskLevel"] {
+  let hasWarning = false;
+  let hasInfo = false;
+  for (const a of alerts) {
+    if (a.severity === "critical") return "critical";
+    if (a.severity === "warning") hasWarning = true;
+    else if (a.severity === "info") hasInfo = true;
+  }
+  if (hasWarning) return "high";
+  if (hasInfo) return "elevated";
+  return "low";
+}
+
+/**
+ * Compute {@link RiskMetrics} from a pre-fetched {@link OverviewContext}.
+ *
+ * Combines:
+ * - {@link getSpendingVelocity}(state.tracker, now, state.globalBudget) →
+ *   `currentRate` becomes `spendingVelocity`; `isAccelerating` and
+ *   `timeToCapSeconds` flow through directly.
+ * - 24h cap projection → `capVelocity = currentRate * 24 / cap × 100`
+ *   (clamped at 0 when cap is 0n).
+ * - {@link evaluateAlertConditions}(state, vault) → `riskLevel` via
+ *   {@link deriveRiskLevel}. Uses `ctx.alerts` when memoized.
+ *
+ * @experimental Part of the `build*` composition surface (S11). Signature and
+ * JSON shape may shift before v1.0.
+ *
+ * @see OwnerClient.getRiskMetrics — the stable single-call alternative.
+ */
+export function buildRiskMetrics(ctx: OverviewContext): RiskMetrics {
+  const state = ctx.state;
+  const nowUnix = BigInt(Math.floor(Date.now() / 1000));
+  const velocity = getSpendingVelocity(
+    state.tracker,
+    nowUnix,
+    state.globalBudget,
+  );
+  const alerts = ctx.alerts ?? evaluateAlertConditions(state, ctx.vault);
+
+  // capVelocity: percent of daily cap consumed in 24h at current rate.
+  // 0 when cap is unset (matches alert logic which only fires on cap > 0).
+  const cap = state.globalBudget.cap;
+  let capVelocity = 0;
+  if (cap > 0n && velocity.currentRate > 0n) {
+    // Promote to Number for the percent calc — rate × 24 / cap × 100.
+    // currentRate is hourly USD base units; cap is total USD base units.
+    capVelocity = (Number(velocity.currentRate * 24n) / Number(cap)) * 100;
+  }
+
+  const riskLevel = deriveRiskLevel(alerts);
+
+  const spendingVelocity = velocity.currentRate;
+  const isAccelerating = velocity.isAccelerating;
+  const timeToCapSeconds = velocity.timeToCapSeconds;
+
+  return {
+    capVelocity,
+    spendingVelocity,
+    riskLevel,
+    isAccelerating,
+    timeToCapSeconds,
+    toJSON: () => ({
+      capVelocity,
+      spendingVelocity: bs(spendingVelocity),
+      riskLevel,
+      isAccelerating,
+      timeToCapSeconds,
+    }),
+  };
+}
+
+/**
+ * Risk-tilt summary for a vault — current spending velocity, daily-cap
+ * projection, and a four-level risk badge derived from the alert stream.
+ *
+ * One state resolution + one alert evaluation. Use this for the dashboard's
+ * "is something concerning right now?" indicator. For deeper inspection,
+ * pair with `getOverview` (which embeds the alert list) or the
+ * `evaluateAlertConditions` export.
+ */
+export async function getRiskMetrics(
+  rpc: Rpc<SolanaRpcApi>,
+  vault: Address,
+  network: "devnet" | "mainnet",
+): Promise<RiskMetrics> {
+  try {
+    const state = await resolveVaultStateForOwner(
+      rpc,
+      vault,
+      undefined,
+      toNet(network),
+    );
+    return buildRiskMetrics({ vault, state });
+  } catch (err) {
+    throw toDxError(err, "OwnerClient.getRiskMetrics");
+  }
+}
+
+// ─── getAuditTrail (S12) ─────────────────────────────────────────────────────
+
+/**
+ * Categories from {@link getVaultActivity} that count as audit events.
+ *
+ * Trades, deposits, withdrawals, and fee accruals are routine operating
+ * activity and are excluded. Constraint changes ride alongside policy
+ * changes (the underlying decoder maps them all to `policy`), so they are
+ * captured under `policy_change`.
+ */
+const AUDIT_CATEGORY_TO_TYPE: Partial<Record<EventCategory, AuditEventType>> = {
+  policy: "policy_change",
+  agent: "agent_change",
+  security: "vault_security",
+  escrow: "escrow",
+};
+
+/**
+ * Filter raw {@link VaultActivityItem}[] to the audit subset and map each to
+ * an {@link AuditTrailEntry}. Pure — no RPC, no time-based filtering.
+ *
+ * Used by both `getAuditTrail` (which then applies the optional `since`
+ * timestamp filter) and direct callers that already have an activity list.
+ *
+ * @experimental Part of the `build*` composition surface (S12).
+ */
+export function buildAuditTrail(
+  items: readonly VaultActivityItem[],
+): AuditTrailEntry[] {
+  const out: AuditTrailEntry[] = [];
+  for (const item of items) {
+    const eventType = AUDIT_CATEGORY_TO_TYPE[item.category];
+    if (!eventType) continue;
+    const timestamp = item.timestamp * 1000;
+    const eventName = (item.eventType as string) ?? "";
+    const actor = (item.agent as string) || "";
+    const details = item.description;
+    const txSignature = item.txSignature;
+    out.push({
+      timestamp,
+      eventType,
+      eventName,
+      actor,
+      details,
+      txSignature,
+      toJSON: () => ({
+        timestamp,
+        eventType,
+        eventName,
+        actor,
+        details,
+        txSignature,
+      }),
+    });
+  }
+  return out;
+}
+
+/**
+ * Governance + security audit trail — the policy/agent/security/escrow
+ * subset of the vault's activity stream.
+ *
+ * Use this for an admin-facing "what changed?" feed: policy queue/apply
+ * cycles, agent registrations, vault freeze/resume events, and escrow
+ * lifecycle. Trades and fund movements are excluded — they live in
+ * `getActivity()`.
+ *
+ * Activity fetch shape: one `getSignaturesForAddress` + up to `limit`
+ * sequential `getTransaction` calls (see {@link getVaultActivity}).
+ * Default limit is 100 — large enough to surface a few weeks of governance
+ * activity for a typical vault without inflating RPC cost.
+ */
+export async function getAuditTrail(
+  rpc: Rpc<SolanaRpcApi>,
+  vault: Address,
+  network: "devnet" | "mainnet",
+  opts?: AuditTrailOptions,
+): Promise<AuditTrailEntry[]> {
+  try {
+    const limit = opts?.limit ?? 100;
+    const items = await getVaultActivity(rpc, vault, limit, toNet(network));
+    let entries = buildAuditTrail(items);
+    if (opts?.since !== undefined) {
+      const since = opts.since;
+      entries = entries.filter((e) => e.timestamp >= since);
+    }
+    return entries;
+  } catch (err) {
+    throw toDxError(err, "OwnerClient.getAuditTrail");
   }
 }

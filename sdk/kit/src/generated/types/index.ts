@@ -42,6 +42,7 @@ export * from "./feesCollected.js";
 export * from "./fundsDeposited.js";
 export * from "./fundsWithdrawn.js";
 export * from "./instructionConstraintsCreated.js";
+export * from "./orphanConstraintsPdaCleaned.js";
 export * from "./pdaAllocated.js";
 export * from "./pdaExtended.js";
 export * from "./policyChangeApplied.js";
