@@ -40,6 +40,9 @@ import type {
   DiscoveredVault,
   OverviewData,
   GetOverviewOptions,
+  RiskMetrics,
+  AuditTrailEntry,
+  AuditTrailOptions,
 } from "./types.js";
 
 import * as reads from "./reads.js";
@@ -72,6 +75,10 @@ export type {
   OverviewContext,
   OverviewData,
   GetOverviewOptions,
+  RiskMetrics,
+  AuditTrailEntry,
+  AuditTrailOptions,
+  AuditEventType,
 } from "./types.js";
 
 // ─── fromJSON — MCP round-trip deserialization (PR 3.A) ─────────────────────
@@ -103,6 +110,10 @@ export {
   buildHealth,
   buildPolicy,
   buildActivityRows,
+  buildAgentDetail,
+  buildRiskMetrics,
+  buildAuditTrail,
+  deriveRiskLevel,
   DEFAULT_OVERVIEW_ACTIVITY_LIMIT,
 } from "./reads.js";
 
@@ -281,6 +292,36 @@ export class OwnerClient {
    */
   async getOverview(options?: GetOverviewOptions): Promise<OverviewData> {
     return reads.getOverview(this.rpc, this.vault, this.network, options);
+  }
+
+  /**
+   * Single-agent detail wrapper around `getAgentProfile` + activity
+   * enrichment (S10). Returns the dashboard-friendly {@link AgentData}
+   * shape — same fields as one entry in `getAgents()` — for the requested
+   * agent. Throws via `toDxError` when the agent is not registered.
+   */
+  async getAgentDetail(agent: Address): Promise<AgentData> {
+    return reads.getAgentDetail(this.rpc, this.vault, agent, this.network);
+  }
+
+  /**
+   * Risk-tilt summary (S11) — combines spending velocity + alert evaluation
+   * into a four-level UI risk badge plus the underlying numeric metrics.
+   * Use for the dashboard's "is something concerning right now?" indicator.
+   * One state resolution; no activity fetch.
+   */
+  async getRiskMetrics(): Promise<RiskMetrics> {
+    return reads.getRiskMetrics(this.rpc, this.vault, this.network);
+  }
+
+  /**
+   * Governance + security audit trail (S12) — the policy/agent/security/
+   * escrow subset of `getVaultActivity`. Trades and fund movements are
+   * excluded; for those use `getActivity()`. Default limit is 100; pass
+   * `since` to filter to events after a given Unix-ms timestamp.
+   */
+  async getAuditTrail(opts?: AuditTrailOptions): Promise<AuditTrailEntry[]> {
+    return reads.getAuditTrail(this.rpc, this.vault, this.network, opts);
   }
 
   // ─── Vault Lifecycle ────────────────────────────────────────────────────────

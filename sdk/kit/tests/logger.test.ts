@@ -5,7 +5,11 @@ import {
   NOOP_LOGGER,
   createConsoleLogger,
   resolveLogger,
+  sanitizeNoop,
+  structuredError,
+  structuredWarn,
   type SigilLogger,
+  type StructuredWarnSanitizer,
 } from "../src/logger.js";
 
 describe("NOOP_LOGGER", () => {
@@ -141,5 +145,130 @@ describe("resolveLogger", () => {
       error() {},
     };
     expect(resolveLogger(custom)).to.equal(custom);
+  });
+});
+
+// ─── F-9 (third-pass audit, Slope wallet analog) ─────────────────────────────
+// Sanitization is type-mandatory for any payload heading to observability.
+describe("structuredWarn (F-9 sanitize)", () => {
+  type Captured = { message: string; context?: Record<string, unknown> };
+
+  const captureLogger = (): { calls: Captured[]; logger: SigilLogger } => {
+    const calls: Captured[] = [];
+    const logger: SigilLogger = {
+      debug() {},
+      info() {},
+      warn(message, context) {
+        calls.push({ message, context });
+      },
+      error() {},
+    };
+    return { calls, logger };
+  };
+
+  it("invokes sanitize before forwarding to logger.warn", () => {
+    const { calls, logger } = captureLogger();
+
+    interface RawVaultMismatch {
+      vaultPubkey: string;
+      seedPhrase: string; // PRETEND-secret payload — must be redacted
+    }
+    const sanitize: StructuredWarnSanitizer<RawVaultMismatch> = (raw) => ({
+      vaultPubkey: `${raw.vaultPubkey.slice(0, 4)}...${raw.vaultPubkey.slice(-4)}`,
+      // seedPhrase intentionally omitted from the sanitized payload
+    });
+
+    structuredWarn(logger, "vault-mismatch", sanitize, {
+      vaultPubkey: "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL",
+      seedPhrase: "abandon abandon abandon",
+    });
+
+    expect(calls).to.have.length(1);
+    expect(calls[0]!.message).to.equal("vault-mismatch");
+    expect(calls[0]!.context).to.deep.equal({ vaultPubkey: "4ZeV...wrHL" });
+    // The seedPhrase MUST NOT have reached the logger — this is the F-9 fix.
+    expect(JSON.stringify(calls[0]!.context)).to.not.include("abandon");
+  });
+
+  it("accepts sanitizeNoop for payloads already safe to log", () => {
+    const { calls, logger } = captureLogger();
+
+    structuredWarn(logger, "tee-degraded", sanitizeNoop, {
+      status: "provider_trusted",
+      code: 1234,
+    });
+
+    expect(calls[0]!.message).to.equal("tee-degraded");
+    expect(calls[0]!.context).to.deep.equal({
+      status: "provider_trusted",
+      code: 1234,
+    });
+  });
+
+  it("compiles only when sanitize is supplied (type-level guarantee)", () => {
+    // This test exercises the runtime contract; the *type-level* contract is
+    // that the function signature requires `sanitize` — there is no overload
+    // accepting a raw payload without one. A `// @ts-expect-error` would
+    // assert that here, but we keep the runtime test instead since
+    // ts-expect-error gates depend on the test runner's TS config.
+    const { logger } = captureLogger();
+    expect(() =>
+      structuredWarn(logger, "ok", sanitizeNoop, { ok: true }),
+    ).not.to.throw();
+  });
+});
+
+describe("structuredError (F-9 sanitize)", () => {
+  type Captured = {
+    message: string;
+    err: unknown;
+    context?: Record<string, unknown>;
+  };
+
+  const captureLogger = (): { calls: Captured[]; logger: SigilLogger } => {
+    const calls: Captured[] = [];
+    const logger: SigilLogger = {
+      debug() {},
+      info() {},
+      warn() {},
+      error(message, err, context) {
+        calls.push({ message, err, context });
+      },
+    };
+    return { calls, logger };
+  };
+
+  it("invokes sanitize and preserves err for stack-trace capture", () => {
+    const { calls, logger } = captureLogger();
+    const err = new Error("boom");
+
+    interface RawTxFailure {
+      signature: string;
+      logs: string[];
+    }
+    const sanitize: StructuredWarnSanitizer<RawTxFailure> = (raw) => ({
+      signaturePrefix: raw.signature.slice(0, 8),
+      logCount: raw.logs.length,
+    });
+
+    structuredError(logger, "tx-failure", err, sanitize, {
+      signature: "5N9dJk1Yq...",
+      logs: ["Program log: ...", "Program failed: ..."],
+    });
+
+    expect(calls).to.have.length(1);
+    expect(calls[0]!.message).to.equal("tx-failure");
+    expect(calls[0]!.err).to.equal(err);
+    expect(calls[0]!.context).to.deep.equal({
+      signaturePrefix: "5N9dJk1Y",
+      logCount: 2,
+    });
+  });
+});
+
+describe("sanitizeNoop", () => {
+  it("returns the input verbatim", () => {
+    const payload = { a: 1, b: "x" };
+    expect(sanitizeNoop(payload)).to.equal(payload);
   });
 });

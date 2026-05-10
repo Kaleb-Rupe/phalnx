@@ -374,6 +374,112 @@ export interface GetOverviewOptions {
   activityLimit?: number;
 }
 
+// ─── Risk Metrics (S11) ──────────────────────────────────────────────────────
+
+/**
+ * Risk-tilt summary derived from current spending + alert state.
+ *
+ * Composed from:
+ * - {@link getSpendingVelocity} — `currentRate` becomes `spendingVelocity`
+ *   (USD/hour at the latest 30-minute observation), `isAccelerating` and
+ *   `timeToCapSeconds` are passed through directly.
+ * - The 24h cap projection — `capVelocity` is the percent of the daily cap
+ *   that would be consumed in 24h at the current rate (0 when there is no
+ *   cap configured).
+ * - {@link evaluateAlertConditions} — the highest severity present is mapped
+ *   to `riskLevel` via: any `critical` ⇒ `"critical"`; otherwise any
+ *   `warning` ⇒ `"high"`; otherwise any `info` ⇒ `"elevated"`; otherwise
+ *   `"low"`.
+ *
+ * The four-level `riskLevel` is intentionally coarser than the on-chain
+ * health levels — it's meant for a single risk badge in the UI, not for
+ * matching the security checklist's pass/fail.
+ */
+export interface RiskMetrics {
+  /** Percentage of the daily cap projected to be consumed in 24h at the current rate. 0 if no cap configured. */
+  capVelocity: number;
+  /** Current spend rate in 6-decimal USD per hour (from getSpendingVelocity). */
+  spendingVelocity: bigint;
+  riskLevel: "low" | "elevated" | "high" | "critical";
+  isAccelerating: boolean;
+  /** Seconds until the cap is projected to be hit. `null` when not approaching. */
+  timeToCapSeconds: number | null;
+  toJSON(): SerializedRiskMetrics;
+}
+
+// ─── Audit Trail (S12) ───────────────────────────────────────────────────────
+
+/**
+ * Categories of activity returned in the audit trail.
+ *
+ * The audit trail is the governance/security subset of `getVaultActivity`:
+ * trades, deposits, withdrawals, and fee accruals are excluded as routine
+ * operating activity. Each variant maps 1:1 to an {@link EventCategory}
+ * value from the underlying activity stream.
+ */
+export type AuditEventType =
+  | "policy_change"
+  | "agent_change"
+  | "vault_security"
+  | "escrow";
+
+/**
+ * One row of the audit trail — a governance, agent-management, security, or
+ * escrow event drawn from the vault's activity stream.
+ *
+ * Returned by {@link OwnerClient.getAuditTrail}. The list is filtered to the
+ * subset of `getVaultActivity` whose category is in
+ * `{policy, agent, security, escrow}`; trade/deposit/withdrawal/fee events
+ * are excluded as routine operating activity.
+ */
+export interface AuditTrailEntry {
+  /** Unix milliseconds. */
+  timestamp: number;
+  eventType: AuditEventType;
+  /**
+   * Originating event name (e.g. `"PolicyUpdated"`, `"AgentRegistered"`,
+   * `"VaultFrozen"`) preserved verbatim from the underlying decoded event for
+   * downstream filtering and UI labels.
+   */
+  eventName: string;
+  /**
+   * Address that initiated the action. For agent events this is the agent's
+   * own pubkey when present; for policy/security events the originating
+   * decoder may not surface an actor — the empty string is used as a
+   * sentinel "no actor recorded" value rather than `null` so the field
+   * always serializes as a string.
+   */
+  actor: string;
+  /** Human-readable summary from `describeEvent()` — safe to render directly. */
+  details: string;
+  txSignature: string;
+  toJSON(): SerializedAuditTrailEntry;
+}
+
+/**
+ * Filtering options for {@link OwnerClient.getAuditTrail}.
+ *
+ * `since` and `limit` are independent: `since` filters the post-fetch event
+ * stream by timestamp, while `limit` controls the underlying
+ * {@link getVaultActivity} fetch size (default 100). When both are passed,
+ * the fetch is sized to `limit` and any events older than `since` are
+ * dropped after categorization.
+ */
+export interface AuditTrailOptions {
+  /**
+   * Activity fetch size cap. Defaults to 100 — matches the default window
+   * used by {@link getAgents} and {@link getOverview}. Larger values
+   * proportionally increase RPC cost (`getSignaturesForAddress` +
+   * `getTransaction × limit`).
+   */
+  limit?: number;
+  /**
+   * Lower bound on `timestamp` (Unix ms). Entries with `timestamp < since`
+   * are excluded.
+   */
+  since?: number;
+}
+
 // ─── Mutation Inputs ─────────────────────────────────────────────────────────
 
 /**
@@ -588,4 +694,23 @@ export interface SerializedOverviewData {
   health: SerializedHealthData;
   policy: SerializedPolicyData;
   activity: SerializedActivityRow[];
+}
+
+/** @internal */
+export interface SerializedRiskMetrics {
+  capVelocity: number;
+  spendingVelocity: string;
+  riskLevel: string;
+  isAccelerating: boolean;
+  timeToCapSeconds: number | null;
+}
+
+/** @internal */
+export interface SerializedAuditTrailEntry {
+  timestamp: number;
+  eventType: string;
+  eventName: string;
+  actor: string;
+  details: string;
+  txSignature: string;
 }

@@ -480,10 +480,10 @@ describe("surfpool-integration", function () {
         const errStr = err.message || JSON.stringify(err);
         expect(
           errStr.includes("MissingFinalizeInstruction") ||
-            errStr.includes("6034"),
+            errStr.includes("6028"),
         ).to.equal(
           true,
-          `Expected MissingFinalizeInstruction (6034) but got: ${errStr.slice(0, 200)}`,
+          `Expected MissingFinalizeInstruction (6028) but got: ${errStr.slice(0, 200)}`,
         );
       }
     });

@@ -491,7 +491,11 @@ export {
   resolveLogger,
   setSigilModuleLogger,
   getSigilModuleLogger,
+  sanitizeNoop,
+  structuredWarn,
+  structuredError,
   type SigilLogger,
+  type StructuredWarnSanitizer,
 } from "./logger.js";
 
 // ─── v0.9.0 genesis hash constants (A7) ─────────────────────────────────────
