@@ -49,7 +49,6 @@ pub struct QueueConstraintsUpdate<'info> {
 pub fn handler(
     ctx: Context<QueueConstraintsUpdate>,
     entries: Vec<ConstraintEntry>,
-    strict_mode: bool,
 ) -> Result<()> {
     crate::reject_cpi!();
 
@@ -113,7 +112,7 @@ pub fn handler(
             bytemuck::from_bytes_mut(&mut data[8..8 + struct_size]);
 
         pending.vault = vault_key.to_bytes();
-        pending.strict_mode = strict_mode as u8;
+        // strict_mode field removed in V2 (REVAMP_PLAN §2.2).
         pending.queued_at = clock.unix_timestamp;
         pending.executes_at = executes_at;
         // F-10 audit fix: capture queue slot for slot-bounded freshness check.

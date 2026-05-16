@@ -38,12 +38,8 @@ export interface TxOpts {
   computeUnits?: number;
   /** Priority fee in micro-lamports. Default: 0. */
   priorityFeeMicroLamports?: number;
-  /**
-   * Constraint enforcement mode. Default: true (strict).
-   * When false, agents can execute instructions that don't match any constraint entry.
-   * Only applies to createConstraints and queueConstraintsUpdate.
-   */
-  strictMode?: boolean;
+  // strictMode option removed in V2 (REVAMP_PLAN §2.2): every constraint
+  // entry is strictly enforced on-chain. Callers no longer pass a mode flag.
 }
 
 // ─── Vault State ─────────────────────────────────────────────────────────────
@@ -420,16 +416,15 @@ export interface RiskMetrics {
 export type AuditEventType =
   | "policy_change"
   | "agent_change"
-  | "vault_security"
-  | "escrow";
+  | "vault_security";
 
 /**
- * One row of the audit trail — a governance, agent-management, security, or
- * escrow event drawn from the vault's activity stream.
+ * One row of the audit trail — a governance, agent-management, or security
+ * event drawn from the vault's activity stream.
  *
  * Returned by {@link OwnerClient.getAuditTrail}. The list is filtered to the
  * subset of `getVaultActivity` whose category is in
- * `{policy, agent, security, escrow}`; trade/deposit/withdrawal/fee events
+ * `{policy, agent, security}`; trade/deposit/withdrawal/fee events
  * are excluded as routine operating activity.
  */
 export interface AuditTrailEntry {
@@ -539,7 +534,7 @@ export interface DiscoveredVault {
 export interface DxError {
   /**
    * Error code. Range encodes category:
-   *   - 6000-6074 → on-chain Anchor program error (see Rust error codes)
+   *   - 6000-6080 → on-chain Anchor program error (see Rust error codes)
    *   - 7000-7099 → SDK / dashboard logic error
    *   - 7100-7199 → RPC / network error
    *   - 7999      → DX_ERROR_CODE_UNMAPPED sentinel
@@ -559,7 +554,7 @@ export interface DxError {
   recovery: string[];
   /**
    * True iff the transaction reached the Sigil on-chain program and was
-   * rejected by program logic (Anchor error codes 6000-6074). When
+   * rejected by program logic (Anchor error codes 6000-6080). When
    * true, the FE renders a specific "the vault's rules prevented this"
    * message instead of a generic error. When false, the failure was
    * client-side, RPC, or network — the caller may retry.

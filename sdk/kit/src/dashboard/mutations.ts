@@ -677,7 +677,6 @@ export async function createConstraints(
       vault,
       policy,
       entries,
-      strictMode: opts?.strictMode ?? true,
     });
     return run(rpc, owner, network, ixs, opts);
   } catch (err: unknown) {
@@ -709,7 +708,6 @@ export async function queueConstraintsUpdate(
       vault,
       policy,
       entries,
-      strictMode: opts?.strictMode ?? true,
     });
     return run(rpc, owner, network, ixs, opts);
   } catch (err: unknown) {

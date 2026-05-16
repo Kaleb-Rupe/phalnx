@@ -5,7 +5,6 @@ import {
   getPolicyPDA,
   getTrackerPDA,
   getSessionPDA,
-  getEscrowPDA,
   getAgentOverlayPDA,
   getConstraintsPDA,
   getPendingConstraintsPDA,
@@ -76,20 +75,6 @@ describe("resolve-accounts", () => {
     it("different agent produces different PDA", async () => {
       const [pda1] = await getSessionPDA(VAULT, AGENT, TOKEN_MINT);
       const [pda2] = await getSessionPDA(VAULT, OWNER, TOKEN_MINT);
-      expect(pda1).to.not.equal(pda2);
-    });
-  });
-
-  describe("getEscrowPDA", () => {
-    it("derives from source + dest + escrow_id", async () => {
-      const [pda1] = await getEscrowPDA(VAULT, DEST_VAULT, 1n);
-      const [pda2] = await getEscrowPDA(VAULT, DEST_VAULT, 1n);
-      expect(pda1).to.equal(pda2);
-    });
-
-    it("different escrow_id produces different PDA", async () => {
-      const [pda1] = await getEscrowPDA(VAULT, DEST_VAULT, 1n);
-      const [pda2] = await getEscrowPDA(VAULT, DEST_VAULT, 2n);
       expect(pda1).to.not.equal(pda2);
     });
   });

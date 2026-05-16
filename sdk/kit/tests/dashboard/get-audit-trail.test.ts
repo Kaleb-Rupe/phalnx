@@ -115,16 +115,10 @@ describe("buildAuditTrail (S12)", () => {
     expect(entries[0].actor).to.equal("");
   });
 
-  it("maps escrow events to escrow", () => {
-    const entries = buildAuditTrail([
-      fixtureActivity({
-        category: "escrow",
-        eventType: "EscrowCreated",
-      }),
-    ]);
-    expect(entries).to.have.length(1);
-    expect(entries[0].eventType).to.equal("escrow");
-  });
+  // Escrow events were removed in V2 (REVAMP_PLAN §2.1). `buildAuditTrail`
+  // only maps policy/agent/security categories — see `AUDIT_CATEGORY_TO_TYPE`
+  // in `sdk/kit/src/dashboard/reads.ts`. The "maps escrow events" case is
+  // gone with no V2 equivalent.
 
   it("converts timestamp seconds to milliseconds", () => {
     const entries = buildAuditTrail([

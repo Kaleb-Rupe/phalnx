@@ -1092,7 +1092,6 @@ const AUDIT_CATEGORY_TO_TYPE: Partial<Record<EventCategory, AuditEventType>> = {
   policy: "policy_change",
   agent: "agent_change",
   security: "vault_security",
-  escrow: "escrow",
 };
 
 /**
@@ -1137,13 +1136,12 @@ export function buildAuditTrail(
 }
 
 /**
- * Governance + security audit trail — the policy/agent/security/escrow
+ * Governance + security audit trail — the policy/agent/security
  * subset of the vault's activity stream.
  *
  * Use this for an admin-facing "what changed?" feed: policy queue/apply
- * cycles, agent registrations, vault freeze/resume events, and escrow
- * lifecycle. Trades and fund movements are excluded — they live in
- * `getActivity()`.
+ * cycles, agent registrations, and vault freeze/resume events.
+ * Trades and fund movements are excluded — they live in `getActivity()`.
  *
  * Activity fetch shape: one `getSignaturesForAddress` + up to `limit`
  * sequential `getTransaction` calls (see {@link getVaultActivity}).

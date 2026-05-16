@@ -20,14 +20,12 @@ pub struct PendingConstraintsUpdate {
     /// Number of active entries (0..=64)
     pub entry_count: u8,
 
-    /// Whether to reject programs without matching constraint entries (0 = permissive, non-zero = strict)
-    pub strict_mode: u8,
-
     /// Bump seed for PDA
     pub bump: u8,
 
-    /// Alignment padding
-    pub _padding: [u8; 5],
+    /// Alignment padding. Total: 8+32+35840+1+1+6 = 35888, keeping queued_at at
+    /// struct offset 35880 (8-aligned post-discriminator absolute 35888).
+    pub _padding: [u8; 6],
 
     /// Unix timestamp when this update was queued
     pub queued_at: i64,
@@ -43,10 +41,10 @@ pub struct PendingConstraintsUpdate {
 }
 
 impl PendingConstraintsUpdate {
-    // SIZE = 8 (disc) + 32 (vault) + 64*560 (entries) + 1+1+1+5 (flags+pad)
+    // SIZE = 8 (disc) + 32 (vault) + 64*560 (entries) + 1+1+6 (flags+pad)
     //      + 8 (queued_at) + 8 (executes_at) + 8 (queued_at_slot)
-    // = 8 + 32 + 35840 + 8 + 24 = 35,912 bytes
-    pub const SIZE: usize = 8 + 32 + (560 * MAX_CONSTRAINT_ENTRIES) + 1 + 1 + 1 + 5 + 8 + 8 + 8;
+    // = 8 + 32 + 35840 + 8 + 24 = 35,912 bytes (unchanged — padding absorbed the byte)
+    pub const SIZE: usize = 8 + 32 + (560 * MAX_CONSTRAINT_ENTRIES) + 1 + 1 + 6 + 8 + 8 + 8;
 
     /// Returns true if the timelock period has expired and the update
     /// can be applied.

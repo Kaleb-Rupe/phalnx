@@ -13,8 +13,6 @@ import {
   getAddressEncoder,
   getArrayDecoder,
   getArrayEncoder,
-  getBooleanDecoder,
-  getBooleanEncoder,
   getBytesDecoder,
   getBytesEncoder,
   getProgramDerivedAddress,
@@ -96,12 +94,10 @@ export type QueueConstraintsUpdateInstruction<
 export type QueueConstraintsUpdateInstructionData = {
   discriminator: ReadonlyUint8Array;
   entries: Array<ConstraintEntry>;
-  strictMode: boolean;
 };
 
 export type QueueConstraintsUpdateInstructionDataArgs = {
   entries: Array<ConstraintEntryArgs>;
-  strictMode: boolean;
 };
 
 export function getQueueConstraintsUpdateInstructionDataEncoder(): Encoder<QueueConstraintsUpdateInstructionDataArgs> {
@@ -109,7 +105,6 @@ export function getQueueConstraintsUpdateInstructionDataEncoder(): Encoder<Queue
     getStructEncoder([
       ["discriminator", fixEncoderSize(getBytesEncoder(), 8)],
       ["entries", getArrayEncoder(getConstraintEntryEncoder())],
-      ["strictMode", getBooleanEncoder()],
     ]),
     (value) => ({
       ...value,
@@ -122,7 +117,6 @@ export function getQueueConstraintsUpdateInstructionDataDecoder(): Decoder<Queue
   return getStructDecoder([
     ["discriminator", fixDecoderSize(getBytesDecoder(), 8)],
     ["entries", getArrayDecoder(getConstraintEntryDecoder())],
-    ["strictMode", getBooleanDecoder()],
   ]);
 }
 
@@ -151,7 +145,6 @@ export type QueueConstraintsUpdateAsyncInput<
   /** Verified in handler: correct size, program-owned, vault match, no discriminator. */
   pendingConstraints?: Address<TAccountPendingConstraints>;
   entries: QueueConstraintsUpdateInstructionDataArgs["entries"];
-  strictMode: QueueConstraintsUpdateInstructionDataArgs["strictMode"];
 };
 
 export async function getQueueConstraintsUpdateInstructionAsync<
@@ -291,7 +284,6 @@ export type QueueConstraintsUpdateInput<
   /** Verified in handler: correct size, program-owned, vault match, no discriminator. */
   pendingConstraints: Address<TAccountPendingConstraints>;
   entries: QueueConstraintsUpdateInstructionDataArgs["entries"];
-  strictMode: QueueConstraintsUpdateInstructionDataArgs["strictMode"];
 };
 
 export function getQueueConstraintsUpdateInstruction<

@@ -38,8 +38,6 @@ export {
   MAX_ALLOWED_PROTOCOLS,
   FULL_CAPABILITY,
   FULL_PERMISSIONS,
-  // Escrow
-  MAX_ESCROW_DURATION,
   // Well-known program addresses (PR 3.B — F036 constant dedup)
   TOKEN_PROGRAM_ADDRESS,
   TOKEN_2022_PROGRAM_ADDRESS,
@@ -83,7 +81,6 @@ export {
   getProtocolSpend,
   getSpendingHistory,
   findVaultsByOwner,
-  findEscrowsByVault,
   findSessionsByVault,
   getPendingPolicyForVault,
   getPendingConstraintsForVault,
@@ -107,7 +104,6 @@ export {
   getTrackerPDA,
   getSessionPDA,
   getPendingPolicyPDA,
-  getEscrowPDA,
   getAgentOverlayPDA,
   getConstraintsPDA,
   getPendingConstraintsPDA,

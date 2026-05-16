@@ -1587,103 +1587,6 @@ export type Sigil = {
       "args": []
     },
     {
-      "name": "closeSettledEscrow",
-      "docs": [
-        "Close a settled/refunded escrow PDA — owner reclaims rent."
-      ],
-      "discriminator": [
-        169,
-        244,
-        164,
-        173,
-        181,
-        214,
-        139,
-        6
-      ],
-      "accounts": [
-        {
-          "name": "signer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "sourceVault",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "source_vault.owner",
-                "account": "agentVault"
-              },
-              {
-                "kind": "account",
-                "path": "source_vault.vault_id",
-                "account": "agentVault"
-              }
-            ]
-          },
-          "relations": [
-            "escrow"
-          ]
-        },
-        {
-          "name": "destinationVaultKey",
-          "docs": [
-            "Validated indirectly: if the wrong key is passed, the escrow PDA seeds won't",
-            "match and Anchor will reject the account."
-          ]
-        },
-        {
-          "name": "escrow",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  101,
-                  115,
-                  99,
-                  114,
-                  111,
-                  119
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "sourceVault"
-              },
-              {
-                "kind": "account",
-                "path": "destinationVaultKey"
-              },
-              {
-                "kind": "arg",
-                "path": "escrowId"
-              }
-            ]
-          }
-        }
-      ],
-      "args": [
-        {
-          "name": "escrowId",
-          "type": "u64"
-        }
-      ]
-    },
-    {
       "name": "closeVault",
       "docs": [
         "Close the vault entirely. Reclaims rent from all PDAs."
@@ -1802,327 +1705,14 @@ export type Sigil = {
       "args": []
     },
     {
-      "name": "createEscrow",
-      "docs": [
-        "Create an escrow deposit between two vaults.",
-        "Agent-initiated, stablecoin-only, fees deducted upfront, cap-checked."
-      ],
-      "discriminator": [
-        253,
-        215,
-        165,
-        116,
-        36,
-        108,
-        68,
-        80
-      ],
-      "accounts": [
-        {
-          "name": "agent",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "sourceVault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "source_vault.owner",
-                "account": "agentVault"
-              },
-              {
-                "kind": "account",
-                "path": "source_vault.vault_id",
-                "account": "agentVault"
-              }
-            ]
-          }
-        },
-        {
-          "name": "policy",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  112,
-                  111,
-                  108,
-                  105,
-                  99,
-                  121
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "sourceVault"
-              }
-            ]
-          }
-        },
-        {
-          "name": "tracker",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  116,
-                  114,
-                  97,
-                  99,
-                  107,
-                  101,
-                  114
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "sourceVault"
-              }
-            ]
-          }
-        },
-        {
-          "name": "agentSpendOverlay",
-          "docs": [
-            "Zero-copy AgentSpendOverlay — per-agent rolling spend"
-          ],
-          "writable": true
-        },
-        {
-          "name": "destinationVault",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "destination_vault.owner",
-                "account": "agentVault"
-              },
-              {
-                "kind": "account",
-                "path": "destination_vault.vault_id",
-                "account": "agentVault"
-              }
-            ]
-          }
-        },
-        {
-          "name": "escrow",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  101,
-                  115,
-                  99,
-                  114,
-                  111,
-                  119
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "sourceVault"
-              },
-              {
-                "kind": "account",
-                "path": "destinationVault"
-              },
-              {
-                "kind": "arg",
-                "path": "escrowId"
-              }
-            ]
-          }
-        },
-        {
-          "name": "sourceVaultAta",
-          "docs": [
-            "Source vault's token account (vault PDA is authority)"
-          ],
-          "writable": true
-        },
-        {
-          "name": "escrowAta",
-          "docs": [
-            "Escrow-owned ATA — init_if_needed because escrow PDA is created in same ix"
-          ],
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "escrow"
-              },
-              {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "tokenMint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
-        },
-        {
-          "name": "protocolTreasuryAta",
-          "docs": [
-            "Protocol treasury token account (needed when protocol_fee > 0)"
-          ],
-          "writable": true,
-          "optional": true
-        },
-        {
-          "name": "feeDestinationAta",
-          "docs": [
-            "Developer fee destination token account (needed when developer_fee > 0)"
-          ],
-          "writable": true,
-          "optional": true
-        },
-        {
-          "name": "tokenMint"
-        },
-        {
-          "name": "tokenProgram",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "associatedTokenProgram",
-          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
-        }
-      ],
-      "args": [
-        {
-          "name": "escrowId",
-          "type": "u64"
-        },
-        {
-          "name": "amount",
-          "type": "u64"
-        },
-        {
-          "name": "expiresAt",
-          "type": "i64"
-        },
-        {
-          "name": "conditionHash",
-          "type": {
-            "array": [
-              "u8",
-              32
-            ]
-          }
-        }
-      ]
-    },
-    {
       "name": "createInstructionConstraints",
       "docs": [
         "Populate a pre-allocated InstructionConstraints PDA with entries.",
-        "Only the owner can call this. PDA must be at full SIZE."
+        "Only the owner can call this. PDA must be at full SIZE.",
+        "",
+        "V2: strict_mode parameter removed. Every constraint entry is strictly",
+        "enforced — if no entry matches an instruction's program_id, the",
+        "instruction is rejected. (REVAMP_PLAN §2.2)"
       ],
       "discriminator": [
         13,
@@ -2237,10 +1827,6 @@ export type Sigil = {
               }
             }
           }
-        },
-        {
-          "name": "strictMode",
-          "type": "bool"
         }
       ]
     },
@@ -3465,7 +3051,9 @@ export type Sigil = {
     {
       "name": "queueConstraintsUpdate",
       "docs": [
-        "Queue a constraints update when timelock is active."
+        "Queue a constraints update when timelock is active.",
+        "",
+        "V2: strict_mode parameter removed (REVAMP_PLAN §2.2)."
       ],
       "discriminator": [
         247,
@@ -3617,10 +3205,6 @@ export type Sigil = {
               }
             }
           }
-        },
-        {
-          "name": "strictMode",
-          "type": "bool"
         }
       ]
     },
@@ -3884,200 +3468,6 @@ export type Sigil = {
       ]
     },
     {
-      "name": "refundEscrow",
-      "docs": [
-        "Refund an escrow — source vault's agent or owner reclaims funds after expiry.",
-        "Cap charge is NOT reversed (prevents cap-washing attacks)."
-      ],
-      "discriminator": [
-        107,
-        186,
-        89,
-        99,
-        26,
-        194,
-        23,
-        204
-      ],
-      "accounts": [
-        {
-          "name": "sourceSigner",
-          "docs": [
-            "Source vault's agent or owner"
-          ],
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "sourceVault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "source_vault.owner",
-                "account": "agentVault"
-              },
-              {
-                "kind": "account",
-                "path": "source_vault.vault_id",
-                "account": "agentVault"
-              }
-            ]
-          }
-        },
-        {
-          "name": "escrow",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  101,
-                  115,
-                  99,
-                  114,
-                  111,
-                  119
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "sourceVault"
-              },
-              {
-                "kind": "account",
-                "path": "escrow.destination_vault",
-                "account": "escrowDeposit"
-              },
-              {
-                "kind": "account",
-                "path": "escrow.escrow_id",
-                "account": "escrowDeposit"
-              }
-            ]
-          }
-        },
-        {
-          "name": "escrowAta",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "escrow"
-              },
-              {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "tokenMint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
-        },
-        {
-          "name": "sourceVaultAta",
-          "writable": true
-        },
-        {
-          "name": "rentDestination",
-          "writable": true
-        },
-        {
-          "name": "tokenMint"
-        },
-        {
-          "name": "tokenProgram",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        }
-      ],
-      "args": []
-    },
-    {
       "name": "registerAgent",
       "docs": [
         "Register an agent's signing key to this vault with per-agent permissions.",
@@ -4214,228 +3604,6 @@ export type Sigil = {
         {
           "name": "agentToRemove",
           "type": "pubkey"
-        }
-      ]
-    },
-    {
-      "name": "settleEscrow",
-      "docs": [
-        "Settle an escrow — destination vault's agent claims funds before expiry.",
-        "For conditional escrows, proof must match the SHA-256 condition hash."
-      ],
-      "discriminator": [
-        22,
-        135,
-        160,
-        194,
-        23,
-        186,
-        124,
-        110
-      ],
-      "accounts": [
-        {
-          "name": "destinationAgent",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "destinationVault",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "destination_vault.owner",
-                "account": "agentVault"
-              },
-              {
-                "kind": "account",
-                "path": "destination_vault.vault_id",
-                "account": "agentVault"
-              }
-            ]
-          }
-        },
-        {
-          "name": "sourceVault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "source_vault.owner",
-                "account": "agentVault"
-              },
-              {
-                "kind": "account",
-                "path": "source_vault.vault_id",
-                "account": "agentVault"
-              }
-            ]
-          }
-        },
-        {
-          "name": "escrow",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  101,
-                  115,
-                  99,
-                  114,
-                  111,
-                  119
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "sourceVault"
-              },
-              {
-                "kind": "account",
-                "path": "destinationVault"
-              },
-              {
-                "kind": "account",
-                "path": "escrow.escrow_id",
-                "account": "escrowDeposit"
-              }
-            ]
-          }
-        },
-        {
-          "name": "escrowAta",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "escrow"
-              },
-              {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "tokenMint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
-        },
-        {
-          "name": "destinationVaultAta",
-          "writable": true
-        },
-        {
-          "name": "rentDestination",
-          "writable": true
-        },
-        {
-          "name": "tokenMint"
-        },
-        {
-          "name": "tokenProgram",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        }
-      ],
-      "args": [
-        {
-          "name": "proof",
-          "type": "bytes"
         }
       ]
     },
@@ -5000,19 +4168,6 @@ export type Sigil = {
       ]
     },
     {
-      "name": "escrowDeposit",
-      "discriminator": [
-        56,
-        152,
-        208,
-        160,
-        159,
-        83,
-        6,
-        17
-      ]
-    },
-    {
       "name": "instructionConstraints",
       "discriminator": [
         183,
@@ -5350,45 +4505,6 @@ export type Sigil = {
         116,
         220,
         8
-      ]
-    },
-    {
-      "name": "escrowCreated",
-      "discriminator": [
-        70,
-        127,
-        105,
-        102,
-        92,
-        97,
-        7,
-        173
-      ]
-    },
-    {
-      "name": "escrowRefunded",
-      "discriminator": [
-        132,
-        209,
-        49,
-        109,
-        135,
-        138,
-        28,
-        81
-      ]
-    },
-    {
-      "name": "escrowSettled",
-      "discriminator": [
-        97,
-        27,
-        150,
-        55,
-        203,
-        179,
-        173,
-        23
       ]
     },
     {
@@ -5824,246 +4940,211 @@ export type Sigil = {
     },
     {
       "code": 6039,
-      "name": "escrowNotActive",
-      "msg": "Escrow is not in Active status"
-    },
-    {
-      "code": 6040,
-      "name": "escrowExpired",
-      "msg": "Escrow has expired"
-    },
-    {
-      "code": 6041,
-      "name": "escrowNotExpired",
-      "msg": "Escrow has not expired yet"
-    },
-    {
-      "code": 6042,
-      "name": "invalidEscrowVault",
-      "msg": "Invalid escrow vault"
-    },
-    {
-      "code": 6043,
-      "name": "escrowConditionsNotMet",
-      "msg": "Escrow conditions not met"
-    },
-    {
-      "code": 6044,
-      "name": "escrowDurationExceeded",
-      "msg": "Escrow duration exceeds maximum (30 days)"
-    },
-    {
-      "code": 6045,
       "name": "invalidConstraintConfig",
       "msg": "Invalid constraint configuration: bounds exceeded"
     },
     {
-      "code": 6046,
+      "code": 6040,
       "name": "constraintViolated",
       "msg": "Instruction constraint violated"
     },
     {
-      "code": 6047,
+      "code": 6041,
       "name": "invalidConstraintsPda",
       "msg": "Invalid constraints PDA: wrong owner or vault"
     },
     {
-      "code": 6048,
+      "code": 6042,
       "name": "invalidPendingConstraintsPda",
       "msg": "Invalid pending constraints PDA: wrong owner or vault"
     },
     {
-      "code": 6049,
+      "code": 6043,
       "name": "agentSpendLimitExceeded",
       "msg": "Agent rolling 24h spend exceeds per-agent spending limit"
     },
     {
-      "code": 6050,
+      "code": 6044,
       "name": "overlaySlotExhausted",
       "msg": "Per-agent overlay is full; cannot register agent with spending limit"
     },
     {
-      "code": 6051,
+      "code": 6045,
       "name": "agentSlotNotFound",
       "msg": "Agent has per-agent spending limit but no overlay tracking slot"
     },
     {
-      "code": 6052,
+      "code": 6046,
       "name": "unauthorizedTokenApproval",
       "msg": "Unauthorized SPL Token Approve between validate and finalize"
     },
     {
-      "code": 6053,
+      "code": 6047,
       "name": "invalidSessionExpiry",
       "msg": "Session expiry slots out of range (10-450)"
     },
     {
-      "code": 6054,
+      "code": 6048,
       "name": "unconstrainedProgramBlocked",
-      "msg": "Program has no constraint entry and strict mode is enabled"
+      "msg": "Program has no matching constraint entry — every instruction must match one"
     },
     {
-      "code": 6055,
+      "code": 6049,
       "name": "protocolCapExceeded",
       "msg": "Per-protocol rolling 24h spending cap would be exceeded"
     },
     {
-      "code": 6056,
+      "code": 6050,
       "name": "protocolCapsMismatch",
       "msg": "protocol_caps length must match protocols length when has_protocol_caps is true"
     },
     {
-      "code": 6057,
-      "name": "activeEscrowsExist",
-      "msg": "Cannot close vault with active escrow deposits"
-    },
-    {
-      "code": 6058,
+      "code": 6051,
       "name": "constraintsNotClosed",
       "msg": "Instruction constraints must be closed before closing vault"
     },
     {
-      "code": 6059,
+      "code": 6052,
       "name": "pendingPolicyExists",
       "msg": "Pending policy update must be applied or cancelled before closing vault"
     },
     {
-      "code": 6060,
+      "code": 6053,
       "name": "agentPaused",
       "msg": "Agent is paused and cannot execute actions"
     },
     {
-      "code": 6061,
+      "code": 6054,
       "name": "agentAlreadyPaused",
       "msg": "Agent is already paused"
     },
     {
-      "code": 6062,
+      "code": 6055,
       "name": "agentNotPaused",
       "msg": "Agent is not paused"
     },
     {
-      "code": 6063,
+      "code": 6056,
       "name": "unauthorizedPostFinalizeInstruction",
       "msg": "Instructions after finalize_session must be ComputeBudget or SystemProgram only"
     },
     {
-      "code": 6064,
+      "code": 6057,
       "name": "unexpectedBalanceDecrease",
       "msg": "Vault balance decreased more than delegated amount — potential CPI attack"
     },
     {
-      "code": 6065,
+      "code": 6058,
       "name": "timelockTooShort",
       "msg": "Timelock duration below minimum (1800 seconds / 30 minutes)"
     },
     {
-      "code": 6066,
+      "code": 6059,
       "name": "policyVersionMismatch",
       "msg": "Policy version mismatch — policy changed since agent's last RPC read"
     },
     {
-      "code": 6067,
+      "code": 6060,
       "name": "activeSessionsExist",
       "msg": "Cannot close vault with active sessions (finalize pending sessions first)"
     },
     {
-      "code": 6068,
+      "code": 6061,
       "name": "postAssertionFailed",
       "msg": "Post-execution assertion failed: account state did not satisfy constraint"
     },
     {
-      "code": 6069,
+      "code": 6062,
       "name": "invalidPostAssertionIndex",
       "msg": "Post-assertion constraint references invalid instruction index"
     },
     {
-      "code": 6070,
+      "code": 6063,
       "name": "unauthorizedPreValidateInstruction",
       "msg": "Non-infrastructure instruction detected before validate_and_authorize"
     },
     {
-      "code": 6071,
+      "code": 6064,
       "name": "snapshotNotCaptured",
       "msg": "Delta assertion snapshot was not captured in validate_and_authorize"
     },
     {
-      "code": 6072,
+      "code": 6065,
       "name": "invalidConstraintOperator",
       "msg": "Constraint operator value is not a valid ConstraintOperator discriminant"
     },
     {
-      "code": 6073,
+      "code": 6066,
       "name": "constraintsVaultMismatch",
       "msg": "Zero-copy constraints account has wrong vault"
     },
     {
-      "code": 6074,
+      "code": 6067,
       "name": "blockedSplOpcode",
       "msg": "SPL opcode is blocked at runtime and cannot be used in constraints"
     },
     {
-      "code": 6075,
+      "code": 6068,
       "name": "queuedUpdateExpired",
       "msg": "Queued update is too old (>MAX_APPLY_AGE_SLOTS) — re-queue to apply. Defends against durable-nonce pre-signing."
     },
     {
-      "code": 6076,
+      "code": 6069,
       "name": "accountWritabilityMismatch",
       "msg": "Account writability flag does not match constraint requirement"
     },
     {
-      "code": 6077,
+      "code": 6070,
       "name": "sysvarScanBoundExceeded",
       "msg": "Sysvar instruction scan exceeded the per-tx safety bound"
     },
     {
-      "code": 6078,
+      "code": 6071,
       "name": "asyncFulfillmentNotPermitted",
       "msg": "Async-fulfillment program is not permitted in V1 (Jupiter Perps, Drift, Drift JIT). Spending cannot be measured because keeper submits the actual transfer in a separate transaction after finalize_session returns."
     },
     {
-      "code": 6079,
+      "code": 6072,
       "name": "constraintsAlreadyPopulated",
       "msg": "Cannot clean an active constraints PDA; use queue+apply_close_constraints"
     },
     {
-      "code": 6080,
+      "code": 6073,
       "name": "orphanPdaWrongOwner",
       "msg": "PDA at constraints seeds is not program-owned"
     },
     {
-      "code": 6081,
+      "code": 6074,
       "name": "orphanPdaPopulated",
       "msg": "PDA is fully populated; not an orphan"
     },
     {
-      "code": 6082,
+      "code": 6075,
       "name": "confidentialTransferBlocked",
       "msg": "Token-2022 ConfidentialTransfer not permitted between validate and finalize"
     },
     {
-      "code": 6083,
+      "code": 6076,
       "name": "permanentDelegateBlocked",
       "msg": "Token-2022 PermanentDelegate not permitted between validate and finalize"
     },
     {
-      "code": 6084,
+      "code": 6077,
       "name": "transferHookBlocked",
       "msg": "Token-2022 TransferHook not permitted between validate and finalize"
     },
     {
-      "code": 6085,
+      "code": 6078,
       "name": "lamportDrainBlocked",
       "msg": "Token-2022 destructive-balance ix (opcodes 38/45/46) not permitted between validate and finalize"
     },
     {
-      "code": 6086,
+      "code": 6079,
       "name": "batchInstructionBlocked",
       "msg": "Token-2022 Batch instruction (opcode 255) is blocked outright — wraps inner instructions and bypasses byte-0 blocklist"
     },
     {
-      "code": 6087,
+      "code": 6080,
       "name": "invalidDestinationMode",
       "msg": "Invalid destination mode (must be 0 = Restricted or 1 = OpenWithCap)"
     }
@@ -6671,13 +5752,6 @@ export type Sigil = {
             "type": "u64"
           },
           {
-            "name": "activeEscrowCount",
-            "docs": [
-              "Number of active (unsettled/unrefunded) escrow deposits from this vault"
-            ],
-            "type": "u8"
-          },
-          {
             "name": "totalFeesCollected",
             "docs": [
               "Cumulative developer fees collected from this vault (token base units)"
@@ -7141,177 +6215,6 @@ export type Sigil = {
       }
     },
     {
-      "name": "escrowCreated",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "sourceVault",
-            "type": "pubkey"
-          },
-          {
-            "name": "destinationVault",
-            "type": "pubkey"
-          },
-          {
-            "name": "escrowId",
-            "type": "u64"
-          },
-          {
-            "name": "amount",
-            "type": "u64"
-          },
-          {
-            "name": "tokenMint",
-            "type": "pubkey"
-          },
-          {
-            "name": "expiresAt",
-            "type": "i64"
-          },
-          {
-            "name": "conditionHash",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "escrowDeposit",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "sourceVault",
-            "type": "pubkey"
-          },
-          {
-            "name": "destinationVault",
-            "type": "pubkey"
-          },
-          {
-            "name": "escrowId",
-            "type": "u64"
-          },
-          {
-            "name": "amount",
-            "type": "u64"
-          },
-          {
-            "name": "tokenMint",
-            "type": "pubkey"
-          },
-          {
-            "name": "createdAt",
-            "type": "i64"
-          },
-          {
-            "name": "expiresAt",
-            "type": "i64"
-          },
-          {
-            "name": "status",
-            "type": {
-              "defined": {
-                "name": "escrowStatus"
-              }
-            }
-          },
-          {
-            "name": "conditionHash",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          }
-        ]
-      }
-    },
-    {
-      "name": "escrowRefunded",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "sourceVault",
-            "type": "pubkey"
-          },
-          {
-            "name": "destinationVault",
-            "type": "pubkey"
-          },
-          {
-            "name": "escrowId",
-            "type": "u64"
-          },
-          {
-            "name": "amount",
-            "type": "u64"
-          },
-          {
-            "name": "refundedBy",
-            "type": "pubkey"
-          }
-        ]
-      }
-    },
-    {
-      "name": "escrowSettled",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "sourceVault",
-            "type": "pubkey"
-          },
-          {
-            "name": "destinationVault",
-            "type": "pubkey"
-          },
-          {
-            "name": "escrowId",
-            "type": "u64"
-          },
-          {
-            "name": "amount",
-            "type": "u64"
-          },
-          {
-            "name": "settledBy",
-            "type": "pubkey"
-          }
-        ]
-      }
-    },
-    {
-      "name": "escrowStatus",
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "active"
-          },
-          {
-            "name": "settled"
-          },
-          {
-            "name": "refunded"
-          }
-        ]
-      }
-    },
-    {
       "name": "feesCollected",
       "type": {
         "kind": "struct",
@@ -7451,10 +6354,6 @@ export type Sigil = {
             "type": "u8"
           },
           {
-            "name": "strictMode",
-            "type": "u8"
-          },
-          {
             "name": "bump",
             "type": "u8"
           },
@@ -7467,10 +6366,15 @@ export type Sigil = {
           },
           {
             "name": "padding",
+            "docs": [
+              "Alignment padding (5 bytes — keeps total fields = 35,880, an even",
+              "number, so the bytemuck Pod derive accepts the struct under",
+              "ConstraintEntryZC's 2-byte alignment requirement)."
+            ],
             "type": {
               "array": [
                 "u8",
-                4
+                5
               ]
             }
           }
@@ -7489,10 +6393,6 @@ export type Sigil = {
           {
             "name": "entriesCount",
             "type": "u8"
-          },
-          {
-            "name": "strictMode",
-            "type": "bool"
           },
           {
             "name": "discriminatorFormats",
@@ -7727,13 +6627,6 @@ export type Sigil = {
             "type": "u8"
           },
           {
-            "name": "strictMode",
-            "docs": [
-              "Whether to reject programs without matching constraint entries (0 = permissive, non-zero = strict)"
-            ],
-            "type": "u8"
-          },
-          {
             "name": "bump",
             "docs": [
               "Bump seed for PDA"
@@ -7743,12 +6636,13 @@ export type Sigil = {
           {
             "name": "padding",
             "docs": [
-              "Alignment padding"
+              "Alignment padding. Total: 8+32+35840+1+1+6 = 35888, keeping queued_at at",
+              "struct offset 35880 (8-aligned post-discriminator absolute 35888)."
             ],
             "type": {
               "array": [
                 "u8",
-                5
+                6
               ]
             }
           },

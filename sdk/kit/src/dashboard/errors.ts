@@ -223,8 +223,10 @@ export function isAccountNotFoundError(
  * specific "the vault's rules prevented this" message.
  */
 const ANCHOR_ERROR_MIN = 6000;
-/** Upper bound of the Anchor on-chain error range (Sigil ships 71 codes: 6000-6070; 6074 is the reserved ceiling per the FE↔BE contract). */
-const ANCHOR_ERROR_MAX = 6074;
+/** Upper bound of the Anchor on-chain error range. V2 ships 81 codes
+ *  (6000-6080); the highest variant is `InvalidDestinationMode = 6080`.
+ *  See `sdk/kit/src/generated/errors/sigil.ts` for the canonical list. */
+const ANCHOR_ERROR_MAX = 6080;
 
 /**
  * Lower bound of the SDK / dashboard logic error range (FE↔BE §6.3).
@@ -269,7 +271,7 @@ export type DxErrorCategory = "user" | "network" | "program" | "unknown";
  * Friendly category for a `DxError` (FE↔BE contract §6.3 helper).
  *
  * Returns one of:
- *   - `"program"` — Anchor on-chain error (6000-6074). Tx reached the
+ *   - `"program"` — Anchor on-chain error (6000-6080). Tx reached the
  *     program and was rejected by program logic.
  *   - `"user"` — SDK / dashboard logic error (7000-7099). Client-side
  *     validation failure the user can fix.

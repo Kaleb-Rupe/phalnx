@@ -126,25 +126,6 @@ pub enum SigilError {
     #[msg("Permission bitmask contains invalid bits")]
     InvalidPermissions,
 
-    // --- Escrow errors ---
-    #[msg("Escrow is not in Active status")]
-    EscrowNotActive,
-
-    #[msg("Escrow has expired")]
-    EscrowExpired,
-
-    #[msg("Escrow has not expired yet")]
-    EscrowNotExpired,
-
-    #[msg("Invalid escrow vault")]
-    InvalidEscrowVault,
-
-    #[msg("Escrow conditions not met")]
-    EscrowConditionsNotMet,
-
-    #[msg("Escrow duration exceeds maximum (30 days)")]
-    EscrowDurationExceeded,
-
     // --- Instruction constraints errors ---
     #[msg("Invalid constraint configuration: bounds exceeded")]
     InvalidConstraintConfig,
@@ -175,7 +156,7 @@ pub enum SigilError {
     InvalidSessionExpiry,
 
     // --- Generic constraints V2 errors ---
-    #[msg("Program has no constraint entry and strict mode is enabled")]
+    #[msg("Program has no matching constraint entry — every instruction must match one")]
     UnconstrainedProgramBlocked,
 
     // --- Per-protocol spend cap errors ---
@@ -186,9 +167,6 @@ pub enum SigilError {
     ProtocolCapsMismatch,
 
     // --- Vault cleanup guard errors ---
-    #[msg("Cannot close vault with active escrow deposits")]
-    ActiveEscrowsExist,
-
     #[msg("Instruction constraints must be closed before closing vault")]
     ConstraintsNotClosed,
 

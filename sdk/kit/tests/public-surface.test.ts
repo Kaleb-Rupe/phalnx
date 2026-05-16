@@ -80,14 +80,13 @@ describe("v0.9.0 root barrel — kept exports", () => {
     expect(kit.SAFETY_PRESETS.production.timelockDuration).to.equal(86_400);
   });
 
-  it("DOES export the 12 account types + their decoders", () => {
+  it("DOES export the 11 account types + their decoders", () => {
     const accounts = [
       "getAgentVaultDecoder",
       "getPolicyConfigDecoder",
       "getSpendTrackerDecoder",
       "getSessionAuthorityDecoder",
       "getAgentSpendOverlayDecoder",
-      "getEscrowDepositDecoder",
       "getInstructionConstraintsDecoder",
       "getPendingPolicyUpdateDecoder",
       "getPendingConstraintsUpdateDecoder",

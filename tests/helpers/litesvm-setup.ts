@@ -746,7 +746,6 @@ export function buildCreateConstraintsIxs(
   vault: PublicKey,
   policy: PublicKey,
   entries: any[],
-  strictMode: boolean,
 ): TransactionInstruction[] {
   const [constraintsPda] = PublicKey.findProgramAddressSync(
     [Buffer.from("constraints"), vault.toBuffer()],
@@ -771,10 +770,11 @@ export function buildCreateConstraintsIxs(
     buildExtendPdaIx(program.programId, owner, vault, constraintsPda, target),
   );
 
-  // Step 5: Populate via existing createInstructionConstraints (Anchor-encoded data)
+  // Step 5: Populate via existing createInstructionConstraints (Anchor-encoded data).
+  // V2 (REVAMP_PLAN §2.2): strictMode parameter removed.
   const populateData = (program.coder.instruction as any).encode(
     "createInstructionConstraints",
-    { entries, strictMode },
+    { entries },
   );
   const populateIx = new TransactionInstruction({
     programId: program.programId,
@@ -801,7 +801,6 @@ export function createConstraintsAccount(
   vault: PublicKey,
   policy: PublicKey,
   entries: any[],
-  strictMode: boolean,
 ): void {
   const ixs = buildCreateConstraintsIxs(
     program,
@@ -809,7 +808,6 @@ export function createConstraintsAccount(
     vault,
     policy,
     entries,
-    strictMode,
   );
   sendVersionedTx(svm, ixs, owner);
 }
@@ -824,7 +822,6 @@ export function buildQueueConstraintsUpdateIxs(
   policy: PublicKey,
   constraints: PublicKey,
   entries: any[],
-  strictMode: boolean,
 ): TransactionInstruction[] {
   const [pendingPda] = PublicKey.findProgramAddressSync(
     [Buffer.from("pending_constraints"), vault.toBuffer()],
@@ -850,10 +847,11 @@ export function buildQueueConstraintsUpdateIxs(
     buildExtendPdaIx(program.programId, owner, vault, pendingPda, target),
   );
 
-  // Step 5: Queue via existing queueConstraintsUpdate (Anchor-encoded data)
+  // Step 5: Queue via existing queueConstraintsUpdate (Anchor-encoded data).
+  // V2 (REVAMP_PLAN §2.2): strictMode parameter removed.
   const queueData = (program.coder.instruction as any).encode(
     "queueConstraintsUpdate",
-    { entries, strictMode },
+    { entries },
   );
   const queueIx = new TransactionInstruction({
     programId: program.programId,
@@ -881,7 +879,6 @@ export function queueConstraintsUpdateMultiIx(
   policy: PublicKey,
   constraints: PublicKey,
   entries: any[],
-  strictMode: boolean,
 ): void {
   const ixs = buildQueueConstraintsUpdateIxs(
     program,
@@ -890,7 +887,6 @@ export function queueConstraintsUpdateMultiIx(
     policy,
     constraints,
     entries,
-    strictMode,
   );
   sendVersionedTx(svm, ixs, owner);
 }
@@ -919,17 +915,16 @@ export async function fetchConstraints(
 ): Promise<{
   vault: PublicKey;
   entries: any[];
-  strictMode: boolean;
   entryCount: number;
   bump: number;
 }> {
+  // V2 (REVAMP_PLAN §2.2): strict_mode field removed from on-chain layout.
   const raw =
     await program.account.instructionConstraints.fetch(constraintsPda);
   const entryCount = (raw as any).entryCount;
   return {
     vault: new PublicKey((raw as any).vault),
     entryCount,
-    strictMode: (raw as any).strictMode !== 0,
     bump: (raw as any).bump,
     entries: Array.from({ length: entryCount }, (_, i) => {
       const e = (raw as any).entries[i];

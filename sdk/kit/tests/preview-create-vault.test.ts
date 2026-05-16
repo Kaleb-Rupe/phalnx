@@ -179,9 +179,9 @@ describe("previewCreateVault — PDA derivation", () => {
 // ─── G3 — Account size correctness ──────────────────────────────────────────
 
 describe("previewCreateVault — on-chain account sizes", () => {
-  it("AgentVault sizeBytes equals 634", async () => {
+  it("AgentVault sizeBytes equals 633 (post-V2 demolition)", async () => {
     const r = await previewCreateVault(baseConfig());
-    expect(r.pdaList[0]!.sizeBytes).to.equal(634);
+    expect(r.pdaList[0]!.sizeBytes).to.equal(633);
   });
 
   it("PolicyConfig sizeBytes equals 822", async () => {
@@ -244,21 +244,23 @@ describe("previewCreateVault — cost math", () => {
     expect(r.totalCostUsd).to.equal(expected);
   });
 
-  it("totalCostUsd fixture: rent ~52M + fee 0 + price $250 → known value", async () => {
+  it("totalCostUsd fixture: rent ~51M + fee 0 + price $250 → known value", async () => {
     // pin a single concrete value so a future drift triggers a test failure.
-    // Sum of rent for the 4 PDAs at default mock formula = ((634+128) +
-    // (822+128) + (2840+128) + (2528+128)) × 6960 = (762+950+2968+2656) ×
-    // 6960 = 7336 × 6960 = 51_058_560 lamports.
-    // totalCostUsd = 51_058_560 × 250_000_000 / 1_000_000_000 = 12_764_640
-    // (= $12.76464 in 6-decimal USD).
+    // V2 (Stage 1): AgentVault shrank 634→633 after `active_escrow_count`
+    // removal. Sum of rent for the 4 PDAs at default mock formula =
+    //   ((633+128) + (822+128) + (2840+128) + (2528+128)) × 6960
+    // = (761 + 950 + 2968 + 2656) × 6960
+    // = 7335 × 6960 = 51_051_600 lamports.
+    // totalCostUsd = 51_051_600 × 250_000_000 / 1_000_000_000 = 12_762_900
+    // (= $12.7629 in 6-decimal USD).
     const r = await previewCreateVault(
       baseConfig({
         priorityFeeMicroLamports: 0,
         solPriceUsd: 250_000_000n,
       }),
     );
-    expect(r.rentLamports).to.equal(51_058_560n);
-    expect(r.totalCostUsd).to.equal(12_764_640n);
+    expect(r.rentLamports).to.equal(51_051_600n);
+    expect(r.totalCostUsd).to.equal(12_762_900n);
   });
 
   it("totalCostUsd is bigint (never number)", async () => {

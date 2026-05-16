@@ -17,7 +17,6 @@ export { SIGIL_PROGRAM_ADDRESS } from "./generated/programs/sigil.js";
 /** @deprecated v6: ActionType eliminated. Use isSpending instead. */
 export type ActionType = never;
 export type { VaultStatus } from "./generated/types/vaultStatus.js";
-export type { EscrowStatus } from "./generated/types/escrowStatus.js";
 export type { AgentEntry } from "./generated/types/agentEntry.js";
 export type { EpochBucket } from "./generated/types/epochBucket.js";
 export type { ConstraintEntry } from "./generated/types/constraintEntry.js";
@@ -123,9 +122,7 @@ export const FULL_PERMISSIONS: CapabilityTier = FULL_CAPABILITY;
 // FULL_CAPABILITY (2n) for operator agents and put granular per-action
 // restrictions in InstructionConstraints.
 
-// ─── Escrow Constants ─────────────────────────────────────────────────────────
-
-export const MAX_ESCROW_DURATION = 2_592_000; // 30 days in seconds
+// Escrow constants REMOVED in v2 revamp Stage 1 (escrow feature deleted).
 
 // ─── u64 Boundary ────────────────────────────────────────────────────────────
 
@@ -311,7 +308,7 @@ export function isStablecoinMint(mint: Address, network: Network): boolean {
 
 /**
  * Canonical action-type names indexed by the v6 on-chain ActionType enum
- * variant. Index 0 = `Swap`, index 20 = `RefundEscrow`. This is the ONLY
+ * variant. Index 0 = `Swap`, index 17 = `CloseAndSwapPosition`. This is the ONLY
  * permission-related state still in this file post-A11 — it powers
  * `parseActionType` for event decoding and nothing else.
  */
@@ -334,14 +331,11 @@ const ACTION_TYPE_NAMES_BY_INDEX = [
   "cancelLimitOrder", // 15
   "swapAndOpenPosition", // 16
   "closeAndSwapPosition", // 17
-  "createEscrow", // 18
-  "settleEscrow", // 19
-  "refundEscrow", // 20
 ] as const;
 
 /**
  * Parse an action type to its string key.
- * Accepts either a numeric ActionType enum value (0-20) or an
+ * Accepts either a numeric ActionType enum value (0-17) or an
  * Anchor-style `{ Swap: {} }` object. Returns `undefined` for
  * out-of-range numeric values or empty objects.
  */
@@ -371,6 +365,5 @@ export function isSpendingAction(actionType: string): boolean {
     "addCollateral",
     "placeLimitOrder",
     "swapAndOpenPosition",
-    "createEscrow",
   ].includes(actionType);
 }

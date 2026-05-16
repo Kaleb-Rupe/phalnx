@@ -65,11 +65,13 @@ export type PendingConstraintsUpdate = {
   entries: Array<ConstraintEntryZC>;
   /** Number of active entries (0..=64) */
   entryCount: number;
-  /** Whether to reject programs without matching constraint entries (0 = permissive, non-zero = strict) */
-  strictMode: number;
   /** Bump seed for PDA */
   bump: number;
-  /** Alignment padding */
+  /**
+   * Alignment padding (grew by 1 to absorb the removed strict_mode byte —
+   * queued_at must remain 8-byte aligned). Total: 8+32+35840+1+1+6 = 35888,
+   * keeping queued_at at offset 35888 (8-aligned).
+   */
   padding: ReadonlyUint8Array;
   /** Unix timestamp when this update was queued */
   queuedAt: bigint;
@@ -91,11 +93,13 @@ export type PendingConstraintsUpdateArgs = {
   entries: Array<ConstraintEntryZCArgs>;
   /** Number of active entries (0..=64) */
   entryCount: number;
-  /** Whether to reject programs without matching constraint entries (0 = permissive, non-zero = strict) */
-  strictMode: number;
   /** Bump seed for PDA */
   bump: number;
-  /** Alignment padding */
+  /**
+   * Alignment padding (grew by 1 to absorb the removed strict_mode byte —
+   * queued_at must remain 8-byte aligned). Total: 8+32+35840+1+1+6 = 35888,
+   * keeping queued_at at offset 35888 (8-aligned).
+   */
   padding: ReadonlyUint8Array;
   /** Unix timestamp when this update was queued */
   queuedAt: number | bigint;
@@ -118,9 +122,8 @@ export function getPendingConstraintsUpdateEncoder(): FixedSizeEncoder<PendingCo
       ["vault", fixEncoderSize(getBytesEncoder(), 32)],
       ["entries", getArrayEncoder(getConstraintEntryZCEncoder(), { size: 64 })],
       ["entryCount", getU8Encoder()],
-      ["strictMode", getU8Encoder()],
       ["bump", getU8Encoder()],
-      ["padding", fixEncoderSize(getBytesEncoder(), 5)],
+      ["padding", fixEncoderSize(getBytesEncoder(), 6)],
       ["queuedAt", getI64Encoder()],
       ["executesAt", getI64Encoder()],
       ["queuedAtSlot", getU64Encoder()],
@@ -139,9 +142,8 @@ export function getPendingConstraintsUpdateDecoder(): FixedSizeDecoder<PendingCo
     ["vault", fixDecoderSize(getBytesDecoder(), 32)],
     ["entries", getArrayDecoder(getConstraintEntryZCDecoder(), { size: 64 })],
     ["entryCount", getU8Decoder()],
-    ["strictMode", getU8Decoder()],
     ["bump", getU8Decoder()],
-    ["padding", fixDecoderSize(getBytesDecoder(), 5)],
+    ["padding", fixDecoderSize(getBytesDecoder(), 6)],
     ["queuedAt", getI64Decoder()],
     ["executesAt", getI64Decoder()],
     ["queuedAtSlot", getU64Decoder()],

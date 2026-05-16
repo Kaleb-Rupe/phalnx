@@ -284,9 +284,10 @@ describe("instruction-constraints", () => {
   }
 
   // Helper: queue constraints update + advance time + apply (replaces updateInstructionConstraints)
+  // V2 (REVAMP_PLAN §2.2): strictMode parameter removed — every entry is
+  // strictly enforced.
   async function queueAndApplyConstraintsUpdate(
     entries: any[],
-    strictMode: boolean,
     vault: PublicKey,
     policy: PublicKey,
     constraints: PublicKey,
@@ -301,7 +302,6 @@ describe("instruction-constraints", () => {
       policy,
       constraints,
       entries,
-      strictMode,
     );
     advanceTime(svm, timelockSeconds + 1);
     await program.methods
@@ -375,7 +375,6 @@ describe("instruction-constraints", () => {
         vaultPda,
         policyPda,
         entries,
-        false,
       );
 
       // Verify constraints PDA
@@ -410,7 +409,6 @@ describe("instruction-constraints", () => {
 
       await queueAndApplyConstraintsUpdate(
         newEntries,
-        false,
         vaultPda,
         policyPda,
         constraintsPda,
@@ -464,7 +462,6 @@ describe("instruction-constraints", () => {
         vaultPda,
         policyPda,
         entries,
-        false,
       );
     });
 
@@ -507,7 +504,6 @@ describe("instruction-constraints", () => {
         vaultPda,
         policyPda,
         entries,
-        false,
       );
     });
 
@@ -555,7 +551,7 @@ describe("instruction-constraints", () => {
         sendVersionedTx(svm, [validateIx, finalizeIx], agent);
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "InvalidConstraintsPda", code: 6047 });
+        expectSigilError(err, { name: "InvalidConstraintsPda", code: 6041 });
       }
     });
 
@@ -633,7 +629,6 @@ describe("instruction-constraints", () => {
             discriminatorFormat: { anchor8: {} },
           },
         ],
-        false,
       );
 
       // Try to use vault 2's constraints PDA on vault 1 → wrong PDA
@@ -648,7 +643,7 @@ describe("instruction-constraints", () => {
         sendVersionedTx(svm, [validateIx, finalizeIx], agent);
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "InvalidConstraintsPda", code: 6047 });
+        expectSigilError(err, { name: "InvalidConstraintsPda", code: 6041 });
       }
     });
   });
@@ -692,7 +687,6 @@ describe("instruction-constraints", () => {
           vaultPda,
           policyPda,
           entries,
-          false,
         );
         expect.fail("Should have thrown");
       } catch (err: any) {
@@ -701,7 +695,7 @@ describe("instruction-constraints", () => {
         const errStr = err.toString();
         expect(
           errStr.includes("InvalidConstraintConfig") ||
-            errStr.includes("6047") ||
+            errStr.includes("6039") ||
             errStr.includes("RangeError") ||
             errStr.includes("out of range"),
           `Expected constraint or serialization error, got: ${errStr}`,
@@ -738,11 +732,10 @@ describe("instruction-constraints", () => {
               discriminatorFormat: { anchor8: {} },
             },
           ],
-          false,
         );
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "InvalidConstraintConfig", code: 6045 });
+        expectSigilError(err, { name: "InvalidConstraintConfig", code: 6039 });
       }
     });
 
@@ -770,11 +763,10 @@ describe("instruction-constraints", () => {
               discriminatorFormat: { anchor8: {} },
             },
           ],
-          false,
         );
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "InvalidConstraintConfig", code: 6045 });
+        expectSigilError(err, { name: "InvalidConstraintConfig", code: 6039 });
       }
     });
 
@@ -806,7 +798,6 @@ describe("instruction-constraints", () => {
             discriminatorFormat: { anchor8: {} },
           },
         ],
-        false,
       );
 
       const acct = await fetchConstraints(program, constraintsPda);
@@ -848,7 +839,6 @@ describe("instruction-constraints", () => {
               discriminatorFormat: { anchor8: {} },
             },
           ],
-          false,
         );
       }
     });
@@ -942,7 +932,6 @@ describe("instruction-constraints", () => {
             discriminatorFormat: { anchor8: {} },
           },
         ],
-        false,
       );
     });
 
@@ -979,7 +968,6 @@ describe("instruction-constraints", () => {
         tlPolicyPda,
         tlConstraintsPda,
         newEntries,
-        false,
       );
 
       expect(accountExists(svm, tlPendingConstraintsPda)).to.equal(true);
@@ -1047,7 +1035,6 @@ describe("instruction-constraints", () => {
             discriminatorFormat: { anchor8: {} },
           },
         ],
-        false,
       );
 
       expect(accountExists(svm, tlPendingConstraintsPda)).to.equal(true);
@@ -1116,7 +1103,7 @@ describe("instruction-constraints", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "TimelockTooShort", code: 6065 });
+        expectSigilError(err, { name: "TimelockTooShort", code: 6058 });
       }
     });
   });
@@ -1158,7 +1145,6 @@ describe("instruction-constraints", () => {
             discriminatorFormat: { anchor8: {} },
           },
         ],
-        false,
       );
 
       // This should succeed — constraints PDA exists but no data constraints
@@ -1202,7 +1188,6 @@ describe("instruction-constraints", () => {
             discriminatorFormat: { anchor8: {} },
           },
         ],
-        false,
       );
 
       // Should succeed — unrelated program not in TX, no constraint check fires
@@ -1255,7 +1240,6 @@ describe("instruction-constraints", () => {
               discriminatorFormat: { anchor8: {} },
             },
           ],
-          false,
         );
         sendVersionedTx(svm, attackerIxs, attacker);
         expect.fail("Should have thrown");
@@ -1287,7 +1271,6 @@ describe("instruction-constraints", () => {
             discriminatorFormat: { anchor8: {} },
           },
         ],
-        false,
       );
     });
 
@@ -1316,7 +1299,6 @@ describe("instruction-constraints", () => {
               discriminatorFormat: { anchor8: {} },
             },
           ],
-          false,
         );
         sendVersionedTx(svm, attackerIxs, attacker);
         expect.fail("Should have thrown");
@@ -1380,7 +1362,6 @@ describe("instruction-constraints", () => {
         vaultPda,
         policyPda,
         entries,
-        false,
       );
 
       // Instruction data [0x01, 0x02] matches second entry → should pass
@@ -1422,7 +1403,6 @@ describe("instruction-constraints", () => {
             discriminatorFormat: { anchor8: {} },
           },
         ],
-        false,
         vaultPda,
         policyPda,
         constraintsPda,
@@ -1439,18 +1419,11 @@ describe("instruction-constraints", () => {
       sendVersionedTx(svm, [validateIx, finalizeIx], agent);
     });
 
-    it("strict_mode=false allows unconstrained program", async () => {
-      // Constraints only cover jupiterProgramId. strict_mode=false.
-      // Using a different protocol (SystemProgram.transfer is whitelisted,
-      // but the point is: no constraints PDA entry for the actual DeFi program).
-      // Since the test TX has [validate, finalize] with no intermediate DeFi ix,
-      // strict_mode doesn't fire. Verify that strict_mode=false is stored.
-      const constraintsAcct = await fetchConstraints(program, constraintsPda);
-      expect(constraintsAcct.strictMode).to.equal(false);
-    });
+    // V2 (REVAMP_PLAN §2.2): "strict_mode=false allows unconstrained program"
+    // test was removed — there is no permissive mode. All entries are strict.
 
     it("recreate constraints after close", async () => {
-      // Close and recreate (strict_mode not settable on rebrand branch)
+      // Close and recreate.
       await queueAndApplyCloseConstraints(
         vaultPda,
         policyPda,
@@ -1478,12 +1451,14 @@ describe("instruction-constraints", () => {
             discriminatorFormat: { anchor8: {} },
           },
         ],
-        false,
       );
 
       const constraintsAcct = await fetchConstraints(program, constraintsPda);
-      // strict_mode is always false on this branch (not settable via instruction)
-      expect(constraintsAcct.strictMode).to.equal(false);
+      // V2 (REVAMP_PLAN §2.2): strict_mode field removed — recreated entries
+      // are always strictly enforced.
+      expect(constraintsAcct.entries[0].programId.toString()).to.equal(
+        jupiterProgramId.toString(),
+      );
     });
 
     it("zero-length constraint value rejected → InvalidConstraintConfig", async () => {
@@ -1512,11 +1487,10 @@ describe("instruction-constraints", () => {
               discriminatorFormat: { anchor8: {} },
             },
           ],
-          false,
         );
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "InvalidConstraintConfig", code: 6045 });
+        expectSigilError(err, { name: "InvalidConstraintConfig", code: 6039 });
       }
     });
 
@@ -1536,11 +1510,10 @@ describe("instruction-constraints", () => {
               discriminatorFormat: { anchor8: {} },
             },
           ],
-          false,
         );
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "InvalidConstraintConfig", code: 6045 });
+        expectSigilError(err, { name: "InvalidConstraintConfig", code: 6039 });
       }
     });
 
@@ -1569,7 +1542,6 @@ describe("instruction-constraints", () => {
         vaultPda,
         policyPda,
         entries,
-        false,
       );
 
       const constraintsAcct = await fetchConstraints(program, constraintsPda);
@@ -1601,7 +1573,6 @@ describe("instruction-constraints", () => {
             discriminatorFormat: { anchor8: {} },
           },
         ],
-        false,
         vaultPda,
         policyPda,
         constraintsPda,
@@ -1655,7 +1626,6 @@ describe("instruction-constraints", () => {
             discriminatorFormat: { anchor8: {} },
           },
         ],
-        false,
       );
 
       const acct = await fetchConstraints(program, constraintsPda);
@@ -1698,7 +1668,6 @@ describe("instruction-constraints", () => {
             discriminatorFormat: { anchor8: {} },
           },
         ],
-        false,
       );
 
       const acct = await fetchConstraints(program, constraintsPda);
@@ -1736,7 +1705,6 @@ describe("instruction-constraints", () => {
             discriminatorFormat: { anchor8: {} },
           },
         ],
-        false,
       );
 
       const acct = await fetchConstraints(program, constraintsPda);
@@ -1783,7 +1751,6 @@ describe("instruction-constraints", () => {
             discriminatorFormat: { anchor8: {} },
           },
         ],
-        false,
       );
 
       const validateIx = await buildValidateIx(
@@ -1823,7 +1790,6 @@ describe("instruction-constraints", () => {
             discriminatorFormat: { anchor8: {} },
           },
         ],
-        false,
       );
 
       const validateIx = await buildValidateIx(
@@ -1879,7 +1845,6 @@ describe("instruction-constraints", () => {
             discriminatorFormat: { anchor8: {} },
           },
         ],
-        false,
       );
 
       // Verify both entries stored with OR structure
@@ -1936,7 +1901,6 @@ describe("instruction-constraints", () => {
             discriminatorFormat: { anchor8: {} },
           },
         ],
-        false,
       );
 
       // Verify both constraints stored with AND
@@ -2006,7 +1970,6 @@ describe("instruction-constraints", () => {
             discriminatorFormat: { anchor8: {} },
           },
         ],
-        false,
       );
 
       const acct = await fetchConstraints(program, constraintsPda);
@@ -2222,7 +2185,6 @@ describe("instruction-constraints", () => {
             discriminatorFormat: { anchor8: {} },
           },
         ],
-        false,
       );
 
       // Intermediate ix targets sigil program with data[0]=0xBB (violates Eq 0xAA)
@@ -2242,7 +2204,7 @@ describe("instruction-constraints", () => {
         sendVersionedTx(svm, [validateIx, mockDeFiIx, finalizeIx], cvAgent);
         expect.fail("Should have thrown ConstraintViolated");
       } catch (err: any) {
-        expectSigilError(err, { name: "ConstraintViolated", code: 6046 });
+        expectSigilError(err, { name: "ConstraintViolated", code: 6040 });
       }
 
       // Clean up: close constraints for next test
@@ -2254,11 +2216,12 @@ describe("instruction-constraints", () => {
       );
     });
 
-    // C-7: UnconstrainedProgramBlocked via strict_mode=true
-    // P0 Finding 8: strict_mode enforcement — previously skipped, now enabled
-    it("UnconstrainedProgramBlocked when strict_mode=true and unknown program (C-7)", async () => {
-      // Create strict_mode=true constraints only for jupiterProgramId
-      // The intermediate ix targets sigil program (not in constraints) → blocked
+    // C-7: UnconstrainedProgramBlocked — V2 strict-by-default semantics.
+    // P0 Finding 8: strict-mode enforcement, now the only mode (REVAMP_PLAN §2.2).
+    it("UnconstrainedProgramBlocked when program lacks constraint entry (C-7)", async () => {
+      // Constraints only cover jupiterProgramId. Every entry is strictly
+      // enforced — an intermediate ix targeting a different program (here
+      // sigil itself) has no matching entry and is rejected.
       createConstraintsAccount(
         program,
         svm,
@@ -2279,7 +2242,6 @@ describe("instruction-constraints", () => {
             discriminatorFormat: { anchor8: {} },
           },
         ],
-        true, // strict_mode=true — reject programs without constraint entries
       );
 
       // Intermediate ix targets sigil program (not in constraints → strict blocks it)
@@ -2301,7 +2263,7 @@ describe("instruction-constraints", () => {
       } catch (err: any) {
         expectSigilError(err, {
           name: "UnconstrainedProgramBlocked",
-          code: 6054,
+          code: 6048,
         });
       }
 
@@ -2394,7 +2356,6 @@ describe("instruction-constraints", () => {
         cvVault,
         cvPolicy,
         m5Entries(isWritableRequired),
-        false,
       );
 
       const validateIx = await buildCvValidateIx(
@@ -2467,7 +2428,6 @@ describe("instruction-constraints", () => {
           cvVault,
           cvPolicy,
           m5Entries(3),
-          false,
         );
         expect.fail("Should have thrown InvalidConstraintConfig");
       } catch (err: any) {
@@ -2584,7 +2544,6 @@ describe("instruction-constraints", () => {
             discriminatorFormat: { anchor8: {} },
           },
         ],
-        false,
       );
 
       // Queue first update — distinct 8-byte discriminator to prove update worked
@@ -2611,7 +2570,6 @@ describe("instruction-constraints", () => {
             discriminatorFormat: { anchor8: {} },
           },
         ],
-        false,
       );
 
       // Queue second update → should fail (pending already exists)
@@ -2639,7 +2597,6 @@ describe("instruction-constraints", () => {
               discriminatorFormat: { anchor8: {} },
             },
           ],
-          false,
         );
         expect.fail("Should have thrown already-in-use error");
       } catch (err: any) {
@@ -2648,7 +2605,7 @@ describe("instruction-constraints", () => {
           errStr.includes("already in use") ||
             errStr.includes("AccountNotInitialized") ||
             errStr.includes("InvalidConstraintConfig") ||
-            errStr.includes("6047") ||
+            errStr.includes("6039") ||
             errStr.includes("0x0"),
           `Expected already-in-use error, got: ${errStr}`,
         ).to.equal(true);
@@ -2833,7 +2790,7 @@ describe("instruction-constraints", () => {
         sendVersionedTx(svm, [extendIx], owner.payer);
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "InvalidConstraintConfig", code: 6045 });
+        expectSigilError(err, { name: "InvalidConstraintConfig", code: 6039 });
       }
       // No cleanup needed — fresh vault (9001), partial PDA cannot be closed via AccountLoader
     });
@@ -2849,7 +2806,6 @@ describe("instruction-constraints", () => {
         f.vault,
         f.policy,
         sampleEntries,
-        false,
       );
 
       // Try to extend the populated PDA further
@@ -2864,7 +2820,7 @@ describe("instruction-constraints", () => {
         sendVersionedTx(svm, [extendIx], owner.payer);
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "InvalidConstraintConfig", code: 6045 });
+        expectSigilError(err, { name: "InvalidConstraintConfig", code: 6039 });
       }
 
       // Cleanup
@@ -2896,10 +2852,10 @@ describe("instruction-constraints", () => {
         20_480,
       );
 
-      // Build populate instruction manually
+      // Build populate instruction manually (V2: no strictMode arg).
       const populateData = (program.coder.instruction as any).encode(
         "createInstructionConstraints",
-        { entries: sampleEntries, strictMode: false },
+        { entries: sampleEntries },
       );
       const populateIx = new TransactionInstruction({
         programId: program.programId,
@@ -2917,7 +2873,7 @@ describe("instruction-constraints", () => {
         sendVersionedTx(svm, [allocIx, extendIx, populateIx], owner.payer);
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "InvalidConstraintsPda", code: 6047 });
+        expectSigilError(err, { name: "InvalidConstraintsPda", code: 6041 });
       }
 
       // Cleanup — close if the PDA was partially created
@@ -2942,7 +2898,6 @@ describe("instruction-constraints", () => {
         f.vault,
         f.policy,
         sampleEntries,
-        false,
       );
 
       // Try to create constraints again on the same vault
@@ -2954,14 +2909,13 @@ describe("instruction-constraints", () => {
           f.vault,
           f.policy,
           sampleEntries,
-          false,
         );
         expect.fail("Should have thrown");
       } catch (err: any) {
         const errStr = err.toString();
         expect(
           errStr.includes("InvalidConstraintConfig") ||
-            errStr.includes("6047") ||
+            errStr.includes("6039") ||
             errStr.includes("already in use") ||
             errStr.includes("0x0"),
           `Expected constraint config or already-in-use error, got: ${errStr}`,
@@ -3002,7 +2956,7 @@ describe("instruction-constraints", () => {
         sendVersionedTx(svm, [extendIx], owner.payer);
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "InvalidConstraintConfig", code: 6045 });
+        expectSigilError(err, { name: "InvalidConstraintConfig", code: 6039 });
       }
       // No cleanup — fresh vault (9005), partial PDA cannot be closed via AccountLoader
     });
@@ -3039,7 +2993,7 @@ describe("instruction-constraints", () => {
         sendVersionedTx(svm, [shrinkIx], owner.payer);
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "InvalidConstraintConfig", code: 6045 });
+        expectSigilError(err, { name: "InvalidConstraintConfig", code: 6039 });
       }
       // No cleanup — fresh vault (9006), partial PDA cannot be closed via AccountLoader
     });
@@ -3096,7 +3050,6 @@ describe("instruction-constraints", () => {
         f.vault,
         f.policy,
         sampleEntries,
-        false,
       );
 
       // Try just the allocate instruction again
@@ -3114,7 +3067,7 @@ describe("instruction-constraints", () => {
         const errStr = err.toString();
         expect(
           errStr.includes("InvalidConstraintConfig") ||
-            errStr.includes("6047") ||
+            errStr.includes("6039") ||
             errStr.includes("already in use") ||
             errStr.includes("0x0"),
           `Expected constraint config or already-in-use error, got: ${errStr}`,
@@ -3228,7 +3181,6 @@ describe("instruction-constraints", () => {
         f.vault,
         f.policy,
         entries,
-        false,
       );
 
       const constraintsAcct = await fetchConstraints(program, f.constraints);
@@ -3282,7 +3234,6 @@ describe("instruction-constraints", () => {
         f.vault,
         f.policy,
         entries,
-        false,
       );
 
       const constraintsAcct = await fetchConstraints(program, f.constraints);
@@ -3333,11 +3284,10 @@ describe("instruction-constraints", () => {
           f.vault,
           f.policy,
           entries,
-          false,
         );
         expect.fail("Should have rejected Spl1 on non-SPL program");
       } catch (err: any) {
-        expectSigilError(err, { name: "InvalidConstraintConfig", code: 6045 });
+        expectSigilError(err, { name: "InvalidConstraintConfig", code: 6039 });
       }
     });
 
@@ -3363,11 +3313,10 @@ describe("instruction-constraints", () => {
           f.vault,
           f.policy,
           entries,
-          false,
         );
         expect.fail("Should have rejected blocked SPL opcode");
       } catch (err: any) {
-        expectSigilError(err, { name: "BlockedSplOpcode", code: 6074 });
+        expectSigilError(err, { name: "BlockedSplOpcode", code: 6067 });
       }
     });
 
@@ -3393,11 +3342,10 @@ describe("instruction-constraints", () => {
           f.vault,
           f.policy,
           entries,
-          false,
         );
         expect.fail("Should have rejected blocked SPL opcode");
       } catch (err: any) {
-        expectSigilError(err, { name: "BlockedSplOpcode", code: 6074 });
+        expectSigilError(err, { name: "BlockedSplOpcode", code: 6067 });
       }
     });
 
@@ -3436,11 +3384,10 @@ describe("instruction-constraints", () => {
             f.vault,
             f.policy,
             entries,
-            false,
           );
           expect.fail(`Should have rejected blocked SPL opcode ${name}`);
         } catch (err: any) {
-          expectSigilError(err, { name: "BlockedSplOpcode", code: 6074 });
+          expectSigilError(err, { name: "BlockedSplOpcode", code: 6067 });
         }
       });
     }
@@ -3480,11 +3427,10 @@ describe("instruction-constraints", () => {
           f.vault,
           f.policy,
           entries,
-          false,
         );
         expect.fail("Should have rejected mixed formats for same program_id");
       } catch (err: any) {
-        expectSigilError(err, { name: "InvalidConstraintConfig", code: 6045 });
+        expectSigilError(err, { name: "InvalidConstraintConfig", code: 6039 });
       }
     });
 
@@ -3513,7 +3459,6 @@ describe("instruction-constraints", () => {
         f.vault,
         f.policy,
         initialEntries,
-        false,
       );
 
       // Queue update with Spl1 entry
@@ -3536,7 +3481,6 @@ describe("instruction-constraints", () => {
         f.policy,
         f.constraints,
         spl1Entries,
-        false,
       );
       advanceTime(svm, 1801);
 
@@ -3702,7 +3646,6 @@ describe("instruction-constraints", () => {
             discriminatorFormat: { anchor8: {} },
           },
         ] as any,
-        false,
       );
     });
 
@@ -3831,7 +3774,7 @@ describe("instruction-constraints", () => {
         );
       } catch (err: any) {
         if (err.message?.includes("Should have thrown")) throw err;
-        expectSigilError(err, { name: "InvalidConstraintsPda", code: 6047 });
+        expectSigilError(err, { name: "InvalidConstraintsPda", code: 6041 });
       }
 
       // Restore for any subsequent tests in this describe
@@ -3879,7 +3822,7 @@ describe("instruction-constraints", () => {
         );
       } catch (err: any) {
         if (err.message?.includes("Should have thrown")) throw err;
-        expectSigilError(err, { name: "InvalidConstraintsPda", code: 6047 });
+        expectSigilError(err, { name: "InvalidConstraintsPda", code: 6041 });
       }
 
       // Restore for cleanliness
@@ -4136,7 +4079,6 @@ describe("instruction-constraints", () => {
             isSpending: 2,
           },
         ],
-        false,
       );
 
       // policy.has_constraints is now true; cleanup must reject
@@ -4146,7 +4088,7 @@ describe("instruction-constraints", () => {
       } catch (err: any) {
         expectSigilError(err, {
           name: "ConstraintsAlreadyPopulated",
-          code: 6078,
+          code: 6072,
         });
       }
 
@@ -4219,7 +4161,7 @@ describe("instruction-constraints", () => {
         await callCleanup(f.vault, f.policy, f.constraints);
         expect.fail("Should have rejected populated PDA");
       } catch (err: any) {
-        expectSigilError(err, { name: "OrphanPdaPopulated", code: 6080 });
+        expectSigilError(err, { name: "OrphanPdaPopulated", code: 6074 });
       }
     });
 
@@ -4266,7 +4208,6 @@ describe("instruction-constraints", () => {
             isSpending: 2,
           },
         ],
-        false,
       );
 
       // Step 5: verify the constraints PDA is healthy and policy flags correct

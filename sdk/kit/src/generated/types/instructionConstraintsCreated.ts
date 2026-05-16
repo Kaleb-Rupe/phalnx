@@ -12,8 +12,6 @@ import {
   combineCodec,
   getAddressDecoder,
   getAddressEncoder,
-  getBooleanDecoder,
-  getBooleanEncoder,
   getBytesDecoder,
   getBytesEncoder,
   getI64Decoder,
@@ -34,7 +32,6 @@ import {
 export type InstructionConstraintsCreated = {
   vault: Address;
   entriesCount: number;
-  strictMode: boolean;
   /**
    * Per-entry discriminator format (0=Anchor8, 1=Spl1).
    * Enables off-chain monitors to detect format changes/downgrades.
@@ -46,7 +43,6 @@ export type InstructionConstraintsCreated = {
 export type InstructionConstraintsCreatedArgs = {
   vault: Address;
   entriesCount: number;
-  strictMode: boolean;
   /**
    * Per-entry discriminator format (0=Anchor8, 1=Spl1).
    * Enables off-chain monitors to detect format changes/downgrades.
@@ -59,7 +55,6 @@ export function getInstructionConstraintsCreatedEncoder(): Encoder<InstructionCo
   return getStructEncoder([
     ["vault", getAddressEncoder()],
     ["entriesCount", getU8Encoder()],
-    ["strictMode", getBooleanEncoder()],
     [
       "discriminatorFormats",
       addEncoderSizePrefix(getBytesEncoder(), getU32Encoder()),
@@ -72,7 +67,6 @@ export function getInstructionConstraintsCreatedDecoder(): Decoder<InstructionCo
   return getStructDecoder([
     ["vault", getAddressDecoder()],
     ["entriesCount", getU8Decoder()],
-    ["strictMode", getBooleanDecoder()],
     [
       "discriminatorFormats",
       addDecoderSizePrefix(getBytesDecoder(), getU32Decoder()),

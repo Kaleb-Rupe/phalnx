@@ -98,23 +98,7 @@ export async function getPendingPolicyPDA(
   return [pda, bump];
 }
 
-export async function getEscrowPDA(
-  sourceVault: Address,
-  destinationVault: Address,
-  escrowId: bigint,
-  programAddress: Address = SIGIL_PROGRAM_ADDRESS,
-): Promise<[Address, number]> {
-  const [pda, bump] = await getProgramDerivedAddress({
-    programAddress,
-    seeds: [
-      seedString("escrow"),
-      seedAddress(sourceVault),
-      seedAddress(destinationVault),
-      seedU64Le(escrowId),
-    ],
-  });
-  return [pda, bump];
-}
+// getEscrowPDA REMOVED in v2 revamp Stage 1 (escrow feature deleted).
 
 export async function getAgentOverlayPDA(
   vault: Address,

@@ -452,13 +452,14 @@ export async function getProfilesByTag(
 // ─── Anchor error code → name lookup ─────────────────────────────────────────
 
 /**
- * Sigil custom error codes (6000-6074) mapped to Anchor error names.
+ * Sigil custom error codes (6000-6080) mapped to Anchor error names.
  * Source of truth: programs/sigil/src/errors.rs
  * Surfnet does NOT return program logs for failed TXs via getTransaction(),
  * so we must decode the numeric error code to include the name in errors.
  */
 // Canonical error-code table — keep in sync with
-// `sdk/kit/src/generated/errors/sigil.ts` (codama-generated from IDL).
+// `sdk/kit/src/generated/errors/sigil.ts` (codama-generated from IDL)
+// and `tests/helpers/strict-errors.ts` (the authoritative name→code map).
 const SIGIL_ERROR_NAMES: Record<number, string> = {
   6000: "VaultNotActive",
   6001: "UnauthorizedAgent",
@@ -499,42 +500,50 @@ const SIGIL_ERROR_NAMES: Record<number, string> = {
   6036: "MaxAgentsReached",
   6037: "InsufficientPermissions",
   6038: "InvalidPermissions",
-  6039: "EscrowNotActive",
-  6040: "EscrowExpired",
-  6041: "EscrowNotExpired",
-  6042: "InvalidEscrowVault",
-  6043: "EscrowConditionsNotMet",
-  6044: "EscrowDurationExceeded",
-  6045: "InvalidConstraintConfig",
-  6046: "ConstraintViolated",
-  6047: "InvalidConstraintsPda",
-  6048: "InvalidPendingConstraintsPda",
-  6049: "AgentSpendLimitExceeded",
-  6050: "OverlaySlotExhausted",
-  6051: "AgentSlotNotFound",
-  6052: "UnauthorizedTokenApproval",
-  6053: "InvalidSessionExpiry",
-  6054: "UnconstrainedProgramBlocked",
-  6055: "ProtocolCapExceeded",
-  6056: "ProtocolCapsMismatch",
-  6057: "ActiveEscrowsExist",
-  6058: "ConstraintsNotClosed",
-  6059: "PendingPolicyExists",
-  6060: "AgentPaused",
-  6061: "AgentAlreadyPaused",
-  6062: "AgentNotPaused",
-  6063: "UnauthorizedPostFinalizeInstruction",
-  6064: "UnexpectedBalanceDecrease",
-  6065: "TimelockTooShort",
-  6066: "PolicyVersionMismatch",
-  6067: "ActiveSessionsExist",
-  6068: "PostAssertionFailed",
-  6069: "InvalidPostAssertionIndex",
-  6070: "UnauthorizedPreValidateInstruction",
-  6071: "SnapshotNotCaptured",
-  6072: "InvalidConstraintOperator",
-  6073: "ConstraintsVaultMismatch",
-  6074: "BlockedSplOpcode",
+  // Escrow errors (6039-6044) and ActiveEscrowsExist (6057) REMOVED in v2 revamp Stage 1.
+  // Anchor renumbered downstream codes sequentially after the removal.
+  6039: "InvalidConstraintConfig",
+  6040: "ConstraintViolated",
+  6041: "InvalidConstraintsPda",
+  6042: "InvalidPendingConstraintsPda",
+  6043: "AgentSpendLimitExceeded",
+  6044: "OverlaySlotExhausted",
+  6045: "AgentSlotNotFound",
+  6046: "UnauthorizedTokenApproval",
+  6047: "InvalidSessionExpiry",
+  6048: "UnconstrainedProgramBlocked",
+  6049: "ProtocolCapExceeded",
+  6050: "ProtocolCapsMismatch",
+  6051: "ConstraintsNotClosed",
+  6052: "PendingPolicyExists",
+  6053: "AgentPaused",
+  6054: "AgentAlreadyPaused",
+  6055: "AgentNotPaused",
+  6056: "UnauthorizedPostFinalizeInstruction",
+  6057: "UnexpectedBalanceDecrease",
+  6058: "TimelockTooShort",
+  6059: "PolicyVersionMismatch",
+  6060: "ActiveSessionsExist",
+  6061: "PostAssertionFailed",
+  6062: "InvalidPostAssertionIndex",
+  6063: "UnauthorizedPreValidateInstruction",
+  6064: "SnapshotNotCaptured",
+  6065: "InvalidConstraintOperator",
+  6066: "ConstraintsVaultMismatch",
+  6067: "BlockedSplOpcode",
+  6068: "QueuedUpdateExpired",
+  6069: "AccountWritabilityMismatch",
+  6070: "SysvarScanBoundExceeded",
+  6071: "AsyncFulfillmentNotPermitted",
+  6072: "ConstraintsAlreadyPopulated",
+  6073: "OrphanPdaWrongOwner",
+  6074: "OrphanPdaPopulated",
+  6075: "ConfidentialTransferBlocked",
+  6076: "PermanentDelegateBlocked",
+  6077: "TransferHookBlocked",
+  6078: "LamportDrainBlocked",
+  6079: "BatchInstructionBlocked",
+  6080: "InvalidDestinationMode",
 };
 
 /**
@@ -681,34 +690,6 @@ export function deriveOverlayPda(
     programId,
   );
   return overlayPda;
-}
-
-// ─── Escrow PDA derivation ───────────────────────────────────────────────────
-
-/**
- * Derive escrow PDA and its USDC ATA.
- */
-export function deriveEscrowPda(
-  srcVault: PublicKey,
-  dstVault: PublicKey,
-  escrowId: BN,
-  programId: PublicKey,
-): { escrowPda: PublicKey; escrowUsdcAta: PublicKey } {
-  const [escrowPda] = PublicKey.findProgramAddressSync(
-    [
-      Buffer.from("escrow"),
-      srcVault.toBuffer(),
-      dstVault.toBuffer(),
-      escrowId.toArrayLike(Buffer, "le", 8),
-    ],
-    programId,
-  );
-  const escrowUsdcAta = getAssociatedTokenAddressSync(
-    DEVNET_USDC_MINT,
-    escrowPda,
-    true,
-  );
-  return { escrowPda, escrowUsdcAta };
 }
 
 // ─── Vault setup helper ─────────────────────────────────────────────────────

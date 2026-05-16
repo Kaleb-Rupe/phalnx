@@ -440,9 +440,6 @@ const ACTION_NAMES = [
   "CancelLimitOrder",
   "SwapAndOpenPosition",
   "CloseAndSwapPosition",
-  "CreateEscrow",
-  "SettleEscrow",
-  "RefundEscrow",
 ];
 
 /**

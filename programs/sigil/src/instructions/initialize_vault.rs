@@ -130,7 +130,6 @@ pub fn handler(
     vault.total_withdrawn_usd = 0;
     vault.total_failed_transactions = 0;
     vault.active_sessions = 0;
-    vault.active_escrow_count = 0; // L-2: explicit for auditability
 
     // Initialize policy
     let policy = &mut ctx.accounts.policy;

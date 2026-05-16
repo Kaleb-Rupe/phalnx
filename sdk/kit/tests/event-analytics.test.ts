@@ -29,9 +29,7 @@ describe("categorizeEvent", () => {
     expect(categorizeEvent("PolicyUpdated")).to.equal("policy");
   });
 
-  it("categorizes EscrowCreated as escrow", () => {
-    expect(categorizeEvent("EscrowCreated")).to.equal("escrow");
-  });
+  // V2 demolition: EscrowCreated event removed (no escrow category in EventCategory union).
 
   it("categorizes FeesCollected as fee", () => {
     expect(categorizeEvent("FeesCollected")).to.equal("fee");
@@ -51,7 +49,7 @@ describe("categorizeEvent", () => {
     expect(categorizeEvent("PolicyUpdated")).to.equal("policy");
     expect(categorizeEvent("VaultCreated")).to.equal("security");
     expect(categorizeEvent("VaultFrozen")).to.equal("security");
-    expect(categorizeEvent("EscrowCreated")).to.equal("escrow");
+    // V2 demolition: EscrowCreated removed (no escrow category in EventCategory union).
     expect(categorizeEvent("FeesCollected")).to.equal("fee");
     expect(categorizeEvent("AgentRegistered")).to.equal("agent");
   });

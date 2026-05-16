@@ -189,24 +189,28 @@ pub mod sigil {
 
     /// Populate a pre-allocated InstructionConstraints PDA with entries.
     /// Only the owner can call this. PDA must be at full SIZE.
+    ///
+    /// V2: strict_mode parameter removed. Every constraint entry is strictly
+    /// enforced — if no entry matches an instruction's program_id, the
+    /// instruction is rejected. (REVAMP_PLAN §2.2)
     pub fn create_instruction_constraints(
         ctx: Context<CreateInstructionConstraints>,
         entries: Vec<state::ConstraintEntry>,
-        strict_mode: bool,
     ) -> Result<()> {
-        instructions::create_instruction_constraints::handler(ctx, entries, strict_mode)
+        instructions::create_instruction_constraints::handler(ctx, entries)
     }
 
     // close_instruction_constraints DELETED — use queue_close_constraints → apply_close_constraints.
     // update_instruction_constraints DELETED — use queue_constraints_update → apply_constraints_update.
 
     /// Queue a constraints update when timelock is active.
+    ///
+    /// V2: strict_mode parameter removed (REVAMP_PLAN §2.2).
     pub fn queue_constraints_update(
         ctx: Context<QueueConstraintsUpdate>,
         entries: Vec<state::ConstraintEntry>,
-        strict_mode: bool,
     ) -> Result<()> {
-        instructions::queue_constraints_update::handler(ctx, entries, strict_mode)
+        instructions::queue_constraints_update::handler(ctx, entries)
     }
 
     /// Apply a queued constraints update after the timelock expires.
@@ -301,34 +305,10 @@ pub mod sigil {
     // sync_positions instruction DELETED — position counter system removed per council decision
     // (9-1 vote, 2026-04-19). See Plans/we-need-to-plan-serialized-summit.md.
 
-    /// Create an escrow deposit between two vaults.
-    /// Agent-initiated, stablecoin-only, fees deducted upfront, cap-checked.
-    pub fn create_escrow(
-        ctx: Context<CreateEscrow>,
-        escrow_id: u64,
-        amount: u64,
-        expires_at: i64,
-        condition_hash: [u8; 32],
-    ) -> Result<()> {
-        instructions::create_escrow::handler(ctx, escrow_id, amount, expires_at, condition_hash)
-    }
-
-    /// Settle an escrow — destination vault's agent claims funds before expiry.
-    /// For conditional escrows, proof must match the SHA-256 condition hash.
-    pub fn settle_escrow(ctx: Context<SettleEscrow>, proof: Vec<u8>) -> Result<()> {
-        instructions::settle_escrow::handler(ctx, proof)
-    }
-
-    /// Refund an escrow — source vault's agent or owner reclaims funds after expiry.
-    /// Cap charge is NOT reversed (prevents cap-washing attacks).
-    pub fn refund_escrow(ctx: Context<RefundEscrow>) -> Result<()> {
-        instructions::refund_escrow::handler(ctx)
-    }
-
-    /// Close a settled/refunded escrow PDA — owner reclaims rent.
-    pub fn close_settled_escrow(ctx: Context<CloseSettledEscrow>, escrow_id: u64) -> Result<()> {
-        instructions::close_settled_escrow::handler(ctx, escrow_id)
-    }
+    // Escrow instructions (create_escrow, settle_escrow, refund_escrow,
+    // close_settled_escrow) REMOVED in Stage 1 of v2 revamp (REVAMP_PLAN.md §2.1).
+    // DEEP-2 audit found freeze-bypass in settle_escrow and there is no
+    // validated customer flow for the feature.
 
     /// Freeze the vault immediately. Preserves all agent entries.
     /// Only the owner can call this. Use reactivate_vault to unfreeze.

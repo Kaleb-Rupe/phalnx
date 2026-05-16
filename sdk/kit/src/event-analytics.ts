@@ -21,7 +21,6 @@ export type EventCategory =
   | "withdrawal"
   | "policy"
   | "agent"
-  | "escrow"
   | "security"
   | "fee";
 
@@ -60,11 +59,15 @@ const EVENT_CATEGORY_MAP: Record<string, EventCategory> = {
   PolicyChangeApplied: "policy",
   PolicyChangeCancelled: "policy",
   InstructionConstraintsCreated: "policy",
-  InstructionConstraintsUpdated: "policy",
-  InstructionConstraintsClosed: "policy",
+  // V2 (MED-2 cleanup): InstructionConstraintsUpdated / InstructionConstraintsClosed
+  // were replaced by ConstraintsChangeApplied / CloseConstraintsApplied. Dead
+  // entries removed to prevent stale event-name matches.
   ConstraintsChangeQueued: "policy",
   ConstraintsChangeApplied: "policy",
   ConstraintsChangeCancelled: "policy",
+  CloseConstraintsQueued: "policy",
+  CloseConstraintsApplied: "policy",
+  CloseConstraintsCancelled: "policy",
   AgentRegistered: "agent",
   AgentRevoked: "agent",
   AgentPermissionsUpdated: "agent",
@@ -75,9 +78,6 @@ const EVENT_CATEGORY_MAP: Record<string, EventCategory> = {
   VaultClosed: "security",
   AgentPausedEvent: "security",
   FeesCollected: "fee",
-  EscrowCreated: "escrow",
-  EscrowSettled: "escrow",
-  EscrowRefunded: "escrow",
 };
 
 /** Categorize a decoded event into a high-level group. Defaults to "trade". */
@@ -175,13 +175,6 @@ export function describeEvent(
     case "PolicyChangeCancelled":
       return "Queued policy change cancelled";
 
-    case "EscrowCreated":
-      return `Escrow created: ${formatUsd(f.amount as bigint, 2)} held for vault ${formatAddress(f.destinationVault as string)}`;
-    case "EscrowSettled":
-      return `Escrow settled — ${formatUsd(f.amount as bigint, 2)} released to destination`;
-    case "EscrowRefunded":
-      return `Escrow refunded — ${formatUsd(f.amount as bigint, 2)} returned to vault`;
-
     case "AgentTransferExecuted":
       return `Agent transferred ${formatUsd(f.amount as bigint, 2)} to ${formatAddress(f.destination as string)}`;
 
@@ -193,16 +186,18 @@ export function describeEvent(
 
     case "InstructionConstraintsCreated":
       return "Instruction constraints configured for this vault";
-    case "InstructionConstraintsUpdated":
-      return "Instruction constraints updated";
-    case "InstructionConstraintsClosed":
-      return "Instruction constraints removed";
     case "ConstraintsChangeQueued":
       return "Constraint change queued — waiting for timelock";
     case "ConstraintsChangeApplied":
       return "Queued constraint change applied";
     case "ConstraintsChangeCancelled":
       return "Queued constraint change cancelled";
+    case "CloseConstraintsQueued":
+      return "Constraint close queued — waiting for timelock";
+    case "CloseConstraintsApplied":
+      return "Instruction constraints closed";
+    case "CloseConstraintsCancelled":
+      return "Queued constraint close cancelled";
 
     default:
       return `${decoded.name} event`;
@@ -273,8 +268,6 @@ export function buildActivityItem(
         "PlaceLimitOrder",
         "swapAndOpenPosition",
         "SwapAndOpenPosition",
-        "createEscrow",
-        "CreateEscrow",
       ].includes(actionType);
     }
   }

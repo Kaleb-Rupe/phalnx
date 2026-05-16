@@ -40,10 +40,7 @@ import {
   decodeSpendTracker,
   type SpendTracker,
 } from "./generated/accounts/spendTracker.js";
-import {
-  getEscrowDepositDecoder,
-  type EscrowDeposit,
-} from "./generated/accounts/escrowDeposit.js";
+// EscrowDeposit import REMOVED in v2 revamp Stage 1.
 import {
   getSessionAuthorityDecoder,
   getSessionAuthoritySize,
@@ -69,7 +66,6 @@ import {
   getTrackerPDA,
   getAgentOverlayPDA,
   getConstraintsPDA,
-  getEscrowPDA,
   getSessionPDA,
   getPendingPolicyPDA,
   getPendingConstraintsPDA,
@@ -912,52 +908,8 @@ export async function findVaultsByOwner(
   return discovered;
 }
 
-// ─── Escrow Discovery ──────────────────────────────────────────────────────
-
-/** Escrow account size (bytes) — used for dataSize filter. */
-const ESCROW_DEPOSIT_SIZE = 170;
-
-/**
- * Find all escrow deposits where this vault is the source.
- * Uses getProgramAccounts with memcmp on source_vault field (offset 8).
- */
-export async function findEscrowsByVault(
-  rpc: Rpc<SolanaRpcApi>,
-  sourceVault: Address,
-): Promise<(EscrowDeposit & { address: Address })[]> {
-  const vaultBase64 = uint8ToBase64(addressEncoder.encode(sourceVault));
-
-  try {
-    const accounts = await rpc
-      .getProgramAccounts(SIGIL_PROGRAM_ADDRESS, {
-        filters: [
-          { dataSize: BigInt(ESCROW_DEPOSIT_SIZE) },
-          {
-            memcmp: {
-              offset: BigInt(8),
-              bytes: vaultBase64 as Base64EncodedBytes,
-              encoding: "base64",
-            },
-          },
-        ],
-        encoding: "base64",
-      })
-      .send();
-
-    // Decode directly from GPA response (avoids double RPC)
-    const decoder = getEscrowDepositDecoder();
-    return (
-      accounts as { pubkey: Address; account: { data: [string, string] } }[]
-    ).map((entry) => {
-      const raw = base64ToUint8(entry.account.data[0]);
-      const data = decoder.decode(raw);
-      return { ...data, address: entry.pubkey };
-    });
-  } catch (err) {
-    if (!isGpaUnsupportedError(err)) throw err;
-    return []; // GPA not supported — return empty
-  }
-}
+// Escrow discovery (findEscrowsByVault, ESCROW_DEPOSIT_SIZE) REMOVED in v2
+// revamp Stage 1 — escrow feature deleted.
 
 // ─── Session Discovery ─────────────────────────────────────────────────────
 

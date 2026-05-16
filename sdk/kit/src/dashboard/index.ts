@@ -315,10 +315,10 @@ export class OwnerClient {
   }
 
   /**
-   * Governance + security audit trail (S12) — the policy/agent/security/
-   * escrow subset of `getVaultActivity`. Trades and fund movements are
-   * excluded; for those use `getActivity()`. Default limit is 100; pass
-   * `since` to filter to events after a given Unix-ms timestamp.
+   * Governance + security audit trail (S12) — the policy/agent/security
+   * subset of `getVaultActivity`. Trades and fund movements are excluded;
+   * for those use `getActivity()`. Default limit is 100; pass `since` to
+   * filter to events after a given Unix-ms timestamp.
    */
   async getAuditTrail(opts?: AuditTrailOptions): Promise<AuditTrailEntry[]> {
     return reads.getAuditTrail(this.rpc, this.vault, this.network, opts);
@@ -356,7 +356,7 @@ export class OwnerClient {
 
   /**
    * Permanently closes vault and reclaims rent.
-   * Requires: all agents revoked, zero active escrows, zero active sessions,
+   * Requires: all agents revoked, zero active sessions,
    * constraints closed, no pending policy update.
    * May need computeUnits: 400_000 for complex vaults (default applied).
    */

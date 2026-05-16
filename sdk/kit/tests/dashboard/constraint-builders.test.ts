@@ -119,7 +119,6 @@ describe("buildCreateConstraintsIxs", () => {
       vault: VAULT,
       policy: POLICY,
       entries: entries(1),
-      strictMode: true,
     });
     expect(ixs).to.have.lengthOf(5);
 
@@ -150,7 +149,6 @@ describe("buildCreateConstraintsIxs", () => {
         typeof parseCreateInstructionConstraintsInstruction
       >[0],
     );
-    expect(populate.data.strictMode).to.equal(true);
     expect(populate.data.entries).to.have.lengthOf(1);
     expect(populate.data.entries[0]!.programId).to.equal(TARGET_PROGRAM);
     expect(populate.data.entries[0]!.dataConstraints).to.have.lengthOf(4);
@@ -163,7 +161,6 @@ describe("buildCreateConstraintsIxs", () => {
       vault: VAULT,
       policy: POLICY,
       entries: entries(2),
-      strictMode: false,
     });
     expect(ixs).to.have.lengthOf(5);
     const populate = parseCreateInstructionConstraintsInstruction(
@@ -172,7 +169,6 @@ describe("buildCreateConstraintsIxs", () => {
       >[0],
     );
     expect(populate.data.entries).to.have.lengthOf(2);
-    expect(populate.data.strictMode).to.equal(false);
   });
 
   it("succeeds for 3 fully-populated entries and round-trips them", async () => {
@@ -181,7 +177,6 @@ describe("buildCreateConstraintsIxs", () => {
       vault: VAULT,
       policy: POLICY,
       entries: entries(3),
-      strictMode: true,
     });
     expect(ixs).to.have.lengthOf(5);
     const populate = parseCreateInstructionConstraintsInstruction(
@@ -200,7 +195,6 @@ describe("buildCreateConstraintsIxs", () => {
         vault: VAULT,
         policy: POLICY,
         entries: entries(4),
-        strictMode: true,
       });
     } catch (err) {
       caught = err;
@@ -221,7 +215,6 @@ describe("buildCreateConstraintsIxs", () => {
         vault: VAULT,
         policy: POLICY,
         entries: [],
-        strictMode: true,
       });
     } catch (err) {
       caught = err;
@@ -236,7 +229,6 @@ describe("buildCreateConstraintsIxs", () => {
       vault: VAULT,
       policy: POLICY,
       entries: entries(1),
-      strictMode: true,
     });
     // ixs[3] is the final extend (index 3 of 5: alloc=0, extends=1..3, populate=4)
     const lastExtend = parseExtendPdaInstruction(
@@ -256,7 +248,6 @@ describe("buildQueueConstraintsUpdateIxs", () => {
       vault: VAULT,
       policy: POLICY,
       entries: entries(1),
-      strictMode: true,
     });
     expect(ixs).to.have.lengthOf(5);
 
@@ -277,7 +268,6 @@ describe("buildQueueConstraintsUpdateIxs", () => {
     const queue = parseQueueConstraintsUpdateInstruction(
       ixs[4]! as Parameters<typeof parseQueueConstraintsUpdateInstruction>[0],
     );
-    expect(queue.data.strictMode).to.equal(true);
     expect(queue.data.entries).to.have.lengthOf(1);
     expect(queue.data.entries[0]!.programId).to.equal(TARGET_PROGRAM);
   });
@@ -288,14 +278,12 @@ describe("buildQueueConstraintsUpdateIxs", () => {
       vault: VAULT,
       policy: POLICY,
       entries: entries(2),
-      strictMode: false,
     });
     expect(ixs).to.have.lengthOf(5);
     const queue = parseQueueConstraintsUpdateInstruction(
       ixs[4]! as Parameters<typeof parseQueueConstraintsUpdateInstruction>[0],
     );
     expect(queue.data.entries).to.have.lengthOf(2);
-    expect(queue.data.strictMode).to.equal(false);
   });
 
   it("succeeds for 3 fully-populated entries and round-trips them", async () => {
@@ -304,7 +292,6 @@ describe("buildQueueConstraintsUpdateIxs", () => {
       vault: VAULT,
       policy: POLICY,
       entries: entries(3),
-      strictMode: true,
     });
     expect(ixs).to.have.lengthOf(5);
     const queue = parseQueueConstraintsUpdateInstruction(
@@ -321,7 +308,6 @@ describe("buildQueueConstraintsUpdateIxs", () => {
         vault: VAULT,
         policy: POLICY,
         entries: entries(4),
-        strictMode: true,
       });
     } catch (err) {
       caught = err;
@@ -340,7 +326,6 @@ describe("buildQueueConstraintsUpdateIxs", () => {
         vault: VAULT,
         policy: POLICY,
         entries: [],
-        strictMode: true,
       });
     } catch (err) {
       caught = err;
@@ -355,7 +340,6 @@ describe("buildQueueConstraintsUpdateIxs", () => {
       vault: VAULT,
       policy: POLICY,
       entries: entries(1),
-      strictMode: true,
     });
     const lastExtend = parseExtendPdaInstruction(
       ixs[3]! as Parameters<typeof parseExtendPdaInstruction>[0],
@@ -370,14 +354,12 @@ describe("buildQueueConstraintsUpdateIxs", () => {
       vault: VAULT,
       policy: POLICY,
       entries: entries(1),
-      strictMode: true,
     });
     const queueIxs = await buildQueueConstraintsUpdateIxs({
       owner,
       vault: VAULT,
       policy: POLICY,
       entries: entries(1),
-      strictMode: true,
     });
     const createFinal = parseExtendPdaInstruction(
       createIxs[3]! as Parameters<typeof parseExtendPdaInstruction>[0],

@@ -5,7 +5,6 @@ import {
   MAX_DEVELOPER_FEE_RATE,
   USD_DECIMALS,
   MAX_AGENTS_PER_VAULT,
-  MAX_ESCROW_DURATION,
   MAX_SLIPPAGE_BPS,
   EPOCH_DURATION,
   NUM_EPOCHS,
@@ -46,10 +45,6 @@ describe("types", () => {
 
     it("MAX_AGENTS_PER_VAULT = 10", () => {
       expect(MAX_AGENTS_PER_VAULT).to.equal(10);
-    });
-
-    it("MAX_ESCROW_DURATION = 2_592_000", () => {
-      expect(MAX_ESCROW_DURATION).to.equal(2_592_000);
     });
 
     it("MAX_SLIPPAGE_BPS = 5000", () => {
@@ -155,12 +150,12 @@ describe("types", () => {
       expect(parseActionType(7)).to.equal("transfer");
     });
 
-    it("numeric enum 20 maps to 'refundEscrow' (last valid index)", () => {
-      expect(parseActionType(20)).to.equal("refundEscrow");
+    it("numeric enum 17 maps to 'closeAndSwapPosition' (last valid index)", () => {
+      expect(parseActionType(17)).to.equal("closeAndSwapPosition");
     });
 
     it("numeric enum out of range returns undefined", () => {
-      expect(parseActionType(21)).to.be.undefined;
+      expect(parseActionType(18)).to.be.undefined;
       expect(parseActionType(-1)).to.be.undefined;
       expect(parseActionType(999)).to.be.undefined;
     });
@@ -175,7 +170,7 @@ describe("types", () => {
       expect(isSpendingAction("closePosition")).to.be.false;
     });
 
-    it("all 9 spending types verified", () => {
+    it("all 8 spending types verified", () => {
       const spending = [
         "swap",
         "openPosition",
@@ -185,14 +180,13 @@ describe("types", () => {
         "addCollateral",
         "placeLimitOrder",
         "swapAndOpenPosition",
-        "createEscrow",
       ];
       for (const s of spending) {
         expect(isSpendingAction(s), `${s} should be spending`).to.be.true;
       }
     });
 
-    it("all 12 non-spending types verified", () => {
+    it("all 10 non-spending types verified", () => {
       const nonSpending = [
         "closePosition",
         "decreasePosition",
@@ -204,8 +198,6 @@ describe("types", () => {
         "editLimitOrder",
         "cancelLimitOrder",
         "closeAndSwapPosition",
-        "settleEscrow",
-        "refundEscrow",
       ];
       for (const ns of nonSpending) {
         expect(isSpendingAction(ns), `${ns} should be non-spending`).to.be

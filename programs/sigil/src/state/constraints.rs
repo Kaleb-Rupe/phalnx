@@ -178,17 +178,19 @@ pub struct InstructionConstraints {
     pub vault: [u8; 32],                                      // 32
     pub entries: [ConstraintEntryZC; MAX_CONSTRAINT_ENTRIES], // 64 * 560 = 35,840
     pub entry_count: u8,                                      // 1 (active entries, 0..=64)
-    pub strict_mode: u8, // 1 (0 = permissive, non-zero = strict)
-    pub bump: u8,        // 1
+    pub bump: u8, // 1
     /// Constraint schema version. Always 1 for new deployments.
-    pub constraint_version: u8, // 1 (was padding[0])
-    pub _padding: [u8; 4], // 4 (reduced from 5: 32+35840+1+1+1+1+4=35880)
+    pub constraint_version: u8, // 1
+    /// Alignment padding (5 bytes — keeps total fields = 35,880, an even
+    /// number, so the bytemuck Pod derive accepts the struct under
+    /// ConstraintEntryZC's 2-byte alignment requirement).
+    pub _padding: [u8; 5], // 5 (32+35840+1+1+1+5=35880)
 }
 
 impl InstructionConstraints {
     // SIZE = 8 (discriminator) + 35,880 (fields) = 35,888 bytes
-    // 8 (disc) + 32 (vault) + 35840 (entries) + 1 (entry_count) + 1 (strict_mode) + 1 (bump) + 1 (constraint_version) + 4 (padding) = 35888
-    pub const SIZE: usize = 8 + 32 + (560 * MAX_CONSTRAINT_ENTRIES) + 1 + 1 + 1 + 1 + 4;
+    // 8 (disc) + 32 (vault) + 35840 (entries) + 1 (entry_count) + 1 (bump) + 1 (constraint_version) + 5 (padding) = 35888
+    pub const SIZE: usize = 8 + 32 + (560 * MAX_CONSTRAINT_ENTRIES) + 1 + 1 + 1 + 5;
 
     /// Validate constraint entries in their Borsh-deserialized form (instruction parameters).
     /// Called before pack_entries() converts them to the zero-copy layout.
@@ -362,12 +364,40 @@ mod tests {
 
     /// LAYOUT INVARIANT — `InstructionConstraints` zero-copy account size
     /// must match the documented `SIZE` constant.
+    ///
+    /// Layout (post-V2, strict_mode byte removed):
+    ///   8 (discriminator)
+    /// + 32 (vault)
+    /// + 560 * MAX_CONSTRAINT_ENTRIES (entries)
+    /// + 1 (entry_count) + 1 (bump) + 1 (constraint_version)
+    /// + 5 (padding)
+    /// = 35,888 bytes total
     #[test]
     fn instruction_constraints_size_invariant() {
         assert_eq!(
             InstructionConstraints::SIZE,
-            8 + 32 + (560 * MAX_CONSTRAINT_ENTRIES) + 1 + 1 + 1 + 1 + 4,
+            8 + 32 + (560 * MAX_CONSTRAINT_ENTRIES) + 1 + 1 + 1 + 5,
             "InstructionConstraints::SIZE constant out of sync with computed layout"
+        );
+        assert_eq!(
+            InstructionConstraints::SIZE,
+            35_888,
+            "InstructionConstraints::SIZE must remain 35,888 bytes"
+        );
+    }
+
+    /// CRIT-2 INVARIANT — a freshly-zeroed `InstructionConstraints` must NOT
+    /// be mistaken for a populated one. The handler stamps
+    /// `constraint_version = 1` on init; the doc-comment promises this. If
+    /// `constraint_version == 0`, the PDA is uninitialized (or pre-V2 stale).
+    /// Any consumer that branches on `constraint_version != 0` to decide
+    /// "constraints are real" depends on this invariant.
+    #[test]
+    fn constraint_version_zero_on_zeroed_layout() {
+        let zeroed = InstructionConstraints::zeroed();
+        assert_eq!(
+            zeroed.constraint_version, 0,
+            "zero-initialized constraint_version must be 0 — handler is responsible for stamping 1"
         );
     }
 

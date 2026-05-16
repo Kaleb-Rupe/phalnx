@@ -84,8 +84,6 @@ export type AgentVault = {
   totalTransactions: bigint;
   /** Total volume processed in token base units */
   totalVolume: bigint;
-  /** Number of active (unsettled/unrefunded) escrow deposits from this vault */
-  activeEscrowCount: number;
   /** Cumulative developer fees collected from this vault (token base units) */
   totalFeesCollected: bigint;
   /**
@@ -137,8 +135,6 @@ export type AgentVaultArgs = {
   totalTransactions: number | bigint;
   /** Total volume processed in token base units */
   totalVolume: number | bigint;
-  /** Number of active (unsettled/unrefunded) escrow deposits from this vault */
-  activeEscrowCount: number;
   /** Cumulative developer fees collected from this vault (token base units) */
   totalFeesCollected: number | bigint;
   /**
@@ -182,7 +178,6 @@ export function getAgentVaultEncoder(): Encoder<AgentVaultArgs> {
       ["createdAt", getI64Encoder()],
       ["totalTransactions", getU64Encoder()],
       ["totalVolume", getU64Encoder()],
-      ["activeEscrowCount", getU8Encoder()],
       ["totalFeesCollected", getU64Encoder()],
       ["totalDepositedUsd", getU64Encoder()],
       ["totalWithdrawnUsd", getU64Encoder()],
@@ -206,7 +201,6 @@ export function getAgentVaultDecoder(): Decoder<AgentVault> {
     ["createdAt", getI64Decoder()],
     ["totalTransactions", getU64Decoder()],
     ["totalVolume", getU64Decoder()],
-    ["activeEscrowCount", getU8Decoder()],
     ["totalFeesCollected", getU64Decoder()],
     ["totalDepositedUsd", getU64Decoder()],
     ["totalWithdrawnUsd", getU64Decoder()],

@@ -35,7 +35,6 @@ import {
 import {
   getAgentSpendOverlayCodec,
   getAgentVaultCodec,
-  getEscrowDepositCodec,
   getInstructionConstraintsCodec,
   getPendingAgentPermissionsUpdateCodec,
   getPendingCloseConstraintsCodec,
@@ -49,8 +48,6 @@ import {
   type AgentSpendOverlayArgs,
   type AgentVault,
   type AgentVaultArgs,
-  type EscrowDeposit,
-  type EscrowDepositArgs,
   type InstructionConstraints,
   type InstructionConstraintsArgs,
   type PendingAgentPermissionsUpdate,
@@ -84,9 +81,7 @@ import {
   getCancelPendingPolicyInstructionAsync,
   getCleanupOrphanConstraintsPdaInstructionAsync,
   getClosePostAssertionsInstructionAsync,
-  getCloseSettledEscrowInstructionAsync,
   getCloseVaultInstructionAsync,
-  getCreateEscrowInstructionAsync,
   getCreateInstructionConstraintsInstructionAsync,
   getCreatePostAssertionsInstructionAsync,
   getDepositFundsInstructionAsync,
@@ -100,10 +95,8 @@ import {
   getQueueConstraintsUpdateInstructionAsync,
   getQueuePolicyUpdateInstructionAsync,
   getReactivateVaultInstruction,
-  getRefundEscrowInstructionAsync,
   getRegisterAgentInstruction,
   getRevokeAgentInstruction,
-  getSettleEscrowInstructionAsync,
   getUnpauseAgentInstruction,
   getValidateAndAuthorizeInstructionAsync,
   getWithdrawFundsInstructionAsync,
@@ -120,9 +113,7 @@ import {
   parseCancelPendingPolicyInstruction,
   parseCleanupOrphanConstraintsPdaInstruction,
   parseClosePostAssertionsInstruction,
-  parseCloseSettledEscrowInstruction,
   parseCloseVaultInstruction,
-  parseCreateEscrowInstruction,
   parseCreateInstructionConstraintsInstruction,
   parseCreatePostAssertionsInstruction,
   parseDepositFundsInstruction,
@@ -136,10 +127,8 @@ import {
   parseQueueConstraintsUpdateInstruction,
   parseQueuePolicyUpdateInstruction,
   parseReactivateVaultInstruction,
-  parseRefundEscrowInstruction,
   parseRegisterAgentInstruction,
   parseRevokeAgentInstruction,
-  parseSettleEscrowInstruction,
   parseUnpauseAgentInstruction,
   parseValidateAndAuthorizeInstruction,
   parseWithdrawFundsInstruction,
@@ -156,9 +145,7 @@ import {
   type CancelPendingPolicyAsyncInput,
   type CleanupOrphanConstraintsPdaAsyncInput,
   type ClosePostAssertionsAsyncInput,
-  type CloseSettledEscrowAsyncInput,
   type CloseVaultAsyncInput,
-  type CreateEscrowAsyncInput,
   type CreateInstructionConstraintsAsyncInput,
   type CreatePostAssertionsAsyncInput,
   type DepositFundsAsyncInput,
@@ -179,9 +166,7 @@ import {
   type ParsedCancelPendingPolicyInstruction,
   type ParsedCleanupOrphanConstraintsPdaInstruction,
   type ParsedClosePostAssertionsInstruction,
-  type ParsedCloseSettledEscrowInstruction,
   type ParsedCloseVaultInstruction,
-  type ParsedCreateEscrowInstruction,
   type ParsedCreateInstructionConstraintsInstruction,
   type ParsedCreatePostAssertionsInstruction,
   type ParsedDepositFundsInstruction,
@@ -195,10 +180,8 @@ import {
   type ParsedQueueConstraintsUpdateInstruction,
   type ParsedQueuePolicyUpdateInstruction,
   type ParsedReactivateVaultInstruction,
-  type ParsedRefundEscrowInstruction,
   type ParsedRegisterAgentInstruction,
   type ParsedRevokeAgentInstruction,
-  type ParsedSettleEscrowInstruction,
   type ParsedUnpauseAgentInstruction,
   type ParsedValidateAndAuthorizeInstruction,
   type ParsedWithdrawFundsInstruction,
@@ -208,10 +191,8 @@ import {
   type QueueConstraintsUpdateAsyncInput,
   type QueuePolicyUpdateAsyncInput,
   type ReactivateVaultInput,
-  type RefundEscrowAsyncInput,
   type RegisterAgentInput,
   type RevokeAgentInput,
-  type SettleEscrowAsyncInput,
   type UnpauseAgentInput,
   type ValidateAndAuthorizeAsyncInput,
   type WithdrawFundsAsyncInput,
@@ -223,7 +204,6 @@ export const SIGIL_PROGRAM_ADDRESS =
 export enum SigilAccount {
   AgentSpendOverlay,
   AgentVault,
-  EscrowDeposit,
   InstructionConstraints,
   PendingAgentPermissionsUpdate,
   PendingCloseConstraints,
@@ -260,17 +240,6 @@ export function identifySigilAccount(
     )
   ) {
     return SigilAccount.AgentVault;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([56, 152, 208, 160, 159, 83, 6, 17]),
-      ),
-      0,
-    )
-  ) {
-    return SigilAccount.EscrowDeposit;
   }
   if (
     containsBytes(
@@ -391,9 +360,7 @@ export enum SigilInstruction {
   CancelPendingPolicy,
   CleanupOrphanConstraintsPda,
   ClosePostAssertions,
-  CloseSettledEscrow,
   CloseVault,
-  CreateEscrow,
   CreateInstructionConstraints,
   CreatePostAssertions,
   DepositFunds,
@@ -407,10 +374,8 @@ export enum SigilInstruction {
   QueueConstraintsUpdate,
   QueuePolicyUpdate,
   ReactivateVault,
-  RefundEscrow,
   RegisterAgent,
   RevokeAgent,
-  SettleEscrow,
   UnpauseAgent,
   ValidateAndAuthorize,
   WithdrawFunds,
@@ -567,34 +532,12 @@ export function identifySigilInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([169, 244, 164, 173, 181, 214, 139, 6]),
-      ),
-      0,
-    )
-  ) {
-    return SigilInstruction.CloseSettledEscrow;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([141, 103, 17, 126, 72, 75, 29, 29]),
       ),
       0,
     )
   ) {
     return SigilInstruction.CloseVault;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([253, 215, 165, 116, 36, 108, 68, 80]),
-      ),
-      0,
-    )
-  ) {
-    return SigilInstruction.CreateEscrow;
   }
   if (
     containsBytes(
@@ -743,17 +686,6 @@ export function identifySigilInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([107, 186, 89, 99, 26, 194, 23, 204]),
-      ),
-      0,
-    )
-  ) {
-    return SigilInstruction.RefundEscrow;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([135, 157, 66, 195, 2, 113, 175, 30]),
       ),
       0,
@@ -771,17 +703,6 @@ export function identifySigilInstruction(
     )
   ) {
     return SigilInstruction.RevokeAgent;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([22, 135, 160, 194, 23, 186, 124, 110]),
-      ),
-      0,
-    )
-  ) {
-    return SigilInstruction.SettleEscrow;
   }
   if (
     containsBytes(
@@ -865,14 +786,8 @@ export type ParsedSigilInstruction<
       instructionType: SigilInstruction.ClosePostAssertions;
     } & ParsedClosePostAssertionsInstruction<TProgram>)
   | ({
-      instructionType: SigilInstruction.CloseSettledEscrow;
-    } & ParsedCloseSettledEscrowInstruction<TProgram>)
-  | ({
       instructionType: SigilInstruction.CloseVault;
     } & ParsedCloseVaultInstruction<TProgram>)
-  | ({
-      instructionType: SigilInstruction.CreateEscrow;
-    } & ParsedCreateEscrowInstruction<TProgram>)
   | ({
       instructionType: SigilInstruction.CreateInstructionConstraints;
     } & ParsedCreateInstructionConstraintsInstruction<TProgram>)
@@ -913,17 +828,11 @@ export type ParsedSigilInstruction<
       instructionType: SigilInstruction.ReactivateVault;
     } & ParsedReactivateVaultInstruction<TProgram>)
   | ({
-      instructionType: SigilInstruction.RefundEscrow;
-    } & ParsedRefundEscrowInstruction<TProgram>)
-  | ({
       instructionType: SigilInstruction.RegisterAgent;
     } & ParsedRegisterAgentInstruction<TProgram>)
   | ({
       instructionType: SigilInstruction.RevokeAgent;
     } & ParsedRevokeAgentInstruction<TProgram>)
-  | ({
-      instructionType: SigilInstruction.SettleEscrow;
-    } & ParsedSettleEscrowInstruction<TProgram>)
   | ({
       instructionType: SigilInstruction.UnpauseAgent;
     } & ParsedUnpauseAgentInstruction<TProgram>)
@@ -1030,25 +939,11 @@ export function parseSigilInstruction<TProgram extends string>(
         ...parseClosePostAssertionsInstruction(instruction),
       };
     }
-    case SigilInstruction.CloseSettledEscrow: {
-      assertIsInstructionWithAccounts(instruction);
-      return {
-        instructionType: SigilInstruction.CloseSettledEscrow,
-        ...parseCloseSettledEscrowInstruction(instruction),
-      };
-    }
     case SigilInstruction.CloseVault: {
       assertIsInstructionWithAccounts(instruction);
       return {
         instructionType: SigilInstruction.CloseVault,
         ...parseCloseVaultInstruction(instruction),
-      };
-    }
-    case SigilInstruction.CreateEscrow: {
-      assertIsInstructionWithAccounts(instruction);
-      return {
-        instructionType: SigilInstruction.CreateEscrow,
-        ...parseCreateEscrowInstruction(instruction),
       };
     }
     case SigilInstruction.CreateInstructionConstraints: {
@@ -1142,13 +1037,6 @@ export function parseSigilInstruction<TProgram extends string>(
         ...parseReactivateVaultInstruction(instruction),
       };
     }
-    case SigilInstruction.RefundEscrow: {
-      assertIsInstructionWithAccounts(instruction);
-      return {
-        instructionType: SigilInstruction.RefundEscrow,
-        ...parseRefundEscrowInstruction(instruction),
-      };
-    }
     case SigilInstruction.RegisterAgent: {
       assertIsInstructionWithAccounts(instruction);
       return {
@@ -1161,13 +1049,6 @@ export function parseSigilInstruction<TProgram extends string>(
       return {
         instructionType: SigilInstruction.RevokeAgent,
         ...parseRevokeAgentInstruction(instruction),
-      };
-    }
-    case SigilInstruction.SettleEscrow: {
-      assertIsInstructionWithAccounts(instruction);
-      return {
-        instructionType: SigilInstruction.SettleEscrow,
-        ...parseSettleEscrowInstruction(instruction),
       };
     }
     case SigilInstruction.UnpauseAgent: {
@@ -1209,8 +1090,6 @@ export type SigilPluginAccounts = {
     SelfFetchFunctions<AgentSpendOverlayArgs, AgentSpendOverlay>;
   agentVault: ReturnType<typeof getAgentVaultCodec> &
     SelfFetchFunctions<AgentVaultArgs, AgentVault>;
-  escrowDeposit: ReturnType<typeof getEscrowDepositCodec> &
-    SelfFetchFunctions<EscrowDepositArgs, EscrowDeposit>;
   instructionConstraints: ReturnType<typeof getInstructionConstraintsCodec> &
     SelfFetchFunctions<InstructionConstraintsArgs, InstructionConstraints>;
   pendingAgentPermissionsUpdate: ReturnType<
@@ -1291,17 +1170,9 @@ export type SigilPluginInstructions = {
     input: ClosePostAssertionsAsyncInput,
   ) => ReturnType<typeof getClosePostAssertionsInstructionAsync> &
     SelfPlanAndSendFunctions;
-  closeSettledEscrow: (
-    input: CloseSettledEscrowAsyncInput,
-  ) => ReturnType<typeof getCloseSettledEscrowInstructionAsync> &
-    SelfPlanAndSendFunctions;
   closeVault: (
     input: CloseVaultAsyncInput,
   ) => ReturnType<typeof getCloseVaultInstructionAsync> &
-    SelfPlanAndSendFunctions;
-  createEscrow: (
-    input: CreateEscrowAsyncInput,
-  ) => ReturnType<typeof getCreateEscrowInstructionAsync> &
     SelfPlanAndSendFunctions;
   createInstructionConstraints: (
     input: CreateInstructionConstraintsAsyncInput,
@@ -1352,10 +1223,6 @@ export type SigilPluginInstructions = {
     input: ReactivateVaultInput,
   ) => ReturnType<typeof getReactivateVaultInstruction> &
     SelfPlanAndSendFunctions;
-  refundEscrow: (
-    input: RefundEscrowAsyncInput,
-  ) => ReturnType<typeof getRefundEscrowInstructionAsync> &
-    SelfPlanAndSendFunctions;
   registerAgent: (
     input: RegisterAgentInput,
   ) => ReturnType<typeof getRegisterAgentInstruction> &
@@ -1363,10 +1230,6 @@ export type SigilPluginInstructions = {
   revokeAgent: (
     input: RevokeAgentInput,
   ) => ReturnType<typeof getRevokeAgentInstruction> & SelfPlanAndSendFunctions;
-  settleEscrow: (
-    input: SettleEscrowAsyncInput,
-  ) => ReturnType<typeof getSettleEscrowInstructionAsync> &
-    SelfPlanAndSendFunctions;
   unpauseAgent: (
     input: UnpauseAgentInput,
   ) => ReturnType<typeof getUnpauseAgentInstruction> & SelfPlanAndSendFunctions;
@@ -1398,7 +1261,6 @@ export function sigilProgram() {
             getAgentSpendOverlayCodec(),
           ),
           agentVault: addSelfFetchFunctions(client, getAgentVaultCodec()),
-          escrowDeposit: addSelfFetchFunctions(client, getEscrowDepositCodec()),
           instructionConstraints: addSelfFetchFunctions(
             client,
             getInstructionConstraintsCodec(),
@@ -1496,20 +1358,10 @@ export function sigilProgram() {
               client,
               getClosePostAssertionsInstructionAsync(input),
             ),
-          closeSettledEscrow: (input) =>
-            addSelfPlanAndSendFunctions(
-              client,
-              getCloseSettledEscrowInstructionAsync(input),
-            ),
           closeVault: (input) =>
             addSelfPlanAndSendFunctions(
               client,
               getCloseVaultInstructionAsync(input),
-            ),
-          createEscrow: (input) =>
-            addSelfPlanAndSendFunctions(
-              client,
-              getCreateEscrowInstructionAsync(input),
             ),
           createInstructionConstraints: (input) =>
             addSelfPlanAndSendFunctions(
@@ -1576,11 +1428,6 @@ export function sigilProgram() {
               client,
               getReactivateVaultInstruction(input),
             ),
-          refundEscrow: (input) =>
-            addSelfPlanAndSendFunctions(
-              client,
-              getRefundEscrowInstructionAsync(input),
-            ),
           registerAgent: (input) =>
             addSelfPlanAndSendFunctions(
               client,
@@ -1590,11 +1437,6 @@ export function sigilProgram() {
             addSelfPlanAndSendFunctions(
               client,
               getRevokeAgentInstruction(input),
-            ),
-          settleEscrow: (input) =>
-            addSelfPlanAndSendFunctions(
-              client,
-              getSettleEscrowInstructionAsync(input),
             ),
           unpauseAgent: (input) =>
             addSelfPlanAndSendFunctions(

@@ -322,8 +322,11 @@ pub fn handler(
     enum ScanAction {
         FoundFinalize,
         Infrastructure,
-        /// Passed shared checks (constraint entry match, if any, is used for strict-mode
-        /// side-effect only — generic_constraints returns Err if strict mode is violated).
+        // V2: constraint entry match is mandatory. If loaded_constraints exists,
+        // the program_id must be in it AND the entry must match. If no entry exists
+        // for this program_id, the call returned Err::UnconstrainedProgramBlocked
+        // above. By the time we reach this arm, the instruction has passed
+        // constraint enforcement.
         PassedSharedChecks,
     }
 
@@ -452,9 +455,11 @@ pub fn handler(
         );
 
         // Generic instruction constraints (OR across entries, zero-copy).
-        // Return value (matched entry index) was only used by position_effect extraction,
-        // which was deleted with the counter system. Strict-mode check remains as the
-        // required side-effect.
+        // V2 (REVAMP_PLAN §2.2): strict_mode dichotomy removed. Every entry
+        // is strictly enforced — if no entry matches the instruction's
+        // program_id + data + accounts, the instruction is rejected. This
+        // collapses the prior permissive default (DEEP-1) that allowed any
+        // unconstrained program through.
         if let Some(constraints) = loaded_constraints {
             let matched = generic_constraints::verify_against_entries_zc(
                 constraints,
@@ -462,7 +467,7 @@ pub fn handler(
                 &ix.data,
                 &ix.accounts,
             )?;
-            if matched.is_none() && constraints.strict_mode != 0 {
+            if matched.is_none() {
                 return Err(error!(SigilError::UnconstrainedProgramBlocked));
             }
         }

@@ -175,20 +175,19 @@ interface SyntheticEntry {
  * entries in one TX). Writes the same layout the on-chain code reads via
  * `bytemuck::from_bytes::<InstructionConstraints>`.
  *
- * Layout (35,888 bytes):
+ * Layout (35,888 bytes) — V2 (REVAMP_PLAN §2.2): strict_mode byte removed,
+ * padding grew from 4 to 5 to preserve the 35,888-byte invariant.
  *   [0..8)         Anchor disc
  *   [8..40)        vault: [u8; 32]
  *   [40..40+64×560)  entries: [ConstraintEntryZC; 64]
  *   [+0)           entry_count: u8
- *   [+1)           strict_mode: u8
- *   [+2)           bump: u8
- *   [+3)           constraint_version: u8
- *   [+4..+8)       _padding: [u8; 4]
+ *   [+1)           bump: u8
+ *   [+2)           constraint_version: u8
+ *   [+3..+8)       _padding: [u8; 5]
  */
 function buildConstraintsAccountData(
   vault: PublicKey,
   bump: number,
-  strictMode: boolean,
   entries: SyntheticEntry[],
 ): Buffer {
   if (entries.length > MAX_CONSTRAINT_ENTRIES) {
@@ -232,13 +231,13 @@ function buildConstraintsAccountData(
     buf.writeUInt8(1, entryOffset + 554);
     // discriminator_format = 0 (Anchor8) — already zero
   }
-  // entry_count, strict_mode, bump, constraint_version, padding follow the entries array.
+  // V2 layout: entry_count, bump, constraint_version, padding follow the
+  // entries array (strict_mode byte removed — REVAMP_PLAN §2.2).
   const tailOffset = 40 + MAX_CONSTRAINT_ENTRIES * CONSTRAINT_ENTRY_ZC_SIZE;
   buf.writeUInt8(entries.length, tailOffset + 0); // entry_count
-  buf.writeUInt8(strictMode ? 1 : 0, tailOffset + 1); // strict_mode
-  buf.writeUInt8(bump, tailOffset + 2); // bump
-  buf.writeUInt8(1, tailOffset + 3); // constraint_version = 1
-  // padding zero
+  buf.writeUInt8(bump, tailOffset + 1); // bump
+  buf.writeUInt8(1, tailOffset + 2); // constraint_version = 1
+  // padding zero (5 bytes at tailOffset+3..+8)
   return buf;
 }
 
@@ -483,10 +482,7 @@ describe("cu-budget", () => {
    * loop to walk all 64 entries before finding a match — the worst case for
    * the verify_against_entries_zc scan.
    */
-  function installFallthroughConstraints(
-    ctx: VaultCtx,
-    strictMode: boolean,
-  ): void {
+  function installFallthroughConstraints(ctx: VaultCtx): void {
     const entries: SyntheticEntry[] = [];
     for (let i = 0; i < 63; i++) {
       // Distinct fake disc per entry, all with first byte 0..62 (none == 229 = ROUTE_DISC[0])
@@ -506,7 +502,6 @@ describe("cu-budget", () => {
     const data = buildConstraintsAccountData(
       ctx.vault,
       ctx.constraintsBump,
-      strictMode,
       entries,
     );
     const rentExempt = Number(
@@ -681,11 +676,11 @@ describe("cu-budget", () => {
   });
 
   // ───────────────────────────────────────────────────────────────────────────
-  // Scenario 4: validate + 64-entry OR-fall-through (strict_mode=true)
+  // Scenario 4: validate + 64-entry OR-fall-through (V2: strict-by-default)
   // ───────────────────────────────────────────────────────────────────────────
   it(`Scenario 4: validate + 64-entry OR-fall-through ≤ ${THRESHOLDS.or64Fallthrough.toLocaleString()} CU`, async () => {
     const ctx = await setupVault(new BN(60004), [JUPITER_PROGRAM_ID]);
-    installFallthroughConstraints(ctx, true);
+    installFallthroughConstraints(ctx);
 
     const jupiterIx = new TransactionInstruction({
       programId: JUPITER_PROGRAM_ID,
@@ -721,7 +716,7 @@ describe("cu-budget", () => {
   // ───────────────────────────────────────────────────────────────────────────
   it(`Scenario 5: 10-step + 64 entries combined ≤ ${THRESHOLDS.combined.toLocaleString()} CU`, async () => {
     const ctx = await setupVault(new BN(60005), [JUPITER_PROGRAM_ID]);
-    installFallthroughConstraints(ctx, true);
+    installFallthroughConstraints(ctx);
 
     const jupiterIx = new TransactionInstruction({
       programId: JUPITER_PROGRAM_ID,

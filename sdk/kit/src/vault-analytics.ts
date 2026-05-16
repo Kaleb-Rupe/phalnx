@@ -50,7 +50,6 @@ export interface VaultHealth {
   isHealthy: boolean;
   agentCount: number;
   pausedAgentCount: number;
-  activeEscrowCount: number;
   /** 0-100 percentage of daily cap used */
   capUtilization: number;
   /** USD base units remaining in 24h window */
@@ -215,7 +214,6 @@ export function getVaultHealth(
     isHealthy,
     agentCount,
     pausedAgentCount,
-    activeEscrowCount: vault.activeEscrowCount,
     capUtilization,
     capRemaining: globalBudget.remaining,
     capResetsIn,

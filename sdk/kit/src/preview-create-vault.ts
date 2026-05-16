@@ -85,11 +85,12 @@ import { SIGIL_ERROR__SDK__INVALID_PARAMS } from "./errors/codes.js";
  * `AgentVault::SIZE` from `programs/sigil/src/state/vault.rs`.
  * Layout: 8 disc + 32 owner + 8 vault_id + 4 vec_prefix + (49 * 10) agents
  *       + 32 fee_destination + 1 status + 1 bump + 8 created_at
- *       + 8 total_transactions + 8 total_volume + 1 active_escrow_count
+ *       + 8 total_transactions + 8 total_volume
  *       + 8 total_fees_collected + 8 total_deposited_usd + 8 total_withdrawn_usd
- *       + 8 total_failed_transactions + 1 active_sessions = 634.
+ *       + 8 total_failed_transactions + 1 active_sessions = 633 (was 634
+ *       before v2 revamp Stage 1 dropped active_escrow_count u8).
  */
-const AGENT_VAULT_SIZE = 634;
+const AGENT_VAULT_SIZE = 633;
 
 /**
  * `PolicyConfig::SIZE` from `programs/sigil/src/state/policy.rs`.

@@ -49,9 +49,6 @@ pub struct AgentVault {
     /// Total volume processed in token base units
     pub total_volume: u64,
 
-    /// Number of active (unsettled/unrefunded) escrow deposits from this vault
-    pub active_escrow_count: u8,
-
     /// Cumulative developer fees collected from this vault (token base units)
     pub total_fees_collected: u64,
 
@@ -94,7 +91,7 @@ impl AgentVault {
     /// agents vec prefix (4) + agents data (49 * 10) +
     /// fee_destination (32) + status (1) + bump (1) +
     /// created_at (8) + total_transactions (8) + total_volume (8) +
-    /// active_escrow_count (1) + total_fees_collected (8) +
+    /// total_fees_collected (8) +
     /// total_deposited_usd (8) + total_withdrawn_usd (8) + total_failed_transactions (8) +
     /// active_sessions (1)
     pub const SIZE: usize = 8
@@ -108,13 +105,12 @@ impl AgentVault {
         + 8
         + 8
         + 8
-        + 1
         + 8
         + 8
         + 8
         + 8
         + 1;
-    // = 634 (was 635; open_positions u8 removed)
+    // = 633 (was 634; active_escrow_count u8 removed in v2 revamp Stage 1)
 
     pub fn is_active(&self) -> bool {
         self.status == VaultStatus::Active

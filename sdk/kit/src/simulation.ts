@@ -251,161 +251,193 @@ const ANCHOR_ERROR_MAP: Record<number, { name: string; suggestion: string }> = {
     suggestion: "Permission bitmask contains invalid bits.",
   },
   6039: {
-    name: "EscrowNotActive",
-    suggestion: "Escrow is not in Active status.",
-  },
-  6040: {
-    name: "EscrowExpired",
-    suggestion: "Escrow has expired.",
-  },
-  6041: {
-    name: "EscrowNotExpired",
-    suggestion: "Escrow has not expired yet — wait for expiry.",
-  },
-  6042: {
-    name: "InvalidEscrowVault",
-    suggestion: "Invalid escrow vault.",
-  },
-  6043: {
-    name: "EscrowConditionsNotMet",
-    suggestion: "Escrow conditions not met.",
-  },
-  6044: {
-    name: "EscrowDurationExceeded",
-    suggestion: "Escrow duration exceeds max (30 days).",
-  },
-  6045: {
     name: "InvalidConstraintConfig",
     suggestion: "Constraint configuration exceeds bounds.",
   },
-  6046: {
+  6040: {
     name: "ConstraintViolated",
     suggestion: "Instruction violates a constraint.",
   },
-  6047: {
+  6041: {
     name: "InvalidConstraintsPda",
     suggestion: "Wrong constraints PDA owner or vault.",
   },
-  6048: {
+  6042: {
     name: "InvalidPendingConstraintsPda",
     suggestion: "Wrong pending constraints PDA.",
   },
-  6049: {
+  6043: {
     name: "AgentSpendLimitExceeded",
     suggestion: "Agent rolling 24h spend exceeds per-agent limit.",
   },
-  6050: {
+  6044: {
     name: "OverlaySlotExhausted",
     suggestion:
       "Per-agent overlay full — cannot register agent with spending limit.",
   },
-  6051: {
+  6045: {
     name: "AgentSlotNotFound",
     suggestion: "Agent has spending limit but no overlay tracking slot.",
   },
-  6052: {
+  6046: {
     name: "UnauthorizedTokenApproval",
     suggestion: "Unauthorized SPL Token Approve between validate and finalize.",
   },
-  6053: {
+  6047: {
     name: "InvalidSessionExpiry",
     suggestion: "Session expiry slots out of range (10-450).",
   },
-  6054: {
+  6048: {
     name: "UnconstrainedProgramBlocked",
-    suggestion: "Program has no constraint entry and strict mode is enabled.",
+    suggestion:
+      "Program has no matching constraint entry — every instruction must match one. Queue a constraint entry for this program before sending.",
   },
-  6055: {
+  6049: {
     name: "ProtocolCapExceeded",
     suggestion: "Per-protocol rolling 24h spending cap exceeded.",
   },
-  6056: {
+  6050: {
     name: "ProtocolCapsMismatch",
     suggestion: "protocol_caps length must match protocols length.",
   },
-  6057: {
-    name: "ActiveEscrowsExist",
-    suggestion: "Close active escrow deposits before closing vault.",
-  },
-  6058: {
+  6051: {
     name: "ConstraintsNotClosed",
     suggestion: "Close instruction constraints before closing vault.",
   },
-  6059: {
+  6052: {
     name: "PendingPolicyExists",
     suggestion: "Apply or cancel pending policy update before closing vault.",
   },
-  6060: {
+  6053: {
     name: "AgentPaused",
     suggestion: "Agent is paused — unpause before executing actions.",
   },
-  6061: {
+  6054: {
     name: "AgentAlreadyPaused",
     suggestion: "Agent is already paused.",
   },
-  6062: {
+  6055: {
     name: "AgentNotPaused",
     suggestion: "Agent is not paused.",
   },
-  6063: {
+  6056: {
     name: "UnauthorizedPostFinalizeInstruction",
     suggestion:
       "UnauthorizedPostFinalizeInstruction — see Sigil error-code documentation.",
   },
-  6064: {
+  6057: {
     name: "UnexpectedBalanceDecrease",
     suggestion:
       "UnexpectedBalanceDecrease — see Sigil error-code documentation.",
   },
-  6065: {
+  6058: {
     name: "TimelockTooShort",
     suggestion: "TimelockTooShort — see Sigil error-code documentation.",
   },
-  6066: {
+  6059: {
     name: "PolicyVersionMismatch",
     suggestion: "PolicyVersionMismatch — see Sigil error-code documentation.",
   },
-  6067: {
+  6060: {
     name: "ActiveSessionsExist",
     suggestion: "ActiveSessionsExist — see Sigil error-code documentation.",
   },
-  6068: {
+  6061: {
     name: "PostAssertionFailed",
     suggestion: "PostAssertionFailed — see Sigil error-code documentation.",
   },
-  6069: {
+  6062: {
     name: "InvalidPostAssertionIndex",
     suggestion:
       "InvalidPostAssertionIndex — see Sigil error-code documentation.",
   },
-  6070: {
+  6063: {
     name: "UnauthorizedPreValidateInstruction",
     suggestion:
       "UnauthorizedPreValidateInstruction — see Sigil error-code documentation.",
   },
-  6071: {
+  6064: {
     name: "SnapshotNotCaptured",
     suggestion: "SnapshotNotCaptured — see Sigil error-code documentation.",
   },
-  6072: {
+  6065: {
     name: "InvalidConstraintOperator",
     suggestion:
       "InvalidConstraintOperator — see Sigil error-code documentation.",
   },
-  6073: {
+  6066: {
     name: "ConstraintsVaultMismatch",
     suggestion:
       "ConstraintsVaultMismatch — see Sigil error-code documentation.",
   },
-  6074: {
+  6067: {
     name: "BlockedSplOpcode",
     suggestion: "BlockedSplOpcode — see Sigil error-code documentation.",
   },
   // F-10 audit fix: durable-nonce pre-signing defense
-  6075: {
+  6068: {
     name: "QueuedUpdateExpired",
     suggestion:
       "Queued update is too old — re-queue via queue_policy_update / queue_constraints_update / queue_close_constraints / queue_agent_permissions_update.",
+  },
+  6069: {
+    name: "AccountWritabilityMismatch",
+    suggestion:
+      "Account writability flag does not match constraint requirement.",
+  },
+  6070: {
+    name: "SysvarScanBoundExceeded",
+    suggestion:
+      "Sysvar instruction scan exceeded the per-tx safety bound — reduce transaction size.",
+  },
+  6071: {
+    name: "AsyncFulfillmentNotPermitted",
+    suggestion:
+      "Async-fulfillment program is not permitted in V1 (Jupiter Perps, Drift, Drift JIT). Keeper-deferred fills cannot be measured by finalize_session.",
+  },
+  6072: {
+    name: "ConstraintsAlreadyPopulated",
+    suggestion:
+      "Cannot clean an active constraints PDA; use queue + apply_close_constraints.",
+  },
+  6073: {
+    name: "OrphanPdaWrongOwner",
+    suggestion:
+      "PDA at constraints seeds is not program-owned — cannot be treated as an orphan.",
+  },
+  6074: {
+    name: "OrphanPdaPopulated",
+    suggestion: "PDA is fully populated; not an orphan.",
+  },
+  6075: {
+    name: "ConfidentialTransferBlocked",
+    suggestion:
+      "Token-2022 ConfidentialTransfer not permitted between validate and finalize.",
+  },
+  6076: {
+    name: "PermanentDelegateBlocked",
+    suggestion:
+      "Token-2022 PermanentDelegate not permitted between validate and finalize.",
+  },
+  6077: {
+    name: "TransferHookBlocked",
+    suggestion:
+      "Token-2022 TransferHook not permitted between validate and finalize.",
+  },
+  6078: {
+    name: "LamportDrainBlocked",
+    suggestion:
+      "Token-2022 destructive-balance ix (opcodes 38/45/46) not permitted between validate and finalize.",
+  },
+  6079: {
+    name: "BatchInstructionBlocked",
+    suggestion:
+      "Token-2022 Batch instruction (opcode 255) is blocked — wraps inner instructions and bypasses byte-0 blocklist.",
+  },
+  6080: {
+    name: "InvalidDestinationMode",
+    suggestion:
+      "Invalid destination mode — must be 0 (Restricted) or 1 (OpenWithCap).",
   },
 };
 

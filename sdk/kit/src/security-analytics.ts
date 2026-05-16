@@ -62,7 +62,6 @@ export interface AuditEntry {
     | "policy_change"
     | "agent_change"
     | "emergency"
-    | "escrow"
     | "constraint_change";
   action: string;
   actor: Address;
@@ -407,15 +406,17 @@ export function getSecurityPosture(state: ResolvedVaultState): SecurityPosture {
     {
       id: "mode-all-unguarded",
       label: "Protocol mode ALL has constraint protection",
-      passed:
-        policy.protocolMode !== 0 /* PROTOCOL_MODE_ALL */ ||
-        (constraints !== null && Number(constraints.strictMode) !== 0),
+      // V2 (REVAMP_PLAN §2.2): strict_mode dichotomy removed. Constraints
+      // are always strictly enforced when present. The remaining gap is
+      // protocol mode ALL paired with NO constraints at all — agents would
+      // hit no allowlist filter and no entry-match check.
+      passed: policy.protocolMode !== 0 /* PROTOCOL_MODE_ALL */ || constraints !== null,
       severity: "critical",
       detail:
-        "Protocol mode ALL allows agents to call any program. Without strict-mode constraints, " +
+        "Protocol mode ALL allows agents to call any program. Without InstructionConstraints, " +
         "agents have unrestricted program access beyond spending caps and SPL transfer blocking.",
       remediation:
-        "Switch to Allowlist mode, or enable InstructionConstraints with strict_mode=true.",
+        "Switch to Allowlist mode, or define InstructionConstraints entries for the vault.",
     },
   ];
 
@@ -626,20 +627,20 @@ const AUDIT_EVENTS: Record<string, AuditEntry["category"]> = {
   VaultReactivated: "emergency",
   VaultClosed: "emergency",
   VaultCreated: "emergency",
-  EscrowCreated: "escrow",
-  EscrowSettled: "escrow",
-  EscrowRefunded: "escrow",
   InstructionConstraintsCreated: "constraint_change",
-  InstructionConstraintsUpdated: "constraint_change",
-  InstructionConstraintsClosed: "constraint_change",
+  // V2 (MED-2 cleanup): InstructionConstraintsUpdated / InstructionConstraintsClosed
+  // were replaced by ConstraintsChangeApplied / CloseConstraintsApplied.
   ConstraintsChangeQueued: "constraint_change",
   ConstraintsChangeApplied: "constraint_change",
   ConstraintsChangeCancelled: "constraint_change",
+  CloseConstraintsQueued: "constraint_change",
+  CloseConstraintsApplied: "constraint_change",
+  CloseConstraintsCancelled: "constraint_change",
 };
 
 /**
  * Filter decoded events into a compliance-focused audit trail.
- * Shows only security-relevant events (policy, agent, emergency, escrow, constraints).
+ * Shows only security-relevant events (policy, agent, emergency, constraints).
  *
  * Supports optional filtering by category, timestamp, and actor.
  *
@@ -718,7 +719,6 @@ export function getAuditTrailSummary(trail: AuditEntry[]): AuditTrailSummary {
     policy_change: 0,
     agent_change: 0,
     emergency: 0,
-    escrow: 0,
     constraint_change: 0,
   };
   const actors = new Set<string>();

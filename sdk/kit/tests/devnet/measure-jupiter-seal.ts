@@ -83,7 +83,6 @@ function mockState(): ResolvedVaultState {
       createdAt: 1000n,
       totalTransactions: 0n,
       totalVolume: 0n,
-      activeEscrowCount: 0,
       totalFeesCollected: 0n,
       totalDepositedUsd: 0n,
       totalWithdrawnUsd: 0n,

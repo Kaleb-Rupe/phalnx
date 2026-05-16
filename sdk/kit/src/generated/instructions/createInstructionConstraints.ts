@@ -13,8 +13,6 @@ import {
   getAddressEncoder,
   getArrayDecoder,
   getArrayEncoder,
-  getBooleanDecoder,
-  getBooleanEncoder,
   getBytesDecoder,
   getBytesEncoder,
   getProgramDerivedAddress,
@@ -92,12 +90,10 @@ export type CreateInstructionConstraintsInstruction<
 export type CreateInstructionConstraintsInstructionData = {
   discriminator: ReadonlyUint8Array;
   entries: Array<ConstraintEntry>;
-  strictMode: boolean;
 };
 
 export type CreateInstructionConstraintsInstructionDataArgs = {
   entries: Array<ConstraintEntryArgs>;
-  strictMode: boolean;
 };
 
 export function getCreateInstructionConstraintsInstructionDataEncoder(): Encoder<CreateInstructionConstraintsInstructionDataArgs> {
@@ -105,7 +101,6 @@ export function getCreateInstructionConstraintsInstructionDataEncoder(): Encoder
     getStructEncoder([
       ["discriminator", fixEncoderSize(getBytesEncoder(), 8)],
       ["entries", getArrayEncoder(getConstraintEntryEncoder())],
-      ["strictMode", getBooleanEncoder()],
     ]),
     (value) => ({
       ...value,
@@ -118,7 +113,6 @@ export function getCreateInstructionConstraintsInstructionDataDecoder(): Decoder
   return getStructDecoder([
     ["discriminator", fixDecoderSize(getBytesDecoder(), 8)],
     ["entries", getArrayDecoder(getConstraintEntryDecoder())],
-    ["strictMode", getBooleanDecoder()],
   ]);
 }
 
@@ -144,7 +138,6 @@ export type CreateInstructionConstraintsAsyncInput<
   /** Verified in handler: correct size, program-owned, vault match, no discriminator yet. */
   constraints?: Address<TAccountConstraints>;
   entries: CreateInstructionConstraintsInstructionDataArgs["entries"];
-  strictMode: CreateInstructionConstraintsInstructionDataArgs["strictMode"];
 };
 
 export async function getCreateInstructionConstraintsInstructionAsync<
@@ -253,7 +246,6 @@ export type CreateInstructionConstraintsInput<
   /** Verified in handler: correct size, program-owned, vault match, no discriminator yet. */
   constraints: Address<TAccountConstraints>;
   entries: CreateInstructionConstraintsInstructionDataArgs["entries"];
-  strictMode: CreateInstructionConstraintsInstructionDataArgs["strictMode"];
 };
 
 export function getCreateInstructionConstraintsInstruction<

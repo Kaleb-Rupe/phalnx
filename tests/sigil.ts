@@ -1155,9 +1155,9 @@ describe("sigil", () => {
         expect.fail("Should have thrown");
       } catch (err: any) {
         // Error 6063 = UnauthorizedPostFinalizeInstruction (code shifted from
-        // 6065 → 6063 after phantom-error cleanup). Checked at finalize
+        // 6065 → 6056 (after escrow removal renumber) after phantom-error cleanup). Checked at finalize
         // instruction (index 1).
-        expect(err.toString()).to.include("6063");
+        expect(err.toString()).to.include("6056");
       }
     });
   });
@@ -3731,7 +3731,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "TimelockTooShort", code: 6065 });
+        expectSigilError(err, { name: "TimelockTooShort", code: 6058 });
       }
     });
 
@@ -5167,7 +5167,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have exceeded per-agent spend limit");
       } catch (err: any) {
-        expectSigilError(err, { name: "AgentSpendLimitExceeded", code: 6049 });
+        expectSigilError(err, { name: "AgentSpendLimitExceeded", code: 6043 });
       }
 
       // But spending $150 (total = $950 < $1000) should succeed
@@ -5652,7 +5652,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "ProtocolCapsMismatch", code: 6056 });
+        expectSigilError(err, { name: "ProtocolCapsMismatch", code: 6050 });
       }
     });
 
@@ -5707,7 +5707,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "ProtocolCapsMismatch", code: 6056 });
+        expectSigilError(err, { name: "ProtocolCapsMismatch", code: 6050 });
       }
     });
   });
@@ -6045,7 +6045,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "AgentAlreadyPaused", code: 6061 });
+        expectSigilError(err, { name: "AgentAlreadyPaused", code: 6054 });
       }
     });
 
@@ -6154,7 +6154,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "AgentPaused", code: 6060 });
+        expectSigilError(err, { name: "AgentPaused", code: 6053 });
       }
     });
 
@@ -6224,7 +6224,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "AgentNotPaused", code: 6062 });
+        expectSigilError(err, { name: "AgentNotPaused", code: 6055 });
       }
     });
 

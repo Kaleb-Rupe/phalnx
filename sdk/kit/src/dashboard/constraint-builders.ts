@@ -161,7 +161,8 @@ export interface BuildCreateConstraintsInput {
    */
   policy: Address;
   entries: ConstraintEntry[];
-  strictMode: boolean;
+  // strictMode field removed in V2 (REVAMP_PLAN §2.2): every entry is strictly
+  // enforced. Callers no longer pass a mode flag.
 }
 
 // ─── Public builders ────────────────────────────────────────────────────────
@@ -179,7 +180,7 @@ export interface BuildCreateConstraintsInput {
 export async function buildCreateConstraintsIxs(
   input: BuildCreateConstraintsInput,
 ): Promise<Instruction[]> {
-  const { owner, vault, policy, entries, strictMode } = input;
+  const { owner, vault, policy, entries } = input;
 
   if (!entries || entries.length === 0) {
     // Match the validation already performed in `mutations.createConstraints`.
@@ -215,7 +216,6 @@ export async function buildCreateConstraintsIxs(
     policy,
     constraints: constraintsPda,
     entries,
-    strictMode,
   });
 
   const ixs: Instruction[] = [allocateIx, ...extendIxs, populateIx];
@@ -236,7 +236,7 @@ export async function buildCreateConstraintsIxs(
 export async function buildQueueConstraintsUpdateIxs(
   input: BuildCreateConstraintsInput,
 ): Promise<Instruction[]> {
-  const { owner, vault, policy, entries, strictMode } = input;
+  const { owner, vault, policy, entries } = input;
 
   if (!entries || entries.length === 0) {
     throw new Error("Constraint entries must be a non-empty array");
@@ -280,7 +280,6 @@ export async function buildQueueConstraintsUpdateIxs(
     constraints: constraintsPda,
     pendingConstraints: pendingConstraintsPda,
     entries,
-    strictMode,
   });
 
   const ixs: Instruction[] = [allocateIx, ...extendIxs, populateIx];

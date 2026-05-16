@@ -17,15 +17,15 @@ describe("agent-errors", () => {
   // ─── On-chain error map completeness ──────────────────────────────────────
 
   describe("ON_CHAIN_ERROR_MAP completeness", () => {
-    it("maps all 88 error codes (6000-6087)", () => {
+    it("maps all 81 error codes (6000-6080)", () => {
       const codes = getAllOnChainErrorCodes();
-      expect(codes).to.have.lengthOf(88);
+      expect(codes).to.have.lengthOf(81);
       expect(codes[0]).to.equal(6000);
-      expect(codes[codes.length - 1]).to.equal(6087);
+      expect(codes[codes.length - 1]).to.equal(6080);
     });
 
-    it("every code from 6000-6087 is present with no gaps", () => {
-      for (let code = 6000; code <= 6087; code++) {
+    it("every code from 6000-6080 is present with no gaps", () => {
+      for (let code = 6000; code <= 6080; code++) {
         const entry = ON_CHAIN_ERROR_MAP[code];
         expect(entry, `Missing error code ${code}`).to.exist;
         expect(entry.name).to.be.a("string").and.not.be.empty;
@@ -84,10 +84,11 @@ describe("agent-errors", () => {
       expect(err!.context.error_name).to.equal("VaultNotActive");
     });
 
-    it("parses numeric code 6063 (UnauthorizedPostFinalizeInstruction)", () => {
-      const err = parseOnChainErrorCode(6063);
+    it("parses numeric code 6056 (UnauthorizedPostFinalizeInstruction)", () => {
+      // V2 demolition: escrow codes removed shifted post-finalize from 6063→6056.
+      const err = parseOnChainErrorCode(6056);
       expect(err).to.not.be.null;
-      expect(err!.code).to.equal("6063");
+      expect(err!.code).to.equal("6056");
       expect(err!.category).to.equal("POLICY_VIOLATION");
       expect(err!.context.error_name).to.equal(
         "UnauthorizedPostFinalizeInstruction",
@@ -101,10 +102,11 @@ describe("agent-errors", () => {
       expect(err!.context.error_name).to.equal("VaultNotActive");
     });
 
-    it("parses hex string 0x17A7 (= 6055 ProtocolCapExceeded)", () => {
-      const err = parseOnChainErrorCode("0x17A7");
+    it("parses hex string 0x17A1 (= 6049 ProtocolCapExceeded)", () => {
+      // V2 demolition: escrow codes removed shifted ProtocolCapExceeded from 6055→6049.
+      const err = parseOnChainErrorCode("0x17A1");
       expect(err).to.not.be.null;
-      expect(err!.code).to.equal("6055");
+      expect(err!.code).to.equal("6049");
       expect(err!.context.error_name).to.equal("ProtocolCapExceeded");
     });
 
@@ -481,14 +483,7 @@ describe("agent-errors", () => {
       expect(result.recovery_actions[0].action).to.equal("add_instructions");
     });
 
-    // Pattern 11: Escrow action
-    it("pattern 11: escrow-action → INPUT_VALIDATION", () => {
-      const result = toSigilAgentError(
-        new Error('Escrow action "createEscrow" uses standalone instructions'),
-      );
-      expect(result.category).to.equal("INPUT_VALIDATION");
-      expect(result.recovery_actions[0].action).to.equal("use_escrow_api");
-    });
+    // Pattern 11 (escrow-action) removed — escrow system deleted in V2 demolition.
 
     // SigilSdkError contract — exercised via the spending-amount pattern
     it("SigilSdkError has all 7 AgentError fields with correct values", () => {

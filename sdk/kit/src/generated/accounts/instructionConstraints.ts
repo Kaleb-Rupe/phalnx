@@ -58,10 +58,15 @@ export type InstructionConstraints = {
   vault: ReadonlyUint8Array;
   entries: Array<ConstraintEntryZC>;
   entryCount: number;
-  strictMode: number;
   bump: number;
   /** Constraint schema version. Always 1 for new deployments. */
   constraintVersion: number;
+  /**
+   * Alignment padding (5 bytes — keeps total fields = 35,880, an even
+   * number, so the bytemuck Pod derive accepts the struct under
+   * ConstraintEntryZC's 2-byte alignment requirement). Grew from 4 to 5
+   * when the strict_mode byte was removed.
+   */
   padding: ReadonlyUint8Array;
 };
 
@@ -69,10 +74,15 @@ export type InstructionConstraintsArgs = {
   vault: ReadonlyUint8Array;
   entries: Array<ConstraintEntryZCArgs>;
   entryCount: number;
-  strictMode: number;
   bump: number;
   /** Constraint schema version. Always 1 for new deployments. */
   constraintVersion: number;
+  /**
+   * Alignment padding (5 bytes — keeps total fields = 35,880, an even
+   * number, so the bytemuck Pod derive accepts the struct under
+   * ConstraintEntryZC's 2-byte alignment requirement). Grew from 4 to 5
+   * when the strict_mode byte was removed.
+   */
   padding: ReadonlyUint8Array;
 };
 
@@ -84,10 +94,9 @@ export function getInstructionConstraintsEncoder(): FixedSizeEncoder<Instruction
       ["vault", fixEncoderSize(getBytesEncoder(), 32)],
       ["entries", getArrayEncoder(getConstraintEntryZCEncoder(), { size: 64 })],
       ["entryCount", getU8Encoder()],
-      ["strictMode", getU8Encoder()],
       ["bump", getU8Encoder()],
       ["constraintVersion", getU8Encoder()],
-      ["padding", fixEncoderSize(getBytesEncoder(), 4)],
+      ["padding", fixEncoderSize(getBytesEncoder(), 5)],
     ]),
     (value) => ({
       ...value,
@@ -103,10 +112,9 @@ export function getInstructionConstraintsDecoder(): FixedSizeDecoder<Instruction
     ["vault", fixDecoderSize(getBytesDecoder(), 32)],
     ["entries", getArrayDecoder(getConstraintEntryZCDecoder(), { size: 64 })],
     ["entryCount", getU8Decoder()],
-    ["strictMode", getU8Decoder()],
     ["bump", getU8Decoder()],
     ["constraintVersion", getU8Decoder()],
-    ["padding", fixDecoderSize(getBytesDecoder(), 4)],
+    ["padding", fixDecoderSize(getBytesDecoder(), 5)],
   ]);
 }
 

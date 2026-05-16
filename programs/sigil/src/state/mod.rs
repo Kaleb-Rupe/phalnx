@@ -1,6 +1,5 @@
 pub mod agent_spend_overlay;
 pub mod constraints;
-pub mod escrow;
 pub mod pending_agent_perms;
 pub mod pending_close_constraints;
 pub mod pending_constraints;
@@ -13,7 +12,6 @@ pub mod vault;
 
 pub use agent_spend_overlay::*;
 pub use constraints::*;
-pub use escrow::*;
 pub use pending_agent_perms::*;
 pub use pending_close_constraints::*;
 pub use pending_constraints::*;
@@ -73,8 +71,7 @@ pub const MAX_DEVELOPER_FEE_RATE: u16 = 500;
 /// Prevents misconfiguration while allowing wide flexibility.
 pub const MAX_SLIPPAGE_BPS: u16 = 5000;
 
-/// Maximum escrow duration: 30 days in seconds
-pub const MAX_ESCROW_DURATION: i64 = 2_592_000;
+// MAX_ESCROW_DURATION constant REMOVED in v2 revamp Stage 1 (escrow deleted).
 
 /// Minimum timelock duration: 30 minutes in seconds.
 /// Enforced at vault creation and in all queue/apply paths.
@@ -158,7 +155,7 @@ pub const PROTOCOL_TREASURY: Pubkey = Pubkey::new_from_array([
 ///
 /// To recreate the un-pinned state for tests: replace the byte array below with
 /// `[0u8; 32]` and uncomment the previous `compile_error!` block. The runtime
-/// owner check at `instructions/{create_escrow, agent_transfer,
+/// owner check at `instructions/{agent_transfer,
 /// validate_and_authorize}.rs` is preserved as a second layer.
 #[cfg(feature = "mainnet")]
 pub const PROTOCOL_TREASURY: Pubkey = Pubkey::new_from_array([
@@ -206,7 +203,7 @@ pub const USDT_MINT: Pubkey = Pubkey::new_from_array([
 /// is structurally redundant: a `--features mainnet` build cannot reach the
 /// test runner if the constant is unset, because compilation halts first.
 ///
-/// The runtime owner check in `instructions/{create_escrow, agent_transfer,
+/// The runtime owner check in `instructions/{agent_transfer,
 /// validate_and_authorize}.rs` is preserved as defense in depth.
 #[cfg(test)]
 mod treasury_tests {

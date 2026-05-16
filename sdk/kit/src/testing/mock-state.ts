@@ -77,7 +77,6 @@ export function createMockVaultState(
       createdAt: 1000n,
       totalTransactions: 0n,
       totalVolume: 0n,
-      activeEscrowCount: 0,
       totalFeesCollected: 0n,
       totalDepositedUsd: overrides?.totalDepositedUsd ?? 0n,
       totalWithdrawnUsd: overrides?.totalWithdrawnUsd ?? 0n,

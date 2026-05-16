@@ -44,7 +44,6 @@ pub struct CreateInstructionConstraints<'info> {
 pub fn handler(
     ctx: Context<CreateInstructionConstraints>,
     entries: Vec<ConstraintEntry>,
-    strict_mode: bool,
 ) -> Result<()> {
     crate::reject_cpi!();
 
@@ -84,8 +83,13 @@ pub fn handler(
             bytemuck::from_bytes_mut(&mut data[8..8 + struct_size]);
 
         constraints.vault = vault_key.to_bytes();
-        constraints.strict_mode = strict_mode as u8;
+        // strict_mode field removed in V2 (REVAMP_PLAN §2.2) — constraints
+        // are always strictly enforced.
         constraints.bump = bump;
+        // V2: schema version stamp. Always 1 for new deployments.
+        // Doc-comment at state/constraints.rs:186 promises constraint_version
+        // is 1; CRIT-2 fix sets it explicitly on PDA init (was leaking 0).
+        constraints.constraint_version = 1;
 
         let mut count = 0u8;
         pack_entries(&entries, &mut constraints.entries, &mut count)?;
@@ -98,7 +102,6 @@ pub fn handler(
     emit!(InstructionConstraintsCreated {
         vault: vault_key,
         entries_count: entry_count,
-        strict_mode,
         discriminator_formats: entries
             .iter()
             .map(|e| e.discriminator_format as u8)

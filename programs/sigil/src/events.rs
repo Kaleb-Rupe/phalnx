@@ -153,7 +153,8 @@ pub struct AgentTransferExecuted {
 pub struct InstructionConstraintsCreated {
     pub vault: Pubkey,
     pub entries_count: u8,
-    pub strict_mode: bool,
+    // strict_mode field removed in V2 (REVAMP_PLAN §2.2): every entry is
+    // strictly enforced; emitting it would be misleading.
     /// Per-entry discriminator format (0=Anchor8, 1=Spl1).
     /// Enables off-chain monitors to detect format changes/downgrades.
     pub discriminator_formats: Vec<u8>,
@@ -202,34 +203,8 @@ pub struct ConstraintsChangeCancelled {
     pub vault: Pubkey,
 }
 
-#[event]
-pub struct EscrowCreated {
-    pub source_vault: Pubkey,
-    pub destination_vault: Pubkey,
-    pub escrow_id: u64,
-    pub amount: u64,
-    pub token_mint: Pubkey,
-    pub expires_at: i64,
-    pub condition_hash: [u8; 32],
-}
-
-#[event]
-pub struct EscrowSettled {
-    pub source_vault: Pubkey,
-    pub destination_vault: Pubkey,
-    pub escrow_id: u64,
-    pub amount: u64,
-    pub settled_by: Pubkey,
-}
-
-#[event]
-pub struct EscrowRefunded {
-    pub source_vault: Pubkey,
-    pub destination_vault: Pubkey,
-    pub escrow_id: u64,
-    pub amount: u64,
-    pub refunded_by: Pubkey,
-}
+// Escrow events (EscrowCreated, EscrowSettled, EscrowRefunded) REMOVED in
+// Stage 1 of v2 revamp (REVAMP_PLAN.md §2.1).
 
 #[event]
 pub struct VaultFrozen {

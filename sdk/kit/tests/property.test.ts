@@ -67,7 +67,6 @@ const SPENDING_ACTIONS = [
   "addCollateral",
   "placeLimitOrder",
   "swapAndOpenPosition",
-  "createEscrow",
 ] as const;
 
 const NON_SPENDING_ACTIONS = [
@@ -81,8 +80,6 @@ const NON_SPENDING_ACTIONS = [
   "editLimitOrder",
   "cancelLimitOrder",
   "closeAndSwapPosition",
-  "settleEscrow",
-  "refundEscrow",
 ] as const;
 
 const ALL_ACTIONS = [...SPENDING_ACTIONS, ...NON_SPENDING_ACTIONS];
@@ -157,16 +154,16 @@ describe("Property Tests — Category A: Exported Function Properties", () => {
   // ── isSpendingAction ────────────────────────────────────────────────────
 
   describe("isSpendingAction", () => {
-    it("exactly 9 actions are spending", () => {
+    it("exactly 8 actions are spending", () => {
       const spendingCount = ALL_ACTIONS.filter(isSpendingAction).length;
-      expect(spendingCount).to.equal(9);
+      expect(spendingCount).to.equal(8);
     });
 
-    it("exactly 12 actions are non-spending", () => {
+    it("exactly 10 actions are non-spending", () => {
       const nonSpendingCount = ALL_ACTIONS.filter(
         (a) => !isSpendingAction(a),
       ).length;
-      expect(nonSpendingCount).to.equal(12);
+      expect(nonSpendingCount).to.equal(10);
     });
 
     it("every known spending action returns true", () => {
@@ -201,8 +198,8 @@ describe("Property Tests — Category A: Exported Function Properties", () => {
       );
     });
 
-    it("total known actions = 21", () => {
-      expect(ALL_ACTIONS.length).to.equal(21);
+    it("total known actions = 18", () => {
+      expect(ALL_ACTIONS.length).to.equal(18);
     });
   });
 

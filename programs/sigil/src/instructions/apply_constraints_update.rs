@@ -48,7 +48,7 @@ pub fn handler(ctx: Context<ApplyConstraintsUpdate>) -> Result<()> {
     let vault_key = ctx.accounts.vault.key();
 
     // Read pending: verify vault + timelock + slot freshness, extract scalar fields
-    let (new_entry_count, new_strict_mode) = {
+    let new_entry_count = {
         let pending = ctx.accounts.pending_constraints.load()?;
         require!(
             pending.vault == vault_key.to_bytes(),
@@ -64,7 +64,7 @@ pub fn handler(ctx: Context<ApplyConstraintsUpdate>) -> Result<()> {
             clock.slot.saturating_sub(pending.queued_at_slot) < MAX_APPLY_AGE_SLOTS,
             SigilError::QueuedUpdateExpired,
         );
-        (pending.entry_count, pending.strict_mode)
+        pending.entry_count
     };
 
     // Direct raw byte copy between account data buffers to avoid 35KB stack allocation.
@@ -98,7 +98,8 @@ pub fn handler(ctx: Context<ApplyConstraintsUpdate>) -> Result<()> {
             SigilError::InvalidConstraintsPda
         );
         constraints.entry_count = new_entry_count;
-        constraints.strict_mode = new_strict_mode;
+        // CRIT-2: stamp constraint_version on every apply — pending PDA has no version field, and this rescues pre-CRIT-2 PDAs initialized at 0.
+        constraints.constraint_version = 1;
     }
 
     // Bump policy version — constraint changes affect security posture
