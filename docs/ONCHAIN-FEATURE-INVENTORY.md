@@ -15,7 +15,7 @@ Cross-references (do not duplicate these here):
 - Access control matrix and invariants → `docs/SECURITY.md`
 - Account seed derivation and layout diagrams → `docs/ARCHITECTURE.md`
 - Full 75-error table with messages → `docs/ERROR-CODES.md`
-- ActionType elimination design → `docs/RFC-ACTIONTYPE-ELIMINATION.md`
+- ActionType elimination design → see git history (RFC-ACTIONTYPE-ELIMINATION.md deleted)
 
 ---
 
@@ -138,7 +138,7 @@ The 21-bit `permissions: u64` ActionType bitmask has been eliminated. `AgentEntr
 - `CAPABILITY_OBSERVER = 1` — non-spending actions only
 - `CAPABILITY_OPERATOR = 2` — full spending and non-spending execution
 
-The spending/non-spending distinction is `amount > 0` evaluated at the entry to `validate_and_authorize` — no stored field, no action-type enum. Historical context → `docs/RFC-ACTIONTYPE-ELIMINATION.md`.
+The spending/non-spending distinction is `amount > 0` evaluated at the entry to `validate_and_authorize` — no stored field, no action-type enum. Historical context → see git history (RFC-ACTIONTYPE-ELIMINATION.md deleted).
 
 ---
 
@@ -172,7 +172,7 @@ Four `AssertionMode` values:
 
 Phase B3 adds `CrossFieldLte` via `cross_field_flags` bit 0: ratio enforcement `field_A × 10000 ≤ multiplier_bps × field_B` using u128 arithmetic. Requires `assertion_mode = Absolute`. Snapshots are captured in `validate_and_authorize` and stored in `SessionAuthority.assertion_snapshots[4]`.
 
-Full design → `docs/RFC-ACTIONTYPE-ELIMINATION.md §Phase B`.
+Full design → see git history (RFC-ACTIONTYPE-ELIMINATION.md deleted).
 
 ---
 

@@ -8,7 +8,7 @@
 > 36 instruction handlers, 12 PDA account types, 81 error codes, 37 events.
 >
 > Cross-reference: See `docs/ARCHITECTURE.md` for account model,
-> `docs/RFC-ACTIONTYPE-ELIMINATION.md` for the capability model migration,
+> git history for `docs/RFC-ACTIONTYPE-ELIMINATION.md` (deleted) covering the capability model migration,
 > and `sdk/kit/src/agent-errors.ts` for error mappings.
 
 ---
@@ -382,7 +382,7 @@ Per-protocol spend counters (`SpendTracker.protocol_counters`) use a simple 24-h
 - Error definitions in `programs/sigil/src/errors.rs` (81 codes, 6000–6080)
 - Event definitions in `programs/sigil/src/events.rs` (38 events)
 - Program entrypoint in `programs/sigil/src/lib.rs`
-- Capability model design rationale: `docs/RFC-ACTIONTYPE-ELIMINATION.md`
+- Capability model design rationale: see git history (RFC-ACTIONTYPE-ELIMINATION.md deleted)
 
 ### Out of Scope
 
@@ -591,7 +591,7 @@ This section documents the 2-bit capability field that replaced the former 21-bi
 
 The `permissions: u64` field on `AgentEntry` (a 21-bit `ActionType` bitmask) has been replaced by `capability: u8`. The `ActionType` enum has been eliminated entirely. The byte layout of `AgentEntry` is preserved at 49 bytes (32 pubkey + 1 capability + 8 spending_limit_usd + 1 paused + 7 reserved) to maintain `AgentVault` account stability on existing deployments.
 
-Source: `state/vault.rs:4-20`, `state/mod.rs:255-259`, `docs/RFC-ACTIONTYPE-ELIMINATION.md`.
+Source: `state/vault.rs:4-20`, `state/mod.rs:255-259`. (Historical RFC at `docs/RFC-ACTIONTYPE-ELIMINATION.md` was deleted — see git history.)
 
 ### 12.2 Capability Levels
 

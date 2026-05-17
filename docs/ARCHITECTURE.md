@@ -317,7 +317,5 @@ instance-level vault and agent state caching.
 | `docs/ERROR-CODES.md`                  | Complete table of all error codes with messages and triggering conditions                                    |
 | `docs/SECURITY.md`                     | Threat model, access control matrix, trust boundaries, upgrade authority governance                          |
 | `docs/ONCHAIN-FEATURE-INVENTORY.md`    | Per-instruction operational detail, complete account type list, event catalog, capability model              |
-| `docs/RFC-ACTIONTYPE-ELIMINATION.md`   | Historical design rationale for replacing the 21-bit ActionType bitmask. Note: the constraint-derived `is_spending` field this RFC introduced was itself deleted in M2 Option A (byte) and Option A V2 (session field). |
 | `docs/COMMANDS-REFERENCE.md`           | All build, test, deploy, and tooling commands                                                                |
 | `docs/DEPLOYMENT.md`                   | Devnet and mainnet deployment procedures, verification steps                                                 |
-| `docs/SECURITY-FINDINGS-2026-04-07.md` | Detailed write-up of security findings and mitigations (A3, A5, H-1, M-1, M-2)                               |
