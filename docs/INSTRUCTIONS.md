@@ -481,7 +481,7 @@ const res = await shieldedFetch(wallet, url, { connection, dryRun: true });
 
 ## Emergency Close Pattern (Phase L — REMOVED, REDESIGN PLANNED)
 
-> **Note:** The original EmergencyCloseAuth PDA was deliberately removed because it introduced an unintentional attack vector. A safer redesign is planned for a future phase. For now, risk-reducing actions (ClosePosition, DecreasePosition, RemoveCollateral, CloseAndSwapPosition) are inherently cap-exempt via `is_spending()` returning false — they never count against the spending cap, so agents can always close positions regardless of cap usage.
+> **Note:** The original EmergencyCloseAuth PDA was deliberately removed because it introduced an unintentional attack vector. A safer redesign is planned for a future phase. For now, risk-reducing actions (ClosePosition, DecreasePosition, RemoveCollateral, CloseAndSwapPosition) are inherently cap-exempt because they invoke `validate_and_authorize` with `amount == 0`, which classifies them as non-spending and skips the spending-cap path. Agents can always close positions regardless of cap usage.
 
 ---
 

@@ -208,17 +208,35 @@ Both entrypoint docs reference REVAMP_PLAN §2.2 with the simplification rationa
 
 ---
 
-## 4. ActionType + is_spending byte (confirm prior elimination)
+## 4. ActionType + is_spending — full elimination trajectory
 
-**Rationale:** Per memory `project_actiontype_elimination_progress.md` (2026-04-19 council 9-1 vote), ActionType + is_spending byte are fully eliminated. Stage 1 confirms by grep.
+**Rationale:** Three discrete removals across two phases. The prior version of this section falsely claimed completion before Option A V2 actually landed. Corrected 2026-05-17.
 
-**Status (post-escrow batch):**
-- Type-level: `type ActionType = never` in SDK (eliminated)
-- Runtime: no `is_spending: bool` field in any handler or struct
-- **Decode-only legacy artifact retained:** `ACTION_TYPE_NAMES_BY_INDEX` in `sdk/kit/src/types.ts` — preserves parsing semantics for pre-revamp on-chain event blobs. Since no on-chain instruction can emit those names in v2, the helper `isSpendingAction(name)` is a no-op string check that never matches a live code path. Retained as defensive zombie code for indexer compatibility; will be removed when v2 deploys under a new program ID at Stage 6.
-- Program source files showing `ActionType` / `is_spending` substring: still 7 files (`events.rs`, `finalize_session.rs`, `validate_and_authorize.rs`, `state/mod.rs`, `state/session.rs`, `state/vault.rs`, `state/constraints.rs`) — all matches are in comments referencing the removal history; **no live code paths**.
+### 4.1 ConstraintEntryZC.is_spending byte (M2 Option A — pre-Stage-1)
 
-No additional Stage 1 deletions required for this category.
+- **When:** 2026-05-09, Week-1 PR 8 (commits `5275d68` + `a24d0a2`).
+- **What:** The `is_spending: u8` byte at offset 554 of the zero-copy `ConstraintEntryZC` struct was deleted. The validator at `state/constraints.rs:309-312` (which enforced `is_spending == 1 || is_spending == 2` at constraint-create time) was also removed.
+- **Why:** The runtime at `validate_and_authorize.rs` derived spending classification from `amount > 0` and **never read** the stored byte. Storing it was waste.
+- **How:** The byte was renamed to `_reserved_was_is_spending: u8` to preserve the 560-byte `ConstraintEntryZC` invariant on existing on-chain PDAs. SDK presets stripped all 9 hardcoded `is_spending: 1` literals. Side effect: 21 latent test failures in `tests/instruction-constraints.ts` started passing (29 → 50 green).
+
+### 4.2 SessionAuthority.is_spending field (Stage 1 follow-up, Option A V2)
+
+- **When:** 2026-05-17, commits `a2eee70`, `3c1fcb5`, `535052e`, `f8112b7`, `8d954b2` on `revamp/v2-2026-05`.
+- **What:** Five symbols deleted:
+  - `SessionAuthority.is_spending: bool` field — was at `state/session.rs:21`
+  - `ActionAuthorized.is_spending: bool` event field — was at `events.rs:44`
+  - `SessionFinalized.is_spending: bool` event field — was at `events.rs:67`
+  - SDK `isSpendingAction(name): boolean` helper — was at `sdk/kit/src/types.ts:358`
+  - SDK `ACTION_TYPE_NAMES_BY_INDEX` constant + `getActionTypeName(idx)` — was at `sdk/kit/src/types.ts:315-346`
+- **Why:** The field was redundant with `authorized_amount > 0` (literally set to that value at `validate_and_authorize.rs:152`). The SDK helpers were marked "decode-only legacy artifact retained for indexer compatibility" — Option A removes zombie code.
+- **How:** `validate_and_authorize.rs:152` retains the function-local `let is_spending = amount > 0;` (used in 15+ sites within the function). `finalize_session.rs:121` was rewritten to `let session_is_spending = session.authorized_amount > 0;`. `vault.has_capability(signer, is_spending: bool)` kept its bool parameter; callers compute `amount > 0` and pass through. IDL was regenerated (`target/idl/sigil.json` + `target/types/sigil.ts` no longer reference the field). All 3 test suites stayed green at 140 / 140 / 1812.
+- **Caveat:** The `_reserved_was_is_spending` byte on `ConstraintEntryZC` (from §4.1) remains in place — it preserves the existing 560-byte invariant and is NOT touched by this removal.
+
+### 4.3 What remains as comments (intentional)
+
+Program source files containing `is_spending` substring after both removals are now limited to the local `let is_spending = amount > 0;` derivation and its consumers within `validate_and_authorize.rs`. Comments in `state/constraints.rs`, `state/mod.rs`, `events.rs` documenting the removal history are preserved as anti-rot anchors. The `_reserved_was_is_spending` field name in `state/constraints.rs` is the only stored artifact remaining.
+
+§RP review (silent-failure-hunter + code-reviewer disciplines) produced 0 HIGH/CRITICAL findings on the Option A V2 diff. 3 MEDIUM findings (stale doc comments pointing to deleted symbols) were fixed in commit `f8112b7`.
 
 ---
 
@@ -345,7 +363,7 @@ flowchart TB
 - Blue solid = atomic execution sandwich (validate → DeFi ix → finalize)
 - Red dashed = removed in Stage 1 (escrow surface + strict_mode field/param)
 - AgentVault is the parent PDA for all per-vault state
-- Note: ActionType / is_spending byte already removed pre-Stage-1 (not shown)
+- Note: `ConstraintEntryZC.is_spending` byte already removed pre-Stage-1 (M2 Option A, 2026-05-09 — §4.1); `SessionAuthority.is_spending` field removed in Stage 1 follow-up (Option A V2, 2026-05-17 — §4.2). Neither is shown in the diagram.
 
 ---
 

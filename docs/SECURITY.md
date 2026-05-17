@@ -99,9 +99,9 @@ Each agent has a 2-bit capability field:
 - `CAPABILITY_OBSERVER (1)` — Non-spending actions only (amount == 0).
 - `CAPABILITY_OPERATOR (2)` — Full access including spending actions (amount > 0). Also `FULL_CAPABILITY`.
 
-The former 21-bit `permissions: u64` bitmask controlling `ActionType` variants has been replaced. The `ActionType` enum is entirely eliminated. Spending classification at runtime uses `amount > 0` in `validate_and_authorize`. The `ConstraintEntryZC.is_spending` field (1=Spending, 2=NonSpending) in the matched constraint entry is stored in the session and reported in events. Per-agent spending limits are tracked via `AgentSpendOverlay` zero-copy PDAs (10 agent slots, 24 hourly epochs, no shards).
+The former 21-bit `permissions: u64` bitmask controlling `ActionType` variants has been replaced. The `ActionType` enum is entirely eliminated. Spending classification at runtime is **purely** `amount > 0` derived as a function-local in `validate_and_authorize`. There is no `is_spending` field stored anywhere: the byte at offset 554 of `ConstraintEntryZC` was deleted in M2 Option A (renamed to `_reserved_was_is_spending`), and the `SessionAuthority.is_spending` field was deleted in Option A V2 (2026-05-17, commits `a2eee70`..`8d954b2`). Off-chain consumers derive spending vs non-spending from `amount > 0` on the `ActionAuthorized` / `SessionFinalized` events. Per-agent spending limits are tracked via `AgentSpendOverlay` zero-copy PDAs (10 agent slots, 24 hourly epochs, no shards).
 
-Source: `state/vault.rs:4-8` (capability constants), `state/mod.rs:31-32` (FULL_CAPABILITY), `state/mod.rs:255-259` (ActionType elimination note), `instructions/validate_and_authorize.rs:135` (is_spending = amount > 0), `docs/RFC-ACTIONTYPE-ELIMINATION.md`.
+Source: `state/vault.rs:4-8` (capability constants), `state/mod.rs:31-32` (FULL_CAPABILITY), `instructions/validate_and_authorize.rs:152` (`let is_spending = amount > 0;`).
 
 ### INV-8: Timelocked Policy Changes (Mandatory)
 
@@ -173,7 +173,7 @@ Vault seeds include `vault_id` (a `u64`) to allow one owner to create multiple i
 | `allocate_constraints_pda`         | `owner`                   | `has_one = owner`. Allocates InstructionConstraints PDA at 10,240 bytes. Must be followed by `extend_pda` + `create_instruction_constraints`.                                                                                                                                                                                                                     |
 | `allocate_pending_constraints_pda` | `owner`                   | `has_one = owner`. Allocates PendingConstraintsUpdate PDA at 10,240 bytes. Must be followed by `extend_pda` + `queue_constraints_update`.                                                                                                                                                                                                                         |
 | `extend_pda`                       | `owner`                   | `has_one = owner`. Grows a program-owned PDA by up to 10,240 bytes per call to reach full SIZE.                                                                                                                                                                                                                                                                   |
-| `create_instruction_constraints`   | `owner`                   | `has_one = owner`. PDA pre-allocated at full SIZE. Max 64 entries. Validates discriminator anchor (A5 invariant), Bitmask non-zero (A3), is_spending 1 or 2. Sets `policy.has_constraints = true`. Bumps `policy_version`.                                                                                                                                        |
+| `create_instruction_constraints`   | `owner`                   | `has_one = owner`. PDA pre-allocated at full SIZE. Max 64 entries. Validates discriminator anchor (A5 invariant) and Bitmask non-zero (A3). Sets `policy.has_constraints = true`. Bumps `policy_version`.                                                                                                                                                          |
 | `queue_constraints_update`         | `owner`                   | `has_one = owner`. PDA pre-allocated. Creates PendingConstraintsUpdate PDA.                                                                                                                                                                                                                                                                                       |
 | `apply_constraints_update`         | `owner`                   | `has_one = owner`. Timelock expired. Merges entries. Closes pending PDA. Bumps `policy_version`.                                                                                                                                                                                                                                                                  |
 | `cancel_constraints_update`        | `owner`                   | `has_one = owner`. Closes PendingConstraintsUpdate PDA.                                                                                                                                                                                                                                                                                                           |
@@ -606,23 +606,23 @@ Source: `state/vault.rs:6-8`, `state/mod.rs:32`.
 
 ### 12.3 Enforcement in validate_and_authorize
 
-Spending classification at runtime uses `is_spending = amount > 0`. The capability check immediately follows:
+Spending classification at runtime is `let is_spending = amount > 0;` — a function-local derivation in `validate_and_authorize` (line 152). The capability check immediately follows:
 
 ```
 vault.has_capability(&agent, is_spending) → SigilError::InsufficientPermissions (error 6047) if fails
 ```
 
-`has_capability` (`state/vault.rs:148-158`):
+`has_capability` (`state/vault.rs:134-146`) takes the caller-derived `is_spending: bool`:
 
 - `is_spending == true`: requires `agent.capability >= CAPABILITY_OPERATOR (2)`
 - `is_spending == false`: requires `agent.capability >= CAPABILITY_OBSERVER (1)`
 - `CAPABILITY_DISABLED (0)` fails both checks unconditionally.
 
-### 12.4 ConstraintEntryZC.is_spending (Session Classification)
+### 12.4 Session Classification — DELETED Option A V2
 
-`ConstraintEntryZC.is_spending` (1=Spending, 2=NonSpending, 0=Unset rejected at creation) is configured by the vault owner at constraint creation time. When a DeFi instruction matches a constraint entry, the matched entry's `is_spending` value is stored in the `SessionAuthority` PDA and emitted in the `SessionFinalized` event. This replaces the old `ActionType.is_spending()` method.
+Prior versions of this document described two distinct sources of spending classification: a function-local `amount > 0` derivation in `validate_and_authorize` AND a `ConstraintEntryZC.is_spending` byte stored on the matched constraint entry, propagated to `SessionAuthority.is_spending` and emitted in events.
 
-Constraint entries with `is_spending == 0` are rejected at creation time. Source: `state/constraints.rs`.
+**Both stored fields are now deleted.** The `ConstraintEntryZC.is_spending` byte at offset 554 was deleted in M2 Option A (renamed to `_reserved_was_is_spending`; runtime never read it). The `SessionAuthority.is_spending` field was deleted in Option A V2 (2026-05-17). The `ActionAuthorized` and `SessionFinalized` events also dropped their `is_spending: bool` payload field. Spending classification is now exclusively the function-local `amount > 0` derivation; off-chain consumers compute the same expression from the `amount` field on those events.
 
 ### 12.5 Queued Agent Permissions Updates
 
@@ -630,12 +630,10 @@ Agent capability changes are timelock-gated: `queue_agent_permissions_update` �
 
 Source: `state/pending_agent_perms.rs`, `instructions/queue_agent_permissions_update.rs`.
 
-### 12.6 Constraint-Level Spending Classification vs. Capability
+### 12.6 Spending classification — single source of truth
 
-For auditors: spending classification has two distinct purposes in the program.
+For auditors: post Option A V2, spending classification has **one** authoritative source.
 
-1. **Capability gate** (validate_and_authorize): `is_spending = amount > 0`. This determines whether the agent needs OPERATOR capability. It runs before constraint matching.
+**Capability gate** (`validate_and_authorize.rs:152`): `let is_spending = amount > 0;`. This determines whether the agent needs OPERATOR capability. It runs before constraint matching and is the only place spending vs non-spending is decided.
 
-2. **Session/event classification** (ConstraintEntryZC.is_spending, matched entry): Stored in SessionAuthority and emitted in SessionFinalized. Enables off-chain analytics to distinguish spending vs non-spending actions. Does not affect on-chain cap enforcement (caps use the outcome-based balance delta from finalize_session).
-
-These two mechanisms are complementary, not redundant.
+Off-chain analytics that previously read `SessionAuthority.is_spending` or `SessionFinalized.is_spending` must now compute `amount > 0` from the event's `amount` field. The post-execution outcome-based balance delta from `finalize_session` continues to drive on-chain cap enforcement; it does not depend on any stored `is_spending` value.
