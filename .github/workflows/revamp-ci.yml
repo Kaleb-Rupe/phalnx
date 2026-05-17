@@ -32,12 +32,17 @@ jobs:
       # v6.0.2
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
       - name: Reject mutable Action refs in all workflow files
-        # Matches uses: <name>@<ref> where <ref> is anything OTHER than a 40-char hex SHA.
-        # [^0-9a-f]{40} means 40 chars where at least one is non-hex - catches @v4, @master, @main.
+        # Matches `uses: <name>@<ref>` where <ref> is NOT a 40-char hex SHA.
+        # Uses PCRE negative lookahead to assert "@ is NOT followed by exactly
+        # 40 hex chars + word boundary". Catches @v4, @master, @main, @v6.0.6, etc.
         # All Action pins MUST be 40-char SHAs per Phase 0.6 / supply-chain hardening.
+        # Phase 0.6 §RP HIGH-1: previous regex `[^0-9a-f]{40}` required 40 consecutive
+        # non-hex chars after @ — almost never matched any real ref. Replaced with PCRE
+        # negative lookahead which correctly flags any non-40-hex ref.
         run: |
           set -euo pipefail
-          OUT=$(find .github/workflows/ -name '*.yml' -exec grep -HnE 'uses: [^@]+@[^0-9a-f]{40}' {} \; || true)
+          OUT=$(find .github/workflows/ -name '*.yml' -print0 \
+            | xargs -0 grep -HnP 'uses:\s+\S+@(?![0-9a-f]{40}\b)\S+' || true)
           if [ -n "$OUT" ]; then
             echo "::error::Mutable Action refs detected - pin every uses: to a 40-char SHA:"
             echo "$OUT"
@@ -345,17 +350,27 @@ jobs:
           npm run surfpool:start &
           SURFPOOL_PID=$!
           trap "kill $SURFPOOL_PID 2>/dev/null || true" EXIT
-          # Wait up to 30s for surfpool to be ready
+          # Wait up to 30s for surfpool /health to respond. Phase 0.6 §RP MEDIUM-1:
+          # previous loop fell through silently when /health never responded but
+          # process was still alive — tests would run against unready RPC and fail
+          # with confusing "method not found" errors. Now we track readiness
+          # explicitly and exit loudly if /health doesn't respond.
+          READY=0
           for i in {1..30}; do
             if curl -sf http://127.0.0.1:8899/health > /dev/null 2>&1; then
               echo "surfpool ready after ${i}s"
+              READY=1
               break
             fi
             sleep 1
           done
+          if [ "$READY" -ne 1 ]; then
+            echo "::error::surfpool /health did not respond within 30s"
+            exit 1
+          fi
           # Confirm still running before tests (kill -0 = signal-0 = is-alive check)
           if ! kill -0 $SURFPOOL_PID 2>/dev/null; then
-            echo "::error::surfpool died before tests could run"
+            echo "::error::surfpool died after readiness probe before tests could run"
             exit 1
           fi
           npm run test:surfpool
