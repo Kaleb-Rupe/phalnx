@@ -105,13 +105,20 @@ Verified against `programs/sigil/src/errors.rs` on `revamp/v2-2026-05` (commit `
 
 Per `HARDENED_V2_PROMPT_MAP.md` §4 and F-21, Phase 1 deletes these Jupiter-specific variants:
 
-- `SwapSlippageExceeded` (6030)
-- `InvalidJupiterInstruction` (6031)
-- `SlippageBpsTooHigh` (6033)
+- `SwapSlippageExceeded` (currently 6030)
+- `InvalidJupiterInstruction` (currently 6031)
+- `SlippageBpsTooHigh` (currently 6033)
 
-**CRITICAL — code re-numbering caveat:** Anchor renumbers ALL variants after a deletion if the variants are removed in place. To preserve stable codes for the 78 remaining V1 variants, Phase 1 MUST remove the Jupiter variants from the END of the enum (re-order before deletion) OR leave placeholder `#[deprecated]` variants in their slots. The chosen approach is documented at Phase 1 implementation time and reflected in the post-Phase-1 numeric snapshot in §3 below.
+**Code re-numbering behavior:** Anchor assigns codes by variant ordinal at compile time. Deleting variants mid-enum causes all subsequent variants to shift down. The prompt map's reservation table (§3 below) assumes the **compaction** strategy: after Phase 1, the 78 surviving V1 variants occupy codes **6000-6077**, and new V2 variants append starting at **6078**.
 
-**Post-Phase-1 expected state:** 78 V1 variants. The lowest unused code is **6078** (the first available slot after compaction or the first slot beyond the last surviving V1 variant, depending on the chosen deletion strategy).
+Under compaction:
+- The 21 variants currently at codes 6000-6020 keep their codes (they appear before the first deleted variant).
+- The 9 variants currently at codes 6021-6029 keep their codes (they appear before the first deleted variant at 6030).
+- Variants currently at 6031, 6032, 6034-6080 shift down by 1, 2, or 3 depending on how many earlier deletions occurred. For example: `InvalidDestinationMode` (currently 6080) shifts to **6077**.
+
+**Phase 1 must explicitly verify the post-deletion numeric layout** and update this document with the actual post-Phase-1 §1-equivalent table before Phase 2 reserves new codes. If Phase 1 instead chooses to preserve numbers via `#[deprecated]` placeholder variants, the reservation table in §3 shifts accordingly (every code +3 from 6081 onward).
+
+**Post-Phase-1 expected state (compaction):** 78 V1 variants at codes 6000-6077. The lowest unused code is **6078**.
 
 ---
 
@@ -155,22 +162,29 @@ These codes are reserved for V2 primitives introduced in Phases 2 through 8. The
 
 The following existing variants are explicitly re-used by V2 primitives (no new code allocation needed). Use the existing variant; if the user-facing `#[msg(...)]` needs to change, update the message text in place but DO NOT renumber.
 
-| Existing variant | Code | V2 primitive that re-uses it |
-|------------------|------|------------------------------|
+**Codes below are stated under the current (pre-Phase-1) layout from §1.** After Phase 1 compaction, all codes from `SwapSlippageExceeded` (6030) onward shift down by 3; the table below must be re-stated against the post-Phase-1 numeric layout at the start of Phase 2.
+
+| Existing variant | Code (pre-Phase-1) | V2 primitive that re-uses it |
+|------------------|--------------------|------------------------------|
 | `DestinationNotAllowed` | 6024 | TA-02 (tightens defaults; no new code) |
 | `InvalidProtocolMode` | 6026 | TA-01 (UPDATE msg to "must be 1=ALLOWLIST") |
-| `InvalidDestinationMode` | 6080 | TA-02 (UPDATE msg to "must be 0=RESTRICTED") |
-| `ConfidentialTransferBlocked` | 6075 | TA-08 deposit-path re-use |
-| `PermanentDelegateBlocked` | 6076 | TA-08 re-use |
-| `TransferHookBlocked` | 6077 | TA-08 re-use |
-| `LamportDrainBlocked` | 6078 | TA-08 re-use **(NOTE: code 6078 is currently `LamportDrainBlocked` per §1; the V2 reservation table re-uses the same code for `ErrInvalidCapability` ONLY in the post-Phase-1 compaction scenario where `LamportDrainBlocked` shifts numerically. Phase 1 implementation MUST resolve this collision explicitly before Phase 2 lands new codes.)** |
-| `BatchInstructionBlocked` | 6079 | TA-08 re-use (same caveat as above — see Phase 1 deletion strategy in §2) |
+| `InvalidDestinationMode` | 6080 (→ 6077 post-Phase-1) | TA-02 (UPDATE msg to "must be 0=RESTRICTED") |
+| `ConfidentialTransferBlocked` | 6075 (→ 6072 post-Phase-1) | TA-08 deposit-path re-use |
+| `PermanentDelegateBlocked` | 6076 (→ 6073 post-Phase-1) | TA-08 re-use |
+| `TransferHookBlocked` | 6077 (→ 6074 post-Phase-1) | TA-08 re-use |
+| `LamportDrainBlocked` | 6078 (→ 6075 post-Phase-1) | TA-08 re-use |
+| `BatchInstructionBlocked` | 6079 (→ 6076 post-Phase-1) | TA-08 re-use |
 | `BlockedSplOpcode` | 6067 | TA-10 re-use |
 | `AccountWritabilityMismatch` | 6069 | TA-11 re-use |
 | `UnauthorizedPreValidateInstruction` | 6063 | TA-10 re-use |
 | `UnauthorizedPostFinalizeInstruction` | 6056 | TA-10 re-use |
 
-**Phase 1 sequencing note:** The Phase 1 demolition prompt must explicitly decide between (a) compaction (deletes shift later codes down — breaks numeric stability) or (b) deprecation placeholders (leaves variant slots in place — preserves codes). The reservation table in §3 assumes option (b) is chosen so that `ErrInvalidCapability` is the next available code at 6078 only after the three Jupiter variants are removed from the end OR replaced by deprecation stubs. If option (a) is chosen, the entire reservation table shifts down by 3.
+**Numbering invariant Phase 2 must establish:**
+- All V1 surviving variants at codes 6000-6077 (post-compaction).
+- `ErrInvalidCapability` (TA-04) at 6078, the first new V2 variant.
+- §3 reservation table continues 6079, 6080, ... 6102.
+
+If Phase 1 deviates from compaction (e.g., uses deprecation placeholders), the reservation table in §3 must be re-stated before Phase 2 lands code.
 
 ---
 
