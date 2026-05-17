@@ -25,6 +25,26 @@ env:
   SOURCE_DATE_EPOCH: "1577836800"
 
 jobs:
+  ci-lint:
+    name: CI lint (reject mutable Action refs)
+    runs-on: ubuntu-latest
+    steps:
+      # v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - name: Reject mutable Action refs in all workflow files
+        # Matches uses: <name>@<ref> where <ref> is anything OTHER than a 40-char hex SHA.
+        # [^0-9a-f]{40} means 40 chars where at least one is non-hex - catches @v4, @master, @main.
+        # All Action pins MUST be 40-char SHAs per Phase 0.6 / supply-chain hardening.
+        run: |
+          set -euo pipefail
+          OUT=$(find .github/workflows/ -name '*.yml' -exec grep -HnE 'uses: [^@]+@[^0-9a-f]{40}' {} \; || true)
+          if [ -n "$OUT" ]; then
+            echo "::error::Mutable Action refs detected - pin every uses: to a 40-char SHA:"
+            echo "$OUT"
+            exit 1
+          fi
+          echo "::notice::All workflow uses: references are pinned to 40-char SHAs."
+
   scope-guard:
     name: Scope guard (docs/revamp + revamp-ci.yml only for Stage 0)
     runs-on: ubuntu-latest
@@ -343,6 +363,7 @@ jobs:
     name: CI summary (final gate)
     runs-on: ubuntu-latest
     needs:
+      - ci-lint
       - scope-guard
       - build-program
       - idl-drift-check
