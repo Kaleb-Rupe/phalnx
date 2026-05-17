@@ -332,12 +332,33 @@ jobs:
       - name: Restore committed IDL
         run: git checkout -- target/idl/ target/types/
       - name: Start surfpool + run tests
+        # Boot-race fix per Phase 0.6 task 3: previously used `sleep 5` + `||` which
+        # silently passed when surfpool died because the test command's non-zero exit
+        # would print stderr but the `|| (kill $SURFPOOL_PID; exit 1)` masked the
+        # cause. Now we:
+        #   1. set -euo pipefail so any failed step exits immediately
+        #   2. trap cleanup so SIGINT/EXIT always kills surfpool
+        #   3. poll /health up to 30s for actual readiness (not fixed sleep)
+        #   4. confirm process is still alive before invoking the test command
         run: |
+          set -euo pipefail
           npm run surfpool:start &
           SURFPOOL_PID=$!
-          sleep 5
-          npm run test:surfpool || (kill $SURFPOOL_PID; exit 1)
-          kill $SURFPOOL_PID
+          trap "kill $SURFPOOL_PID 2>/dev/null || true" EXIT
+          # Wait up to 30s for surfpool to be ready
+          for i in {1..30}; do
+            if curl -sf http://127.0.0.1:8899/health > /dev/null 2>&1; then
+              echo "surfpool ready after ${i}s"
+              break
+            fi
+            sleep 1
+          done
+          # Confirm still running before tests (kill -0 = signal-0 = is-alive check)
+          if ! kill -0 $SURFPOOL_PID 2>/dev/null; then
+            echo "::error::surfpool died before tests could run"
+            exit 1
+          fi
+          npm run test:surfpool
 
   k6-emit-check:
     # K6 load-bearing-5 static check per Architect 2026-05-17 + INTERFACES_V2 §K6.
