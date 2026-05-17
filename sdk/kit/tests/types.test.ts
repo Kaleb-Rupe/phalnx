@@ -159,6 +159,7 @@ describe("types", () => {
 
   // `stringsToPermissions` block deleted in A11 — the helper encoded the
   // pre-v6 21-bit bitmask and had no v6 equivalent (capability is a 2-bit
-  // enum, not a string list). See `parseActionType` above for the only
-  // surviving ActionType-name helper.
+  // enum, not a string list). `parseActionType` was the only surviving
+  // ActionType-name helper but was also deleted in V2 Option A alongside
+  // the on-chain ActionType field.
 });

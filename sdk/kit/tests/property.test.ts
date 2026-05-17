@@ -3,12 +3,14 @@
  *
  * Uses fast-check (v3) for property-based testing to exhaustively explore edge cases
  * that hand-written tests miss. Three categories:
- *   A — Exported function properties (isSpendingAction, getRolling24hUsd)
+ *   A — Exported function properties (getRolling24hUsd)
  *   B — Cross-validation (ceilFee formula)
  *   C — Fuzz testing (detectDrainAttempt, replaceAgentAtas)
  *
  * Note: `hasPermission`, `stringsToPermissions`, `PermissionBuilder` property
  * tests were deleted in the A11 cleanup — the underlying 21-bit bitmask is gone.
+ * `isSpendingAction` property tests were deleted in V2 Option A — the helper
+ * was zombie code; V2 derives spending from `amount > 0n`.
  */
 
 import * as fc from "fast-check";
@@ -1027,9 +1029,10 @@ describe("Adversarial SDK Attack Tests", () => {
   // tests (unique-bits-per-action, stringsToPermissions↔PermissionBuilder
   // round-trip, contiguous-0-to-20, all-bits-OR-equals-2^21-1) were all
   // property-testing the deleted bitmask helpers. The v6 program's 2-bit
-  // capability enum has no bitmask structure to test; spending
-  // classification is covered by `isSpendingAction` property tests in
-  // Category A.
+  // capability enum has no bitmask structure to test. Spending
+  // classification was previously covered by `isSpendingAction` property
+  // tests in Category A, which were themselves deleted in V2 Option A
+  // (spending now derives from `amount > 0n`, not a string-label map).
 
   describe("Threshold Property Tests (fuzz)", () => {
     it("drain thresholds are always integers after clamping", () => {

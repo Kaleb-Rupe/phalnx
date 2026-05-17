@@ -14,7 +14,11 @@ import { SIGIL_ERROR__SDK__INVALID_NETWORK } from "./errors/codes.js";
 export { SIGIL_PROGRAM_ADDRESS } from "./generated/programs/sigil.js";
 
 // Re-export generated types
-/** @deprecated v6: ActionType eliminated. Use isSpending instead. */
+/**
+ * @deprecated v6: ActionType eliminated. V2 Option A also removed the
+ * `isSpending` field from on-chain events and the SDK SealResult — derive
+ * spending from `amount > 0n` directly.
+ */
 export type ActionType = never;
 export type { VaultStatus } from "./generated/types/vaultStatus.js";
 export type { AgentEntry } from "./generated/types/agentEntry.js";
