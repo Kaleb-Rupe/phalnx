@@ -13,7 +13,6 @@
 
 import * as fc from "fast-check";
 import { expect } from "chai";
-import { isSpendingAction } from "../src/types.js";
 import {
   detectDrainAttempt,
   RISK_FLAG_LARGE_OUTFLOW,
@@ -57,37 +56,14 @@ function replaceAgentAtas(
 const NUM_RUNS = parseInt(process.env.PROPERTY_RUNS ?? "5000", 10);
 
 // ─── Constants ──────────────────────────────────────────────────────────────
-
-const SPENDING_ACTIONS = [
-  "swap",
-  "openPosition",
-  "increasePosition",
-  "deposit",
-  "transfer",
-  "addCollateral",
-  "placeLimitOrder",
-  "swapAndOpenPosition",
-] as const;
-
-const NON_SPENDING_ACTIONS = [
-  "closePosition",
-  "decreasePosition",
-  "withdraw",
-  "removeCollateral",
-  "placeTriggerOrder",
-  "editTriggerOrder",
-  "cancelTriggerOrder",
-  "editLimitOrder",
-  "cancelLimitOrder",
-  "closeAndSwapPosition",
-] as const;
-
-const ALL_ACTIONS = [...SPENDING_ACTIONS, ...NON_SPENDING_ACTIONS];
-
+//
+// SPENDING_ACTIONS / NON_SPENDING_ACTIONS / ALL_ACTIONS arrays deleted in
+// V2 Option A alongside `isSpendingAction`. The helper they fed was zombie
+// code; V2 derives spending from `amount > 0n`.
+//
 // `ACTION_KEYS` array was used by the deleted `hasPermission` / bitmask
-// property tests (A11). Kept removed — every surviving test either
-// references `SPENDING_ACTIONS` / `NON_SPENDING_ACTIONS` or builds its
-// own inline list.
+// property tests (A11). The v6 program uses a 2-bit capability enum that
+// is not bitmask-compositional.
 
 const EPOCH_DURATION = 600;
 const NUM_EPOCHS = 144;
@@ -151,63 +127,15 @@ const arbAccountRole: fc.Arbitrary<AccountRole> = fc.constantFrom(
 // ─── CATEGORY A: Exported Function Properties ──────────────────────────────
 
 describe("Property Tests — Category A: Exported Function Properties", () => {
-  // ── isSpendingAction ────────────────────────────────────────────────────
-
-  describe("isSpendingAction", () => {
-    it("exactly 8 actions are spending", () => {
-      const spendingCount = ALL_ACTIONS.filter(isSpendingAction).length;
-      expect(spendingCount).to.equal(8);
-    });
-
-    it("exactly 10 actions are non-spending", () => {
-      const nonSpendingCount = ALL_ACTIONS.filter(
-        (a) => !isSpendingAction(a),
-      ).length;
-      expect(nonSpendingCount).to.equal(10);
-    });
-
-    it("every known spending action returns true", () => {
-      for (const action of SPENDING_ACTIONS) {
-        expect(isSpendingAction(action)).to.equal(
-          true,
-          `Expected ${action} to be spending`,
-        );
-      }
-    });
-
-    it("every known non-spending action returns false", () => {
-      for (const action of NON_SPENDING_ACTIONS) {
-        expect(isSpendingAction(action)).to.equal(
-          false,
-          `Expected ${action} to be non-spending`,
-        );
-      }
-    });
-
-    it("random unknown strings always return false", () => {
-      fc.assert(
-        fc.property(
-          fc
-            .string({ minLength: 1, maxLength: 50 })
-            .filter((s) => !(ALL_ACTIONS as readonly string[]).includes(s)),
-          (unknownAction) => {
-            expect(isSpendingAction(unknownAction)).to.equal(false);
-          },
-        ),
-        { numRuns: NUM_RUNS },
-      );
-    });
-
-    it("total known actions = 18", () => {
-      expect(ALL_ACTIONS.length).to.equal(18);
-    });
-  });
-
+  // `isSpendingAction` property-test block deleted in V2 Option A — the
+  // helper was zombie code mapping legacy ActionType names to spending
+  // booleans. V2 uses `amount > 0n` directly as the spending predicate;
+  // no string label mapping exists to property-test.
+  //
   // `hasPermission` property-test block deleted in A11 — the helper encoded
   // the pre-v6 21-bit bitmask. The v6 program uses a 2-bit capability enum
   // that is not bitmask-compositional, so there's no property-based
-  // analogue. Spending classification is property-tested through
-  // `isSpendingAction` above.
+  // analogue.
 
   // ── getRolling24hUsd ──────────────────────────────────────────────────
 

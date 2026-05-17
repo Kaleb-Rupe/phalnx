@@ -3642,7 +3642,6 @@ describe("instruction-constraints", () => {
               },
             ],
             accountConstraints: [],
-            isSpending: 1,
             discriminatorFormat: { anchor8: {} },
           },
         ] as any,
@@ -4057,7 +4056,8 @@ describe("instruction-constraints", () => {
       const f = await setupFreshVaultC(11_002);
 
       // Set up real, populated constraints (NOT an orphan).
-      // is_spending: 2 (NonSpending) — required since 0 is rejected at runtime.
+      // is_spending byte was removed from ConstraintEntry in V2 Option A — the
+      // helper no longer requires it.
       createConstraintsAccount(
         program,
         svm,
@@ -4076,7 +4076,6 @@ describe("instruction-constraints", () => {
             ],
             accountConstraints: [],
             discriminatorFormat: { anchor8: {} },
-            isSpending: 2,
           },
         ],
       );
@@ -4185,8 +4184,8 @@ describe("instruction-constraints", () => {
 
       // Step 4: re-create constraints from scratch via the normal path —
       // this exercises allocate + extend chain + populate end-to-end on
-      // the previously-orphaned PDA address.
-      // is_spending: 2 (NonSpending) — required since 0 is rejected at runtime.
+      // the previously-orphaned PDA address. is_spending byte was removed
+      // from ConstraintEntry in V2 Option A.
       createConstraintsAccount(
         program,
         svm,
@@ -4205,7 +4204,6 @@ describe("instruction-constraints", () => {
             ],
             accountConstraints: [],
             discriminatorFormat: { anchor8: {} },
-            isSpending: 2,
           },
         ],
       );

@@ -208,7 +208,8 @@ function buildConstraintsAccountData(
     //   [352..552) account_constraints[5] — 5 × AccountConstraintZC(40)
     //   [552)     data_count
     //   [553)     account_count
-    //   [554)     is_spending
+    //   [554)     _reserved_was_is_spending (M2 Option A — byte preserved
+    //             for layout stability; runtime never reads it)
     //   [555)     discriminator_format
     //   [556..560) _padding[4]
     entry.programId.toBuffer().copy(buf, entryOffset + 0);
@@ -227,7 +228,8 @@ function buildConstraintsAccountData(
     // data_count = 1
     buf.writeUInt8(1, entryOffset + 552);
     // account_count = 0 (already zero)
-    // is_spending = 1 (Spending)
+    // byte 554 = _reserved_was_is_spending (M2 Option A — write preserved
+    // for layout stability; runtime never reads it)
     buf.writeUInt8(1, entryOffset + 554);
     // discriminator_format = 0 (Anchor8) — already zero
   }

@@ -3098,7 +3098,6 @@ describe("surfpool-integration", function () {
         },
       ],
       accountConstraints: [],
-      isSpending: 1,
       discriminatorFormat: { anchor8: {} },
     };
 
@@ -3411,7 +3410,6 @@ describe("surfpool-integration", function () {
           },
         ],
         accountConstraints: [],
-        isSpending: 1,
         discriminatorFormat: { anchor8: {} },
       };
       // Multi-IX: allocate pending + extend×3 + populate

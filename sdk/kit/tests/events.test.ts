@@ -188,7 +188,6 @@ describe("events", () => {
       const encoded = encoder.encode({
         vault: VAULT_ADDR,
         agent: AGENT_ADDR,
-        isSpending: true,
         tokenMint: MINT_ADDR,
         amount: 1_000_000n,
         usdAmount: 1_000_000n,
@@ -227,7 +226,6 @@ describe("events", () => {
         timestamp: 1700000100n,
         actualSpendUsd: 500_000_000n,
         balanceAfterUsd: 1_200_000_000n,
-        isSpending: true,
       });
 
       const event: SigilEvent = {
@@ -244,7 +242,6 @@ describe("events", () => {
       expect(decoded.fields!.timestamp).to.equal(1700000100n);
       expect(decoded.fields!.actualSpendUsd).to.equal(500_000_000n);
       expect(decoded.fields!.balanceAfterUsd).to.equal(1_200_000_000n);
-      expect(decoded.fields!.isSpending).to.equal(true);
     });
 
     it("returns fields=null when decoder fails on corrupt data", () => {
@@ -267,7 +264,6 @@ describe("events", () => {
       const payload = encoder.encode({
         vault: VAULT_ADDR,
         agent: AGENT_ADDR,
-        isSpending: true,
         tokenMint: MINT_ADDR,
         amount: 500_000n,
         usdAmount: 500_000n,
@@ -358,7 +354,6 @@ describe("events", () => {
         timestamp: 1700000500n,
         actualSpendUsd: 0n,
         balanceAfterUsd: 0n,
-        isSpending: true,
       });
       const validBytes = new Uint8Array([
         ...discBytes,

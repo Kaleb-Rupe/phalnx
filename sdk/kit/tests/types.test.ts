@@ -18,8 +18,6 @@ import {
   USDT_MINT_DEVNET,
   USDT_MINT_MAINNET,
   isStablecoinMint,
-  parseActionType,
-  isSpendingAction,
   normalizeNetwork,
   validateNetwork,
 } from "../src/types.js";
@@ -127,84 +125,10 @@ describe("types", () => {
   // `hasPermission` + `permissionsToStrings` blocks deleted in A11 — the
   // underlying 21-bit bitmask was replaced by a 2-bit capability enum
   // (see docstrings in `src/types.ts`). The helpers no longer exist.
-
-  describe("parseActionType", () => {
-    it("{ swap: {} } returns 'swap'", () => {
-      expect(parseActionType({ swap: {} })).to.equal("swap");
-    });
-
-    it("empty object returns undefined", () => {
-      expect(parseActionType({})).to.be.undefined;
-    });
-
-    it("multi-key returns first key", () => {
-      const result = parseActionType({ openPosition: {}, closePosition: {} });
-      expect(result).to.be.a("string");
-    });
-
-    it("numeric enum 0 maps to 'swap' (A11 refactor — plain array instead of ACTION_PERMISSION_MAP)", () => {
-      expect(parseActionType(0)).to.equal("swap");
-    });
-
-    it("numeric enum 7 maps to 'transfer'", () => {
-      expect(parseActionType(7)).to.equal("transfer");
-    });
-
-    it("numeric enum 17 maps to 'closeAndSwapPosition' (last valid index)", () => {
-      expect(parseActionType(17)).to.equal("closeAndSwapPosition");
-    });
-
-    it("numeric enum out of range returns undefined", () => {
-      expect(parseActionType(18)).to.be.undefined;
-      expect(parseActionType(-1)).to.be.undefined;
-      expect(parseActionType(999)).to.be.undefined;
-    });
-  });
-
-  describe("isSpendingAction", () => {
-    it("swap is spending", () => {
-      expect(isSpendingAction("swap")).to.be.true;
-    });
-
-    it("closePosition is non-spending", () => {
-      expect(isSpendingAction("closePosition")).to.be.false;
-    });
-
-    it("all 8 spending types verified", () => {
-      const spending = [
-        "swap",
-        "openPosition",
-        "increasePosition",
-        "deposit",
-        "transfer",
-        "addCollateral",
-        "placeLimitOrder",
-        "swapAndOpenPosition",
-      ];
-      for (const s of spending) {
-        expect(isSpendingAction(s), `${s} should be spending`).to.be.true;
-      }
-    });
-
-    it("all 10 non-spending types verified", () => {
-      const nonSpending = [
-        "closePosition",
-        "decreasePosition",
-        "withdraw",
-        "removeCollateral",
-        "placeTriggerOrder",
-        "editTriggerOrder",
-        "cancelTriggerOrder",
-        "editLimitOrder",
-        "cancelLimitOrder",
-        "closeAndSwapPosition",
-      ];
-      for (const ns of nonSpending) {
-        expect(isSpendingAction(ns), `${ns} should be non-spending`).to.be
-          .false;
-      }
-    });
-  });
+  //
+  // `parseActionType` + `isSpendingAction` blocks deleted in V2 Option A —
+  // the underlying ActionType enum and helpers were removed alongside the
+  // on-chain `is_spending` field. V2 derives spending from `amount > 0n`.
 
   // `PermissionBuilder` block deleted in A11 — see block comment above
   // at the "Preset bitmasks" deletion for full rationale.

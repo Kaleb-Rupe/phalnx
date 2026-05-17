@@ -90,7 +90,6 @@ describe("seal()", () => {
     const result = await seal(baseSealParams());
 
     expect(result.transaction).to.exist;
-    expect(result.isSpending).to.equal(true);
     expect(result.warnings).to.be.an("array");
     expect(result.txSizeBytes).to.be.a("number");
     expect(result.txSizeBytes).to.be.greaterThan(0);
@@ -111,9 +110,12 @@ describe("seal()", () => {
     expect(protocolWarnings).to.have.length(0);
   });
 
-  it("determines spending from amount > 0n", async () => {
+  it("composes spending TX when amount > 0n", async () => {
+    // V2 Option A: isSpending is no longer surfaced on SealResult; callers
+    // derive it from the params they passed in. This test verifies seal()
+    // accepts a spending amount and returns a composed transaction.
     const result = await seal(baseSealParams({ amount: 100_000_000n }));
-    expect(result.isSpending).to.equal(true);
+    expect(result.transaction).to.exist;
   });
 
   it("throws on non-active vault (status !== Active)", async () => {
@@ -211,12 +213,15 @@ describe("seal()", () => {
   });
 
   it("amount=0 results in non-spending seal", async () => {
+    // V2 Option A: isSpending is no longer surfaced on SealResult. The
+    // caller already knows amount=0 means non-spending — the seal() return
+    // simply needs to succeed under the non-spending branch.
     const result = await seal(
       baseSealParams({
         amount: 0n,
       }),
     );
-    expect(result.isSpending).to.equal(false);
+    expect(result.transaction).to.exist;
   });
 
   it("throws when no target protocol or DeFi instructions", async () => {
@@ -425,11 +430,13 @@ describe("SigilClient", () => {
 
     expect(result.ok).to.equal(true);
     expect(result.transaction).to.exist;
-    expect(result.isSpending).to.equal(true);
     expect(result.txSizeBytes).to.be.a("number");
   });
 
-  it("client.seal() produces same isSpending as direct seal() with identical params", async () => {
+  it("client.seal() produces same ok status as direct seal() with identical params", async () => {
+    // V2 Option A: isSpending was removed from SealResult; we now compare
+    // ok status only. The two code paths still share the same spending
+    // classification logic internally (amount > 0n in both).
     const state = makeCachedState();
     const blockhash = {
       blockhash: "GHtXQBpokCiBP6spMNfMW9qLBjfQJhmR4GWzCiQ2ATQA",
@@ -454,7 +461,6 @@ describe("SigilClient", () => {
       addressLookupTables: {},
     });
 
-    expect(clientResult.isSpending).to.equal(directResult.isSpending);
     expect(clientResult.ok).to.equal(directResult.ok);
   });
 
