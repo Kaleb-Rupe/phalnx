@@ -745,7 +745,6 @@ pub fn handler(
     session.authorized_amount = amount;
     session.authorized_token = token_mint;
     session.authorized_protocol = target_protocol;
-    session.is_spending = is_spending;
     // Wall-clock based — congestion-immune (audit F5-H1).
     // The slot is no longer load-bearing for expiry; only Clock::unix_timestamp.
     session.expires_at_timestamp = SessionAuthority::calculate_expiry(
@@ -838,7 +837,6 @@ pub fn handler(
     emit!(ActionAuthorized {
         vault: vault_key,
         agent: ctx.accounts.agent.key(),
-        is_spending,
         token_mint,
         amount,
         usd_amount: amount,

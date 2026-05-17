@@ -129,7 +129,7 @@ impl AgentVault {
     }
 
     /// Check if an agent has sufficient capability for the requested operation.
-    /// is_spending: whether the matched constraint entry is classified as spending.
+    /// is_spending: whether `authorized_amount > 0` — caller derives.
     /// Returns true if the agent's capability level permits the operation.
     pub fn has_capability(&self, signer: &Pubkey, is_spending: bool) -> bool {
         self.get_agent(signer)

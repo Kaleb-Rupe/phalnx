@@ -16,10 +16,6 @@ pub struct SessionAuthority {
     pub authorized_token: Pubkey,
     pub authorized_protocol: Pubkey,
 
-    /// Whether the matched constraint entry classifies this as spending.
-    /// Derived from amount > 0 in validate_and_authorize.
-    pub is_spending: bool,
-
     /// Wall-clock expiry: session is valid until this `Clock::unix_timestamp`.
     ///
     /// **Why timestamp, not slot:** Solana slot times vary 400ms-1.5s under
@@ -69,13 +65,17 @@ pub struct SessionAuthority {
 
 impl SessionAuthority {
     /// discriminator (8) + vault (32) + agent (32) + authorized (1) +
-    /// amount (8) + token (32) + protocol (32) + is_spending (1) +
+    /// amount (8) + token (32) + protocol (32) +
     /// expires_at_timestamp i64 (8) + delegated (1) + delegation_token_account (32) +
     /// protocol_fee (8) + developer_fee (8) +
     /// output_mint (32) + stablecoin_balance_before (8) + bump (1) +
     /// assertion_snapshots (128) + snapshot_lens (4)
+    ///
+    /// is_spending byte removed in V2 Option A — always derived from
+    /// `authorized_amount > 0`. Account is no longer rent-resized; SIZE shrinks
+    /// by 1 byte under the V2 program ID.
     pub const SIZE: usize =
-        8 + 32 + 32 + 1 + 8 + 32 + 32 + 1 + 8 + 1 + 32 + 8 + 8 + 32 + 8 + 1 + 128 + 4;
+        8 + 32 + 32 + 1 + 8 + 32 + 32 + 8 + 1 + 32 + 8 + 8 + 32 + 8 + 1 + 128 + 4;
 
     /// Returns true when wall-clock has passed the session's expiry timestamp.
     pub fn is_expired(&self, current_unix_ts: i64) -> bool {
@@ -123,7 +123,6 @@ mod f5h1_tests {
             authorized_amount: 0,
             authorized_token: Pubkey::default(),
             authorized_protocol: Pubkey::default(),
-            is_spending: false,
             expires_at_timestamp: expires_at,
             delegated: false,
             delegation_token_account: Pubkey::default(),

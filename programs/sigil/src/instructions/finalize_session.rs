@@ -118,7 +118,9 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
 
     // Extract session data before we lose access
     let session_agent = session.agent;
-    let session_is_spending = session.is_spending;
+    // is_spending derived from authorized_amount > 0 (V2 Option A — field removed
+    // from SessionAuthority; canonical source is now amount).
+    let session_is_spending = session.authorized_amount > 0;
     let session_delegated = session.delegated;
     let session_developer_fee = session.developer_fee;
     let session_output_mint = session.output_mint;
@@ -690,7 +692,6 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
         timestamp: clock.unix_timestamp,
         actual_spend_usd: actual_spend_tracked,
         balance_after_usd: balance_after_tracked,
-        is_spending: session_is_spending,
     });
 
     // --- Post-finalize instruction scan (defense-in-depth) ---

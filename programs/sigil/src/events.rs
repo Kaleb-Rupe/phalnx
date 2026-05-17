@@ -41,7 +41,6 @@ pub struct AgentSpendLimitChecked {
 pub struct ActionAuthorized {
     pub vault: Pubkey,
     pub agent: Pubkey,
-    pub is_spending: bool,
     pub token_mint: Pubkey,
     pub amount: u64,
     pub usd_amount: u64,
@@ -63,8 +62,6 @@ pub struct SessionFinalized {
     pub actual_spend_usd: u64,
     /// Vault stablecoin balance after this transaction (0 for non-spending).
     pub balance_after_usd: u64,
-    /// Whether this was a spending action.
-    pub is_spending: bool,
 }
 
 #[event]
