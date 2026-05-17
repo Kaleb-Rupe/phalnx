@@ -5237,10 +5237,6 @@
             "type": "pubkey"
           },
           {
-            "name": "is_spending",
-            "type": "bool"
-          },
-          {
             "name": "token_mint",
             "type": "pubkey"
           },
@@ -7405,14 +7401,6 @@
             "type": "pubkey"
           },
           {
-            "name": "is_spending",
-            "docs": [
-              "Whether the matched constraint entry classifies this as spending.",
-              "Derived from amount > 0 in validate_and_authorize."
-            ],
-            "type": "bool"
-          },
-          {
             "name": "expires_at_timestamp",
             "docs": [
               "Wall-clock expiry: session is valid until this `Clock::unix_timestamp`.",
@@ -7554,13 +7542,6 @@
               "Vault stablecoin balance after this transaction (0 for non-spending)."
             ],
             "type": "u64"
-          },
-          {
-            "name": "is_spending",
-            "docs": [
-              "Whether this was a spending action."
-            ],
-            "type": "bool"
           }
         ]
       }

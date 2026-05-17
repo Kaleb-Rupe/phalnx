@@ -68,9 +68,8 @@ export type PendingConstraintsUpdate = {
   /** Bump seed for PDA */
   bump: number;
   /**
-   * Alignment padding (grew by 1 to absorb the removed strict_mode byte —
-   * queued_at must remain 8-byte aligned). Total: 8+32+35840+1+1+6 = 35888,
-   * keeping queued_at at offset 35888 (8-aligned).
+   * Alignment padding. Total: 8+32+35840+1+1+6 = 35888, keeping queued_at at
+   * struct offset 35880 (8-aligned post-discriminator absolute 35888).
    */
   padding: ReadonlyUint8Array;
   /** Unix timestamp when this update was queued */
@@ -96,9 +95,8 @@ export type PendingConstraintsUpdateArgs = {
   /** Bump seed for PDA */
   bump: number;
   /**
-   * Alignment padding (grew by 1 to absorb the removed strict_mode byte —
-   * queued_at must remain 8-byte aligned). Total: 8+32+35840+1+1+6 = 35888,
-   * keeping queued_at at offset 35888 (8-aligned).
+   * Alignment padding. Total: 8+32+35840+1+1+6 = 35888, keeping queued_at at
+   * struct offset 35880 (8-aligned post-discriminator absolute 35888).
    */
   padding: ReadonlyUint8Array;
   /** Unix timestamp when this update was queued */

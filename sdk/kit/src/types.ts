@@ -297,73 +297,11 @@ export function isStablecoinMint(mint: Address, network: Network): boolean {
   return mint === USDC_MINT_MAINNET || mint === USDT_MINT_MAINNET;
 }
 
-// ─── ActionType Parsing ──────────────────────────────────────────────────────
-//
-// The v6 on-chain program eliminated per-action permission bits in favor of a
-// 2-bit capability enum. `parseActionType` is preserved because
-// `event-analytics.ts` still reads numeric ActionType values from on-chain
-// events and needs the string label for UI display. It does NOT grant or
-// check any permission — the v6 program enforces capability (0/1/2), not
-// ActionType.
-
-/**
- * Canonical action-type names indexed by the v6 on-chain ActionType enum
- * variant. Index 0 = `Swap`, index 17 = `CloseAndSwapPosition`. This is the ONLY
- * permission-related state still in this file post-A11 — it powers
- * `parseActionType` for event decoding and nothing else.
- */
-const ACTION_TYPE_NAMES_BY_INDEX = [
-  "swap", // 0
-  "openPosition", // 1
-  "closePosition", // 2
-  "increasePosition", // 3
-  "decreasePosition", // 4
-  "deposit", // 5
-  "withdraw", // 6
-  "transfer", // 7
-  "addCollateral", // 8
-  "removeCollateral", // 9
-  "placeTriggerOrder", // 10
-  "editTriggerOrder", // 11
-  "cancelTriggerOrder", // 12
-  "placeLimitOrder", // 13
-  "editLimitOrder", // 14
-  "cancelLimitOrder", // 15
-  "swapAndOpenPosition", // 16
-  "closeAndSwapPosition", // 17
-] as const;
-
-/**
- * Parse an action type to its string key.
- * Accepts either a numeric ActionType enum value (0-17) or an
- * Anchor-style `{ Swap: {} }` object. Returns `undefined` for
- * out-of-range numeric values or empty objects.
- */
-export function parseActionType(
-  actionType: number | Record<string, unknown>,
-): string | undefined {
-  if (typeof actionType === "number") {
-    return ACTION_TYPE_NAMES_BY_INDEX[actionType];
-  }
-  return Object.keys(actionType)[0];
-}
-
 // ─── Spending Classification ─────────────────────────────────────────────────
-
-// PositionEffect type + getPositionEffect helper REMOVED — position counter
-// system deleted wholesale per council decision (9-1 vote, 2026-04-19).
-// Spending classification is authoritative via session.is_spending (set from
-// amount > 0 in validate_and_authorize) — not derived from position semantics.
-
-export function isSpendingAction(actionType: string): boolean {
-  return [
-    "swap",
-    "openPosition",
-    "increasePosition",
-    "deposit",
-    "transfer",
-    "addCollateral",
-    "placeLimitOrder",
-    "swapAndOpenPosition",
-  ].includes(actionType);
-}
+//
+// V2 Option A: spending is always derived from `amount > 0`. The on-chain
+// session no longer carries an `is_spending` field, and ActionType + 21-bit
+// permission bits were deleted (council 9-1 vote, 2026-04-19). The
+// `ACTION_TYPE_NAMES_BY_INDEX` / `parseActionType` / `isSpendingAction`
+// helpers that mapped enum indices to labels for UI display were removed
+// along with the on-chain field they decoded.

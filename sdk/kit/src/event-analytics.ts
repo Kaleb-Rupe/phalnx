@@ -10,7 +10,7 @@ import type { DecodedSigilEvent, SigilEventName } from "./events.js";
 import { parseAndDecodeSigilEvents } from "./events.js";
 import { formatUsd, formatAddress, formatTokenAmount } from "./formatting.js";
 import { resolveToken } from "./tokens.js";
-import { parseActionType, type Network } from "./types.js";
+import { type Network } from "./types.js";
 import { resolveProtocolName } from "./protocol-names.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -36,8 +36,6 @@ export interface VaultActivityItem {
   tokenSymbol: string | null;
   /** Whether this was a spending action (amount > 0). */
   isSpending: boolean;
-  /** @deprecated Use isSpending instead. Legacy field for backward decode of pre-v6 events. */
-  actionType: string | null;
   protocol: Address | null;
   protocolName: string | null;
   success: boolean;
@@ -102,8 +100,7 @@ export function describeEvent(
     case "ActionAuthorized": {
       const agent = formatAddress(f.agent as string);
       const amount = f.usdAmount as bigint;
-      const actionObj = f.actionType as { __kind: string } | undefined;
-      const actionStr = actionObj?.__kind ?? "action";
+      const actionStr = amount > 0n ? "spending" : "action";
       return `Agent ${agent} authorized ${formatUsd(amount, 2)} ${actionStr} on ${resolveProtocolName(f.protocol as string)}`;
     }
 
@@ -233,48 +230,10 @@ export function buildActivityItem(
         ? formatUsd(amount, 2)
         : null;
 
-  // v6 events carry isSpending directly; legacy events derive it from actionType.
-  // positionEffect extraction removed — position counter system deleted per
-  // council decision (9-1 vote, 2026-04-19).
-  let isSpending = false;
-  let actionType: string | null = null;
-
-  if (f?.isSpending != null) {
-    // New v6 event format
-    isSpending = f.isSpending as boolean;
-  } else if (f?.actionType != null) {
-    // Legacy event format — derive isSpending from actionType for backward decode
-    const at = f.actionType;
-    if (typeof at === "object" && at !== null && "__kind" in at) {
-      actionType = (at as { __kind: string }).__kind;
-    } else if (typeof at === "number" || typeof at === "bigint") {
-      actionType = parseActionType(Number(at))?.toString() ?? null;
-    }
-    if (actionType) {
-      isSpending = [
-        "swap",
-        "Swap",
-        "openPosition",
-        "OpenPosition",
-        "increasePosition",
-        "IncreasePosition",
-        "deposit",
-        "Deposit",
-        "transfer",
-        "Transfer",
-        "addCollateral",
-        "AddCollateral",
-        "placeLimitOrder",
-        "PlaceLimitOrder",
-        "swapAndOpenPosition",
-        "SwapAndOpenPosition",
-      ].includes(actionType);
-    }
-  }
-  // Also infer isSpending from amount if no event field present
-  if (!isSpending && amount !== null && amount > 0n) {
-    isSpending = true;
-  }
+  // V2 Option A: isSpending derived from amount > 0. The on-chain event no
+  // longer carries an isSpending field, and the legacy ActionType decoding is
+  // dead (position counter + ActionType deleted 2026-04-19).
+  const isSpending = amount !== null && amount > 0n;
 
   return {
     timestamp: blockTime,
@@ -287,7 +246,6 @@ export function buildActivityItem(
     tokenMint,
     tokenSymbol: token?.symbol ?? null,
     isSpending,
-    actionType,
     protocol,
     protocolName: protocol ? resolveProtocolName(protocol) : null,
     success,

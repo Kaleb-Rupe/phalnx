@@ -5243,10 +5243,6 @@ export type Sigil = {
             "type": "pubkey"
           },
           {
-            "name": "isSpending",
-            "type": "bool"
-          },
-          {
             "name": "tokenMint",
             "type": "pubkey"
           },
@@ -7411,14 +7407,6 @@ export type Sigil = {
             "type": "pubkey"
           },
           {
-            "name": "isSpending",
-            "docs": [
-              "Whether the matched constraint entry classifies this as spending.",
-              "Derived from amount > 0 in validate_and_authorize."
-            ],
-            "type": "bool"
-          },
-          {
             "name": "expiresAtTimestamp",
             "docs": [
               "Wall-clock expiry: session is valid until this `Clock::unix_timestamp`.",
@@ -7560,13 +7548,6 @@ export type Sigil = {
               "Vault stablecoin balance after this transaction (0 for non-spending)."
             ],
             "type": "u64"
-          },
-          {
-            "name": "isSpending",
-            "docs": [
-              "Whether this was a spending action."
-            ],
-            "type": "bool"
           }
         ]
       }

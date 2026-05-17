@@ -225,8 +225,6 @@ export interface SealParams {
 export interface SealResult {
   ok: true;
   transaction: ReturnType<typeof compileTransaction>;
-  /** Whether this action is spending (amount > 0). */
-  isSpending: boolean;
   warnings: string[];
   txSizeBytes: number;
   /** Block height after which the blockhash expires. Sign and send before this. */
@@ -906,7 +904,6 @@ export async function seal(params: SealParams): Promise<SealResult> {
   return {
     ok: true,
     transaction: compiledTx,
-    isSpending: spending,
     warnings,
     txSizeBytes: byteLength,
     lastValidBlockHeight: blockhash.lastValidBlockHeight,

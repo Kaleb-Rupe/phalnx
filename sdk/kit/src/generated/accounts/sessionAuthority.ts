@@ -68,11 +68,6 @@ export type SessionAuthority = {
   authorizedToken: Address;
   authorizedProtocol: Address;
   /**
-   * Whether the matched constraint entry classifies this as spending.
-   * Derived from amount > 0 in validate_and_authorize.
-   */
-  isSpending: boolean;
-  /**
    * Wall-clock expiry: session is valid until this `Clock::unix_timestamp`.
    *
    * **Why timestamp, not slot:** Solana slot times vary 400ms-1.5s under
@@ -134,11 +129,6 @@ export type SessionAuthorityArgs = {
   authorizedToken: Address;
   authorizedProtocol: Address;
   /**
-   * Whether the matched constraint entry classifies this as spending.
-   * Derived from amount > 0 in validate_and_authorize.
-   */
-  isSpending: boolean;
-  /**
    * Wall-clock expiry: session is valid until this `Clock::unix_timestamp`.
    *
    * **Why timestamp, not slot:** Solana slot times vary 400ms-1.5s under
@@ -199,7 +189,6 @@ export function getSessionAuthorityEncoder(): FixedSizeEncoder<SessionAuthorityA
       ["authorizedAmount", getU64Encoder()],
       ["authorizedToken", getAddressEncoder()],
       ["authorizedProtocol", getAddressEncoder()],
-      ["isSpending", getBooleanEncoder()],
       ["expiresAtTimestamp", getI64Encoder()],
       ["delegated", getBooleanEncoder()],
       ["delegationTokenAccount", getAddressEncoder()],
@@ -228,7 +217,6 @@ export function getSessionAuthorityDecoder(): FixedSizeDecoder<SessionAuthority>
     ["authorizedAmount", getU64Decoder()],
     ["authorizedToken", getAddressDecoder()],
     ["authorizedProtocol", getAddressDecoder()],
-    ["isSpending", getBooleanDecoder()],
     ["expiresAtTimestamp", getI64Decoder()],
     ["delegated", getBooleanDecoder()],
     ["delegationTokenAccount", getAddressDecoder()],
@@ -320,5 +308,5 @@ export async function fetchAllMaybeSessionAuthority(
 }
 
 export function getSessionAuthoritySize(): number {
-  return 376;
+  return 375;
 }

@@ -64,8 +64,7 @@ export type InstructionConstraints = {
   /**
    * Alignment padding (5 bytes — keeps total fields = 35,880, an even
    * number, so the bytemuck Pod derive accepts the struct under
-   * ConstraintEntryZC's 2-byte alignment requirement). Grew from 4 to 5
-   * when the strict_mode byte was removed.
+   * ConstraintEntryZC's 2-byte alignment requirement).
    */
   padding: ReadonlyUint8Array;
 };
@@ -80,8 +79,7 @@ export type InstructionConstraintsArgs = {
   /**
    * Alignment padding (5 bytes — keeps total fields = 35,880, an even
    * number, so the bytemuck Pod derive accepts the struct under
-   * ConstraintEntryZC's 2-byte alignment requirement). Grew from 4 to 5
-   * when the strict_mode byte was removed.
+   * ConstraintEntryZC's 2-byte alignment requirement).
    */
   padding: ReadonlyUint8Array;
 };

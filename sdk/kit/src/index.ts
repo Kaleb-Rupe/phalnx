@@ -62,8 +62,6 @@ export {
   RECOGNIZED_DEFI_PROGRAMS,
   // Functions
   isStablecoinMint,
-  parseActionType,
-  isSpendingAction,
   validateNetwork,
   normalizeNetwork,
   // u64 boundary
