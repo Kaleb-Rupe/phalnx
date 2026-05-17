@@ -1,14 +1,16 @@
 # REVAMP_PLAN.md — Sigil v2 Master Plan
 
 **Status:** Living document — single source of truth for the Sigil v2 revamp.
-**Last updated:** 2026-05-17
+**Last updated:** 2026-05-17 (Phase 0.5 hygiene pass)
 **Branch:** `revamp/v2-2026-05`
-**Companion docs:** [THREAT_MODEL_V2.md](./THREAT_MODEL_V2.md), [ACCEPTANCE_V2.md](./ACCEPTANCE_V2.md), [INTERFACES_V2.md](./INTERFACES_V2.md)
-**Architecture diagram:** [tier-model.mmd](./tier-model.mmd) (canonical) + embedded in §8 below.
+**Companion docs:** [THREAT_MODEL_V2.md](./THREAT_MODEL_V2.md), [ACCEPTANCE_V2.md](./ACCEPTANCE_V2.md), [INTERFACES_V2.md](./INTERFACES_V2.md), [ERROR_CODE_ALLOCATION_V2.md](./ERROR_CODE_ALLOCATION_V2.md), [HARDENED_V2_PROMPT_MAP.md](./HARDENED_V2_PROMPT_MAP.md)
+**Architecture diagram:** [tier-model.mmd](./tier-model.mmd) (legacy filename retained; content updated per L-1).
+
+> **L-6 exception (operational scope):** writes to `~/.claude/projects/-Users-kalebrupe/memory/project_sigil_*.md` are allowed and required under L-9 (docs + memory refresh phase-by-phase). No other paths outside `agent-middleware/` may be touched. The exception is narrow: it covers memory files at the listed path only; the repo-root `CLAUDE.md` and any other path outside `agent-middleware/` remain out of scope.
 
 This document is the answer to the question: *"What is Sigil v2, and why is it different from v1?"*
 
-It enumerates 7 foundational features (K1-K7), 16 new V2 Tier A primitives (TA-01..TA-16), 3 tiers (T1/T2/T3), 9 decision-register entries (D-01..D-09), and 7 council items (C22-C28 — all locked). It also defines §RP, the Review Protocol that binds every later stage.
+It enumerates 7 foundational features (K1-K7), the V2 Tier A primitives (TA-01..TA-19 with TA-16 DELETED per L-1), the locked decisions D-01..D-09 (revised under Option A — see [INTERFACES_V2.md](./INTERFACES_V2.md#decisions-d-01d-09)), and 7 council items (C22-C28). It also defines §RP, the Review Protocol that binds every later stage. **Authoritative phase-by-phase execution sequence is in [HARDENED_V2_PROMPT_MAP.md](./HARDENED_V2_PROMPT_MAP.md) §6.**
 
 ---
 

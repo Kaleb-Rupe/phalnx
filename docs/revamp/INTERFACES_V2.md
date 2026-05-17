@@ -1,17 +1,18 @@
 # INTERFACES_V2.md — Sigil v2 ID Registry
 
-**Status:** Source of truth for all IDs used across Stage 0+ docs (K1-K7, TA-01..TA-16, AC-1..AC-11, D-01..D-09, plus T-21 / T-DoS-1/2 / T-K6-1 / Def-1..Def-6).
-**Last updated:** 2026-05-17
-**Companion docs:** [REVAMP_PLAN.md](./REVAMP_PLAN.md), [THREAT_MODEL_V2.md](./THREAT_MODEL_V2.md), [ACCEPTANCE_V2.md](./ACCEPTANCE_V2.md)
+**Status:** Source of truth for all IDs used across Stage 0+ docs (K1-K7, TA-01..TA-19 with TA-16 DELETED, AC-1..AC-11, D-01..D-09, plus T-21 / T-DoS-1/2 / T-K6-1 / Def-1..Def-6).
+**Last updated:** 2026-05-17 (Phase 0.5 hygiene pass — TA-16 deleted, TA-17/18/19 finalized)
+**Companion docs:** [REVAMP_PLAN.md](./REVAMP_PLAN.md), [THREAT_MODEL_V2.md](./THREAT_MODEL_V2.md), [ACCEPTANCE_V2.md](./ACCEPTANCE_V2.md), [ERROR_CODE_ALLOCATION_V2.md](./ERROR_CODE_ALLOCATION_V2.md)
 
 > **All other docs in this directory cite IDs from this file as canonical. Cross-doc ID drift = §RP CRITICAL finding.**
 > Modifications here require a §RP Review Protocol pass per [REVAMP_PLAN.md §12](./REVAMP_PLAN.md#12-rp-review-protocol).
+> **Numeric error code allocation:** see [ERROR_CODE_ALLOCATION_V2.md](./ERROR_CODE_ALLOCATION_V2.md) for the canonical line-by-line variant → code mapping. The "Error Code Allocation" section at the end of this file is a summary only.
 
 ---
 
 ## Foundational Features (K1-K7)
 
-These are pre-V2 primitives carried forward unchanged. They are NOT enumerated in Tier A and do NOT count toward the 16-TA surface; they form the substrate on which Tier A enforces.
+These are pre-V2 primitives carried forward unchanged. They are NOT enumerated in Tier A and do NOT count toward the TA surface; they form the substrate on which Tier A enforces.
 
 ### K1 — Vault PDA + token accounts
 The `AgentVault` PDA at seeds `[b"vault", owner, vault_id]` plus its associated USDC/USDT ATAs. Foundation since V0.
@@ -31,67 +32,121 @@ Owner-only lifecycle instructions for agents. K4 is the substrate for TA-04 capa
 ### K6 — Mandatory Anchor event emission
 Every instruction calls `emit!(...)` per project CLAUDE.md mandate. Foundation since V0 for audit/dashboard observability.
 
-### K7 — NM-E primitive (T1-only)
-Net-Movement Enforcement — per-instruction semantic delta assertions. Reserved for the T1 verified short-list (~10 protocols with hand-written parsers). T2/T3 use vault-balance delta only. Foundation since V1; scope-reduced in V2 to T1-only per [REVAMP_PLAN.md §2.5](./REVAMP_PLAN.md#25-generic-byte-offset-nm-e-for-arbitrary-programs).
+### K7 — NM-E primitive (generic vault-balance delta)
+Net-Movement Enforcement — vault-balance delta assertions at finalize. Per Option A locks (L-1), there is no tier model and no per-protocol parser path; NM-E in V2 is the generic vault-balance delta check that applies uniformly to every protocol. Foundation since V1; v2 scope is the generic shape only.
 
 ---
 
-## Tier A Primitives (TA-01..TA-16)
+## Tier A Primitives (TA-01..TA-19, TA-16 DELETED)
 
-These are the NEW V2 constraint surface enforced on every seal() bundle. Each cites its tier applicability. Full implementation specs are deferred to the Stage 2 prompt; this section provides one-line definitions for cross-doc reference.
+These are the NEW V2 constraint surface enforced on every seal() bundle. Per Option A locks (L-1), there is no tier model — every primitive applies to every protocol uniformly. Full implementation specs are deferred to per-phase prompts; this section provides one-line definitions for cross-doc reference.
+
+**Allocation status post-Phase-0.5:**
+- TA-01..TA-15: existing primitives (definitions tightened per Option A).
+- TA-16: **DELETED.** Was `parser_version` under the tier model; incompatible with L-1.
+- TA-17: **LOCKED.** Auto-revoke on consecutive failures (AgentEntry, configurable, policy-codes only).
+- TA-18: **LOCKED.** Squads V4 SDK detection helper — off-chain only (§4.4 framing).
+- TA-19: **LOCKED.** `policy_preview_digest` SHA-256 on PolicyConfig + PendingPolicyUpdate.
 
 ### TA-01 — Per-vault+agent protocol allowlist
-`PolicyConfig.allowed_protocols: Vec<Pubkey>` runtime-bounded to 10. Default-deny. Entry guard rejects any seal() whose next DeFi-instruction program ID is absent. Tiers: T1, T2, T3.
+`PolicyConfig.allowed_protocols: Vec<Pubkey>` runtime-bounded to 10. Default-deny. Entry guard rejects any seal() whose next DeFi-instruction program ID is absent. Applies uniformly (Option A — no tier filter).
 
 ### TA-02 — Wallet allowlist default-deny
-`PolicyConfig.allowed_destinations: Vec<Pubkey>` runtime-bounded to 10. Default-deny per Ondo USDY precedent. Tiers: T1, T2, T3.
+`PolicyConfig.allowed_destinations: Vec<Pubkey>` runtime-bounded to 10. Default-deny per Ondo USDY precedent. Applies uniformly.
 
 ### TA-03 — USDC/USDT mint pinning
-Cluster-pinned mints at build time. Mainnet USDC `EPjFWdd5...`, mainnet USDT `Es9vMFrz...`, devnet USDC `4zMMC9sr...`. Entry guard rejects any non-pinned mint. Tiers: T1, T2, T3.
+Cluster-pinned mints at build time. Mainnet USDC `EPjFWdd5...`, mainnet USDT `Es9vMFrz...`, devnet USDC `4zMMC9sr...`. Entry guard rejects any non-pinned mint. Applies uniformly.
 
 ### TA-04 — Per-agent capability split
-`SessionAuthority.capability: u8` per `state/vault.rs:6-8`: `DISABLED=0`, `OBSERVER=1`, `OPERATOR=2`. Reserved 3..=255 reject with `ErrInvalidCapability`. Tiers: T1, T2, T3.
+`AgentEntry.capability: u8`: `DISABLED=0`, `OBSERVER=1`, `OPERATOR=2`. Reserved 3..=255 reject with `ErrInvalidCapability` (code 6078 — see [ERROR_CODE_ALLOCATION_V2.md](./ERROR_CODE_ALLOCATION_V2.md)). Applies uniformly.
 
 ### TA-05 — Operating hours UTC bitmask
-`PolicyConfig.operating_hours: u32` — bit `i` (0..=23) set ⇒ hour `i` UTC is permitted. Tiers: T1, T2, T3.
+`PolicyConfig.operating_hours: u32` — bit `i` (0..=23) set ⇒ hour `i` UTC is permitted. Applies uniformly.
 
-### TA-06 — Per-action cooldown
-`PolicyConfig.cooldown_seconds: u32`. Entry guard rejects if `clock.unix_timestamp - last_action_unix < cooldown_seconds`. Tiers: T1, T2, T3.
+### TA-06 — Per-agent cooldown (relocated from per-vault per F-16)
+Per-agent `cooldown_seconds: u32` + `last_action_unix: i64` stored on `AgentSpendOverlay` (NOT on `PolicyConfig`). Entry guard rejects if `clock.unix_timestamp - last_action_unix < cooldown_seconds`. Applies uniformly.
 
 ### TA-07 — First-time-destination friction
-`PolicyConfig.destination_graylist: Vec<(Pubkey, i64)>` runtime-bounded to 10. New destination → graylist with `unlock_unix = now + 86400`. `auto_promote_grays: bool` defaults `false`. Tiers: T1, T2, T3.
+`PolicyConfig.destination_graylist: Vec<(Pubkey, i64)>` runtime-bounded to 10. New destination → graylist with `unlock_unix = now + 86400`. `auto_promote_grays: bool` defaults `false`. Applies uniformly.
 
-### TA-08 — Token-2022 dangerous-extension blocklist
-Entry guard rejects mints with: `TransferFee`, `TransferHook`, `PermanentDelegate`, `DefaultAccountState::Frozen`, `MintCloseAuthority`. Tiers: T1, T2, T3.
+### TA-08 — Token-2022 dangerous-extension blocklist (deposit-path)
+Deposit-path TLV check with a 3-item ALLOWLIST per D-4 (`MemoTransfer`, `MetadataPointer`, `NonTransferable`). All other extensions reject. Additive to the existing validate-time opcode blocklist at `validate_and_authorize.rs:417-429`. Applies uniformly.
 
 ### TA-09 — Cosign workflow
-Elevated owner operations (raise daily cap, expand allowlist) require owner+session co-signature on the policy-update instruction. Tiers: T1, T2, T3.
+Elevated owner operations (raise daily cap, expand allowlist) require owner+session co-signature on the policy-update instruction. Applies uniformly.
 
 ### TA-10 — Sandwich integrity N2 via instructions-sysvar
-Entry guard reads `instructions` sysvar and asserts: (a) 1..=4 `validate_and_authorize` + `finalize_session` pairs in transaction, (b) immediate-next instruction after each `validate_and_authorize` is an allowed protocol program ID, (c) no foreign instruction inside any seal window writes to protected accounts. Tiers: T1, T2, T3.
+Entry guard reads `instructions` sysvar and asserts: (a) 1..=4 `validate_and_authorize` + `finalize_session` pairs in transaction, (b) immediate-next instruction after each `validate_and_authorize` is an allowed protocol program ID, (c) no foreign instruction inside any seal window writes to protected accounts. Applies uniformly.
 
 ### TA-11 — Protected-writable deny-list N4
-Protected set: `{vault, tracker, session, policy}` PDAs. Entry guard rejects if any foreign instruction in the bundle lists a protected account as writable. Tiers: T1, T2, T3.
+Protected set: `{vault, tracker, session, policy}` PDAs (dynamic seed-prefix family check). Entry guard rejects if any foreign instruction in the bundle lists a protected account as writable. Applies uniformly.
 
 ### TA-12 — Stablecoin balance floor
-`PolicyConfig.stable_balance_floor: u64` (6-decimal USDC face value). `finalize_session` rejects if `usdc_balance + usdt_balance < stable_balance_floor`. Tiers: T1, T2, T3.
+`PolicyConfig.stable_balance_floor: u64` (6-decimal USDC face value). `finalize_session` rejects if `usdc_balance + usdt_balance < stable_balance_floor`. Applies uniformly.
 
-### TA-13 — Rolling 24h tracker
-`SpendTracker` PDA (zero-copy, 2,840 bytes), keyed by `(vault, agent, protocol)`. Each entry tracks rolling-24h outflow in USDC face value. Tiers: T1, T2, T3.
+### TA-13 — Rolling 24h tracker (RATIFY existing wiring)
+`SpendTracker` PDA (zero-copy, 2,840 bytes baseline; +484 in Phase 5), keyed by `(vault, agent, protocol)`. Each entry tracks rolling-24h outflow in USDC face value. RATIFICATION of existing wiring (Phase 5 does NOT unlock new behavior).
 
 ### TA-14 — Per-recipient daily cap
-`SpendTracker.per_recipient: Vec<(Pubkey, u64, i64)>` runtime-bounded to 10. Tiers: T1, T2, T3.
+`SpendTracker.per_recipient: [PerRecipientCounter; 10]` (fixed-size array, NOT Vec) with explicit `count: u8`. Applies uniformly.
 
-### TA-15 — Audit-log circular buffer (with N1 temporal binding per C22)
-**Two separate buffers per C24 Stage 3-A LOCKED disposition:**
-- Success buffer: 128 entries × 64 bytes = **8,192 bytes**.
-- Rejected buffer: 64 entries × 64 bytes = **4,096 bytes**.
-- **Total: 12,288 bytes** (192 entries combined; success and rejected isolated to eliminate ordering ambiguity under contention).
+### TA-15 — Audit-log separate PDAs (with N1 temporal binding per C22)
+**Per L-12 + C24 LOCKED disposition: two SEPARATE PDAs, NOT fields on AgentVault.**
+- `AuditLogSuccess` PDA at seeds `[b"audit_success", vault]`: 128 entries × 64 bytes = **8,192 bytes** (account payload).
+- `AuditLogRejected` PDA at seeds `[b"audit_rejected", vault]`: 64 entries × 64 bytes = **4,096 bytes** (account payload).
 
-Each entry: `(discriminator, target_protocol, balance_delta_in, balance_delta_out, timestamp, slot_hash, blockhash)`. Each entry double-bound by slot + blockhash (C22 macaroon-style). Tiers: T1, T2, T3.
+Each entry: `(discriminator, target_protocol, balance_delta_in, balance_delta_out, timestamp, slot_hash, blockhash)`. Each entry double-bound by slot + blockhash (C22 macaroon-style). Applies uniformly. Rent paid by owner per L-12.
 
-### TA-16 — T1 parser version fail-closed (C23)
-`InstructionConstraints.parser_version: u8` field. If a T1 parser version mismatch is detected (SDK ≠ on-chain), the entry guard rejects with `ErrParserVersionMismatch`. Field on InstructionConstraints, no new ix. Tiers: T1 only (T2/T3 have no parser).
+### TA-16 — DELETED
+Was `InstructionConstraints.parser_version: u8` under the tier model (C23). **DELETED in Phase 1 per L-1** (incompatible with Option A — there is no T1 parser path). The ID `TA-16` is permanently retired; no future primitive will re-use it.
+
+### TA-17 — Auto-revoke on N consecutive failures (LOCKED per L-10)
+**Location:** `AgentEntry.consecutive_failures: u8` (NOT `SessionAuthority` — sessions are ephemeral and would lose counter state on rotation).
+
+**Filter:** Increments **only** on `SigilError::*` policy-violation codes. External causes (CU exhaustion, network errors, non-Sigil program failures, pre-finalize sysvar bound exceedance, runtime account-resolution failure) do **NOT** increment the counter. The filter list is exhaustive and committed at Phase 3 implementation time alongside the new error variant.
+
+**Threshold:** Configurable per D-2. **Floor = 3, ceiling = 20, default = 5.** Stored on `PolicyConfig` as `auto_revoke_threshold: u8` with runtime range check.
+
+**Behavior on trip:** AgentEntry transitions to a paused/revoked state; emits a K6 event with the trip reason. Owner-only `unpause_agent` / `revoke_agent` resets the counter to 0. Successful finalize also resets to 0 (Phase 3 decides whether to use a saturating decrement or hard reset).
+
+**Error code:** `ErrAutoRevoked` = 6088 — see [ERROR_CODE_ALLOCATION_V2.md](./ERROR_CODE_ALLOCATION_V2.md).
+
+**DoS guard:** T-DoS-1 (auto-revoke spam) is mitigated by pairing TA-17 with TA-06 (per-agent cooldown). A storming adversary cannot increment the counter faster than the cooldown allows.
+
+### TA-18 — Squads V4 SDK detection helper (LOCKED per L-11 — OFF-CHAIN ONLY)
+**Off-chain ergonomics primitive. NOT an on-chain enforcement primitive.** See [§4.4 Off-chain SDK helpers](#44-off-chain-sdk-helpers-no-on-chain-enforcement) for the category framing.
+
+**What it does:** A read-side SDK utility that inspects the program upgrade-authority and the program data account, and surfaces a structured warning to the dashboard / CLI if the upgrade authority is a single key (not a Squads V4 multisig vault PDA).
+
+**What it does NOT do:** Block any transaction. Reject any seal(). Emit any on-chain event. Mutate any account.
+
+**Scope:** `sdk/kit/src/dashboard/` only. No program code.
+
+**Rationale (D-05):** Closes DEEP-9 (single-key upgrade authority) and DEEP-10 (solo founder bus factor) at the human-decision layer, not at the consensus layer. Sigil cannot enforce upgrade-authority shape on-chain (the upgrade-authority lives on a BPF loader account that is not a Sigil PDA); the best Sigil can do is detect and surface.
+
+### TA-19 — `policy_preview_digest` (LOCKED per L-14 — NEW from Audit #3)
+**SHA-256 of canonical-encoded policy form**, stored on both `PolicyConfig` (`policy_preview_digest: [u8; 32]`) and `PendingPolicyUpdate` (`new_policy_preview_digest: [u8; 32]`).
+
+**Canonical form:** Borsh-serialize the policy in a strict field order (defined at Phase 2 implementation time), with all `Vec<T>` sorted lexically. The canonical encoding is a separate library function shared by the SDK and the program so that both compute the same digest.
+
+**Handler behavior:** Every owner-initiated policy mutation (queue + apply) recomputes the digest from the canonical form and `require!` it matches `new_policy_preview_digest`. Mismatch rejects with `ErrPolicyPreviewMismatch` (code 6080 — see [ERROR_CODE_ALLOCATION_V2.md](./ERROR_CODE_ALLOCATION_V2.md)).
+
+**Attack closed:** Audit #3 — SDK builds preview that owner sees and signs, but the on-chain instruction encodes a different policy (e.g., an extra allowlist entry the dashboard didn't render). The digest binds the visible preview to the executed form, making this discrepancy detectable.
+
+**Phase:** lands in Phase 2 alongside the default-tightening pass.
+
+---
+
+## 4.4 Off-chain SDK helpers (no on-chain enforcement)
+
+This category groups primitives that live in `sdk/kit/` and never run on-chain. They produce structured warnings, telemetry, or ergonomic affordances — they cannot block transactions and cannot be relied upon as security boundaries.
+
+Off-chain helpers are NOT counted in the on-chain Tier A surface for audit/threat-model purposes. They are listed here for cross-doc traceability.
+
+**Current members:**
+- **TA-18** — Squads V4 SDK detection helper (see above).
+
+**Framing rule:** Any future off-chain ergonomic helper that earns a TA-NN ID must include the explicit "OFF-CHAIN ONLY" marker in its definition and be cross-linked from this section. On-chain primitives never live in this section.
 
 ---
 
@@ -133,7 +188,7 @@ A signed transaction using a durable nonce remains valid indefinitely. A leaked 
 Pyth or Switchboard returns stale price data, leading a protocol to mis-price a vault position. Sigil does not consume oracles in V1. Folded into N1 TA-15 temporal binding (slot+blockhash double-bind) per D-09. v1.1 candidate for dual-floor with Pyth lazy fetch only when within 10% of floor.
 
 ### T-21 — Owner Policy Underspecification (workflow-mitigated)
-Trust-assumption inversion: users empirically cannot pre-specify policy correctly. Maestro 60%+ default-policy rate. Workflow mitigations M-T21-1..4 (learning mode, attestation, onboarding wizard, tier-visibility UI). NOT an on-chain primitive.
+Trust-assumption inversion: users empirically cannot pre-specify policy correctly. Maestro 60%+ default-policy rate. Workflow mitigations M-T21-1..4 (learning mode, attestation, onboarding wizard, policy-visibility UI). NOT an on-chain primitive.
 
 ### T-DoS-1 — Auto-revoke spam
 Adversary spams crafted-failing bundles to trigger auto-revoke counter, denying legitimate agent service. V1 mitigation: auto-revoke deferred + per-action cooldown TA-06 rate-limits any counter increment.
@@ -148,23 +203,23 @@ Highest-leverage single dependency per Architect 2026-05-17. CI static check + S
 
 ## Decisions (D-01..D-09)
 
-### D-01 — Architecture pivot
-Deep-parsing universal walker → generic Maestro-floor + N1/N2/N4 always-on + NM-E for T1 verified short-list only.
+### D-01 — Architecture pivot (Option A locks per L-1)
+Deep-parsing universal walker → generic Maestro-floor guardrails + N1/N2/N4 always-on + generic vault-balance NM-E for every protocol uniformly. **No tier model. No per-protocol parsers. No Jupiter slippage verifier.** Every TA primitive applies to every program ID identically.
 
-### D-02 — Three-tier model
-T1 verified (~10 protocols), T2 Anchor-IDL (~48), T3 No-IDL (fail-closed default).
+### D-02 — Auto-revoke threshold range (locked per L-10 / TA-17)
+`auto_revoke_threshold: u8` configurable on `PolicyConfig` with runtime range check: **floor = 3, ceiling = 20, default = 5.** Counter increments only on `SigilError::*` policy-violation codes (external causes do not increment). State lives on `AgentEntry.consecutive_failures`, not `SessionAuthority`. **Supersedes** the prior D-02 "three-tier model" entry — tiers were dropped per L-1.
 
 ### D-03 — Unit of account
 USDC face value at 1:1, not USD. No Pyth oracle in V1. Maestro precedent.
 
-### D-04 — Funding gate
-External audit + bug bounty are mainnet-only gates ($100K-$350K obligation per [ACCEPTANCE_V2.md §4](./ACCEPTANCE_V2.md#4-funding-plan)). Stage 6 sequencing.
+### D-04 — Token-2022 deposit-path TLV allowlist (locked per Option A)
+TA-08 deposit-path check uses a **3-item ALLOWLIST**: `MemoTransfer`, `MetadataPointer`, `NonTransferable`. All other Token-2022 extensions reject at deposit. The ID `D-04` previously referenced "Funding gate"; that framing is dropped per L-2 (no audit/bounty/funding gate language in V2 scope). The funding-gate semantics, if revisited, will land in a v1.1 governance doc — not in V2 specs.
 
 ### D-05 — Squads V4 upgrade authority
 Closes DEEP-9 (single-key upgrade authority) + DEEP-10 (solo founder bus factor). Program ID `SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf`. 3-of-5 + 24-72hr timelock + autonomous mode (`config_authority == Pubkey::default()`).
 
-### D-06 — TierRegistry asymmetric threshold
-Tier registry writes require 4-of-5 (strictly greater than 3-of-5 program upgrade threshold). Rationale: malicious tier promotion harder to detect than code change (bytecode hash unchanged); asymmetric threshold makes the registry the hardest surface to compromise. Per Council Debate output 2026-05-17.
+### D-06 — DROPPED per L-1 (was TierRegistry asymmetric threshold)
+The TierRegistry primitive presupposed the tier model. Under Option A (L-1), there is no tier registry to gate. The asymmetric-threshold idea is retained at the **policy-mutation** layer via TA-09 (cosign workflow) for elevated owner operations, NOT as a separate signed config.
 
 ### D-07 — Lighthouse pattern: INSPIRE not FORK
 Sigil's PostExecutionAssertions IR shape is inspired by Lighthouse's 14 assertion types (per GeminiResearcher validation 2026-05-17: actual count is 14, not the previously-cited 8). No CPI to Lighthouse program; no fork of Lighthouse source. Append-only top-level instructions = zero upgrade-key contagion.
@@ -179,29 +234,44 @@ AC-11 (oracle staleness) is explicitly out-of-scope for V1. Folded into N1 TA-15
 
 ## Error Code Allocation
 
-Per `programs/sigil/src/errors.rs` (post-Stage-1 escrow removal — variant count shifted from 88 → 81 after 7 escrow variants were deleted):
-- **6000-6080**: V1 error codes (81 variants currently). Sigil v1.0 stable.
-- **6081-6103**: Reserved for V2 additions (Stage 2-3 implementation):
-  - 6081 `ErrDestinationNotAllowed` (TA-02)
-  - 6082 `ErrMintNotPinned` (TA-03)
-  - 6083 `ErrStableFloorViolation` (TA-12)
-  - 6084 `ErrDailyCapExceeded` (TA-13)
-  - 6085 `ErrRecipientCapExceeded` (TA-14)
-  - 6086 `ErrVelocityCapExceeded` (TA-06 cooldown)
-  - 6087 `ErrInvalidCapability` (TA-04)
-  - 6088 `ErrOutsideOperatingHours` (TA-05)
-  - 6089 `ErrCooldownActive` (TA-06)
-  - 6090 `ErrGraylistFriction` (TA-07)
-  - 6091 `ErrGraylistFull` (TA-07)
-  - 6092 `ErrToken2022ExtensionForbidden` (TA-08)
-  - 6093 `ErrSandwichIntegrity` (TA-10)
-  - 6094 `ErrProtectedWritable` (TA-11)
-  - 6095 `ErrCosignRequired` (TA-09)
-  - 6096 `ErrSessionNonceMismatch` (K2 + AC-10)
-  - 6097 `ErrParserVersionMismatch` (TA-16)
-  - 6098-6103 Reserved for V2.x additions
+**Canonical source:** [ERROR_CODE_ALLOCATION_V2.md](./ERROR_CODE_ALLOCATION_V2.md). The summary below is for cross-doc convenience only; if it disagrees with the canonical doc, the canonical doc wins.
 
-The project-root `CLAUDE.md` cites range "6000-6070" — that is stale. Real current count is 6000-6080 (81 variants verified via `grep -c '#\[msg' programs/sigil/src/errors.rs` on `revamp/v2-2026-05`). `ErrAutoRevoked` is NOT allocated in V2 — auto-revoke is deferred per [REVAMP_PLAN.md §6.1 Def-6](./REVAMP_PLAN.md#61-deferred-to-v11-post-mainnet); if added in v1.1, allocate from 6098+.
+**Current state (post-Stage-1, V1 baseline):**
+- **6000-6080:** 81 V1 variants (verified line-by-line against `programs/sigil/src/errors.rs`).
+
+**Phase 1 deletions:** 3 Jupiter-specific variants (codes 6030 `SwapSlippageExceeded`, 6031 `InvalidJupiterInstruction`, 6033 `SlippageBpsTooHigh`) are removed. Phase 1 implementation chooses between (a) compaction (renumbers later codes) and (b) deprecation placeholders (preserves codes). The choice is documented at Phase 1 implementation time and reflected in the canonical doc.
+
+**V2 reservation table (6078-6102 — assumes deprecation placeholders preserving stable codes):**
+- 6078 `ErrInvalidCapability` (TA-04, Phase 2)
+- 6079 `ErrObserveOnlyModeBlocksExecute` (TA-04, Phase 2)
+- 6080 `ErrPolicyPreviewMismatch` (TA-19, Phase 2)
+- 6081 `ErrMintNotPinned` (TA-03, Phase 3)
+- 6082 `ErrOutsideOperatingHours` (TA-05, Phase 3)
+- 6083 `ErrCooldownActive` (TA-06, Phase 3)
+- 6084 `ErrGraylistFriction` (TA-07, Phase 3)
+- 6085 `ErrGraylistFull` (TA-07, Phase 3)
+- 6086 `ErrToken2022ExtensionForbidden` (TA-08, Phase 3)
+- 6087 `ErrCosignRequired` (TA-09, Phase 3)
+- 6088 `ErrAutoRevoked` (TA-17, Phase 3)
+- 6089 `ErrSandwichIntegrity` (TA-10, Phase 4)
+- 6090 `ErrProtectedWritable` (TA-11, Phase 4)
+- 6091 `ErrSessionNonceMismatch` (AC-10, Phase 4)
+- 6092 `ErrStableFloorViolation` (TA-12, Phase 5)
+- 6093 `ErrDailyCapExceeded` (TA-13, Phase 5)
+- 6094 `ErrRecipientCapExceeded` (TA-14, Phase 5)
+- 6095 `ErrMintDeltaCapExceeded` (R-1, Phase 6)
+- 6096 `ErrAtaAuthorityChanged` (R-2, Phase 6)
+- 6097 `ErrOutputBelowFloor` (R-3, Phase 6)
+- 6098 `ErrDeclarationInconsistent` (R-4, Phase 6)
+- 6099 `ErrPendingOwnershipExists` (C26, Phase 8)
+- 6100 `ErrPendingOwnershipNotReady` (C26, Phase 8)
+- 6101 `ErrInvalidFreezeReason` (C27, Phase 8)
+- 6102 `ErrReactivateCooldownActive` (C28, Phase 8)
+
+**Notes:**
+- TA-16 is DELETED per L-1; `ErrParserVersionMismatch` is NOT allocated.
+- TA-17's `ErrAutoRevoked` IS allocated at 6088 (auto-revoke is in V2 scope under Option A — TA-17 is locked, with TA-06 cooldown as its T-DoS-1 mitigation).
+- The repo-root `CLAUDE.md` cites range "6000-6070" — that is stale (real count is 6000-6080). Correction is out of L-6 scope for Phase 0.5; flagged for v1.1 housekeeping.
 
 ---
 
