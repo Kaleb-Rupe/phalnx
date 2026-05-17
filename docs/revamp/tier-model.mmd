@@ -1,0 +1,83 @@
+%% Sigil v2 — Canonical Tier Model Diagram
+%% Single source of truth. Embedded verbatim in REVAMP_PLAN.md, THREAT_MODEL_V2.md, ACCEPTANCE_V2.md.
+%% Generated 2026-05-17 by Architect agent (Stage 0).
+
+flowchart TB
+    classDef t1 fill:#1f6f3a,stroke:#0d3d1f,color:#fff
+    classDef t2 fill:#b88a00,stroke:#6b4f00,color:#000
+    classDef t3 fill:#a02121,stroke:#5a0d0d,color:#fff
+    classDef flow fill:#2d3748,stroke:#1a202c,color:#fff
+    classDef risk fill:#e2e8f0,stroke:#718096,color:#1a202c,stroke-dasharray:5 5
+    classDef foundation fill:#2b6cb0,stroke:#1a4480,color:#fff
+
+    subgraph FOUND["K1-K7 Foundational (cross-tier)"]
+        K1[K1 Vault PDA]
+        K2[K2 Session keys]
+        K3[K3 freeze_vault]
+        K4[K4 register/revoke/pause agent]
+        K5[K5 Timelock policy mutations]
+        K6[K6 Mandatory Anchor events]
+        K7[K7 NM-E primitive T1-only]
+    end
+
+    subgraph PRE["Pre-execution Constraints TA-01..TA-09"]
+        TA01[TA-01 protocol allowlist]
+        TA02[TA-02 wallet allowlist]
+        TA03[TA-03 USDC/USDT mint pin]
+        TA04[TA-04 capability split]
+        TA05[TA-05 operating hours]
+        TA06[TA-06 per-action cooldown]
+        TA07[TA-07 first-time friction]
+        TA08[TA-08 Token-2022 ext blocklist]
+        TA09[TA-09 cosign workflow]
+    end
+
+    subgraph BUNDLE["Atomic-Bundle Integrity TA-10..TA-11"]
+        TA10[TA-10 sandwich integrity N2]
+        TA11[TA-11 protected-writable deny N4]
+    end
+
+    subgraph POST["Post-execution Invariants TA-12..TA-16"]
+        TA12[TA-12 stablecoin floor]
+        TA13[TA-13 rolling 24h tracker]
+        TA14[TA-14 per-recipient daily cap]
+        TA15[TA-15 audit-log circular N1 binding]
+        TA16[TA-16 T1 parser version fail-closed]
+    end
+
+    subgraph TIERS["Tier Swim Lanes"]
+        T1[T1 Verified ~10 protocols L1+L2+L3+L4 + NM-E]
+        T2[T2 Anchor-IDL ~48 protocols structural + NM-E balance, fail-closed]
+        T3[T3 No-IDL ceiling-only N1+N2+N4, fail-closed]
+    end
+
+    CLIENT[Client signs] --> SDK[SDK builds tx]
+    SDK --> SEAL[seal composes bundle]
+    SEAL --> VAL[validate_and_authorize]
+    VAL --> DEFI[DeFi instruction]
+    DEFI --> FIN[finalize_session]
+
+    FOUND --> VAL
+    PRE --> VAL
+    BUNDLE --> SEAL
+    POST --> FIN
+    TIERS --> VAL
+
+    AC1[AC-1 agent key leak] -.-> VAL
+    AC2[AC-2 owner key leak] -.-> FOUND
+    AC3[AC-3 Sigil program bug] -.-> SEAL
+    AC4[AC-4 Token-2022 silent drain] -.-> TA08
+    AC5[AC-5 protocol exploit] -.-> DEFI
+    AC6[AC-6 stablecoin depeg] -.-> TA12
+    AC7[AC-7 network halt] -.-> FIN
+    AC8[AC-8 CU exhaustion] -.-> SEAL
+    AC9[AC-9 sandwich injection] -.-> TA10
+    AC10[AC-10 durable nonce replay] -.-> TA15
+
+    class K1,K2,K3,K4,K5,K6,K7 foundation
+    class TA01,TA02,TA03,TA04,TA05,TA06,TA07,TA08,TA09,TA10,TA11,TA12,TA13,TA14,TA15,TA16 flow
+    class T1 t1
+    class T2 t2
+    class T3 t3
+    class CLIENT,SDK,SEAL,VAL,DEFI,FIN flow
+    class AC1,AC2,AC3,AC4,AC5,AC6,AC7,AC8,AC9,AC10 risk
