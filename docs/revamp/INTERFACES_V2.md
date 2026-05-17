@@ -241,7 +241,7 @@ AC-11 (oracle staleness) is explicitly out-of-scope for V1. Folded into N1 TA-15
 
 **Phase 1 deletions:** 3 Jupiter-specific variants (codes 6030 `SwapSlippageExceeded`, 6031 `InvalidJupiterInstruction`, 6033 `SlippageBpsTooHigh`) are removed. Phase 1 implementation chooses between (a) compaction (renumbers later codes) and (b) deprecation placeholders (preserves codes). The choice is documented at Phase 1 implementation time and reflected in the canonical doc.
 
-**V2 reservation table (6078-6102 — assumes deprecation placeholders preserving stable codes):**
+**V2 reservation table (6078-6102 — assumes the *compaction* strategy per [ERROR_CODE_ALLOCATION_V2.md §3](./ERROR_CODE_ALLOCATION_V2.md). If Phase 1 chooses deprecation placeholders instead, this entire range shifts to 6081-6105 per §2 of the canonical doc):**
 - 6078 `ErrInvalidCapability` (TA-04, Phase 2)
 - 6079 `ErrObserveOnlyModeBlocksExecute` (TA-04, Phase 2)
 - 6080 `ErrPolicyPreviewMismatch` (TA-19, Phase 2)

@@ -36,20 +36,24 @@ The pre-Phase-0.5 briefing was the 2026-05-16 strategic-pivot draft and containe
 
 ## Verification
 
-To verify the refresh stripped the listed claims, run from any shell:
+The refresh strips legacy claims by **converting them to explicit tombstones**, not by erasing the strings. Tombstones are required (they document the supersession). A naive grep for legacy-claim strings will therefore match tombstones and produce false positives.
+
+Correct verification is contextual: search for legacy strings, then confirm each occurrence is wrapped in a supersession marker (`superseded`, `❌`, `OVERTURNED`, `struck per L-2`, or "see git history").
 
 ```sh
 MEMFILE="$HOME/.claude/projects/-Users-kalebrupe/memory/project_sigil_v2_revamp_briefing.md"
 
-# These should print NOTHING (claim is absent post-refresh):
-grep -Ei "21 Tier A constraints|Mainnet 8-12wk post-audit|audit non-negotiable|C23\b|C25\b" "$MEMFILE" || echo "OK: legacy claims absent"
-grep -Ei "Tiers: T1|T1, T2, T3|three-tier" "$MEMFILE" || echo "OK: tier framing absent"
+# For each legacy phrase, show context and confirm a tombstone marker is present:
+for phrase in "21 Tier A constraints" "Mainnet 8-12wk post-audit" "audit non-negotiable" "Tiers: T1" "three-tier"; do
+  echo "=== $phrase ==="
+  grep -B 1 -A 2 -E "$phrase" "$MEMFILE" || echo "(no match — also acceptable)"
+done
 
-# These should each print at least one match (Option A header is present):
-grep -Ei "Option A locks|L-1|L-15" "$MEMFILE"
+# Required: Option A header markers MUST be present:
+grep -E "Option A locks|L-1|L-15" "$MEMFILE"
 ```
 
-Any non-empty output from the first two `grep` commands indicates a leftover Phase 0.5 claim that needs to be re-scrubbed.
+A legacy phrase without a nearby `superseded` / `❌` / `OVERTURNED` / `struck per L-2` / "see git history" marker indicates a real leftover. A phrase with such a marker is the intended tombstone — no action required.
 
 ---
 
