@@ -457,11 +457,13 @@ export async function buildAuthorizeIx(opts: AuthorizeOpts) {
 
   // Read current policy version from on-chain if not provided.
   // Ensures tests that queue+apply policy changes use the correct version.
-  let policyVersion = opts.expectedPolicyVersion;
-  if (policyVersion === undefined) {
+  let policyVersion: BN;
+  if (opts.expectedPolicyVersion !== undefined) {
+    policyVersion = opts.expectedPolicyVersion;
+  } else {
     try {
       const pol = await program.account.policyConfig.fetch(policyPda);
-      policyVersion = (pol as any).policyVersion ?? new BN(0);
+      policyVersion = ((pol as any).policyVersion ?? new BN(0)) as BN;
     } catch {
       policyVersion = new BN(0); // Fallback for tests where policy may not exist yet
     }

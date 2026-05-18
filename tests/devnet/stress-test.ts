@@ -44,6 +44,7 @@ import {
   getTokenBalance,
   calculateFees,
 } from "../helpers/devnet-setup";
+import { initVaultPreviewDigest } from "../helpers/policy-digest";
 
 // ─── Shared State ──────────────────────────────────────────────────────────
 
@@ -100,6 +101,17 @@ async function createVault(opts: {
       new BN(1800),
       opts.destinations ?? [],
       [],
+      false, // observe_only (Phase 2 TA-19)
+      initVaultPreviewDigest({
+        dailySpendingCapUsd: opts.dailyCap,
+        maxTransactionSizeUsd: opts.maxTx,
+        maxSlippageBps: 500,
+        developerFeeRate: opts.devFeeRate ?? 0,
+        protocolMode: 0,
+        protocols: [],
+        allowedDestinations: opts.destinations ?? [],
+        timelockDuration: new BN(1800),
+      }),
     )
     .accounts({
       owner: owner.publicKey,

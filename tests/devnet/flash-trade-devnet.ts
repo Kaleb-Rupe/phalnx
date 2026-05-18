@@ -47,6 +47,7 @@ import {
   getTokenBalance,
   PROTOCOL_TREASURY,
 } from "../helpers/devnet-setup";
+import { initVaultPreviewDigest } from "../helpers/policy-digest";
 
 // ─── Flash Trade Devnet Constants ──────────────────────────────────────────
 
@@ -226,6 +227,16 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
           new BN(1800), // timelock
           [], // destinations
           [], // protocolCaps
+          false, // observe_only (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 5000,
+            protocolMode: 1,
+            protocols: [FLASH_TRADE_DEVNET, FLASH_COMPOSABILITY_DEVNET],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -597,6 +608,16 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
           new BN(0),
           [],
           [],
+          false, // observe_only (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 5000,
+            protocolMode: 1,
+            protocols: [FLASH_TRADE_DEVNET, FLASH_COMPOSABILITY_DEVNET],
+            allowedDestinations: [],
+            timelockDuration: new BN(0),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -812,6 +833,16 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
           new BN(0),
           [],
           [],
+          false, // observe_only (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 5000,
+            protocolMode: 1,
+            protocols: [FLASH_TRADE_DEVNET],
+            allowedDestinations: [],
+            timelockDuration: new BN(0),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -950,6 +981,16 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
           new BN(0),
           [],
           [],
+          false, // observe_only (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 5000,
+            protocolMode: 1,
+            protocols: [FLASH_TRADE_DEVNET],
+            allowedDestinations: [],
+            timelockDuration: new BN(0),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
