@@ -149,6 +149,8 @@ New variants append starting at 6079:
 | 6103 | `ErrInvalidFreezeReason` (C27) | Phase 8 |
 | 6104 | `ErrReactivateCooldownActive` (C28) | Phase 8 |
 
+**G6 audit fix 2026-05-18 (cosign opt-in):** uses NO new error code. The existing `ErrCosignRequired` (6089) handles all rejection cases: missing cosign on an elevated mutation, default cosign pubkey on an elevated mutation, owner-same cosigner, AND the new "disabling cosign on a live policy where `cosign_required: true`" elevation case. The `cosign_required: bool` field on `PolicyConfig` + `Option<bool>` on `PendingPolicyUpdate` are pure schema growth — they extend TA-19 canonical digest encoding to position 20 but do not require a new failure mode (the field's mutation is gated by the existing 6089). See [§6 Phase 6 post-audit absorption](#post-phase-5-deliverable-summary) below for the full G6 deliverable list.
+
 Phase 0.5 docs commit makes ERROR_CODE_ALLOCATION_V2.md the canonical source.
 
 ---
@@ -1019,6 +1021,22 @@ OUT OF SCOPE: Maestro borrows (Phase 6), audit log (Phase 7).
 
 Report: 700 words.
 ```
+
+### Post-Phase-5 audit-absorption deliverable summary (G1..G6, 2026-05-18)
+
+Audit work landed between Phase 5 close and Phase 6 start. Recorded here so future readers can map the audit findings to the commits that closed them:
+
+| Gate | Finding | Closure |
+|---|---|---|
+| **G1** | Schema regen drift after Phase 5 lands — Codama types lagging behind Rust struct fields | Codama regen + hand-written caller-site wiring across all SDK files (`create-vault.ts`, `dashboard/mutations.ts`, `testing/{devnet,mock-state}.ts`) |
+| **G2** | (reserved — historical placeholder; no audit fix shipped under this ID) | n/a |
+| **G3** | TA-09 elevated set did NOT cover TA-12 stable_balance_floor LOWERING or TA-14 per_recipient_daily_cap_usd RAISING. Hostile policy mutations that weakened these post-execution invariants passed without cosign | Extended `is_elevated` predicate in `queue_policy_update.rs` to detect `lowers_floor` + `raises_per_recipient_cap`; cosignHelper.ts surfaces both for client-side elevation detection |
+| **G3a** | §RP-2 follow-up: G3's `new > live` predicate missed "0 = unlimited / off" convention. `Some(0)` for per-recipient cap DISABLES enforcement (strictly weaker) but `0 > live_non_zero` evaluates false. Same for `has_protocol_caps: Some(false)` + individual protocol-cap shrink-to-zero | New `weakens_per_recipient_cap_predicate` + `weakens_protocol_caps_predicate` honor the "0 = unlimited" convention. Extracted as pub fn for unit-test boundary coverage |
+| **G4** | TA-09 cosign workflow lived only on the on-chain side — SDK had no client-side path to produce a valid cosign session + digest | `sdk/kit/src/cosignHelper.ts` ships `buildCosignBundle()` mirroring on-chain `compute_cosign_digest` byte-for-byte. Cross-impl property test + truth-table coverage |
+| **G5** | Documentation drift: §RP transcripts not persisted; INTERFACES_V2 TA-09 listed only 4 of the 6 elevation triggers; error code references reversed (6080 ↔ 6081) | Persisted §RP review transcripts at `docs/revamp/PHASE_N_REVIEW/`; INTERFACES_V2 TA-09 updated to list all 6 (then 7 after G3a) triggers; HARDENED §4 error reservation table reconciled with `ERROR_CODE_ALLOCATION_V2.md` |
+| **G6** | TA-09 cosign was unconditional on elevated mutations — created real UX friction for solo founders + AI-agent automation + vaults owned by Squads V4 multisig PDAs (multisig at the Solana layer already enforces multi-signer auth, making Sigil cosign redundant) | (a) `PolicyConfig.cosign_required: bool` opt-in flag (default false); (b) `queue_policy_update` elevation gate now gates on `policy.cosign_required` (the live value); (c) one-way ratchet: disabling cosign on a live `cosign_required: true` policy is itself elevated regardless of any other trigger; (d) `PendingPolicyUpdate.cosign_required: Option<bool>` for queue/apply flow; (e) TA-19 canonical digest extended to 20 fields (cosign_required at position 20) — bound digest defends against silent SDK flip; (f) read-only `detectSquadsV4Owner()` SDK helper (`sdk/kit/src/squadsDetection.ts`) lets dashboard recognize multisig-owner mode and suppress the warning banner. No new error code (reuses 6089 `ErrCosignRequired`) |
+
+The G6 closure ships under commits 9965a50 (on-chain) + f6f1031 (SDK + Codama regen) + d5b0d8d (Squads detection helper). Post-G6 baseline: `cargo test --lib --features devnet-testing` = 193/0, `npx tsc --noEmit` in `sdk/kit/` = 0 errors, SDK `pnpm test` policy subset = 31 passing including cross-impl byte-equality with the Rust digest fixtures.
 
 ### Phase 6 — Maestro borrows (R-1 / R-2 / R-3 / R-4)
 
