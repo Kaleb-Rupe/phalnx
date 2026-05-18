@@ -73,7 +73,15 @@ Per-agent `cooldown_seconds: u32` + `last_action_unix: i64` stored on `AgentSpen
 Deposit-path TLV check with a 3-item ALLOWLIST per D-4 (`MemoTransfer`, `MetadataPointer`, `NonTransferable`). All other extensions reject. Additive to the existing validate-time opcode blocklist (search for `BlockedSplOpcode` — runtime check lives in `validate_and_authorize.rs`; G5 audit fix 2026-05-18 — prior fixed line-range `validate_and_authorize.rs:417-429` was stale after Phase 3 refactor). Applies uniformly.
 
 ### TA-09 — Cosign workflow
-Elevated owner operations (raise daily cap, expand allowlist) require owner+session co-signature on the policy-update instruction. Applies uniformly.
+Elevated owner operations require owner+session co-signature on the policy-update instruction. Applies uniformly. The full set of elevation triggers (G3a audit fix §RP-2 2026-05-18) is:
+
+1. Raise `daily_spending_cap_usd` (`Some(new) > live`)
+2. Raise `max_transaction_amount_usd` (`Some(new) > live`)
+3. Expand `allowed_destinations` (more entries OR any pubkey not in live)
+4. Expand `allowed_protocols` (more entries OR any pubkey not in live)
+5. Lower `stable_balance_floor` (`Some(new) < live`) — G3a fix 2026-05-18; the existing `<` operator correctly handles the "0 = no floor" convention since `0 < live_non_zero` is true (weakening) while raising the floor (`new > live`) is strengthening
+6. Weaken `per_recipient_daily_cap_usd` — G3a fix §RP-2 CRIT-1 2026-05-18; honors the "0 = unlimited" convention at `finalize_session.rs:486`. Weakening = `Some(0)` when live > 0, OR `Some(new) > live` when both bounded
+7. Weaken `protocol_caps` — G3a fix §RP-2 HIGH-1 2026-05-18; triggered by `has_protocol_caps: Some(false)` (master-switch disable) OR any per-protocol cap shrinking to 0 from a non-zero live value OR any per-protocol cap growing to a larger value. Honors the "0 = unlimited" convention at `finalize_session.rs:411-412` + `state/policy.rs:347-355`
 
 ### TA-10 — Sandwich integrity N2 via instructions-sysvar
 Entry guard reads `instructions` sysvar and asserts: (a) 1..=4 `validate_and_authorize` + `finalize_session` pairs in transaction, (b) immediate-next instruction after each `validate_and_authorize` is an allowed protocol program ID, (c) no foreign instruction inside any seal window writes to protected accounts. Applies uniformly.
