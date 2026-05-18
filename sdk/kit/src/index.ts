@@ -530,6 +530,21 @@ export type {
   PreviewCreateVaultConfig,
 } from "./preview-create-vault.js";
 
+// ─── TA-09 Cosign Helper (G4 audit close) ───────────────────────────────────
+// Client-side path to produce a valid cosign session + digest for elevated
+// `queue_policy_update` mutations (raising caps, expanding allowlists,
+// lowering floor, raising per-recipient cap). The on-chain handler at
+// queue_policy_update.rs:286-328 rejects elevated mutations without cosign;
+// this helper produces the matching digest mirroring the canonical Rust
+// `compute_cosign_digest` byte-for-byte.
+export { buildCosignBundle } from "./cosignHelper.js";
+export type { CosignArgs, CosignBundle } from "./cosignHelper.js";
+export {
+  computeCosignDigest,
+  cosignDigestsEqual,
+} from "./policy/compute-cosign-digest.js";
+export type { CosignDigestFields } from "./policy/compute-cosign-digest.js";
+
 // ─── Error Classification (typed predicates + transport classifier) ─────────
 //
 // Shared helpers used across `seal`, `shielded-fetch`, `facilitator-verify`,
