@@ -248,6 +248,30 @@ pub fn is_stablecoin_mint(_mint: &Pubkey) -> bool {
 // passed through PolicyConfig.protocols at vault creation time — generic primitive,
 // not Jupiter-specific.
 
+// ─── ADR-Phase-1 (2026-05-17) ───────────────────────────────────────────────
+// JUPITER_LEND_PROGRAM / JUPITER_EARN_PROGRAM / JUPITER_BORROW_PROGRAM survive
+// the Option A demolition as **`is_recognized_defi` markers** used by
+// `ProtocolMismatch` enforcement and `defi_ix_count` accounting in
+// `validate_and_authorize`. These are program-ID identifiers, NOT Jupiter
+// routing-format parsers; they comply with Option A L-1 because Sigil does NOT
+// interpret the Jupiter instruction data — it only checks whether the target
+// program of a bundle's DeFi instruction is on this recognized-DeFi list.
+//
+// JUPITER_PERPS_PROGRAM survives in `KNOWN_ASYNC_FULFILLMENT_PROGRAMS`
+// (alongside `DRIFT_V2_PROGRAM` and `DRIFT_JIT_PROXY_PROGRAM`) as an
+// **attack-class block** — the program-ID is rejected outright in the scan
+// because async-fulfillment models break Sigil's stablecoin balance-delta
+// measurement (the keeper submits the SPL transfer 5-45s later in a separate
+// transaction, so `finalize_session` records a $0 spend). Again, no Jupiter
+// instruction-data parsing is involved; the block is purely program-ID based.
+//
+// **Future direction:** D-5 / Phase 4 TA-10 hardening will eventually replace
+// these explicit constants with a **generic primitive** (reject any program ID
+// known to follow async-fulfillment patterns; recognize DeFi via a per-vault
+// PolicyConfig.protocols list, not a hardcoded enum). For V1 the explicit
+// allowlist is the simplest implementation and the smallest blast radius.
+// ─────────────────────────────────────────────────────────────────────────────
+
 /// Flash Trade (Perpetuals) program
 /// Base58: FLASH6Lo6h3iasJKWDs2F8TkW2UKf3s15C8PMGuVfgBn
 pub const FLASH_TRADE_PROGRAM: Pubkey = Pubkey::new_from_array([
