@@ -791,7 +791,7 @@ TASKS:
    - state/session.rs: append `pub nonce: u64` to SessionAuthority. APPEND-ONLY.
    - instructions/validate_and_authorize.rs: accept new arg expected_nonce: u64.
      If session exists (re-use case): require session.nonce == expected_nonce.
-     Reject with 6091 ErrSessionNonceMismatch. If session is new: store
+     Reject with 6093 ErrSessionNonceMismatch. If session is new: store
      expected_nonce = 0 initially, increment on each successful seal.
    - instructions/finalize_session.rs: increment session.nonce on successful
      finalize. Persist.
@@ -804,7 +804,7 @@ TASKS:
    - Keep "immediate-next instruction is allowed protocol" check. Continue
      allowing ComputeBudget + SystemProgram interleave (operational flexibility,
      documented choice per Q-6 default).
-   - Reject sandwich-shape violations with 6089 ErrSandwichIntegrity.
+   - Reject sandwich-shape violations with 6091 ErrSandwichIntegrity.
 
 3. TA-11 DYNAMIC seed-prefix family check (per F-20):
    - Define the protected seed-prefix set in constants.rs:
@@ -819,7 +819,7 @@ TASKS:
      b) Try to derive the meta.pubkey as PDA from (prefix, owner, [vault_id|
         additional seeds]) for each prefix in PROTECTED_SEED_PREFIXES. If
         ANY prefix derivation matches: reject as protected-writable with
-        6090 ErrProtectedWritable.
+        6092 ErrProtectedWritable.
    - ADDITIONALLY: verify account.owner == sigil_program_id for discriminator-
      based identification (per F-30 — prevents attacker-deployed program from
      spoofing discriminator).
