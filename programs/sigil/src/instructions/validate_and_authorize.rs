@@ -460,11 +460,9 @@ pub fn handler(
     {
         let mut ta10_iter: usize = 0;
         let mut scan_idx: usize = 0;
+        // Bound enforced by the `while` condition itself
+        // (MAX_SYSVAR_SCAN_ITERATIONS). No inner `require!` needed.
         while ta10_iter < MAX_SYSVAR_SCAN_ITERATIONS {
-            require!(
-                ta10_iter < MAX_SYSVAR_SCAN_ITERATIONS,
-                SigilError::SysvarScanBoundExceeded
-            );
             // Skip the current instruction — only check siblings.
             if scan_idx == current_idx_usize {
                 scan_idx = scan_idx.saturating_add(1);
@@ -625,11 +623,9 @@ pub fn handler(
 
         let mut ta11_iter: usize = 0;
         let mut ix_idx: usize = 0;
+        // Bound enforced by the `while` condition itself
+        // (MAX_SYSVAR_SCAN_ITERATIONS). No inner `require!` needed.
         while ta11_iter < MAX_SYSVAR_SCAN_ITERATIONS {
-            require!(
-                ta11_iter < MAX_SYSVAR_SCAN_ITERATIONS,
-                SigilError::SysvarScanBoundExceeded
-            );
             // Skip the current validate ix itself — its own protected metas
             // are legitimate (we OWN them) and they will be marked writable
             // for state-mutating instructions like cooldown updates.
