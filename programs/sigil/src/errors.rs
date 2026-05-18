@@ -84,7 +84,7 @@ pub enum SigilError {
     #[msg("Too many destinations (max 10)")]
     TooManyDestinations,
 
-    #[msg("Invalid protocol mode (must be 0, 1, or 2)")]
+    #[msg("Invalid protocol mode (must be 1 = ALLOWLIST)")]
     InvalidProtocolMode,
 
     // --- Transaction validation errors ---

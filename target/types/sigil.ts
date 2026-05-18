@@ -4898,7 +4898,7 @@ export type Sigil = {
     {
       "code": 6026,
       "name": "invalidProtocolMode",
-      "msg": "Invalid protocol mode (must be 0, 1, or 2)"
+      "msg": "Invalid protocol mode (must be 1 = ALLOWLIST)"
     },
     {
       "code": 6027,
