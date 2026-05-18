@@ -407,7 +407,7 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
             targetAccount,
             offset: 0,
             valueLen: 8,
-            operator: { lte: {} },
+            operator: 3, // ConstraintOperator::Lte (PostAssertionEntry.operator is u8)
             expectedValue: Buffer.from(new BN(1_000_000).toArray("le", 8)),
             assertionMode: 0,
           },
@@ -463,7 +463,7 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
             targetAccount,
             offset: 0,
             valueLen: 8,
-            operator: { lte: {} },
+            operator: 3, // ConstraintOperator::Lte (PostAssertionEntry.operator is u8)
             expectedValue: Buffer.from(new BN(1_000_000).toArray("le", 8)),
             assertionMode: 0,
           },
@@ -932,7 +932,7 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
             targetAccount: Keypair.generate().publicKey,
             offset: 0,
             valueLen: 8,
-            operator: { lte: {} },
+            operator: 3, // ConstraintOperator::Lte (PostAssertionEntry.operator is u8)
             expectedValue: Buffer.from(new BN(1).toArray("le", 8)),
             assertionMode: 0,
           },

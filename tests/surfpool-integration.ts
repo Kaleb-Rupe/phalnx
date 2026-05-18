@@ -27,7 +27,7 @@ import {
 } from "@solana/spl-token";
 import { expect } from "chai";
 import BN from "bn.js";
-import { initVaultPreviewDigest, fetchAndComputeQueueDigest } from "./helpers/policy-digest";
+import { initVaultPreviewDigest, fetchAndComputeQueueDigest, siblingHandlerDigest } from "./helpers/policy-digest";
 import {
   createSurfpoolTestEnv,
   SurfpoolTestEnv,
@@ -3229,8 +3229,14 @@ describe("surfpool-integration", function () {
               .instruction(),
           ),
         );
+        const expectedDigest = await siblingHandlerDigest(
+          program,
+          tlSetup.policyPda,
+          tlSetup.vaultPda,
+          { hasConstraints: true },
+        );
         const populateIx = await program.methods
-          .createInstructionConstraints([sampleEntry])
+          .createInstructionConstraints([sampleEntry], expectedDigest)
           .accounts({
             owner: env.payer.publicKey,
             vault: tlSetup.vaultPda,
@@ -3376,8 +3382,14 @@ describe("surfpool-integration", function () {
               .instruction(),
           ),
         );
+        const expectedDigest = await siblingHandlerDigest(
+          program,
+          closeSetup.policyPda,
+          closeSetup.vaultPda,
+          { hasConstraints: true },
+        );
         const populateIx = await program.methods
-          .createInstructionConstraints([sampleEntry])
+          .createInstructionConstraints([sampleEntry], expectedDigest)
           .accounts({
             owner: env.payer.publicKey,
             vault: closeSetup.vaultPda,
@@ -3416,8 +3428,14 @@ describe("surfpool-integration", function () {
       });
 
       // Apply close
+      const applyCloseDigest = await siblingHandlerDigest(
+        program,
+        closeSetup.policyPda,
+        closeSetup.vaultPda,
+        { hasConstraints: false },
+      );
       await program.methods
-        .applyCloseConstraints()
+        .applyCloseConstraints(applyCloseDigest)
         .accounts({
           owner: env.payer.publicKey,
           vault: closeSetup.vaultPda,
@@ -3473,8 +3491,14 @@ describe("surfpool-integration", function () {
               .instruction(),
           ),
         );
+        const expectedDigest = await siblingHandlerDigest(
+          program,
+          tlSetup.policyPda,
+          tlSetup.vaultPda,
+          { hasConstraints: true },
+        );
         const populateIx = await program.methods
-          .createInstructionConstraints([sampleEntry])
+          .createInstructionConstraints([sampleEntry], expectedDigest)
           .accounts({
             owner: env.payer.publicKey,
             vault: tlSetup.vaultPda,
@@ -3617,8 +3641,14 @@ describe("surfpool-integration", function () {
               .instruction(),
           ),
         );
+        const expectedDigest = await siblingHandlerDigest(
+          program,
+          tlSetup2.policyPda,
+          tlSetup2.vaultPda,
+          { hasConstraints: true },
+        );
         const populateIx = await program.methods
-          .createInstructionConstraints([sampleEntry])
+          .createInstructionConstraints([sampleEntry], expectedDigest)
           .accounts({
             owner: env.payer.publicKey,
             vault: tlSetup2.vaultPda,

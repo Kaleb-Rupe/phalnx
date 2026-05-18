@@ -1296,6 +1296,8 @@ describe("instruction-constraints", () => {
 
       // Attacker's vault PDA derivation uses attacker.publicKey → ConstraintSeeds
       try {
+        // Digest doesn't matter — has_one/ConstraintSeeds check fails before
+        // the PEN-CROSS-3 digest assertion. Use a placeholder zeroed digest.
         const attackerIxs = buildCreateConstraintsIxs(
           program,
           attacker.publicKey,
@@ -1315,6 +1317,7 @@ describe("instruction-constraints", () => {
               discriminatorFormat: { anchor8: {} },
             },
           ],
+          Array(32).fill(0),
         );
         sendVersionedTx(svm, attackerIxs, attacker);
         expect.fail("Should have thrown");
