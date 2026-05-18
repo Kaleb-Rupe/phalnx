@@ -98,11 +98,14 @@ pub enum SigilError {
     #[msg("Non-stablecoin swap must return stablecoin (balance did not increase)")]
     NonTrackedSwapMustReturnStablecoin,
 
-    #[msg("Swap slippage exceeds policy max_slippage_bps or quoted output is zero")]
-    SwapSlippageExceeded,
-
-    #[msg("Cannot parse Jupiter swap instruction data")]
-    InvalidJupiterInstruction,
+    // SwapSlippageExceeded (was 6030) DELETED in Phase 1 Option A demolition —
+    // on-chain Jupiter slippage verifier removed. The generic
+    // `policy.max_slippage_bps` config primitive is preserved (D-5); runtime
+    // slippage enforcement moves to off-chain SDK simulators / Phase 6
+    // post-execution assertions.
+    //
+    // InvalidJupiterInstruction (was 6031) DELETED in Phase 1 Option A demolition —
+    // Jupiter swap instruction parser removed entirely.
 
     #[msg("Top-level SPL Token transfer not allowed between validate and finalize")]
     UnauthorizedTokenTransfer,
