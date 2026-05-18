@@ -272,7 +272,29 @@ pub enum SigilError {
     BatchInstructionBlocked,
 
     // --- F-4 audit fix: explicit destination mode ---
-    // Added at the END of the enum so existing error codes are not renumbered.
-    #[msg("Invalid destination mode (must be 0 = Restricted or 1 = OpenWithCap)")]
+    // Phase 2 (Option A default-tightening): only RESTRICTED is permitted.
+    // OPEN_WITH_CAP path deleted; #[msg] tightened to reflect new contract.
+    #[msg("Invalid destination mode (must be 0 = RESTRICTED)")]
     InvalidDestinationMode,
+
+    // --- Phase 2 additions (TA-04 + TA-19) ---
+    // Appended at the END of the enum to preserve existing error codes 6000-6078.
+
+    /// 6079 — TA-04: Reserved AgentEntry.capability values 3..=255 explicitly
+    /// rejected at register/queue/apply. Replaces the prior silent zero-coerce
+    /// behaviour (values >2 were treated as 0 by `has_capability`).
+    #[msg("Invalid agent capability value (must be 0 = Disabled, 1 = Observer, or 2 = Operator)")]
+    InvalidCapability,
+
+    /// 6080 — TA-19: SHA-256 digest of canonical policy preview encoding does
+    /// not match recomputed digest. Indicates owner-signer compromise or
+    /// pending-PDA tampering between queue and apply. Hard reject.
+    #[msg("Policy preview digest mismatch — caller's signed digest differs from recomputed canonical digest")]
+    PolicyPreviewMismatch,
+
+    /// 6081 — TA-19: observe_only vault rejects all `validate_and_authorize`
+    /// calls. Owners stand up observe-only vaults to baseline agent behaviour
+    /// before opening the execute path.
+    #[msg("Vault is in observe_only mode — validate_and_authorize is blocked")]
+    ObserveOnlyModeBlocksExecute,
 }

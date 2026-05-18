@@ -71,6 +71,16 @@ pub fn handler(ctx: Context<ApplyAgentPermissionsUpdate>) -> Result<()> {
     let new_capability = pending.new_capability;
     let spending_limit_usd = pending.spending_limit_usd;
 
+    // Phase 2 TA-04 (Audit #2 F-4): defense in depth. The pending PDA was
+    // validated at queue time, but a rogue program with the same account
+    // discriminator could have overwritten the field between queue and apply.
+    // Re-assert the bound here so a tampered pending capability cannot
+    // become the live capability without a fresh queue.
+    require!(
+        new_capability <= FULL_CAPABILITY,
+        SigilError::InvalidCapability
+    );
+
     // Find agent entry and update capability + spending limit
     let vault = &mut ctx.accounts.vault;
     let entry = vault

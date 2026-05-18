@@ -39,9 +39,11 @@ pub fn handler(
         vault.status != VaultStatus::Closed,
         SigilError::VaultAlreadyClosed
     );
+    // Phase 2 TA-04: reserved capability values 3..=255 explicitly rejected.
+    // Replaces prior silent zero-coerce behaviour in `has_capability`.
     require!(
         capability <= FULL_CAPABILITY,
-        SigilError::InvalidPermissions
+        SigilError::InvalidCapability
     );
     require!(!vault.is_agent(&agent), SigilError::AgentAlreadyRegistered);
     require!(

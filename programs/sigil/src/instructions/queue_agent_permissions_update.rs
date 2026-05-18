@@ -64,10 +64,10 @@ pub fn handler(
         SigilError::UnauthorizedAgent
     );
 
-    // Validate capability
+    // Validate capability (Phase 2 TA-04: reserved values 3..=255 explicitly rejected).
     require!(
         new_capability <= FULL_CAPABILITY,
-        SigilError::InvalidPermissions
+        SigilError::InvalidCapability
     );
 
     let clock = Clock::get()?;
