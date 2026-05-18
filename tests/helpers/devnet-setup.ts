@@ -480,7 +480,7 @@ export async function buildAuthorizeIx(opts: AuthorizeOpts) {
     program.programId,
   );
   return program.methods
-    .validateAndAuthorize(mint, amount, protocol, policyVersion)
+    .validateAndAuthorize(mint, amount, protocol, policyVersion, new BN(0))
     .accounts({
       agent: agent.publicKey,
       vault: vaultPda,

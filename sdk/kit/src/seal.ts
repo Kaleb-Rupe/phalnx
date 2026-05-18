@@ -728,7 +728,15 @@ export async function seal(params: SealParams): Promise<SealResult> {
     ataReplacements,
   );
 
-  // Step 8: Build validate_and_authorize instruction
+  // Step 8: Build validate_and_authorize instruction.
+  //
+  // AC-10 (Phase 4): pass `expectedNonce = 0n`. The session PDA is created
+  // via `init` (not `init_if_needed`) on every validate, so a fresh session
+  // account starts at nonce=0. The on-chain handler requires
+  // `session.nonce == expected_nonce`, so callers MUST pass 0 in the
+  // steady-state flow. Phase 8 ownership-transfer flow (M-5) reuses the
+  // same field with non-close semantics; that path will resolve the stored
+  // value off-chain before calling `seal`.
   const validateIxBase = await getValidateAndAuthorizeInstructionAsync({
     agent: params.agent,
     vault: params.vault,
@@ -742,6 +750,7 @@ export async function seal(params: SealParams): Promise<SealResult> {
     amount: params.amount,
     targetProtocol,
     expectedPolicyVersion: state.policy.policyVersion ?? 0n,
+    expectedNonce: 0n,
   });
 
   // Step 8b: When the vault has instruction constraints configured, the on-chain

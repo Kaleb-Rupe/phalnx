@@ -369,4 +369,35 @@ pub enum SigilError {
     /// `queue_agent_permissions_update`.
     #[msg("Agent capability auto-revoked after consecutive policy-violation failures; owner must re-enable")]
     ErrAutoRevoked,
+
+    // --- Phase 4 (bundle integrity TA-10 + TA-11 + AC-10) ---
+    // Appended at END to preserve existing error codes 6000-6090.
+
+    /// 6091 — TA-10: sandwich-integrity uniqueness. At most ONE
+    /// `validate_and_authorize` instruction may exist per (vault, agent,
+    /// mint) tuple per transaction. Multiple validates against the same
+    /// tuple would let an attacker stage a second authorization sandwich
+    /// inside the first (using the second session's expanded capability)
+    /// before the first finalize revokes the SPL delegation. Reject at the
+    /// entry guard.
+    #[msg("Bundle integrity violation: multiple validate_and_authorize instructions for the same (vault, agent, mint) tuple in one transaction")]
+    ErrSandwichIntegrity,
+
+    /// 6092 — TA-11: writable Sigil-owned PDA in a foreign instruction
+    /// between validate and finalize. The DYNAMIC seed-prefix family check
+    /// derives every protected PDA family from `PROTECTED_SEED_PREFIXES`
+    /// and rejects when a foreign instruction passes any such PDA with
+    /// `is_writable=true`. Per F-20 + F-30, the on-chain `account.owner`
+    /// check provides defense-in-depth against discriminator-spoofing
+    /// from attacker-deployed programs.
+    #[msg("Protected Sigil PDA passed as writable to a foreign instruction between validate and finalize")]
+    ErrProtectedWritable,
+
+    /// 6093 — AC-10: session nonce mismatch. The caller's `expected_nonce`
+    /// argument does not match the session's stored nonce. Closes the
+    /// durable-nonce pre-signing replay class for in-flight sessions
+    /// (per Audit #1 C-1). Phase 8 ownership-transfer replay protection
+    /// (M-5) reuses the same field semantics.
+    #[msg("Session nonce mismatch — caller's expected_nonce does not match the session's stored nonce (durable-nonce replay defense)")]
+    ErrSessionNonceMismatch,
 }

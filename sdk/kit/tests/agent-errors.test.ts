@@ -17,16 +17,16 @@ describe("agent-errors", () => {
   // ─── On-chain error map completeness ──────────────────────────────────────
 
   describe("ON_CHAIN_ERROR_MAP completeness", () => {
-    it("maps all 91 error codes (6000-6090) post-Phase-3", () => {
+    it("maps all 94 error codes (6000-6093) post-Phase-4", () => {
       const codes = getAllOnChainErrorCodes();
-      // 6000-6090 inclusive = 91 codes.
-      expect(codes).to.have.lengthOf(91);
+      // 6000-6093 inclusive = 94 codes (Phase 4 adds 6091/6092/6093).
+      expect(codes).to.have.lengthOf(94);
       expect(codes[0]).to.equal(6000);
-      expect(codes[codes.length - 1]).to.equal(6090);
+      expect(codes[codes.length - 1]).to.equal(6093);
     });
 
-    it("every code from 6000-6090 is present with no gaps post-Phase-3", () => {
-      for (let code = 6000; code <= 6090; code++) {
+    it("every code from 6000-6093 is present with no gaps post-Phase-4", () => {
+      for (let code = 6000; code <= 6093; code++) {
         const entry = ON_CHAIN_ERROR_MAP[code];
         expect(entry, `Missing error code ${code}`).to.exist;
         expect(entry.name).to.be.a("string").and.not.be.empty;

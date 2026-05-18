@@ -1075,6 +1075,7 @@ describe("sigil", () => {
           amount,
           jupiterProgramId,
           await pv(), // expectedPolicyVersion
+          new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -1163,6 +1164,7 @@ describe("sigil", () => {
           amount,
           jupiterProgramId,
           await pv(), // restored pv() v2
+          new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -1304,6 +1306,7 @@ describe("sigil", () => {
             new BN(1_000_000),
             jupiterProgramId,
             await pv(),
+            new BN(0), // AC-10 expectedNonce
           )
           .accounts({
             agent: agent.publicKey,
@@ -1339,6 +1342,7 @@ describe("sigil", () => {
             new BN(1_000_000),
             fakeProtocol, // not in protocols
             await pv(),
+            new BN(0), // AC-10 expectedNonce
           )
           .accounts({
             agent: agent.publicKey,
@@ -1374,6 +1378,7 @@ describe("sigil", () => {
             new BN(200_000_000), // would exceed max_transaction_size — but checked in finalize now
             jupiterProgramId,
             await pv(),
+            new BN(0), // AC-10 expectedNonce
           )
           .accounts({
             agent: agent.publicKey,
@@ -1412,6 +1417,7 @@ describe("sigil", () => {
             new BN(100_000_000),
             jupiterProgramId,
             await pv(),
+            new BN(0), // AC-10 expectedNonce
           )
           .accounts({
             agent: agent.publicKey,
@@ -1460,6 +1466,7 @@ describe("sigil", () => {
             new BN(1_000_000),
             jupiterProgramId,
             await pv(),
+            new BN(0), // AC-10 expectedNonce
           )
           .accounts({
             agent: fakeAgent.publicKey,
@@ -1539,6 +1546,7 @@ describe("sigil", () => {
             new BN(1_000_000),
             jupiterProgramId,
             await pv(),
+            new BN(0), // AC-10 expectedNonce
           )
           .accounts({
             agent: agent.publicKey,
@@ -2129,6 +2137,7 @@ describe("sigil", () => {
           new BN(10_000_000),
           jupiterProgramId,
           await pv(feePolicyPda),
+          new BN(0), // AC-10 expectedNonce
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -2255,6 +2264,7 @@ describe("sigil", () => {
           new BN(10_000_000),
           jupiterProgramId,
           await pv(feePolicyPda),
+          new BN(0), // AC-10 expectedNonce
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -2322,6 +2332,7 @@ describe("sigil", () => {
           new BN(10_000_000),
           jupiterProgramId,
           await pv(feePolicyPda),
+          new BN(0), // AC-10 expectedNonce
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -2563,6 +2574,7 @@ describe("sigil", () => {
           new BN(10_000_000),
           jupiterProgramId,
           await pv(lifecyclePolicyPda),
+          new BN(0), // AC-10 expectedNonce
         )
         .accountsPartial({
           agent: lifecycleAgent.publicKey,
@@ -2619,6 +2631,7 @@ describe("sigil", () => {
           new BN(5_000_000),
           jupiterProgramId,
           await pv(lifecyclePolicyPda),
+          new BN(0), // AC-10 expectedNonce
         )
         .accountsPartial({
           agent: lifecycleAgent.publicKey,
@@ -2673,6 +2686,7 @@ describe("sigil", () => {
             new BN(5_000_000),
             jupiterProgramId,
             await pv(lifecyclePolicyPda),
+            new BN(0), // AC-10 expectedNonce
           )
           .accountsPartial({
             agent: lifecycleAgent.publicKey,
@@ -2865,6 +2879,7 @@ describe("sigil", () => {
             new BN(1_000_000),
             jupiterProgramId,
             await pv(),
+            new BN(0), // AC-10 expectedNonce
           )
           .accounts({
             agent: agent.publicKey,
@@ -3210,6 +3225,7 @@ describe("sigil", () => {
             new BN(1_000_000),
             jupiterProgramId,
             await pv(),
+            new BN(0), // AC-10 expectedNonce
           )
           .accounts({
             agent: agent.publicKey,
@@ -3366,6 +3382,7 @@ describe("sigil", () => {
             new BN(1_000_000), // 1 USDC each
             jupiterProgramId,
             await pv(ringPolicyPda),
+            new BN(0), // AC-10 expectedNonce
           )
           .accountsPartial({
             agent: ringAgent.publicKey,
@@ -3543,6 +3560,7 @@ describe("sigil", () => {
           new BN(1), // 1 lamport
           jupiterProgramId,
           await pv(feeEdgePolicyPda),
+          new BN(0), // AC-10 expectedNonce
         )
         .accountsPartial({
           agent: feeEdgeAgent.publicKey,
@@ -3608,6 +3626,7 @@ describe("sigil", () => {
           new BN(4_999),
           jupiterProgramId,
           await pv(feeEdgePolicyPda),
+          new BN(0), // AC-10 expectedNonce
         )
         .accountsPartial({
           agent: feeEdgeAgent.publicKey,
@@ -3657,6 +3676,7 @@ describe("sigil", () => {
           new BN(5_000),
           jupiterProgramId,
           await pv(feeEdgePolicyPda),
+          new BN(0), // AC-10 expectedNonce
         )
         .accountsPartial({
           agent: feeEdgeAgent.publicKey,
@@ -5069,6 +5089,7 @@ describe("sigil", () => {
           new BN(0), // non-spending for Observer
           jupiterProgramId,
           await pv(maPolicy),
+          new BN(0), // AC-10 expectedNonce
         )
         .accounts({
           agent: agent.publicKey,
@@ -5129,6 +5150,7 @@ describe("sigil", () => {
           new BN(1_000_000),
           jupiterProgramId,
           await pv(maPolicy),
+          new BN(0), // AC-10 expectedNonce
         )
         .accounts({
           agent: agent.publicKey,
@@ -5794,7 +5816,7 @@ describe("sigil", () => {
       );
 
       const validateIx = await program.methods
-        .validateAndAuthorize(usdcMint, amount, protocol, await pv(pcPolicy))
+        .validateAndAuthorize(usdcMint, amount, protocol, await pv(pcPolicy), new BN(0))
         .accountsPartial({
           agent: protoCapAgent.publicKey,
           vault: pcVault,

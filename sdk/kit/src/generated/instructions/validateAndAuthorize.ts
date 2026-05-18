@@ -134,6 +134,7 @@ export type ValidateAndAuthorizeInstructionData = {
   amount: bigint;
   targetProtocol: Address;
   expectedPolicyVersion: bigint;
+  expectedNonce: bigint;
 };
 
 export type ValidateAndAuthorizeInstructionDataArgs = {
@@ -141,6 +142,7 @@ export type ValidateAndAuthorizeInstructionDataArgs = {
   amount: number | bigint;
   targetProtocol: Address;
   expectedPolicyVersion: number | bigint;
+  expectedNonce: number | bigint;
 };
 
 export function getValidateAndAuthorizeInstructionDataEncoder(): FixedSizeEncoder<ValidateAndAuthorizeInstructionDataArgs> {
@@ -151,6 +153,7 @@ export function getValidateAndAuthorizeInstructionDataEncoder(): FixedSizeEncode
       ["amount", getU64Encoder()],
       ["targetProtocol", getAddressEncoder()],
       ["expectedPolicyVersion", getU64Encoder()],
+      ["expectedNonce", getU64Encoder()],
     ]),
     (value) => ({
       ...value,
@@ -166,6 +169,7 @@ export function getValidateAndAuthorizeInstructionDataDecoder(): FixedSizeDecode
     ["amount", getU64Decoder()],
     ["targetProtocol", getAddressDecoder()],
     ["expectedPolicyVersion", getU64Decoder()],
+    ["expectedNonce", getU64Decoder()],
   ]);
 }
 
@@ -231,6 +235,7 @@ export type ValidateAndAuthorizeAsyncInput<
   amount: ValidateAndAuthorizeInstructionDataArgs["amount"];
   targetProtocol: ValidateAndAuthorizeInstructionDataArgs["targetProtocol"];
   expectedPolicyVersion: ValidateAndAuthorizeInstructionDataArgs["expectedPolicyVersion"];
+  expectedNonce: ValidateAndAuthorizeInstructionDataArgs["expectedNonce"];
 };
 
 export async function getValidateAndAuthorizeInstructionAsync<
@@ -506,6 +511,7 @@ export type ValidateAndAuthorizeInput<
   amount: ValidateAndAuthorizeInstructionDataArgs["amount"];
   targetProtocol: ValidateAndAuthorizeInstructionDataArgs["targetProtocol"];
   expectedPolicyVersion: ValidateAndAuthorizeInstructionDataArgs["expectedPolicyVersion"];
+  expectedNonce: ValidateAndAuthorizeInstructionDataArgs["expectedNonce"];
 };
 
 export function getValidateAndAuthorizeInstruction<

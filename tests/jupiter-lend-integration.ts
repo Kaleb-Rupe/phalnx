@@ -140,6 +140,7 @@ describe("jupiter-lend-integration", () => {
         amount,
         targetProtocol,
         new BN(0), // expectedPolicyVersion
+        new BN(0), // AC-10 expectedNonce (fresh session)
       )
       .accountsPartial({
         agent: agentKp.publicKey,

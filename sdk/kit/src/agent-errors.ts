@@ -1412,6 +1412,49 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
+  // Phase 4 — Bundle integrity (TA-10 + TA-11 + AC-10)
+  6091: {
+    name: "ErrSandwichIntegrity",
+    message:
+      "Bundle integrity violation: multiple validate_and_authorize instructions for the same (vault, agent, mint) tuple in one transaction. At most one is permitted (TA-10 hardening).",
+    category: "POLICY_VIOLATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "rebuild_bundle",
+        description:
+          "Rebuild the transaction with exactly one validate_and_authorize per (vault, agent, mint) tuple. ComputeBudget and SystemProgram instructions may be interleaved.",
+      },
+    ],
+  },
+  6092: {
+    name: "ErrProtectedWritable",
+    message:
+      "A Sigil-owned PDA was passed as writable to a foreign instruction between validate and finalize (TA-11). Protected PDAs include vault, policy, tracker, session, post_assertions, audit, constraints, and overlay accounts.",
+    category: "POLICY_VIOLATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "remove_protected_pda_writable",
+        description:
+          "Remove the writable flag on any Sigil PDA passed to the DeFi instruction, or remove the PDA from that instruction's account metas entirely. Sigil PDAs may still be read by foreign instructions (writable=false is allowed).",
+      },
+    ],
+  },
+  6093: {
+    name: "ErrSessionNonceMismatch",
+    message:
+      "Session nonce mismatch (AC-10 durable-nonce replay defense). The caller's expected_nonce does not match the session's stored nonce. For a fresh session, pass expected_nonce = 0.",
+    category: "INPUT_VALIDATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "fresh_session_nonce",
+        description:
+          "Pass expected_nonce = 0 for a fresh validate_and_authorize. A non-zero value is only valid in Phase 8 ownership-transfer flow (M-5).",
+      },
+    ],
+  },
 };
 
 // ---------------------------------------------------------------------------

@@ -4234,6 +4234,10 @@ export type Sigil = {
         {
           "name": "expectedPolicyVersion",
           "type": "u64"
+        },
+        {
+          "name": "expectedNonce",
+          "type": "u64"
         }
       ]
     },
@@ -5599,6 +5603,21 @@ export type Sigil = {
       "code": 6090,
       "name": "errAutoRevoked",
       "msg": "Agent capability auto-revoked after consecutive policy-violation failures; owner must re-enable"
+    },
+    {
+      "code": 6091,
+      "name": "errSandwichIntegrity",
+      "msg": "Bundle integrity violation: multiple validate_and_authorize instructions for the same (vault, agent, mint) tuple in one transaction"
+    },
+    {
+      "code": 6092,
+      "name": "errProtectedWritable",
+      "msg": "Protected Sigil PDA passed as writable to a foreign instruction between validate and finalize"
+    },
+    {
+      "code": 6093,
+      "name": "errSessionNonceMismatch",
+      "msg": "Session nonce mismatch — caller's expected_nonce does not match the session's stored nonce (durable-nonce replay defense)"
     }
   ],
   "types": [
@@ -8387,6 +8406,15 @@ export type Sigil = {
                 4
               ]
             }
+          },
+          {
+            "name": "nonce",
+            "docs": [
+              "AC-10 (Phase 4) — monotonic session nonce closing durable-nonce replay (Audit #1 C-1).",
+              "Starts at 0 on fresh `init`; incremented by finalize_session on success.",
+              "Phase 8 ownership-transfer flow (M-5) reuses this field."
+            ],
+            "type": "u64"
           }
         ]
       }

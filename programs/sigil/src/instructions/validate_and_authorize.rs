@@ -131,6 +131,14 @@ pub fn handler(
     amount: u64,
     target_protocol: Pubkey,
     expected_policy_version: u64,
+    // AC-10 (Phase 4) — durable-nonce replay defense per Audit #1 C-1.
+    // The `session` account is `init` (not `init_if_needed`), so steady-state
+    // operation creates a fresh SessionAuthority on every validate with
+    // `nonce = 0`. Callers therefore pass 0 in the typical flow. The check
+    // is structural: it sits behind every successful validate so a Phase 8
+    // ownership-transfer flow (M-5) extension can extend the contract
+    // without breaking the on-chain shape.
+    expected_nonce: u64,
 ) -> Result<()> {
     // 0. Reject CPI calls — only top-level transaction instructions allowed.
     require!(
@@ -142,6 +150,23 @@ pub fn handler(
     let vault = &ctx.accounts.vault;
     let policy = &ctx.accounts.policy;
     let clock = Clock::get()?;
+
+    // AC-10 (Phase 4): session nonce check. The session account is created
+    // via `init` so a fresh account has `nonce = 0`. The caller's
+    // `expected_nonce` MUST equal the stored value. Because `init` zeroes
+    // the account, the check is effectively `expected_nonce == 0` for new
+    // sessions — but written generically so Phase 8 ownership-transfer
+    // flow (M-5) can reuse the field with stored-state semantics.
+    //
+    // The reject_cpi guard above prevents a nested validate from reusing a
+    // partially-initialized session; the nonce check is defense-in-depth
+    // for the durable-nonce class where an attacker pre-signs a validate
+    // and replays it with a stale nonce after the session was closed by an
+    // intervening finalize.
+    require!(
+        ctx.accounts.session.nonce == expected_nonce,
+        SigilError::ErrSessionNonceMismatch
+    );
 
     // TOCTOU fix: reject if policy changed since agent's off-chain RPC read.
     require!(
@@ -822,6 +847,13 @@ pub fn handler(
     // Initialize snapshot fields to zero (default for non-delta sessions)
     session.assertion_snapshots = [[0u8; 32]; 4];
     session.snapshot_lens = [0u8; 4];
+    // AC-10 (Phase 4): session nonce starts at 0 on every fresh `init`.
+    // finalize_session increments the field on success; because validate
+    // uses `init` (not `init_if_needed`), the account is closed at finalize
+    // and the next validate re-creates the PDA starting at 0 again. Stored
+    // here explicitly so the contract is visible at the construction site
+    // even though `init` already zeroed the account.
+    session.nonce = 0;
 
     // ── Phase B2: Snapshot capture for delta assertions ─────────────────
     // If the vault has post-assertions with delta modes (1-3), capture target

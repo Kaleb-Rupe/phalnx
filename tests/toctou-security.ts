@@ -304,6 +304,7 @@ describe("TOCTOU Security Fix", () => {
           new BN(10_000_000),
           jupiterProgramId,
           new BN(0), // STALE: policy is now at version 1
+          new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accountsPartial({
           agent: agent.publicKey,

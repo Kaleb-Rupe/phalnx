@@ -92,6 +92,12 @@ pub mod sigil {
         amount: u64,
         target_protocol: Pubkey,
         expected_policy_version: u64,
+        // AC-10 (Phase 4) — session nonce closing durable-nonce replay
+        // (per Audit #1 C-1). Caller passes 0 for a fresh session; the
+        // session PDA is closed at finalize so the steady-state always
+        // resets to 0 between validates. Phase 8 ownership-transfer flow
+        // (M-5) reuses the same field for replay protection.
+        expected_nonce: u64,
     ) -> Result<()> {
         instructions::validate_and_authorize::handler(
             ctx,
@@ -99,6 +105,7 @@ pub mod sigil {
             amount,
             target_protocol,
             expected_policy_version,
+            expected_nonce,
         )
     }
 

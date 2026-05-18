@@ -56,6 +56,8 @@ async function buildSwapInstructions(
     amount,
     targetProtocol: JUPITER_PROGRAM_ADDRESS,
     expectedPolicyVersion: 0n,
+    // AC-10 (Phase 4): fresh session always starts at nonce=0.
+    expectedNonce: 0n,
   });
 
   const finalizeIx = await getFinalizeSessionInstructionAsync({

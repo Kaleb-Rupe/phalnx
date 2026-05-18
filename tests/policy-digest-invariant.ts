@@ -836,7 +836,7 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
     );
 
     const validateIx = await program.methods
-      .validateAndAuthorize(usdcMint, new BN(0), dummyProtocol, currentVersion)
+      .validateAndAuthorize(usdcMint, new BN(0), dummyProtocol, currentVersion, new BN(0))
       .accounts({
         agent: agent.publicKey,
         vault: vault.vaultPda,

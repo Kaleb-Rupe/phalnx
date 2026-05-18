@@ -196,6 +196,12 @@ export const SIGIL_ERROR__ERR_TOKEN2022_EXTENSION_FORBIDDEN = 0x17c8; // 6088
 export const SIGIL_ERROR__ERR_COSIGN_REQUIRED = 0x17c9; // 6089
 /** ErrAutoRevoked: Agent capability auto-revoked after consecutive policy-violation failures; owner must re-enable */
 export const SIGIL_ERROR__ERR_AUTO_REVOKED = 0x17ca; // 6090
+/** ErrSandwichIntegrity: Bundle integrity violation: multiple validate_and_authorize instructions for the same (vault, agent, mint) tuple in one transaction */
+export const SIGIL_ERROR__ERR_SANDWICH_INTEGRITY = 0x17cb; // 6091
+/** ErrProtectedWritable: Protected Sigil PDA passed as writable to a foreign instruction between validate and finalize */
+export const SIGIL_ERROR__ERR_PROTECTED_WRITABLE = 0x17cc; // 6092
+/** ErrSessionNonceMismatch: Session nonce mismatch — caller's expected_nonce does not match the session's stored nonce (durable-nonce replay defense) */
+export const SIGIL_ERROR__ERR_SESSION_NONCE_MISMATCH = 0x17cd; // 6093
 
 export type SigilError =
   | typeof SIGIL_ERROR__ACCOUNT_WRITABILITY_MISMATCH
@@ -226,6 +232,9 @@ export type SigilError =
   | typeof SIGIL_ERROR__ERR_GRAYLIST_FULL
   | typeof SIGIL_ERROR__ERR_MINT_NOT_PINNED
   | typeof SIGIL_ERROR__ERR_OUTSIDE_OPERATING_HOURS
+  | typeof SIGIL_ERROR__ERR_PROTECTED_WRITABLE
+  | typeof SIGIL_ERROR__ERR_SANDWICH_INTEGRITY
+  | typeof SIGIL_ERROR__ERR_SESSION_NONCE_MISMATCH
   | typeof SIGIL_ERROR__ERR_TOKEN2022_EXTENSION_FORBIDDEN
   | typeof SIGIL_ERROR__INSUFFICIENT_BALANCE
   | typeof SIGIL_ERROR__INSUFFICIENT_PERMISSIONS
@@ -321,6 +330,9 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__ERR_GRAYLIST_FULL]: `Destination graylist is full (max 10 entries) — wait for an existing entry to unlock or promote`,
     [SIGIL_ERROR__ERR_MINT_NOT_PINNED]: `Deposit mint is not a build-time-pinned stablecoin (USDC or USDT)`,
     [SIGIL_ERROR__ERR_OUTSIDE_OPERATING_HOURS]: `Current UTC hour is outside the policy's operating_hours bitmask`,
+    [SIGIL_ERROR__ERR_PROTECTED_WRITABLE]: `Protected Sigil PDA passed as writable to a foreign instruction between validate and finalize`,
+    [SIGIL_ERROR__ERR_SANDWICH_INTEGRITY]: `Bundle integrity violation: multiple validate_and_authorize instructions for the same (vault, agent, mint) tuple in one transaction`,
+    [SIGIL_ERROR__ERR_SESSION_NONCE_MISMATCH]: `Session nonce mismatch — caller's expected_nonce does not match the session's stored nonce (durable-nonce replay defense)`,
     [SIGIL_ERROR__ERR_TOKEN2022_EXTENSION_FORBIDDEN]: `Token-2022 mint has a forbidden extension (only MemoTransfer + MetadataPointer + NonTransferable allowed)`,
     [SIGIL_ERROR__INSUFFICIENT_BALANCE]: `Insufficient vault balance for withdrawal`,
     [SIGIL_ERROR__INSUFFICIENT_PERMISSIONS]: `Agent lacks permission for this action type`,

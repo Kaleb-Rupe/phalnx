@@ -115,6 +115,7 @@ export type SessionAuthority = {
    * finalize_session cross-checks snapshot_lens[i] == entry.value_len.
    */
   snapshotLens: ReadonlyUint8Array;
+  nonce: bigint;
 };
 
 export type SessionAuthorityArgs = {
@@ -176,6 +177,7 @@ export type SessionAuthorityArgs = {
    * finalize_session cross-checks snapshot_lens[i] == entry.value_len.
    */
   snapshotLens: ReadonlyUint8Array;
+  nonce: number | bigint;
 };
 
 /** Gets the encoder for {@link SessionAuthorityArgs} account data. */
@@ -202,6 +204,7 @@ export function getSessionAuthorityEncoder(): FixedSizeEncoder<SessionAuthorityA
         getArrayEncoder(fixEncoderSize(getBytesEncoder(), 32), { size: 4 }),
       ],
       ["snapshotLens", fixEncoderSize(getBytesEncoder(), 4)],
+      ["nonce", getU64Encoder()],
     ]),
     (value) => ({ ...value, discriminator: SESSION_AUTHORITY_DISCRIMINATOR }),
   );
@@ -230,6 +233,7 @@ export function getSessionAuthorityDecoder(): FixedSizeDecoder<SessionAuthority>
       getArrayDecoder(fixDecoderSize(getBytesDecoder(), 32), { size: 4 }),
     ],
     ["snapshotLens", fixDecoderSize(getBytesDecoder(), 4)],
+    ["nonce", getU64Decoder()],
   ]);
 }
 
@@ -308,5 +312,5 @@ export async function fetchAllMaybeSessionAuthority(
 }
 
 export function getSessionAuthoritySize(): number {
-  return 375;
+  return 383;
 }

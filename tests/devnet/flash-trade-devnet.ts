@@ -333,6 +333,7 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
           new BN(500_000), // $0.50
           FLASH_TRADE_DEVNET,
           new BN(0), // expectedPolicyVersion
+          new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accounts({
           agent: agent.publicKey,
@@ -518,6 +519,7 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
           amount,
           FLASH_TRADE_DEVNET,
           new BN(0),
+          new BN(0), // AC-10 expectedNonce
         )
         .accounts({
           agent: agent.publicKey,
@@ -909,6 +911,7 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
           new BN(100_000),
           FLASH_TRADE_DEVNET,
           new BN(0),
+          new BN(0), // AC-10 expectedNonce
         )
         .accounts({
           agent: agent.publicKey,
@@ -1059,6 +1062,7 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
             new BN(100_000),
             randomProgram, // NOT in allowlist
             new BN(0),
+            new BN(0), // AC-10 expectedNonce
           )
           .accounts({
             agent: agent.publicKey,
