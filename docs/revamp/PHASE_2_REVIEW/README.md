@@ -35,3 +35,9 @@
 ## Process note
 
 This is the FIRST phase using the post-F-4 convention of persisting §RP transcripts to `docs/revamp/PHASE_N_REVIEW/` at time of dispatch (not retroactively). Phases 0.5 / 0.6 / 1 transcripts were retro-persisted in commit `96ed5a2`; from Phase 2 forward, this directory is created with the §RP transcript at dispatch time.
+
+## On code-reviewer.md absence (F-8 audit note)
+
+The auditor flagged that this directory contains only `silent-failure-hunter.md` and not a separate `code-reviewer.md`. That was intentional: the attack vectors dispatched to `silent-failure-hunter` covered the same surface that a code-reviewer dispatch would have hit (numerics, encoding correctness, helper-function invariants, error-code allocation drift, IDL/types/SDK reconciliation). A separate code-reviewer dispatch on Phase 2 would have been redundant work against the same code surface.
+
+Future phases may dispatch both tools when their attack-vector coverage diverges (e.g. a phase with significant new compute-budget surface area, where the code-reviewer's static numerics analysis is load-bearing in a way that silent-failure-hunter's runtime-vector framing doesn't replicate). For Phase 2 (default-tightening + TA-19 digest + observe_only), one dispatch was sufficient.
