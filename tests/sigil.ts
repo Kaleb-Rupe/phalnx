@@ -5921,6 +5921,14 @@ describe("sigil", () => {
       // Initialize vault with 2 protocols + per-protocol caps:
       // protocolA: 100 USDC cap, protocolB: 200 USDC cap
       // Global cap: 1000 USDC, Max tx: 500 USDC
+      //
+      // G6 §RP-2 P2 supplementary (2026-05-18): vault opted IN to cosign so
+      // the `cap of 0 means unlimited` and `caps disabled` tests below
+      // (which weaken protocol_caps) GENUINELY exercise the G6 elevation
+      // gate. Previously those tests passed protoCapCosigner decoratively —
+      // `policy.cosign_required = false` made the handler take the
+      // non-elevated fallback. After the flip, removing protoCapCosigner
+      // from those tests WOULD trip ErrCosignRequired.
       await program.methods
         .initializeVault(protoCapVaultId,
           new BN(1_000_000_000),
@@ -5938,7 +5946,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
-          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
+          true, // cosignRequired (G6 §RP-2 P2 supplementary — vault OPTED IN)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1_000_000_000),
             maxTransactionSizeUsd: new BN(500_000_000),
@@ -5950,6 +5958,8 @@ describe("sigil", () => {
             operatingHours: 0x00FFFFFF,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
+            // G6 §RP-2 P2 supplementary: match on-chain init.
+            cosignRequired: true,
           }),
         )
         .accounts({
@@ -6052,6 +6062,9 @@ describe("sigil", () => {
       // G3a audit fix (§RP-2 2026-05-18 HIGH-1): live cap = 100_000_000;
       // proposing 0 disables enforcement for protocolA → ELEVATED weakening,
       // TA-09 cosign required.
+      // G6 §RP-2 P2 supplementary (2026-05-18): pcVault was flipped to
+      // `cosignRequired: true` at init — this `weakens_protocol_caps` queue
+      // now GENUINELY exercises the G6 elevation gate.
       await program.methods
         .queuePolicyUpdate(null,
           null,
@@ -6068,8 +6081,8 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
-          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
-          protoCapCosigner.publicKey, // cosign_session (TA-09 — ELEVATED, weakens_protocol_caps)
+          null, // cosign_required (G6 — pass-through; live=true after §RP-2 P2 flip at vault init)
+          protoCapCosigner.publicKey, // cosign_session (TA-09 — ELEVATED, weakens_protocol_caps on cosign-opted-in vault)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -6106,6 +6119,10 @@ describe("sigil", () => {
       // G3a (§RP-2): protocolA cap moves from 0 (unlimited live) to 100_000_000
       // — that's a TIGHTENING (live=0 means already unlimited, no weakening
       // possible). Non-elevated, no cosign needed.
+      // G6 §RP-2 P2 supplementary (2026-05-18): pcVault now has live=true
+      // for cosign_required but the 7 elevation triggers all evaluate false
+      // here (tightening only) and disables_cosign is false, so is_elevated
+      // remains false. No cosign needed despite live=true.
       await program.methods
         .queuePolicyUpdate(null,
           null,
@@ -6122,7 +6139,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
-          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+          null, // cosign_required (G6 — pass-through; live=true but no elevation trigger fires)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated, tightening)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -6168,6 +6185,9 @@ describe("sigil", () => {
       // Disable per-protocol caps.
       // G3a audit fix (§RP-2 2026-05-18 HIGH-1): has_protocol_caps: false
       // disables the master switch → ELEVATED weakening, TA-09 cosign required.
+      // G6 §RP-2 P2 supplementary (2026-05-18): pcVault was flipped to
+      // `cosignRequired: true` at init — this `weakens_protocol_caps`
+      // (master-switch disable) now GENUINELY exercises the G6 elevation gate.
       await program.methods
         .queuePolicyUpdate(null,
           null,
@@ -6184,8 +6204,8 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
-          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
-          protoCapCosigner.publicKey, // cosign_session (TA-09 — ELEVATED, weakens_protocol_caps via has_protocol_caps=false)
+          null, // cosign_required (G6 — pass-through; live=true after §RP-2 P2 flip at vault init)
+          protoCapCosigner.publicKey, // cosign_session (TA-09 — ELEVATED, weakens_protocol_caps via has_protocol_caps=false on cosign-opted-in vault)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -6223,6 +6243,8 @@ describe("sigil", () => {
       // (the predicate triggers only on `has_protocol_caps: false`). The new
       // protocol_caps [100M, 200M] vs live [] (cleared) — live_cap=0 at every
       // index → unlimited → no weakening. Non-elevated, no cosign needed.
+      // G6 §RP-2 P2 supplementary (2026-05-18): pcVault has live=true but no
+      // elevation trigger fires here, so is_elevated remains false.
       await program.methods
         .queuePolicyUpdate(null,
           null,
@@ -6239,7 +6261,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
-          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+          null, // cosign_required (G6 — pass-through; live=true but no elevation trigger fires)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated, tightening)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -6273,7 +6295,11 @@ describe("sigil", () => {
         [Buffer.from("pending_policy"), pcVault.toBuffer()],
         program.programId,
       );
-      // Try to set protocol_caps with wrong length (1 cap for 2 protocols)
+      // Try to set protocol_caps with wrong length (1 cap for 2 protocols).
+      // G6 §RP-2 P2 supplementary (2026-05-18): pcVault has cosign_required=true
+      // but ProtocolCapsMismatch fires BEFORE the elevation check (handler
+      // queue_policy_update.rs:177-196 runs before line 245 elevation logic),
+      // so cosign session is moot — the basic validation rejects first.
       try {
         await program.methods
           .queuePolicyUpdate(null,
@@ -6291,8 +6317,8 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
-          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
-          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
+          null, // cosign_required (G6 — pass-through; mismatch fires before elevation check)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated; never reached)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
           .accounts({
