@@ -109,6 +109,19 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
         );
     }
 
+    // F-11 cross-check (§RP-2 bonus finding 2026-05-18): mirror the
+    // initialize_vault + set_observe_only guard. An active (non-observe_only)
+    // vault cannot have both allowlists empty post-merge, or it becomes silently
+    // inert — accepts deposits but rejects every spending tx. The TA-19 digest
+    // matches the owner's signed digest in this state, so without this gate the
+    // owner-blind-sign path lets the vault land in the silently-inert state.
+    require!(
+        ctx.accounts.vault.observe_only
+            || !policy.protocols.is_empty()
+            || !policy.allowed_destinations.is_empty(),
+        SigilError::ActiveVaultRequiresAllowlist
+    );
+
     // Phase 2 TA-19: re-assert the digest of the now-merged live policy against
     // the owner-signed `pending.new_policy_preview_digest`. This is the second
     // defense — the first ran at `queue_policy_update`. If a rogue program

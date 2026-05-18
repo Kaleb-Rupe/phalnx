@@ -58,8 +58,9 @@ pub fn handler(ctx: Context<SetObserveOnly>, new_value: bool) -> Result<()> {
 
     // F-2 lesson (TA-19): any mutation of a field included in
     // policy_preview_digest MUST recompute the stored digest + bump
-    // policy_version (OCC). observe_only is at position 10 of the canonical
-    // digest encoding.
+    // policy_version (OCC). observe_only is at position 11 of the canonical
+    // digest encoding (was 10 pre PEN-CROSS-6; developer_fee_rate at position 4
+    // shifted observe_only and downstream fields by 1).
     let recomputed_digest = compute_policy_preview_digest(&PolicyPreviewFields {
         daily_spending_cap_usd: policy.daily_spending_cap_usd,
         max_transaction_size_usd: policy.max_transaction_size_usd,
