@@ -21,6 +21,7 @@
  *   12. has_constraints: bool (1 byte 0/1)
  *   13. has_post_assertions: u8
  *   14. created_at_slot: u64 LE — PEN-CROSS-2 (Phase 2 close-up)
+ *   15. operating_hours: u32 LE — TA-05 (Phase 3 pre-exec)
  */
 
 import { createHash } from "crypto";
@@ -52,6 +53,13 @@ export interface PolicyDigestFields {
    * actual slot at init).
    */
   createdAtSlot?: BN | bigint | number;
+  /**
+   * TA-05 (Phase 3 pre-exec): 24-bit UTC operating-hours bitmask. Optional
+   * with default 0 so legacy fixtures that don't pass it produce the same
+   * inert-hours digest the on-chain init handler now requires. New tests
+   * should pass `0x00FFFFFF` (all 24h) explicitly.
+   */
+  operatingHours?: number;
 }
 
 function u64le(v: BN | bigint | number): Buffer {
@@ -110,6 +118,8 @@ export function computePolicyPreviewDigest(
   parts.push(u8(fields.hasPostAssertions ?? 0));
   // PEN-CROSS-2: created_at_slot at position 14 of canonical encoding.
   parts.push(u64le(fields.createdAtSlot ?? 0));
+  // TA-05: operating_hours at position 15 of canonical encoding.
+  parts.push(u32le(fields.operatingHours ?? 0));
 
   const buf = Buffer.concat(parts);
   return Array.from(createHash("sha256").update(buf).digest());
@@ -154,6 +164,12 @@ export function initVaultPreviewDigest(args: {
    * has advanced.
    */
   createdAtSlot?: BN | bigint | number;
+  /**
+   * TA-05 (Phase 3 pre-exec): operating_hours UTC bitmask. Default 0 — legacy
+   * fixtures need no update, but new tests SHOULD pass `0x00FFFFFF` (all 24h)
+   * so validate_and_authorize doesn't reject. Upper 8 bits must be zero.
+   */
+  operatingHours?: number;
 }): number[] {
   return computePolicyPreviewDigest({
     dailySpendingCapUsd: args.dailySpendingCapUsd,
@@ -170,6 +186,7 @@ export function initVaultPreviewDigest(args: {
     hasConstraints: false,
     hasPostAssertions: 0,
     createdAtSlot: args.createdAtSlot ?? 0,
+    operatingHours: args.operatingHours ?? 0,
   });
 }
 
@@ -204,6 +221,8 @@ export interface LiveLikePolicy {
    * `PolicyConfig.createdAtSlot` (typed as BN by Anchor).
    */
   createdAtSlot?: BN | bigint | number;
+  /** TA-05 (Phase 3): bound by the canonical digest at position 15. */
+  operatingHours?: number;
 }
 
 export interface QueueOverride {
@@ -217,6 +236,8 @@ export interface QueueOverride {
   allowedDestinations?: PublicKey[] | null;
   timelockDuration?: BN | bigint | number | null;
   sessionExpirySeconds?: BN | bigint | number | null;
+  /** TA-05 (Phase 3): operating_hours override. */
+  operatingHours?: number | null;
 }
 
 function pick<T>(override: T | null | undefined, fallback: T): T {
@@ -255,6 +276,9 @@ export function queuePolicyMergedDigest(
     // PEN-CROSS-2: created_at_slot is immutable post-init — always sourced
     // from live policy. Queue does NOT mutate it; no override is exposed.
     createdAtSlot: live.createdAtSlot ?? 0,
+    // TA-05 (Phase 3): operating_hours is mutable via queue (override) or
+    // pass-through from live.
+    operatingHours: pick(override.operatingHours, live.operatingHours ?? 0),
   });
 }
 
@@ -296,6 +320,8 @@ export async function siblingHandlerDigest(
         ? override.hasPostAssertions
         : (policy.hasPostAssertions as number),
     createdAtSlot: policy.createdAtSlot ?? 0,
+    // TA-05 (Phase 3): sibling handlers never mutate operating_hours.
+    operatingHours: policy.operatingHours ?? 0,
   });
 }
 
@@ -329,6 +355,7 @@ export async function fetchAndComputeQueueDigest(
     hasConstraints: policy.hasConstraints,
     hasPostAssertions: policy.hasPostAssertions,
     createdAtSlot: policy.createdAtSlot ?? 0,
+    operatingHours: policy.operatingHours ?? 0,
   };
   return queuePolicyMergedDigest(live, override, !!vault.observeOnly);
 }

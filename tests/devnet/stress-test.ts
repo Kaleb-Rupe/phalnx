@@ -111,6 +111,7 @@ async function createVault(opts: {
         protocols: [],
         allowedDestinations: opts.destinations ?? [],
         timelockDuration: new BN(1800),
+        operatingHours: 0x00FFFFFF,
       }),
     )
     .accounts({

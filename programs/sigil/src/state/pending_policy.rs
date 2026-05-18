@@ -42,6 +42,12 @@ pub struct PendingPolicyUpdate {
     /// Bump seed for PDA
     pub bump: u8,
 
+    /// TA-05 (Phase 3): optional update to `PolicyConfig.operating_hours`.
+    /// 24-bit UTC bitmask; upper 8 bits MUST be zero. Bound by TA-19 at
+    /// canonical position 15.
+    /// APPENDED at end per F-14 APPEND-ONLY rule for Borsh stability.
+    pub operating_hours: Option<u32>,
+
     /// TA-19 (Phase 2): SHA-256 digest of the canonical Borsh encoding of the
     /// policy fields THAT WOULD RESULT FROM APPLYING this pending update over
     /// the live policy. Owner computes off-chain over the merged result and
@@ -78,7 +84,8 @@ impl PendingPolicyUpdate {
         + (1 + 4 + 8 * MAX_ALLOWED_PROTOCOLS) // protocol_caps
         + (1 + 1) // destination_mode (Option<u8>)
         + 1 // bump
-        + 32; // new_policy_preview_digest [TA-19, Phase 2]
+        + 32 // new_policy_preview_digest [TA-19, Phase 2]
+        + (1 + 4); // operating_hours [TA-05, Phase 3]
 
     /// Returns true if the timelock period has expired and the update
     /// can be applied.

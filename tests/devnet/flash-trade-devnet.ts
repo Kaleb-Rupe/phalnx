@@ -236,6 +236,7 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
             protocols: [FLASH_TRADE_DEVNET, FLASH_COMPOSABILITY_DEVNET],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -617,6 +618,7 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
             protocols: [FLASH_TRADE_DEVNET, FLASH_COMPOSABILITY_DEVNET],
             allowedDestinations: [],
             timelockDuration: new BN(0),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -842,6 +844,7 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
             protocols: [FLASH_TRADE_DEVNET],
             allowedDestinations: [],
             timelockDuration: new BN(0),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -990,6 +993,7 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
             protocols: [FLASH_TRADE_DEVNET],
             allowedDestinations: [],
             timelockDuration: new BN(0),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({

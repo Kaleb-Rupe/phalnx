@@ -153,6 +153,7 @@ describe("surfpool-integration", function () {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: dailyCap,
             maxTransactionSizeUsd: maxTxSize,
@@ -161,6 +162,7 @@ describe("surfpool-integration", function () {
             protocols: [],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -340,6 +342,7 @@ describe("surfpool-integration", function () {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -348,6 +351,7 @@ describe("surfpool-integration", function () {
             protocols: [],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -614,6 +618,7 @@ describe("surfpool-integration", function () {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -622,6 +627,7 @@ describe("surfpool-integration", function () {
             protocols: [],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -916,6 +922,7 @@ describe("surfpool-integration", function () {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -924,6 +931,7 @@ describe("surfpool-integration", function () {
             protocols: [],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -1103,6 +1111,7 @@ describe("surfpool-integration", function () {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -1111,6 +1120,7 @@ describe("surfpool-integration", function () {
             protocols: [],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -1259,6 +1269,7 @@ describe("surfpool-integration", function () {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -1267,6 +1278,7 @@ describe("surfpool-integration", function () {
             protocols: [],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -1346,6 +1358,7 @@ describe("surfpool-integration", function () {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -1354,6 +1367,7 @@ describe("surfpool-integration", function () {
             protocols: [],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -1408,6 +1422,7 @@ describe("surfpool-integration", function () {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -1416,6 +1431,7 @@ describe("surfpool-integration", function () {
             protocols: [],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -1485,6 +1501,7 @@ describe("surfpool-integration", function () {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -1493,6 +1510,7 @@ describe("surfpool-integration", function () {
             protocols: [],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -1552,6 +1570,7 @@ describe("surfpool-integration", function () {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -1560,6 +1579,7 @@ describe("surfpool-integration", function () {
             protocols: [],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -1589,6 +1609,7 @@ describe("surfpool-integration", function () {
           null,
           null,
           null,
+          null, // operating_hours (TA-05 Phase 3)
           (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { dailySpendingCapUsd: new BN(200_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -1644,6 +1665,7 @@ describe("surfpool-integration", function () {
           null,
           null,
           null,
+          null, // operating_hours (TA-05 Phase 3)
           (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { dailySpendingCapUsd: new BN(300_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({

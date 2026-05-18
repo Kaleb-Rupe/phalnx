@@ -165,6 +165,7 @@ describe("TOCTOU Security Fix", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -173,6 +174,7 @@ describe("TOCTOU Security Fix", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(timelockDuration),
+            operatingHours: 0x00FFFFFF,
           }),
         )
       .accounts({
@@ -360,6 +362,7 @@ describe("TOCTOU Security Fix", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -368,6 +371,7 @@ describe("TOCTOU Security Fix", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(0),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -405,6 +409,7 @@ describe("TOCTOU Security Fix", () => {
           null,
           null,
           null, // destinationMode,
+          null, // operating_hours (TA-05 Phase 3)
           new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
         )
         .accounts({
@@ -440,6 +445,7 @@ describe("TOCTOU Security Fix", () => {
           null,
           null,
           null, // destinationMode,
+          null, // operating_hours (TA-05 Phase 3)
           new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
         )
         .accounts({

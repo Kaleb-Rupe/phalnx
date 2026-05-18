@@ -52,6 +52,7 @@ pub fn handler(
     has_protocol_caps: Option<bool>,
     protocol_caps: Option<Vec<u64>>,
     destination_mode: Option<u8>,
+    operating_hours: Option<u32>,
     new_policy_preview_digest: [u8; 32],
 ) -> Result<()> {
     crate::reject_cpi!();
@@ -122,6 +123,15 @@ pub fn handler(
             );
         }
     }
+    // TA-05 (Phase 3): if owner is updating operating_hours, ensure upper
+    // 8 bits are zero. Bound by TA-19 — the recomputed digest below also
+    // catches divergent encodings, but this is the explicit local check.
+    if let Some(ref hours) = operating_hours {
+        require!(
+            *hours & !OPERATING_HOURS_VALID_MASK == 0,
+            SigilError::ErrOutsideOperatingHours
+        );
+    }
 
     // Validate per-protocol caps consistency against resulting policy state
     {
@@ -170,6 +180,8 @@ pub fn handler(
         .unwrap_or_else(|| policy.allowed_destinations.clone());
     let eff_timelock = timelock_duration.unwrap_or(policy.timelock_duration);
     let eff_session_expiry = session_expiry_seconds.unwrap_or(policy.session_expiry_seconds);
+    // TA-05 (Phase 3): merged-effective operating_hours.
+    let eff_operating_hours = operating_hours.unwrap_or(policy.operating_hours);
 
     // observe_only is NOT mutable via queue_policy_update (uses dedicated
     // set_observe_only ix for direct owner-only mutation — F-12 audit fix,
@@ -197,6 +209,8 @@ pub fn handler(
         // PEN-CROSS-2: created_at_slot is bound to vault lifetime — never
         // mutates after init, so pass through from live policy.
         created_at_slot: policy.created_at_slot,
+        // TA-05 (Phase 3): merged-effective operating_hours bound by TA-19.
+        operating_hours: eff_operating_hours,
     });
     require!(
         recomputed_digest == new_policy_preview_digest,
@@ -228,6 +242,8 @@ pub fn handler(
     pending.protocol_caps = protocol_caps;
     pending.destination_mode = destination_mode;
     pending.bump = ctx.bumps.pending_policy;
+    // TA-05 (Phase 3): persist optional operating_hours update.
+    pending.operating_hours = operating_hours;
     // Phase 2 TA-19: store the validated owner-signed digest. `apply_pending_policy`
     // re-asserts it after the timelock against the merged-effective policy.
     pending.new_policy_preview_digest = new_policy_preview_digest;

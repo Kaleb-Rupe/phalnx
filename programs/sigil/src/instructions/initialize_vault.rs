@@ -69,6 +69,7 @@ pub fn handler(
     allowed_destinations: Vec<Pubkey>,
     protocol_caps: Vec<u64>,
     observe_only: bool,
+    operating_hours: u32,
     preview_digest: [u8; 32],
 ) -> Result<()> {
     crate::reject_cpi!();
@@ -77,6 +78,16 @@ pub fn handler(
     require!(
         protocol_mode == PROTOCOL_MODE_ALLOWLIST,
         SigilError::InvalidProtocolMode
+    );
+
+    // TA-05 (Phase 3 pre-execution guard #2): operating_hours is a 24-bit
+    // UTC bitmask. Upper 8 bits MUST be zero — anything else indicates a
+    // misconfigured caller (or hostile data) and is rejected at write time.
+    // The bitmask is bound by TA-19, so the signed-digest path also catches
+    // a divergent value; this is the local validation step.
+    require!(
+        operating_hours & !OPERATING_HOURS_VALID_MASK == 0,
+        SigilError::ErrOutsideOperatingHours
     );
     require!(
         protocols.len() <= MAX_ALLOWED_PROTOCOLS,
@@ -158,6 +169,8 @@ pub fn handler(
         has_post_assertions: 0,
         // PEN-CROSS-2: defends against close+reinit replay.
         created_at_slot,
+        // TA-05 (Phase 3 pre-exec): operating_hours bound at digest position 15.
+        operating_hours,
     });
     require!(
         recomputed_digest == preview_digest,
@@ -207,6 +220,12 @@ pub fn handler(
     policy.policy_preview_digest = preview_digest;
     // PEN-CROSS-2 (Phase 2 close-up): persist the slot bound by TA-19.
     policy.created_at_slot = created_at_slot;
+    // TA-05 (Phase 3): persist operating_hours after the digest assertion.
+    // Caller MUST pass an explicit value; the SDK helper defaults to
+    // 0x00FFFFFF when the owner did not configure narrow hours. Encoding
+    // this on the digest ensures owner-blind-sign cannot slip a permissive
+    // mask when the owner thought they signed a narrow one.
+    policy.operating_hours = operating_hours;
 
     // Initialize zero-copy tracker (buckets + protocol_counters zero-initialized by allocator)
     let mut tracker = ctx.accounts.tracker.load_init()?;

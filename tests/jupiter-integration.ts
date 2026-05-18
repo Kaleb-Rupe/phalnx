@@ -282,6 +282,7 @@ describe("jupiter-integration", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(200_000_000),
@@ -290,6 +291,7 @@ describe("jupiter-integration", () => {
             protocols: [jupiterProtocol],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
       .accountsPartial({
@@ -555,6 +557,7 @@ describe("jupiter-integration", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(200_000_000),
@@ -563,6 +566,7 @@ describe("jupiter-integration", () => {
             protocols: [jupiterProtocol],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accountsPartial({
@@ -690,6 +694,7 @@ describe("jupiter-integration", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(100_000_000),
             maxTransactionSizeUsd: new BN(60_000_000),
@@ -698,6 +703,7 @@ describe("jupiter-integration", () => {
             protocols: [jupiterProtocol],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accountsPartial({

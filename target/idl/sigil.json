@@ -2734,6 +2734,10 @@
           "type": "bool"
         },
         {
+          "name": "operating_hours",
+          "type": "u32"
+        },
+        {
           "name": "preview_digest",
           "type": {
             "array": [
@@ -3442,6 +3446,12 @@
           "name": "destination_mode",
           "type": {
             "option": "u8"
+          }
+        },
+        {
+          "name": "operating_hours",
+          "type": {
+            "option": "u32"
           }
         },
         {
@@ -5293,6 +5303,46 @@
       "code": 6082,
       "name": "ActiveVaultRequiresAllowlist",
       "msg": "Active (non-observe_only) vault must have at least one protocol or destination on the allowlist"
+    },
+    {
+      "code": 6083,
+      "name": "ErrMintNotPinned",
+      "msg": "Deposit mint is not a build-time-pinned stablecoin (USDC or USDT)"
+    },
+    {
+      "code": 6084,
+      "name": "ErrOutsideOperatingHours",
+      "msg": "Current UTC hour is outside the policy's operating_hours bitmask"
+    },
+    {
+      "code": 6085,
+      "name": "ErrCooldownActive",
+      "msg": "Agent cooldown period has not elapsed since the last action"
+    },
+    {
+      "code": 6086,
+      "name": "ErrGraylistFriction",
+      "msg": "Destination is graylisted (24h friction window — awaiting promote_graylist_destination or unlock)"
+    },
+    {
+      "code": 6087,
+      "name": "ErrGraylistFull",
+      "msg": "Destination graylist is full (max 10 entries) — wait for an existing entry to unlock or promote"
+    },
+    {
+      "code": 6088,
+      "name": "ErrToken2022ExtensionForbidden",
+      "msg": "Token-2022 mint has a forbidden extension (only MemoTransfer + MetadataPointer + NonTransferable allowed)"
+    },
+    {
+      "code": 6089,
+      "name": "ErrCosignRequired",
+      "msg": "Elevated policy mutation requires an owner-signed cosigning session"
+    },
+    {
+      "code": 6090,
+      "name": "ErrAutoRevoked",
+      "msg": "Agent capability auto-revoked after consecutive policy-violation failures; owner must re-enable"
     }
   ],
   "types": [
@@ -7009,6 +7059,18 @@
             "type": "u8"
           },
           {
+            "name": "operating_hours",
+            "docs": [
+              "TA-05 (Phase 3): optional update to `PolicyConfig.operating_hours`.",
+              "24-bit UTC bitmask; upper 8 bits MUST be zero. Bound by TA-19 at",
+              "canonical position 15.",
+              "APPENDED at end per F-14 APPEND-ONLY rule for Borsh stability."
+            ],
+            "type": {
+              "option": "u32"
+            }
+          },
+          {
             "name": "new_policy_preview_digest",
             "docs": [
               "TA-19 (Phase 2): SHA-256 digest of the canonical Borsh encoding of the",
@@ -7300,6 +7362,24 @@
               "APPENDED at end of struct per F-14 APPEND-ONLY rule."
             ],
             "type": "u64"
+          },
+          {
+            "name": "operating_hours",
+            "docs": [
+              "TA-05 (Phase 3 pre-execution guard #2): 24-bit UTC operating-hours",
+              "bitmask. Bit `n` (0 ≤ n ≤ 23) set → spending allowed when",
+              "`clock.unix_timestamp / 3600 % 24 == n`. Upper 8 bits (24..=31)",
+              "MUST be zero; rejected at write-time.",
+              "",
+              "Default for owners who don't narrow: 0xFFFFFF (all 24 hours enabled",
+              "— equivalent to \"no operating-hours constraint\"). New vaults set",
+              "this explicitly via the digest the owner signs; back-compat",
+              "consideration removed per L-3 (Phase 2 TA-19 bound the field anyway).",
+              "",
+              "Bound by TA-19 at position 15 of the canonical digest encoding.",
+              "APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability."
+            ],
+            "type": "u32"
           }
         ]
       }

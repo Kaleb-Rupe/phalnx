@@ -101,6 +101,9 @@ pub fn handler(
         has_post_assertions: policy.has_post_assertions,
         // PEN-CROSS-2: created_at_slot is immutable post-init.
         created_at_slot: policy.created_at_slot,
+        // TA-05 (Phase 3): operating_hours is policy-owned and bound by TA-19.
+        // Sibling handler reads from live policy — this ix never mutates it.
+        operating_hours: policy.operating_hours,
     });
     // PEN-CROSS-3: owner must have signed the post-mutation digest.
     require!(

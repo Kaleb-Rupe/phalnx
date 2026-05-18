@@ -346,6 +346,7 @@ export async function createFullVault(
           allowedDestinations,
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: dailyCap,
             maxTransactionSizeUsd: maxTx,
@@ -354,6 +355,7 @@ export async function createFullVault(
             protocols: allowedProtocols,
             allowedDestinations: allowedDestinations,
             timelockDuration: timelockDuration,
+            operatingHours: 0x00FFFFFF,
           }),
         )
     .accounts({

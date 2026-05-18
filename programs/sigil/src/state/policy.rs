@@ -151,6 +151,20 @@ pub struct PolicyConfig {
     ///
     /// APPENDED at end of struct per F-14 APPEND-ONLY rule.
     pub created_at_slot: u64,
+
+    /// TA-05 (Phase 3 pre-execution guard #2): 24-bit UTC operating-hours
+    /// bitmask. Bit `n` (0 ≤ n ≤ 23) set → spending allowed when
+    /// `clock.unix_timestamp / 3600 % 24 == n`. Upper 8 bits (24..=31)
+    /// MUST be zero; rejected at write-time.
+    ///
+    /// Default for owners who don't narrow: 0xFFFFFF (all 24 hours enabled
+    /// — equivalent to "no operating-hours constraint"). New vaults set
+    /// this explicitly via the digest the owner signs; back-compat
+    /// consideration removed per L-3 (Phase 2 TA-19 bound the field anyway).
+    ///
+    /// Bound by TA-19 at position 15 of the canonical digest encoding.
+    /// APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
+    pub operating_hours: u32,
 }
 
 impl PolicyConfig {
@@ -162,8 +176,8 @@ impl PolicyConfig {
     /// has_pending_policy (1) + has_protocol_caps (1) +
     /// protocol_caps vec (4 + 8 * MAX) + session_expiry_seconds (8) + bump (1) +
     /// policy_version (8) + has_post_assertions (1) + destination_mode (1) +
-    /// policy_preview_digest (32) + created_at_slot (8)
-    /// [TA-19, Phase 2; PEN-CROSS-2 Phase 2 close-up]
+    /// policy_preview_digest (32) + created_at_slot (8) + operating_hours (4)
+    /// [TA-19, Phase 2; PEN-CROSS-2 Phase 2 close-up; TA-05 Phase 3 pre-exec]
     pub const SIZE: usize = 8
         + 32
         + 8
@@ -184,7 +198,8 @@ impl PolicyConfig {
         + 1 // has_post_assertions
         + 1 // destination_mode
         + 32 // policy_preview_digest [TA-19]
-        + 8; // created_at_slot [PEN-CROSS-2]
+        + 8 // created_at_slot [PEN-CROSS-2]
+        + 4; // operating_hours [TA-05 Phase 3]
 
     /// Check if a protocol is allowed.
     ///
@@ -236,4 +251,41 @@ impl PolicyConfig {
             self.session_expiry_seconds
         }
     }
+
+    /// TA-05 (Phase 3): is the given Unix timestamp's UTC hour permitted
+    /// by `operating_hours`?
+    ///
+    /// `operating_hours` is a 24-bit bitmask. Bit `n` (0..=23) set → spending
+    /// allowed when the UTC hour is `n`. UTC hour is derived as
+    /// `(unix_timestamp / 3600).rem_euclid(24)` — `rem_euclid` ensures
+    /// pre-epoch timestamps (negative i64) still map into 0..=23.
+    ///
+    /// Bits 24..=31 MUST be zero (validated at write time). Defaults to
+    /// 0xFFFFFF when an owner doesn't narrow — equivalent to "no
+    /// operating-hours constraint".
+    ///
+    /// `unix_timestamp <= 0` is treated as "outside" — a positive Clock
+    /// timestamp is the only safe input. (Solana mainnet always provides one;
+    /// LiteSVM under devnet-testing may not — those vaults should configure
+    /// `operating_hours = 0xFFFFFF` so the bitmask check is a no-op.)
+    pub fn is_within_operating_hours(&self, unix_timestamp: i64) -> bool {
+        if unix_timestamp <= 0 {
+            return false;
+        }
+        let hour: u32 = ((unix_timestamp / 3600).rem_euclid(24)) as u32;
+        // Defense-in-depth: even if upper bits leaked through validation,
+        // mask to the lower 24 bits before testing.
+        let mask = self.operating_hours & 0x00FFFFFF;
+        (mask & (1u32 << hour)) != 0
+    }
 }
+
+/// TA-05 (Phase 3): default operating_hours value when the owner does not
+/// narrow — all 24 UTC hours enabled. The full 24-bit allowed range; upper
+/// 8 bits remain zero.
+pub const OPERATING_HOURS_DEFAULT_ALL: u32 = 0x00FFFFFF;
+
+/// TA-05 (Phase 3): mask covering bits 0..=23 only. Any `operating_hours`
+/// value whose bits 24..=31 are non-zero is invalid and MUST be rejected at
+/// policy-write time.
+pub const OPERATING_HOURS_VALID_MASK: u32 = 0x00FFFFFF;

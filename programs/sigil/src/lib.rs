@@ -37,6 +37,7 @@ pub mod sigil {
         allowed_destinations: Vec<Pubkey>,
         protocol_caps: Vec<u64>,
         observe_only: bool,
+        operating_hours: u32,
         preview_digest: [u8; 32],
     ) -> Result<()> {
         instructions::initialize_vault::handler(
@@ -52,6 +53,7 @@ pub mod sigil {
             allowed_destinations,
             protocol_caps,
             observe_only,
+            operating_hours,
             preview_digest,
         )
     }
@@ -142,6 +144,7 @@ pub mod sigil {
         has_protocol_caps: Option<bool>,
         protocol_caps: Option<Vec<u64>>,
         destination_mode: Option<u8>,
+        operating_hours: Option<u32>,
         new_policy_preview_digest: [u8; 32],
     ) -> Result<()> {
         instructions::queue_policy_update::handler(
@@ -158,6 +161,7 @@ pub mod sigil {
             has_protocol_caps,
             protocol_caps,
             destination_mode,
+            operating_hours,
             new_policy_preview_digest,
         )
     }

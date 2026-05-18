@@ -20,8 +20,8 @@ import * as fc from "fast-check";
 import { createHash } from "node:crypto";
 import { computePolicyPreviewDigest } from "../../src/policy/compute-policy-preview-digest.js";
 
-// Post-PEN-CROSS-2 (Phase 2 close-up): created_at_slot added at position 14
-// of the canonical encoding shifts both fixture digests again.
+// Post-TA-05 (Phase 3 pre-exec): operating_hours added at position 15 of the
+// canonical encoding shifts both fixture digests again.
 // Prior values:
 //   Pre-PEN-CROSS-6:
 //     HEX_MINIMAL   = 29f9a0caa6851902abe7de24ac30380ef50c220d25d541f8fe1762793152b623
@@ -29,13 +29,17 @@ import { computePolicyPreviewDigest } from "../../src/policy/compute-policy-prev
 //   Post-PEN-CROSS-6 (pre-PEN-CROSS-2):
 //     HEX_MINIMAL   = 0ad67bf0d81b972c60abe82ebea425d4b30d0ef910bcc7b76584fae36a0f1252
 //     HEX_REALISTIC = ed9ac12d21e0f03933bbf789eae99944c311f2ff6f1baff992058307174de316
+//   Post-PEN-CROSS-2 (pre-TA-05):
+//     HEX_MINIMAL   = 63974a2661afc539fc8f1e55245adcef9e3b91f82a191c757ed3c795e8e59148
+//     HEX_REALISTIC = ac54284579f4b8afd714b290ec22df745bddbede9a5b366f17c8db776fab53c7
 //
-// HEX_REALISTIC fixture exercises a non-zero created_at_slot (12345) to lock
-// the byte layout of an active vault; HEX_MINIMAL stays at 0.
+// TA-05 fixtures:
+//   - HEX_MINIMAL: operatingHours = 0 (inert configuration — deterministic bytes)
+//   - HEX_REALISTIC: operatingHours = 0x00FFFFFF (all-hours default — a representative production value)
 const HEX_MINIMAL =
-  "63974a2661afc539fc8f1e55245adcef9e3b91f82a191c757ed3c795e8e59148";
+  "f48fb07695e4b5da504654ad5281f0d39e9fcff6fa9cde64a463f1d8a8471322";
 const HEX_REALISTIC =
-  "ac54284579f4b8afd714b290ec22df745bddbede9a5b366f17c8db776fab53c7";
+  "af3990ea433e3de25baa05627f9a38ab497dffcba1e202aac99343b1de9cfc8c";
 
 // Base58 encodings of fixed test pubkeys [1u8;32], [2u8;32], [10u8;32].
 // Computed once (see Rust unit-test fixtures `pk(1) / pk(2) / pk(10)`).
@@ -66,6 +70,8 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       hasConstraints: false,
       hasPostAssertions: 0,
       createdAtSlot: 0n,
+      // TA-05: minimal fixture uses inert operating_hours=0
+      operatingHours: 0,
     });
     expect(toHex(digest)).to.equal(HEX_MINIMAL);
   });
@@ -86,6 +92,8 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       hasConstraints: false,
       hasPostAssertions: 0,
       createdAtSlot: 12345n,
+      // TA-05: realistic fixture pins all-hours default
+      operatingHours: 0x00ffffff,
     });
     expect(toHex(digest)).to.equal(HEX_REALISTIC);
   });
@@ -106,6 +114,7 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       hasConstraints: false,
       hasPostAssertions: 0,
       createdAtSlot: 0n,
+      operatingHours: 0,
     } as const;
     const d1 = computePolicyPreviewDigest(fields);
     const d2 = computePolicyPreviewDigest(fields);
@@ -128,6 +137,7 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       hasConstraints: false,
       hasPostAssertions: 0,
       createdAtSlot: 0n,
+      operatingHours: 0,
     } as const;
     const d1 = computePolicyPreviewDigest(base);
     const d2 = computePolicyPreviewDigest({ ...base, observeOnly: true });
@@ -150,6 +160,7 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       hasConstraints: false,
       hasPostAssertions: 0,
       createdAtSlot: 0n,
+      operatingHours: 0,
     } as const;
     const b = { ...a, protocols: [PK_2, PK_1] } as const;
     const d1 = computePolicyPreviewDigest(a);
@@ -175,6 +186,7 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       hasConstraints: false,
       hasPostAssertions: 0,
       createdAtSlot: 0n,
+      operatingHours: 0,
     } as const;
     const d1 = computePolicyPreviewDigest(base);
     const d2 = computePolicyPreviewDigest({ ...base, developerFeeRate: 25 });
@@ -199,6 +211,7 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       hasConstraints: false,
       hasPostAssertions: 0,
       createdAtSlot: 12345n,
+      operatingHours: 0,
     } as const;
     const d1 = computePolicyPreviewDigest(base);
     const d2 = computePolicyPreviewDigest({ ...base, createdAtSlot: 67890n });
@@ -222,8 +235,38 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
         hasConstraints: false,
         hasPostAssertions: 0,
         createdAtSlot: 0n,
+        operatingHours: 0,
       }),
     ).to.throw(/base58/);
+  });
+
+  // TA-05 cross-impl pin: operating_hours is bound by the digest.
+  // Flipping it from 0 to a non-zero mask MUST change the digest.
+  it("operating_hours flip changes the digest (TA-05)", () => {
+    const base = {
+      dailySpendingCapUsd: 500_000_000n,
+      maxTransactionSizeUsd: 100_000_000n,
+      maxSlippageBps: 100,
+      developerFeeRate: 0,
+      protocolMode: 1,
+      protocols: [PK_1],
+      destinationMode: 0,
+      allowedDestinations: [PK_10],
+      timelockDuration: 1800n,
+      sessionExpirySeconds: 30n,
+      observeOnly: false,
+      hasConstraints: false,
+      hasPostAssertions: 0,
+      createdAtSlot: 12345n,
+      operatingHours: 0,
+    } as const;
+    const d1 = computePolicyPreviewDigest(base);
+    // 13:00-17:00 UTC = bits 13..17 = 0x1E000
+    const d2 = computePolicyPreviewDigest({
+      ...base,
+      operatingHours: 0x0001e000,
+    });
+    expect(toHex(d1)).to.not.equal(toHex(d2));
   });
 });
 
@@ -291,6 +334,7 @@ function referenceDigest(fields: {
   hasConstraints: boolean;
   hasPostAssertions: number;
   createdAtSlot: bigint;
+  operatingHours: number;
 }): string {
   const parts: number[] = [];
   const pushU64 = (v: bigint) => {
@@ -330,6 +374,8 @@ function referenceDigest(fields: {
   pushU8(fields.hasConstraints ? 1 : 0);
   pushU8(fields.hasPostAssertions);
   pushU64(fields.createdAtSlot);
+  // TA-05: operating_hours at position 15
+  pushU32(fields.operatingHours);
 
   const buf = Buffer.from(parts);
   return createHash("sha256").update(buf).digest("hex");
@@ -357,6 +403,7 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
         fc.boolean(), // has_constraints
         fc.integer({ min: 0, max: 255 }), // has_post_assertions
         fc.bigUint({ max: (1n << 64n) - 1n }), // created_at_slot
+        fc.integer({ min: 0, max: 0xffffffff }), // operating_hours (TA-05; encoder must handle any u32)
         (
           dailyCap,
           maxTx,
@@ -372,6 +419,7 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
           hasConstraints,
           hasPostAssertions,
           createdAtSlot,
+          operatingHours,
         ) => {
           const sdkDigest = computePolicyPreviewDigest({
             dailySpendingCapUsd: dailyCap,
@@ -390,6 +438,7 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
             hasConstraints,
             hasPostAssertions,
             createdAtSlot,
+            operatingHours,
           });
           const refDigest = referenceDigest({
             dailySpendingCapUsd: dailyCap,
@@ -406,6 +455,7 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
             hasConstraints,
             hasPostAssertions,
             createdAtSlot,
+            operatingHours,
           });
           const sdkHex = Array.from(sdkDigest)
             .map((x) => x.toString(16).padStart(2, "0"))

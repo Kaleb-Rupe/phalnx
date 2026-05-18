@@ -33,6 +33,19 @@
  *   12. has_constraints: bool as 1 byte (0 or 1)
  *   13. has_post_assertions: u8 (1 byte)
  *   14. created_at_slot: u64 LE (8 bytes) — PEN-CROSS-2 (Phase 2 close-up)
+ *   15. operating_hours: u32 LE (4 bytes) — TA-05 (Phase 3 pre-exec)
+ *
+ * Phase 3 append-only additions (TA-05/07/17): operating_hours,
+ * auto_promote_grays, auto_revoke_threshold are appended at positions 15-17
+ * to preserve the 14-field prefix (F-14 APPEND-ONLY rule).
+ *
+ * The `destination_graylist: Vec<(Pubkey, i64)>` is intentionally NOT in
+ * the digest. Graylist entries are derived/ephemeral — they auto-populate
+ * when the owner adds a destination via queue_policy_update, and they
+ * only delay an already-signed allowlist entry. Promoting via
+ * promote_graylist_destination only accelerates the existing unlock — it
+ * cannot widen the allowlist. The owner-signed digest already binds the
+ * destination allowlist (position 8).
  *
  * Total bounded by MAX_ALLOWED_PROTOCOLS=10 + MAX_ALLOWED_DESTINATIONS=10 at
  * 32 bytes each + fixed scalars ≈ 700 bytes worst case.
@@ -81,6 +94,16 @@ export interface PolicyPreviewFields {
    * close+reinit replay window.
    */
   createdAtSlot: bigint;
+  /**
+   * TA-05 (Phase 3): 24-bit UTC operating-hours bitmask. Bit `n` (0..=23)
+   * set → the vault permits spending at UTC hour `n`. Default 0 when
+   * omitted by legacy callers (preserves existing test fixtures). Production
+   * SDK consumers should pass 0xFFFFFF (all 24h enabled) explicitly.
+   * Upper 8 bits MUST be zero — on-chain handler rejects with
+   * `ErrOutsideOperatingHours` (6084) if violated. Bound at position 15
+   * of the canonical encoding.
+   */
+  operatingHours?: number;
 }
 
 // ── Base58 decode (no external dep) ──────────────────────────────────────────
@@ -189,7 +212,8 @@ export function computePolicyPreviewDigest(
     1 + // observe_only
     1 + // has_constraints
     1 + // has_post_assertions
-    8; // created_at_slot (PEN-CROSS-2)
+    8 + // created_at_slot (PEN-CROSS-2)
+    4; // operating_hours (TA-05 Phase 3)
   const variableSize = protoBytes.length * 32 + destBytes.length * 32;
   const buf = new Uint8Array(fixedSize + variableSize);
   const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
@@ -219,6 +243,10 @@ export function computePolicyPreviewDigest(
   buf[off++] = fields.hasPostAssertions;
   // PEN-CROSS-2: created_at_slot at position 14 of canonical encoding.
   off = writeU64Le(view, off, fields.createdAtSlot);
+  // TA-05 (Phase 3): operating_hours at position 15 of canonical encoding.
+  // Default 0 when omitted by legacy callers; production SDK consumers
+  // should pass 0xFFFFFF explicitly via `initializeVault`/`queuePolicyUpdate`.
+  off = writeU32Le(view, off, fields.operatingHours ?? 0);
 
   // Defensive: assert we wrote exactly what we sized
   if (off !== buf.length) {

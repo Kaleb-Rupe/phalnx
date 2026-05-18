@@ -251,6 +251,7 @@ describe("flash-trade-integration", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1_000_000_000),
             maxTransactionSizeUsd: new BN(500_000_000),
@@ -259,6 +260,7 @@ describe("flash-trade-integration", () => {
             protocols: [flashProtocol],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
       .accountsPartial({
@@ -438,6 +440,7 @@ describe("flash-trade-integration", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1_000_000_000),
             maxTransactionSizeUsd: new BN(500_000_000),
@@ -446,6 +449,7 @@ describe("flash-trade-integration", () => {
             protocols: [flashProtocol],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accountsPartial({
@@ -618,6 +622,7 @@ describe("flash-trade-integration", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(200_000_000),
             maxTransactionSizeUsd: new BN(200_000_000),
@@ -626,6 +631,7 @@ describe("flash-trade-integration", () => {
             protocols: [mockProtocol],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accountsPartial({

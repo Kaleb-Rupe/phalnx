@@ -185,6 +185,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: dailyCap,
             maxTransactionSizeUsd: maxTxSize,
@@ -193,6 +194,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -249,6 +251,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(100),
             maxTransactionSizeUsd: new BN(100),
@@ -257,6 +260,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
           .accounts({
@@ -313,6 +317,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(100),
             maxTransactionSizeUsd: new BN(100),
@@ -321,6 +326,7 @@ describe("sigil", () => {
             protocols: [],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
           .accounts({
@@ -481,6 +487,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -489,6 +496,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -547,6 +555,7 @@ describe("sigil", () => {
           null,
           null,
           null,
+          null, // operating_hours (TA-05 Phase 3)
           (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { dailySpendingCapUsd: new BN(200_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -596,6 +605,7 @@ describe("sigil", () => {
           null,
           null,
           null,
+          null, // operating_hours (TA-05 Phase 3)
           (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { dailySpendingCapUsd: new BN(999) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
           .accounts({
@@ -632,6 +642,7 @@ describe("sigil", () => {
           null,
           null,
           null,
+          null, // operating_hours (TA-05 Phase 3)
           (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { protocols: tooManyProtocols })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
           .accounts({
@@ -696,6 +707,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -704,6 +716,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -822,6 +835,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -830,6 +844,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -1578,6 +1593,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -1586,6 +1602,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -1661,6 +1678,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -1669,6 +1687,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -1748,6 +1767,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -1757,6 +1777,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -1810,6 +1831,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -1818,6 +1840,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
           .accounts({
@@ -1856,6 +1879,7 @@ describe("sigil", () => {
           null,
           null,
           null,
+          null, // operating_hours (TA-05 Phase 3)
           (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, { developerFeeRate: 0 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -1897,6 +1921,7 @@ describe("sigil", () => {
           null,
           null,
           null,
+          null, // operating_hours (TA-05 Phase 3)
           (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, { developerFeeRate: 30 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -1944,6 +1969,7 @@ describe("sigil", () => {
           null,
           null,
           null,
+          null, // operating_hours (TA-05 Phase 3)
           (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
           .accounts({
@@ -1979,6 +2005,7 @@ describe("sigil", () => {
           null,
           null,
           null,
+          null, // operating_hours (TA-05 Phase 3)
           (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, { developerFeeRate: 0 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -2121,6 +2148,7 @@ describe("sigil", () => {
           null,
           null,
           null,
+          null, // operating_hours (TA-05 Phase 3)
           (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, { developerFeeRate: 500 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -2325,6 +2353,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -2334,6 +2363,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -2416,6 +2446,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -2424,6 +2455,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -2670,6 +2702,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -2678,6 +2711,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -2841,6 +2875,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -2849,6 +2884,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -2940,6 +2976,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -2948,6 +2985,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -3048,6 +3086,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -3056,6 +3095,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -3179,6 +3219,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(999_000_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -3187,6 +3228,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -3348,6 +3390,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(999_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -3356,6 +3399,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -3631,6 +3675,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -3639,6 +3684,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -3675,6 +3721,7 @@ describe("sigil", () => {
           null,
           null,
           null,
+          null, // operating_hours (TA-05 Phase 3)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(200_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -3754,6 +3801,7 @@ describe("sigil", () => {
           null,
           null,
           null,
+          null, // operating_hours (TA-05 Phase 3)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(300_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -3801,6 +3849,7 @@ describe("sigil", () => {
           null,
           null,
           null,
+          null, // operating_hours (TA-05 Phase 3)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(400_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -3827,6 +3876,7 @@ describe("sigil", () => {
           null,
           null,
           null,
+          null, // operating_hours (TA-05 Phase 3)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(500_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
           .accounts({
@@ -3891,6 +3941,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -3899,6 +3950,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(0),
+            operatingHours: 0x00FFFFFF,
           }),
         )
           .accounts({
@@ -3932,6 +3984,7 @@ describe("sigil", () => {
           null,
           null,
           null,
+          null, // operating_hours (TA-05 Phase 3)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { timelockDuration: new BN(3600) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -3975,6 +4028,7 @@ describe("sigil", () => {
           null,
           null,
           null,
+          null, // operating_hours (TA-05 Phase 3)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { timelockDuration: new BN(1800) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -4016,6 +4070,7 @@ describe("sigil", () => {
           null,
           null,
           null,
+          null, // operating_hours (TA-05 Phase 3)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(999_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -4126,6 +4181,7 @@ describe("sigil", () => {
           [allowedDest.publicKey],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -4134,6 +4190,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [allowedDest.publicKey],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -4281,6 +4338,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -4289,6 +4347,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -4396,6 +4455,7 @@ describe("sigil", () => {
           null,
           null,
           1,
+          null, // operating_hours (TA-05 Phase 3)
           (await fetchAndComputeQueueDigest(program, anyPolicy, anyVault, { destinationMode: 1 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
           .accounts({
@@ -4434,6 +4494,7 @@ describe("sigil", () => {
           null,
           null,
           2,
+          null, // operating_hours (TA-05 Phase 3)
           (await fetchAndComputeQueueDigest(program, anyPolicy, anyVault, { destinationMode: 2 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
           .accounts({
@@ -4492,6 +4553,7 @@ describe("sigil", () => {
           tooMany,
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -4500,6 +4562,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: tooMany,
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
           .accounts({
@@ -4639,6 +4702,7 @@ describe("sigil", () => {
           [allowedDest.publicKey],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -4648,6 +4712,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [allowedDest.publicKey],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -4785,6 +4850,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1_000_000_000),
             maxTransactionSizeUsd: new BN(500_000_000),
@@ -4793,6 +4859,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -5233,6 +5300,7 @@ describe("sigil", () => {
           [epochDest.publicKey],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(2_000_000_000),
             maxTransactionSizeUsd: new BN(1_000_000_000),
@@ -5241,6 +5309,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [epochDest.publicKey],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -5543,6 +5612,7 @@ describe("sigil", () => {
           [],
           [new BN(100_000_000), new BN(200_000_000)],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1_000_000_000),
             maxTransactionSizeUsd: new BN(500_000_000),
@@ -5551,6 +5621,7 @@ describe("sigil", () => {
             protocols: [protocolA, protocolB],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -5662,6 +5733,7 @@ describe("sigil", () => {
           true,
           [new BN(0), new BN(200_000_000)],
           null,
+          null, // operating_hours (TA-05 Phase 3)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -5705,6 +5777,7 @@ describe("sigil", () => {
           true,
           [new BN(100_000_000), new BN(200_000_000)],
           null,
+          null, // operating_hours (TA-05 Phase 3)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -5760,6 +5833,7 @@ describe("sigil", () => {
           false,
           null,
           null,
+          null, // operating_hours (TA-05 Phase 3)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -5803,6 +5877,7 @@ describe("sigil", () => {
           true,
           [new BN(100_000_000), new BN(200_000_000)],
           null,
+          null, // operating_hours (TA-05 Phase 3)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -5850,6 +5925,7 @@ describe("sigil", () => {
           true,
           [new BN(100_000_000)],
           null,
+          null, // operating_hours (TA-05 Phase 3)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
           .accounts({
@@ -5909,6 +5985,7 @@ describe("sigil", () => {
           [],
           [new BN(100_000_000)],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1_000_000_000),
             maxTransactionSizeUsd: new BN(500_000_000),
@@ -5917,6 +5994,7 @@ describe("sigil", () => {
             protocols: [],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
           .accounts({
@@ -5990,6 +6068,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000_000_000),
             maxTransactionSizeUsd: new BN(1000_000_000),
@@ -5998,6 +6077,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({
@@ -6221,6 +6301,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
+          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000_000_000),
             maxTransactionSizeUsd: new BN(1000_000_000),
@@ -6229,6 +6310,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
+            operatingHours: 0x00FFFFFF,
           }),
         )
         .accounts({

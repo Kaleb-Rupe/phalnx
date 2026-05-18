@@ -132,6 +132,7 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
           allowedDestinations: [],
           timelockDuration: new BN(1800),
           observeOnly: true,
+          operatingHours: 0x00FFFFFF,
         }),
       )
       .accounts({
@@ -707,6 +708,7 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
           allowedDestinations: [],
           timelockDuration: new BN(1800),
           observeOnly,
+          operatingHours: 0x00FFFFFF,
         }),
       )
       .accounts({
@@ -1120,6 +1122,7 @@ describe("PEN-CROSS-2 — close+reinit replay protection", () => {
       timelockDuration: new BN(1800),
       observeOnly: false,
       createdAtSlot: oldSlot,
+      operatingHours: 0x00FFFFFF,
     });
 
     let threw = false;
@@ -1206,6 +1209,7 @@ describe("PEN-CROSS-2 — close+reinit replay protection", () => {
       timelockDuration: new BN(1800),
       observeOnly: false,
       createdAtSlot: currentSlot,
+      operatingHours: 0x00FFFFFF,
     });
     await program.methods
       .initializeVault(
@@ -1311,6 +1315,7 @@ describe("PEN-CROSS-2 — close+reinit replay protection", () => {
       timelockDuration: new BN(1800),
       observeOnly: false,
       createdAtSlot: currentSlot,
+      operatingHours: 0x00FFFFFF,
     });
 
     await program.methods

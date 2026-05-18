@@ -23,6 +23,23 @@
 //! 12. `has_constraints: bool`        (1 byte, 0 or 1)
 //! 13. `has_post_assertions: u8`      (1 byte)
 //! 14. `created_at_slot: u64`         (8 bytes, LE) — PEN-CROSS-2 (Phase 2 close-up)
+//! 15. `operating_hours: u32`         (4 bytes, LE) — TA-05 (Phase 3 pre-exec)
+//!
+//! Phase 3 append-only additions (TA-05/07/17): the three new policy-owned
+//! fields are appended at positions 15-17 to preserve the existing 14-field
+//! prefix (F-14 APPEND-ONLY rule).
+//!
+//! The graylist itself (`destination_graylist: Vec<(Pubkey, i64)>`) is
+//! intentionally NOT in the digest. Reasoning: graylist entries are
+//! derived/ephemeral — they auto-populate when the owner adds a new
+//! destination via `queue_policy_update`, and they only delay an already-
+//! signed allowlist entry. The owner-signed digest already binds the
+//! destination allowlist (position 8). Promoting via
+//! `promote_graylist_destination` only accelerates the existing unlock — it
+//! cannot widen the allowlist. So including the graylist would force the
+//! owner to re-sign the digest on every unlock-time advancement, which is
+//! ephemeral noise. The allowlist (position 8) carries the load-bearing
+//! authorisation; the graylist is unsigned friction.
 
 use anchor_lang::prelude::*;
 // Note: `anchor_lang::solana_program::hash` is NOT re-exported in Anchor 0.32.1.
@@ -56,6 +73,13 @@ pub struct PolicyPreviewFields<'a> {
     /// signed `initialize_vault` against a fresh (owner, vault_id) PDA
     /// produces a slot mismatch and `PolicyPreviewMismatch` rejects it.
     pub created_at_slot: u64,
+    /// TA-05 (Phase 3): 24-bit UTC operating-hours bitmask. Bit `n` set →
+    /// the vault permits spending at UTC hour `n`. Bound at position 15 of
+    /// the canonical digest so owner-blind-sign cannot land a permissive
+    /// 0xFFFFFF when the owner thought they signed a narrow market-hours
+    /// mask. Upper 8 bits (24..=31) MUST be zero — handler rejects with
+    /// `ErrOutsideOperatingHours` if violated.
+    pub operating_hours: u32,
 }
 
 /// SHA-256 over the canonical Borsh encoding of the preview fields.
@@ -66,8 +90,8 @@ pub struct PolicyPreviewFields<'a> {
 /// `hashv` on a contiguous `Vec<u8>` rather than incremental hashing because
 /// SHA-256 is single-pass and the bound is tight.
 pub fn compute_policy_preview_digest(fields: &PolicyPreviewFields<'_>) -> [u8; 32] {
-    // Pre-size: 8+8+2+1 + 4+32*10 + 1 + 4+32*10 + 8+8+1+1+1 = ~684 bytes worst case
-    let mut buf: Vec<u8> = Vec::with_capacity(700);
+    // Pre-size: 8+8+2+2+1 + 4+32*10 + 1 + 4+32*10 + 8+8+1+1+1+8+4 = ~692 bytes worst case
+    let mut buf: Vec<u8> = Vec::with_capacity(720);
 
     // 1. daily_spending_cap_usd: u64 LE
     buf.extend_from_slice(&fields.daily_spending_cap_usd.to_le_bytes());
@@ -103,6 +127,8 @@ pub fn compute_policy_preview_digest(fields: &PolicyPreviewFields<'_>) -> [u8; 3
     buf.push(fields.has_post_assertions);
     // 14. created_at_slot: u64 LE — PEN-CROSS-2 (Phase 2 close-up)
     buf.extend_from_slice(&fields.created_at_slot.to_le_bytes());
+    // 15. operating_hours: u32 LE — TA-05 (Phase 3 pre-exec)
+    buf.extend_from_slice(&fields.operating_hours.to_le_bytes());
 
     hashv(&[&buf]).to_bytes()
 }
@@ -134,6 +160,7 @@ mod tests {
             has_constraints: false,
             has_post_assertions: 0,
             created_at_slot: 0,
+            operating_hours: 0,
         };
         let d1 = compute_policy_preview_digest(&f);
         let d2 = compute_policy_preview_digest(&f);
@@ -159,6 +186,7 @@ mod tests {
             has_constraints: false,
             has_post_assertions: 0,
             created_at_slot: 0,
+            operating_hours: 0,
         };
         let mut flipped = base.daily_spending_cap_usd;
         let _ = &mut flipped; // suppress unused
@@ -193,6 +221,7 @@ mod tests {
             has_constraints: false,
             has_post_assertions: 0,
             created_at_slot: 0,
+            operating_hours: 0,
         };
         let f2 = PolicyPreviewFields {
             protocols: &b,
@@ -201,6 +230,44 @@ mod tests {
         let d1 = compute_policy_preview_digest(&f1);
         let d2 = compute_policy_preview_digest(&f2);
         assert_ne!(d1, d2, "ordered slice → reorder must change digest");
+    }
+
+    /// TA-05 (Phase 3 pre-exec): flipping operating_hours from 0x00FFFFFF
+    /// (all 24 hours) to a narrower mask MUST change the canonical digest.
+    /// Without this, an owner who signed a narrow market-hours mask could
+    /// be tricked into landing a permissive 0xFFFFFF on-chain.
+    #[test]
+    fn digest_changes_on_operating_hours_flip() {
+        let protocols = [pk(1)];
+        let dests = [pk(10)];
+        let base = PolicyPreviewFields {
+            daily_spending_cap_usd: 500_000_000,
+            max_transaction_size_usd: 100_000_000,
+            max_slippage_bps: 100,
+            developer_fee_rate: 0,
+            protocol_mode: 1,
+            protocols: &protocols,
+            destination_mode: 0,
+            allowed_destinations: &dests,
+            timelock_duration: 1800,
+            session_expiry_seconds: 30,
+            observe_only: false,
+            has_constraints: false,
+            has_post_assertions: 0,
+            created_at_slot: 12345,
+            operating_hours: 0x00FFFFFF,
+        };
+        let narrow = PolicyPreviewFields {
+            // 13:00-17:00 UTC = bits 13..17 = 0x1E000
+            operating_hours: 0x0001E000,
+            ..base
+        };
+        let d_base = compute_policy_preview_digest(&base);
+        let d_narrow = compute_policy_preview_digest(&narrow);
+        assert_ne!(
+            d_base, d_narrow,
+            "operating_hours flip MUST change digest"
+        );
     }
 
     #[test]
@@ -222,11 +289,14 @@ mod tests {
             has_constraints: false,
             has_post_assertions: 0,
             created_at_slot: 0,
+            // Minimal fixture uses operating_hours=0 (no hours enabled — an
+            // inert configuration, but the bytes are deterministic).
+            operating_hours: 0,
         };
         // Encoding: 8 zero + 8 zero + 2 zero + 2 zero (developer_fee_rate)
         //   + 0x01 + 4 zero + 0x00 + 4 zero + 8 zero + 8 zero + 0 + 0 + 0
-        //   + 8 zero (created_at_slot)
-        // = 57 bytes deterministic input.
+        //   + 8 zero (created_at_slot) + 4 zero (operating_hours TA-05)
+        // = 61 bytes deterministic input.
         let digest = compute_policy_preview_digest(&f);
         // Cross-impl pin — same fixture is asserted byte-for-byte in
         // sdk/kit/tests/policy/preview-digest.test.ts. If either side
@@ -236,12 +306,14 @@ mod tests {
         //     29f9a0caa6851902abe7de24ac30380ef50c220d25d541f8fe1762793152b623
         //   Post-PEN-CROSS-6 (pre-PEN-CROSS-2):
         //     0ad67bf0d81b972c60abe82ebea425d4b30d0ef910bcc7b76584fae36a0f1252
-        // Adding 8 bytes of zero (created_at_slot=0) at position 14 shifts the
-        // encoding once more and forces the new known-good digest below.
+        //   Post-PEN-CROSS-2 (pre-TA-05):
+        //     63974a2661afc539fc8f1e55245adcef9e3b91f82a191c757ed3c795e8e59148
+        // TA-05 appends 4 bytes (operating_hours=0) at position 15 and shifts
+        // the encoding to the digest below.
         let expected: [u8; 32] = [
-            0x63, 0x97, 0x4a, 0x26, 0x61, 0xaf, 0xc5, 0x39, 0xfc, 0x8f, 0x1e, 0x55, 0x24, 0x5a,
-            0xdc, 0xef, 0x9e, 0x3b, 0x91, 0xf8, 0x2a, 0x19, 0x1c, 0x75, 0x7e, 0xd3, 0xc7, 0x95,
-            0xe8, 0xe5, 0x91, 0x48,
+            0xf4, 0x8f, 0xb0, 0x76, 0x95, 0xe4, 0xb5, 0xda, 0x50, 0x46, 0x54, 0xad, 0x52, 0x81,
+            0xf0, 0xd3, 0x9e, 0x9f, 0xcf, 0xf6, 0xfa, 0x9c, 0xde, 0x64, 0xa4, 0x63, 0xf1, 0xd8,
+            0xa8, 0x47, 0x13, 0x22,
         ];
         assert_eq!(
             digest, expected,
@@ -273,6 +345,10 @@ mod tests {
             // PEN-CROSS-2: realistic fixture exercises a non-zero
             // created_at_slot to lock the byte layout of an active vault.
             created_at_slot: 12345,
+            // TA-05: realistic fixture pins operating_hours = 0x00FFFFFF
+            // (all 24h) so the test exercises a representative production
+            // value rather than the inert 0.
+            operating_hours: 0x00FFFFFF,
         };
         let digest = compute_policy_preview_digest(&f);
         // Prior digests:
@@ -280,12 +356,14 @@ mod tests {
         //     33d743a9643fcc6d39c30ac5f8c159d6e94d31ce354d6dd3843367773b3a8502
         //   Post-PEN-CROSS-6 (pre-PEN-CROSS-2, created_at_slot=0 not yet encoded):
         //     ed9ac12d21e0f03933bbf789eae99944c311f2ff6f1baff992058307174de316
-        // Adding 8 bytes of created_at_slot=12345 at position 14 forces the
-        // new known-good digest below.
+        //   Post-PEN-CROSS-2 (pre-TA-05):
+        //     ac54284579f4b8afd714b290ec22df745bddbede9a5b366f17c8db776fab53c7
+        // TA-05 appends 4 bytes (operating_hours=0x00FFFFFF) at position 15
+        // and forces the new known-good digest below.
         let expected: [u8; 32] = [
-            0xac, 0x54, 0x28, 0x45, 0x79, 0xf4, 0xb8, 0xaf, 0xd7, 0x14, 0xb2, 0x90, 0xec, 0x22,
-            0xdf, 0x74, 0x5b, 0xdd, 0xbe, 0xde, 0x9a, 0x5b, 0x36, 0x6f, 0x17, 0xc8, 0xdb, 0x77,
-            0x6f, 0xab, 0x53, 0xc7,
+            0xaf, 0x39, 0x90, 0xea, 0x43, 0x3e, 0x3d, 0xe2, 0x5b, 0xaa, 0x05, 0x62, 0x7f, 0x9a,
+            0x38, 0xab, 0x49, 0x7d, 0xff, 0xcb, 0xa1, 0xe2, 0x02, 0xaa, 0xc9, 0x93, 0x43, 0xb1,
+            0xde, 0x9c, 0xfc, 0x8c,
         ];
         assert_eq!(
             digest, expected,

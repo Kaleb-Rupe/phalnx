@@ -77,6 +77,9 @@ pub fn handler(ctx: Context<SetObserveOnly>, new_value: bool) -> Result<()> {
         has_post_assertions: policy.has_post_assertions,
         // PEN-CROSS-2: created_at_slot is immutable post-init.
         created_at_slot: policy.created_at_slot,
+        // TA-05 (Phase 3): operating_hours is policy-owned and bound by TA-19.
+        // set_observe_only never mutates operating_hours — read live policy.
+        operating_hours: policy.operating_hours,
     });
     policy.policy_preview_digest = recomputed_digest;
     policy.policy_version = policy

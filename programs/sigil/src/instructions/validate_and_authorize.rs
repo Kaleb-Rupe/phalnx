@@ -163,6 +163,19 @@ pub fn handler(
         SigilError::ObserveOnlyModeBlocksExecute
     );
 
+    // TA-05 (Phase 3 pre-execution guard #2): operating_hours UTC bitmask.
+    // Runs AFTER observe_only short-circuit (F-13: observe_only stays first
+    // because it short-circuits the 35KB constraints PDA borrow). Runs
+    // BEFORE the constraints PDA load because the hours check is cheap
+    // (single arith + bit test) — fail fast for owners who park agents
+    // outside their configured window. Bound by TA-19 at canonical position
+    // 15 so owner-blind-sign can't slip a permissive 0xFFFFFF when the
+    // owner thought they signed a narrow mask.
+    require!(
+        policy.is_within_operating_hours(clock.unix_timestamp),
+        SigilError::ErrOutsideOperatingHours
+    );
+
     let vault_key = vault.key();
     // Spending classification: amount > 0 = spending, amount == 0 = non-spending.
     let is_spending = amount > 0;

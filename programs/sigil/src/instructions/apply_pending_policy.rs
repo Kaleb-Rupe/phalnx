@@ -101,6 +101,16 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
         );
         policy.destination_mode = mode;
     }
+    if let Some(hours) = pending.operating_hours {
+        // TA-05 (Phase 3): re-validate the bitmask shape at apply time.
+        // Defense-in-depth — queue already gates the same invariant but
+        // an apply-time check defends against pending-PDA tampering.
+        require!(
+            hours & !OPERATING_HOURS_VALID_MASK == 0,
+            SigilError::ErrOutsideOperatingHours
+        );
+        policy.operating_hours = hours;
+    }
     // Phase 2 Option A: defense-in-depth — re-validate protocol_mode if pending overrode it.
     if let Some(mode) = pending.protocol_mode {
         require!(
@@ -144,6 +154,11 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
         has_post_assertions: policy.has_post_assertions,
         // PEN-CROSS-2: re-bind to live policy's immutable creation slot.
         created_at_slot: policy.created_at_slot,
+        // TA-05 (Phase 3): operating_hours is policy-owned and bound by
+        // TA-19. apply_pending_policy currently does not mutate it (this
+        // ix copies through Option<u8> fields only). Read the live value so
+        // the second-pass digest re-assertion matches the queue-time digest.
+        operating_hours: policy.operating_hours,
     });
     require!(
         recomputed_digest == pending.new_policy_preview_digest,
