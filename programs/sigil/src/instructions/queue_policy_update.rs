@@ -266,11 +266,22 @@ pub fn handler(
         new.len() > policy.protocols.len()
             || new.iter().any(|p| !policy.protocols.contains(p))
     });
+    // G3 audit fix (2026-05-18): TA-12/14 elevation closure. Phase 5 shipped
+    // stable_balance_floor + per_recipient_daily_cap_usd as queueable but did
+    // NOT classify their hostile mutations (LOWERING the floor, RAISING the
+    // per-recipient cap) as elevated. Independently flagged by Pentester (A1)
+    // + code-reviewer (A2) + Architect (B1-6). Single-line each.
+    let lowers_floor =
+        stable_balance_floor.is_some_and(|new| new < policy.stable_balance_floor);
+    let raises_per_recipient_cap = per_recipient_daily_cap_usd
+        .is_some_and(|new| new > policy.per_recipient_daily_cap_usd);
 
     let is_elevated = raises_daily_cap
         || raises_max_tx
         || expands_destinations
-        || expands_protocols;
+        || expands_protocols
+        || lowers_floor
+        || raises_per_recipient_cap;
 
     let (cosign_session_pubkey, cosign_digest_bound): (Pubkey, [u8; 32]) = if is_elevated {
         // Elevated mutation: cosign_session MUST be a non-default pubkey.
