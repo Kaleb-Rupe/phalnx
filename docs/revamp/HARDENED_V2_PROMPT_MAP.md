@@ -662,7 +662,7 @@ TASKS:
      build-time Pubkey constants. With `devnet-testing` cargo feature, allow any
      mint (extend existing pattern at state/mod.rs:168-176).
    - instructions/deposit_funds.rs: assert mint matches a pinned constant. Reject
-     with 6081 ErrMintNotPinned.
+     with 6083 ErrMintNotPinned.
 
 2. TA-05 operating_hours bitmask:
    - state/policy.rs: append `pub operating_hours: u32` (24-bit UTC). Default
@@ -670,7 +670,7 @@ TASKS:
      explicitly (the digest enforces what the user signed; back-compat
      consideration removed per L-3).
    - validate_and_authorize.rs: assert clock.unix_timestamp's UTC hour is set
-     in the bitmask. Reject with 6082 ErrOutsideOperatingHours.
+     in the bitmask. Reject with 6084 ErrOutsideOperatingHours.
 
 3. TA-06 PER-AGENT cooldown (moved from per-vault per F-16):
    - state/agent_spend_overlay.rs: add per-agent cooldown_seconds and
@@ -678,7 +678,7 @@ TASKS:
      Document the +size delta.
    - validate_and_authorize.rs: load AgentSpendOverlay, check
      (now - agent.last_action_unix) >= agent.cooldown_seconds. Reject with
-     6083 ErrCooldownActive.
+     6085 ErrCooldownActive.
    - After successful validate, write last_action_unix = now.
 
 4. TA-07 first-time-destination friction (graylist):
@@ -686,9 +686,9 @@ TASKS:
      `pub destination_graylist: Vec<(Pubkey, i64)>` bounded ≤10,
      `pub auto_promote_grays: bool` default false.
    - utils/destination_check.rs (extending Phase 2's helper): if destination
-     in graylist AND now < unlock_unix, reject with 6084 ErrGraylistFriction.
+     in graylist AND now < unlock_unix, reject with 6086 ErrGraylistFriction.
    - When new destination added to allowed_destinations: enters graylist with
-     unlock_unix = now + 86400. Reject if graylist full with 6085 ErrGraylistFull.
+     unlock_unix = now + 86400. Reject if graylist full with 6087 ErrGraylistFull.
    - Add ix promote_graylist_destination (owner-only, fast-track to active
      allowlist before 24h).
 
@@ -697,7 +697,7 @@ TASKS:
      extensions: MemoTransfer, MetadataPointer, NonTransferable. Reject ALL
      OTHER Token-2022 extensions (TransferFee, TransferHook, PermanentDelegate,
      DefaultAccountState::Frozen, MintCloseAuthority, InterestBearingMint,
-     ConfidentialTransfer, any future-added extension) with 6086
+     ConfidentialTransfer, any future-added extension) with 6088
      ErrToken2022ExtensionForbidden.
    - This is ADDITIVE to existing validate-time opcode blocklist at
      validate_and_authorize.rs:417-429 (per F-5). DO NOT remove or modify the
@@ -718,7 +718,7 @@ TASKS:
    - Per D-2 default Q-1: lock cosign scope to "any owner-signed session within
      vault validity window" (not "same session" — operationally lethal at
      session expiry).
-   - Reject with 6087 ErrCosignRequired.
+   - Reject with 6089 ErrCosignRequired.
 
 7. TA-17 auto-revoke on N consecutive failures (per L-10 + D-2):
    - state/vault.rs: AgentEntry adds consecutive_failures: u8. Fit in existing
@@ -731,11 +731,12 @@ TASKS:
      seal, reset to 0.
    - Threshold gate: if consecutive_failures >= policy.auto_revoke_threshold,
      set agent.capability = DISABLED, emit AutoRevokedEvent. Subsequent seal
-     attempts reject with 6088 ErrAutoRevoked.
+     attempts reject with 6090 ErrAutoRevoked.
    - Owner can re-enable via existing queue_agent_permissions_update.
    - Filter list of "policy violation codes that count" — document
-     authoritatively (any error in 6080-6100 range counts; external errors
-     6047/6048 do NOT).
+     authoritatively (any error in 6083-6100 range counts; external errors
+     6047/6048 do NOT — those are external causes like CU exhaustion / nonce
+     desync, not policy violations).
 
 BUILD+TEST: full pipeline. AgentVault size unchanged (capability uses _reserved).
 PolicyConfig grows by ~415 bytes (operating_hours u32 + graylist Vec + auto_promote
