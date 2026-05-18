@@ -58,7 +58,7 @@ These are the NEW V2 constraint surface enforced on every seal() bundle. Per Opt
 Cluster-pinned mints at build time. Mainnet USDC `EPjFWdd5...`, mainnet USDT `Es9vMFrz...`, devnet USDC `4zMMC9sr...`. Entry guard rejects any non-pinned mint. Applies uniformly.
 
 ### TA-04 — Per-agent capability split
-`AgentEntry.capability: u8`: `DISABLED=0`, `OBSERVER=1`, `OPERATOR=2`. Reserved 3..=255 reject with `ErrInvalidCapability` (code 6078 — see [ERROR_CODE_ALLOCATION_V2.md](./ERROR_CODE_ALLOCATION_V2.md)). Applies uniformly.
+`AgentEntry.capability: u8`: `DISABLED=0`, `OBSERVER=1`, `OPERATOR=2`. Reserved 3..=255 reject with `ErrInvalidCapability` (code 6079 — see [ERROR_CODE_ALLOCATION_V2.md](./ERROR_CODE_ALLOCATION_V2.md)). Applies uniformly.
 
 ### TA-05 — Operating hours UTC bitmask
 `PolicyConfig.operating_hours: u32` — bit `i` (0..=23) set ⇒ hour `i` UTC is permitted. Applies uniformly.
@@ -129,7 +129,7 @@ Was `InstructionConstraints.parser_version: u8` under the tier model (C23). **DE
 
 **Canonical form:** Borsh-serialize the policy in a strict field order (defined at Phase 2 implementation time), with all `Vec<T>` sorted lexically. The canonical encoding is a separate library function shared by the SDK and the program so that both compute the same digest.
 
-**Handler behavior:** Every owner-initiated policy mutation (queue + apply) recomputes the digest from the canonical form and `require!` it matches `new_policy_preview_digest`. Mismatch rejects with `ErrPolicyPreviewMismatch` (code 6080 — see [ERROR_CODE_ALLOCATION_V2.md](./ERROR_CODE_ALLOCATION_V2.md)).
+**Handler behavior:** Every owner-initiated policy mutation (queue + apply) recomputes the digest from the canonical form and `require!` it matches `new_policy_preview_digest`. Mismatch rejects with `ErrPolicyPreviewMismatch` (code 6081 — see [ERROR_CODE_ALLOCATION_V2.md](./ERROR_CODE_ALLOCATION_V2.md)).
 
 **Attack closed:** Audit #3 — SDK builds preview that owner sees and signs, but the on-chain instruction encodes a different policy (e.g., an extra allowlist entry the dashboard didn't render). The digest binds the visible preview to the executed form, making this discrepancy detectable.
 

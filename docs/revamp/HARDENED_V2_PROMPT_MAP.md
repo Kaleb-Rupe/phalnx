@@ -115,37 +115,37 @@ Three independent audits + Maestro re-verification + Solana-runtime verification
 
 **Net new variants needed (post-Phase-1 deletions):**
 
-Phase 1 deletes 3 Jupiter-specific error variants (errors.rs:101/105/111 per F-21). Post-Phase-1 count: 78 variants, codes 6000-6077.
+Phase 1 deletes 2 Jupiter-specific error variants (`SwapSlippageExceeded`, `InvalidJupiterInstruction` per F-21). `SlippageBpsTooHigh` is KEPT per D-5 (generic `policy.max_slippage_bps` config primitive preserved; runtime slippage enforcement moves off-chain). Post-Phase-1 count: **79 variants, codes 6000-6078**.
 
-New variants append starting at 6078:
+New variants append starting at 6079:
 
 | Code | Name | Phase |
 |---|---|---|
-| 6078 | `ErrInvalidCapability` (reserved values 3..=255) | Phase 2 |
-| 6079 | `ErrObserveOnlyModeBlocksExecute` | Phase 2 |
-| 6080 | `ErrPolicyPreviewMismatch` (TA-19) | Phase 2 |
-| 6081 | `ErrMintNotPinned` (TA-03) | Phase 3 |
-| 6082 | `ErrOutsideOperatingHours` (TA-05) | Phase 3 |
-| 6083 | `ErrCooldownActive` (TA-06) | Phase 3 |
-| 6084 | `ErrGraylistFriction` (TA-07) | Phase 3 |
-| 6085 | `ErrGraylistFull` (TA-07) | Phase 3 |
-| 6086 | `ErrToken2022ExtensionForbidden` (TA-08) | Phase 3 |
-| 6087 | `ErrCosignRequired` (TA-09) | Phase 3 |
-| 6088 | `ErrAutoRevoked` (TA-17) | Phase 3 |
-| 6089 | `ErrSandwichIntegrity` (TA-10 tightening) | Phase 4 |
-| 6090 | `ErrProtectedWritable` (TA-11) | Phase 4 |
-| 6091 | `ErrSessionNonceMismatch` (AC-10) | Phase 4 |
-| 6092 | `ErrStableFloorViolation` (TA-12) | Phase 5 |
-| 6093 | `ErrDailyCapExceeded` (TA-13 doc-fix) | Phase 5 |
-| 6094 | `ErrRecipientCapExceeded` (TA-14) | Phase 5 |
-| 6095 | `ErrMintDeltaCapExceeded` (R-1) | Phase 6 |
-| 6096 | `ErrAtaAuthorityChanged` (R-2) | Phase 6 |
-| 6097 | `ErrOutputBelowFloor` (R-3) | Phase 6 |
-| 6098 | `ErrDeclarationInconsistent` (R-4) | Phase 6 |
-| 6099 | `ErrPendingOwnershipExists` (C26) | Phase 8 |
-| 6100 | `ErrPendingOwnershipNotReady` (C26) | Phase 8 |
-| 6101 | `ErrInvalidFreezeReason` (C27) | Phase 8 |
-| 6102 | `ErrReactivateCooldownActive` (C28) | Phase 8 |
+| 6079 | `ErrInvalidCapability` (reserved values 3..=255) | Phase 2 |
+| 6080 | `ErrObserveOnlyModeBlocksExecute` | Phase 2 |
+| 6081 | `ErrPolicyPreviewMismatch` (TA-19) | Phase 2 |
+| 6082 | `ErrMintNotPinned` (TA-03) | Phase 3 |
+| 6083 | `ErrOutsideOperatingHours` (TA-05) | Phase 3 |
+| 6084 | `ErrCooldownActive` (TA-06) | Phase 3 |
+| 6085 | `ErrGraylistFriction` (TA-07) | Phase 3 |
+| 6086 | `ErrGraylistFull` (TA-07) | Phase 3 |
+| 6087 | `ErrToken2022ExtensionForbidden` (TA-08) | Phase 3 |
+| 6088 | `ErrCosignRequired` (TA-09) | Phase 3 |
+| 6089 | `ErrAutoRevoked` (TA-17) | Phase 3 |
+| 6090 | `ErrSandwichIntegrity` (TA-10 tightening) | Phase 4 |
+| 6091 | `ErrProtectedWritable` (TA-11) | Phase 4 |
+| 6092 | `ErrSessionNonceMismatch` (AC-10) | Phase 4 |
+| 6093 | `ErrStableFloorViolation` (TA-12) | Phase 5 |
+| 6094 | `ErrDailyCapExceeded` (TA-13 doc-fix) | Phase 5 |
+| 6095 | `ErrRecipientCapExceeded` (TA-14) | Phase 5 |
+| 6096 | `ErrMintDeltaCapExceeded` (R-1) | Phase 6 |
+| 6097 | `ErrAtaAuthorityChanged` (R-2) | Phase 6 |
+| 6098 | `ErrOutputBelowFloor` (R-3) | Phase 6 |
+| 6099 | `ErrDeclarationInconsistent` (R-4) | Phase 6 |
+| 6100 | `ErrPendingOwnershipExists` (C26) | Phase 8 |
+| 6101 | `ErrPendingOwnershipNotReady` (C26) | Phase 8 |
+| 6102 | `ErrInvalidFreezeReason` (C27) | Phase 8 |
+| 6103 | `ErrReactivateCooldownActive` (C28) | Phase 8 |
 
 Phase 0.5 docs commit makes ERROR_CODE_ALLOCATION_V2.md the canonical source.
 
@@ -209,7 +209,7 @@ TASKS:
 
 1. Build canonical docs/revamp/ERROR_CODE_ALLOCATION_V2.md by reading errors.rs
    top-to-bottom. Map every variant to numeric code (6000+line_offset). Document
-   the post-Phase-1 reservation table (6078-6102 enumerated in §4 of the prompt map).
+   the post-Phase-1 reservation table (6079-6103 enumerated in §4 of the prompt map).
 
 2. Resolve naming hygiene in INTERFACES_V2.md:
    - TA-16: mark as DELETED (was T1 parser_version, incompatible with L-1).
@@ -536,7 +536,7 @@ TASKS:
    - instructions/queue_agent_permissions_update.rs
    - instructions/apply_agent_permissions_update.rs (per F-4 — pending→applied
      path also needs the bound)
-   Add new error code 6078 ErrInvalidCapability for the explicit reject.
+   Add new error code 6079 ErrInvalidCapability for the explicit reject.
 
 6. Wire allowed_destinations enforcement into spending paths:
    - Create utils/destination_check.rs helper that takes the DeFi ix's account
@@ -556,7 +556,7 @@ TASKS:
       protocol_mode, protocols, destination_mode, allowed_destinations,
       timelock_duration, session_expiry_seconds, observe_only, has_constraints,
       has_post_assertions). Field order is FIXED (document in policy.rs).
-     Assert recomputed == preview_digest. Reject with new error 6080
+     Assert recomputed == preview_digest. Reject with new error 6081
      ErrPolicyPreviewMismatch.
    - instructions/queue_policy_update.rs: same digest enforcement on pending.
    - instructions/apply_pending_policy.rs: RE-ASSERT pending.new_policy_preview_digest
@@ -570,7 +570,7 @@ TASKS:
      non-empty allowlists required (or queue policy update can be empty for
      ramp-up).
    - instructions/validate_and_authorize.rs: at entry, if vault.observe_only,
-     reject with new error 6079 ErrObserveOnlyModeBlocksExecute.
+     reject with new error 6080 ErrObserveOnlyModeBlocksExecute.
 
 9. SDK side (in sdk/kit/src/policy/):
    - Add computePolicyPreviewDigest(policy_fields) → Uint8Array. Use same
@@ -599,7 +599,7 @@ BUILD+TEST: full pipeline. Verify SchemaInvariants.
   Verify TA-19 digest encoding is deterministic — same fields produce same
   bytes 100% of the time (try variations in HashMap iteration order, vec
   ordering of identical bytes)."
-- code-reviewer prompt: "Verify error codes 6078, 6079, 6080 are the next free
+- code-reviewer prompt: "Verify error codes 6079, 6080, 6081 are the next free
   per the post-Phase-1 allocation. Verify the new destination-check helper has
   measured CU overhead and doesn't introduce quadratic scan. Verify TA-19
   digest field order in encoding matches the doc-comment in policy.rs.

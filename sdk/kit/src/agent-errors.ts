@@ -5,8 +5,9 @@
  * Every error includes a category, retryability flag, and
  * recovery actions that tell the agent exactly what to do next.
  *
- * Maps all 88 on-chain error codes (6000-6087) plus 34 SDK
- * error codes (7000-7033) to AgentError with machine-readable metadata.
+ * Maps all 79 on-chain error codes (6000-6078) post Phase 1 compaction
+ * (Option A V2; Jupiter swap integration + 2 error variants deleted) plus
+ * 34 SDK error codes (7000-7033) to AgentError with machine-readable metadata.
  *
  * Zero dependency on @solana/web3.js or @coral-xyz/anchor.
  * Uses bigint instead of BN for context values.
