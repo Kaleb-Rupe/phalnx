@@ -513,7 +513,6 @@ describe("TOCTOU Security Fix", () => {
       v.vaultPda,
       v.policyPda,
       entries,
-      false,
     );
 
     // Queue constraints update
@@ -548,7 +547,6 @@ describe("TOCTOU Security Fix", () => {
       v.policyPda,
       constraintsPda,
       newEntries,
-      false,
     );
 
     // Advance time past the 1800s timelock

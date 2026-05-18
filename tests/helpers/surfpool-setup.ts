@@ -770,6 +770,16 @@ export async function setupVaultWithAgent(
   // Phase 2 Option A: protocol_mode must be 1 (ALLOWLIST). Empty protocols
   // means "no DeFi permitted yet" — callers that need a permissive default
   // pass `opts.protocols = [...]` explicitly.
+  //
+  // KNOWN: `tsc --noEmit` reports `TS2589: Type instantiation is excessively
+  // deep and possibly infinite` at the line below. This is a pre-existing
+  // Anchor 0.32.1 type-depth limit (the codec hits the compiler's depth-50
+  // ceiling on the long `.initializeVault(...)` argument chain). Phase 2's
+  // two new arguments (observeOnly + policy_preview_digest) shifted the line
+  // from 758 → 773; the underlying issue predates Phase 2 and is not a
+  // regression. Tracked for v1.1 SDK cleanup (Codama-generated client will
+  // sidestep this). DO NOT attempt to fix here — touching the chain only
+  // resurfaces the same error elsewhere.
   await program.methods
     .initializeVault(vaultId,
           dailyCap,
