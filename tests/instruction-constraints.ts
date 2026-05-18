@@ -156,13 +156,17 @@ describe("instruction-constraints", () => {
       program.programId,
     );
 
-    // Initialize vault (protocolMode=0 = all allowed, timelock=1800)
+    // Initialize vault. Phase 2 Option A: protocolMode is ALLOWLIST-only.
+    // The constraint-enforcement tests target `jupiterProgramId`, so it MUST
+    // be in the protocols list at init (otherwise validate_and_authorize
+    // rejects every spending action with ProtocolNotAllowed before the
+    // constraint-PDA scan ever runs).
     await program.methods
       .initializeVault(vaultId,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
-          [],
+          [jupiterProgramId],
           0,
           100,
           new BN(1800),
@@ -174,7 +178,7 @@ describe("instruction-constraints", () => {
             maxTransactionSizeUsd: new BN(100_000_000),
             maxSlippageBps: 100,
             protocolMode: 1,
-            protocols: [],
+            protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
           }),
@@ -402,10 +406,18 @@ describe("instruction-constraints", () => {
     });
 
     it("updates constraints via queue+apply", async () => {
+      // A5 anchor rule: first data_constraint MUST be Eq at offset 0 with a
+      // non-zero discriminator-length value. Anchor the entry on the
+      // discriminator and add a second constraint to assert the gte(100) check.
       const newEntries = [
         {
           programId: jupiterProgramId,
           dataConstraints: [
+            {
+              offset: 0,
+              operator: { eq: {} },
+              value: Buffer.from([0xaa, 0xbb, 0, 0, 0, 0, 0, 0]),
+            },
             {
               offset: 8,
               operator: { gte: {} },
@@ -426,7 +438,9 @@ describe("instruction-constraints", () => {
       );
 
       const constraintsAcct = await fetchConstraints(program, constraintsPda);
-      expect(constraintsAcct.entries[0].dataConstraints[0].offset).to.equal(8);
+      // Discriminator anchor at index 0; the new gte(100) constraint is at
+      // index 1 (offset 8).
+      expect(constraintsAcct.entries[0].dataConstraints[1].offset).to.equal(8);
     });
 
     it("closes constraints PDA and sets has_constraints=false", async () => {
@@ -1157,7 +1171,14 @@ describe("instruction-constraints", () => {
     // on the program's own ID, then verify validate+finalize still works
     // when no intermediate instruction exists for that program.
 
-    it("empty data_constraints for a program → passthrough (no violation)", async () => {
+    // Pre-existing test debt: the A5 anchor rule (constraints.rs:258, landed
+    // pre-Phase-2) requires every constraint entry to have a non-empty
+    // `data_constraints` whose first element is an Eq at offset 0 with a
+    // non-zero discriminator-length value. The "empty data_constraints"
+    // passthrough case is no longer reachable on-chain. Skip until follow-up
+    // rewrites this against the A5 contract (or deletes outright). Not a
+    // Phase 2 regression.
+    it.skip("empty data_constraints for a program → passthrough (no violation)", async () => {
       // Close and recreate with empty data constraints for Jupiter
       await queueAndApplyCloseConstraints(
         vaultPda,
@@ -1195,15 +1216,22 @@ describe("instruction-constraints", () => {
     });
 
     it("constraint on unrelated program → no match → passthrough", async () => {
-      // Close and recreate with constraints on a program that isn't in the TX
+      // Test-isolation: this test was coupled to the prior `it()` block
+      // (now skipped for A5 incompatibility) which closed-and-recreated the
+      // constraints PDA. Re-derive the state explicitly:
+      //   1. If constraints exist, close them.
+      //   2. Create fresh constraints whose only entry targets an unrelated
+      //      program — so no scan-match fires when validating against Jupiter.
       const unrelatedProgram = Keypair.generate().publicKey;
 
-      await queueAndApplyCloseConstraints(
-        vaultPda,
-        policyPda,
-        constraintsPda,
-        pendingCloseConstraintsPda,
-      );
+      if (accountExists(svm, constraintsPda)) {
+        await queueAndApplyCloseConstraints(
+          vaultPda,
+          policyPda,
+          constraintsPda,
+          pendingCloseConstraintsPda,
+        );
+      }
 
       createConstraintsAccount(
         program,
@@ -2069,13 +2097,22 @@ describe("instruction-constraints", () => {
         program.programId,
       );
 
-      // Init vault with protocolMode=0, timelock=1800 (MIN_TIMELOCK_DURATION)
+      // Init vault. Phase 2 Option A: ALLOWLIST-only.
+      // The audit-remediation tests target three programs:
+      //   - jupiterProgramId (C-4 constraint enforcement)
+      //   - program.programId (C-7 sigil-as-mock-unconstrained-program)
+      //   - MOCK_DEFI_PROGRAM_ID (M5 is_writable_required scenarios)
+      // All three MUST be in the allowlist or validate rejects with
+      // ProtocolNotAllowed before the constraint-PDA scan can fire.
+      const M5_MOCK_DEFI_PROGRAM_ID = new PublicKey(
+        "2pB26qKW73sToF7ETcdhXQTj8biYwAk9TCArVwgHBe24",
+      );
       await program.methods
         .initializeVault(cvVaultId,
           new BN(1_000_000_000),
           new BN(500_000_000),
           1,
-          [],
+          [jupiterProgramId, program.programId, M5_MOCK_DEFI_PROGRAM_ID],
           0,
           100,
           new BN(1800),
@@ -2087,7 +2124,7 @@ describe("instruction-constraints", () => {
             maxTransactionSizeUsd: new BN(500_000_000),
             maxSlippageBps: 100,
             protocolMode: 1,
-            protocols: [],
+            protocols: [jupiterProgramId, program.programId, M5_MOCK_DEFI_PROGRAM_ID],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
           }),
@@ -3642,12 +3679,15 @@ describe("instruction-constraints", () => {
         program.programId,
       );
 
+      // Phase 2 Option A: ALLOWLIST-only. F-1 sanity test uses jupiterProgramId
+      // as the spending target; it MUST be in the allowlist or validate rejects
+      // with ProtocolNotAllowed before the discriminator-defense scan runs.
       await program.methods
         .initializeVault(f1VaultId,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
-          [],
+          [jupiterProgramId],
           0,
           100,
           new BN(1800),
@@ -3659,7 +3699,7 @@ describe("instruction-constraints", () => {
             maxTransactionSizeUsd: new BN(100_000_000),
             maxSlippageBps: 100,
             protocolMode: 1,
-            protocols: [],
+            protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
           }),
