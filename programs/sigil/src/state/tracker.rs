@@ -216,7 +216,8 @@ impl SpendTracker {
     /// Record a spend in the current epoch bucket.
     /// If the bucket is from a different epoch, reset it first.
     pub fn record_spend(&mut self, clock: &Clock, usd_amount: u64) -> Result<()> {
-        require!(clock.unix_timestamp > 0, SigilError::Overflow);
+        // Clock-validity guard (pre-genesis broken clock).
+        require!(clock.unix_timestamp > 0, SigilError::InvalidSession);
         // Safe: EPOCH_DURATION is a non-zero constant (600)
         let current_epoch = clock.unix_timestamp.checked_div(EPOCH_DURATION).unwrap();
         let idx = (current_epoch % NUM_EPOCHS as i64) as usize;
@@ -333,7 +334,8 @@ impl SpendTracker {
         protocol_id: &Pubkey,
         usd_amount: u64,
     ) -> Result<()> {
-        require!(clock.unix_timestamp > 0, SigilError::Overflow);
+        // Clock-validity guard (pre-genesis broken clock).
+        require!(clock.unix_timestamp > 0, SigilError::InvalidSession);
         let current_epoch = clock.unix_timestamp.checked_div(EPOCH_DURATION).unwrap();
         let protocol_bytes = protocol_id.to_bytes();
         let empty_bytes = [0u8; 32];
@@ -431,7 +433,8 @@ impl SpendTracker {
         recipient: &Pubkey,
         usd_amount: u64,
     ) -> Result<()> {
-        require!(clock.unix_timestamp > 0, SigilError::Overflow);
+        // Clock-validity guard (pre-genesis broken clock).
+        require!(clock.unix_timestamp > 0, SigilError::InvalidSession);
         let now = clock.unix_timestamp;
         let recipient_bytes = recipient.to_bytes();
         let active = (self.per_recipient_count as usize).min(self.per_recipient.len());
