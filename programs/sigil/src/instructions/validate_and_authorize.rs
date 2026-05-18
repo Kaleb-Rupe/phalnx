@@ -8,6 +8,7 @@ use anchor_spl::token::{self, Approve, Mint, Token, TokenAccount, Transfer};
 use crate::errors::SigilError;
 use crate::events::{ActionAuthorized, FeesCollected};
 use crate::state::*;
+use crate::utils::destination_check::enforce_destination_allowlist;
 
 use super::integrations::generic_constraints;
 
@@ -208,6 +209,14 @@ pub fn handler(
 
     // 1. Vault must be active
     require!(vault.is_active(), SigilError::VaultNotActive);
+
+    // Phase 2 TA-19: observe_only mode rejects every validate_and_authorize.
+    // Owners use this as a low-blast-radius kill switch separate from Frozen
+    // status (which is for emergency response after detection of an attack).
+    require!(
+        !vault.observe_only,
+        SigilError::ObserveOnlyModeBlocksExecute
+    );
 
     // 1a-pre. Agent must not be paused
     require!(
@@ -534,6 +543,19 @@ pub fn handler(
                         );
                         defi_ix_count = defi_ix_count.saturating_add(1);
                     }
+
+                    // Phase 2 TA-02: wire allowed_destinations enforcement into
+                    // BOTH spending paths (stablecoin input AND non-stablecoin
+                    // input). Pre-Phase-2 this was checked only in
+                    // `agent_transfer`. Closes the gap where a DeFi swap could
+                    // route value to an ATA whose owner was NOT in the
+                    // destination allowlist.
+                    enforce_destination_allowlist(
+                        &ix.accounts,
+                        ctx.remaining_accounts,
+                        &vault_key,
+                        policy,
+                    )?;
                 }
             }
             scan_idx = scan_idx.saturating_add(1);

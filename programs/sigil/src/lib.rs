@@ -6,6 +6,7 @@ pub mod errors;
 pub mod events;
 pub mod instructions;
 pub mod state;
+pub mod utils;
 
 #[cfg(feature = "certora")]
 mod certora;
@@ -35,6 +36,8 @@ pub mod sigil {
         timelock_duration: u64,
         allowed_destinations: Vec<Pubkey>,
         protocol_caps: Vec<u64>,
+        observe_only: bool,
+        preview_digest: [u8; 32],
     ) -> Result<()> {
         instructions::initialize_vault::handler(
             ctx,
@@ -48,6 +51,8 @@ pub mod sigil {
             timelock_duration,
             allowed_destinations,
             protocol_caps,
+            observe_only,
+            preview_digest,
         )
     }
 
@@ -137,6 +142,7 @@ pub mod sigil {
         has_protocol_caps: Option<bool>,
         protocol_caps: Option<Vec<u64>>,
         destination_mode: Option<u8>,
+        new_policy_preview_digest: [u8; 32],
     ) -> Result<()> {
         instructions::queue_policy_update::handler(
             ctx,
@@ -152,6 +158,7 @@ pub mod sigil {
             has_protocol_caps,
             protocol_caps,
             destination_mode,
+            new_policy_preview_digest,
         )
     }
 
