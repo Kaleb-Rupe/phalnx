@@ -189,6 +189,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: dailyCap,
             maxTransactionSizeUsd: maxTxSize,
@@ -260,6 +261,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(100),
             maxTransactionSizeUsd: new BN(100),
@@ -331,6 +333,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(100),
             maxTransactionSizeUsd: new BN(100),
@@ -508,6 +511,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -580,6 +584,7 @@ describe("sigil", () => {
           null,
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { dailySpendingCapUsd: new BN(200_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -632,6 +637,7 @@ describe("sigil", () => {
           null,
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { dailySpendingCapUsd: new BN(999) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -671,6 +677,7 @@ describe("sigil", () => {
           null,
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { protocols: tooManyProtocols })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -740,6 +747,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -877,6 +885,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -1652,6 +1661,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -1742,6 +1752,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -1836,6 +1847,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -1905,6 +1917,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -1956,6 +1969,7 @@ describe("sigil", () => {
           null,
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, { developerFeeRate: 0 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -2000,6 +2014,7 @@ describe("sigil", () => {
           null,
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, { developerFeeRate: 30 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -2050,6 +2065,7 @@ describe("sigil", () => {
           null,
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -2088,6 +2104,7 @@ describe("sigil", () => {
           null,
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, { developerFeeRate: 0 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -2235,6 +2252,7 @@ describe("sigil", () => {
           null,
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, { developerFeeRate: 500 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -2446,6 +2464,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -2544,6 +2563,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -2809,6 +2829,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -2990,6 +3011,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -3098,6 +3120,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -3213,6 +3236,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -3353,6 +3377,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(999_000_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -3531,6 +3556,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(999_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -3825,6 +3851,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -3875,6 +3902,7 @@ describe("sigil", () => {
           null,
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(200_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -3959,6 +3987,7 @@ describe("sigil", () => {
           null,
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(100_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -4011,6 +4040,7 @@ describe("sigil", () => {
           null,
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(150_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -4040,6 +4070,7 @@ describe("sigil", () => {
           null,
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(500_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -4109,6 +4140,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -4155,6 +4187,7 @@ describe("sigil", () => {
           null,
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { timelockDuration: new BN(3600) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -4201,6 +4234,7 @@ describe("sigil", () => {
           null,
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { timelockDuration: new BN(1800) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -4248,6 +4282,7 @@ describe("sigil", () => {
           null,
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(50_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -4364,6 +4399,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -4527,6 +4563,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -4648,6 +4685,7 @@ describe("sigil", () => {
           1,
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, anyPolicy, anyVault, { destinationMode: 1 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -4689,6 +4727,7 @@ describe("sigil", () => {
           2,
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, anyPolicy, anyVault, { destinationMode: 2 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -4752,6 +4791,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -4906,6 +4946,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -5060,6 +5101,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1_000_000_000),
             maxTransactionSizeUsd: new BN(500_000_000),
@@ -5527,6 +5569,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(2_000_000_000),
             maxTransactionSizeUsd: new BN(1_000_000_000),
@@ -5845,6 +5888,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1_000_000_000),
             maxTransactionSizeUsd: new BN(500_000_000),
@@ -5970,6 +6014,7 @@ describe("sigil", () => {
           null,
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -6016,6 +6061,7 @@ describe("sigil", () => {
           null,
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -6074,6 +6120,7 @@ describe("sigil", () => {
           null,
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -6120,6 +6167,7 @@ describe("sigil", () => {
           null,
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -6170,6 +6218,7 @@ describe("sigil", () => {
           null,
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -6234,6 +6283,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1_000_000_000),
             maxTransactionSizeUsd: new BN(500_000_000),
@@ -6322,6 +6372,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000_000_000),
             maxTransactionSizeUsd: new BN(1000_000_000),
@@ -6562,6 +6613,7 @@ describe("sigil", () => {
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000_000_000),
             maxTransactionSizeUsd: new BN(1000_000_000),

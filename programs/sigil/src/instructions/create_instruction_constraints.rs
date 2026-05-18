@@ -135,6 +135,8 @@ pub fn handler(
         auto_revoke_threshold: policy.auto_revoke_threshold,
         // TA-12 (Phase 5): bound by TA-19, never mutated by this ix.
         stable_balance_floor: policy.stable_balance_floor,
+        // TA-14 (Phase 5): bound by TA-19, never mutated by this ix.
+        per_recipient_daily_cap_usd: policy.per_recipient_daily_cap_usd,
     });
     // PEN-CROSS-3: owner must have signed the post-mutation digest. Reject
     // if the caller's signed digest does not match. Closes the owner

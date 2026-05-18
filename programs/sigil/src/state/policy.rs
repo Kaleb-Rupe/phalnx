@@ -230,6 +230,22 @@ pub struct PolicyConfig {
     /// Bound by TA-19 at canonical digest position 18. APPENDED per
     /// F-14 APPEND-ONLY rule for Borsh stability.
     pub stable_balance_floor: u64,
+
+    /// TA-14 (Phase 5 post-execution invariant #2): rolling 24h
+    /// per-recipient outflow cap, in 6-decimal USDC face value. When
+    /// non-zero, every `finalize_session` spending path validates that
+    /// the recipient's rolling 24h spend (tracked on
+    /// `SpendTracker.per_recipient`) PLUS this transaction's outflow
+    /// to that recipient stays ≤ this value. Otherwise rejects with
+    /// `ErrRecipientCapExceeded` (6096).
+    ///
+    /// Default 0 (no per-recipient cap) preserves existing vault
+    /// behavior. Owner-configurable via `initialize_vault` and
+    /// `queue_policy_update`.
+    ///
+    /// Bound by TA-19 at canonical digest position 19. APPENDED per
+    /// F-14 APPEND-ONLY rule for Borsh stability.
+    pub per_recipient_daily_cap_usd: u64,
 }
 
 /// TA-07 (Phase 3): one entry in `PolicyConfig.destination_graylist`.
@@ -265,9 +281,10 @@ impl PolicyConfig {
     /// policy_preview_digest (32) + created_at_slot (8) + operating_hours (4) +
     /// destination_graylist vec (4 + 40 * MAX_ALLOWED_DESTINATIONS) +
     /// auto_promote_grays (1) + auto_revoke_threshold (1) +
-    /// stable_balance_floor (8) [TA-12 Phase 5]
+    /// stable_balance_floor (8) [TA-12 Phase 5] +
+    /// per_recipient_daily_cap_usd (8) [TA-14 Phase 5]
     /// [TA-19, Phase 2; PEN-CROSS-2 Phase 2 close-up;
-    ///  TA-05/07/17 Phase 3 pre-exec; TA-12 Phase 5]
+    ///  TA-05/07/17 Phase 3 pre-exec; TA-12/TA-14 Phase 5]
     pub const SIZE: usize = 8
         + 32
         + 8
@@ -293,7 +310,8 @@ impl PolicyConfig {
         + (4 + DestinationGraylistEntry::SIZE * MAX_ALLOWED_DESTINATIONS) // graylist [TA-07]
         + 1 // auto_promote_grays [TA-07]
         + 1 // auto_revoke_threshold [TA-17]
-        + 8; // stable_balance_floor [TA-12 Phase 5]
+        + 8 // stable_balance_floor [TA-12 Phase 5]
+        + 8; // per_recipient_daily_cap_usd [TA-14 Phase 5]
 
     /// Check if a protocol is allowed.
     ///

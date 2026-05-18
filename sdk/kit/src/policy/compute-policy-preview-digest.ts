@@ -37,14 +37,16 @@
  *   16. auto_promote_grays: bool as 1 byte (0/1) — TA-07 (Phase 3 pre-exec)
  *   17. auto_revoke_threshold: u8 (1 byte) — TA-17 (Phase 3 pre-exec)
  *   18. stable_balance_floor: u64 LE (8 bytes) — TA-12 (Phase 5 post-exec)
+ *   19. per_recipient_daily_cap_usd: u64 LE (8 bytes) — TA-14 (Phase 5 post-exec)
  *
  * Phase 3 append-only additions (TA-05/07/17): operating_hours,
  * auto_promote_grays, auto_revoke_threshold are appended at positions 15-17
  * to preserve the 14-field prefix (F-14 APPEND-ONLY rule).
  *
- * Phase 5 append-only addition (TA-12): stable_balance_floor at position 18 —
- * the owner-chosen hard reserve on combined USDC+USDT vault balance,
- * asserted at every finalize_session spending path completion.
+ * Phase 5 append-only additions (TA-12/TA-14): stable_balance_floor at
+ * position 18, per_recipient_daily_cap_usd at position 19. Both bound by
+ * TA-19 so silent SDK / pending-PDA mutations can't bypass the owner's
+ * signed digest.
  *
  * The `destination_graylist: Vec<(Pubkey, i64)>` is intentionally NOT in
  * the digest. Graylist entries are derived/ephemeral — they auto-populate
@@ -133,6 +135,13 @@ export interface PolicyPreviewFields {
    * vault behavior). Bound at canonical position 18.
    */
   stableBalanceFloor?: bigint;
+  /**
+   * TA-14 (Phase 5 post-exec): owner-chosen rolling 24h per-recipient
+   * outflow cap. 6-decimal USDC face value. Default 0 (no per-recipient
+   * cap — preserves existing vault behavior). Bound at canonical
+   * position 19.
+   */
+  perRecipientDailyCapUsd?: bigint;
 }
 
 // ── Base58 decode (no external dep) ──────────────────────────────────────────
@@ -245,7 +254,8 @@ export function computePolicyPreviewDigest(
     4 + // operating_hours (TA-05 Phase 3)
     1 + // auto_promote_grays (TA-07 Phase 3)
     1 + // auto_revoke_threshold (TA-17 Phase 3)
-    8; // stable_balance_floor (TA-12 Phase 5)
+    8 + // stable_balance_floor (TA-12 Phase 5)
+    8; // per_recipient_daily_cap_usd (TA-14 Phase 5)
   const variableSize = protoBytes.length * 32 + destBytes.length * 32;
   const buf = new Uint8Array(fixedSize + variableSize);
   const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
@@ -285,6 +295,8 @@ export function computePolicyPreviewDigest(
   buf[off++] = fields.autoRevokeThreshold ?? 0;
   // TA-12 (Phase 5): stable_balance_floor at position 18.
   off = writeU64Le(view, off, fields.stableBalanceFloor ?? 0n);
+  // TA-14 (Phase 5): per_recipient_daily_cap_usd at position 19.
+  off = writeU64Le(view, off, fields.perRecipientDailyCapUsd ?? 0n);
 
   // Defensive: assert we wrote exactly what we sized
   if (off !== buf.length) {

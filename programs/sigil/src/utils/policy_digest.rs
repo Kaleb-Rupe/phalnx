@@ -27,14 +27,16 @@
 //! 16. `auto_promote_grays: bool`     (1 byte, 0/1)  — TA-07 (Phase 3 pre-exec)
 //! 17. `auto_revoke_threshold: u8`    (1 byte)       — TA-17 (Phase 3 pre-exec)
 //! 18. `stable_balance_floor: u64`    (8 bytes, LE)  — TA-12 (Phase 5 post-exec)
+//! 19. `per_recipient_daily_cap_usd: u64` (8 bytes, LE) — TA-14 (Phase 5 post-exec)
 //!
 //! Phase 3 append-only additions (TA-05/07/17): the three new policy-owned
 //! fields are appended at positions 15-17 to preserve the existing 14-field
 //! prefix (F-14 APPEND-ONLY rule).
 //!
-//! Phase 5 append-only addition (TA-12): `stable_balance_floor` appended at
-//! position 18. The owner's chosen reserve is part of the signed policy —
-//! a compromised SDK or pending-PDA tamperer cannot silently lower it.
+//! Phase 5 append-only additions (TA-12/TA-14): `stable_balance_floor` at
+//! position 18, `per_recipient_daily_cap_usd` at position 19. The owner's
+//! chosen reserve and per-recipient cap are part of the signed policy —
+//! a compromised SDK or pending-PDA tamperer cannot silently lower them.
 //!
 //! The graylist itself (`destination_graylist: Vec<(Pubkey, i64)>`) is
 //! intentionally NOT in the digest. Reasoning: graylist entries are
@@ -102,6 +104,10 @@ pub struct PolicyPreviewFields<'a> {
     /// vault balance, asserted at the end of every finalize_session
     /// spending path. 6-decimal USDC face value. Bound at position 18.
     pub stable_balance_floor: u64,
+    /// TA-14 (Phase 5): per-recipient rolling 24h outflow cap in 6-decimal
+    /// USDC face value. Default 0 = no per-recipient cap. Bound at
+    /// position 19.
+    pub per_recipient_daily_cap_usd: u64,
 }
 
 /// SHA-256 over the canonical Borsh encoding of the preview fields.
@@ -157,6 +163,8 @@ pub fn compute_policy_preview_digest(fields: &PolicyPreviewFields<'_>) -> [u8; 3
     buf.push(fields.auto_revoke_threshold);
     // 18. stable_balance_floor: u64 LE — TA-12 (Phase 5 post-exec invariant)
     buf.extend_from_slice(&fields.stable_balance_floor.to_le_bytes());
+    // 19. per_recipient_daily_cap_usd: u64 LE — TA-14 (Phase 5 post-exec)
+    buf.extend_from_slice(&fields.per_recipient_daily_cap_usd.to_le_bytes());
 
     hashv(&[&buf]).to_bytes()
 }
@@ -192,6 +200,7 @@ mod tests {
             auto_promote_grays: false,
             auto_revoke_threshold: 0,
             stable_balance_floor: 0,
+            per_recipient_daily_cap_usd: 0,
         };
         let d1 = compute_policy_preview_digest(&f);
         let d2 = compute_policy_preview_digest(&f);
@@ -221,6 +230,7 @@ mod tests {
             auto_promote_grays: false,
             auto_revoke_threshold: 0,
             stable_balance_floor: 0,
+            per_recipient_daily_cap_usd: 0,
         };
         let mut flipped = base.daily_spending_cap_usd;
         let _ = &mut flipped; // suppress unused
@@ -259,6 +269,7 @@ mod tests {
             auto_promote_grays: false,
             auto_revoke_threshold: 0,
             stable_balance_floor: 0,
+            per_recipient_daily_cap_usd: 0,
         };
         let f2 = PolicyPreviewFields {
             protocols: &b,
@@ -296,6 +307,7 @@ mod tests {
             auto_promote_grays: false,
             auto_revoke_threshold: 0,
             stable_balance_floor: 0,
+            per_recipient_daily_cap_usd: 0,
         };
         let narrow = PolicyPreviewFields {
             // 13:00-17:00 UTC = bits 13..17 = 0x1E000
@@ -336,6 +348,7 @@ mod tests {
             auto_promote_grays: false,
             auto_revoke_threshold: 5,
             stable_balance_floor: 0,
+            per_recipient_daily_cap_usd: 0,
         };
         let flipped = PolicyPreviewFields {
             auto_promote_grays: true,
@@ -374,6 +387,7 @@ mod tests {
             auto_promote_grays: false,
             auto_revoke_threshold: 5,
             stable_balance_floor: 0,
+            per_recipient_daily_cap_usd: 0,
         };
         let lower = PolicyPreviewFields {
             auto_revoke_threshold: 3,
@@ -384,6 +398,47 @@ mod tests {
         assert_ne!(
             d_base, d_lower,
             "auto_revoke_threshold flip MUST change digest"
+        );
+    }
+
+    /// TA-14 (Phase 5 post-exec): flipping per_recipient_daily_cap_usd MUST
+    /// change the canonical digest. The owner's chosen per-recipient cap is
+    /// part of the signed policy — silent flips can't raise (or remove) the
+    /// cap to let an attacker drain a single recipient.
+    #[test]
+    fn digest_changes_on_per_recipient_daily_cap_flip() {
+        let protocols = [pk(1)];
+        let dests = [pk(10)];
+        let base = PolicyPreviewFields {
+            daily_spending_cap_usd: 500_000_000,
+            max_transaction_size_usd: 100_000_000,
+            max_slippage_bps: 100,
+            developer_fee_rate: 0,
+            protocol_mode: 1,
+            protocols: &protocols,
+            destination_mode: 0,
+            allowed_destinations: &dests,
+            timelock_duration: 1800,
+            session_expiry_seconds: 30,
+            observe_only: false,
+            has_constraints: false,
+            has_post_assertions: 0,
+            created_at_slot: 12345,
+            operating_hours: 0x00FFFFFF,
+            auto_promote_grays: false,
+            auto_revoke_threshold: 5,
+            stable_balance_floor: 0,
+            per_recipient_daily_cap_usd: 0,
+        };
+        let raised = PolicyPreviewFields {
+            per_recipient_daily_cap_usd: 50_000_000, // $50 cap
+            ..base
+        };
+        let d_base = compute_policy_preview_digest(&base);
+        let d_raised = compute_policy_preview_digest(&raised);
+        assert_ne!(
+            d_base, d_raised,
+            "per_recipient_daily_cap_usd flip MUST change digest"
         );
     }
 
@@ -414,6 +469,7 @@ mod tests {
             auto_promote_grays: false,
             auto_revoke_threshold: 5,
             stable_balance_floor: 0,
+            per_recipient_daily_cap_usd: 0,
         };
         let raised = PolicyPreviewFields {
             // $100 floor in 6-decimal USDC face value
@@ -455,13 +511,15 @@ mod tests {
             auto_revoke_threshold: 0,
             // TA-12 minimal pin: zero floor (default — no reserve).
             stable_balance_floor: 0,
+            per_recipient_daily_cap_usd: 0,
         };
         // Encoding: 8 zero + 8 zero + 2 zero + 2 zero (developer_fee_rate)
         //   + 0x01 + 4 zero + 0x00 + 4 zero + 8 zero + 8 zero + 0 + 0 + 0
         //   + 8 zero (created_at_slot) + 4 zero (operating_hours TA-05)
         //   + 0 (auto_promote_grays TA-07) + 0 (auto_revoke_threshold TA-17)
         //   + 8 zero (stable_balance_floor TA-12)
-        // = 69 bytes deterministic input.
+        //   + 8 zero (per_recipient_daily_cap_usd TA-14)
+        // = 77 bytes deterministic input.
         let digest = compute_policy_preview_digest(&f);
         // Cross-impl pin — same fixture is asserted byte-for-byte in
         // sdk/kit/tests/policy/preview-digest.test.ts. If either side
@@ -477,9 +535,10 @@ mod tests {
         //     f48fb07695e4b5da504654ad5281f0d39e9fcff6fa9cde64a463f1d8a8471322
         //   Post-TA-07/17 (pre-TA-12):
         //     eec4230cd52f7f567e06e9b197a0dacdc3955808d1a5a256d5975a4ac1177beb
-        // TA-12 (Phase 5) appends 8 more bytes (stable_balance_floor=0) at
-        // position 18. New digest computed by the test below — re-pinned
-        // here for the SDK-side fixture parity.
+        //   Post-TA-12 (pre-TA-14):
+        //     d3e731941e95cb1c426ccc6f2b5c53525c033f498bdb79a593bc86c98508c67a
+        // TA-14 (Phase 5) appends 8 more bytes (per_recipient_daily_cap_usd=0)
+        // at position 19. New digest pinned in REGENERATED_HEX_MINIMAL below.
         let expected: [u8; 32] = REGENERATED_HEX_MINIMAL;
         assert_eq!(
             digest, expected,
@@ -523,6 +582,10 @@ mod tests {
             // TA-12 realistic pin: $100 floor in 6-decimal USDC face value.
             // Exercises a non-zero floor on the canonical byte layout.
             stable_balance_floor: 100_000_000,
+            // TA-14 realistic pin: $50 per-recipient daily cap in 6-decimal
+            // USDC face value. Exercises a non-zero cap on the canonical
+            // byte layout.
+            per_recipient_daily_cap_usd: 50_000_000,
         };
         let digest = compute_policy_preview_digest(&f);
         // Prior digests:
@@ -536,8 +599,11 @@ mod tests {
         //     af3990ea433e3de25baa05627f9a38ab497dffcba1e202aac99343b1de9cfc8c
         //   Post-TA-07/17 (pre-TA-12):
         //     35ed9a9f97b0fa21ca581bd45f11b28c2932525101e9be063cc0d2f6bebc3c48
-        // TA-12 (Phase 5) appends 8 more bytes (stable_balance_floor=100_000_000)
-        // at position 18. New digest below.
+        //   Post-TA-12 (pre-TA-14):
+        //     6523cb9b64baef661d919c802a8762332d1091cb53e8245d1624f52839fc9c8c
+        // TA-14 (Phase 5) appends 8 more bytes
+        // (per_recipient_daily_cap_usd=50_000_000) at position 19. New
+        // digest pinned in REGENERATED_HEX_REALISTIC below.
         let expected: [u8; 32] = REGENERATED_HEX_REALISTIC;
         assert_eq!(
             digest, expected,
@@ -546,27 +612,29 @@ mod tests {
     }
 }
 
-/// TA-12 Phase 5 minimal-policy expected digest.
+/// TA-12 + TA-14 Phase 5 minimal-policy expected digest.
 ///
-/// Computed over the canonical 69-byte encoding:
+/// Computed over the canonical 77-byte encoding:
 ///   - all 17 prior fields zero (or default), plus
 ///   - stable_balance_floor = 0 (u64 LE, 8 bytes)
+///   - per_recipient_daily_cap_usd = 0 (u64 LE, 8 bytes)
 ///
-/// = `d3e731941e95cb1c426ccc6f2b5c53525c033f498bdb79a593bc86c98508c67a`
+/// = `45c51e8d77b5a1775ea95c760a4a554288fc246f91e10bac620cfda902936a46`
 #[cfg(test)]
 const REGENERATED_HEX_MINIMAL: [u8; 32] = [
-    0xd3, 0xe7, 0x31, 0x94, 0x1e, 0x95, 0xcb, 0x1c, 0x42, 0x6c, 0xcc, 0x6f, 0x2b, 0x5c, 0x53, 0x52,
-    0x5c, 0x03, 0x3f, 0x49, 0x8b, 0xdb, 0x79, 0xa5, 0x93, 0xbc, 0x86, 0xc9, 0x85, 0x08, 0xc6, 0x7a,
+    0x45, 0xc5, 0x1e, 0x8d, 0x77, 0xb5, 0xa1, 0x77, 0x5e, 0xa9, 0x5c, 0x76, 0x0a, 0x4a, 0x55, 0x42,
+    0x88, 0xfc, 0x24, 0x6f, 0x91, 0xe1, 0x0b, 0xac, 0x62, 0x0c, 0xfd, 0xa9, 0x02, 0x93, 0x6a, 0x46,
 ];
 
-/// TA-12 Phase 5 realistic-policy expected digest.
+/// TA-12 + TA-14 Phase 5 realistic-policy expected digest.
 ///
-/// Realistic fixture with 2 protocols, 1 destination, common scalars, and
-/// `stable_balance_floor = 100_000_000` ($100 reserve).
+/// Realistic fixture with 2 protocols, 1 destination, common scalars,
+/// `stable_balance_floor = 100_000_000` ($100 reserve), and
+/// `per_recipient_daily_cap_usd = 50_000_000` ($50 per-recipient cap).
 ///
-/// = `6523cb9b64baef661d919c802a8762332d1091cb53e8245d1624f52839fc9c8c`
+/// = `67c7cde90c0d8140fceb370bf94dcc15488ffd1407a84d4c248b590a8b9d810f`
 #[cfg(test)]
 const REGENERATED_HEX_REALISTIC: [u8; 32] = [
-    0x65, 0x23, 0xcb, 0x9b, 0x64, 0xba, 0xef, 0x66, 0x1d, 0x91, 0x9c, 0x80, 0x2a, 0x87, 0x62, 0x33,
-    0x2d, 0x10, 0x91, 0xcb, 0x53, 0xe8, 0x24, 0x5d, 0x16, 0x24, 0xf5, 0x28, 0x39, 0xfc, 0x9c, 0x8c,
+    0x67, 0xc7, 0xcd, 0xe9, 0x0c, 0x0d, 0x81, 0x40, 0xfc, 0xeb, 0x37, 0x0b, 0xf9, 0x4d, 0xcc, 0x15,
+    0x48, 0x8f, 0xfd, 0x14, 0x07, 0xa8, 0x4d, 0x4c, 0x24, 0x8b, 0x59, 0x0a, 0x8b, 0x9d, 0x81, 0x0f,
 ];

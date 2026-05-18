@@ -191,6 +191,29 @@ pub fn handler(
 
     // Record spend
     tracker.record_spend(&clock, usd_amount)?;
+
+    // ─── TA-14 (Phase 5 post-exec invariant #2): per-recipient cap ───
+    //
+    // agent_transfer has an explicit `destination_token_account.owner`
+    // which IS the recipient wallet — no DeFi-ix walking needed. The
+    // §RP-correct resolution: read the SPL TokenAccount.owner field
+    // (already loaded by Anchor since this is `Account<TokenAccount>`).
+    //
+    // When policy.per_recipient_daily_cap_usd > 0, enforce against the
+    // recipient's rolling 24h spend on `SpendTracker.per_recipient`.
+    // Default 0 = no per-recipient cap, the check is skipped.
+    if policy.per_recipient_daily_cap_usd > 0 {
+        let recipient = ctx.accounts.destination_token_account.owner;
+        let prior_spend = tracker.get_recipient_spend(&clock, &recipient);
+        let new_total = prior_spend
+            .checked_add(usd_amount)
+            .ok_or(SigilError::Overflow)?;
+        require!(
+            new_total <= policy.per_recipient_daily_cap_usd,
+            SigilError::ErrRecipientCapExceeded
+        );
+        tracker.record_recipient_spend(&clock, &recipient, usd_amount)?;
+    }
     drop(tracker);
 
     // Build vault PDA signer seeds

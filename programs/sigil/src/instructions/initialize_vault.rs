@@ -77,6 +77,10 @@ pub fn handler(
     // (no reserve) preserves existing vault behavior; owners opt in via
     // a non-zero value. Bound by TA-19 at canonical digest position 18.
     stable_balance_floor: u64,
+    // TA-14 (Phase 5 post-exec): per-recipient rolling 24h outflow cap.
+    // 6-decimal USDC face value. Default 0 (no per-recipient cap).
+    // Bound by TA-19 at canonical digest position 19.
+    per_recipient_daily_cap_usd: u64,
     preview_digest: [u8; 32],
 ) -> Result<()> {
     crate::reject_cpi!();
@@ -193,6 +197,8 @@ pub fn handler(
         auto_revoke_threshold,
         // TA-12 (Phase 5 post-exec): owner-chosen reserve bound at position 18.
         stable_balance_floor,
+        // TA-14 (Phase 5 post-exec): per-recipient cap bound at position 19.
+        per_recipient_daily_cap_usd,
     });
     require!(
         recomputed_digest == preview_digest,
@@ -262,6 +268,10 @@ pub fn handler(
     // part of the signed configuration and cannot be silently lowered
     // by a tampered SDK or pending-PDA mutation.
     policy.stable_balance_floor = stable_balance_floor;
+    // TA-14 (Phase 5): persist per-recipient daily cap. Bound by TA-19
+    // at canonical digest position 19 — silent raises (or removals) of
+    // the cap cannot bypass the owner's signed digest.
+    policy.per_recipient_daily_cap_usd = per_recipient_daily_cap_usd;
 
     // Initialize zero-copy tracker (buckets + protocol_counters zero-initialized by allocator)
     let mut tracker = ctx.accounts.tracker.load_init()?;

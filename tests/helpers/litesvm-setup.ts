@@ -915,6 +915,8 @@ export function autoSiblingHandlerDigest(
   parts.push(u8(policy.autoRevokeThreshold ?? 0));
   // Phase 5 (TA-12): stable_balance_floor at position 18.
   parts.push(u64le(policy.stableBalanceFloor ?? 0));
+  // Phase 5 (TA-14): per_recipient_daily_cap_usd at position 19.
+  parts.push(u64le(policy.perRecipientDailyCapUsd ?? 0));
   const buf = Buffer.concat(parts);
   return Array.from(crypto.createHash("sha256").update(buf).digest());
 }

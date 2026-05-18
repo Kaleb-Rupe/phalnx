@@ -76,6 +76,11 @@ pub fn handler(
     // lowering through ordinary queue/apply since TA-09 cosign currently
     // covers only the original 4 elevated conditions).
     stable_balance_floor: Option<u64>,
+    // TA-14 (Phase 5 post-exec): owner-controlled per-recipient daily cap.
+    // None = pass through; Some(n) = update. Bound by TA-19 at digest
+    // position 19. NOTE: raising this is an "elevated mutation" per
+    // TA-09 (deferred to Phase 9 alongside the floor-lowering case).
+    per_recipient_daily_cap_usd: Option<u64>,
     // TA-09 (Phase 3): the cosigning session pubkey. `Pubkey::default()`
     // means "no cosign required" (non-elevated mutation). For elevated
     // mutations the caller MUST pass a non-default pubkey AND include
@@ -222,6 +227,9 @@ pub fn handler(
     let eff_has_post_assertions = policy.has_post_assertions;
     // TA-12 (Phase 5): merged-effective stable_balance_floor.
     let eff_stable_balance_floor = stable_balance_floor.unwrap_or(policy.stable_balance_floor);
+    // TA-14 (Phase 5): merged-effective per_recipient_daily_cap_usd.
+    let eff_per_recipient_daily_cap_usd =
+        per_recipient_daily_cap_usd.unwrap_or(policy.per_recipient_daily_cap_usd);
 
     // ─── TA-09 (Phase 3): elevated mutation detection + cosign binding ─
     //
@@ -339,6 +347,9 @@ pub fn handler(
         // signed digest — defends against a tampered SDK silently
         // lowering the reserve between queue and apply.
         stable_balance_floor: eff_stable_balance_floor,
+        // TA-14 (Phase 5 post-exec): merged-effective per-recipient cap
+        // bound by TA-19 at canonical position 19.
+        per_recipient_daily_cap_usd: eff_per_recipient_daily_cap_usd,
     });
     require!(
         recomputed_digest == new_policy_preview_digest,
@@ -382,6 +393,8 @@ pub fn handler(
     // TA-12 (Phase 5): persist optional stable_balance_floor update.
     // None passes the live value through at apply time.
     pending.stable_balance_floor = stable_balance_floor;
+    // TA-14 (Phase 5): persist optional per_recipient_daily_cap_usd update.
+    pending.per_recipient_daily_cap_usd = per_recipient_daily_cap_usd;
 
     ctx.accounts.policy.has_pending_policy = true;
 

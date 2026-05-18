@@ -197,6 +197,11 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
     if let Some(floor) = pending.stable_balance_floor {
         policy.stable_balance_floor = floor;
     }
+    // TA-14 (Phase 5): apply optional per_recipient_daily_cap_usd update.
+    // Second-pass TA-19 digest below covers this field at position 19.
+    if let Some(cap) = pending.per_recipient_daily_cap_usd {
+        policy.per_recipient_daily_cap_usd = cap;
+    }
     // Phase 2 Option A: defense-in-depth — re-validate protocol_mode if pending overrode it.
     if let Some(mode) = pending.protocol_mode {
         require!(
@@ -253,6 +258,9 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
         // by TA-19. apply_pending_policy reads live (applied) value so
         // the second-pass digest matches what queue_policy_update bound.
         stable_balance_floor: policy.stable_balance_floor,
+        // TA-14 (Phase 5): per_recipient_daily_cap_usd is policy-owned and
+        // bound by TA-19. Same pattern — read live (applied) value.
+        per_recipient_daily_cap_usd: policy.per_recipient_daily_cap_usd,
     });
     require!(
         recomputed_digest == pending.new_policy_preview_digest,

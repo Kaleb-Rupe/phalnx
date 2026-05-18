@@ -2756,6 +2756,10 @@ export type Sigil = {
           "type": "u64"
         },
         {
+          "name": "perRecipientDailyCapUsd",
+          "type": "u64"
+        },
+        {
           "name": "previewDigest",
           "type": {
             "array": [
@@ -3592,6 +3596,12 @@ export type Sigil = {
         },
         {
           "name": "stableBalanceFloor",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "perRecipientDailyCapUsd",
           "type": {
             "option": "u64"
           }
@@ -7702,6 +7712,17 @@ export type Sigil = {
             "type": {
               "option": "u64"
             }
+          },
+          {
+            "name": "perRecipientDailyCapUsd",
+            "docs": [
+              "TA-14 (Phase 5): optional update to `PolicyConfig.per_recipient_daily_cap_usd`.",
+              "None = preserve live value; Some(n) = set to n. Bound by TA-19 at canonical",
+              "digest position 19. APPENDED per F-14 APPEND-ONLY rule for Borsh stability."
+            ],
+            "type": {
+              "option": "u64"
+            }
           }
         ]
       }
@@ -8062,6 +8083,15 @@ export type Sigil = {
               "at canonical digest position 18. APPENDED per F-14 APPEND-ONLY rule."
             ],
             "type": "u64"
+          },
+          {
+            "name": "perRecipientDailyCapUsd",
+            "docs": [
+              "TA-14 (Phase 5 post-execution invariant #2): rolling 24h",
+              "per-recipient outflow cap. Bound by TA-19 at canonical digest",
+              "position 19. APPENDED per F-14 APPEND-ONLY rule."
+            ],
+            "type": "u64"
           }
         ]
       }
@@ -8377,6 +8407,52 @@ export type Sigil = {
       }
     },
     {
+      "name": "perRecipientCounter",
+      "docs": [
+        "TA-14 (Phase 5 post-exec): per-recipient rolling 24h outflow counter.",
+        "48 bytes per entry (32 + 8 + 8).",
+        "",
+        "`recipient` is resolved from the SPL TokenAccount.owner field — NOT",
+        "the ATA pubkey. The §RP brief explicitly flags ATA-vs-owner confusion",
+        "as the attack class to defend against."
+      ],
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "recipient",
+            "docs": [
+              "Recipient wallet pubkey (NOT the ATA pubkey — Pod-compatible bytes)."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "windowStart",
+            "docs": [
+              "Unix timestamp at which the active rolling 24h window started."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "windowSpendUsd",
+            "docs": [
+              "Accumulated 6-decimal USDC face value spent to recipient in window."
+            ],
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "sessionAuthority",
       "type": {
         "kind": "struct",
@@ -8647,6 +8723,44 @@ export type Sigil = {
             "name": "padding",
             "docs": [
               "Padding for 8-byte alignment"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                7
+              ]
+            }
+          },
+          {
+            "name": "perRecipient",
+            "docs": [
+              "TA-14 (Phase 5 post-exec invariant #2): per-recipient rolling 24h",
+              "outflow counters. Bounded to MAX_PER_RECIPIENT_ENTRIES (10) entries —",
+              "Vec NOT permitted in zero-copy account per F-14."
+            ],
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "perRecipientCounter"
+                  }
+                },
+                10
+              ]
+            }
+          },
+          {
+            "name": "perRecipientCount",
+            "docs": [
+              "TA-14 (Phase 5): how many per_recipient slots are currently active.",
+              "Eviction is AGE-BASED only — no LRU/churn-eviction per §RP."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "paddingRecipient",
+            "docs": [
+              "Padding for 8-byte alignment after the new u8 counter."
             ],
             "type": {
               "array": [

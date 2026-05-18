@@ -43,6 +43,9 @@ pub mod sigil {
         // TA-12 (Phase 5): owner's hard floor on combined USDC+USDT vault
         // balance. Default 0 = no reserve. Bound by TA-19 at digest position 18.
         stable_balance_floor: u64,
+        // TA-14 (Phase 5): owner's per-recipient rolling 24h outflow cap.
+        // Default 0 = no per-recipient cap. Bound by TA-19 at digest position 19.
+        per_recipient_daily_cap_usd: u64,
         preview_digest: [u8; 32],
     ) -> Result<()> {
         instructions::initialize_vault::handler(
@@ -62,6 +65,7 @@ pub mod sigil {
             auto_promote_grays,
             auto_revoke_threshold,
             stable_balance_floor,
+            per_recipient_daily_cap_usd,
             preview_digest,
         )
     }
@@ -167,6 +171,9 @@ pub mod sigil {
         // TA-12 (Phase 5): optional update to PolicyConfig.stable_balance_floor.
         // None passes the live value through; Some(n) sets the new floor.
         stable_balance_floor: Option<u64>,
+        // TA-14 (Phase 5): optional update to
+        // PolicyConfig.per_recipient_daily_cap_usd. None = pass-through.
+        per_recipient_daily_cap_usd: Option<u64>,
         cosign_session: Pubkey,
         new_policy_preview_digest: [u8; 32],
     ) -> Result<()> {
@@ -186,6 +193,7 @@ pub mod sigil {
             destination_mode,
             operating_hours,
             stable_balance_floor,
+            per_recipient_daily_cap_usd,
             cosign_session,
             new_policy_preview_digest,
         )

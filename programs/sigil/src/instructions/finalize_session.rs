@@ -450,6 +450,143 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
         drop(tracker);
     }
 
+    // ─── TA-14 (Phase 5 post-exec invariant #2): per-recipient cap ───
+    //
+    // When a spending finalize completes with `actual_spend_tracked > 0`,
+    // identify the recipient(s) whose token accounts received outflow and
+    // enforce `policy.per_recipient_daily_cap_usd` against each.
+    //
+    // RECIPIENT RESOLUTION: walk the PREVIOUS (DeFi) instruction's
+    // account metas via the instructions sysvar. For each writable
+    // SPL/Token-2022 token account in the metas where:
+    //   1. The deserialized SPL TokenAccount.owner ∈ allowed_destinations
+    //   2. The mint is a stablecoin (USDC/USDT)
+    // attribute outflow. CRITICAL: recipient = TokenAccount.owner (the
+    // wallet), NOT the meta pubkey (which is the ATA). The §RP brief
+    // explicitly flags ATA-vs-owner confusion as the attack class.
+    //
+    // V1 SCOPING: this loop only RECOGNIZES recipients whose owner is on
+    // the policy's allowed_destinations allowlist. Other writable token
+    // accounts in the DeFi ix's metas (DEX-internal vaults, protocol
+    // treasuries, etc.) are NOT counted as recipients. This matches the
+    // policy model: the owner pre-authorizes the set of legitimate
+    // outflow destinations; any address NOT on that list cannot receive
+    // a deliberate outflow without ALSO breaking the global spending cap.
+    //
+    // When per_recipient_daily_cap_usd == 0, the entire block is skipped
+    // (default — preserves existing vault behavior).
+    let per_recipient_policy = &ctx.accounts.policy;
+    if per_recipient_policy.per_recipient_daily_cap_usd > 0 && actual_spend_tracked > 0 {
+        // Find the DeFi instruction immediately preceding this finalize.
+        // It sits at `validate_ix_index + 1` per the sandwich pattern, OR
+        // we can scan backwards from `current_ix_index - 1`.
+        let ix_sysvar_info_ta14 = ctx.accounts.instructions_sysvar.to_account_info();
+        let current_index = load_current_index_checked(&ix_sysvar_info_ta14)
+            .map_err(|_| error!(SigilError::InvalidSession))?
+            as usize;
+        // The DeFi ix sits at current_index - 1 (the instruction
+        // immediately before finalize_session in the sandwich
+        // [validate, DeFi, finalize]).
+        require!(current_index >= 1, SigilError::InvalidSession);
+        let defi_ix_index = current_index.saturating_sub(1);
+        let Ok(defi_ix) = load_instruction_at_checked(defi_ix_index, &ix_sysvar_info_ta14) else {
+            // No preceding instruction — fail closed.
+            return Err(error!(SigilError::ErrRecipientCapExceeded));
+        };
+
+        // Walk metas to find recipient token accounts. The DeFi ix's metas
+        // contain pubkeys but NOT account data — we must look up each
+        // pubkey in `ctx.remaining_accounts` to get the deserialized
+        // TokenAccount.owner field. The §RP-correct resolution.
+        //
+        // Track distinct recipients seen in THIS tx — V1 rejects if more
+        // than one distinct recipient is touched (the per-recipient
+        // outflow attribution becomes ambiguous and is deferred to V2).
+        let mut recipient_seen: Option<Pubkey> = None;
+        for meta in defi_ix.accounts.iter() {
+            // Only writable token accounts could be recipients. The DeFi
+            // program's read-only accounts (oracles, config PDAs) can't
+            // receive outflow.
+            if !meta.is_writable {
+                continue;
+            }
+            // Look up the meta pubkey in remaining_accounts to get the
+            // account data. If not present, skip (the floor check below
+            // may still pass if this recipient isn't a vault stablecoin
+            // ATA).
+            let Some(info) = ctx.remaining_accounts.iter().find(|a| a.key() == meta.pubkey)
+            else {
+                continue;
+            };
+            // Must be token-program-owned.
+            if info.owner != &anchor_spl::token::ID && info.owner != &TOKEN_2022_PROGRAM_ID {
+                continue;
+            }
+            let data = info.try_borrow_data()?;
+            if data.len() < 72 {
+                continue;
+            }
+            // Parse mint (0..32), owner (32..64) — see TA-12 block above
+            // for the same shape. Skip non-stablecoin accounts and
+            // accounts whose owner is the vault itself (those are
+            // self-transfers, not recipient outflow).
+            let mut mint_bytes = [0u8; 32];
+            mint_bytes.copy_from_slice(&data[0..32]);
+            let mint = Pubkey::new_from_array(mint_bytes);
+            let mut owner_bytes = [0u8; 32];
+            owner_bytes.copy_from_slice(&data[32..64]);
+            let recipient = Pubkey::new_from_array(owner_bytes);
+            if recipient == vault_key {
+                continue;
+            }
+            if !is_stablecoin_mint(&mint) {
+                continue;
+            }
+            // CRITICAL: only count owners on the policy's allowlist. Any
+            // other destination is either a DEX-internal vault (not a
+            // human recipient) or an unauthorized outflow target — the
+            // latter case is already blocked by destination_check in
+            // validate_and_authorize, so reaching it here would indicate
+            // a deeper validation gap. Defense-in-depth: skip.
+            if !per_recipient_policy.is_destination_allowed(&recipient) {
+                continue;
+            }
+            // Found a legitimate recipient. V1 only supports one
+            // distinct recipient per tx — reject if we see a second.
+            if let Some(prev) = recipient_seen {
+                if prev != recipient {
+                    // Multiple distinct recipients in same finalize.
+                    return Err(error!(SigilError::ErrRecipientCapExceeded));
+                }
+            } else {
+                recipient_seen = Some(recipient);
+            }
+        }
+
+        if let Some(recipient) = recipient_seen {
+            // Read-only prior spend in the active window.
+            let mut tracker = ctx.accounts.tracker.load_mut()?;
+            let prior_spend = tracker.get_recipient_spend(&clock, &recipient);
+            let new_total = prior_spend
+                .checked_add(actual_spend_tracked)
+                .ok_or(SigilError::Overflow)?;
+            require!(
+                new_total <= per_recipient_policy.per_recipient_daily_cap_usd,
+                SigilError::ErrRecipientCapExceeded
+            );
+            // Record (may evict an age-elapsed entry; rejects if all
+            // slots are filled within last 24h per the no-churn rule).
+            tracker.record_recipient_spend(&clock, &recipient, actual_spend_tracked)?;
+            drop(tracker);
+        }
+        // If no recipient was seen but actual_spend_tracked > 0, the
+        // spend went to a non-allowlisted destination (DEX-internal
+        // vault for a swap that lands stablecoin back in the vault, or
+        // protocol treasury). Per the policy model, no per-recipient
+        // attribution applies; the global daily cap already enforced
+        // the spend ceiling. NO-OP for the per-recipient cap.
+    }
+
     // ─── TA-12 (Phase 5 post-exec invariant #1): stable balance floor ──
     //
     // After ALL spending paths complete (DeFi spend bookkeeping, fee

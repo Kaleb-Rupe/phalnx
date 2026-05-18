@@ -20,8 +20,8 @@ import * as fc from "fast-check";
 import { createHash } from "node:crypto";
 import { computePolicyPreviewDigest } from "../../src/policy/compute-policy-preview-digest.js";
 
-// Post-TA-12 (Phase 5 post-exec): stable_balance_floor appended at position 18
-// of the canonical encoding.
+// Post-TA-14 (Phase 5 post-exec): per_recipient_daily_cap_usd appended at
+// position 19 of the canonical encoding.
 // Prior values:
 //   Pre-PEN-CROSS-6:
 //     HEX_MINIMAL   = 29f9a0caa6851902abe7de24ac30380ef50c220d25d541f8fe1762793152b623
@@ -38,14 +38,17 @@ import { computePolicyPreviewDigest } from "../../src/policy/compute-policy-prev
 //   Post-TA-07/17 (pre-TA-12):
 //     HEX_MINIMAL   = eec4230cd52f7f567e06e9b197a0dacdc3955808d1a5a256d5975a4ac1177beb
 //     HEX_REALISTIC = 35ed9a9f97b0fa21ca581bd45f11b28c2932525101e9be063cc0d2f6bebc3c48
+//   Post-TA-12 (pre-TA-14):
+//     HEX_MINIMAL   = d3e731941e95cb1c426ccc6f2b5c53525c033f498bdb79a593bc86c98508c67a
+//     HEX_REALISTIC = 6523cb9b64baef661d919c802a8762332d1091cb53e8245d1624f52839fc9c8c
 //
-// TA-12 fixtures:
-//   - HEX_MINIMAL: stableBalanceFloor=0 (no reserve — append 8 zero bytes)
-//   - HEX_REALISTIC: stableBalanceFloor=100_000_000 ($100 reserve)
+// TA-14 fixtures:
+//   - HEX_MINIMAL: perRecipientDailyCapUsd=0n (no cap — append 8 zero bytes)
+//   - HEX_REALISTIC: perRecipientDailyCapUsd=50_000_000n ($50 per-recipient cap)
 const HEX_MINIMAL =
-  "d3e731941e95cb1c426ccc6f2b5c53525c033f498bdb79a593bc86c98508c67a";
+  "45c51e8d77b5a1775ea95c760a4a554288fc246f91e10bac620cfda902936a46";
 const HEX_REALISTIC =
-  "6523cb9b64baef661d919c802a8762332d1091cb53e8245d1624f52839fc9c8c";
+  "67c7cde90c0d8140fceb370bf94dcc15488ffd1407a84d4c248b590a8b9d810f";
 
 // Base58 encodings of fixed test pubkeys [1u8;32], [2u8;32], [10u8;32].
 // Computed once (see Rust unit-test fixtures `pk(1) / pk(2) / pk(10)`).
@@ -82,6 +85,8 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       autoRevokeThreshold: 0,
       // TA-12: minimal fixture pins floor=0 (no reserve)
       stableBalanceFloor: 0n,
+      // TA-14: minimal fixture pins per-recipient cap=0 (no cap)
+      perRecipientDailyCapUsd: 0n,
     });
     expect(toHex(digest)).to.equal(HEX_MINIMAL);
   });
@@ -110,6 +115,8 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       autoRevokeThreshold: 5,
       // TA-12: realistic fixture pins floor=$100 (100_000_000 in 6-decimal USDC face value)
       stableBalanceFloor: 100_000_000n,
+      // TA-14: realistic fixture pins per-recipient cap=$50 (50_000_000)
+      perRecipientDailyCapUsd: 50_000_000n,
     });
     expect(toHex(digest)).to.equal(HEX_REALISTIC);
   });
@@ -375,6 +382,40 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
     });
     expect(toHex(d1)).to.not.equal(toHex(d2));
   });
+
+  // TA-14 cross-impl pin: per_recipient_daily_cap_usd is bound by the
+  // digest. Flipping it MUST change the digest — defends against a
+  // tampered SDK silently raising the per-recipient cap to drain to
+  // one recipient.
+  it("per_recipient_daily_cap_usd flip changes the digest (TA-14)", () => {
+    const base = {
+      dailySpendingCapUsd: 500_000_000n,
+      maxTransactionSizeUsd: 100_000_000n,
+      maxSlippageBps: 100,
+      developerFeeRate: 0,
+      protocolMode: 1,
+      protocols: [PK_1],
+      destinationMode: 0,
+      allowedDestinations: [PK_10],
+      timelockDuration: 1800n,
+      sessionExpirySeconds: 30n,
+      observeOnly: false,
+      hasConstraints: false,
+      hasPostAssertions: 0,
+      createdAtSlot: 12345n,
+      operatingHours: 0x00ffffff,
+      autoPromoteGrays: false,
+      autoRevokeThreshold: 5,
+      stableBalanceFloor: 0n,
+      perRecipientDailyCapUsd: 0n,
+    } as const;
+    const d1 = computePolicyPreviewDigest(base);
+    const d2 = computePolicyPreviewDigest({
+      ...base,
+      perRecipientDailyCapUsd: 50_000_000n,
+    });
+    expect(toHex(d1)).to.not.equal(toHex(d2));
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -445,6 +486,7 @@ function referenceDigest(fields: {
   autoPromoteGrays: boolean;
   autoRevokeThreshold: number;
   stableBalanceFloor: bigint;
+  perRecipientDailyCapUsd: bigint;
 }): string {
   const parts: number[] = [];
   const pushU64 = (v: bigint) => {
@@ -492,6 +534,8 @@ function referenceDigest(fields: {
   pushU8(fields.autoRevokeThreshold);
   // TA-12: stable_balance_floor at position 18
   pushU64(fields.stableBalanceFloor);
+  // TA-14: per_recipient_daily_cap_usd at position 19
+  pushU64(fields.perRecipientDailyCapUsd);
 
   const buf = Buffer.from(parts);
   return createHash("sha256").update(buf).digest("hex");
@@ -523,6 +567,7 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
         fc.boolean(), // auto_promote_grays (TA-07)
         fc.integer({ min: 0, max: 255 }), // auto_revoke_threshold (TA-17; encoder handles any u8)
         fc.bigUint({ max: (1n << 64n) - 1n }), // stable_balance_floor (TA-12)
+        fc.bigUint({ max: (1n << 64n) - 1n }), // per_recipient_daily_cap_usd (TA-14)
         (
           dailyCap,
           maxTx,
@@ -542,6 +587,7 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
           autoPromoteGrays,
           autoRevokeThreshold,
           stableBalanceFloor,
+          perRecipientDailyCapUsd,
         ) => {
           const sdkDigest = computePolicyPreviewDigest({
             dailySpendingCapUsd: dailyCap,
@@ -564,6 +610,7 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
             autoPromoteGrays,
             autoRevokeThreshold,
             stableBalanceFloor,
+            perRecipientDailyCapUsd,
           });
           const refDigest = referenceDigest({
             dailySpendingCapUsd: dailyCap,
@@ -584,6 +631,7 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
             autoPromoteGrays,
             autoRevokeThreshold,
             stableBalanceFloor,
+            perRecipientDailyCapUsd,
           });
           const sdkHex = Array.from(sdkDigest)
             .map((x) => x.toString(16).padStart(2, "0"))

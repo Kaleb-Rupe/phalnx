@@ -85,6 +85,8 @@ pub fn handler(ctx: Context<SetObserveOnly>, new_value: bool) -> Result<()> {
         auto_revoke_threshold: policy.auto_revoke_threshold,
         // TA-12 (Phase 5): bound by TA-19, never mutated by this ix.
         stable_balance_floor: policy.stable_balance_floor,
+        // TA-14 (Phase 5): bound by TA-19, never mutated by this ix.
+        per_recipient_daily_cap_usd: policy.per_recipient_daily_cap_usd,
     });
     policy.policy_preview_digest = recomputed_digest;
     policy.policy_version = policy

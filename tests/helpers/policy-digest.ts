@@ -25,6 +25,7 @@
  *   16. auto_promote_grays: bool (1 byte 0/1) — TA-07 (Phase 3 pre-exec)
  *   17. auto_revoke_threshold: u8 — TA-17 (Phase 3 pre-exec)
  *   18. stable_balance_floor: u64 LE — TA-12 (Phase 5 post-exec)
+ *   19. per_recipient_daily_cap_usd: u64 LE — TA-14 (Phase 5 post-exec)
  */
 
 import { createHash } from "crypto";
@@ -80,6 +81,12 @@ export interface PolicyDigestFields {
    * (no reserve). Bound at digest position 18.
    */
   stableBalanceFloor?: BN | bigint | number;
+  /**
+   * TA-14 (Phase 5 post-exec): owner-chosen rolling 24h per-recipient
+   * outflow cap. 6-decimal USDC face value. Default 0 (no per-recipient
+   * cap). Bound at digest position 19.
+   */
+  perRecipientDailyCapUsd?: BN | bigint | number;
 }
 
 function u64le(v: BN | bigint | number): Buffer {
@@ -146,6 +153,8 @@ export function computePolicyPreviewDigest(
   parts.push(u8(fields.autoRevokeThreshold ?? 0));
   // TA-12: stable_balance_floor at position 18.
   parts.push(u64le(fields.stableBalanceFloor ?? 0));
+  // TA-14: per_recipient_daily_cap_usd at position 19.
+  parts.push(u64le(fields.perRecipientDailyCapUsd ?? 0));
 
   const buf = Buffer.concat(parts);
   return Array.from(createHash("sha256").update(buf).digest());
@@ -208,6 +217,11 @@ export function initVaultPreviewDigest(args: {
    * Default 0 (no reserve). Bound at digest position 18.
    */
   stableBalanceFloor?: BN | bigint | number;
+  /**
+   * TA-14 (Phase 5): per_recipient_daily_cap_usd in 6-decimal USDC face
+   * value. Default 0 (no cap). Bound at digest position 19.
+   */
+  perRecipientDailyCapUsd?: BN | bigint | number;
 }): number[] {
   return computePolicyPreviewDigest({
     dailySpendingCapUsd: args.dailySpendingCapUsd,
@@ -228,6 +242,7 @@ export function initVaultPreviewDigest(args: {
     autoPromoteGrays: args.autoPromoteGrays ?? false,
     autoRevokeThreshold: args.autoRevokeThreshold ?? 0,
     stableBalanceFloor: args.stableBalanceFloor ?? 0,
+    perRecipientDailyCapUsd: args.perRecipientDailyCapUsd ?? 0,
   });
 }
 
@@ -270,6 +285,8 @@ export interface LiveLikePolicy {
   autoRevokeThreshold?: number;
   /** TA-12 (Phase 5): bound by the canonical digest at position 18. */
   stableBalanceFloor?: BN | bigint | number;
+  /** TA-14 (Phase 5): bound by the canonical digest at position 19. */
+  perRecipientDailyCapUsd?: BN | bigint | number;
 }
 
 export interface QueueOverride {
@@ -294,6 +311,11 @@ export interface QueueOverride {
   autoRevokeThreshold?: number | null;
   /** TA-12 (Phase 5): stable_balance_floor override. null = pass-through. */
   stableBalanceFloor?: BN | bigint | number | null;
+  /**
+   * TA-14 (Phase 5): per_recipient_daily_cap_usd override. null =
+   * pass-through from live policy.
+   */
+  perRecipientDailyCapUsd?: BN | bigint | number | null;
 }
 
 function pick<T>(override: T | null | undefined, fallback: T): T {
@@ -350,6 +372,11 @@ export function queuePolicyMergedDigest(
       override.stableBalanceFloor,
       live.stableBalanceFloor ?? 0,
     ),
+    // TA-14 (Phase 5): merged-effective per-recipient daily cap.
+    perRecipientDailyCapUsd: pick(
+      override.perRecipientDailyCapUsd,
+      live.perRecipientDailyCapUsd ?? 0,
+    ),
   });
 }
 
@@ -398,6 +425,8 @@ export async function siblingHandlerDigest(
     autoRevokeThreshold: policy.autoRevokeThreshold ?? 0,
     // TA-12 (Phase 5): pass-through. Sibling handlers never mutate this.
     stableBalanceFloor: policy.stableBalanceFloor ?? 0,
+    // TA-14 (Phase 5): pass-through. Sibling handlers never mutate this.
+    perRecipientDailyCapUsd: policy.perRecipientDailyCapUsd ?? 0,
   });
 }
 
@@ -435,6 +464,7 @@ export async function fetchAndComputeQueueDigest(
     autoPromoteGrays: !!policy.autoPromoteGrays,
     autoRevokeThreshold: policy.autoRevokeThreshold ?? 0,
     stableBalanceFloor: policy.stableBalanceFloor ?? 0,
+    perRecipientDailyCapUsd: policy.perRecipientDailyCapUsd ?? 0,
   };
   return queuePolicyMergedDigest(live, override, !!vault.observeOnly);
 }

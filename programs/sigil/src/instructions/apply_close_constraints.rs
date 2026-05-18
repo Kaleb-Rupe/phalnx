@@ -113,6 +113,9 @@ pub fn handler(
         // by TA-19. apply_close_constraints never mutates it — pass
         // through from live policy.
         stable_balance_floor: policy.stable_balance_floor,
+        // TA-14 (Phase 5): per_recipient_daily_cap_usd is policy-owned
+        // and bound by TA-19. Sibling handler — never mutates it.
+        per_recipient_daily_cap_usd: policy.per_recipient_daily_cap_usd,
     });
     // PEN-CROSS-3: owner must have signed the post-mutation digest.
     require!(
