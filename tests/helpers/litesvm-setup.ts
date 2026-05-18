@@ -917,6 +917,10 @@ export function autoSiblingHandlerDigest(
   parts.push(u64le(policy.stableBalanceFloor ?? 0));
   // Phase 5 (TA-14): per_recipient_daily_cap_usd at position 19.
   parts.push(u64le(policy.perRecipientDailyCapUsd ?? 0));
+  // G6 (audit 2026-05-18 cosign opt-in): cosign_required at position 20.
+  // Sibling handlers (constraints / post-assertions flips) never mutate
+  // cosign_required — pass through from live policy.
+  parts.push(u8(policy.cosignRequired ? 1 : 0));
   const buf = Buffer.concat(parts);
   return Array.from(crypto.createHash("sha256").update(buf).digest());
 }

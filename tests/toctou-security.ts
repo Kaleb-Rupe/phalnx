@@ -170,6 +170,7 @@ describe("TOCTOU Security Fix", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -254,6 +255,7 @@ describe("TOCTOU Security Fix", () => {
           null, // operating_hours (TA-05 Phase 3 — null pass-through)
           null, // stable_balance_floor (TA-12 Phase 5 — null pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — null pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           newDigest,
         )
@@ -380,6 +382,7 @@ describe("TOCTOU Security Fix", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -431,6 +434,7 @@ describe("TOCTOU Security Fix", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
         )
@@ -470,6 +474,7 @@ describe("TOCTOU Security Fix", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
         )
