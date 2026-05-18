@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 use crate::errors::SigilError;
 use crate::events::VaultCreated;
 use crate::state::*;
+use crate::utils::policy_digest::{compute_policy_preview_digest, PolicyPreviewFields};
 
 #[derive(Accounts)]
 #[instruction(vault_id: u64)]
@@ -67,12 +68,14 @@ pub fn handler(
     timelock_duration: u64,
     allowed_destinations: Vec<Pubkey>,
     protocol_caps: Vec<u64>,
+    observe_only: bool,
+    preview_digest: [u8; 32],
 ) -> Result<()> {
     crate::reject_cpi!();
 
-    // Validate protocol_mode
+    // Phase 2 Option A: protocol_mode MUST be ALLOWLIST (1). Permissive ALL/DENYLIST deleted.
     require!(
-        protocol_mode <= PROTOCOL_MODE_DENYLIST,
+        protocol_mode == PROTOCOL_MODE_ALLOWLIST,
         SigilError::InvalidProtocolMode
     );
     require!(
@@ -112,6 +115,30 @@ pub fn handler(
         );
     }
 
+    // Phase 2 TA-19: assert the owner's signed digest matches the recomputed
+    // digest over the resulting policy fields. Closes pending-PDA tampering +
+    // signer-blind-sign risks. The resulting policy uses RESTRICTED destination
+    // mode (Option A default-tightening; OPEN_WITH_CAP deleted) and the caller's
+    // observe_only flag.
+    let recomputed_digest = compute_policy_preview_digest(&PolicyPreviewFields {
+        daily_spending_cap_usd,
+        max_transaction_size_usd,
+        max_slippage_bps,
+        protocol_mode,
+        protocols: &protocols,
+        destination_mode: DESTINATION_MODE_RESTRICTED,
+        allowed_destinations: &allowed_destinations,
+        timelock_duration,
+        session_expiry_seconds: 0,
+        observe_only,
+        has_constraints: false,
+        has_post_assertions: 0,
+    });
+    require!(
+        recomputed_digest == preview_digest,
+        SigilError::PolicyPreviewMismatch
+    );
+
     let clock = Clock::get()?;
 
     // Initialize vault
@@ -130,6 +157,8 @@ pub fn handler(
     vault.total_withdrawn_usd = 0;
     vault.total_failed_transactions = 0;
     vault.active_sessions = 0;
+    // Phase 2 TA-19: observer-only mode (set by owner at init).
+    vault.observe_only = observe_only;
 
     // Initialize policy
     let policy = &mut ctx.accounts.policy;
@@ -149,9 +178,10 @@ pub fn handler(
     policy.bump = ctx.bumps.policy;
     policy.policy_version = 0;
     policy.has_post_assertions = 0;
-    // F-4 fix: default to Restricted mode (destination must appear in allowlist).
-    // Owners switch to OpenWithCap explicitly via queue_policy_update.
+    // Phase 2 Option A: destination_mode is RESTRICTED. OPEN_WITH_CAP path deleted.
     policy.destination_mode = DESTINATION_MODE_RESTRICTED;
+    // Phase 2 TA-19: pin the owner-signed digest into live policy.
+    policy.policy_preview_digest = preview_digest;
 
     // Initialize zero-copy tracker (buckets + protocol_counters zero-initialized by allocator)
     let mut tracker = ctx.accounts.tracker.load_init()?;

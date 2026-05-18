@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 use crate::errors::SigilError;
 use crate::events::PolicyChangeApplied;
 use crate::state::*;
+use crate::utils::policy_digest::{compute_policy_preview_digest, PolicyPreviewFields};
 
 #[derive(Accounts)]
 pub struct ApplyPendingPolicy<'info> {
@@ -93,13 +94,47 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
         policy.protocol_caps = caps.clone();
     }
     if let Some(mode) = pending.destination_mode {
-        // Validate again at apply time — defence in depth.
+        // Phase 2 Option A: re-validate at apply time. OPEN_WITH_CAP deleted.
         require!(
-            mode <= DESTINATION_MODE_OPEN_WITH_CAP,
+            mode == DESTINATION_MODE_RESTRICTED,
             SigilError::InvalidDestinationMode
         );
         policy.destination_mode = mode;
     }
+    // Phase 2 Option A: defense-in-depth — re-validate protocol_mode if pending overrode it.
+    if let Some(mode) = pending.protocol_mode {
+        require!(
+            mode == PROTOCOL_MODE_ALLOWLIST,
+            SigilError::InvalidProtocolMode
+        );
+    }
+
+    // Phase 2 TA-19: re-assert the digest of the now-merged live policy against
+    // the owner-signed `pending.new_policy_preview_digest`. This is the second
+    // defense — the first ran at `queue_policy_update`. If a rogue program
+    // tampered with the pending PDA between queue and apply (e.g. discriminator
+    // collision via a future zero-copy account type), the recomputed digest
+    // diverges and we hard-reject.
+    let recomputed_digest = compute_policy_preview_digest(&PolicyPreviewFields {
+        daily_spending_cap_usd: policy.daily_spending_cap_usd,
+        max_transaction_size_usd: policy.max_transaction_size_usd,
+        max_slippage_bps: policy.max_slippage_bps,
+        protocol_mode: policy.protocol_mode,
+        protocols: &policy.protocols,
+        destination_mode: policy.destination_mode,
+        allowed_destinations: &policy.allowed_destinations,
+        timelock_duration: policy.timelock_duration,
+        session_expiry_seconds: policy.session_expiry_seconds,
+        observe_only: ctx.accounts.vault.observe_only,
+        has_constraints: policy.has_constraints,
+        has_post_assertions: policy.has_post_assertions,
+    });
+    require!(
+        recomputed_digest == pending.new_policy_preview_digest,
+        SigilError::PolicyPreviewMismatch
+    );
+    // Persist the new digest into live policy for future reads.
+    policy.policy_preview_digest = pending.new_policy_preview_digest;
 
     policy.has_pending_policy = false;
 

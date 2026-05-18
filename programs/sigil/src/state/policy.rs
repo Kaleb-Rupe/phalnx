@@ -1,19 +1,28 @@
 use super::{MAX_ALLOWED_DESTINATIONS, MAX_ALLOWED_PROTOCOLS, SESSION_DURATION_SECONDS};
 use anchor_lang::prelude::*;
 
-/// Protocol access control mode: all protocols allowed
-pub const PROTOCOL_MODE_ALL: u8 = 0;
-/// Protocol access control mode: only protocols in list allowed
+/// Protocol access control mode: only protocols in list allowed.
+///
+/// Phase 2 (Option A default-tightening): this is the ONLY permitted value.
+/// The prior `PROTOCOL_MODE_ALL` (0) and `PROTOCOL_MODE_DENYLIST` (2) constants
+/// were deleted because:
+///   - ALL mode bypassed the protocol allowlist entirely (Audit #2 F-4 vector).
+///   - DENYLIST mode required Sigil to enumerate every hostile program — an
+///     unbounded set — defeating the security primitive.
+/// Vaults MUST use ALLOWLIST. Handlers (`initialize_vault`, `queue_policy_update`,
+/// `apply_pending_policy`) reject any other value with `InvalidProtocolMode`.
 pub const PROTOCOL_MODE_ALLOWLIST: u8 = 1;
-/// Protocol access control mode: all except protocols in list
-pub const PROTOCOL_MODE_DENYLIST: u8 = 2;
 
-/// Destination access control mode: destination MUST be in `allowed_destinations`
-/// (default — closes F-4 default-allow drain vector).
+/// Destination access control mode: destination MUST be in `allowed_destinations`.
+///
+/// Phase 2 (Option A default-tightening): this is the ONLY permitted value.
+/// The prior `DESTINATION_MODE_OPEN_WITH_CAP` (1) constant was deleted because
+/// it allowed a compromised agent to drain `daily_spending_cap_usd` to any
+/// destination (closes F-4 default-allow drain vector definitively, rather
+/// than depending on owner opt-in correctness).
+/// Vaults MUST use RESTRICTED. Handlers reject any other value with
+/// `InvalidDestinationMode`.
 pub const DESTINATION_MODE_RESTRICTED: u8 = 0;
-/// Destination access control mode: any destination allowed; only the
-/// daily spending cap throttles drain blast radius. Owner must explicitly opt in.
-pub const DESTINATION_MODE_OPEN_WITH_CAP: u8 = 1;
 
 #[account]
 pub struct PolicyConfig {
@@ -94,13 +103,39 @@ pub struct PolicyConfig {
     /// 0 = no assertions, non-zero = assertions required.
     pub has_post_assertions: u8,
 
-    /// Destination access control mode for `agent_transfer`:
-    ///   0 = Restricted (DEFAULT) — destination MUST be in `allowed_destinations`.
-    ///   1 = OpenWithCap — destination unrestricted; only `daily_spending_cap_usd` throttles drain.
-    /// Closes F-4 (third-pass audit): empty `allowed_destinations` no longer
-    /// implies default-allow. Owners must explicitly opt into OpenWithCap via
-    /// queue_policy_update / apply_pending_policy.
+    /// Destination access control mode for `agent_transfer` and spending paths.
+    ///
+    /// Phase 2 Option A: only value 0 (RESTRICTED) is accepted. Permissive
+    /// OPEN_WITH_CAP (1) was deleted. Closes F-4 (third-pass audit) and the
+    /// subsequent owner-opt-in window definitively.
     pub destination_mode: u8,
+
+    /// TA-19 (Phase 2): SHA-256 digest of the canonical Borsh encoding of the
+    /// policy fields the owner approved at queue/init time. Bound at the same
+    /// instruction where the owner signs the change, re-asserted at apply, so
+    /// a compromised owner-signer or pending-PDA tampering cannot mutate the
+    /// applied policy without producing a digest mismatch.
+    ///
+    /// CANONICAL ENCODING (FIXED — DO NOT REORDER):
+    ///   1. `daily_spending_cap_usd: u64`
+    ///   2. `max_transaction_size_usd: u64`
+    ///   3. `max_slippage_bps: u16`
+    ///   4. `protocol_mode: u8`
+    ///   5. `protocols: Vec<Pubkey>`
+    ///   6. `destination_mode: u8`
+    ///   7. `allowed_destinations: Vec<Pubkey>`
+    ///   8. `timelock_duration: u64`
+    ///   9. `session_expiry_seconds: u64`
+    ///   10. `observe_only: bool`
+    ///   11. `has_constraints: bool`
+    ///   12. `has_post_assertions: u8`
+    ///
+    /// All fields encoded as Borsh: u8/u16/u64 little-endian, `bool` as `[u8; 1]`
+    /// (0 or 1), `Vec<Pubkey>` as `u32_le_len ++ pubkey_bytes_concatenated`.
+    /// The SDK helper `computePolicyPreviewDigest` mirrors this encoding exactly.
+    ///
+    /// APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
+    pub policy_preview_digest: [u8; 32],
 }
 
 impl PolicyConfig {
@@ -111,7 +146,8 @@ impl PolicyConfig {
     /// allowed_destinations vec (4 + 32 * MAX) + has_constraints (1) +
     /// has_pending_policy (1) + has_protocol_caps (1) +
     /// protocol_caps vec (4 + 8 * MAX) + session_expiry_seconds (8) + bump (1) +
-    /// policy_version (8) + has_post_assertions (1) + destination_mode (1)
+    /// policy_version (8) + has_post_assertions (1) + destination_mode (1) +
+    /// policy_preview_digest (32)  [TA-19, Phase 2]
     pub const SIZE: usize = 8
         + 32
         + 8
@@ -130,37 +166,36 @@ impl PolicyConfig {
         + 1 // bump
         + 8 // policy_version
         + 1 // has_post_assertions
-        + 1; // destination_mode
+        + 1 // destination_mode
+        + 32; // policy_preview_digest [TA-19]
 
-    /// Check if a protocol is allowed based on the protocol mode.
+    /// Check if a protocol is allowed.
+    ///
+    /// Phase 2 Option A: ALLOWLIST-only. Permissive ALL/DENYLIST modes deleted.
+    /// Returns true iff `program_id` appears in `self.protocols`.
+    /// Handlers reject `protocol_mode != PROTOCOL_MODE_ALLOWLIST` at create/queue/apply,
+    /// so a runtime `protocol_mode` mismatch here indicates state corruption — fail closed.
     pub fn is_protocol_allowed(&self, program_id: &Pubkey) -> bool {
-        match self.protocol_mode {
-            PROTOCOL_MODE_ALL => true,
-            PROTOCOL_MODE_ALLOWLIST => self.protocols.contains(program_id),
-            PROTOCOL_MODE_DENYLIST => !self.protocols.contains(program_id),
-            _ => false, // invalid mode = deny all
+        if self.protocol_mode != PROTOCOL_MODE_ALLOWLIST {
+            return false; // defensive: state corruption / migration glitch
         }
+        self.protocols.contains(program_id)
     }
 
     /// Check if a destination is allowed for agent transfers.
     ///
-    /// Behaviour is governed by `destination_mode` (F-4 audit fix —
-    /// previously this returned true on any empty allowlist, allowing a
-    /// compromised agent to drain `daily_spending_cap_usd` to any address).
-    ///
-    /// * `DESTINATION_MODE_RESTRICTED` (0, default) — destination MUST appear
-    ///   in `allowed_destinations`. An empty list rejects every destination.
-    /// * `DESTINATION_MODE_OPEN_WITH_CAP` (1) — destination unrestricted; only
-    ///   the daily cap throttles. Owner must opt in explicitly via the
-    ///   timelocked queue_policy_update path.
-    /// * Any other value — fail-closed deny (defensive against bit flips /
-    ///   migration glitches).
+    /// Phase 2 Option A: RESTRICTED-only. Permissive OPEN_WITH_CAP mode deleted
+    /// (closes F-4 default-allow drain vector definitively rather than relying on
+    /// owner opt-in correctness). Returns true iff `destination_owner` appears
+    /// in `self.allowed_destinations`. An empty list rejects every destination.
+    /// Handlers reject `destination_mode != DESTINATION_MODE_RESTRICTED` at
+    /// create/queue/apply, so a runtime mismatch here indicates state corruption —
+    /// fail closed.
     pub fn is_destination_allowed(&self, destination_owner: &Pubkey) -> bool {
-        match self.destination_mode {
-            DESTINATION_MODE_OPEN_WITH_CAP => true,
-            DESTINATION_MODE_RESTRICTED => self.allowed_destinations.contains(destination_owner),
-            _ => false,
+        if self.destination_mode != DESTINATION_MODE_RESTRICTED {
+            return false; // defensive: state corruption / migration glitch
         }
+        self.allowed_destinations.contains(destination_owner)
     }
 
     /// Get the per-protocol daily cap for a given protocol.
