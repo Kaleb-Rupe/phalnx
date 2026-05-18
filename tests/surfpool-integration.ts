@@ -156,6 +156,9 @@ describe("surfpool-integration", function () {
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: dailyCap,
             maxTransactionSizeUsd: maxTxSize,
@@ -243,6 +246,7 @@ describe("surfpool-integration", function () {
           new BN(50_000_000), // 50 USDC
           program.programId, // dummy protocol
           await readPolicyVersion(program, policyPda),
+          new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -349,6 +353,9 @@ describe("surfpool-integration", function () {
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -421,6 +428,7 @@ describe("surfpool-integration", function () {
           new BN(10_000_000), // 10 USDC
           program.programId,
           await readPolicyVersion(program, policyPda),
+          new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -483,6 +491,7 @@ describe("surfpool-integration", function () {
           new BN(10_000_000),
           program.programId,
           await readPolicyVersion(program, policyPda),
+          new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -533,6 +542,7 @@ describe("surfpool-integration", function () {
           new BN(5_000_000), // 5 USDC
           program.programId,
           await readPolicyVersion(program, policyPda),
+          new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -629,6 +639,9 @@ describe("surfpool-integration", function () {
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -701,6 +714,7 @@ describe("surfpool-integration", function () {
           new BN(25_000_000), // 25 USDC
           program.programId,
           await readPolicyVersion(program, policyPda),
+          new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -766,6 +780,7 @@ describe("surfpool-integration", function () {
           new BN(25_000_000), // 25 USDC (valid amount)
           program.programId,
           await readPolicyVersion(program, policyPda),
+          new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accountsPartial({
           agent: rogueAgent.publicKey,
@@ -841,6 +856,7 @@ describe("surfpool-integration", function () {
           new BN(30_000_000), // 30 USDC
           program.programId,
           await readPolicyVersion(program, policyPda),
+          new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -937,6 +953,9 @@ describe("surfpool-integration", function () {
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -1032,6 +1051,7 @@ describe("surfpool-integration", function () {
           new BN(amount),
           program.programId,
           await readPolicyVersion(program, policyPda),
+          new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -1130,6 +1150,9 @@ describe("surfpool-integration", function () {
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -1202,6 +1225,7 @@ describe("surfpool-integration", function () {
           new BN(20_000_000),
           program.programId,
           await readPolicyVersion(program, policyPda),
+          new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -1292,6 +1316,9 @@ describe("surfpool-integration", function () {
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -1385,6 +1412,9 @@ describe("surfpool-integration", function () {
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -1453,6 +1483,9 @@ describe("surfpool-integration", function () {
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -1536,6 +1569,9 @@ describe("surfpool-integration", function () {
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -1609,6 +1645,9 @@ describe("surfpool-integration", function () {
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -1650,6 +1689,9 @@ describe("surfpool-integration", function () {
           null,
           null,
           null, // operating_hours (TA-05 Phase 3)
+          null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { dailySpendingCapUsd: new BN(200_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -1707,6 +1749,9 @@ describe("surfpool-integration", function () {
           null,
           null,
           null, // operating_hours (TA-05 Phase 3)
+          null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { dailySpendingCapUsd: new BN(300_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -1948,6 +1993,7 @@ describe("surfpool-integration", function () {
           new BN(10_000_000),
           program.programId,
           await readPolicyVersion(program, setup.policyPda),
+          new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accountsPartial({
           agent: setup.agent.publicKey,
@@ -2018,6 +2064,7 @@ describe("surfpool-integration", function () {
           new BN(5_000_000),
           program.programId,
           await readPolicyVersion(program, setup.policyPda),
+          new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accountsPartial({
           agent: setup.agent.publicKey,
@@ -2131,6 +2178,7 @@ describe("surfpool-integration", function () {
           new BN(5_000_000),
           program.programId,
           await readPolicyVersion(program, setup.policyPda),
+          new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accountsPartial({
           agent: setup.agent.publicKey,
@@ -2191,6 +2239,7 @@ describe("surfpool-integration", function () {
           new BN(5_000_000),
           program.programId,
           await readPolicyVersion(program, setup.policyPda),
+          new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accountsPartial({
           agent: agent2.publicKey,
@@ -2264,6 +2313,7 @@ describe("surfpool-integration", function () {
           new BN(5_000_000),
           program.programId,
           await readPolicyVersion(program, setup.policyPda),
+          new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accountsPartial({
           agent: setup.agent.publicKey,
@@ -2407,6 +2457,7 @@ describe("surfpool-integration", function () {
           new BN(5_000_000),
           program.programId,
           await readPolicyVersion(program, swapSetup.policyPda),
+          new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accountsPartial({
           agent: swapSetup.agent.publicKey,
@@ -2472,6 +2523,7 @@ describe("surfpool-integration", function () {
           new BN(5_000_000),
           program.programId,
           currentVersion,
+          new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accountsPartial({
           agent: noSwapSetup.agent.publicKey,
@@ -2606,6 +2658,7 @@ describe("surfpool-integration", function () {
           new BN(5_000_000),
           program.programId,
           currentVersion,
+          new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accountsPartial({
           agent: agent2.publicKey,
@@ -2709,6 +2762,7 @@ describe("surfpool-integration", function () {
           new BN(5_000_000),
           program.programId,
           await readPolicyVersion(program, zeroSetup.policyPda),
+          new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accountsPartial({
           agent: zeroSetup.agent.publicKey,
@@ -3055,6 +3109,7 @@ describe("surfpool-integration", function () {
           new BN(5_000_000),
           program.programId,
           await readPolicyVersion(program, setup.policyPda),
+          new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accountsPartial({
           agent: setup.agent.publicKey,
@@ -3121,6 +3176,7 @@ describe("surfpool-integration", function () {
           new BN(5_000_000),
           program.programId,
           await readPolicyVersion(program, setup.policyPda),
+          new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accountsPartial({
           agent: setup.agent.publicKey,
