@@ -43,10 +43,14 @@ import {
 import {
   getEpochBucketDecoder,
   getEpochBucketEncoder,
+  getPerRecipientCounterDecoder,
+  getPerRecipientCounterEncoder,
   getProtocolSpendCounterDecoder,
   getProtocolSpendCounterEncoder,
   type EpochBucket,
   type EpochBucketArgs,
+  type PerRecipientCounter,
+  type PerRecipientCounterArgs,
   type ProtocolSpendCounter,
   type ProtocolSpendCounterArgs,
 } from "../types/index.js";
@@ -78,6 +82,19 @@ export type SpendTracker = {
   bump: number;
   /** Padding for 8-byte alignment */
   padding: ReadonlyUint8Array;
+  /**
+   * TA-14 (Phase 5 post-exec invariant #2): per-recipient rolling 24h
+   * outflow counters. Bounded to MAX_PER_RECIPIENT_ENTRIES (10) entries —
+   * Vec NOT permitted in zero-copy account per F-14.
+   */
+  perRecipient: Array<PerRecipientCounter>;
+  /**
+   * TA-14 (Phase 5): how many per_recipient slots are currently active.
+   * Eviction is AGE-BASED only — no LRU/churn-eviction per §RP.
+   */
+  perRecipientCount: number;
+  /** Padding for 8-byte alignment after the new u8 counter. */
+  paddingRecipient: ReadonlyUint8Array;
 };
 
 export type SpendTrackerArgs = {
@@ -96,6 +113,19 @@ export type SpendTrackerArgs = {
   bump: number;
   /** Padding for 8-byte alignment */
   padding: ReadonlyUint8Array;
+  /**
+   * TA-14 (Phase 5 post-exec invariant #2): per-recipient rolling 24h
+   * outflow counters. Bounded to MAX_PER_RECIPIENT_ENTRIES (10) entries —
+   * Vec NOT permitted in zero-copy account per F-14.
+   */
+  perRecipient: Array<PerRecipientCounterArgs>;
+  /**
+   * TA-14 (Phase 5): how many per_recipient slots are currently active.
+   * Eviction is AGE-BASED only — no LRU/churn-eviction per §RP.
+   */
+  perRecipientCount: number;
+  /** Padding for 8-byte alignment after the new u8 counter. */
+  paddingRecipient: ReadonlyUint8Array;
 };
 
 /** Gets the encoder for {@link SpendTrackerArgs} account data. */
@@ -112,6 +142,12 @@ export function getSpendTrackerEncoder(): FixedSizeEncoder<SpendTrackerArgs> {
       ["lastWriteEpoch", getI64Encoder()],
       ["bump", getU8Encoder()],
       ["padding", fixEncoderSize(getBytesEncoder(), 7)],
+      [
+        "perRecipient",
+        getArrayEncoder(getPerRecipientCounterEncoder(), { size: 10 }),
+      ],
+      ["perRecipientCount", getU8Encoder()],
+      ["paddingRecipient", fixEncoderSize(getBytesEncoder(), 7)],
     ]),
     (value) => ({ ...value, discriminator: SPEND_TRACKER_DISCRIMINATOR }),
   );
@@ -130,6 +166,12 @@ export function getSpendTrackerDecoder(): FixedSizeDecoder<SpendTracker> {
     ["lastWriteEpoch", getI64Decoder()],
     ["bump", getU8Decoder()],
     ["padding", fixDecoderSize(getBytesDecoder(), 7)],
+    [
+      "perRecipient",
+      getArrayDecoder(getPerRecipientCounterDecoder(), { size: 10 }),
+    ],
+    ["perRecipientCount", getU8Decoder()],
+    ["paddingRecipient", fixDecoderSize(getBytesDecoder(), 7)],
   ]);
 }
 
@@ -195,5 +237,5 @@ export async function fetchAllMaybeSpendTracker(
 }
 
 export function getSpendTrackerSize(): number {
-  return 2840;
+  return 3328;
 }

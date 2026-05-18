@@ -153,6 +153,32 @@ export interface CreateVaultOptions {
    * Bound by TA-19 at canonical digest position 17.
    */
   autoRevokeThreshold?: number;
+
+  /**
+   * TA-12 (Phase 5 post-execution invariant): hard stable balance floor in
+   * USD base units (6 decimals). The combined USDC + USDT vault balance is
+   * asserted >= this value at finalize_session AND at agent_transfer's
+   * post-CPI re-read. Default 0 = no floor enforcement.
+   *
+   * Lowering this on a live vault is an elevated mutation per TA-09 and
+   * requires cosign (closed by G3 audit fix).
+   *
+   * Bound by TA-19 at canonical digest position 18.
+   */
+  stableBalanceFloor?: bigint;
+
+  /**
+   * TA-14 (Phase 5 post-execution invariant): per-recipient daily cap in
+   * USD base units (6 decimals). Each unique recipient's rolling 24h
+   * outflow is asserted <= this value at finalize. Per-recipient slots
+   * are bounded at 10 with age-based eviction (no LRU churn).
+   *
+   * Default 0 = no per-recipient cap (global daily cap still applies).
+   * Raising this on a live vault is elevated per TA-09 (closed by G3).
+   *
+   * Bound by TA-19 at canonical digest position 19.
+   */
+  perRecipientDailyCapUsd?: bigint;
 }
 
 export interface CreateVaultResult {
@@ -340,6 +366,12 @@ export async function createVault(
     // TA-17 (Phase 3): default auto-revoke threshold of 5 — matches the
     // on-chain default constant. Range 3..=20 enforced by the handler.
     autoRevokeThreshold: options.autoRevokeThreshold ?? 5,
+    // TA-12 (Phase 5): stable balance floor — hard reserve under which spending
+    // is rejected at finalize. Default 0 = no floor enforcement. Bound by digest.
+    stableBalanceFloor: options.stableBalanceFloor ?? 0n,
+    // TA-14 (Phase 5): per-recipient daily cap. Default 0 = unlimited per recipient
+    // (still bounded by the global daily cap). Bound by digest.
+    perRecipientDailyCapUsd: options.perRecipientDailyCapUsd ?? 0n,
   });
 
   const initializeVaultIx = await getInitializeVaultInstructionAsync({
@@ -360,6 +392,8 @@ export async function createVault(
     operatingHours: options.operatingHours ?? 0x00ffffff,
     autoPromoteGrays: options.autoPromoteGrays ?? false,
     autoRevokeThreshold: options.autoRevokeThreshold ?? 5,
+    stableBalanceFloor: options.stableBalanceFloor ?? 0n,
+    perRecipientDailyCapUsd: options.perRecipientDailyCapUsd ?? 0n,
     previewDigest,
   });
 

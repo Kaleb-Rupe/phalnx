@@ -120,6 +120,10 @@ export function createMockVaultState(
       autoPromoteGrays: false,
       // TA-17 (Phase 3): default threshold of 5.
       autoRevokeThreshold: 5,
+      // TA-12/14 (Phase 5): post-execution invariants. Mock defaults are 0
+      // (no floor, no per-recipient cap) — matches "off" semantics.
+      stableBalanceFloor: 0n,
+      perRecipientDailyCapUsd: 0n,
     },
     tracker: null,
     overlay: null,

@@ -117,6 +117,9 @@ function mockState(): ResolvedVaultState {
       destinationGraylist: [],
       autoPromoteGrays: false,
       autoRevokeThreshold: 5,
+      // TA-12/14 (Phase 5): mock defaults, off.
+      stableBalanceFloor: 0n,
+      perRecipientDailyCapUsd: 0n,
     },
     tracker: null,
     overlay: null,

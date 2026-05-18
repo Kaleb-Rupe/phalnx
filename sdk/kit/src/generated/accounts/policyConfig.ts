@@ -267,6 +267,18 @@ export type PolicyConfig = {
    * F-14 APPEND-ONLY rule.
    */
   autoRevokeThreshold: number;
+  /**
+   * TA-12 (Phase 5 post-execution invariant #1): hard floor on the
+   * combined USDC + USDT balance held by the vault. Bound by TA-19
+   * at canonical digest position 18. APPENDED per F-14 APPEND-ONLY rule.
+   */
+  stableBalanceFloor: bigint;
+  /**
+   * TA-14 (Phase 5 post-execution invariant #2): rolling 24h
+   * per-recipient outflow cap. Bound by TA-19 at canonical digest
+   * position 19. APPENDED per F-14 APPEND-ONLY rule.
+   */
+  perRecipientDailyCapUsd: bigint;
 };
 
 export type PolicyConfigArgs = {
@@ -472,6 +484,18 @@ export type PolicyConfigArgs = {
    * F-14 APPEND-ONLY rule.
    */
   autoRevokeThreshold: number;
+  /**
+   * TA-12 (Phase 5 post-execution invariant #1): hard floor on the
+   * combined USDC + USDT balance held by the vault. Bound by TA-19
+   * at canonical digest position 18. APPENDED per F-14 APPEND-ONLY rule.
+   */
+  stableBalanceFloor: number | bigint;
+  /**
+   * TA-14 (Phase 5 post-execution invariant #2): rolling 24h
+   * per-recipient outflow cap. Bound by TA-19 at canonical digest
+   * position 19. APPENDED per F-14 APPEND-ONLY rule.
+   */
+  perRecipientDailyCapUsd: number | bigint;
 };
 
 /** Gets the encoder for {@link PolicyConfigArgs} account data. */
@@ -506,6 +530,8 @@ export function getPolicyConfigEncoder(): Encoder<PolicyConfigArgs> {
       ],
       ["autoPromoteGrays", getBooleanEncoder()],
       ["autoRevokeThreshold", getU8Encoder()],
+      ["stableBalanceFloor", getU64Encoder()],
+      ["perRecipientDailyCapUsd", getU64Encoder()],
     ]),
     (value) => ({ ...value, discriminator: POLICY_CONFIG_DISCRIMINATOR }),
   );
@@ -542,6 +568,8 @@ export function getPolicyConfigDecoder(): Decoder<PolicyConfig> {
     ],
     ["autoPromoteGrays", getBooleanDecoder()],
     ["autoRevokeThreshold", getU8Decoder()],
+    ["stableBalanceFloor", getU64Decoder()],
+    ["perRecipientDailyCapUsd", getU64Decoder()],
   ]);
 }
 

@@ -108,7 +108,7 @@ export const SIGIL_ERROR__UNAUTHORIZED_TOKEN_APPROVAL = 0x179c; // 6044
 export const SIGIL_ERROR__INVALID_SESSION_EXPIRY = 0x179d; // 6045
 /** UnconstrainedProgramBlocked: Program has no matching constraint entry — every instruction must match one */
 export const SIGIL_ERROR__UNCONSTRAINED_PROGRAM_BLOCKED = 0x179e; // 6046
-/** ProtocolCapExceeded: Per-protocol counter slot allocation exhausted (max 10 protocols tracked) */
+/** ProtocolCapExceeded: Per-protocol rolling 24h spending cap would be exceeded */
 export const SIGIL_ERROR__PROTOCOL_CAP_EXCEEDED = 0x179f; // 6047
 /** ProtocolCapsMismatch: protocol_caps length must match protocols length when has_protocol_caps is true */
 export const SIGIL_ERROR__PROTOCOL_CAPS_MISMATCH = 0x17a0; // 6048
@@ -379,7 +379,7 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__POLICY_PREVIEW_MISMATCH]: `Policy preview digest mismatch — caller's signed digest differs from recomputed canonical digest`,
     [SIGIL_ERROR__POLICY_VERSION_MISMATCH]: `Policy version mismatch — policy changed since agent's last RPC read`,
     [SIGIL_ERROR__POST_ASSERTION_FAILED]: `Post-execution assertion failed: account state did not satisfy constraint`,
-    [SIGIL_ERROR__PROTOCOL_CAP_EXCEEDED]: `Per-protocol counter slot allocation exhausted (max 10 protocols tracked)`,
+    [SIGIL_ERROR__PROTOCOL_CAP_EXCEEDED]: `Per-protocol rolling 24h spending cap would be exceeded`,
     [SIGIL_ERROR__PROTOCOL_CAPS_MISMATCH]: `protocol_caps length must match protocols length when has_protocol_caps is true`,
     [SIGIL_ERROR__PROTOCOL_MISMATCH]: `DeFi instruction program does not match declared target_protocol`,
     [SIGIL_ERROR__PROTOCOL_NOT_ALLOWED]: `Protocol not allowed by policy`,

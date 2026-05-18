@@ -138,6 +138,20 @@ export type PendingPolicyUpdate = {
    * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
    */
   newPolicyPreviewDigest: ReadonlyUint8Array;
+  /**
+   * TA-12 (Phase 5): optional update to `PolicyConfig.stable_balance_floor`.
+   * None = preserve live value; Some(n) = set to n. Bound by TA-19 at
+   * canonical digest position 18.
+   *
+   * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  stableBalanceFloor: Option<bigint>;
+  /**
+   * TA-14 (Phase 5): optional update to `PolicyConfig.per_recipient_daily_cap_usd`.
+   * None = preserve live value; Some(n) = set to n. Bound by TA-19 at canonical
+   * digest position 19. APPENDED per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  perRecipientDailyCapUsd: Option<bigint>;
 };
 
 export type PendingPolicyUpdateArgs = {
@@ -214,6 +228,20 @@ export type PendingPolicyUpdateArgs = {
    * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
    */
   newPolicyPreviewDigest: ReadonlyUint8Array;
+  /**
+   * TA-12 (Phase 5): optional update to `PolicyConfig.stable_balance_floor`.
+   * None = preserve live value; Some(n) = set to n. Bound by TA-19 at
+   * canonical digest position 18.
+   *
+   * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  stableBalanceFloor: OptionOrNullable<number | bigint>;
+  /**
+   * TA-14 (Phase 5): optional update to `PolicyConfig.per_recipient_daily_cap_usd`.
+   * None = preserve live value; Some(n) = set to n. Bound by TA-19 at canonical
+   * digest position 19. APPENDED per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  perRecipientDailyCapUsd: OptionOrNullable<number | bigint>;
 };
 
 /** Gets the encoder for {@link PendingPolicyUpdateArgs} account data. */
@@ -245,6 +273,8 @@ export function getPendingPolicyUpdateEncoder(): Encoder<PendingPolicyUpdateArgs
       ["cosignDigest", fixEncoderSize(getBytesEncoder(), 32)],
       ["cosignSession", getAddressEncoder()],
       ["newPolicyPreviewDigest", fixEncoderSize(getBytesEncoder(), 32)],
+      ["stableBalanceFloor", getOptionEncoder(getU64Encoder())],
+      ["perRecipientDailyCapUsd", getOptionEncoder(getU64Encoder())],
     ]),
     (value) => ({
       ...value,
@@ -281,6 +311,8 @@ export function getPendingPolicyUpdateDecoder(): Decoder<PendingPolicyUpdate> {
     ["cosignDigest", fixDecoderSize(getBytesDecoder(), 32)],
     ["cosignSession", getAddressDecoder()],
     ["newPolicyPreviewDigest", fixDecoderSize(getBytesDecoder(), 32)],
+    ["stableBalanceFloor", getOptionDecoder(getU64Decoder())],
+    ["perRecipientDailyCapUsd", getOptionDecoder(getU64Decoder())],
   ]);
 }
 

@@ -673,6 +673,10 @@ export async function queuePolicyUpdate(
     // TA-07/17 (Phase 3): same — not mutated by this dashboard surface.
     autoPromoteGrays: livePolicy.data.autoPromoteGrays,
     autoRevokeThreshold: livePolicy.data.autoRevokeThreshold,
+    // TA-12/14 (Phase 5): post-exec invariants. Not mutated by this surface;
+    // pass-through from live policy. Mutating them is elevated per TA-09.
+    stableBalanceFloor: livePolicy.data.stableBalanceFloor,
+    perRecipientDailyCapUsd: livePolicy.data.perRecipientDailyCapUsd,
   });
 
   const ix = await getQueuePolicyUpdateInstructionAsync({
@@ -694,10 +698,16 @@ export async function queuePolicyUpdate(
     // TA-05 (Phase 3): operating_hours is not mutated by this mutation
     // surface — pass null to fall through to live policy at on-chain merge.
     operatingHours: null,
+    // TA-12/14 (Phase 5): not mutated by this non-elevated surface — pass
+    // null to fall through to live policy. Elevated mutations (lowering
+    // floor, raising per-recipient cap) require cosign and the
+    // `queuePolicyElevated()` helper.
+    stableBalanceFloor: null,
+    perRecipientDailyCapUsd: null,
     // TA-09 (Phase 3): non-elevated path by default — pass the
     // System Program / zero-pubkey ("11111111111111111111111111111111").
     // Elevated mutations through this dashboard surface require a
-    // follow-on `queuePolicyElevated()` helper (not yet exposed).
+    // follow-on `queuePolicyElevated()` helper (cosignHelper.ts, G4).
     cosignSession:
       "11111111111111111111111111111111" as unknown as Address,
     newPolicyPreviewDigest,

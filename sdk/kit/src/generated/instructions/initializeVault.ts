@@ -122,6 +122,8 @@ export type InitializeVaultInstructionData = {
   operatingHours: number;
   autoPromoteGrays: boolean;
   autoRevokeThreshold: number;
+  stableBalanceFloor: bigint;
+  perRecipientDailyCapUsd: bigint;
   previewDigest: ReadonlyUint8Array;
 };
 
@@ -140,6 +142,8 @@ export type InitializeVaultInstructionDataArgs = {
   operatingHours: number;
   autoPromoteGrays: boolean;
   autoRevokeThreshold: number;
+  stableBalanceFloor: number | bigint;
+  perRecipientDailyCapUsd: number | bigint;
   previewDigest: ReadonlyUint8Array;
 };
 
@@ -161,6 +165,8 @@ export function getInitializeVaultInstructionDataEncoder(): Encoder<InitializeVa
       ["operatingHours", getU32Encoder()],
       ["autoPromoteGrays", getBooleanEncoder()],
       ["autoRevokeThreshold", getU8Encoder()],
+      ["stableBalanceFloor", getU64Encoder()],
+      ["perRecipientDailyCapUsd", getU64Encoder()],
       ["previewDigest", fixEncoderSize(getBytesEncoder(), 32)],
     ]),
     (value) => ({ ...value, discriminator: INITIALIZE_VAULT_DISCRIMINATOR }),
@@ -184,6 +190,8 @@ export function getInitializeVaultInstructionDataDecoder(): Decoder<InitializeVa
     ["operatingHours", getU32Decoder()],
     ["autoPromoteGrays", getBooleanDecoder()],
     ["autoRevokeThreshold", getU8Decoder()],
+    ["stableBalanceFloor", getU64Decoder()],
+    ["perRecipientDailyCapUsd", getU64Decoder()],
     ["previewDigest", fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }
@@ -230,6 +238,8 @@ export type InitializeVaultAsyncInput<
   operatingHours: InitializeVaultInstructionDataArgs["operatingHours"];
   autoPromoteGrays: InitializeVaultInstructionDataArgs["autoPromoteGrays"];
   autoRevokeThreshold: InitializeVaultInstructionDataArgs["autoRevokeThreshold"];
+  stableBalanceFloor: InitializeVaultInstructionDataArgs["stableBalanceFloor"];
+  perRecipientDailyCapUsd: InitializeVaultInstructionDataArgs["perRecipientDailyCapUsd"];
   previewDigest: InitializeVaultInstructionDataArgs["previewDigest"];
 };
 
@@ -401,6 +411,8 @@ export type InitializeVaultInput<
   operatingHours: InitializeVaultInstructionDataArgs["operatingHours"];
   autoPromoteGrays: InitializeVaultInstructionDataArgs["autoPromoteGrays"];
   autoRevokeThreshold: InitializeVaultInstructionDataArgs["autoRevokeThreshold"];
+  stableBalanceFloor: InitializeVaultInstructionDataArgs["stableBalanceFloor"];
+  perRecipientDailyCapUsd: InitializeVaultInstructionDataArgs["perRecipientDailyCapUsd"];
   previewDigest: InitializeVaultInstructionDataArgs["previewDigest"];
 };
 

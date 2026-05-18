@@ -291,6 +291,9 @@ export async function provisionVault(
     operatingHours: 0x00ffffff,
     autoPromoteGrays: false,
     autoRevokeThreshold: 5,
+    // TA-12/14 (Phase 5): testing helper defaults — no floor, no per-recipient cap.
+    stableBalanceFloor: 0n,
+    perRecipientDailyCapUsd: 0n,
   });
 
   const initIx = await getInitializeVaultInstructionAsync({
@@ -311,6 +314,8 @@ export async function provisionVault(
     operatingHours: 0x00ffffff,
     autoPromoteGrays: false,
     autoRevokeThreshold: 5,
+    stableBalanceFloor: 0n,
+    perRecipientDailyCapUsd: 0n,
     previewDigest,
   });
 

@@ -157,6 +157,9 @@ describe("Kit SDK Devnet — Vault Lifecycle", function () {
       // TA-07/17 (Phase 3): pass-through from live policy.
       autoPromoteGrays: livePolicy.data.autoPromoteGrays,
       autoRevokeThreshold: livePolicy.data.autoRevokeThreshold,
+      // TA-12/14 (Phase 5): pass-through from live policy.
+      stableBalanceFloor: livePolicy.data.stableBalanceFloor,
+      perRecipientDailyCapUsd: livePolicy.data.perRecipientDailyCapUsd,
     });
 
     const queueIx = await getQueuePolicyUpdateInstructionAsync({
@@ -175,6 +178,9 @@ describe("Kit SDK Devnet — Vault Lifecycle", function () {
       protocolCaps: null,
       destinationMode: null,
       operatingHours: null,
+      // TA-12/14 (Phase 5): non-elevated path — pass null for fall-through.
+      stableBalanceFloor: null,
+      perRecipientDailyCapUsd: null,
       // TA-09 (Phase 3): zero pubkey for non-elevated path.
       cosignSession:
         "11111111111111111111111111111111" as unknown as Address,

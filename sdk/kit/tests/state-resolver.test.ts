@@ -65,7 +65,19 @@ function makeTracker(
     lastWriteEpoch: overrides.lastWriteEpoch ?? 0n,
     bump: 255,
     padding: zeroBytes(7),
+    // TA-14 (Phase 5): per-recipient counters appended. Mock defaults empty + 0.
+    perRecipient: emptyPerRecipient(10),
+    perRecipientCount: 0,
+    paddingRecipient: zeroBytes(7),
   };
+}
+
+function emptyPerRecipient(count: number) {
+  return Array.from({ length: count }, () => ({
+    recipient: new Uint8Array(32),
+    windowStart: 0n,
+    windowSpendUsd: 0n,
+  }));
 }
 
 function emptyProtocolCounters(count: number): ProtocolSpendCounter[] {
