@@ -452,14 +452,24 @@ export async function getProfilesByTag(
 // ─── Anchor error code → name lookup ─────────────────────────────────────────
 
 /**
- * Sigil custom error codes (6000-6080) mapped to Anchor error names.
- * Source of truth: programs/sigil/src/errors.rs
+ * Sigil custom error codes (6000-6078, post-Phase-1 Option A compaction)
+ * mapped to Anchor error names. Source of truth:
+ * `programs/sigil/src/errors.rs` (declaration order = numeric code).
+ *
  * Surfnet does NOT return program logs for failed TXs via getTransaction(),
  * so we must decode the numeric error code to include the name in errors.
+ *
+ * Phase 1 Option A demolition (2026-05-17): SwapSlippageExceeded (was 6030)
+ * and InvalidJupiterInstruction (was 6031) DELETED. All codes from 6030
+ * onward shifted DOWN by 2. Compaction also removed escrow errors
+ * (formerly 6039-6044) and ActiveEscrowsExist (formerly 6057) in v2 revamp
+ * Stage 1.
+ *
+ * Canonical name→code map lives at:
+ *   - `sdk/kit/src/testing/errors/names.generated.ts` (regenerated from IDL)
+ *   - `tests/helpers/strict-errors.ts` (mirror used by LiteSVM suite)
+ * If this table drifts from those, decoded errors will print the wrong name.
  */
-// Canonical error-code table — keep in sync with
-// `sdk/kit/src/generated/errors/sigil.ts` (codama-generated from IDL)
-// and `tests/helpers/strict-errors.ts` (the authoritative name→code map).
 const SIGIL_ERROR_NAMES: Record<number, string> = {
   6000: "VaultNotActive",
   6001: "UnauthorizedAgent",
@@ -491,59 +501,57 @@ const SIGIL_ERROR_NAMES: Record<number, string> = {
   6027: "CpiCallNotAllowed",
   6028: "MissingFinalizeInstruction",
   6029: "NonTrackedSwapMustReturnStablecoin",
-  6030: "SwapSlippageExceeded",
-  6031: "InvalidJupiterInstruction",
-  6032: "UnauthorizedTokenTransfer",
-  6033: "SlippageBpsTooHigh",
-  6034: "ProtocolMismatch",
-  6035: "TooManyDeFiInstructions",
-  6036: "MaxAgentsReached",
-  6037: "InsufficientPermissions",
-  6038: "InvalidPermissions",
-  // Escrow errors (6039-6044) and ActiveEscrowsExist (6057) REMOVED in v2 revamp Stage 1.
-  // Anchor renumbered downstream codes sequentially after the removal.
-  6039: "InvalidConstraintConfig",
-  6040: "ConstraintViolated",
-  6041: "InvalidConstraintsPda",
-  6042: "InvalidPendingConstraintsPda",
-  6043: "AgentSpendLimitExceeded",
-  6044: "OverlaySlotExhausted",
-  6045: "AgentSlotNotFound",
-  6046: "UnauthorizedTokenApproval",
-  6047: "InvalidSessionExpiry",
-  6048: "UnconstrainedProgramBlocked",
-  6049: "ProtocolCapExceeded",
-  6050: "ProtocolCapsMismatch",
-  6051: "ConstraintsNotClosed",
-  6052: "PendingPolicyExists",
-  6053: "AgentPaused",
-  6054: "AgentAlreadyPaused",
-  6055: "AgentNotPaused",
-  6056: "UnauthorizedPostFinalizeInstruction",
-  6057: "UnexpectedBalanceDecrease",
-  6058: "TimelockTooShort",
-  6059: "PolicyVersionMismatch",
-  6060: "ActiveSessionsExist",
-  6061: "PostAssertionFailed",
-  6062: "InvalidPostAssertionIndex",
-  6063: "UnauthorizedPreValidateInstruction",
-  6064: "SnapshotNotCaptured",
-  6065: "InvalidConstraintOperator",
-  6066: "ConstraintsVaultMismatch",
-  6067: "BlockedSplOpcode",
-  6068: "QueuedUpdateExpired",
-  6069: "AccountWritabilityMismatch",
-  6070: "SysvarScanBoundExceeded",
-  6071: "AsyncFulfillmentNotPermitted",
-  6072: "ConstraintsAlreadyPopulated",
-  6073: "OrphanPdaWrongOwner",
-  6074: "OrphanPdaPopulated",
-  6075: "ConfidentialTransferBlocked",
-  6076: "PermanentDelegateBlocked",
-  6077: "TransferHookBlocked",
-  6078: "LamportDrainBlocked",
-  6079: "BatchInstructionBlocked",
-  6080: "InvalidDestinationMode",
+  // SwapSlippageExceeded (was 6030) + InvalidJupiterInstruction (was 6031) DELETED
+  // in Phase 1 Option A demolition. Codes from 6030 onward shifted down by 2.
+  6030: "UnauthorizedTokenTransfer",
+  6031: "SlippageBpsTooHigh",
+  6032: "ProtocolMismatch",
+  6033: "TooManyDeFiInstructions",
+  6034: "MaxAgentsReached",
+  6035: "InsufficientPermissions",
+  6036: "InvalidPermissions",
+  6037: "InvalidConstraintConfig",
+  6038: "ConstraintViolated",
+  6039: "InvalidConstraintsPda",
+  6040: "InvalidPendingConstraintsPda",
+  6041: "AgentSpendLimitExceeded",
+  6042: "OverlaySlotExhausted",
+  6043: "AgentSlotNotFound",
+  6044: "UnauthorizedTokenApproval",
+  6045: "InvalidSessionExpiry",
+  6046: "UnconstrainedProgramBlocked",
+  6047: "ProtocolCapExceeded",
+  6048: "ProtocolCapsMismatch",
+  6049: "ConstraintsNotClosed",
+  6050: "PendingPolicyExists",
+  6051: "AgentPaused",
+  6052: "AgentAlreadyPaused",
+  6053: "AgentNotPaused",
+  6054: "UnauthorizedPostFinalizeInstruction",
+  6055: "UnexpectedBalanceDecrease",
+  6056: "TimelockTooShort",
+  6057: "PolicyVersionMismatch",
+  6058: "ActiveSessionsExist",
+  6059: "PostAssertionFailed",
+  6060: "InvalidPostAssertionIndex",
+  6061: "UnauthorizedPreValidateInstruction",
+  6062: "SnapshotNotCaptured",
+  6063: "InvalidConstraintOperator",
+  6064: "ConstraintsVaultMismatch",
+  6065: "BlockedSplOpcode",
+  6066: "QueuedUpdateExpired",
+  6067: "AccountWritabilityMismatch",
+  6068: "SysvarScanBoundExceeded",
+  6069: "AsyncFulfillmentNotPermitted",
+  6070: "ConstraintsAlreadyPopulated",
+  6071: "OrphanPdaWrongOwner",
+  6072: "OrphanPdaPopulated",
+  6073: "ConfidentialTransferBlocked",
+  6074: "PermanentDelegateBlocked",
+  6075: "TransferHookBlocked",
+  6076: "LamportDrainBlocked",
+  6077: "BatchInstructionBlocked",
+  6078: "InvalidDestinationMode",
 };
 
 /**
