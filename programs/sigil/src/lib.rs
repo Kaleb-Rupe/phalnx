@@ -339,4 +339,17 @@ pub mod sigil {
     pub fn unpause_agent(ctx: Context<UnpauseAgent>, agent_to_unpause: Pubkey) -> Result<()> {
         instructions::unpause_agent::handler(ctx, agent_to_unpause)
     }
+
+    /// F-12 audit fix: direct owner-only flip of `vault.observe_only`.
+    ///
+    /// Mirrors `freeze_vault` simplicity (no timelock). observe_only is part
+    /// of the canonical policy_preview_digest encoding; the handler recomputes
+    /// the stored digest + bumps `policy_version` (OCC) on every flip and
+    /// emits `ObserveOnlyChanged` for off-chain monitors.
+    ///
+    /// F-11 consistency: cannot flip to active (false) when both protocol
+    /// and destination allowlists are empty.
+    pub fn set_observe_only(ctx: Context<SetObserveOnly>, new_value: bool) -> Result<()> {
+        instructions::set_observe_only::handler(ctx, new_value)
+    }
 }

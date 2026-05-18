@@ -3630,6 +3630,75 @@ export type Sigil = {
       ]
     },
     {
+      "name": "setObserveOnly",
+      "docs": [
+        "F-12 audit fix: direct owner-only flip of `vault.observe_only`.",
+        "",
+        "Mirrors `freeze_vault` simplicity (no timelock). observe_only is part",
+        "of the canonical policy_preview_digest encoding; the handler recomputes",
+        "the stored digest + bumps `policy_version` (OCC) on every flip and",
+        "emits `ObserveOnlyChanged` for off-chain monitors.",
+        "",
+        "F-11 consistency: cannot flip to active (false) when both protocol",
+        "and destination allowlists are empty."
+      ],
+      "discriminator": [
+        36,
+        88,
+        141,
+        35,
+        179,
+        134,
+        54,
+        12
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "writable": true,
+          "relations": [
+            "policy"
+          ]
+        },
+        {
+          "name": "policy",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "vault"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "newValue",
+          "type": "bool"
+        }
+      ]
+    },
+    {
       "name": "unpauseAgent",
       "docs": [
         "Unpause a paused agent. Restores ability to execute actions.",
@@ -4579,6 +4648,19 @@ export type Sigil = {
         216,
         57,
         26
+      ]
+    },
+    {
+      "name": "observeOnlyChanged",
+      "discriminator": [
+        180,
+        209,
+        162,
+        85,
+        197,
+        205,
+        231,
+        170
       ]
     },
     {
@@ -6445,6 +6527,48 @@ export type Sigil = {
               "Enables off-chain monitors to detect format changes/downgrades."
             ],
             "type": "bytes"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "observeOnlyChanged",
+      "docs": [
+        "Emitted when `set_observe_only` flips `vault.observe_only`. Off-chain",
+        "monitors use `new_policy_preview_digest` + `new_policy_version` for OCC",
+        "reconciliation against their cached policy view."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "oldValue",
+            "type": "bool"
+          },
+          {
+            "name": "newValue",
+            "type": "bool"
+          },
+          {
+            "name": "newPolicyVersion",
+            "type": "u64"
+          },
+          {
+            "name": "newPolicyPreviewDigest",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
           },
           {
             "name": "timestamp",

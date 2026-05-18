@@ -299,3 +299,18 @@ pub struct OrphanConstraintsPdaCleaned {
     pub rent_recovered: u64,
     pub timestamp: i64,
 }
+
+// --- F-12 audit fix: observe_only direct flip ---
+
+/// Emitted when `set_observe_only` flips `vault.observe_only`. Off-chain
+/// monitors use `new_policy_preview_digest` + `new_policy_version` for OCC
+/// reconciliation against their cached policy view.
+#[event]
+pub struct ObserveOnlyChanged {
+    pub vault: Pubkey,
+    pub old_value: bool,
+    pub new_value: bool,
+    pub new_policy_version: u64,
+    pub new_policy_preview_digest: [u8; 32],
+    pub timestamp: i64,
+}
