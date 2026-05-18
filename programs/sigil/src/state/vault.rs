@@ -72,6 +72,18 @@ pub struct AgentVault {
     /// Incremented in validate_and_authorize, decremented in finalize_session.
     /// close_vault requires this to be 0.
     pub active_sessions: u8,
+
+    /// Phase 2 TA-19: observe_only mode flag.
+    ///
+    /// When true, ALL `validate_and_authorize` calls reject with
+    /// `ObserveOnlyModeBlocksExecute`. Provides a hard, low-blast-radius
+    /// kill switch separate from `VaultStatus::Frozen` — owners can stand
+    /// up an observe-only vault to baseline agent behaviour before opening
+    /// the execute path. Set at `initialize_vault` time; flipping it post-
+    /// init is deferred to a later phase.
+    ///
+    /// APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
+    pub observe_only: bool,
 }
 
 // ARCHITECTURE DECISION: No on-chain viewer/delegate role
@@ -93,7 +105,7 @@ impl AgentVault {
     /// created_at (8) + total_transactions (8) + total_volume (8) +
     /// total_fees_collected (8) +
     /// total_deposited_usd (8) + total_withdrawn_usd (8) + total_failed_transactions (8) +
-    /// active_sessions (1)
+    /// active_sessions (1) + observe_only (1)  [Phase 2 TA-19]
     pub const SIZE: usize = 8
         + 32
         + 8
@@ -109,8 +121,9 @@ impl AgentVault {
         + 8
         + 8
         + 8
-        + 1;
-    // = 633 (was 634; active_escrow_count u8 removed in v2 revamp Stage 1)
+        + 1
+        + 1; // observe_only [Phase 2 TA-19]
+    // = 634 (Phase 2: 633 + 1 observe_only)
 
     pub fn is_active(&self) -> bool {
         self.status == VaultStatus::Active
