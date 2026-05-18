@@ -190,6 +190,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: dailyCap,
             maxTransactionSizeUsd: maxTxSize,
@@ -262,6 +263,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(100),
             maxTransactionSizeUsd: new BN(100),
@@ -334,6 +336,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(100),
             maxTransactionSizeUsd: new BN(100),
@@ -512,6 +515,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -585,6 +589,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { dailySpendingCapUsd: new BN(200_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -638,6 +643,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { dailySpendingCapUsd: new BN(999) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -678,6 +684,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { protocols: tooManyProtocols })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -748,6 +755,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -886,6 +894,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -1662,6 +1671,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -1753,6 +1763,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -1848,6 +1859,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -1918,6 +1930,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -1970,6 +1983,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, { developerFeeRate: 0 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -2015,6 +2029,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, { developerFeeRate: 30 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -2066,6 +2081,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -2105,6 +2121,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, { developerFeeRate: 0 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -2253,6 +2270,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, { developerFeeRate: 500 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -2465,6 +2483,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -2564,6 +2583,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -2830,6 +2850,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -3012,6 +3033,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -3121,6 +3143,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -3237,6 +3260,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -3378,6 +3402,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(999_000_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -3557,6 +3582,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(999_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -3852,6 +3878,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -3903,6 +3930,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(200_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -3988,6 +4016,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(100_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -4041,6 +4070,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(150_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -4071,6 +4101,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(500_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -4141,6 +4172,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -4188,6 +4220,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { timelockDuration: new BN(3600) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -4235,6 +4268,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { timelockDuration: new BN(1800) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -4283,6 +4317,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(50_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -4400,6 +4435,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -4564,6 +4600,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -4686,6 +4723,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, anyPolicy, anyVault, { destinationMode: 1 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -4728,6 +4766,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, anyPolicy, anyVault, { destinationMode: 2 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -4792,6 +4831,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -4947,6 +4987,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -5102,6 +5143,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1_000_000_000),
             maxTransactionSizeUsd: new BN(500_000_000),
@@ -5570,6 +5612,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(2_000_000_000),
             maxTransactionSizeUsd: new BN(1_000_000_000),
@@ -5895,6 +5938,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1_000_000_000),
             maxTransactionSizeUsd: new BN(500_000_000),
@@ -6024,6 +6068,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           protoCapCosigner.publicKey, // cosign_session (TA-09 — ELEVATED, weakens_protocol_caps)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -6077,6 +6122,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated, tightening)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -6138,6 +6184,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           protoCapCosigner.publicKey, // cosign_session (TA-09 — ELEVATED, weakens_protocol_caps via has_protocol_caps=false)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -6192,6 +6239,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated, tightening)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -6243,6 +6291,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -6308,6 +6357,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1_000_000_000),
             maxTransactionSizeUsd: new BN(500_000_000),
@@ -6427,6 +6477,7 @@ describe("sigil", () => {
           5,
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1_000_000_000),
             maxTransactionSizeUsd: new BN(501_000_000),
@@ -6549,6 +6600,7 @@ describe("sigil", () => {
           null, null, null,
           null, // stable_balance_floor (TA-12 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 — pass-through)
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through)
           ta13Cosigner.publicKey, // cosign_session (TA-09 — ELEVATED, weakens_protocol_caps)
           await fetchAndComputeQueueDigest(program, ta13Policy, ta13Vault, {}),
         )
@@ -6597,6 +6649,7 @@ describe("sigil", () => {
           [new BN(500_000_000), new BN(500_000_000)],
           null, null,
           null, null,
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through)
           PublicKey.default,
           await fetchAndComputeQueueDigest(program, ta13Policy, ta13Vault, {}),
         )
@@ -6650,6 +6703,7 @@ describe("sigil", () => {
           [new BN(0), new BN(500_000_000)], // Jupiter cap = $0 (unlimited)
           null, null,
           null, null,
+          null, // cosign_required (G6 audit 2026-05-18 — pass-through)
           ta13Cosigner.publicKey, // cosign_session (TA-09 — ELEVATED, weakens_protocol_caps)
           await fetchAndComputeQueueDigest(program, ta13Policy, ta13Vault, {}),
         )
@@ -6744,6 +6798,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000_000_000),
             maxTransactionSizeUsd: new BN(1000_000_000),
@@ -6985,6 +7040,7 @@ describe("sigil", () => {
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000_000_000),
             maxTransactionSizeUsd: new BN(1000_000_000),
