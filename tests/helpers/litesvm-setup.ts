@@ -906,6 +906,13 @@ export function autoSiblingHandlerDigest(
       : (policy.hasPostAssertions as number);
   parts.push(u8(hasPostAssertions));
   parts.push(u64le(policy.createdAtSlot ?? 0));
+  // Phase 3 (TA-05/TA-07/TA-17): operating_hours, auto_promote_grays,
+  // auto_revoke_threshold are now bound at positions 15-17 of the canonical
+  // policy_preview_digest encoding. Must mirror
+  // `programs/sigil/src/utils/policy_digest.rs` byte-for-byte.
+  parts.push(u32le(policy.operatingHours ?? 0));
+  parts.push(u8(policy.autoPromoteGrays ? 1 : 0));
+  parts.push(u8(policy.autoRevokeThreshold ?? 0));
   const buf = Buffer.concat(parts);
   return Array.from(crypto.createHash("sha256").update(buf).digest());
 }
