@@ -5908,14 +5908,18 @@ export type Sigil = {
           {
             "name": "observeOnly",
             "docs": [
-              "Phase 2 TA-19: observe_only mode flag.",
+              "Phase 2 Task 8: observe_only mode flag (independent from TA-19;",
+              "included in TA-19 digest encoding at position 10).",
               "",
               "When true, ALL `validate_and_authorize` calls reject with",
               "`ObserveOnlyModeBlocksExecute`. Provides a hard, low-blast-radius",
               "kill switch separate from `VaultStatus::Frozen` — owners can stand",
               "up an observe-only vault to baseline agent behaviour before opening",
-              "the execute path. Set at `initialize_vault` time; flipping it post-",
-              "init is deferred to a later phase.",
+              "the execute path.",
+              "",
+              "Set at `initialize_vault` time; flipped post-init via the dedicated",
+              "`set_observe_only` instruction (F-12 audit fix, Option (a) direct",
+              "owner-only flip mirroring `freeze_vault` simplicity).",
               "",
               "APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability."
             ],

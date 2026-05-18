@@ -168,8 +168,11 @@ pub fn handler(
     let eff_timelock = timelock_duration.unwrap_or(policy.timelock_duration);
     let eff_session_expiry = session_expiry_seconds.unwrap_or(policy.session_expiry_seconds);
 
-    // observe_only is NOT mutable via queue_policy_update (Phase 2 scope):
-    // captured at init only. Read from vault for digest correctness.
+    // observe_only is NOT mutable via queue_policy_update (uses dedicated
+    // set_observe_only ix for direct owner-only mutation — F-12 audit fix,
+    // Option (a) flip mirroring freeze_vault simplicity). Read from vault
+    // for digest correctness so this queue's recomputed digest matches the
+    // owner's signed digest even when set_observe_only ran independently.
     let eff_observe_only = vault.observe_only;
     let eff_has_constraints = policy.has_constraints;
     let eff_has_post_assertions = policy.has_post_assertions;

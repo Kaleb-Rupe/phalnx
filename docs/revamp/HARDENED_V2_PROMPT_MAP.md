@@ -581,6 +581,19 @@ TASKS:
    - instructions/validate_and_authorize.rs: at entry, if vault.observe_only,
      reject with new error 6080 ErrObserveOnlyModeBlocksExecute.
 
+   **Phase 2 close-up addition (F-12, landed post-Phase-2 dispatch):**
+   - instructions/set_observe_only.rs: NEW direct owner-only flip ix.
+     User-approved Option (a) — no timelock; mirrors freeze_vault simplicity
+     since observe_only is a low-stakes mutation (only enables/disables
+     execution; if owner key leaks attacker can do strictly worse via
+     existing surfaces). Recomputes policy_preview_digest + bumps
+     policy_version (OCC). Emits ObserveOnlyChanged event. F-11 consistency
+     enforced: cannot flip to active (false) when both allowlists are empty.
+   - Phase 2 close-up also added the F-11 ActiveVaultRequiresAllowlist
+     check (error 6082) at initialize_vault: active vaults must have at
+     least one protocol or destination on the allowlist; observe_only=true
+     skips the check (inert by design).
+
 9. SDK side (in sdk/kit/src/policy/):
    - Add computePolicyPreviewDigest(policy_fields) → Uint8Array. Use same
      BorshSerialize encoding as on-chain.

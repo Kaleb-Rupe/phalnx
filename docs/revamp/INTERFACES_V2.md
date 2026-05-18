@@ -135,6 +135,10 @@ Was `InstructionConstraints.parser_version: u8` under the tier model (C23). **DE
 
 **Phase:** lands in Phase 2 alongside the default-tightening pass.
 
+**Phase 2 close-up additions:**
+- `set_observe_only` instruction (F-12 audit fix) — direct owner-only flip of `vault.observe_only` (Option (a), no timelock; mirrors `freeze_vault`). observe_only is at position 10 of the canonical digest encoding, so the handler recomputes `policy_preview_digest` + bumps `policy_version` on every flip and emits `ObserveOnlyChanged`.
+- F-11 `ActiveVaultRequiresAllowlist` (code 6082) enforced at `initialize_vault` AND at `set_observe_only` (when flipping to active=false). Active vaults must have at least one protocol or destination on the allowlist; observe_only=true skips the check (inert by design).
+
 ---
 
 ## 4.4 Off-chain SDK helpers (no on-chain enforcement)
@@ -243,32 +247,33 @@ AC-11 (oracle staleness) is explicitly out-of-scope for V1. Folded into N1 TA-15
 
 **Post-Phase-1 V1 count:** 79 variants at codes 6000-6078 (NOT 78/6000-6077 as the prompt assumed). Compaction strategy chosen; all codes from 6030 onward shifted down by 2.
 
-**V2 reservation table starts at 6079** (compaction; the first new V2 variant `ErrInvalidCapability` lands at 6079, not 6078):
-- 6079 `ErrInvalidCapability` (TA-04, Phase 2)
-- 6080 `ErrObserveOnlyModeBlocksExecute` (TA-04, Phase 2)
-- 6081 `ErrPolicyPreviewMismatch` (TA-19, Phase 2)
-- 6082 `ErrMintNotPinned` (TA-03, Phase 3)
-- 6083 `ErrOutsideOperatingHours` (TA-05, Phase 3)
-- 6084 `ErrCooldownActive` (TA-06, Phase 3)
-- 6085 `ErrGraylistFriction` (TA-07, Phase 3)
-- 6086 `ErrGraylistFull` (TA-07, Phase 3)
-- 6087 `ErrToken2022ExtensionForbidden` (TA-08, Phase 3)
-- 6088 `ErrCosignRequired` (TA-09, Phase 3)
-- 6089 `ErrAutoRevoked` (TA-17, Phase 3)
-- 6090 `ErrSandwichIntegrity` (TA-10, Phase 4)
-- 6091 `ErrProtectedWritable` (TA-11, Phase 4)
-- 6092 `ErrSessionNonceMismatch` (AC-10, Phase 4)
-- 6093 `ErrStableFloorViolation` (TA-12, Phase 5)
-- 6094 `ErrDailyCapExceeded` (TA-13, Phase 5)
-- 6095 `ErrRecipientCapExceeded` (TA-14, Phase 5)
-- 6096 `ErrMintDeltaCapExceeded` (R-1, Phase 6)
-- 6097 `ErrAtaAuthorityChanged` (R-2, Phase 6)
-- 6098 `ErrOutputBelowFloor` (R-3, Phase 6)
-- 6099 `ErrDeclarationInconsistent` (R-4, Phase 6)
-- 6100 `ErrPendingOwnershipExists` (C26, Phase 8)
-- 6101 `ErrPendingOwnershipNotReady` (C26, Phase 8)
-- 6102 `ErrInvalidFreezeReason` (C27, Phase 8)
-- 6103 `ErrReactivateCooldownActive` (C28, Phase 8)
+**V2 reservation table starts at 6079** (compaction; the first new V2 variant `ErrInvalidCapability` lands at 6079, not 6078). Phase 2 close-up appended 6082 `ErrActiveVaultRequiresAllowlist` (F-11), shifting Phase 3+ reservations down by 1:
+- 6079 `ErrInvalidCapability` (TA-04, Phase 2 — LANDED)
+- 6080 `ErrPolicyPreviewMismatch` (TA-19, Phase 2 — LANDED)
+- 6081 `ErrObserveOnlyModeBlocksExecute` (TA-19, Phase 2 — LANDED)
+- 6082 `ErrActiveVaultRequiresAllowlist` (F-11, Phase 2 close-up — LANDED)
+- 6083 `ErrMintNotPinned` (TA-03, Phase 3)
+- 6084 `ErrOutsideOperatingHours` (TA-05, Phase 3)
+- 6085 `ErrCooldownActive` (TA-06, Phase 3)
+- 6086 `ErrGraylistFriction` (TA-07, Phase 3)
+- 6087 `ErrGraylistFull` (TA-07, Phase 3)
+- 6088 `ErrToken2022ExtensionForbidden` (TA-08, Phase 3)
+- 6089 `ErrCosignRequired` (TA-09, Phase 3)
+- 6090 `ErrAutoRevoked` (TA-17, Phase 3)
+- 6091 `ErrSandwichIntegrity` (TA-10, Phase 4)
+- 6092 `ErrProtectedWritable` (TA-11, Phase 4)
+- 6093 `ErrSessionNonceMismatch` (AC-10, Phase 4)
+- 6094 `ErrStableFloorViolation` (TA-12, Phase 5)
+- 6095 `ErrDailyCapExceeded` (TA-13, Phase 5)
+- 6096 `ErrRecipientCapExceeded` (TA-14, Phase 5)
+- 6097 `ErrMintDeltaCapExceeded` (R-1, Phase 6)
+- 6098 `ErrAtaAuthorityChanged` (R-2, Phase 6)
+- 6099 `ErrOutputBelowFloor` (R-3, Phase 6)
+- 6100 `ErrDeclarationInconsistent` (R-4, Phase 6)
+- 6101 `ErrPendingOwnershipExists` (C26, Phase 8)
+- 6102 `ErrPendingOwnershipNotReady` (C26, Phase 8)
+- 6103 `ErrInvalidFreezeReason` (C27, Phase 8)
+- 6104 `ErrReactivateCooldownActive` (C28, Phase 8)
 
 **Notes:**
 - TA-16 is DELETED per L-1; `ErrParserVersionMismatch` is NOT allocated.
