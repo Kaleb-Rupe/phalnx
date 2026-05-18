@@ -38,6 +38,7 @@
  *   17. auto_revoke_threshold: u8 (1 byte) — TA-17 (Phase 3 pre-exec)
  *   18. stable_balance_floor: u64 LE (8 bytes) — TA-12 (Phase 5 post-exec)
  *   19. per_recipient_daily_cap_usd: u64 LE (8 bytes) — TA-14 (Phase 5 post-exec)
+ *   20. cosign_required: bool (1 byte 0/1) — G6 (audit 2026-05-18 cosign opt-in)
  *
  * Phase 3 append-only additions (TA-05/07/17): operating_hours,
  * auto_promote_grays, auto_revoke_threshold are appended at positions 15-17
@@ -47,6 +48,13 @@
  * position 18, per_recipient_daily_cap_usd at position 19. Both bound by
  * TA-19 so silent SDK / pending-PDA mutations can't bypass the owner's
  * signed digest.
+ *
+ * G6 append-only addition (audit 2026-05-18 cosign opt-in): cosign_required
+ * at position 20 (1 byte, 0/1). Owner's choice to opt into TA-09 cosign
+ * enforcement is part of the signed policy — a compromised SDK cannot
+ * silently disable cosign between owner approval and on-chain landing.
+ * Disabling cosign on a live policy where this is true is itself an
+ * elevated mutation per `queue_policy_update` (one-way ratchet).
  *
  * The `destination_graylist: Vec<(Pubkey, i64)>` is intentionally NOT in
  * the digest. Graylist entries are derived/ephemeral — they auto-populate
@@ -142,6 +150,17 @@ export interface PolicyPreviewFields {
    * position 19.
    */
   perRecipientDailyCapUsd?: bigint;
+  /**
+   * G6 (audit 2026-05-18 cosign opt-in): owner-chosen opt-in to TA-09
+   * cosign enforcement on elevated mutations. Default false (low-friction
+   * — preserves existing vault behavior; owner-signature-only flow on
+   * elevated mutations). When true, the `queue_policy_update` handler's
+   * 7-trigger elevation gate (raises caps, expands allowlists, weakens
+   * floor / per-recipient / protocol caps) requires a cosign session.
+   * Disabling cosign on a live policy where this is true is itself an
+   * elevated mutation (one-way ratchet). Bound at canonical position 20.
+   */
+  cosignRequired?: boolean;
 }
 
 // ── Base58 decode (no external dep) ──────────────────────────────────────────
@@ -255,7 +274,8 @@ export function computePolicyPreviewDigest(
     1 + // auto_promote_grays (TA-07 Phase 3)
     1 + // auto_revoke_threshold (TA-17 Phase 3)
     8 + // stable_balance_floor (TA-12 Phase 5)
-    8; // per_recipient_daily_cap_usd (TA-14 Phase 5)
+    8 + // per_recipient_daily_cap_usd (TA-14 Phase 5)
+    1; // cosign_required (G6 audit 2026-05-18)
   const variableSize = protoBytes.length * 32 + destBytes.length * 32;
   const buf = new Uint8Array(fixedSize + variableSize);
   const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
@@ -297,6 +317,8 @@ export function computePolicyPreviewDigest(
   off = writeU64Le(view, off, fields.stableBalanceFloor ?? 0n);
   // TA-14 (Phase 5): per_recipient_daily_cap_usd at position 19.
   off = writeU64Le(view, off, fields.perRecipientDailyCapUsd ?? 0n);
+  // G6 (audit 2026-05-18 cosign opt-in): cosign_required at position 20.
+  buf[off++] = fields.cosignRequired ? 1 : 0;
 
   // Defensive: assert we wrote exactly what we sized
   if (off !== buf.length) {

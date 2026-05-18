@@ -269,16 +269,75 @@ export type PolicyConfig = {
   autoRevokeThreshold: number;
   /**
    * TA-12 (Phase 5 post-execution invariant #1): hard floor on the
-   * combined USDC + USDT balance held by the vault. Bound by TA-19
-   * at canonical digest position 18. APPENDED per F-14 APPEND-ONLY rule.
+   * combined USDC + USDT balance held by the vault. After every
+   * `finalize_session` spending path completes (CPI balance audit +
+   * rolling-cap + per-agent + per-protocol bookkeeping), the handler
+   * re-reads the vault's USDC + USDT token-account balances and
+   * asserts their sum is ≥ this value. If not, it rejects with
+   * `ErrStableFloorViolation` (6094).
+   *
+   * This is the LAST defensive line — no combination of attacks (CPI
+   * drain, per-protocol cap bypass via async fulfillment, fee
+   * inflation, slippage manipulation) may drain the vault below this
+   * line. Default 0 (no reserve — preserves all existing vault
+   * behavior). Owner-configurable via `initialize_vault` and
+   * `queue_policy_update`.
+   *
+   * Bound by TA-19 at canonical digest position 18. APPENDED per
+   * F-14 APPEND-ONLY rule for Borsh stability.
    */
   stableBalanceFloor: bigint;
   /**
    * TA-14 (Phase 5 post-execution invariant #2): rolling 24h
-   * per-recipient outflow cap. Bound by TA-19 at canonical digest
-   * position 19. APPENDED per F-14 APPEND-ONLY rule.
+   * per-recipient outflow cap, in 6-decimal USDC face value. When
+   * non-zero, every `finalize_session` spending path validates that
+   * the recipient's rolling 24h spend (tracked on
+   * `SpendTracker.per_recipient`) PLUS this transaction's outflow
+   * to that recipient stays ≤ this value. Otherwise rejects with
+   * `ErrRecipientCapExceeded` (6096).
+   *
+   * Default 0 (no per-recipient cap) preserves existing vault
+   * behavior. Owner-configurable via `initialize_vault` and
+   * `queue_policy_update`.
+   *
+   * Bound by TA-19 at canonical digest position 19. APPENDED per
+   * F-14 APPEND-ONLY rule for Borsh stability.
    */
   perRecipientDailyCapUsd: bigint;
+  /**
+   * G6 (audit 2026-05-18): owner-controlled opt-in flag for TA-09
+   * cosign enforcement on elevated policy mutations.
+   *
+   * When `false` (default): elevated mutations (raising caps,
+   * expanding allowlists, weakening floors / per-recipient caps /
+   * protocol caps) require only the owner's signature — no cosign
+   * session is required. Low-friction default, suitable for solo
+   * founders, AI-agent automation, dev/test vaults, and any vault
+   * whose owner is a Squads V4 multisig PDA (multisig at the Solana
+   * layer already enforces multi-signer authorization).
+   *
+   * When `true`: TA-09 elevation checks fire. The seven elevation
+   * triggers in `queue_policy_update` (raises_daily_cap,
+   * raises_max_tx, expands_destinations, expands_protocols,
+   * lowers_floor, weakens_per_recipient_cap, weakens_protocol_caps)
+   * require a non-default `cosign_session` pubkey + a corresponding
+   * signer in `remaining_accounts` with `is_signer == true`.
+   *
+   * Toggle semantics:
+   * - **Enabling (false → true)** is NON-ELEVATED. It is a safety
+   * improvement — owner is voluntarily tightening the policy.
+   * Cosign is not required to enable cosign.
+   * - **Disabling (true → false)** IS ELEVATED. One-way-ratchet
+   * semantics: if cosign is currently ON, the owner cannot turn
+   * it OFF without producing a valid cosign signature — exactly
+   * the protection cosign was meant to provide. A phishing-
+   * compromised owner key cannot silently disable cosign and
+   * then drain via subsequent non-elevated mutations.
+   *
+   * Bound by TA-19 at canonical digest position 20. APPENDED at end
+   * of struct per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  cosignRequired: boolean;
 };
 
 export type PolicyConfigArgs = {
@@ -486,16 +545,75 @@ export type PolicyConfigArgs = {
   autoRevokeThreshold: number;
   /**
    * TA-12 (Phase 5 post-execution invariant #1): hard floor on the
-   * combined USDC + USDT balance held by the vault. Bound by TA-19
-   * at canonical digest position 18. APPENDED per F-14 APPEND-ONLY rule.
+   * combined USDC + USDT balance held by the vault. After every
+   * `finalize_session` spending path completes (CPI balance audit +
+   * rolling-cap + per-agent + per-protocol bookkeeping), the handler
+   * re-reads the vault's USDC + USDT token-account balances and
+   * asserts their sum is ≥ this value. If not, it rejects with
+   * `ErrStableFloorViolation` (6094).
+   *
+   * This is the LAST defensive line — no combination of attacks (CPI
+   * drain, per-protocol cap bypass via async fulfillment, fee
+   * inflation, slippage manipulation) may drain the vault below this
+   * line. Default 0 (no reserve — preserves all existing vault
+   * behavior). Owner-configurable via `initialize_vault` and
+   * `queue_policy_update`.
+   *
+   * Bound by TA-19 at canonical digest position 18. APPENDED per
+   * F-14 APPEND-ONLY rule for Borsh stability.
    */
   stableBalanceFloor: number | bigint;
   /**
    * TA-14 (Phase 5 post-execution invariant #2): rolling 24h
-   * per-recipient outflow cap. Bound by TA-19 at canonical digest
-   * position 19. APPENDED per F-14 APPEND-ONLY rule.
+   * per-recipient outflow cap, in 6-decimal USDC face value. When
+   * non-zero, every `finalize_session` spending path validates that
+   * the recipient's rolling 24h spend (tracked on
+   * `SpendTracker.per_recipient`) PLUS this transaction's outflow
+   * to that recipient stays ≤ this value. Otherwise rejects with
+   * `ErrRecipientCapExceeded` (6096).
+   *
+   * Default 0 (no per-recipient cap) preserves existing vault
+   * behavior. Owner-configurable via `initialize_vault` and
+   * `queue_policy_update`.
+   *
+   * Bound by TA-19 at canonical digest position 19. APPENDED per
+   * F-14 APPEND-ONLY rule for Borsh stability.
    */
   perRecipientDailyCapUsd: number | bigint;
+  /**
+   * G6 (audit 2026-05-18): owner-controlled opt-in flag for TA-09
+   * cosign enforcement on elevated policy mutations.
+   *
+   * When `false` (default): elevated mutations (raising caps,
+   * expanding allowlists, weakening floors / per-recipient caps /
+   * protocol caps) require only the owner's signature — no cosign
+   * session is required. Low-friction default, suitable for solo
+   * founders, AI-agent automation, dev/test vaults, and any vault
+   * whose owner is a Squads V4 multisig PDA (multisig at the Solana
+   * layer already enforces multi-signer authorization).
+   *
+   * When `true`: TA-09 elevation checks fire. The seven elevation
+   * triggers in `queue_policy_update` (raises_daily_cap,
+   * raises_max_tx, expands_destinations, expands_protocols,
+   * lowers_floor, weakens_per_recipient_cap, weakens_protocol_caps)
+   * require a non-default `cosign_session` pubkey + a corresponding
+   * signer in `remaining_accounts` with `is_signer == true`.
+   *
+   * Toggle semantics:
+   * - **Enabling (false → true)** is NON-ELEVATED. It is a safety
+   * improvement — owner is voluntarily tightening the policy.
+   * Cosign is not required to enable cosign.
+   * - **Disabling (true → false)** IS ELEVATED. One-way-ratchet
+   * semantics: if cosign is currently ON, the owner cannot turn
+   * it OFF without producing a valid cosign signature — exactly
+   * the protection cosign was meant to provide. A phishing-
+   * compromised owner key cannot silently disable cosign and
+   * then drain via subsequent non-elevated mutations.
+   *
+   * Bound by TA-19 at canonical digest position 20. APPENDED at end
+   * of struct per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  cosignRequired: boolean;
 };
 
 /** Gets the encoder for {@link PolicyConfigArgs} account data. */
@@ -532,6 +650,7 @@ export function getPolicyConfigEncoder(): Encoder<PolicyConfigArgs> {
       ["autoRevokeThreshold", getU8Encoder()],
       ["stableBalanceFloor", getU64Encoder()],
       ["perRecipientDailyCapUsd", getU64Encoder()],
+      ["cosignRequired", getBooleanEncoder()],
     ]),
     (value) => ({ ...value, discriminator: POLICY_CONFIG_DISCRIMINATOR }),
   );
@@ -570,6 +689,7 @@ export function getPolicyConfigDecoder(): Decoder<PolicyConfig> {
     ["autoRevokeThreshold", getU8Decoder()],
     ["stableBalanceFloor", getU64Decoder()],
     ["perRecipientDailyCapUsd", getU64Decoder()],
+    ["cosignRequired", getBooleanDecoder()],
   ]);
 }
 

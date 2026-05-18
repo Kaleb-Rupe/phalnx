@@ -124,6 +124,10 @@ export function createMockVaultState(
       // (no floor, no per-recipient cap) — matches "off" semantics.
       stableBalanceFloor: 0n,
       perRecipientDailyCapUsd: 0n,
+      // G6 (audit 2026-05-18 cosign opt-in): mock default = false
+      // (low-friction). Matches the production default; tests exercising
+      // the cosign-required path should override at construction time.
+      cosignRequired: false,
     },
     tracker: null,
     overlay: null,

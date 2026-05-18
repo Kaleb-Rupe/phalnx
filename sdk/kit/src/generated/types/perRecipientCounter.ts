@@ -31,22 +31,47 @@ import {
  * `recipient` is resolved from the SPL TokenAccount.owner field — NOT
  * the ATA pubkey. The §RP brief explicitly flags ATA-vs-owner confusion
  * as the attack class to defend against.
+ *
+ * `window_start` is the Unix timestamp at which the current 24h window
+ * began. When `now - window_start >= 86400` the slot is eligible for
+ * age-based eviction.
+ *
+ * `window_spend_usd` is the accumulated 6-decimal USDC face value spent
+ * to this recipient in the active window.
  */
 export type PerRecipientCounter = {
-  /** Recipient wallet pubkey (NOT the ATA pubkey — Pod-compatible bytes). */
+  /**
+   * Recipient wallet pubkey (NOT the ATA pubkey — Pod-compatible
+   * `[u8; 32]` since zero-copy accounts can't hold Pubkey directly).
+   */
   recipient: ReadonlyUint8Array;
-  /** Unix timestamp at which the active rolling 24h window started. */
+  /**
+   * Unix timestamp at which the active rolling 24h window started.
+   * Zero indicates an empty slot.
+   */
   windowStart: bigint;
-  /** Accumulated 6-decimal USDC face value spent to recipient in window. */
+  /**
+   * Accumulated 6-decimal USDC face value spent to `recipient` in
+   * the active 24h window.
+   */
   windowSpendUsd: bigint;
 };
 
 export type PerRecipientCounterArgs = {
-  /** Recipient wallet pubkey (NOT the ATA pubkey — Pod-compatible bytes). */
+  /**
+   * Recipient wallet pubkey (NOT the ATA pubkey — Pod-compatible
+   * `[u8; 32]` since zero-copy accounts can't hold Pubkey directly).
+   */
   recipient: ReadonlyUint8Array;
-  /** Unix timestamp at which the active rolling 24h window started. */
+  /**
+   * Unix timestamp at which the active rolling 24h window started.
+   * Zero indicates an empty slot.
+   */
   windowStart: number | bigint;
-  /** Accumulated 6-decimal USDC face value spent to recipient in window. */
+  /**
+   * Accumulated 6-decimal USDC face value spent to `recipient` in
+   * the active 24h window.
+   */
   windowSpendUsd: number | bigint;
 };
 

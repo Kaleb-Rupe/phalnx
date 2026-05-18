@@ -121,6 +121,12 @@ export type RevokeAgentAsyncInput<
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
+  /**
+   * PEN-CROSS-5 (Phase 4 absorption) — bump policy_version on agent
+   * revocation. See register_agent.rs for the OCC rationale; revoke
+   * is the more important of the four (removing an agent must
+   * invalidate concurrent validates that race the revoke).
+   */
   policy?: Address<TAccountPolicy>;
   /** Agent spend overlay — release slot on revocation. */
   agentSpendOverlay: Address<TAccountAgentSpendOverlay>;
@@ -216,6 +222,12 @@ export type RevokeAgentInput<
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
+  /**
+   * PEN-CROSS-5 (Phase 4 absorption) — bump policy_version on agent
+   * revocation. See register_agent.rs for the OCC rationale; revoke
+   * is the more important of the four (removing an agent must
+   * invalidate concurrent validates that race the revoke).
+   */
   policy: Address<TAccountPolicy>;
   /** Agent spend overlay — release slot on revocation. */
   agentSpendOverlay: Address<TAccountAgentSpendOverlay>;
@@ -293,6 +305,12 @@ export type ParsedRevokeAgentInstruction<
   accounts: {
     owner: TAccountMetas[0];
     vault: TAccountMetas[1];
+    /**
+     * PEN-CROSS-5 (Phase 4 absorption) — bump policy_version on agent
+     * revocation. See register_agent.rs for the OCC rationale; revoke
+     * is the more important of the four (removing an agent must
+     * invalidate concurrent validates that race the revoke).
+     */
     policy: TAccountMetas[2];
     /** Agent spend overlay — release slot on revocation. */
     agentSpendOverlay: TAccountMetas[3];

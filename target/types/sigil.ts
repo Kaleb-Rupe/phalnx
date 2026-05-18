@@ -2760,6 +2760,10 @@ export type Sigil = {
           "type": "u64"
         },
         {
+          "name": "cosignRequired",
+          "type": "bool"
+        },
+        {
           "name": "previewDigest",
           "type": {
             "array": [
@@ -2823,12 +2827,26 @@ export type Sigil = {
         },
         {
           "name": "policy",
+          "docs": [
+            "PEN-CROSS-5 (Phase 4 absorption) — bump policy_version on pause.",
+            "Mirrors revoke semantics: pause is a kill-switch for an agent,",
+            "and concurrent validate_and_authorize calls must reject with",
+            "PolicyVersionMismatch instead of relying on the slower",
+            "is_agent_paused constraint check."
+          ],
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
-                "value": [112, 111, 108, 105, 99, 121]
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
               },
               {
                 "kind": "account",
@@ -3607,6 +3625,12 @@ export type Sigil = {
           }
         },
         {
+          "name": "cosignRequired",
+          "type": {
+            "option": "bool"
+          }
+        },
+        {
           "name": "cosignSession",
           "type": "pubkey"
         },
@@ -3837,12 +3861,36 @@ export type Sigil = {
         },
         {
           "name": "policy",
+          "docs": [
+            "PEN-CROSS-5 (Phase 4 absorption) — policy is now mutated by",
+            "register/revoke/pause/unpause to bump `policy_version` as a",
+            "defense-in-depth OCC signal. Existing `vault.is_agent` /",
+            "`is_agent_paused` constraints already reject the TOCTOU window;",
+            "the version bump lets concurrent validate_and_authorize calls fail",
+            "fast with PolicyVersionMismatch instead of relying on the slower",
+            "constraint check.",
+            "",
+            "§RP-1 V6 clarification (2026-05-18): the policy-to-vault binding is",
+            "enforced by the PDA seeds derivation `[b\"policy\", vault.key().as_ref()]`",
+            "— functionally equivalent to `has_one = vault`. Any sibling-thread",
+            "claim of an explicit `has_one = vault` constraint on this account is",
+            "cosmetic; the seeds derivation is the load-bearing check. This same",
+            "pattern is mirrored on `revoke_agent.rs`, `pause_agent.rs`, and",
+            "`unpause_agent.rs`."
+          ],
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
-                "value": [112, 111, 108, 105, 99, 121]
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
               },
               {
                 "kind": "account",
@@ -3927,12 +3975,25 @@ export type Sigil = {
         },
         {
           "name": "policy",
+          "docs": [
+            "PEN-CROSS-5 (Phase 4 absorption) — bump policy_version on agent",
+            "revocation. See register_agent.rs for the OCC rationale; revoke",
+            "is the more important of the four (removing an agent must",
+            "invalidate concurrent validates that race the revoke)."
+          ],
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
-                "value": [112, 111, 108, 105, 99, 121]
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
               },
               {
                 "kind": "account",
@@ -4078,12 +4139,25 @@ export type Sigil = {
         },
         {
           "name": "policy",
+          "docs": [
+            "PEN-CROSS-5 (Phase 4 absorption) — bump policy_version on unpause.",
+            "Symmetric with pause_agent; the four agent-mutation ix",
+            "(register / revoke / pause / unpause) all bump version so OCC",
+            "signals fire uniformly regardless of which mutation lands."
+          ],
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
-                "value": [112, 111, 108, 105, 99, 121]
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
               },
               {
                 "kind": "account",
@@ -5962,15 +6036,20 @@ export type Sigil = {
             "name": "consecutiveFailures",
             "docs": [
               "TA-17 (Phase 3 pre-execution guard #7): consecutive policy-",
-              "violation failures by this agent. Incremented in finalize_session",
-              "when the failed seal's reject reason is an on-chain policy code",
-              "(numeric range POLICY_VIOLATION_RANGE = 6083..=6100 — see",
-              "finalize_session.rs). Reset to 0 on a successful seal. When",
-              "`>= policy.auto_revoke_threshold`, the agent's capability is set",
-              "to CAPABILITY_DISABLED and an AgentAutoRevoked event is emitted.",
-              "Owner re-enables via queue_agent_permissions_update.",
+              "violation failures by this agent. Solana's atomic-or-none execution",
+              "means a validate-time reject rolls back its own state mutation, so",
+              "the counter cannot self-increment inside the failing tx. Instead,",
+              "it is incremented by the owner-only `record_agent_violation` ix,",
+              "called by an off-chain monitor after observing a failed seal whose",
+              "reject reason is an on-chain policy code (numeric range",
+              "POLICY_VIOLATION_RANGE = 6083..=6100 — see `state/mod.rs::is_policy_violation_code`).",
+              "Reset to 0 inside `validate_and_authorize` on a successful seal.",
+              "When `>= policy.auto_revoke_threshold`, the agent's capability is",
+              "set to CAPABILITY_DISABLED and an `AgentAutoRevoked` event is",
+              "emitted. Owner re-enables via `queue_agent_permissions_update`.",
               "",
-              "External codes (CU exhaustion 6047, nonce desync 6048, auth",
+              "External codes (sysvar-scan 6068 SysvarScanBoundExceeded,",
+              "async-fulfillment 6069 AsyncFulfillmentNotPermitted, auth",
               "errors 6000-6082) do NOT increment — they're not the agent's",
               "fault and auto-revoking on them would let an attacker brick",
               "a working agent.",
@@ -7716,13 +7795,87 @@ export type Sigil = {
           {
             "name": "perRecipientDailyCapUsd",
             "docs": [
-              "TA-14 (Phase 5): optional update to `PolicyConfig.per_recipient_daily_cap_usd`.",
-              "None = preserve live value; Some(n) = set to n. Bound by TA-19 at canonical",
-              "digest position 19. APPENDED per F-14 APPEND-ONLY rule for Borsh stability."
+              "TA-14 (Phase 5): optional update to",
+              "`PolicyConfig.per_recipient_daily_cap_usd`. None = preserve live value;",
+              "Some(n) = set to n. Bound by TA-19 at canonical digest position 19.",
+              "",
+              "APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability."
             ],
             "type": {
               "option": "u64"
             }
+          },
+          {
+            "name": "cosignRequired",
+            "docs": [
+              "G6 (audit 2026-05-18 cosign opt-in): optional update to",
+              "`PolicyConfig.cosign_required`. None = preserve live value;",
+              "Some(true) = enable cosign on elevated mutations (safety",
+              "improvement — NOT elevated); Some(false) when live is true",
+              "IS elevated (one-way ratchet — disabling cosign requires cosign).",
+              "Bound by TA-19 at canonical digest position 20.",
+              "",
+              "APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability."
+            ],
+            "type": {
+              "option": "bool"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "perRecipientCounter",
+      "docs": [
+        "TA-14 (Phase 5 post-exec): per-recipient rolling 24h outflow counter.",
+        "48 bytes per entry (32 + 8 + 8).",
+        "",
+        "`recipient` is resolved from the SPL TokenAccount.owner field — NOT",
+        "the ATA pubkey. The §RP brief explicitly flags ATA-vs-owner confusion",
+        "as the attack class to defend against.",
+        "",
+        "`window_start` is the Unix timestamp at which the current 24h window",
+        "began. When `now - window_start >= 86400` the slot is eligible for",
+        "age-based eviction.",
+        "",
+        "`window_spend_usd` is the accumulated 6-decimal USDC face value spent",
+        "to this recipient in the active window."
+      ],
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "recipient",
+            "docs": [
+              "Recipient wallet pubkey (NOT the ATA pubkey — Pod-compatible",
+              "`[u8; 32]` since zero-copy accounts can't hold Pubkey directly)."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "windowStart",
+            "docs": [
+              "Unix timestamp at which the active rolling 24h window started.",
+              "Zero indicates an empty slot."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "windowSpendUsd",
+            "docs": [
+              "Accumulated 6-decimal USDC face value spent to `recipient` in",
+              "the active 24h window."
+            ],
+            "type": "u64"
           }
         ]
       }
@@ -8079,8 +8232,22 @@ export type Sigil = {
             "name": "stableBalanceFloor",
             "docs": [
               "TA-12 (Phase 5 post-execution invariant #1): hard floor on the",
-              "combined USDC + USDT balance held by the vault. Bound by TA-19",
-              "at canonical digest position 18. APPENDED per F-14 APPEND-ONLY rule."
+              "combined USDC + USDT balance held by the vault. After every",
+              "`finalize_session` spending path completes (CPI balance audit +",
+              "rolling-cap + per-agent + per-protocol bookkeeping), the handler",
+              "re-reads the vault's USDC + USDT token-account balances and",
+              "asserts their sum is ≥ this value. If not, it rejects with",
+              "`ErrStableFloorViolation` (6094).",
+              "",
+              "This is the LAST defensive line — no combination of attacks (CPI",
+              "drain, per-protocol cap bypass via async fulfillment, fee",
+              "inflation, slippage manipulation) may drain the vault below this",
+              "line. Default 0 (no reserve — preserves all existing vault",
+              "behavior). Owner-configurable via `initialize_vault` and",
+              "`queue_policy_update`.",
+              "",
+              "Bound by TA-19 at canonical digest position 18. APPENDED per",
+              "F-14 APPEND-ONLY rule for Borsh stability."
             ],
             "type": "u64"
           },
@@ -8088,10 +8255,58 @@ export type Sigil = {
             "name": "perRecipientDailyCapUsd",
             "docs": [
               "TA-14 (Phase 5 post-execution invariant #2): rolling 24h",
-              "per-recipient outflow cap. Bound by TA-19 at canonical digest",
-              "position 19. APPENDED per F-14 APPEND-ONLY rule."
+              "per-recipient outflow cap, in 6-decimal USDC face value. When",
+              "non-zero, every `finalize_session` spending path validates that",
+              "the recipient's rolling 24h spend (tracked on",
+              "`SpendTracker.per_recipient`) PLUS this transaction's outflow",
+              "to that recipient stays ≤ this value. Otherwise rejects with",
+              "`ErrRecipientCapExceeded` (6096).",
+              "",
+              "Default 0 (no per-recipient cap) preserves existing vault",
+              "behavior. Owner-configurable via `initialize_vault` and",
+              "`queue_policy_update`.",
+              "",
+              "Bound by TA-19 at canonical digest position 19. APPENDED per",
+              "F-14 APPEND-ONLY rule for Borsh stability."
             ],
             "type": "u64"
+          },
+          {
+            "name": "cosignRequired",
+            "docs": [
+              "G6 (audit 2026-05-18): owner-controlled opt-in flag for TA-09",
+              "cosign enforcement on elevated policy mutations.",
+              "",
+              "When `false` (default): elevated mutations (raising caps,",
+              "expanding allowlists, weakening floors / per-recipient caps /",
+              "protocol caps) require only the owner's signature — no cosign",
+              "session is required. Low-friction default, suitable for solo",
+              "founders, AI-agent automation, dev/test vaults, and any vault",
+              "whose owner is a Squads V4 multisig PDA (multisig at the Solana",
+              "layer already enforces multi-signer authorization).",
+              "",
+              "When `true`: TA-09 elevation checks fire. The seven elevation",
+              "triggers in `queue_policy_update` (raises_daily_cap,",
+              "raises_max_tx, expands_destinations, expands_protocols,",
+              "lowers_floor, weakens_per_recipient_cap, weakens_protocol_caps)",
+              "require a non-default `cosign_session` pubkey + a corresponding",
+              "signer in `remaining_accounts` with `is_signer == true`.",
+              "",
+              "Toggle semantics:",
+              "- **Enabling (false → true)** is NON-ELEVATED. It is a safety",
+              "improvement — owner is voluntarily tightening the policy.",
+              "Cosign is not required to enable cosign.",
+              "- **Disabling (true → false)** IS ELEVATED. One-way-ratchet",
+              "semantics: if cosign is currently ON, the owner cannot turn",
+              "it OFF without producing a valid cosign signature — exactly",
+              "the protection cosign was meant to provide. A phishing-",
+              "compromised owner key cannot silently disable cosign and",
+              "then drain via subsequent non-elevated mutations.",
+              "",
+              "Bound by TA-19 at canonical digest position 20. APPENDED at end",
+              "of struct per F-14 APPEND-ONLY rule for Borsh stability."
+            ],
+            "type": "bool"
           }
         ]
       }
@@ -8407,52 +8622,6 @@ export type Sigil = {
       }
     },
     {
-      "name": "perRecipientCounter",
-      "docs": [
-        "TA-14 (Phase 5 post-exec): per-recipient rolling 24h outflow counter.",
-        "48 bytes per entry (32 + 8 + 8).",
-        "",
-        "`recipient` is resolved from the SPL TokenAccount.owner field — NOT",
-        "the ATA pubkey. The §RP brief explicitly flags ATA-vs-owner confusion",
-        "as the attack class to defend against."
-      ],
-      "serialization": "bytemuck",
-      "repr": {
-        "kind": "c"
-      },
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "recipient",
-            "docs": [
-              "Recipient wallet pubkey (NOT the ATA pubkey — Pod-compatible bytes)."
-            ],
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
-          },
-          {
-            "name": "windowStart",
-            "docs": [
-              "Unix timestamp at which the active rolling 24h window started."
-            ],
-            "type": "i64"
-          },
-          {
-            "name": "windowSpendUsd",
-            "docs": [
-              "Accumulated 6-decimal USDC face value spent to recipient in window."
-            ],
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
       "name": "sessionAuthority",
       "type": {
         "kind": "struct",
@@ -8597,9 +8766,44 @@ export type Sigil = {
           {
             "name": "nonce",
             "docs": [
-              "AC-10 (Phase 4) — monotonic session nonce closing durable-nonce replay (Audit #1 C-1).",
-              "Starts at 0 on fresh `init`; incremented by finalize_session on success.",
-              "Phase 8 ownership-transfer flow (M-5) reuses this field."
+              "AC-10 (Phase 4) — monotonic session nonce closing durable-nonce replay",
+              "(per Audit #1 C-1).",
+              "",
+              "**Semantics**",
+              "- New session: `init` zero-initializes the account, so the field starts",
+              "at 0. `validate_and_authorize` accepts `expected_nonce` and requires",
+              "it to equal `self.nonce` at entry — a fresh session therefore demands",
+              "`expected_nonce = 0` from the caller.",
+              "- `finalize_session` increments `self.nonce` by 1 on every successful",
+              "finalize (including the expired-cleanup path — see finalize_session.rs",
+              "for the atomicity argument). The increment is atomic with the",
+              "account-close: if finalize errors, the close is rolled back by the",
+              "runtime and the persisted nonce stays at the pre-increment value, so",
+              "a partial-fail does NOT permanent-increment the nonce.",
+              "- Because `validate_and_authorize` uses `init` (not `init_if_needed`),",
+              "the (vault, agent, mint) session PDA is closed at finalize and the",
+              "next validate creates a fresh account starting at nonce=0. The nonce",
+              "field therefore functions as an in-session counter and is checked",
+              "against `expected_nonce` ONLY when the SessionAuthority account is",
+              "not closed between validates — currently a no-op in the steady-state",
+              "flow, present so Phase 8 ownership-transfer replay protection (M-5)",
+              "can extend the same field without a state-shape migration.",
+              "",
+              "**Phase 8 extension contract:** the ownership-transfer flow (M-5) will",
+              "reuse this field as a per-vault monotonic counter scoped to the",
+              "session PDA, preserving the existing finalize-time increment semantics.",
+              "Adding seeds / scope is additive; the on-chain field stays a `u64`.",
+              "",
+              "**Why NOT in TA-19 canonical digest:** SessionAuthority is per-session",
+              "ephemeral state, not policy-owned. Including the nonce in the policy",
+              "digest would require digest recomputation on every successful seal,",
+              "which collapses the queue/apply timelock semantics. The nonce is",
+              "orthogonal to the policy_preview_digest binding.",
+              "",
+              "**APPEND-ONLY**: new field at the END of SessionAuthority. SIZE grows",
+              "by 8 bytes (375 → 383). Pre-existing accounts at the prior layout are",
+              "not migrated (the program close+init cycle naturally retires them at",
+              "the next finalize), so this is safe under a V2 program ID redeploy."
             ],
             "type": "u64"
           }
@@ -8691,7 +8895,24 @@ export type Sigil = {
           {
             "name": "protocolCounters",
             "docs": [
-              "Reserved per-protocol spend counters (zeroed, no enforcement yet)"
+              "Per-protocol rolling 24h counters. Enforcement wired in",
+              "`finalize_session.rs` — search for \"TA-13 (Phase 5 ratification)\"",
+              "(two sites: the stablecoin-input branch around line 314 and the",
+              "non-stablecoin-input branch around line 408). See",
+              "`policy.protocol_caps` for the cap values and",
+              "`PolicyConfig::get_protocol_cap` for the lookup logic. Per-protocol",
+              "entries are populated by `record_protocol_spend()` when",
+              "`policy.has_protocol_caps == true`.",
+              "",
+              "TA-13 ratification (Phase 5): the prior doc-comment claimed",
+              "\"zeroed, no enforcement yet\" — this was stale. The enforcement",
+              "has lived in `finalize_session` since Phase 2; this comment was",
+              "the only artifact suggesting otherwise. Phase 5 ratifies the",
+              "existing require! with the dedicated `ErrDailyCapExceeded` (6095)",
+              "error code so off-chain monitors can disambiguate the \"rolling",
+              "24h cap hit\" semantic from the legacy \"slot allocation exhausted\"",
+              "path (which still returns `ProtocolCapExceeded` from inside",
+              "`record_protocol_spend`)."
             ],
             "type": {
               "array": [
@@ -8735,8 +8956,11 @@ export type Sigil = {
             "name": "perRecipient",
             "docs": [
               "TA-14 (Phase 5 post-exec invariant #2): per-recipient rolling 24h",
-              "outflow counters. Bounded to MAX_PER_RECIPIENT_ENTRIES (10) entries —",
-              "Vec NOT permitted in zero-copy account per F-14."
+              "outflow counters. Bounded to `MAX_PER_RECIPIENT_ENTRIES` (10)",
+              "entries — Vec NOT permitted in zero-copy account per F-14.",
+              "10 × 48 = 480 bytes. Each entry tracks one recipient pubkey",
+              "(resolved from the SPL TokenAccount.owner field — NOT the ATA",
+              "pubkey) and their rolling-24h outflow USD total."
             ],
             "type": {
               "array": [
@@ -8752,8 +8976,13 @@ export type Sigil = {
           {
             "name": "perRecipientCount",
             "docs": [
-              "TA-14 (Phase 5): how many per_recipient slots are currently active.",
-              "Eviction is AGE-BASED only — no LRU/churn-eviction per §RP."
+              "TA-14 (Phase 5): how many `per_recipient` slots are currently",
+              "active. New entries occupy `per_recipient[per_recipient_count]`",
+              "then this counter increments. Eviction is AGE-BASED only — slots",
+              "whose 24h window has elapsed are eligible; LRU/churn-eviction is",
+              "EXPLICITLY REJECTED per §RP requirement (prevents an attacker",
+              "recycling slots by paying many distinct recipients to bypass",
+              "the cap)."
             ],
             "type": "u8"
           },
@@ -8899,3 +9128,4 @@ export type Sigil = {
     }
   ]
 };
+

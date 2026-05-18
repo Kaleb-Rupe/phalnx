@@ -114,6 +114,13 @@ export type PauseAgentAsyncInput<
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
+  /**
+   * PEN-CROSS-5 (Phase 4 absorption) — bump policy_version on pause.
+   * Mirrors revoke semantics: pause is a kill-switch for an agent,
+   * and concurrent validate_and_authorize calls must reject with
+   * PolicyVersionMismatch instead of relying on the slower
+   * is_agent_paused constraint check.
+   */
   policy?: Address<TAccountPolicy>;
   agentToPause: PauseAgentInstructionDataArgs["agentToPause"];
 };
@@ -193,6 +200,13 @@ export type PauseAgentInput<
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
+  /**
+   * PEN-CROSS-5 (Phase 4 absorption) — bump policy_version on pause.
+   * Mirrors revoke semantics: pause is a kill-switch for an agent,
+   * and concurrent validate_and_authorize calls must reject with
+   * PolicyVersionMismatch instead of relying on the slower
+   * is_agent_paused constraint check.
+   */
   policy: Address<TAccountPolicy>;
   agentToPause: PauseAgentInstructionDataArgs["agentToPause"];
 };
@@ -255,6 +269,13 @@ export type ParsedPauseAgentInstruction<
   accounts: {
     owner: TAccountMetas[0];
     vault: TAccountMetas[1];
+    /**
+     * PEN-CROSS-5 (Phase 4 absorption) — bump policy_version on pause.
+     * Mirrors revoke semantics: pause is a kill-switch for an agent,
+     * and concurrent validate_and_authorize calls must reject with
+     * PolicyVersionMismatch instead of relying on the slower
+     * is_agent_paused constraint check.
+     */
     policy: TAccountMetas[2];
   };
   data: PauseAgentInstructionData;

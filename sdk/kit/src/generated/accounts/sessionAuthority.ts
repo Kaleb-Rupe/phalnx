@@ -115,6 +115,46 @@ export type SessionAuthority = {
    * finalize_session cross-checks snapshot_lens[i] == entry.value_len.
    */
   snapshotLens: ReadonlyUint8Array;
+  /**
+   * AC-10 (Phase 4) — monotonic session nonce closing durable-nonce replay
+   * (per Audit #1 C-1).
+   *
+   * **Semantics**
+   * - New session: `init` zero-initializes the account, so the field starts
+   * at 0. `validate_and_authorize` accepts `expected_nonce` and requires
+   * it to equal `self.nonce` at entry — a fresh session therefore demands
+   * `expected_nonce = 0` from the caller.
+   * - `finalize_session` increments `self.nonce` by 1 on every successful
+   * finalize (including the expired-cleanup path — see finalize_session.rs
+   * for the atomicity argument). The increment is atomic with the
+   * account-close: if finalize errors, the close is rolled back by the
+   * runtime and the persisted nonce stays at the pre-increment value, so
+   * a partial-fail does NOT permanent-increment the nonce.
+   * - Because `validate_and_authorize` uses `init` (not `init_if_needed`),
+   * the (vault, agent, mint) session PDA is closed at finalize and the
+   * next validate creates a fresh account starting at nonce=0. The nonce
+   * field therefore functions as an in-session counter and is checked
+   * against `expected_nonce` ONLY when the SessionAuthority account is
+   * not closed between validates — currently a no-op in the steady-state
+   * flow, present so Phase 8 ownership-transfer replay protection (M-5)
+   * can extend the same field without a state-shape migration.
+   *
+   * **Phase 8 extension contract:** the ownership-transfer flow (M-5) will
+   * reuse this field as a per-vault monotonic counter scoped to the
+   * session PDA, preserving the existing finalize-time increment semantics.
+   * Adding seeds / scope is additive; the on-chain field stays a `u64`.
+   *
+   * **Why NOT in TA-19 canonical digest:** SessionAuthority is per-session
+   * ephemeral state, not policy-owned. Including the nonce in the policy
+   * digest would require digest recomputation on every successful seal,
+   * which collapses the queue/apply timelock semantics. The nonce is
+   * orthogonal to the policy_preview_digest binding.
+   *
+   * **APPEND-ONLY**: new field at the END of SessionAuthority. SIZE grows
+   * by 8 bytes (375 → 383). Pre-existing accounts at the prior layout are
+   * not migrated (the program close+init cycle naturally retires them at
+   * the next finalize), so this is safe under a V2 program ID redeploy.
+   */
   nonce: bigint;
 };
 
@@ -177,6 +217,46 @@ export type SessionAuthorityArgs = {
    * finalize_session cross-checks snapshot_lens[i] == entry.value_len.
    */
   snapshotLens: ReadonlyUint8Array;
+  /**
+   * AC-10 (Phase 4) — monotonic session nonce closing durable-nonce replay
+   * (per Audit #1 C-1).
+   *
+   * **Semantics**
+   * - New session: `init` zero-initializes the account, so the field starts
+   * at 0. `validate_and_authorize` accepts `expected_nonce` and requires
+   * it to equal `self.nonce` at entry — a fresh session therefore demands
+   * `expected_nonce = 0` from the caller.
+   * - `finalize_session` increments `self.nonce` by 1 on every successful
+   * finalize (including the expired-cleanup path — see finalize_session.rs
+   * for the atomicity argument). The increment is atomic with the
+   * account-close: if finalize errors, the close is rolled back by the
+   * runtime and the persisted nonce stays at the pre-increment value, so
+   * a partial-fail does NOT permanent-increment the nonce.
+   * - Because `validate_and_authorize` uses `init` (not `init_if_needed`),
+   * the (vault, agent, mint) session PDA is closed at finalize and the
+   * next validate creates a fresh account starting at nonce=0. The nonce
+   * field therefore functions as an in-session counter and is checked
+   * against `expected_nonce` ONLY when the SessionAuthority account is
+   * not closed between validates — currently a no-op in the steady-state
+   * flow, present so Phase 8 ownership-transfer replay protection (M-5)
+   * can extend the same field without a state-shape migration.
+   *
+   * **Phase 8 extension contract:** the ownership-transfer flow (M-5) will
+   * reuse this field as a per-vault monotonic counter scoped to the
+   * session PDA, preserving the existing finalize-time increment semantics.
+   * Adding seeds / scope is additive; the on-chain field stays a `u64`.
+   *
+   * **Why NOT in TA-19 canonical digest:** SessionAuthority is per-session
+   * ephemeral state, not policy-owned. Including the nonce in the policy
+   * digest would require digest recomputation on every successful seal,
+   * which collapses the queue/apply timelock semantics. The nonce is
+   * orthogonal to the policy_preview_digest binding.
+   *
+   * **APPEND-ONLY**: new field at the END of SessionAuthority. SIZE grows
+   * by 8 bytes (375 → 383). Pre-existing accounts at the prior layout are
+   * not migrated (the program close+init cycle naturally retires them at
+   * the next finalize), so this is safe under a V2 program ID redeploy.
+   */
   nonce: number | bigint;
 };
 

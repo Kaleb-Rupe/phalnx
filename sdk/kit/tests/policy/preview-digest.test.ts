@@ -20,8 +20,8 @@ import * as fc from "fast-check";
 import { createHash } from "node:crypto";
 import { computePolicyPreviewDigest } from "../../src/policy/compute-policy-preview-digest.js";
 
-// Post-TA-14 (Phase 5 post-exec): per_recipient_daily_cap_usd appended at
-// position 19 of the canonical encoding.
+// Post-G6 (audit 2026-05-18 cosign opt-in): cosign_required appended at
+// position 20 of the canonical encoding.
 // Prior values:
 //   Pre-PEN-CROSS-6:
 //     HEX_MINIMAL   = 29f9a0caa6851902abe7de24ac30380ef50c220d25d541f8fe1762793152b623
@@ -41,14 +41,20 @@ import { computePolicyPreviewDigest } from "../../src/policy/compute-policy-prev
 //   Post-TA-12 (pre-TA-14):
 //     HEX_MINIMAL   = d3e731941e95cb1c426ccc6f2b5c53525c033f498bdb79a593bc86c98508c67a
 //     HEX_REALISTIC = 6523cb9b64baef661d919c802a8762332d1091cb53e8245d1624f52839fc9c8c
+//   Post-TA-14 (pre-G6):
+//     HEX_MINIMAL   = 45c51e8d77b5a1775ea95c760a4a554288fc246f91e10bac620cfda902936a46
+//     HEX_REALISTIC = 67c7cde90c0d8140fceb370bf94dcc15488ffd1407a84d4c248b590a8b9d810f
 //
-// TA-14 fixtures:
-//   - HEX_MINIMAL: perRecipientDailyCapUsd=0n (no cap — append 8 zero bytes)
-//   - HEX_REALISTIC: perRecipientDailyCapUsd=50_000_000n ($50 per-recipient cap)
+// G6 fixtures:
+//   - HEX_MINIMAL: cosignRequired=false (default low-friction — append 1 zero byte)
+//   - HEX_REALISTIC: cosignRequired=false (realistic default — append 1 zero byte)
+//
+// Cross-impl byte-equality pinned against Rust unit tests in
+// `programs/sigil/src/utils/policy_digest.rs::digest_known_value_*`.
 const HEX_MINIMAL =
-  "45c51e8d77b5a1775ea95c760a4a554288fc246f91e10bac620cfda902936a46";
+  "19c70cb767358d1ce2a4c736b067172e0f87ddad8ae6f98292a62bd5f9bae355";
 const HEX_REALISTIC =
-  "67c7cde90c0d8140fceb370bf94dcc15488ffd1407a84d4c248b590a8b9d810f";
+  "15ab9e4290b8bc9229adc64e46cf785edb1adc78596eb339e7bdd4df2a2cab62";
 
 // Base58 encodings of fixed test pubkeys [1u8;32], [2u8;32], [10u8;32].
 // Computed once (see Rust unit-test fixtures `pk(1) / pk(2) / pk(10)`).
@@ -87,6 +93,8 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       stableBalanceFloor: 0n,
       // TA-14: minimal fixture pins per-recipient cap=0 (no cap)
       perRecipientDailyCapUsd: 0n,
+      // G6: minimal fixture pins cosign opt-in = false (default low-friction)
+      cosignRequired: false,
     });
     expect(toHex(digest)).to.equal(HEX_MINIMAL);
   });
@@ -117,6 +125,8 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       stableBalanceFloor: 100_000_000n,
       // TA-14: realistic fixture pins per-recipient cap=$50 (50_000_000)
       perRecipientDailyCapUsd: 50_000_000n,
+      // G6: realistic fixture pins cosign opt-in = false (default low-friction)
+      cosignRequired: false,
     });
     expect(toHex(digest)).to.equal(HEX_REALISTIC);
   });
@@ -383,6 +393,43 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
     expect(toHex(d1)).to.not.equal(toHex(d2));
   });
 
+  // G6 cross-impl pin: cosign_required is bound by the digest. Flipping
+  // the owner's opt-in choice MUST change the digest — a tampered SDK
+  // cannot silently flip cosign on/off between owner approval and on-
+  // chain landing. Disabling cosign on a live policy where this is true
+  // is itself an elevated mutation (one-way ratchet) per
+  // `queue_policy_update`.
+  it("cosign_required flip changes the digest (G6 audit 2026-05-18)", () => {
+    const base = {
+      dailySpendingCapUsd: 500_000_000n,
+      maxTransactionSizeUsd: 100_000_000n,
+      maxSlippageBps: 100,
+      developerFeeRate: 0,
+      protocolMode: 1,
+      protocols: [PK_1],
+      destinationMode: 0,
+      allowedDestinations: [PK_10],
+      timelockDuration: 1800n,
+      sessionExpirySeconds: 30n,
+      observeOnly: false,
+      hasConstraints: false,
+      hasPostAssertions: 0,
+      createdAtSlot: 12345n,
+      operatingHours: 0x00ffffff,
+      autoPromoteGrays: false,
+      autoRevokeThreshold: 5,
+      stableBalanceFloor: 0n,
+      perRecipientDailyCapUsd: 0n,
+      cosignRequired: false,
+    } as const;
+    const d1 = computePolicyPreviewDigest(base);
+    const d2 = computePolicyPreviewDigest({
+      ...base,
+      cosignRequired: true,
+    });
+    expect(toHex(d1)).to.not.equal(toHex(d2));
+  });
+
   // TA-14 cross-impl pin: per_recipient_daily_cap_usd is bound by the
   // digest. Flipping it MUST change the digest — defends against a
   // tampered SDK silently raising the per-recipient cap to drain to
@@ -487,6 +534,7 @@ function referenceDigest(fields: {
   autoRevokeThreshold: number;
   stableBalanceFloor: bigint;
   perRecipientDailyCapUsd: bigint;
+  cosignRequired: boolean;
 }): string {
   const parts: number[] = [];
   const pushU64 = (v: bigint) => {
@@ -536,6 +584,8 @@ function referenceDigest(fields: {
   pushU64(fields.stableBalanceFloor);
   // TA-14: per_recipient_daily_cap_usd at position 19
   pushU64(fields.perRecipientDailyCapUsd);
+  // G6 (audit 2026-05-18 cosign opt-in): cosign_required at position 20
+  pushU8(fields.cosignRequired ? 1 : 0);
 
   const buf = Buffer.from(parts);
   return createHash("sha256").update(buf).digest("hex");
@@ -568,6 +618,7 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
         fc.integer({ min: 0, max: 255 }), // auto_revoke_threshold (TA-17; encoder handles any u8)
         fc.bigUint({ max: (1n << 64n) - 1n }), // stable_balance_floor (TA-12)
         fc.bigUint({ max: (1n << 64n) - 1n }), // per_recipient_daily_cap_usd (TA-14)
+        fc.boolean(), // cosign_required (G6 audit 2026-05-18 cosign opt-in)
         (
           dailyCap,
           maxTx,
@@ -588,6 +639,7 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
           autoRevokeThreshold,
           stableBalanceFloor,
           perRecipientDailyCapUsd,
+          cosignRequired,
         ) => {
           const sdkDigest = computePolicyPreviewDigest({
             dailySpendingCapUsd: dailyCap,
@@ -611,6 +663,7 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
             autoRevokeThreshold,
             stableBalanceFloor,
             perRecipientDailyCapUsd,
+            cosignRequired,
           });
           const refDigest = referenceDigest({
             dailySpendingCapUsd: dailyCap,
@@ -632,6 +685,7 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
             autoRevokeThreshold,
             stableBalanceFloor,
             perRecipientDailyCapUsd,
+            cosignRequired,
           });
           const sdkHex = Array.from(sdkDigest)
             .map((x) => x.toString(16).padStart(2, "0"))

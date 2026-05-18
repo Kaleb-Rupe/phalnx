@@ -118,6 +118,7 @@ export type QueuePolicyUpdateInstructionData = {
   operatingHours: Option<number>;
   stableBalanceFloor: Option<bigint>;
   perRecipientDailyCapUsd: Option<bigint>;
+  cosignRequired: Option<boolean>;
   cosignSession: Address;
   newPolicyPreviewDigest: ReadonlyUint8Array;
 };
@@ -138,6 +139,7 @@ export type QueuePolicyUpdateInstructionDataArgs = {
   operatingHours: OptionOrNullable<number>;
   stableBalanceFloor: OptionOrNullable<number | bigint>;
   perRecipientDailyCapUsd: OptionOrNullable<number | bigint>;
+  cosignRequired: OptionOrNullable<boolean>;
   cosignSession: Address;
   newPolicyPreviewDigest: ReadonlyUint8Array;
 };
@@ -164,6 +166,7 @@ export function getQueuePolicyUpdateInstructionDataEncoder(): Encoder<QueuePolic
       ["operatingHours", getOptionEncoder(getU32Encoder())],
       ["stableBalanceFloor", getOptionEncoder(getU64Encoder())],
       ["perRecipientDailyCapUsd", getOptionEncoder(getU64Encoder())],
+      ["cosignRequired", getOptionEncoder(getBooleanEncoder())],
       ["cosignSession", getAddressEncoder()],
       ["newPolicyPreviewDigest", fixEncoderSize(getBytesEncoder(), 32)],
     ]),
@@ -192,6 +195,7 @@ export function getQueuePolicyUpdateInstructionDataDecoder(): Decoder<QueuePolic
     ["operatingHours", getOptionDecoder(getU32Decoder())],
     ["stableBalanceFloor", getOptionDecoder(getU64Decoder())],
     ["perRecipientDailyCapUsd", getOptionDecoder(getU64Decoder())],
+    ["cosignRequired", getOptionDecoder(getBooleanDecoder())],
     ["cosignSession", getAddressDecoder()],
     ["newPolicyPreviewDigest", fixDecoderSize(getBytesDecoder(), 32)],
   ]);
@@ -234,6 +238,7 @@ export type QueuePolicyUpdateAsyncInput<
   operatingHours: QueuePolicyUpdateInstructionDataArgs["operatingHours"];
   stableBalanceFloor: QueuePolicyUpdateInstructionDataArgs["stableBalanceFloor"];
   perRecipientDailyCapUsd: QueuePolicyUpdateInstructionDataArgs["perRecipientDailyCapUsd"];
+  cosignRequired: QueuePolicyUpdateInstructionDataArgs["cosignRequired"];
   cosignSession: QueuePolicyUpdateInstructionDataArgs["cosignSession"];
   newPolicyPreviewDigest: QueuePolicyUpdateInstructionDataArgs["newPolicyPreviewDigest"];
 };
@@ -371,6 +376,7 @@ export type QueuePolicyUpdateInput<
   operatingHours: QueuePolicyUpdateInstructionDataArgs["operatingHours"];
   stableBalanceFloor: QueuePolicyUpdateInstructionDataArgs["stableBalanceFloor"];
   perRecipientDailyCapUsd: QueuePolicyUpdateInstructionDataArgs["perRecipientDailyCapUsd"];
+  cosignRequired: QueuePolicyUpdateInstructionDataArgs["cosignRequired"];
   cosignSession: QueuePolicyUpdateInstructionDataArgs["cosignSession"];
   newPolicyPreviewDigest: QueuePolicyUpdateInstructionDataArgs["newPolicyPreviewDigest"];
 };

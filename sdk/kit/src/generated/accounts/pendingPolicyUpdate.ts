@@ -147,11 +147,24 @@ export type PendingPolicyUpdate = {
    */
   stableBalanceFloor: Option<bigint>;
   /**
-   * TA-14 (Phase 5): optional update to `PolicyConfig.per_recipient_daily_cap_usd`.
-   * None = preserve live value; Some(n) = set to n. Bound by TA-19 at canonical
-   * digest position 19. APPENDED per F-14 APPEND-ONLY rule for Borsh stability.
+   * TA-14 (Phase 5): optional update to
+   * `PolicyConfig.per_recipient_daily_cap_usd`. None = preserve live value;
+   * Some(n) = set to n. Bound by TA-19 at canonical digest position 19.
+   *
+   * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
    */
   perRecipientDailyCapUsd: Option<bigint>;
+  /**
+   * G6 (audit 2026-05-18 cosign opt-in): optional update to
+   * `PolicyConfig.cosign_required`. None = preserve live value;
+   * Some(true) = enable cosign on elevated mutations (safety
+   * improvement — NOT elevated); Some(false) when live is true
+   * IS elevated (one-way ratchet — disabling cosign requires cosign).
+   * Bound by TA-19 at canonical digest position 20.
+   *
+   * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  cosignRequired: Option<boolean>;
 };
 
 export type PendingPolicyUpdateArgs = {
@@ -237,11 +250,24 @@ export type PendingPolicyUpdateArgs = {
    */
   stableBalanceFloor: OptionOrNullable<number | bigint>;
   /**
-   * TA-14 (Phase 5): optional update to `PolicyConfig.per_recipient_daily_cap_usd`.
-   * None = preserve live value; Some(n) = set to n. Bound by TA-19 at canonical
-   * digest position 19. APPENDED per F-14 APPEND-ONLY rule for Borsh stability.
+   * TA-14 (Phase 5): optional update to
+   * `PolicyConfig.per_recipient_daily_cap_usd`. None = preserve live value;
+   * Some(n) = set to n. Bound by TA-19 at canonical digest position 19.
+   *
+   * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
    */
   perRecipientDailyCapUsd: OptionOrNullable<number | bigint>;
+  /**
+   * G6 (audit 2026-05-18 cosign opt-in): optional update to
+   * `PolicyConfig.cosign_required`. None = preserve live value;
+   * Some(true) = enable cosign on elevated mutations (safety
+   * improvement — NOT elevated); Some(false) when live is true
+   * IS elevated (one-way ratchet — disabling cosign requires cosign).
+   * Bound by TA-19 at canonical digest position 20.
+   *
+   * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  cosignRequired: OptionOrNullable<boolean>;
 };
 
 /** Gets the encoder for {@link PendingPolicyUpdateArgs} account data. */
@@ -275,6 +301,7 @@ export function getPendingPolicyUpdateEncoder(): Encoder<PendingPolicyUpdateArgs
       ["newPolicyPreviewDigest", fixEncoderSize(getBytesEncoder(), 32)],
       ["stableBalanceFloor", getOptionEncoder(getU64Encoder())],
       ["perRecipientDailyCapUsd", getOptionEncoder(getU64Encoder())],
+      ["cosignRequired", getOptionEncoder(getBooleanEncoder())],
     ]),
     (value) => ({
       ...value,
@@ -313,6 +340,7 @@ export function getPendingPolicyUpdateDecoder(): Decoder<PendingPolicyUpdate> {
     ["newPolicyPreviewDigest", fixDecoderSize(getBytesDecoder(), 32)],
     ["stableBalanceFloor", getOptionDecoder(getU64Decoder())],
     ["perRecipientDailyCapUsd", getOptionDecoder(getU64Decoder())],
+    ["cosignRequired", getOptionDecoder(getBooleanDecoder())],
   ]);
 }
 

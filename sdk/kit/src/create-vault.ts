@@ -179,6 +179,27 @@ export interface CreateVaultOptions {
    * Bound by TA-19 at canonical digest position 19.
    */
   perRecipientDailyCapUsd?: bigint;
+
+  /**
+   * G6 (audit 2026-05-18 cosign opt-in): owner's opt-in to TA-09 cosign
+   * enforcement on elevated mutations. Default `false` (low-friction —
+   * owner signature alone authorizes elevated mutations).
+   *
+   * When `true`, future calls to `queue_policy_update` with elevated
+   * mutations require a non-default `cosignSession` pubkey + a
+   * corresponding signer in `remaining_accounts`. Use this for solo-key
+   * owners who want Sigil-native per-mutation co-signature. Vaults whose
+   * owner is a Squads V4 multisig PDA (`detectSquadsV4Owner` returns
+   * `isSquadsMultisig: true`) typically leave this `false` because
+   * multisig at the Solana layer already enforces multi-signer auth.
+   *
+   * Disabling cosign on a live vault where this is `true` is itself an
+   * elevated mutation (one-way ratchet — `queue_policy_update` requires
+   * cosign to flip true → false).
+   *
+   * Bound by TA-19 at canonical digest position 20.
+   */
+  cosignRequired?: boolean;
 }
 
 export interface CreateVaultResult {
@@ -372,6 +393,9 @@ export async function createVault(
     // TA-14 (Phase 5): per-recipient daily cap. Default 0 = unlimited per recipient
     // (still bounded by the global daily cap). Bound by digest.
     perRecipientDailyCapUsd: options.perRecipientDailyCapUsd ?? 0n,
+    // G6 (audit 2026-05-18 cosign opt-in): default false (low-friction).
+    // Owners explicitly opt in by passing true. Bound by TA-19 at position 20.
+    cosignRequired: options.cosignRequired ?? false,
   });
 
   const initializeVaultIx = await getInitializeVaultInstructionAsync({
@@ -394,6 +418,10 @@ export async function createVault(
     autoRevokeThreshold: options.autoRevokeThreshold ?? 5,
     stableBalanceFloor: options.stableBalanceFloor ?? 0n,
     perRecipientDailyCapUsd: options.perRecipientDailyCapUsd ?? 0n,
+    // G6 (audit 2026-05-18 cosign opt-in): default false at construction.
+    // The arg + the digest above are computed against the same value so
+    // the on-chain `initialize_vault` digest assertion passes.
+    cosignRequired: options.cosignRequired ?? false,
     previewDigest,
   });
 

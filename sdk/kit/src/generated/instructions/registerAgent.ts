@@ -135,6 +135,23 @@ export type RegisterAgentAsyncInput<
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
+  /**
+   * PEN-CROSS-5 (Phase 4 absorption) — policy is now mutated by
+   * register/revoke/pause/unpause to bump `policy_version` as a
+   * defense-in-depth OCC signal. Existing `vault.is_agent` /
+   * `is_agent_paused` constraints already reject the TOCTOU window;
+   * the version bump lets concurrent validate_and_authorize calls fail
+   * fast with PolicyVersionMismatch instead of relying on the slower
+   * constraint check.
+   *
+   * §RP-1 V6 clarification (2026-05-18): the policy-to-vault binding is
+   * enforced by the PDA seeds derivation `[b"policy", vault.key().as_ref()]`
+   * — functionally equivalent to `has_one = vault`. Any sibling-thread
+   * claim of an explicit `has_one = vault` constraint on this account is
+   * cosmetic; the seeds derivation is the load-bearing check. This same
+   * pattern is mirrored on `revoke_agent.rs`, `pause_agent.rs`, and
+   * `unpause_agent.rs`.
+   */
   policy?: Address<TAccountPolicy>;
   /** Agent spend overlay — per-agent tracking slot. */
   agentSpendOverlay: Address<TAccountAgentSpendOverlay>;
@@ -232,6 +249,23 @@ export type RegisterAgentInput<
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
+  /**
+   * PEN-CROSS-5 (Phase 4 absorption) — policy is now mutated by
+   * register/revoke/pause/unpause to bump `policy_version` as a
+   * defense-in-depth OCC signal. Existing `vault.is_agent` /
+   * `is_agent_paused` constraints already reject the TOCTOU window;
+   * the version bump lets concurrent validate_and_authorize calls fail
+   * fast with PolicyVersionMismatch instead of relying on the slower
+   * constraint check.
+   *
+   * §RP-1 V6 clarification (2026-05-18): the policy-to-vault binding is
+   * enforced by the PDA seeds derivation `[b"policy", vault.key().as_ref()]`
+   * — functionally equivalent to `has_one = vault`. Any sibling-thread
+   * claim of an explicit `has_one = vault` constraint on this account is
+   * cosmetic; the seeds derivation is the load-bearing check. This same
+   * pattern is mirrored on `revoke_agent.rs`, `pause_agent.rs`, and
+   * `unpause_agent.rs`.
+   */
   policy: Address<TAccountPolicy>;
   /** Agent spend overlay — per-agent tracking slot. */
   agentSpendOverlay: Address<TAccountAgentSpendOverlay>;
@@ -311,6 +345,23 @@ export type ParsedRegisterAgentInstruction<
   accounts: {
     owner: TAccountMetas[0];
     vault: TAccountMetas[1];
+    /**
+     * PEN-CROSS-5 (Phase 4 absorption) — policy is now mutated by
+     * register/revoke/pause/unpause to bump `policy_version` as a
+     * defense-in-depth OCC signal. Existing `vault.is_agent` /
+     * `is_agent_paused` constraints already reject the TOCTOU window;
+     * the version bump lets concurrent validate_and_authorize calls fail
+     * fast with PolicyVersionMismatch instead of relying on the slower
+     * constraint check.
+     *
+     * §RP-1 V6 clarification (2026-05-18): the policy-to-vault binding is
+     * enforced by the PDA seeds derivation `[b"policy", vault.key().as_ref()]`
+     * — functionally equivalent to `has_one = vault`. Any sibling-thread
+     * claim of an explicit `has_one = vault` constraint on this account is
+     * cosmetic; the seeds derivation is the load-bearing check. This same
+     * pattern is mirrored on `revoke_agent.rs`, `pause_agent.rs`, and
+     * `unpause_agent.rs`.
+     */
     policy: TAccountMetas[2];
     /** Agent spend overlay — per-agent tracking slot. */
     agentSpendOverlay: TAccountMetas[3];

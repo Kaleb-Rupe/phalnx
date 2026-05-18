@@ -124,6 +124,7 @@ export type InitializeVaultInstructionData = {
   autoRevokeThreshold: number;
   stableBalanceFloor: bigint;
   perRecipientDailyCapUsd: bigint;
+  cosignRequired: boolean;
   previewDigest: ReadonlyUint8Array;
 };
 
@@ -144,6 +145,7 @@ export type InitializeVaultInstructionDataArgs = {
   autoRevokeThreshold: number;
   stableBalanceFloor: number | bigint;
   perRecipientDailyCapUsd: number | bigint;
+  cosignRequired: boolean;
   previewDigest: ReadonlyUint8Array;
 };
 
@@ -167,6 +169,7 @@ export function getInitializeVaultInstructionDataEncoder(): Encoder<InitializeVa
       ["autoRevokeThreshold", getU8Encoder()],
       ["stableBalanceFloor", getU64Encoder()],
       ["perRecipientDailyCapUsd", getU64Encoder()],
+      ["cosignRequired", getBooleanEncoder()],
       ["previewDigest", fixEncoderSize(getBytesEncoder(), 32)],
     ]),
     (value) => ({ ...value, discriminator: INITIALIZE_VAULT_DISCRIMINATOR }),
@@ -192,6 +195,7 @@ export function getInitializeVaultInstructionDataDecoder(): Decoder<InitializeVa
     ["autoRevokeThreshold", getU8Decoder()],
     ["stableBalanceFloor", getU64Decoder()],
     ["perRecipientDailyCapUsd", getU64Decoder()],
+    ["cosignRequired", getBooleanDecoder()],
     ["previewDigest", fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }
@@ -240,6 +244,7 @@ export type InitializeVaultAsyncInput<
   autoRevokeThreshold: InitializeVaultInstructionDataArgs["autoRevokeThreshold"];
   stableBalanceFloor: InitializeVaultInstructionDataArgs["stableBalanceFloor"];
   perRecipientDailyCapUsd: InitializeVaultInstructionDataArgs["perRecipientDailyCapUsd"];
+  cosignRequired: InitializeVaultInstructionDataArgs["cosignRequired"];
   previewDigest: InitializeVaultInstructionDataArgs["previewDigest"];
 };
 
@@ -413,6 +418,7 @@ export type InitializeVaultInput<
   autoRevokeThreshold: InitializeVaultInstructionDataArgs["autoRevokeThreshold"];
   stableBalanceFloor: InitializeVaultInstructionDataArgs["stableBalanceFloor"];
   perRecipientDailyCapUsd: InitializeVaultInstructionDataArgs["perRecipientDailyCapUsd"];
+  cosignRequired: InitializeVaultInstructionDataArgs["cosignRequired"];
   previewDigest: InitializeVaultInstructionDataArgs["previewDigest"];
 };
 

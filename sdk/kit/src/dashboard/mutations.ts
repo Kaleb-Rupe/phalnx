@@ -143,6 +143,15 @@ async function siblingHandlerExpectedDigest(
     // TA-07/17 (Phase 3): also pass-through from live policy.
     autoPromoteGrays: livePolicy.data.autoPromoteGrays,
     autoRevokeThreshold: livePolicy.data.autoRevokeThreshold,
+    // TA-12/14 (Phase 5): pass-through from live policy — sibling
+    // handlers (constraints / post-assertions flips) never mutate the
+    // post-execution invariant fields.
+    stableBalanceFloor: livePolicy.data.stableBalanceFloor,
+    perRecipientDailyCapUsd: livePolicy.data.perRecipientDailyCapUsd,
+    // G6 (audit 2026-05-18 cosign opt-in): pass-through from live policy.
+    // Sibling handlers never mutate cosign_required — the user changes
+    // this via `queue_policy_update` only.
+    cosignRequired: livePolicy.data.cosignRequired,
   });
 }
 
@@ -677,6 +686,14 @@ export async function queuePolicyUpdate(
     // pass-through from live policy. Mutating them is elevated per TA-09.
     stableBalanceFloor: livePolicy.data.stableBalanceFloor,
     perRecipientDailyCapUsd: livePolicy.data.perRecipientDailyCapUsd,
+    // G6 (audit 2026-05-18 cosign opt-in): pass-through from live policy.
+    // The non-elevated dashboard surface does NOT mutate cosign_required;
+    // owners change cosign opt-in via a separate elevated workflow that
+    // includes the cosign signer (or, for false→true direction, can also
+    // be done non-elevated by passing the override directly through the
+    // ix arg below — but this dashboard helper keeps the policy stable
+    // for the default path).
+    cosignRequired: livePolicy.data.cosignRequired,
   });
 
   const ix = await getQueuePolicyUpdateInstructionAsync({
@@ -704,6 +721,12 @@ export async function queuePolicyUpdate(
     // `queuePolicyElevated()` helper.
     stableBalanceFloor: null,
     perRecipientDailyCapUsd: null,
+    // G6 (audit 2026-05-18 cosign opt-in): not mutated by this non-
+    // elevated surface — pass null to fall through to live policy.
+    // Toggling cosign on/off goes through a dedicated path that is
+    // aware of the one-way-ratchet semantics (true→false requires
+    // cosign; false→true does not).
+    cosignRequired: null,
     // TA-09 (Phase 3): non-elevated path by default — pass the
     // System Program / zero-pubkey ("11111111111111111111111111111111").
     // Elevated mutations through this dashboard surface require a

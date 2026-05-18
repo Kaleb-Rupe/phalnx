@@ -116,6 +116,12 @@ export type UnpauseAgentAsyncInput<
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
+  /**
+   * PEN-CROSS-5 (Phase 4 absorption) — bump policy_version on unpause.
+   * Symmetric with pause_agent; the four agent-mutation ix
+   * (register / revoke / pause / unpause) all bump version so OCC
+   * signals fire uniformly regardless of which mutation lands.
+   */
   policy?: Address<TAccountPolicy>;
   agentToUnpause: UnpauseAgentInstructionDataArgs["agentToUnpause"];
 };
@@ -195,6 +201,12 @@ export type UnpauseAgentInput<
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
+  /**
+   * PEN-CROSS-5 (Phase 4 absorption) — bump policy_version on unpause.
+   * Symmetric with pause_agent; the four agent-mutation ix
+   * (register / revoke / pause / unpause) all bump version so OCC
+   * signals fire uniformly regardless of which mutation lands.
+   */
   policy: Address<TAccountPolicy>;
   agentToUnpause: UnpauseAgentInstructionDataArgs["agentToUnpause"];
 };
@@ -257,6 +269,12 @@ export type ParsedUnpauseAgentInstruction<
   accounts: {
     owner: TAccountMetas[0];
     vault: TAccountMetas[1];
+    /**
+     * PEN-CROSS-5 (Phase 4 absorption) — bump policy_version on unpause.
+     * Symmetric with pause_agent; the four agent-mutation ix
+     * (register / revoke / pause / unpause) all bump version so OCC
+     * signals fire uniformly regardless of which mutation lands.
+     */
     policy: TAccountMetas[2];
   };
   data: UnpauseAgentInstructionData;

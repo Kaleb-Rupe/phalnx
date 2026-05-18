@@ -181,6 +181,10 @@ describe("Kit SDK Devnet — Vault Lifecycle", function () {
       // TA-12/14 (Phase 5): non-elevated path — pass null for fall-through.
       stableBalanceFloor: null,
       perRecipientDailyCapUsd: null,
+      // G6 (audit 2026-05-18 cosign opt-in): non-elevated path —
+      // pass null for fall-through. cosign opt-in is left at the
+      // initial-vault value for this lifecycle test.
+      cosignRequired: null,
       // TA-09 (Phase 3): zero pubkey for non-elevated path.
       cosignSession:
         "11111111111111111111111111111111" as unknown as Address,

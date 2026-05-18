@@ -294,6 +294,10 @@ export async function provisionVault(
     // TA-12/14 (Phase 5): testing helper defaults — no floor, no per-recipient cap.
     stableBalanceFloor: 0n,
     perRecipientDailyCapUsd: 0n,
+    // G6 (audit 2026-05-18 cosign opt-in): testing helper default = false
+    // (low-friction). Tests can override via opts when exercising the
+    // cosign-required path explicitly.
+    cosignRequired: false,
   });
 
   const initIx = await getInitializeVaultInstructionAsync({
@@ -316,6 +320,9 @@ export async function provisionVault(
     autoRevokeThreshold: 5,
     stableBalanceFloor: 0n,
     perRecipientDailyCapUsd: 0n,
+    // G6 (audit 2026-05-18 cosign opt-in): same default as the digest
+    // computation above — testing helper opts out of cosign by default.
+    cosignRequired: false,
     previewDigest,
   });
 
