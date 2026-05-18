@@ -116,6 +116,9 @@ pub fn handler(
         // TA-14 (Phase 5): per_recipient_daily_cap_usd is policy-owned
         // and bound by TA-19. Sibling handler — never mutates it.
         per_recipient_daily_cap_usd: policy.per_recipient_daily_cap_usd,
+        // G6 (audit 2026-05-18 cosign opt-in): bound by TA-19 at canonical
+        // position 20. Sibling handler reads live policy.
+        cosign_required: policy.cosign_required,
     });
     // PEN-CROSS-3: owner must have signed the post-mutation digest.
     require!(

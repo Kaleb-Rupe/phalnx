@@ -246,6 +246,39 @@ pub struct PolicyConfig {
     /// Bound by TA-19 at canonical digest position 19. APPENDED per
     /// F-14 APPEND-ONLY rule for Borsh stability.
     pub per_recipient_daily_cap_usd: u64,
+
+    /// G6 (audit 2026-05-18): owner-controlled opt-in flag for TA-09
+    /// cosign enforcement on elevated policy mutations.
+    ///
+    /// When `false` (default): elevated mutations (raising caps,
+    /// expanding allowlists, weakening floors / per-recipient caps /
+    /// protocol caps) require only the owner's signature — no cosign
+    /// session is required. Low-friction default, suitable for solo
+    /// founders, AI-agent automation, dev/test vaults, and any vault
+    /// whose owner is a Squads V4 multisig PDA (multisig at the Solana
+    /// layer already enforces multi-signer authorization).
+    ///
+    /// When `true`: TA-09 elevation checks fire. The seven elevation
+    /// triggers in `queue_policy_update` (raises_daily_cap,
+    /// raises_max_tx, expands_destinations, expands_protocols,
+    /// lowers_floor, weakens_per_recipient_cap, weakens_protocol_caps)
+    /// require a non-default `cosign_session` pubkey + a corresponding
+    /// signer in `remaining_accounts` with `is_signer == true`.
+    ///
+    /// Toggle semantics:
+    /// - **Enabling (false → true)** is NON-ELEVATED. It is a safety
+    ///   improvement — owner is voluntarily tightening the policy.
+    ///   Cosign is not required to enable cosign.
+    /// - **Disabling (true → false)** IS ELEVATED. One-way-ratchet
+    ///   semantics: if cosign is currently ON, the owner cannot turn
+    ///   it OFF without producing a valid cosign signature — exactly
+    ///   the protection cosign was meant to provide. A phishing-
+    ///   compromised owner key cannot silently disable cosign and
+    ///   then drain via subsequent non-elevated mutations.
+    ///
+    /// Bound by TA-19 at canonical digest position 20. APPENDED at end
+    /// of struct per F-14 APPEND-ONLY rule for Borsh stability.
+    pub cosign_required: bool,
 }
 
 /// TA-07 (Phase 3): one entry in `PolicyConfig.destination_graylist`.
@@ -282,9 +315,11 @@ impl PolicyConfig {
     /// destination_graylist vec (4 + 40 * MAX_ALLOWED_DESTINATIONS) +
     /// auto_promote_grays (1) + auto_revoke_threshold (1) +
     /// stable_balance_floor (8) [TA-12 Phase 5] +
-    /// per_recipient_daily_cap_usd (8) [TA-14 Phase 5]
+    /// per_recipient_daily_cap_usd (8) [TA-14 Phase 5] +
+    /// cosign_required (1) [G6 audit 2026-05-18]
     /// [TA-19, Phase 2; PEN-CROSS-2 Phase 2 close-up;
-    ///  TA-05/07/17 Phase 3 pre-exec; TA-12/TA-14 Phase 5]
+    ///  TA-05/07/17 Phase 3 pre-exec; TA-12/TA-14 Phase 5;
+    ///  G6 cosign opt-in 2026-05-18 audit]
     pub const SIZE: usize = 8
         + 32
         + 8
@@ -311,7 +346,8 @@ impl PolicyConfig {
         + 1 // auto_promote_grays [TA-07]
         + 1 // auto_revoke_threshold [TA-17]
         + 8 // stable_balance_floor [TA-12 Phase 5]
-        + 8; // per_recipient_daily_cap_usd [TA-14 Phase 5]
+        + 8 // per_recipient_daily_cap_usd [TA-14 Phase 5]
+        + 1; // cosign_required [G6 audit 2026-05-18]
 
     /// Check if a protocol is allowed.
     ///

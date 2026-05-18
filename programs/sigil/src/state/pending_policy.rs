@@ -94,6 +94,16 @@ pub struct PendingPolicyUpdate {
     ///
     /// APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
     pub per_recipient_daily_cap_usd: Option<u64>,
+
+    /// G6 (audit 2026-05-18 cosign opt-in): optional update to
+    /// `PolicyConfig.cosign_required`. None = preserve live value;
+    /// Some(true) = enable cosign on elevated mutations (safety
+    /// improvement — NOT elevated); Some(false) when live is true
+    /// IS elevated (one-way ratchet — disabling cosign requires cosign).
+    /// Bound by TA-19 at canonical digest position 20.
+    ///
+    /// APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
+    pub cosign_required: Option<bool>,
 }
 
 impl PendingPolicyUpdate {
@@ -121,7 +131,8 @@ impl PendingPolicyUpdate {
         + 32 // cosign_digest [TA-09, Phase 3]
         + 32 // cosign_session [TA-09, Phase 3]
         + (1 + 8) // stable_balance_floor [TA-12, Phase 5]
-        + (1 + 8); // per_recipient_daily_cap_usd [TA-14, Phase 5]
+        + (1 + 8) // per_recipient_daily_cap_usd [TA-14, Phase 5]
+        + (1 + 1); // cosign_required Option<bool> [G6, 2026-05-18 audit]
 
     /// Returns true if the timelock period has expired and the update
     /// can be applied.

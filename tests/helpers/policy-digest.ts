@@ -26,6 +26,7 @@
  *   17. auto_revoke_threshold: u8 — TA-17 (Phase 3 pre-exec)
  *   18. stable_balance_floor: u64 LE — TA-12 (Phase 5 post-exec)
  *   19. per_recipient_daily_cap_usd: u64 LE — TA-14 (Phase 5 post-exec)
+ *   20. cosign_required: bool (1 byte 0/1) — G6 (audit 2026-05-18 cosign opt-in)
  */
 
 import { createHash } from "crypto";
@@ -87,6 +88,13 @@ export interface PolicyDigestFields {
    * cap). Bound at digest position 19.
    */
   perRecipientDailyCapUsd?: BN | bigint | number;
+  /**
+   * G6 (audit 2026-05-18 cosign opt-in): owner's opt-in to TA-09 cosign
+   * enforcement on elevated mutations. Default false (low-friction).
+   * Bound at digest position 20. Disabling cosign on a live policy where
+   * this is true is itself an elevated mutation per `queue_policy_update`.
+   */
+  cosignRequired?: boolean;
 }
 
 function u64le(v: BN | bigint | number): Buffer {
@@ -155,6 +163,8 @@ export function computePolicyPreviewDigest(
   parts.push(u64le(fields.stableBalanceFloor ?? 0));
   // TA-14: per_recipient_daily_cap_usd at position 19.
   parts.push(u64le(fields.perRecipientDailyCapUsd ?? 0));
+  // G6 (audit 2026-05-18 cosign opt-in): cosign_required at position 20.
+  parts.push(u8(fields.cosignRequired ? 1 : 0));
 
   const buf = Buffer.concat(parts);
   return Array.from(createHash("sha256").update(buf).digest());
@@ -222,6 +232,12 @@ export function initVaultPreviewDigest(args: {
    * value. Default 0 (no cap). Bound at digest position 19.
    */
   perRecipientDailyCapUsd?: BN | bigint | number;
+  /**
+   * G6 (audit 2026-05-18 cosign opt-in): owner's opt-in to TA-09 cosign
+   * enforcement on elevated mutations. Default false (low-friction).
+   * Bound at digest position 20.
+   */
+  cosignRequired?: boolean;
 }): number[] {
   return computePolicyPreviewDigest({
     dailySpendingCapUsd: args.dailySpendingCapUsd,
@@ -243,6 +259,10 @@ export function initVaultPreviewDigest(args: {
     autoRevokeThreshold: args.autoRevokeThreshold ?? 0,
     stableBalanceFloor: args.stableBalanceFloor ?? 0,
     perRecipientDailyCapUsd: args.perRecipientDailyCapUsd ?? 0,
+    // G6 (audit 2026-05-18 cosign opt-in): default false at init so
+    // existing fixtures continue to produce the same digest layout
+    // they signed against. New tests opt in explicitly.
+    cosignRequired: args.cosignRequired ?? false,
   });
 }
 
@@ -287,6 +307,8 @@ export interface LiveLikePolicy {
   stableBalanceFloor?: BN | bigint | number;
   /** TA-14 (Phase 5): bound by the canonical digest at position 19. */
   perRecipientDailyCapUsd?: BN | bigint | number;
+  /** G6 (audit 2026-05-18 cosign opt-in): bound at digest position 20. */
+  cosignRequired?: boolean;
 }
 
 export interface QueueOverride {
@@ -316,6 +338,14 @@ export interface QueueOverride {
    * pass-through from live policy.
    */
   perRecipientDailyCapUsd?: BN | bigint | number | null;
+  /**
+   * G6 (audit 2026-05-18 cosign opt-in): cosign_required override. null =
+   * pass-through. Setting from true→false on a live policy where the live
+   * value is true is itself an ELEVATED mutation (one-way ratchet); the
+   * helper doesn't enforce that here — the on-chain handler rejects with
+   * `ErrCosignRequired` if cosign isn't provided.
+   */
+  cosignRequired?: boolean | null;
 }
 
 function pick<T>(override: T | null | undefined, fallback: T): T {
@@ -377,6 +407,11 @@ export function queuePolicyMergedDigest(
       override.perRecipientDailyCapUsd,
       live.perRecipientDailyCapUsd ?? 0,
     ),
+    // G6 (audit 2026-05-18 cosign opt-in): merged-effective cosign_required.
+    cosignRequired: pick(
+      override.cosignRequired,
+      live.cosignRequired ?? false,
+    ),
   });
 }
 
@@ -427,6 +462,10 @@ export async function siblingHandlerDigest(
     stableBalanceFloor: policy.stableBalanceFloor ?? 0,
     // TA-14 (Phase 5): pass-through. Sibling handlers never mutate this.
     perRecipientDailyCapUsd: policy.perRecipientDailyCapUsd ?? 0,
+    // G6 (audit 2026-05-18 cosign opt-in): pass-through from live policy.
+    // Sibling handlers (constraints / post-assertions flips) never mutate
+    // cosign_required.
+    cosignRequired: !!policy.cosignRequired,
   });
 }
 
@@ -465,6 +504,7 @@ export async function fetchAndComputeQueueDigest(
     autoRevokeThreshold: policy.autoRevokeThreshold ?? 0,
     stableBalanceFloor: policy.stableBalanceFloor ?? 0,
     perRecipientDailyCapUsd: policy.perRecipientDailyCapUsd ?? 0,
+    cosignRequired: !!policy.cosignRequired,
   };
   return queuePolicyMergedDigest(live, override, !!vault.observeOnly);
 }

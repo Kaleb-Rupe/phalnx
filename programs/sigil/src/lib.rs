@@ -46,6 +46,12 @@ pub mod sigil {
         // TA-14 (Phase 5): owner's per-recipient rolling 24h outflow cap.
         // Default 0 = no per-recipient cap. Bound by TA-19 at digest position 19.
         per_recipient_daily_cap_usd: u64,
+        // G6 (audit 2026-05-18 cosign opt-in): owner's opt-in choice for
+        // TA-09 cosign enforcement on elevated mutations. Default false at
+        // most SDK call sites (low-friction, owner-signature-only). When
+        // true, future `queue_policy_update` calls with elevated mutations
+        // require a cosign session. Bound by TA-19 at digest position 20.
+        cosign_required: bool,
         preview_digest: [u8; 32],
     ) -> Result<()> {
         instructions::initialize_vault::handler(
@@ -66,6 +72,7 @@ pub mod sigil {
             auto_revoke_threshold,
             stable_balance_floor,
             per_recipient_daily_cap_usd,
+            cosign_required,
             preview_digest,
         )
     }
@@ -174,6 +181,11 @@ pub mod sigil {
         // TA-14 (Phase 5): optional update to
         // PolicyConfig.per_recipient_daily_cap_usd. None = pass-through.
         per_recipient_daily_cap_usd: Option<u64>,
+        // G6 (audit 2026-05-18 cosign opt-in): optional update to
+        // PolicyConfig.cosign_required. None = pass-through; Some(true)
+        // = enable (non-elevated); Some(false) when live is true =
+        // disable (ELEVATED — one-way ratchet).
+        cosign_required: Option<bool>,
         cosign_session: Pubkey,
         new_policy_preview_digest: [u8; 32],
     ) -> Result<()> {
@@ -194,6 +206,7 @@ pub mod sigil {
             operating_hours,
             stable_balance_floor,
             per_recipient_daily_cap_usd,
+            cosign_required,
             cosign_session,
             new_policy_preview_digest,
         )

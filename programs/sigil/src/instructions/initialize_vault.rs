@@ -81,6 +81,15 @@ pub fn handler(
     // 6-decimal USDC face value. Default 0 (no per-recipient cap).
     // Bound by TA-19 at canonical digest position 19.
     per_recipient_daily_cap_usd: u64,
+    // G6 (audit 2026-05-18 cosign opt-in): owner-controlled opt-in to
+    // TA-09 cosign enforcement on elevated mutations. Default false
+    // (low-friction, owner-signature-only). When true, future calls to
+    // `queue_policy_update` with elevated mutations REQUIRE a cosign
+    // session. Disabling cosign on a live policy where this is true
+    // is itself an elevated mutation (one-way ratchet — see
+    // `queue_policy_update`). Bound by TA-19 at canonical digest
+    // position 20.
+    cosign_required: bool,
     preview_digest: [u8; 32],
 ) -> Result<()> {
     crate::reject_cpi!();
@@ -199,6 +208,9 @@ pub fn handler(
         stable_balance_floor,
         // TA-14 (Phase 5 post-exec): per-recipient cap bound at position 19.
         per_recipient_daily_cap_usd,
+        // G6 (audit 2026-05-18 cosign opt-in): owner's cosign choice bound
+        // at canonical digest position 20.
+        cosign_required,
     });
     require!(
         recomputed_digest == preview_digest,
@@ -272,6 +284,14 @@ pub fn handler(
     // at canonical digest position 19 — silent raises (or removals) of
     // the cap cannot bypass the owner's signed digest.
     policy.per_recipient_daily_cap_usd = per_recipient_daily_cap_usd;
+    // G6 (audit 2026-05-18 cosign opt-in): persist owner's cosign choice.
+    // Bound by TA-19 at canonical digest position 20 — a tampered SDK
+    // cannot silently flip cosign on/off between owner approval and
+    // on-chain landing. Default at most call sites is `false` (low-
+    // friction) — owners explicitly opt in via this arg at vault
+    // creation, or later via `queue_policy_update` (where the false→true
+    // direction is non-elevated and the true→false direction IS elevated).
+    policy.cosign_required = cosign_required;
 
     // Initialize zero-copy tracker (buckets + protocol_counters zero-initialized by allocator)
     let mut tracker = ctx.accounts.tracker.load_init()?;

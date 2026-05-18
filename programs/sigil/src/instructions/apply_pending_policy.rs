@@ -202,6 +202,17 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
     if let Some(cap) = pending.per_recipient_daily_cap_usd {
         policy.per_recipient_daily_cap_usd = cap;
     }
+    // G6 (audit 2026-05-18 cosign opt-in): apply optional cosign_required
+    // update. The queue handler classified the toggle:
+    //   - false→true (enable) is non-elevated (safety improvement).
+    //   - true→false (disable) IS elevated and was gated by cosign at queue.
+    // The second-pass TA-19 digest below recomputes over the merged
+    // policy state and binds cosign_required at canonical position 20,
+    // so a tampered pending PDA that flipped the queued value between
+    // queue and apply produces a digest mismatch.
+    if let Some(new_cosign) = pending.cosign_required {
+        policy.cosign_required = new_cosign;
+    }
     // Phase 2 Option A: defense-in-depth — re-validate protocol_mode if pending overrode it.
     if let Some(mode) = pending.protocol_mode {
         require!(
@@ -261,6 +272,11 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
         // TA-14 (Phase 5): per_recipient_daily_cap_usd is policy-owned and
         // bound by TA-19. Same pattern — read live (applied) value.
         per_recipient_daily_cap_usd: policy.per_recipient_daily_cap_usd,
+        // G6 (audit 2026-05-18 cosign opt-in): cosign_required is policy-
+        // owned and bound by TA-19 at canonical position 20. Read live
+        // (post-merge) value so the second-pass digest matches whatever
+        // the queue handler signed against.
+        cosign_required: policy.cosign_required,
     });
     require!(
         recomputed_digest == pending.new_policy_preview_digest,

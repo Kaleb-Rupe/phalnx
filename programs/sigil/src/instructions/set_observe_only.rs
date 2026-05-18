@@ -87,6 +87,10 @@ pub fn handler(ctx: Context<SetObserveOnly>, new_value: bool) -> Result<()> {
         stable_balance_floor: policy.stable_balance_floor,
         // TA-14 (Phase 5): bound by TA-19, never mutated by this ix.
         per_recipient_daily_cap_usd: policy.per_recipient_daily_cap_usd,
+        // G6 (audit 2026-05-18 cosign opt-in): bound by TA-19 at canonical
+        // position 20. set_observe_only never mutates cosign_required —
+        // read live policy.
+        cosign_required: policy.cosign_required,
     });
     policy.policy_preview_digest = recomputed_digest;
     policy.policy_version = policy

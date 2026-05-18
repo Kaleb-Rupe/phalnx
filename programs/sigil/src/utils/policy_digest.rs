@@ -28,6 +28,7 @@
 //! 17. `auto_revoke_threshold: u8`    (1 byte)       — TA-17 (Phase 3 pre-exec)
 //! 18. `stable_balance_floor: u64`    (8 bytes, LE)  — TA-12 (Phase 5 post-exec)
 //! 19. `per_recipient_daily_cap_usd: u64` (8 bytes, LE) — TA-14 (Phase 5 post-exec)
+//! 20. `cosign_required: bool`        (1 byte, 0/1)  — G6 (audit 2026-05-18 cosign opt-in)
 //!
 //! Phase 3 append-only additions (TA-05/07/17): the three new policy-owned
 //! fields are appended at positions 15-17 to preserve the existing 14-field
@@ -37,6 +38,15 @@
 //! position 18, `per_recipient_daily_cap_usd` at position 19. The owner's
 //! chosen reserve and per-recipient cap are part of the signed policy —
 //! a compromised SDK or pending-PDA tamperer cannot silently lower them.
+//!
+//! G6 append-only addition (2026-05-18 audit cosign opt-in): `cosign_required`
+//! at position 20 (1 byte, 0/1). Owner's choice to opt into TA-09 cosign
+//! enforcement is part of the signed policy — a compromised SDK cannot
+//! silently disable cosign between owner approval and on-chain landing.
+//! Disabling cosign on a live policy where `cosign_required == true` is
+//! itself an elevated mutation per `queue_policy_update`, closing the
+//! one-way ratchet: phishing-compromised owner key cannot disable cosign
+//! and then drain via subsequent non-elevated mutations.
 //!
 //! The graylist itself (`destination_graylist: Vec<(Pubkey, i64)>`) is
 //! intentionally NOT in the digest. Reasoning: graylist entries are
@@ -108,6 +118,14 @@ pub struct PolicyPreviewFields<'a> {
     /// USDC face value. Default 0 = no per-recipient cap. Bound at
     /// position 19.
     pub per_recipient_daily_cap_usd: u64,
+    /// G6 (audit 2026-05-18 cosign opt-in): owner's choice to require
+    /// TA-09 cosign on elevated mutations. Default false (low-friction).
+    /// When true, `queue_policy_update`'s elevation checks fire and
+    /// require a non-default cosign session + signer. Bound at
+    /// position 20 of the canonical encoding so a compromised SDK
+    /// cannot silently disable cosign between owner approval and
+    /// on-chain landing. Disabling (true → false) is itself elevated.
+    pub cosign_required: bool,
 }
 
 /// SHA-256 over the canonical Borsh encoding of the preview fields.
@@ -165,6 +183,8 @@ pub fn compute_policy_preview_digest(fields: &PolicyPreviewFields<'_>) -> [u8; 3
     buf.extend_from_slice(&fields.stable_balance_floor.to_le_bytes());
     // 19. per_recipient_daily_cap_usd: u64 LE — TA-14 (Phase 5 post-exec)
     buf.extend_from_slice(&fields.per_recipient_daily_cap_usd.to_le_bytes());
+    // 20. cosign_required: bool as 1 byte (0/1) — G6 (audit 2026-05-18 cosign opt-in)
+    buf.push(u8::from(fields.cosign_required));
 
     hashv(&[&buf]).to_bytes()
 }
@@ -201,6 +221,10 @@ mod tests {
             auto_revoke_threshold: 0,
             stable_balance_floor: 0,
             per_recipient_daily_cap_usd: 0,
+            // G6 (audit 2026-05-18): default cosign opt-in = false. Existing
+            // fixtures must keep this off so the byte layout below remains
+            // pinned; new tests below exercise the flipped case explicitly.
+            cosign_required: false,
         };
         let d1 = compute_policy_preview_digest(&f);
         let d2 = compute_policy_preview_digest(&f);
@@ -231,6 +255,10 @@ mod tests {
             auto_revoke_threshold: 0,
             stable_balance_floor: 0,
             per_recipient_daily_cap_usd: 0,
+            // G6 (audit 2026-05-18): default cosign opt-in = false. Existing
+            // fixtures must keep this off so the byte layout below remains
+            // pinned; new tests below exercise the flipped case explicitly.
+            cosign_required: false,
         };
         let mut flipped = base.daily_spending_cap_usd;
         let _ = &mut flipped; // suppress unused
@@ -270,6 +298,10 @@ mod tests {
             auto_revoke_threshold: 0,
             stable_balance_floor: 0,
             per_recipient_daily_cap_usd: 0,
+            // G6 (audit 2026-05-18): default cosign opt-in = false. Existing
+            // fixtures must keep this off so the byte layout below remains
+            // pinned; new tests below exercise the flipped case explicitly.
+            cosign_required: false,
         };
         let f2 = PolicyPreviewFields {
             protocols: &b,
@@ -308,6 +340,10 @@ mod tests {
             auto_revoke_threshold: 0,
             stable_balance_floor: 0,
             per_recipient_daily_cap_usd: 0,
+            // G6 (audit 2026-05-18): default cosign opt-in = false. Existing
+            // fixtures must keep this off so the byte layout below remains
+            // pinned; new tests below exercise the flipped case explicitly.
+            cosign_required: false,
         };
         let narrow = PolicyPreviewFields {
             // 13:00-17:00 UTC = bits 13..17 = 0x1E000
@@ -349,6 +385,10 @@ mod tests {
             auto_revoke_threshold: 5,
             stable_balance_floor: 0,
             per_recipient_daily_cap_usd: 0,
+            // G6 (audit 2026-05-18): default cosign opt-in = false. Existing
+            // fixtures must keep this off so the byte layout below remains
+            // pinned; new tests below exercise the flipped case explicitly.
+            cosign_required: false,
         };
         let flipped = PolicyPreviewFields {
             auto_promote_grays: true,
@@ -388,6 +428,10 @@ mod tests {
             auto_revoke_threshold: 5,
             stable_balance_floor: 0,
             per_recipient_daily_cap_usd: 0,
+            // G6 (audit 2026-05-18): default cosign opt-in = false. Existing
+            // fixtures must keep this off so the byte layout below remains
+            // pinned; new tests below exercise the flipped case explicitly.
+            cosign_required: false,
         };
         let lower = PolicyPreviewFields {
             auto_revoke_threshold: 3,
@@ -429,6 +473,10 @@ mod tests {
             auto_revoke_threshold: 5,
             stable_balance_floor: 0,
             per_recipient_daily_cap_usd: 0,
+            // G6 (audit 2026-05-18): default cosign opt-in = false. Existing
+            // fixtures must keep this off so the byte layout below remains
+            // pinned; new tests below exercise the flipped case explicitly.
+            cosign_required: false,
         };
         let raised = PolicyPreviewFields {
             per_recipient_daily_cap_usd: 50_000_000, // $50 cap
@@ -470,6 +518,10 @@ mod tests {
             auto_revoke_threshold: 5,
             stable_balance_floor: 0,
             per_recipient_daily_cap_usd: 0,
+            // G6 (audit 2026-05-18): default cosign opt-in = false. Existing
+            // fixtures must keep this off so the byte layout below remains
+            // pinned; new tests below exercise the flipped case explicitly.
+            cosign_required: false,
         };
         let raised = PolicyPreviewFields {
             // $100 floor in 6-decimal USDC face value
@@ -482,6 +534,45 @@ mod tests {
             d_base, d_raised,
             "stable_balance_floor flip MUST change digest"
         );
+    }
+
+    /// G6 (audit 2026-05-18 cosign opt-in): flipping `cosign_required` MUST
+    /// change the canonical digest. The owner's CHOICE to opt into TA-09
+    /// cosign is bound by TA-19 — silent flips can't enable or disable
+    /// cosign without invalidating the owner's signed digest.
+    #[test]
+    fn digest_changes_on_cosign_required_flip() {
+        let protocols = [pk(1)];
+        let dests = [pk(10)];
+        let base = PolicyPreviewFields {
+            daily_spending_cap_usd: 500_000_000,
+            max_transaction_size_usd: 100_000_000,
+            max_slippage_bps: 100,
+            developer_fee_rate: 0,
+            protocol_mode: 1,
+            protocols: &protocols,
+            destination_mode: 0,
+            allowed_destinations: &dests,
+            timelock_duration: 1800,
+            session_expiry_seconds: 30,
+            observe_only: false,
+            has_constraints: false,
+            has_post_assertions: 0,
+            created_at_slot: 12345,
+            operating_hours: 0x00FFFFFF,
+            auto_promote_grays: false,
+            auto_revoke_threshold: 5,
+            stable_balance_floor: 0,
+            per_recipient_daily_cap_usd: 0,
+            cosign_required: false,
+        };
+        let flipped = PolicyPreviewFields {
+            cosign_required: true,
+            ..base
+        };
+        let d_base = compute_policy_preview_digest(&base);
+        let d_flip = compute_policy_preview_digest(&flipped);
+        assert_ne!(d_base, d_flip, "cosign_required flip MUST change digest");
     }
 
     #[test]
@@ -512,6 +603,10 @@ mod tests {
             // TA-12 minimal pin: zero floor (default — no reserve).
             stable_balance_floor: 0,
             per_recipient_daily_cap_usd: 0,
+            // G6 (audit 2026-05-18): default cosign opt-in = false. Existing
+            // fixtures must keep this off so the byte layout below remains
+            // pinned; new tests below exercise the flipped case explicitly.
+            cosign_required: false,
         };
         // Encoding: 8 zero + 8 zero + 2 zero + 2 zero (developer_fee_rate)
         //   + 0x01 + 4 zero + 0x00 + 4 zero + 8 zero + 8 zero + 0 + 0 + 0
@@ -519,7 +614,8 @@ mod tests {
         //   + 0 (auto_promote_grays TA-07) + 0 (auto_revoke_threshold TA-17)
         //   + 8 zero (stable_balance_floor TA-12)
         //   + 8 zero (per_recipient_daily_cap_usd TA-14)
-        // = 77 bytes deterministic input.
+        //   + 0 (cosign_required G6 audit 2026-05-18)
+        // = 78 bytes deterministic input.
         let digest = compute_policy_preview_digest(&f);
         // Cross-impl pin — same fixture is asserted byte-for-byte in
         // sdk/kit/tests/policy/preview-digest.test.ts. If either side
@@ -537,8 +633,11 @@ mod tests {
         //     eec4230cd52f7f567e06e9b197a0dacdc3955808d1a5a256d5975a4ac1177beb
         //   Post-TA-12 (pre-TA-14):
         //     d3e731941e95cb1c426ccc6f2b5c53525c033f498bdb79a593bc86c98508c67a
-        // TA-14 (Phase 5) appends 8 more bytes (per_recipient_daily_cap_usd=0)
-        // at position 19. New digest pinned in REGENERATED_HEX_MINIMAL below.
+        //   Post-TA-14 (pre-G6):
+        //     45c51e8d77b5a1775ea95c760a4a554288fc246f91e10bac620cfda902936a46
+        // G6 (audit 2026-05-18 cosign opt-in) appends 1 more byte
+        // (cosign_required=false → 0x00) at position 20. New digest pinned
+        // in REGENERATED_HEX_MINIMAL below.
         let expected: [u8; 32] = REGENERATED_HEX_MINIMAL;
         assert_eq!(
             digest, expected,
@@ -586,6 +685,9 @@ mod tests {
             // USDC face value. Exercises a non-zero cap on the canonical
             // byte layout.
             per_recipient_daily_cap_usd: 50_000_000,
+            // G6 realistic pin: cosign opt-in default = false (low-friction).
+            // The flip-changes-digest test below exercises the true path.
+            cosign_required: false,
         };
         let digest = compute_policy_preview_digest(&f);
         // Prior digests:
@@ -601,9 +703,11 @@ mod tests {
         //     35ed9a9f97b0fa21ca581bd45f11b28c2932525101e9be063cc0d2f6bebc3c48
         //   Post-TA-12 (pre-TA-14):
         //     6523cb9b64baef661d919c802a8762332d1091cb53e8245d1624f52839fc9c8c
-        // TA-14 (Phase 5) appends 8 more bytes
-        // (per_recipient_daily_cap_usd=50_000_000) at position 19. New
-        // digest pinned in REGENERATED_HEX_REALISTIC below.
+        //   Post-TA-14 (pre-G6):
+        //     67c7cde90c0d8140fceb370bf94dcc15488ffd1407a84d4c248b590a8b9d810f
+        // G6 (audit 2026-05-18 cosign opt-in) appends 1 more byte
+        // (cosign_required=false → 0x00) at position 20. New digest pinned
+        // in REGENERATED_HEX_REALISTIC below.
         let expected: [u8; 32] = REGENERATED_HEX_REALISTIC;
         assert_eq!(
             digest, expected,
@@ -612,29 +716,29 @@ mod tests {
     }
 }
 
-/// TA-12 + TA-14 Phase 5 minimal-policy expected digest.
+/// G6 (audit 2026-05-18 cosign opt-in) minimal-policy expected digest.
 ///
-/// Computed over the canonical 77-byte encoding:
-///   - all 17 prior fields zero (or default), plus
-///   - stable_balance_floor = 0 (u64 LE, 8 bytes)
-///   - per_recipient_daily_cap_usd = 0 (u64 LE, 8 bytes)
+/// Computed over the canonical 78-byte encoding:
+///   - all 18 prior TA-14 fields at default (zeroes), plus
+///   - cosign_required = false (1 byte, 0x00)
 ///
-/// = `45c51e8d77b5a1775ea95c760a4a554288fc246f91e10bac620cfda902936a46`
+/// = `19c70cb767358d1ce2a4c736b067172e0f87ddad8ae6f98292a62bd5f9bae355`
 #[cfg(test)]
 const REGENERATED_HEX_MINIMAL: [u8; 32] = [
-    0x45, 0xc5, 0x1e, 0x8d, 0x77, 0xb5, 0xa1, 0x77, 0x5e, 0xa9, 0x5c, 0x76, 0x0a, 0x4a, 0x55, 0x42,
-    0x88, 0xfc, 0x24, 0x6f, 0x91, 0xe1, 0x0b, 0xac, 0x62, 0x0c, 0xfd, 0xa9, 0x02, 0x93, 0x6a, 0x46,
+    0x19, 0xc7, 0x0c, 0xb7, 0x67, 0x35, 0x8d, 0x1c, 0xe2, 0xa4, 0xc7, 0x36, 0xb0, 0x67, 0x17, 0x2e,
+    0x0f, 0x87, 0xdd, 0xad, 0x8a, 0xe6, 0xf9, 0x82, 0x92, 0xa6, 0x2b, 0xd5, 0xf9, 0xba, 0xe3, 0x55,
 ];
 
-/// TA-12 + TA-14 Phase 5 realistic-policy expected digest.
+/// G6 (audit 2026-05-18 cosign opt-in) realistic-policy expected digest.
 ///
 /// Realistic fixture with 2 protocols, 1 destination, common scalars,
-/// `stable_balance_floor = 100_000_000` ($100 reserve), and
-/// `per_recipient_daily_cap_usd = 50_000_000` ($50 per-recipient cap).
+/// `stable_balance_floor = 100_000_000` ($100 reserve),
+/// `per_recipient_daily_cap_usd = 50_000_000` ($50 per-recipient cap),
+/// and `cosign_required = false` (default low-friction).
 ///
-/// = `67c7cde90c0d8140fceb370bf94dcc15488ffd1407a84d4c248b590a8b9d810f`
+/// = `15ab9e4290b8bc9229adc64e46cf785edb1adc78596eb339e7bdd4df2a2cab62`
 #[cfg(test)]
 const REGENERATED_HEX_REALISTIC: [u8; 32] = [
-    0x67, 0xc7, 0xcd, 0xe9, 0x0c, 0x0d, 0x81, 0x40, 0xfc, 0xeb, 0x37, 0x0b, 0xf9, 0x4d, 0xcc, 0x15,
-    0x48, 0x8f, 0xfd, 0x14, 0x07, 0xa8, 0x4d, 0x4c, 0x24, 0x8b, 0x59, 0x0a, 0x8b, 0x9d, 0x81, 0x0f,
+    0x15, 0xab, 0x9e, 0x42, 0x90, 0xb8, 0xbc, 0x92, 0x29, 0xad, 0xc6, 0x4e, 0x46, 0xcf, 0x78, 0x5e,
+    0xdb, 0x1a, 0xdc, 0x78, 0x59, 0x6e, 0xb3, 0x39, 0xe7, 0xbd, 0xd4, 0xdf, 0x2a, 0x2c, 0xab, 0x62,
 ];

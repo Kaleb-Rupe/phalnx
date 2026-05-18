@@ -81,6 +81,12 @@ pub fn handler(
     // position 19. NOTE: raising this is an "elevated mutation" per
     // TA-09 (deferred to Phase 9 alongside the floor-lowering case).
     per_recipient_daily_cap_usd: Option<u64>,
+    // G6 (audit 2026-05-18 cosign opt-in): owner-controlled cosign
+    // requirement flag. None = pass through from live; Some(true) =
+    // enable (non-elevated — safety improvement); Some(false) when
+    // live is true = DISABLE (ELEVATED — one-way ratchet, cosign
+    // required to disable cosign). Bound by TA-19 at digest position 20.
+    cosign_required: Option<bool>,
     // TA-09 (Phase 3): the cosigning session pubkey. `Pubkey::default()`
     // means "no cosign required" (non-elevated mutation). For elevated
     // mutations the caller MUST pass a non-default pubkey AND include
@@ -230,6 +236,11 @@ pub fn handler(
     // TA-14 (Phase 5): merged-effective per_recipient_daily_cap_usd.
     let eff_per_recipient_daily_cap_usd =
         per_recipient_daily_cap_usd.unwrap_or(policy.per_recipient_daily_cap_usd);
+    // G6 (audit 2026-05-18 cosign opt-in): merged-effective cosign_required.
+    // None = pass through from live; Some(new) = the queued value. The
+    // elevation check below uses BOTH the live and effective values to
+    // implement the one-way-ratchet (disable IS elevated, enable is not).
+    let eff_cosign_required = cosign_required.unwrap_or(policy.cosign_required);
 
     // ─── TA-09 (Phase 3): elevated mutation detection + cosign binding ─
     //
@@ -296,13 +307,61 @@ pub fn handler(
             .as_ref()
             .is_some_and(|new_caps| weakens_protocol_caps_predicate(new_caps, &policy.protocol_caps));
 
-    let is_elevated = raises_daily_cap
-        || raises_max_tx
-        || expands_destinations
-        || expands_protocols
-        || lowers_floor
-        || weakens_per_recipient_cap
-        || weakens_protocol_caps;
+    // G6 (audit 2026-05-18 cosign opt-in): one-way-ratchet semantics for
+    // toggling `cosign_required`.
+    //
+    // - `disables_cosign`: queue is requesting cosign_required: Some(false)
+    //   AND the live policy currently has cosign_required: true. This is
+    //   the ATTACK vector: a phishing-compromised owner key would otherwise
+    //   be able to silently disable cosign and then drain via subsequent
+    //   non-elevated mutations. Disabling cosign is therefore ITSELF
+    //   elevated, regardless of policy.cosign_required's current value
+    //   being the gate for the other 7 triggers (see is_elevated below).
+    //
+    //   Note: if live cosign_required is already false, `disables_cosign`
+    //   can never be true — `policy.cosign_required && !new` collapses to
+    //   `false && _` = false. So the predicate naturally cannot fire
+    //   spuriously when cosign is already off.
+    //
+    // - `enables_cosign`: queue is requesting cosign_required: Some(true)
+    //   when live is false. This is a SAFETY IMPROVEMENT — owner is
+    //   voluntarily tightening the policy. Not in is_elevated below.
+    //   Variable declared for documentation and future analytics; the
+    //   underscore prefix suppresses dead-code warnings while keeping
+    //   the symmetry obvious.
+    let disables_cosign =
+        cosign_required.is_some_and(|new| !new && policy.cosign_required);
+    let _enables_cosign =
+        cosign_required.is_some_and(|new| new && !policy.cosign_required);
+
+    // G6 (audit 2026-05-18 cosign opt-in): the 7-trigger elevation check
+    // (raises caps, expands allowlists, weakens floor / per-recipient /
+    // protocol caps) is now gated on `policy.cosign_required`. When the
+    // owner has opted OUT of cosign (the default), elevated mutations
+    // only require the owner signature — single-signer flow.
+    //
+    // Why gate on `policy.cosign_required` (the LIVE value), not the
+    // merged-effective value: an attacker who phishes the owner cannot
+    // queue an enable-cosign AND a daily-cap raise in the same call to
+    // bypass the gate, because the enable side is non-elevated (safety
+    // improvement) and applies AFTER this queue passes the timelock —
+    // the cap raise here is the FIRST mutation, evaluated against the
+    // CURRENT cosign_required state. Conversely, an honest owner who
+    // wants to enable cosign AND raise the cap can do so in two
+    // independent queues (enable first, then raise) without friction.
+    //
+    // `disables_cosign` is OR'd in unconditionally because it represents
+    // an attempted weakening that must itself be cosigned — regardless
+    // of what other fields the queue is mutating.
+    let is_elevated = (policy.cosign_required
+        && (raises_daily_cap
+            || raises_max_tx
+            || expands_destinations
+            || expands_protocols
+            || lowers_floor
+            || weakens_per_recipient_cap
+            || weakens_protocol_caps))
+        || disables_cosign;
 
     let (cosign_session_pubkey, cosign_digest_bound): (Pubkey, [u8; 32]) = if is_elevated {
         // Elevated mutation: cosign_session MUST be a non-default pubkey.
@@ -382,6 +441,11 @@ pub fn handler(
         // TA-14 (Phase 5 post-exec): merged-effective per-recipient cap
         // bound by TA-19 at canonical position 19.
         per_recipient_daily_cap_usd: eff_per_recipient_daily_cap_usd,
+        // G6 (audit 2026-05-18 cosign opt-in): merged-effective
+        // cosign_required bound by TA-19 at canonical position 20.
+        // The owner's choice (and any toggle) is part of the signed
+        // digest so a tampered SDK cannot flip it silently.
+        cosign_required: eff_cosign_required,
     });
     require!(
         recomputed_digest == new_policy_preview_digest,
@@ -427,6 +491,11 @@ pub fn handler(
     pending.stable_balance_floor = stable_balance_floor;
     // TA-14 (Phase 5): persist optional per_recipient_daily_cap_usd update.
     pending.per_recipient_daily_cap_usd = per_recipient_daily_cap_usd;
+    // G6 (audit 2026-05-18 cosign opt-in): persist optional cosign_required
+    // update. apply_pending_policy reads this and writes through to
+    // `policy.cosign_required` before the second-pass TA-19 digest
+    // recompute (which binds the merged value at canonical position 20).
+    pending.cosign_required = cosign_required;
 
     ctx.accounts.policy.has_pending_policy = true;
 
@@ -495,6 +564,73 @@ pub fn weakens_protocol_caps_predicate(new_caps: &[u64], live_caps: &[u64]) -> b
         // Both bounded: weakening = strictly larger.
         new_cap > live_cap
     })
+}
+
+/// G6 (audit 2026-05-18 cosign opt-in): pure-function variant of the
+/// `is_elevated` decision in `handler()`. Extracted so the cosign-gating
+/// + one-way-ratchet semantics can be unit-tested without spinning up a
+/// full Anchor `Context` + `PolicyConfig` scaffold.
+///
+/// Mirrors the in-handler logic exactly:
+///   - If `live_cosign_required == false`, the 7 conventional triggers
+///     (raises_daily_cap, raises_max_tx, expands_destinations,
+///     expands_protocols, lowers_floor, weakens_per_recipient_cap,
+///     weakens_protocol_caps) do NOT elevate. The owner has opted out
+///     of cosign, so elevated mutations only require the owner signature.
+///   - If `live_cosign_required == true`, any of the 7 triggers elevates.
+///   - `disables_cosign` is OR'd in unconditionally — disabling cosign
+///     is an elevated mutation regardless of any other trigger, because
+///     the change ITSELF is the weakening the cosign primitive existed
+///     to prevent. (Note: when `live_cosign_required == false`, the
+///     `disables_cosign` predicate cannot evaluate true since
+///     `policy.cosign_required && !new` becomes `false && _` = false.)
+pub fn is_elevated_decision(
+    live_cosign_required: bool,
+    raises_daily_cap: bool,
+    raises_max_tx: bool,
+    expands_destinations: bool,
+    expands_protocols: bool,
+    lowers_floor: bool,
+    weakens_per_recipient_cap: bool,
+    weakens_protocol_caps: bool,
+    disables_cosign: bool,
+) -> bool {
+    (live_cosign_required
+        && (raises_daily_cap
+            || raises_max_tx
+            || expands_destinations
+            || expands_protocols
+            || lowers_floor
+            || weakens_per_recipient_cap
+            || weakens_protocol_caps))
+        || disables_cosign
+}
+
+/// G6 (audit 2026-05-18 cosign opt-in): pure predicate computing whether a
+/// queued `cosign_required` update DISABLES cosign on a live policy that
+/// currently requires it. Mirrors the in-handler `disables_cosign`
+/// expression exactly so unit tests can pin all four toggle combinations
+/// without needing a full Anchor scaffold.
+///
+/// Truth table:
+///   | live    | new            | disables |
+///   |---------|----------------|----------|
+///   | true    | Some(false)    | true     | one-way ratchet attack vector
+///   | true    | Some(true)     | false    | no-op
+///   | true    | None           | false    | pass-through
+///   | false   | Some(false)    | false    | no-op (already off)
+///   | false   | Some(true)     | false    | enabling — safety improvement
+///   | false   | None           | false    | pass-through
+pub fn disables_cosign_predicate(new: Option<bool>, live: bool) -> bool {
+    new.is_some_and(|n| !n && live)
+}
+
+/// G6 (audit 2026-05-18 cosign opt-in): pure predicate companion to
+/// `disables_cosign_predicate` for the false→true direction. Always
+/// non-elevated (safety improvement), but exposed for symmetry +
+/// future analytics / audit-log emission.
+pub fn enables_cosign_predicate(new: Option<bool>, live: bool) -> bool {
+    new.is_some_and(|n| n && !live)
 }
 
 #[cfg(test)]
@@ -600,5 +736,144 @@ mod tests {
         let live = vec![100_000_000u64, 50_000_000u64];
         let new = vec![50_000_000u64, 100_000_000u64];
         assert!(weakens_protocol_caps_predicate(&new, &live));
+    }
+
+    // --- G6 (audit 2026-05-18 cosign opt-in) boundary tests ---
+    //
+    // Coverage for the four cases enumerated in the spec:
+    //   1. is_elevated == false when live_cosign_required=false even with
+    //      all 7 conventional triggers active (cosign is OFF — owner-only
+    //      mutation, no cosign required).
+    //   2. is_elevated == true for any single trigger when
+    //      live_cosign_required=true.
+    //   3. is_elevated == true for cosign_required: Some(false) when
+    //      live=true (disable IS elevated — one-way ratchet).
+    //   4. is_elevated == false for cosign_required: Some(true) regardless
+    //      of current value (enabling is free — safety improvement).
+
+    #[test]
+    fn elevation_off_when_live_cosign_required_false() {
+        // Spec case 1: cosign opted-out. All 7 conventional triggers true.
+        // Result: NOT elevated. Owner-only mutation allowed.
+        let elevated = is_elevated_decision(
+            /* live_cosign_required */ false,
+            /* raises_daily_cap */ true,
+            /* raises_max_tx */ true,
+            /* expands_destinations */ true,
+            /* expands_protocols */ true,
+            /* lowers_floor */ true,
+            /* weakens_per_recipient_cap */ true,
+            /* weakens_protocol_caps */ true,
+            /* disables_cosign */ false,
+        );
+        assert!(
+            !elevated,
+            "cosign_required=false short-circuits the 7-trigger elevation gate"
+        );
+    }
+
+    #[test]
+    fn elevation_on_for_any_trigger_when_live_cosign_required_true() {
+        // Spec case 2: cosign opted-in. Each individual trigger elevates.
+        let triggers = [
+            "raises_daily_cap",
+            "raises_max_tx",
+            "expands_destinations",
+            "expands_protocols",
+            "lowers_floor",
+            "weakens_per_recipient_cap",
+            "weakens_protocol_caps",
+        ];
+        for (i, name) in triggers.iter().enumerate() {
+            let elevated = is_elevated_decision(
+                /* live_cosign_required */ true,
+                /* raises_daily_cap */ i == 0,
+                /* raises_max_tx */ i == 1,
+                /* expands_destinations */ i == 2,
+                /* expands_protocols */ i == 3,
+                /* lowers_floor */ i == 4,
+                /* weakens_per_recipient_cap */ i == 5,
+                /* weakens_protocol_caps */ i == 6,
+                /* disables_cosign */ false,
+            );
+            assert!(elevated, "{} alone must elevate when cosign is opted in", name);
+        }
+    }
+
+    #[test]
+    fn elevation_on_for_disables_cosign_when_live_true() {
+        // Spec case 3: disabling cosign on a live-true policy is elevated.
+        // No other triggers active — disables_cosign alone carries the bit.
+        let elevated = is_elevated_decision(
+            /* live_cosign_required */ true,
+            /* raises_daily_cap */ false,
+            /* raises_max_tx */ false,
+            /* expands_destinations */ false,
+            /* expands_protocols */ false,
+            /* lowers_floor */ false,
+            /* weakens_per_recipient_cap */ false,
+            /* weakens_protocol_caps */ false,
+            /* disables_cosign */ true,
+        );
+        assert!(
+            elevated,
+            "disabling cosign on a live cosign_required=true policy MUST elevate (one-way ratchet)"
+        );
+    }
+
+    #[test]
+    fn elevation_off_for_enables_cosign_regardless_of_other_state() {
+        // Spec case 4: enabling cosign from false→true is non-elevated.
+        // It's a safety improvement — owner is voluntarily tightening.
+        // Exercises both directions: live=false (enabling) and live=true
+        // (no-op via Some(true)).
+        //
+        // In both cases disables_cosign is false (no false→true→false in
+        // a single queue), so elevation depends entirely on whether any
+        // of the 7 conventional triggers fire AND whether live is true.
+        // We pin the case where NO conventional triggers fire to isolate
+        // the enable path.
+        for live in [false, true] {
+            let elevated = is_elevated_decision(
+                /* live_cosign_required */ live,
+                /* raises_daily_cap */ false,
+                /* raises_max_tx */ false,
+                /* expands_destinations */ false,
+                /* expands_protocols */ false,
+                /* lowers_floor */ false,
+                /* weakens_per_recipient_cap */ false,
+                /* weakens_protocol_caps */ false,
+                /* disables_cosign */ false,
+            );
+            assert!(
+                !elevated,
+                "enabling (or no-op) cosign with no other triggers MUST NOT elevate, live={}",
+                live
+            );
+        }
+    }
+
+    // --- G6 disables_cosign_predicate truth-table coverage ---
+
+    #[test]
+    fn disables_cosign_true_only_for_some_false_with_live_true() {
+        assert!(disables_cosign_predicate(Some(false), true));
+        // All other combinations must be false.
+        assert!(!disables_cosign_predicate(Some(true), true));
+        assert!(!disables_cosign_predicate(None, true));
+        assert!(!disables_cosign_predicate(Some(false), false));
+        assert!(!disables_cosign_predicate(Some(true), false));
+        assert!(!disables_cosign_predicate(None, false));
+    }
+
+    #[test]
+    fn enables_cosign_true_only_for_some_true_with_live_false() {
+        assert!(enables_cosign_predicate(Some(true), false));
+        // All other combinations must be false.
+        assert!(!enables_cosign_predicate(Some(false), false));
+        assert!(!enables_cosign_predicate(None, false));
+        assert!(!enables_cosign_predicate(Some(true), true));
+        assert!(!enables_cosign_predicate(Some(false), true));
+        assert!(!enables_cosign_predicate(None, true));
     }
 }
