@@ -140,6 +140,7 @@ describe("Kit SDK Devnet — Vault Lifecycle", function () {
       dailySpendingCapUsd: newCap, // changed
       maxTransactionSizeUsd: livePolicy.data.maxTransactionSizeUsd,
       maxSlippageBps: livePolicy.data.maxSlippageBps,
+      developerFeeRate: livePolicy.data.developerFeeRate,
       protocolMode: livePolicy.data.protocolMode,
       protocols: livePolicy.data.protocols,
       destinationMode: livePolicy.data.destinationMode,

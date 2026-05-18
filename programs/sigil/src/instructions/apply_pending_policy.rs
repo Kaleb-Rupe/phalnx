@@ -119,6 +119,7 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
         daily_spending_cap_usd: policy.daily_spending_cap_usd,
         max_transaction_size_usd: policy.max_transaction_size_usd,
         max_slippage_bps: policy.max_slippage_bps,
+        developer_fee_rate: policy.developer_fee_rate,
         protocol_mode: policy.protocol_mode,
         protocols: &policy.protocols,
         destination_mode: policy.destination_mode,

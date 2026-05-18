@@ -12,15 +12,16 @@
 //! 1. `daily_spending_cap_usd: u64`   (8 bytes, LE)
 //! 2. `max_transaction_size_usd: u64` (8 bytes, LE)
 //! 3. `max_slippage_bps: u16`         (2 bytes, LE)
-//! 4. `protocol_mode: u8`             (1 byte)
-//! 5. `protocols: Vec<Pubkey>`        (4 byte LE len ++ each Pubkey 32 bytes)
-//! 6. `destination_mode: u8`          (1 byte)
-//! 7. `allowed_destinations: Vec<Pubkey>` (4 byte LE len ++ each Pubkey 32 bytes)
-//! 8. `timelock_duration: u64`        (8 bytes, LE)
-//! 9. `session_expiry_seconds: u64`   (8 bytes, LE)
-//! 10. `observe_only: bool`           (1 byte, 0 or 1)
-//! 11. `has_constraints: bool`        (1 byte, 0 or 1)
-//! 12. `has_post_assertions: u8`      (1 byte)
+//! 4. `developer_fee_rate: u16`       (2 bytes, LE) — PEN-CROSS-6 (Phase 2 close-up)
+//! 5. `protocol_mode: u8`             (1 byte)
+//! 6. `protocols: Vec<Pubkey>`        (4 byte LE len ++ each Pubkey 32 bytes)
+//! 7. `destination_mode: u8`          (1 byte)
+//! 8. `allowed_destinations: Vec<Pubkey>` (4 byte LE len ++ each Pubkey 32 bytes)
+//! 9. `timelock_duration: u64`        (8 bytes, LE)
+//! 10. `session_expiry_seconds: u64`  (8 bytes, LE)
+//! 11. `observe_only: bool`           (1 byte, 0 or 1)
+//! 12. `has_constraints: bool`        (1 byte, 0 or 1)
+//! 13. `has_post_assertions: u8`      (1 byte)
 
 use anchor_lang::prelude::*;
 // Note: `anchor_lang::solana_program::hash` is NOT re-exported in Anchor 0.32.1.
@@ -35,6 +36,11 @@ pub struct PolicyPreviewFields<'a> {
     pub daily_spending_cap_usd: u64,
     pub max_transaction_size_usd: u64,
     pub max_slippage_bps: u16,
+    /// PEN-CROSS-6 (Phase 2 close-up): `developer_fee_rate` lives on
+    /// `PolicyConfig` but was previously NOT in the digest. A compromised SDK
+    /// could insert a non-zero fee rate that bypasses the user's signed
+    /// digest. Now bound at position 4 of the canonical encoding.
+    pub developer_fee_rate: u16,
     pub protocol_mode: u8,
     pub protocols: &'a [Pubkey],
     pub destination_mode: u8,
@@ -63,29 +69,31 @@ pub fn compute_policy_preview_digest(fields: &PolicyPreviewFields<'_>) -> [u8; 3
     buf.extend_from_slice(&fields.max_transaction_size_usd.to_le_bytes());
     // 3. max_slippage_bps: u16 LE
     buf.extend_from_slice(&fields.max_slippage_bps.to_le_bytes());
-    // 4. protocol_mode: u8
+    // 4. developer_fee_rate: u16 LE — PEN-CROSS-6 (Phase 2 close-up)
+    buf.extend_from_slice(&fields.developer_fee_rate.to_le_bytes());
+    // 5. protocol_mode: u8
     buf.push(fields.protocol_mode);
-    // 5. protocols: Vec<Pubkey> — Borsh u32-LE length then concatenated pubkey bytes
+    // 6. protocols: Vec<Pubkey> — Borsh u32-LE length then concatenated pubkey bytes
     buf.extend_from_slice(&(fields.protocols.len() as u32).to_le_bytes());
     for pk in fields.protocols.iter() {
         buf.extend_from_slice(pk.as_ref());
     }
-    // 6. destination_mode: u8
+    // 7. destination_mode: u8
     buf.push(fields.destination_mode);
-    // 7. allowed_destinations: Vec<Pubkey>
+    // 8. allowed_destinations: Vec<Pubkey>
     buf.extend_from_slice(&(fields.allowed_destinations.len() as u32).to_le_bytes());
     for pk in fields.allowed_destinations.iter() {
         buf.extend_from_slice(pk.as_ref());
     }
-    // 8. timelock_duration: u64 LE
+    // 9. timelock_duration: u64 LE
     buf.extend_from_slice(&fields.timelock_duration.to_le_bytes());
-    // 9. session_expiry_seconds: u64 LE
+    // 10. session_expiry_seconds: u64 LE
     buf.extend_from_slice(&fields.session_expiry_seconds.to_le_bytes());
-    // 10. observe_only: bool as 1 byte (0/1)
+    // 11. observe_only: bool as 1 byte (0/1)
     buf.push(u8::from(fields.observe_only));
-    // 11. has_constraints: bool as 1 byte
+    // 12. has_constraints: bool as 1 byte
     buf.push(u8::from(fields.has_constraints));
-    // 12. has_post_assertions: u8
+    // 13. has_post_assertions: u8
     buf.push(fields.has_post_assertions);
 
     hashv(&[&buf]).to_bytes()
@@ -107,6 +115,7 @@ mod tests {
             daily_spending_cap_usd: 500_000_000,
             max_transaction_size_usd: 100_000_000,
             max_slippage_bps: 100,
+            developer_fee_rate: 0,
             protocol_mode: 1,
             protocols: &protocols,
             destination_mode: 0,
@@ -130,6 +139,7 @@ mod tests {
             daily_spending_cap_usd: 1,
             max_transaction_size_usd: 1,
             max_slippage_bps: 0,
+            developer_fee_rate: 0,
             protocol_mode: 1,
             protocols: &protocols,
             destination_mode: 0,
@@ -162,6 +172,7 @@ mod tests {
             daily_spending_cap_usd: 1,
             max_transaction_size_usd: 1,
             max_slippage_bps: 0,
+            developer_fee_rate: 0,
             protocol_mode: 1,
             protocols: &a,
             destination_mode: 0,
@@ -189,6 +200,7 @@ mod tests {
             daily_spending_cap_usd: 0,
             max_transaction_size_usd: 0,
             max_slippage_bps: 0,
+            developer_fee_rate: 0,
             protocol_mode: 1,
             protocols: &[],
             destination_mode: 0,
@@ -199,18 +211,22 @@ mod tests {
             has_constraints: false,
             has_post_assertions: 0,
         };
-        // Encoding: 8 zero + 8 zero + 2 zero + 0x01 + 4 zero + 0x00 + 4 zero
-        //   + 8 zero + 8 zero + 0 + 0 + 0
-        // = 47 bytes deterministic input.
+        // Encoding: 8 zero + 8 zero + 2 zero + 2 zero (developer_fee_rate)
+        //   + 0x01 + 4 zero + 0x00 + 4 zero + 8 zero + 8 zero + 0 + 0 + 0
+        // = 49 bytes deterministic input.
         let digest = compute_policy_preview_digest(&f);
         // Cross-impl pin — same fixture is asserted byte-for-byte in
         // sdk/kit/tests/policy/preview-digest.test.ts. If either side
         // changes the canonical encoding, BOTH digests change and the
-        // two tests fail in lock-step.
+        // two tests fail in lock-step. Pre-PEN-CROSS-6 digest was
+        //   29f9a0caa6851902abe7de24ac30380ef50c220d25d541f8fe1762793152b623.
+        // Adding 2 bytes of zero (developer_fee_rate=0) at position 4 shifts
+        // the encoding and forces a new known-good digest below.
+        // Post-PEN-CROSS-6 known-good digest of the 49-byte encoding above.
         let expected: [u8; 32] = [
-            0x29, 0xf9, 0xa0, 0xca, 0xa6, 0x85, 0x19, 0x02, 0xab, 0xe7, 0xde, 0x24, 0xac, 0x30,
-            0x38, 0x0e, 0xf5, 0x0c, 0x22, 0x0d, 0x25, 0xd5, 0x41, 0xf8, 0xfe, 0x17, 0x62, 0x79,
-            0x31, 0x52, 0xb6, 0x23,
+            0x0a, 0xd6, 0x7b, 0xf0, 0xd8, 0x1b, 0x97, 0x2c, 0x60, 0xab, 0xe8, 0x2e, 0xbe, 0xa4,
+            0x25, 0xd4, 0xb3, 0x0d, 0x0e, 0xf9, 0x10, 0xbc, 0xc7, 0xb7, 0x65, 0x84, 0xfa, 0xe3,
+            0x6a, 0x0f, 0x12, 0x52,
         ];
         assert_eq!(
             digest, expected,
@@ -229,6 +245,7 @@ mod tests {
             daily_spending_cap_usd: 500_000_000,
             max_transaction_size_usd: 100_000_000,
             max_slippage_bps: 100,
+            developer_fee_rate: 0,
             protocol_mode: 1,
             protocols: &protocols,
             destination_mode: 0,
@@ -240,10 +257,12 @@ mod tests {
             has_post_assertions: 0,
         };
         let digest = compute_policy_preview_digest(&f);
+        // Post-PEN-CROSS-6 known-good digest. Pre-fix was
+        //   33d743a9643fcc6d39c30ac5f8c159d6e94d31ce354d6dd3843367773b3a8502.
         let expected: [u8; 32] = [
-            0x33, 0xd7, 0x43, 0xa9, 0x64, 0x3f, 0xcc, 0x6d, 0x39, 0xc3, 0x0a, 0xc5, 0xf8, 0xc1,
-            0x59, 0xd6, 0xe9, 0x4d, 0x31, 0xce, 0x35, 0x4d, 0x6d, 0xd3, 0x84, 0x33, 0x67, 0x77,
-            0x3b, 0x3a, 0x85, 0x02,
+            0xed, 0x9a, 0xc1, 0x2d, 0x21, 0xe0, 0xf0, 0x39, 0x33, 0xbb, 0xf7, 0x89, 0xea, 0xe9,
+            0x99, 0x44, 0xc3, 0x11, 0xf2, 0xff, 0x6f, 0x1b, 0xaf, 0xf9, 0x92, 0x05, 0x83, 0x07,
+            0x17, 0x4d, 0xe3, 0x16,
         ];
         assert_eq!(
             digest, expected,

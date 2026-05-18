@@ -1752,6 +1752,7 @@ describe("sigil", () => {
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
             maxSlippageBps: 100,
+            developerFeeRate: 30, // PEN-CROSS-6: must match the ix arg.
             protocolMode: 1,
             protocols: [jupiterProgramId],
             allowedDestinations: [],
@@ -1855,7 +1856,7 @@ describe("sigil", () => {
           null,
           null,
           null,
-          (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
+          (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, { developerFeeRate: 0 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -1896,7 +1897,7 @@ describe("sigil", () => {
           null,
           null,
           null,
-          (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
+          (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, { developerFeeRate: 30 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -1978,7 +1979,7 @@ describe("sigil", () => {
           null,
           null,
           null,
-          (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
+          (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, { developerFeeRate: 0 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -2120,7 +2121,7 @@ describe("sigil", () => {
           null,
           null,
           null,
-          (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
+          (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, { developerFeeRate: 500 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -2328,6 +2329,7 @@ describe("sigil", () => {
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
             maxSlippageBps: 100,
+            developerFeeRate: 500, // PEN-CROSS-6: must match the ix arg.
             protocolMode: 1,
             protocols: [jupiterProgramId],
             allowedDestinations: [],
@@ -4641,6 +4643,7 @@ describe("sigil", () => {
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
             maxSlippageBps: 100,
+            developerFeeRate: 500, // PEN-CROSS-6: must match the ix arg.
             protocolMode: 1,
             protocols: [jupiterProgramId],
             allowedDestinations: [allowedDest.publicKey],

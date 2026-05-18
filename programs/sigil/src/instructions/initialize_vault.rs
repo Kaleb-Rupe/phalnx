@@ -135,6 +135,8 @@ pub fn handler(
         daily_spending_cap_usd,
         max_transaction_size_usd,
         max_slippage_bps,
+        // PEN-CROSS-6: developer_fee_rate is bound by the owner-signed digest.
+        developer_fee_rate,
         protocol_mode,
         protocols: &protocols,
         destination_mode: DESTINATION_MODE_RESTRICTED,

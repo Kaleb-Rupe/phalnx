@@ -264,6 +264,9 @@ export async function createVault(
     dailySpendingCapUsd: options.dailySpendingCapUsd,
     maxTransactionSizeUsd,
     maxSlippageBps: options.maxSlippageBps ?? 100,
+    // PEN-CROSS-6: developer_fee_rate is bound by the digest. Mirror the
+    // same default the ix arg uses below to keep digest and storage in sync.
+    developerFeeRate: options.developerFeeRate ?? 0,
     protocolMode,
     protocols,
     destinationMode: 0, // Phase 2 Option A: RESTRICTED is the only valid value

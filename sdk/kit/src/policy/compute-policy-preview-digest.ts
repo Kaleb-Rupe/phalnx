@@ -22,15 +22,16 @@
  *   1. daily_spending_cap_usd: u64 LE (8 bytes)
  *   2. max_transaction_size_usd: u64 LE (8 bytes)
  *   3. max_slippage_bps: u16 LE (2 bytes)
- *   4. protocol_mode: u8 (1 byte)
- *   5. protocols: Vec<Pubkey> = u32 LE length (4 bytes) ++ each Pubkey 32 bytes
- *   6. destination_mode: u8 (1 byte)
- *   7. allowed_destinations: Vec<Pubkey> = u32 LE length (4 bytes) ++ each Pubkey 32 bytes
- *   8. timelock_duration: u64 LE (8 bytes)
- *   9. session_expiry_seconds: u64 LE (8 bytes)
- *   10. observe_only: bool as 1 byte (0 or 1)
- *   11. has_constraints: bool as 1 byte (0 or 1)
- *   12. has_post_assertions: u8 (1 byte)
+ *   4. developer_fee_rate: u16 LE (2 bytes) — PEN-CROSS-6 (Phase 2 close-up)
+ *   5. protocol_mode: u8 (1 byte)
+ *   6. protocols: Vec<Pubkey> = u32 LE length (4 bytes) ++ each Pubkey 32 bytes
+ *   7. destination_mode: u8 (1 byte)
+ *   8. allowed_destinations: Vec<Pubkey> = u32 LE length (4 bytes) ++ each Pubkey 32 bytes
+ *   9. timelock_duration: u64 LE (8 bytes)
+ *   10. session_expiry_seconds: u64 LE (8 bytes)
+ *   11. observe_only: bool as 1 byte (0 or 1)
+ *   12. has_constraints: bool as 1 byte (0 or 1)
+ *   13. has_post_assertions: u8 (1 byte)
  *
  * Total bounded by MAX_ALLOWED_PROTOCOLS=10 + MAX_ALLOWED_DESTINATIONS=10 at
  * 32 bytes each + fixed scalars ≈ 700 bytes worst case.
@@ -50,6 +51,11 @@ export interface PolicyPreviewFields {
   maxTransactionSizeUsd: bigint;
   /** Basis points (0-5000). */
   maxSlippageBps: number;
+  /**
+   * Developer fee rate (rate / 1,000,000). Bound by the owner-signed digest
+   * since PEN-CROSS-6 (Phase 2 close-up). 0..=MAX_DEVELOPER_FEE_RATE (500).
+   */
+  developerFeeRate: number;
   /** 1 = ALLOWLIST (Phase 2 Option A). Other values rejected on-chain. */
   protocolMode: number;
   /** Up to MAX_ALLOWED_PROTOCOLS (10) base58-encoded program IDs. */
@@ -166,6 +172,7 @@ export function computePolicyPreviewDigest(
     8 + // daily_spending_cap_usd
     8 + // max_transaction_size_usd
     2 + // max_slippage_bps
+    2 + // developer_fee_rate (PEN-CROSS-6)
     1 + // protocol_mode
     4 + // protocols length prefix
     1 + // destination_mode
@@ -183,6 +190,8 @@ export function computePolicyPreviewDigest(
   off = writeU64Le(view, off, fields.dailySpendingCapUsd);
   off = writeU64Le(view, off, fields.maxTransactionSizeUsd);
   off = writeU16Le(view, off, fields.maxSlippageBps);
+  // PEN-CROSS-6: developer_fee_rate at position 4 of canonical encoding.
+  off = writeU16Le(view, off, fields.developerFeeRate);
   buf[off++] = fields.protocolMode;
   off = writeU32Le(view, off, protoBytes.length);
   for (const pk of protoBytes) {

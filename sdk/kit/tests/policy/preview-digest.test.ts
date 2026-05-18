@@ -18,10 +18,14 @@
 import { expect } from "chai";
 import { computePolicyPreviewDigest } from "../../src/policy/compute-policy-preview-digest.js";
 
+// Post-PEN-CROSS-6 (Phase 2 close-up): developer_fee_rate added at position 4
+// of the canonical encoding shifts both fixture digests. Pre-fix values were
+//   HEX_MINIMAL   = 29f9a0caa6851902abe7de24ac30380ef50c220d25d541f8fe1762793152b623
+//   HEX_REALISTIC = 33d743a9643fcc6d39c30ac5f8c159d6e94d31ce354d6dd3843367773b3a8502
 const HEX_MINIMAL =
-  "29f9a0caa6851902abe7de24ac30380ef50c220d25d541f8fe1762793152b623";
+  "0ad67bf0d81b972c60abe82ebea425d4b30d0ef910bcc7b76584fae36a0f1252";
 const HEX_REALISTIC =
-  "33d743a9643fcc6d39c30ac5f8c159d6e94d31ce354d6dd3843367773b3a8502";
+  "ed9ac12d21e0f03933bbf789eae99944c311f2ff6f1baff992058307174de316";
 
 // Base58 encodings of fixed test pubkeys [1u8;32], [2u8;32], [10u8;32].
 // Computed once (see Rust unit-test fixtures `pk(1) / pk(2) / pk(10)`).
@@ -41,6 +45,7 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       dailySpendingCapUsd: 0n,
       maxTransactionSizeUsd: 0n,
       maxSlippageBps: 0,
+      developerFeeRate: 0,
       protocolMode: 1,
       protocols: [],
       destinationMode: 0,
@@ -59,6 +64,7 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       dailySpendingCapUsd: 500_000_000n,
       maxTransactionSizeUsd: 100_000_000n,
       maxSlippageBps: 100,
+      developerFeeRate: 0,
       protocolMode: 1,
       protocols: [PK_1, PK_2],
       destinationMode: 0,
@@ -77,6 +83,7 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       dailySpendingCapUsd: 1n,
       maxTransactionSizeUsd: 1n,
       maxSlippageBps: 50,
+      developerFeeRate: 0,
       protocolMode: 1,
       protocols: [PK_1],
       destinationMode: 0,
@@ -97,6 +104,7 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       dailySpendingCapUsd: 1n,
       maxTransactionSizeUsd: 1n,
       maxSlippageBps: 0,
+      developerFeeRate: 0,
       protocolMode: 1,
       protocols: [PK_1],
       destinationMode: 0,
@@ -117,6 +125,7 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       dailySpendingCapUsd: 1n,
       maxTransactionSizeUsd: 1n,
       maxSlippageBps: 0,
+      developerFeeRate: 0,
       protocolMode: 1,
       protocols: [PK_1, PK_2],
       destinationMode: 0,
@@ -133,12 +142,36 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
     expect(toHex(d1)).to.not.equal(toHex(d2));
   });
 
+  // PEN-CROSS-6 cross-impl pin: developer_fee_rate is bound by the digest.
+  // Flipping it from 0 to a non-zero value MUST change the digest.
+  it("developer_fee_rate flip changes the digest (PEN-CROSS-6)", () => {
+    const base = {
+      dailySpendingCapUsd: 500_000_000n,
+      maxTransactionSizeUsd: 100_000_000n,
+      maxSlippageBps: 100,
+      developerFeeRate: 0,
+      protocolMode: 1,
+      protocols: [PK_1],
+      destinationMode: 0,
+      allowedDestinations: [PK_10],
+      timelockDuration: 1800n,
+      sessionExpirySeconds: 30n,
+      observeOnly: false,
+      hasConstraints: false,
+      hasPostAssertions: 0,
+    } as const;
+    const d1 = computePolicyPreviewDigest(base);
+    const d2 = computePolicyPreviewDigest({ ...base, developerFeeRate: 25 });
+    expect(toHex(d1)).to.not.equal(toHex(d2));
+  });
+
   it("rejects malformed pubkey base58", () => {
     expect(() =>
       computePolicyPreviewDigest({
         dailySpendingCapUsd: 0n,
         maxTransactionSizeUsd: 0n,
         maxSlippageBps: 0,
+        developerFeeRate: 0,
         protocolMode: 1,
         protocols: ["not-a-pubkey"],
         destinationMode: 0,

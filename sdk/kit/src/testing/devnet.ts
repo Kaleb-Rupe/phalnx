@@ -273,6 +273,8 @@ export async function provisionVault(
     dailySpendingCapUsd: dailyCap,
     maxTransactionSizeUsd: maxTx,
     maxSlippageBps: 500,
+    // PEN-CROSS-6: developer_fee_rate is bound by the digest.
+    developerFeeRate: 0,
     protocolMode,
     protocols: [],
     destinationMode: 0,

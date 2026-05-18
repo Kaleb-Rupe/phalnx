@@ -571,6 +571,10 @@ export async function queuePolicyUpdate(
     changes.maxPerTrade ?? livePolicy.data.maxTransactionSizeUsd;
   const effMaxSlip =
     changes.maxSlippageBps ?? livePolicy.data.maxSlippageBps;
+  // PEN-CROSS-6: developer_fee_rate is now part of the digest. Project the
+  // merged-effective value the same way as other Option<…> fields.
+  const effDeveloperFeeRate =
+    changes.developerFeeRate ?? livePolicy.data.developerFeeRate;
   const effTimelock =
     changes.timelock != null
       ? BigInt(changes.timelock)
@@ -582,6 +586,7 @@ export async function queuePolicyUpdate(
     dailySpendingCapUsd: effDaily,
     maxTransactionSizeUsd: effMaxTx,
     maxSlippageBps: effMaxSlip,
+    developerFeeRate: effDeveloperFeeRate,
     protocolMode: effProtocolMode,
     protocols: effProtocols,
     destinationMode: effDestinationMode,

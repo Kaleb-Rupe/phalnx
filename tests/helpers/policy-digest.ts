@@ -10,15 +10,16 @@
  *   1. daily_spending_cap_usd: u64 LE
  *   2. max_transaction_size_usd: u64 LE
  *   3. max_slippage_bps: u16 LE
- *   4. protocol_mode: u8
- *   5. protocols: Vec<Pubkey>  (u32 LE len + 32 bytes each)
- *   6. destination_mode: u8
- *   7. allowed_destinations: Vec<Pubkey>
- *   8. timelock_duration: u64 LE
- *   9. session_expiry_seconds: u64 LE
- *   10. observe_only: bool (1 byte 0/1)
- *   11. has_constraints: bool (1 byte 0/1)
- *   12. has_post_assertions: u8
+ *   4. developer_fee_rate: u16 LE — PEN-CROSS-6 (Phase 2 close-up)
+ *   5. protocol_mode: u8
+ *   6. protocols: Vec<Pubkey>  (u32 LE len + 32 bytes each)
+ *   7. destination_mode: u8
+ *   8. allowed_destinations: Vec<Pubkey>
+ *   9. timelock_duration: u64 LE
+ *   10. session_expiry_seconds: u64 LE
+ *   11. observe_only: bool (1 byte 0/1)
+ *   12. has_constraints: bool (1 byte 0/1)
+ *   13. has_post_assertions: u8
  */
 
 import { createHash } from "crypto";
@@ -29,6 +30,11 @@ export interface PolicyDigestFields {
   dailySpendingCapUsd: BN | bigint | number;
   maxTransactionSizeUsd: BN | bigint | number;
   maxSlippageBps: number;
+  /**
+   * PEN-CROSS-6 (Phase 2 close-up): now part of the canonical digest encoding.
+   * Optional with default 0 so legacy callers continue to pin a 0-fee policy.
+   */
+  developerFeeRate?: number;
   protocolMode: number;
   protocols: PublicKey[];
   destinationMode: number;
@@ -81,6 +87,8 @@ export function computePolicyPreviewDigest(
   parts.push(u64le(fields.dailySpendingCapUsd));
   parts.push(u64le(fields.maxTransactionSizeUsd));
   parts.push(u16le(fields.maxSlippageBps));
+  // PEN-CROSS-6: developer_fee_rate at position 4 of canonical encoding.
+  parts.push(u16le(fields.developerFeeRate ?? 0));
   parts.push(u8(fields.protocolMode));
   parts.push(u32le(fields.protocols.length));
   for (const p of fields.protocols) parts.push(p.toBuffer());
@@ -115,6 +123,12 @@ export function initVaultPreviewDigest(args: {
   dailySpendingCapUsd: BN | bigint | number;
   maxTransactionSizeUsd: BN | bigint | number;
   maxSlippageBps: number;
+  /**
+   * Optional — defaults to 0 so existing fixtures need no update. The on-chain
+   * `initialize_vault` handler will recompute against the caller's
+   * `developer_fee_rate` ix arg; the two MUST match.
+   */
+  developerFeeRate?: number;
   protocolMode: number;
   protocols: PublicKey[];
   allowedDestinations: PublicKey[];
@@ -125,6 +139,7 @@ export function initVaultPreviewDigest(args: {
     dailySpendingCapUsd: args.dailySpendingCapUsd,
     maxTransactionSizeUsd: args.maxTransactionSizeUsd,
     maxSlippageBps: args.maxSlippageBps,
+    developerFeeRate: args.developerFeeRate ?? 0,
     protocolMode: args.protocolMode,
     protocols: args.protocols,
     destinationMode: 0,
@@ -153,6 +168,8 @@ export interface LiveLikePolicy {
   dailySpendingCapUsd: BN | bigint;
   maxTransactionSizeUsd: BN | bigint;
   maxSlippageBps: number;
+  /** PEN-CROSS-6: bound by the canonical digest. */
+  developerFeeRate?: number;
   protocolMode: number;
   protocols: PublicKey[];
   destinationMode: number;
@@ -167,6 +184,7 @@ export interface QueueOverride {
   dailySpendingCapUsd?: BN | bigint | number | null;
   maxTransactionSizeUsd?: BN | bigint | number | null;
   maxSlippageBps?: number | null;
+  developerFeeRate?: number | null;
   protocolMode?: number | null;
   protocols?: PublicKey[] | null;
   destinationMode?: number | null;
@@ -191,6 +209,8 @@ export function queuePolicyMergedDigest(
       live.maxTransactionSizeUsd,
     ),
     maxSlippageBps: pick(override.maxSlippageBps, live.maxSlippageBps),
+    // PEN-CROSS-6: developer_fee_rate flows through the merge identically.
+    developerFeeRate: pick(override.developerFeeRate, live.developerFeeRate ?? 0),
     protocolMode: pick(override.protocolMode, live.protocolMode),
     protocols: pick(override.protocols, live.protocols),
     destinationMode: pick(override.destinationMode, live.destinationMode),
@@ -229,6 +249,7 @@ export async function fetchAndComputeQueueDigest(
     dailySpendingCapUsd: policy.dailySpendingCapUsd,
     maxTransactionSizeUsd: policy.maxTransactionSizeUsd,
     maxSlippageBps: policy.maxSlippageBps,
+    developerFeeRate: policy.developerFeeRate ?? 0,
     protocolMode: policy.protocolMode,
     protocols: policy.protocols,
     destinationMode: policy.destinationMode,

@@ -155,6 +155,9 @@ pub fn handler(
     let eff_daily = daily_spending_cap_usd.unwrap_or(policy.daily_spending_cap_usd);
     let eff_max_tx = max_transaction_amount_usd.unwrap_or(policy.max_transaction_size_usd);
     let eff_max_slip = max_slippage_bps.unwrap_or(policy.max_slippage_bps);
+    // PEN-CROSS-6: developer_fee_rate is now part of the digest. Project the
+    // merged-effective value the same way as other Option<…> fields.
+    let eff_developer_fee_rate = developer_fee_rate.unwrap_or(policy.developer_fee_rate);
     let eff_protocol_mode = protocol_mode.unwrap_or(policy.protocol_mode);
     let eff_protocols_owned: Vec<Pubkey> = protocols
         .as_ref()
@@ -181,6 +184,7 @@ pub fn handler(
         daily_spending_cap_usd: eff_daily,
         max_transaction_size_usd: eff_max_tx,
         max_slippage_bps: eff_max_slip,
+        developer_fee_rate: eff_developer_fee_rate,
         protocol_mode: eff_protocol_mode,
         protocols: &eff_protocols_owned,
         destination_mode: eff_dest_mode,
