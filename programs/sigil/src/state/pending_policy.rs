@@ -35,12 +35,27 @@ pub struct PendingPolicyUpdate {
     pub has_protocol_caps: Option<bool>,
     pub protocol_caps: Option<Vec<u64>>,
 
-    /// Destination access control mode update (F-4 audit fix).
-    /// Some(0) = Restricted, Some(1) = OpenWithCap, None = leave unchanged.
+    /// Destination access control mode update.
+    /// Phase 2 Option A: only Some(0) (RESTRICTED) is accepted. Some(1) was deleted.
     pub destination_mode: Option<u8>,
 
     /// Bump seed for PDA
     pub bump: u8,
+
+    /// TA-19 (Phase 2): SHA-256 digest of the canonical Borsh encoding of the
+    /// policy fields THAT WOULD RESULT FROM APPLYING this pending update over
+    /// the live policy. Owner computes off-chain over the merged result and
+    /// includes the digest in `queue_policy_update`; `apply_pending_policy`
+    /// re-asserts the digest against a re-computed merged digest before any
+    /// field is copied to the live policy. Defends against pending-PDA
+    /// tampering between queue and apply (e.g., partial overwrite via a
+    /// rogue program with the same account discriminator).
+    ///
+    /// Encoding identical to `PolicyConfig.policy_preview_digest` — see that
+    /// field's doc-comment for the canonical encoding ordering.
+    ///
+    /// APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
+    pub new_policy_preview_digest: [u8; 32],
 }
 
 impl PendingPolicyUpdate {
@@ -62,7 +77,8 @@ impl PendingPolicyUpdate {
         + (1 + 1) // has_protocol_caps
         + (1 + 4 + 8 * MAX_ALLOWED_PROTOCOLS) // protocol_caps
         + (1 + 1) // destination_mode (Option<u8>)
-        + 1; // bump
+        + 1 // bump
+        + 32; // new_policy_preview_digest [TA-19, Phase 2]
 
     /// Returns true if the timelock period has expired and the update
     /// can be applied.
