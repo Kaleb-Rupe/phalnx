@@ -565,47 +565,13 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
                     let operator = ConstraintOperator::try_from(entry.operator)
                         .map_err(|_| error!(SigilError::InvalidConstraintOperator))?;
 
-                    // Phase B3: CrossFieldLte — ratio check using two offsets
-                    if entry.cross_field_flags & 0x01 != 0 {
-                        let offset_b = u16::from_le_bytes(entry.cross_field_offset_b) as usize;
-                        let end_b = offset_b
-                            .checked_add(len)
-                            .ok_or(error!(SigilError::PostAssertionFailed))?;
-                        require!(end_b <= target_data.len(), SigilError::PostAssertionFailed);
-                        let field_b_bytes = &target_data[offset_b..end_b];
-
-                        // Parse as little-endian unsigned integers
-                        let mut a_buf = [0u8; 8];
-                        let mut b_buf = [0u8; 8];
-                        a_buf[..len].copy_from_slice(actual);
-                        b_buf[..len].copy_from_slice(field_b_bytes);
-                        let field_a = u64::from_le_bytes(a_buf);
-                        let field_b = u64::from_le_bytes(b_buf);
-
-                        let multiplier =
-                            u32::from_le_bytes(entry.cross_field_multiplier_bps) as u128;
-
-                        // Handle field_B = 0 explicitly (security audit H5)
-                        if field_b == 0 {
-                            require!(field_a == 0, SigilError::PostAssertionFailed);
-                        } else {
-                            // Cross-multiply with u128 to avoid overflow (security audit M1)
-                            let lhs = (field_a as u128)
-                                .checked_mul(10000u128)
-                                .ok_or(error!(SigilError::Overflow))?;
-                            let rhs = multiplier
-                                .checked_mul(field_b as u128)
-                                .ok_or(error!(SigilError::Overflow))?;
-                            require!(lhs <= rhs, SigilError::PostAssertionFailed);
-                        }
-                    } else {
-                        // Standard absolute comparison (B1)
-                        let passed =
-                            crate::instructions::integrations::generic_constraints::bytes_match(
-                                actual, &operator, expected,
-                            );
-                        require!(passed, SigilError::PostAssertionFailed);
-                    }
+                    // Phase B3 CrossFieldLte branch DELETED in Phase 1 Option A demolition.
+                    // Standard absolute comparison (B1) is now the sole path.
+                    let passed =
+                        crate::instructions::integrations::generic_constraints::bytes_match(
+                            actual, &operator, expected,
+                        );
+                    require!(passed, SigilError::PostAssertionFailed);
                 }
                 crate::state::post_assertions::AssertionMode::MaxDecrease => {
                     // Phase B2: check (snapshot - current) ≤ expected_value

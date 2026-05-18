@@ -42,7 +42,12 @@ impl TryFrom<u8> for AssertionMode {
 /// vault owner configures byte offsets from protocol documentation.
 ///
 /// Phase B1: absolute value assertions (check field ≤ max, field ≥ min).
-/// Phase B3 will add CrossFieldLte for leverage ratio enforcement.
+/// Phase B2: delta-mode assertions (MaxDecrease, MaxIncrease, NoChange).
+///
+/// Phase B3 CrossFieldLte fields (cross_field_offset_b, cross_field_multiplier_bps,
+/// cross_field_flags) DELETED in Phase 1 Option A demolition (L-1). The two-field
+/// ratio check (field_A × 10000 ≤ multiplier_bps × field_B) was Jupiter-Perps-flavored
+/// leverage-cap logic that doesn't generalize to a per-vault generic primitive.
 #[zero_copy]
 pub struct PostAssertionEntryZC {
     /// The account to read after execution (passed via remaining_accounts).
@@ -71,24 +76,14 @@ pub struct PostAssertionEntryZC {
     /// 3 = NoChange: check current == snapshot — byte-for-byte equality (Phase B2)
     pub assertion_mode: u8, // 1
 
-    /// Phase B3: Second field offset for CrossFieldLte (little-endian u16).
-    /// When cross_field_flags & 0x01: read field_B at offset_b (value_len bytes) from same target.
-    /// Check: field_A × 10000 ≤ multiplier_bps × field_B (using u128 arithmetic).
-    /// Stored as [u8; 2] for zero-copy Pod alignment compatibility.
-    pub cross_field_offset_b: [u8; 2], // 2
-
-    /// Phase B3: Multiplier in basis points for CrossFieldLte (little-endian u32).
-    /// 10000 = 1.0x, 100000 = 10x, 5000000 = 500x.
-    /// Must be > 0 when cross_field_flags is enabled.
-    /// Stored as [u8; 4] for zero-copy Pod alignment compatibility.
-    pub cross_field_multiplier_bps: [u8; 4], // 4
-
-    /// Phase B3: Flags byte. Bit 0 = enable CrossFieldLte.
-    /// When enabled, assertion_mode MUST be 0 (Absolute).
-    /// Unknown bits (1-7) must be 0.
-    pub cross_field_flags: u8, // 1
+    /// Explicit padding to make total entry size even (Pod requires no implicit
+    /// padding; struct alignment is 2 because of `offset: u16`). Without this
+    /// byte, derive(Pod) panics with "type with padding" since 69 is odd.
+    /// Added in Phase 1 Option A demolition after Phase B3 CrossFieldLte
+    /// fields (7 bytes) were deleted.
+    pub _padding: u8, // 1
 }
-// = 76 bytes per entry (32 + 2 + 1 + 1 + 32 + 1 + 2 + 4 + 1 = 76)
+// = 70 bytes per entry (32 + 2 + 1 + 1 + 32 + 1 + 1 = 70)
 
 /// On-chain account storing post-execution assertions for a vault.
 /// Seeds: [b"post_assertions", vault.key()]
@@ -98,7 +93,7 @@ pub struct PostExecutionAssertions {
     pub vault: [u8; 32], // 32
 
     /// Assertion entries (fixed-size array, up to MAX_POST_ASSERTION_ENTRIES).
-    pub entries: [PostAssertionEntryZC; MAX_POST_ASSERTION_ENTRIES], // 4 * 76 = 304
+    pub entries: [PostAssertionEntryZC; MAX_POST_ASSERTION_ENTRIES], // 4 * 70 = 280
 
     /// Number of active entries (0..=4).
     pub entry_count: u8, // 1
@@ -109,10 +104,10 @@ pub struct PostExecutionAssertions {
     /// Reserved for future use.
     pub _padding: [u8; 6], // 6
 }
-// Total: 8 (discriminator) + 32 + 304 + 1 + 1 + 6 = 352 bytes
+// Total: 8 (discriminator) + 32 + 280 + 1 + 1 + 6 = 328 bytes
 
 impl PostExecutionAssertions {
-    pub const SIZE: usize = 8 + 32 + (76 * MAX_POST_ASSERTION_ENTRIES) + 1 + 1 + 6;
+    pub const SIZE: usize = 8 + 32 + (70 * MAX_POST_ASSERTION_ENTRIES) + 1 + 1 + 6;
 
     /// Validate a set of assertion entries before storing.
     pub fn validate_entries(entries: &[PostAssertionEntry]) -> Result<()> {
@@ -151,41 +146,16 @@ impl PostExecutionAssertions {
                 );
             }
 
-            // Phase B3: CrossFieldLte validation
-            if entry.cross_field_flags & 0x01 != 0 {
-                // CrossFieldLte parses fields as u64 — value_len must fit (audit C1)
-                require!(
-                    entry.value_len <= 8,
-                    crate::errors::SigilError::InvalidConstraintConfig
-                );
-                // CrossFieldLte only composes with Absolute mode
-                require!(
-                    entry.assertion_mode == 0,
-                    crate::errors::SigilError::InvalidConstraintConfig
-                );
-                // Multiplier must be positive
-                require!(
-                    entry.cross_field_multiplier_bps > 0,
-                    crate::errors::SigilError::InvalidConstraintConfig
-                );
-                // No unknown flags
-                require!(
-                    entry.cross_field_flags & 0xFE == 0,
-                    crate::errors::SigilError::InvalidConstraintConfig
-                );
-            } else {
-                // When CrossFieldLte disabled, B3 fields must be zeroed
-                require!(
-                    entry.cross_field_offset_b == 0 && entry.cross_field_multiplier_bps == 0,
-                    crate::errors::SigilError::InvalidConstraintConfig
-                );
-            }
+            // Phase B3 CrossFieldLte validation block DELETED in Phase 1 Option A demolition.
         }
         Ok(())
     }
 }
 
 /// Borsh-serializable assertion entry (instruction parameter form).
+///
+/// Phase B3 fields (cross_field_offset_b, cross_field_multiplier_bps,
+/// cross_field_flags) DELETED in Phase 1 Option A demolition.
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
 pub struct PostAssertionEntry {
     pub target_account: Pubkey,
@@ -194,12 +164,6 @@ pub struct PostAssertionEntry {
     pub operator: u8,
     pub expected_value: Vec<u8>,
     pub assertion_mode: u8,
-    /// Phase B3: second field offset for CrossFieldLte (0 if unused)
-    pub cross_field_offset_b: u16,
-    /// Phase B3: multiplier in BPS for CrossFieldLte (0 if unused)
-    pub cross_field_multiplier_bps: u32,
-    /// Phase B3: flags byte — bit 0 = enable CrossFieldLte (0 if unused)
-    pub cross_field_flags: u8,
 }
 
 #[cfg(test)]
@@ -216,25 +180,11 @@ mod tests {
             operator: 0, // Eq
             expected_value: vec![0u8; value_len as usize],
             assertion_mode: mode,
-            cross_field_offset_b: 0,
-            cross_field_multiplier_bps: 0,
-            cross_field_flags: 0,
         }
     }
 
-    fn mk_crossfield_entry(multiplier_bps: u32, flags: u8) -> PostAssertionEntry {
-        PostAssertionEntry {
-            target_account: Pubkey::default(),
-            offset: 0,
-            value_len: 8,
-            operator: 0,
-            expected_value: vec![0u8; 8],
-            assertion_mode: 0, // Absolute — required for CrossFieldLte
-            cross_field_offset_b: 100,
-            cross_field_multiplier_bps: multiplier_bps,
-            cross_field_flags: flags,
-        }
-    }
+    // mk_crossfield_entry DELETED in Phase 1 Option A demolition along with
+    // the seven CrossFieldLte tests below it.
 
     // ─── AssertionMode TryFrom<u8> ──────────────────────────────────────
 
@@ -308,60 +258,13 @@ mod tests {
         assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
     }
 
-    // ─── B3: CrossFieldLte in validate_entries ──────────────────────────
-
-    #[test]
-    fn validate_accepts_crossfield_enabled_absolute_mode_positive_multiplier() {
-        // flags=1 (enabled), mode=0 (Absolute), multiplier>0 → valid
-        let entries = vec![mk_crossfield_entry(10_000, 1)];
-        assert!(PostExecutionAssertions::validate_entries(&entries).is_ok());
-    }
-
-    #[test]
-    fn validate_rejects_crossfield_enabled_with_delta_mode() {
-        // flags=1 (enabled) but mode=1 (MaxDecrease) → must be Absolute
-        let mut entry = mk_crossfield_entry(10_000, 1);
-        entry.assertion_mode = 1;
-        let entries = vec![entry];
-        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
-    }
-
-    #[test]
-    fn validate_rejects_crossfield_enabled_with_zero_multiplier() {
-        // flags=1 (enabled) but multiplier=0 → invalid
-        let entries = vec![mk_crossfield_entry(0, 1)];
-        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
-    }
-
-    #[test]
-    fn validate_rejects_crossfield_enabled_with_unknown_flags() {
-        // flags=3 (bit 0 + bit 1 set) → unknown bit 1 must be rejected
-        let entries = vec![mk_crossfield_entry(10_000, 3)];
-        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
-    }
-
-    #[test]
-    fn validate_accepts_crossfield_disabled_zeroed_fields() {
-        // flags=0 (disabled), offset_b=0, multiplier=0 → valid
-        let entries = vec![mk_assertion_entry(0, 8)]; // all B3 fields are 0
-        assert!(PostExecutionAssertions::validate_entries(&entries).is_ok());
-    }
-
-    #[test]
-    fn validate_rejects_crossfield_disabled_but_nonzero_offset_b() {
-        // flags=0 (disabled) but offset_b != 0 → unused fields must be zeroed
-        let mut entry = mk_assertion_entry(0, 8);
-        entry.cross_field_offset_b = 42;
-        let entries = vec![entry];
-        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
-    }
-
-    #[test]
-    fn validate_rejects_crossfield_disabled_but_nonzero_multiplier() {
-        // flags=0 (disabled) but multiplier != 0 → unused fields must be zeroed
-        let mut entry = mk_assertion_entry(0, 8);
-        entry.cross_field_multiplier_bps = 5000;
-        let entries = vec![entry];
-        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
-    }
+    // B3 CrossFieldLte tests DELETED in Phase 1 Option A demolition.
+    // The 7 deleted tests covered:
+    //   - validate_accepts_crossfield_enabled_absolute_mode_positive_multiplier
+    //   - validate_rejects_crossfield_enabled_with_delta_mode
+    //   - validate_rejects_crossfield_enabled_with_zero_multiplier
+    //   - validate_rejects_crossfield_enabled_with_unknown_flags
+    //   - validate_accepts_crossfield_disabled_zeroed_fields
+    //   - validate_rejects_crossfield_disabled_but_nonzero_offset_b
+    //   - validate_rejects_crossfield_disabled_but_nonzero_multiplier
 }
