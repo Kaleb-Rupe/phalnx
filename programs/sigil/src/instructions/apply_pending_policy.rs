@@ -190,6 +190,13 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
         );
         policy.operating_hours = hours;
     }
+    // TA-12 (Phase 5): apply optional stable_balance_floor update.
+    // The new value is recomputed into the second-pass TA-19 digest
+    // below so a tampered pending PDA that lowered the floor between
+    // queue and apply produces a digest mismatch.
+    if let Some(floor) = pending.stable_balance_floor {
+        policy.stable_balance_floor = floor;
+    }
     // Phase 2 Option A: defense-in-depth — re-validate protocol_mode if pending overrode it.
     if let Some(mode) = pending.protocol_mode {
         require!(
@@ -242,6 +249,10 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
         // values if pending overrode them).
         auto_promote_grays: policy.auto_promote_grays,
         auto_revoke_threshold: policy.auto_revoke_threshold,
+        // TA-12 (Phase 5): stable_balance_floor is policy-owned and bound
+        // by TA-19. apply_pending_policy reads live (applied) value so
+        // the second-pass digest matches what queue_policy_update bound.
+        stable_balance_floor: policy.stable_balance_floor,
     });
     require!(
         recomputed_digest == pending.new_policy_preview_digest,

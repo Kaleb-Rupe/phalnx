@@ -105,6 +105,8 @@ pub fn handler(
         // TA-07/17 (Phase 3): bound by TA-19, never mutated by this ix.
         auto_promote_grays: policy.auto_promote_grays,
         auto_revoke_threshold: policy.auto_revoke_threshold,
+        // TA-12 (Phase 5): bound by TA-19, never mutated by this ix.
+        stable_balance_floor: policy.stable_balance_floor,
     });
     // PEN-CROSS-3: owner must have signed the post-mutation digest.
     require!(

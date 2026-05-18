@@ -2752,6 +2752,10 @@ export type Sigil = {
           "type": "u8"
         },
         {
+          "name": "stableBalanceFloor",
+          "type": "u64"
+        },
+        {
           "name": "previewDigest",
           "type": {
             "array": [
@@ -3584,6 +3588,12 @@ export type Sigil = {
           "name": "operatingHours",
           "type": {
             "option": "u32"
+          }
+        },
+        {
+          "name": "stableBalanceFloor",
+          "type": {
+            "option": "u64"
           }
         },
         {
@@ -5682,6 +5692,21 @@ export type Sigil = {
       "code": 6093,
       "name": "errSessionNonceMismatch",
       "msg": "Session nonce mismatch — caller's expected_nonce does not match the session's stored nonce (durable-nonce replay defense)"
+    },
+    {
+      "code": 6094,
+      "name": "errStableFloorViolation",
+      "msg": "Stable balance floor violated — combined USDC+USDT balance dropped below policy.stable_balance_floor"
+    },
+    {
+      "code": 6095,
+      "name": "errDailyCapExceeded",
+      "msg": "Per-protocol daily spending cap would be exceeded (rolling 24h)"
+    },
+    {
+      "code": 6096,
+      "name": "errRecipientCapExceeded",
+      "msg": "Per-recipient daily cap exceeded — recipient outflow would breach policy.per_recipient_daily_cap_usd within the rolling 24h window, or per_recipient array full with no expired slot to evict"
     }
   ],
   "types": [
@@ -7664,6 +7689,19 @@ export type Sigil = {
                 32
               ]
             }
+          },
+          {
+            "name": "stableBalanceFloor",
+            "docs": [
+              "TA-12 (Phase 5): optional update to `PolicyConfig.stable_balance_floor`.",
+              "None = preserve live value; Some(n) = set to n. Bound by TA-19 at",
+              "canonical digest position 18.",
+              "",
+              "APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability."
+            ],
+            "type": {
+              "option": "u64"
+            }
           }
         ]
       }
@@ -8015,6 +8053,15 @@ export type Sigil = {
               "F-14 APPEND-ONLY rule."
             ],
             "type": "u8"
+          },
+          {
+            "name": "stableBalanceFloor",
+            "docs": [
+              "TA-12 (Phase 5 post-execution invariant #1): hard floor on the",
+              "combined USDC + USDT balance held by the vault. Bound by TA-19",
+              "at canonical digest position 18. APPENDED per F-14 APPEND-ONLY rule."
+            ],
+            "type": "u64"
           }
         ]
       }

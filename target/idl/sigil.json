@@ -2746,6 +2746,10 @@
           "type": "u8"
         },
         {
+          "name": "stable_balance_floor",
+          "type": "u64"
+        },
+        {
           "name": "preview_digest",
           "type": {
             "array": [
@@ -3585,6 +3589,12 @@
           "name": "operating_hours",
           "type": {
             "option": "u32"
+          }
+        },
+        {
+          "name": "stable_balance_floor",
+          "type": {
+            "option": "u64"
           }
         },
         {
@@ -5704,6 +5714,21 @@
       "code": 6093,
       "name": "ErrSessionNonceMismatch",
       "msg": "Session nonce mismatch \u2014 caller's expected_nonce does not match the session's stored nonce (durable-nonce replay defense)"
+    },
+    {
+      "code": 6094,
+      "name": "ErrStableFloorViolation",
+      "msg": "Stable balance floor violated \u2014 combined USDC+USDT balance dropped below policy.stable_balance_floor"
+    },
+    {
+      "code": 6095,
+      "name": "ErrDailyCapExceeded",
+      "msg": "Per-protocol daily spending cap would be exceeded (rolling 24h)"
+    },
+    {
+      "code": 6096,
+      "name": "ErrRecipientCapExceeded",
+      "msg": "Per-recipient daily cap exceeded \u2014 recipient outflow would breach policy.per_recipient_daily_cap_usd within the rolling 24h window, or per_recipient array full with no expired slot to evict"
     }
   ],
   "types": [
@@ -7686,6 +7711,19 @@
                 32
               ]
             }
+          },
+          {
+            "name": "stable_balance_floor",
+            "docs": [
+              "TA-12 (Phase 5): optional update to `PolicyConfig.stable_balance_floor`.",
+              "None = preserve live value; Some(n) = set to n. Bound by TA-19 at",
+              "canonical digest position 18.",
+              "",
+              "APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability."
+            ],
+            "type": {
+              "option": "u64"
+            }
           }
         ]
       }
@@ -8037,6 +8075,15 @@
               "F-14 APPEND-ONLY rule."
             ],
             "type": "u8"
+          },
+          {
+            "name": "stable_balance_floor",
+            "docs": [
+              "TA-12 (Phase 5 post-execution invariant #1): hard floor on the",
+              "combined USDC + USDT balance held by the vault. Bound by TA-19",
+              "at canonical digest position 18. APPENDED per F-14 APPEND-ONLY rule."
+            ],
+            "type": "u64"
           }
         ]
       }

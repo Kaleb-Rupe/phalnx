@@ -40,6 +40,9 @@ pub mod sigil {
         operating_hours: u32,
         auto_promote_grays: bool,
         auto_revoke_threshold: u8,
+        // TA-12 (Phase 5): owner's hard floor on combined USDC+USDT vault
+        // balance. Default 0 = no reserve. Bound by TA-19 at digest position 18.
+        stable_balance_floor: u64,
         preview_digest: [u8; 32],
     ) -> Result<()> {
         instructions::initialize_vault::handler(
@@ -58,6 +61,7 @@ pub mod sigil {
             operating_hours,
             auto_promote_grays,
             auto_revoke_threshold,
+            stable_balance_floor,
             preview_digest,
         )
     }
@@ -160,6 +164,9 @@ pub mod sigil {
         protocol_caps: Option<Vec<u64>>,
         destination_mode: Option<u8>,
         operating_hours: Option<u32>,
+        // TA-12 (Phase 5): optional update to PolicyConfig.stable_balance_floor.
+        // None passes the live value through; Some(n) sets the new floor.
+        stable_balance_floor: Option<u64>,
         cosign_session: Pubkey,
         new_policy_preview_digest: [u8; 32],
     ) -> Result<()> {
@@ -178,6 +185,7 @@ pub mod sigil {
             protocol_caps,
             destination_mode,
             operating_hours,
+            stable_balance_floor,
             cosign_session,
             new_policy_preview_digest,
         )

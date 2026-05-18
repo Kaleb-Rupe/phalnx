@@ -211,6 +211,25 @@ pub struct PolicyConfig {
     /// Bound by TA-19 at canonical digest position 17. APPENDED per
     /// F-14 APPEND-ONLY rule.
     pub auto_revoke_threshold: u8,
+
+    /// TA-12 (Phase 5 post-execution invariant #1): hard floor on the
+    /// combined USDC + USDT balance held by the vault. After every
+    /// `finalize_session` spending path completes (CPI balance audit +
+    /// rolling-cap + per-agent + per-protocol bookkeeping), the handler
+    /// re-reads the vault's USDC + USDT token-account balances and
+    /// asserts their sum is ≥ this value. If not, it rejects with
+    /// `ErrStableFloorViolation` (6094).
+    ///
+    /// This is the LAST defensive line — no combination of attacks (CPI
+    /// drain, per-protocol cap bypass via async fulfillment, fee
+    /// inflation, slippage manipulation) may drain the vault below this
+    /// line. Default 0 (no reserve — preserves all existing vault
+    /// behavior). Owner-configurable via `initialize_vault` and
+    /// `queue_policy_update`.
+    ///
+    /// Bound by TA-19 at canonical digest position 18. APPENDED per
+    /// F-14 APPEND-ONLY rule for Borsh stability.
+    pub stable_balance_floor: u64,
 }
 
 /// TA-07 (Phase 3): one entry in `PolicyConfig.destination_graylist`.
@@ -245,9 +264,10 @@ impl PolicyConfig {
     /// policy_version (8) + has_post_assertions (1) + destination_mode (1) +
     /// policy_preview_digest (32) + created_at_slot (8) + operating_hours (4) +
     /// destination_graylist vec (4 + 40 * MAX_ALLOWED_DESTINATIONS) +
-    /// auto_promote_grays (1) + auto_revoke_threshold (1)
+    /// auto_promote_grays (1) + auto_revoke_threshold (1) +
+    /// stable_balance_floor (8) [TA-12 Phase 5]
     /// [TA-19, Phase 2; PEN-CROSS-2 Phase 2 close-up;
-    ///  TA-05/07/17 Phase 3 pre-exec]
+    ///  TA-05/07/17 Phase 3 pre-exec; TA-12 Phase 5]
     pub const SIZE: usize = 8
         + 32
         + 8
@@ -272,7 +292,8 @@ impl PolicyConfig {
         + 4 // operating_hours [TA-05 Phase 3]
         + (4 + DestinationGraylistEntry::SIZE * MAX_ALLOWED_DESTINATIONS) // graylist [TA-07]
         + 1 // auto_promote_grays [TA-07]
-        + 1; // auto_revoke_threshold [TA-17]
+        + 1 // auto_revoke_threshold [TA-17]
+        + 8; // stable_balance_floor [TA-12 Phase 5]
 
     /// Check if a protocol is allowed.
     ///

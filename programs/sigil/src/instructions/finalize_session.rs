@@ -450,6 +450,135 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
         drop(tracker);
     }
 
+    // ─── TA-12 (Phase 5 post-exec invariant #1): stable balance floor ──
+    //
+    // After ALL spending paths complete (DeFi spend bookkeeping, fee
+    // collection, fee-to-cap fallback), assert the combined USDC+USDT
+    // balance held by this vault is ≥ policy.stable_balance_floor.
+    //
+    // The floor is the LAST defensive line — no combination of attacks
+    // (CPI drain, per-protocol cap evasion via async fulfillment, fee
+    // inflation, slippage manipulation) may drain the vault below it.
+    //
+    // Sources of vault stablecoin ATAs (in priority order):
+    //   1. `vault_token_account` (Option<TokenAccount>) — when present,
+    //      validate owner == vault + mint ∈ {USDC, USDT}, contribute amount.
+    //   2. `output_stablecoin_account` (Option<TokenAccount>) — same checks.
+    //   3. `ctx.remaining_accounts` — every account whose deserialized SPL
+    //      TokenAccount has owner == vault + mint ∈ {USDC, USDT}. Caller
+    //      MUST include the OTHER stablecoin ATA when only one stablecoin
+    //      session is in scope (e.g. USDC→SOL session needs vault's USDT
+    //      ATA passed via remaining_accounts for the floor check).
+    //
+    // Default policy.stable_balance_floor = 0 means "no reserve" — the
+    // check passes trivially. Owners explicitly opt in by setting a
+    // non-zero value via initialize_vault or queue_policy_update.
+    //
+    // The §RP brief explicitly calls out attack class "wrong pubkey
+    // (parses ATA pubkey instead of owner field)" — we MUST resolve
+    // via SPL TokenAccount.owner (the WALLET that holds the token
+    // account), NOT the meta pubkey. Same fix applies here.
+    let stable_floor_policy = &ctx.accounts.policy;
+    if stable_floor_policy.stable_balance_floor > 0 {
+        let mut combined_stable_balance: u64 = 0;
+
+        // Source 1: vault_token_account
+        if let Some(acct) = ctx.accounts.vault_token_account.as_ref() {
+            if acct.owner == vault_key && is_stablecoin_mint(&acct.mint) {
+                combined_stable_balance = combined_stable_balance
+                    .checked_add(acct.amount)
+                    .ok_or(SigilError::Overflow)?;
+            }
+        }
+
+        // Source 2: output_stablecoin_account (skip if it's the SAME
+        // pubkey as vault_token_account — defends against double-count
+        // when the same ATA is passed in both slots).
+        if let Some(acct) = ctx.accounts.output_stablecoin_account.as_ref() {
+            let same_as_input = ctx
+                .accounts
+                .vault_token_account
+                .as_ref()
+                .is_some_and(|t| t.key() == acct.key());
+            if !same_as_input && acct.owner == vault_key && is_stablecoin_mint(&acct.mint) {
+                combined_stable_balance = combined_stable_balance
+                    .checked_add(acct.amount)
+                    .ok_or(SigilError::Overflow)?;
+            }
+        }
+
+        // Source 3: remaining_accounts — caller passes any additional
+        // vault stablecoin ATAs needed to cover the floor invariant.
+        // We deserialize each as an SPL TokenAccount and check
+        // owner=vault + mint∈{USDC,USDT}. De-duplicate by pubkey to
+        // defend against double-count from a caller passing the same
+        // ATA twice.
+        let already_counted_a = ctx.accounts.vault_token_account.as_ref().map(|t| t.key());
+        let already_counted_b = ctx
+            .accounts
+            .output_stablecoin_account
+            .as_ref()
+            .map(|t| t.key());
+        let mut seen: Vec<Pubkey> = Vec::with_capacity(2);
+        if let Some(k) = already_counted_a {
+            seen.push(k);
+        }
+        if let Some(k) = already_counted_b {
+            if !seen.contains(&k) {
+                seen.push(k);
+            }
+        }
+        for info in ctx.remaining_accounts.iter() {
+            if seen.contains(&info.key()) {
+                continue;
+            }
+            // Defensive: must be a token-program-owned account. Accept
+            // both SPL Token and Token-2022 — the first 72 bytes of the
+            // serialized layout (mint, owner, amount) are identical
+            // between the two, and Token-2022 ConfidentialTransfer
+            // extensions are blocked at validate time so the amount
+            // field is always ground-truth.
+            if info.owner != &anchor_spl::token::ID && info.owner != &TOKEN_2022_PROGRAM_ID {
+                continue;
+            }
+            let data = info.try_borrow_data()?;
+            // SPL TokenAccount packed length = 165 bytes (no extension).
+            // Token-2022 accounts may be larger but the prefix layout
+            // (mint, owner, amount) is identical for the first 72 bytes,
+            // so we only require >=72 here. Token-2022 ConfidentialTransfer
+            // extensions are blocked at validate time (Phase 1) so the
+            // amount field still reflects ground-truth balance.
+            if data.len() < 72 {
+                continue;
+            }
+            // SPL TokenAccount: bytes 0..32 = mint, 32..64 = owner,
+            // 64..72 = amount (u64 LE). Parse only the fields we need
+            // (cheaper than full deserialize).
+            let mut mint_bytes = [0u8; 32];
+            mint_bytes.copy_from_slice(&data[0..32]);
+            let mint = Pubkey::new_from_array(mint_bytes);
+            let mut owner_bytes = [0u8; 32];
+            owner_bytes.copy_from_slice(&data[32..64]);
+            let owner = Pubkey::new_from_array(owner_bytes);
+            if owner != vault_key || !is_stablecoin_mint(&mint) {
+                continue;
+            }
+            let mut amount_bytes = [0u8; 8];
+            amount_bytes.copy_from_slice(&data[64..72]);
+            let amount = u64::from_le_bytes(amount_bytes);
+            combined_stable_balance = combined_stable_balance
+                .checked_add(amount)
+                .ok_or(SigilError::Overflow)?;
+            seen.push(info.key());
+            drop(data);
+        }
+
+        require!(
+            combined_stable_balance >= stable_floor_policy.stable_balance_floor,
+            SigilError::ErrStableFloorViolation
+        );
+    }
+
     // Always track fees that were transferred in validate (regardless of expiry or outcome).
     // Fees are CPI-transferred in validate_and_authorize — accounting must match reality.
     if session_developer_fee > 0 {

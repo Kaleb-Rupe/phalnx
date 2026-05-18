@@ -168,6 +168,7 @@ describe("TOCTOU Security Fix", () => {
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -250,6 +251,7 @@ describe("TOCTOU Security Fix", () => {
           null,
           null, // destinationMode,
           null, // operating_hours (TA-05 Phase 3 — null pass-through)
+          null, // stable_balance_floor (TA-12 Phase 5 — null pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           newDigest,
         )
@@ -374,6 +376,7 @@ describe("TOCTOU Security Fix", () => {
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -423,6 +426,7 @@ describe("TOCTOU Security Fix", () => {
           null,
           null, // destinationMode,
           null, // operating_hours (TA-05 Phase 3)
+          null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
         )
@@ -460,6 +464,7 @@ describe("TOCTOU Security Fix", () => {
           null,
           null, // destinationMode,
           null, // operating_hours (TA-05 Phase 3)
+          null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
         )

@@ -68,6 +68,14 @@ pub fn handler(
     protocol_caps: Option<Vec<u64>>,
     destination_mode: Option<u8>,
     operating_hours: Option<u32>,
+    // TA-12 (Phase 5 post-exec): owner-controlled stablecoin floor.
+    // None = pass through from live policy; Some(n) = update.
+    // Bound by TA-19 at canonical digest position 18. NOTE: lowering
+    // this is an "elevated mutation" per TA-09 (deferred — Phase 9 will
+    // wire the cosign gate for floor reductions; current ix permits
+    // lowering through ordinary queue/apply since TA-09 cosign currently
+    // covers only the original 4 elevated conditions).
+    stable_balance_floor: Option<u64>,
     // TA-09 (Phase 3): the cosigning session pubkey. `Pubkey::default()`
     // means "no cosign required" (non-elevated mutation). For elevated
     // mutations the caller MUST pass a non-default pubkey AND include
@@ -212,6 +220,8 @@ pub fn handler(
     let eff_observe_only = vault.observe_only;
     let eff_has_constraints = policy.has_constraints;
     let eff_has_post_assertions = policy.has_post_assertions;
+    // TA-12 (Phase 5): merged-effective stable_balance_floor.
+    let eff_stable_balance_floor = stable_balance_floor.unwrap_or(policy.stable_balance_floor);
 
     // ─── TA-09 (Phase 3): elevated mutation detection + cosign binding ─
     //
@@ -323,6 +333,12 @@ pub fn handler(
         // owner's signed digest when the owner didn't intend to change them.
         auto_promote_grays: policy.auto_promote_grays,
         auto_revoke_threshold: policy.auto_revoke_threshold,
+        // TA-12 (Phase 5 post-exec): merged-effective stable_balance_floor
+        // bound by TA-19. When the queue does not change this field the
+        // value pass-through from live policy MUST match the owner's
+        // signed digest — defends against a tampered SDK silently
+        // lowering the reserve between queue and apply.
+        stable_balance_floor: eff_stable_balance_floor,
     });
     require!(
         recomputed_digest == new_policy_preview_digest,
@@ -363,6 +379,9 @@ pub fn handler(
     // Phase 2 TA-19: store the validated owner-signed digest. `apply_pending_policy`
     // re-asserts it after the timelock against the merged-effective policy.
     pending.new_policy_preview_digest = new_policy_preview_digest;
+    // TA-12 (Phase 5): persist optional stable_balance_floor update.
+    // None passes the live value through at apply time.
+    pending.stable_balance_floor = stable_balance_floor;
 
     ctx.accounts.policy.has_pending_policy = true;
 

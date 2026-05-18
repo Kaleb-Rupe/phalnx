@@ -80,6 +80,13 @@ pub struct PendingPolicyUpdate {
     ///
     /// APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
     pub new_policy_preview_digest: [u8; 32],
+
+    /// TA-12 (Phase 5): optional update to `PolicyConfig.stable_balance_floor`.
+    /// None = preserve live value; Some(n) = set to n. Bound by TA-19 at
+    /// canonical digest position 18.
+    ///
+    /// APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
+    pub stable_balance_floor: Option<u64>,
 }
 
 impl PendingPolicyUpdate {
@@ -105,7 +112,8 @@ impl PendingPolicyUpdate {
         + 32 // new_policy_preview_digest [TA-19, Phase 2]
         + (1 + 4) // operating_hours [TA-05, Phase 3]
         + 32 // cosign_digest [TA-09, Phase 3]
-        + 32; // cosign_session [TA-09, Phase 3]
+        + 32 // cosign_session [TA-09, Phase 3]
+        + (1 + 8); // stable_balance_floor [TA-12, Phase 5]
 
     /// Returns true if the timelock period has expired and the update
     /// can be applied.

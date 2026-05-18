@@ -913,6 +913,8 @@ export function autoSiblingHandlerDigest(
   parts.push(u32le(policy.operatingHours ?? 0));
   parts.push(u8(policy.autoPromoteGrays ? 1 : 0));
   parts.push(u8(policy.autoRevokeThreshold ?? 0));
+  // Phase 5 (TA-12): stable_balance_floor at position 18.
+  parts.push(u64le(policy.stableBalanceFloor ?? 0));
   const buf = Buffer.concat(parts);
   return Array.from(crypto.createHash("sha256").update(buf).digest());
 }

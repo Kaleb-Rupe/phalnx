@@ -20,8 +20,8 @@ import * as fc from "fast-check";
 import { createHash } from "node:crypto";
 import { computePolicyPreviewDigest } from "../../src/policy/compute-policy-preview-digest.js";
 
-// Post-TA-07/17 (Phase 3 pre-exec): auto_promote_grays + auto_revoke_threshold
-// appended at positions 16-17 of the canonical encoding.
+// Post-TA-12 (Phase 5 post-exec): stable_balance_floor appended at position 18
+// of the canonical encoding.
 // Prior values:
 //   Pre-PEN-CROSS-6:
 //     HEX_MINIMAL   = 29f9a0caa6851902abe7de24ac30380ef50c220d25d541f8fe1762793152b623
@@ -35,14 +35,17 @@ import { computePolicyPreviewDigest } from "../../src/policy/compute-policy-prev
 //   Post-TA-05 (pre-TA-07/17):
 //     HEX_MINIMAL   = f48fb07695e4b5da504654ad5281f0d39e9fcff6fa9cde64a463f1d8a8471322
 //     HEX_REALISTIC = af3990ea433e3de25baa05627f9a38ab497dffcba1e202aac99343b1de9cfc8c
+//   Post-TA-07/17 (pre-TA-12):
+//     HEX_MINIMAL   = eec4230cd52f7f567e06e9b197a0dacdc3955808d1a5a256d5975a4ac1177beb
+//     HEX_REALISTIC = 35ed9a9f97b0fa21ca581bd45f11b28c2932525101e9be063cc0d2f6bebc3c48
 //
-// TA-07/17 fixtures:
-//   - HEX_MINIMAL: autoPromoteGrays=false, autoRevokeThreshold=0
-//   - HEX_REALISTIC: autoPromoteGrays=false, autoRevokeThreshold=5
+// TA-12 fixtures:
+//   - HEX_MINIMAL: stableBalanceFloor=0 (no reserve — append 8 zero bytes)
+//   - HEX_REALISTIC: stableBalanceFloor=100_000_000 ($100 reserve)
 const HEX_MINIMAL =
-  "eec4230cd52f7f567e06e9b197a0dacdc3955808d1a5a256d5975a4ac1177beb";
+  "d3e731941e95cb1c426ccc6f2b5c53525c033f498bdb79a593bc86c98508c67a";
 const HEX_REALISTIC =
-  "35ed9a9f97b0fa21ca581bd45f11b28c2932525101e9be063cc0d2f6bebc3c48";
+  "6523cb9b64baef661d919c802a8762332d1091cb53e8245d1624f52839fc9c8c";
 
 // Base58 encodings of fixed test pubkeys [1u8;32], [2u8;32], [10u8;32].
 // Computed once (see Rust unit-test fixtures `pk(1) / pk(2) / pk(10)`).
@@ -77,6 +80,8 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       operatingHours: 0,
       autoPromoteGrays: false,
       autoRevokeThreshold: 0,
+      // TA-12: minimal fixture pins floor=0 (no reserve)
+      stableBalanceFloor: 0n,
     });
     expect(toHex(digest)).to.equal(HEX_MINIMAL);
   });
@@ -103,6 +108,8 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       autoPromoteGrays: false,
       // TA-17: realistic fixture pins auto_revoke_threshold=5 (the default)
       autoRevokeThreshold: 5,
+      // TA-12: realistic fixture pins floor=$100 (100_000_000 in 6-decimal USDC face value)
+      stableBalanceFloor: 100_000_000n,
     });
     expect(toHex(digest)).to.equal(HEX_REALISTIC);
   });
@@ -335,6 +342,39 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
     });
     expect(toHex(d1)).to.not.equal(toHex(d2));
   });
+
+  // TA-12 cross-impl pin: stable_balance_floor is bound by the digest.
+  // Flipping it from 0 to a non-zero value MUST change the digest —
+  // defends against a tampered SDK silently lowering the owner's reserve
+  // between queue and apply.
+  it("stable_balance_floor flip changes the digest (TA-12)", () => {
+    const base = {
+      dailySpendingCapUsd: 500_000_000n,
+      maxTransactionSizeUsd: 100_000_000n,
+      maxSlippageBps: 100,
+      developerFeeRate: 0,
+      protocolMode: 1,
+      protocols: [PK_1],
+      destinationMode: 0,
+      allowedDestinations: [PK_10],
+      timelockDuration: 1800n,
+      sessionExpirySeconds: 30n,
+      observeOnly: false,
+      hasConstraints: false,
+      hasPostAssertions: 0,
+      createdAtSlot: 12345n,
+      operatingHours: 0x00ffffff,
+      autoPromoteGrays: false,
+      autoRevokeThreshold: 5,
+      stableBalanceFloor: 0n,
+    } as const;
+    const d1 = computePolicyPreviewDigest(base);
+    const d2 = computePolicyPreviewDigest({
+      ...base,
+      stableBalanceFloor: 100_000_000n,
+    });
+    expect(toHex(d1)).to.not.equal(toHex(d2));
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -404,6 +444,7 @@ function referenceDigest(fields: {
   operatingHours: number;
   autoPromoteGrays: boolean;
   autoRevokeThreshold: number;
+  stableBalanceFloor: bigint;
 }): string {
   const parts: number[] = [];
   const pushU64 = (v: bigint) => {
@@ -449,6 +490,8 @@ function referenceDigest(fields: {
   pushU8(fields.autoPromoteGrays ? 1 : 0);
   // TA-17: auto_revoke_threshold at position 17
   pushU8(fields.autoRevokeThreshold);
+  // TA-12: stable_balance_floor at position 18
+  pushU64(fields.stableBalanceFloor);
 
   const buf = Buffer.from(parts);
   return createHash("sha256").update(buf).digest("hex");
@@ -479,6 +522,7 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
         fc.integer({ min: 0, max: 0xffffffff }), // operating_hours (TA-05; encoder must handle any u32)
         fc.boolean(), // auto_promote_grays (TA-07)
         fc.integer({ min: 0, max: 255 }), // auto_revoke_threshold (TA-17; encoder handles any u8)
+        fc.bigUint({ max: (1n << 64n) - 1n }), // stable_balance_floor (TA-12)
         (
           dailyCap,
           maxTx,
@@ -497,6 +541,7 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
           operatingHours,
           autoPromoteGrays,
           autoRevokeThreshold,
+          stableBalanceFloor,
         ) => {
           const sdkDigest = computePolicyPreviewDigest({
             dailySpendingCapUsd: dailyCap,
@@ -518,6 +563,7 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
             operatingHours,
             autoPromoteGrays,
             autoRevokeThreshold,
+            stableBalanceFloor,
           });
           const refDigest = referenceDigest({
             dailySpendingCapUsd: dailyCap,
@@ -537,6 +583,7 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
             operatingHours,
             autoPromoteGrays,
             autoRevokeThreshold,
+            stableBalanceFloor,
           });
           const sdkHex = Array.from(sdkDigest)
             .map((x) => x.toString(16).padStart(2, "0"))

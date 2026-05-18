@@ -72,6 +72,11 @@ pub fn handler(
     operating_hours: u32,
     auto_promote_grays: bool,
     auto_revoke_threshold: u8,
+    // TA-12 (Phase 5 post-exec): combined USDC+USDT vault floor enforced
+    // at every finalize_session. 6-decimal USDC face value. Default 0
+    // (no reserve) preserves existing vault behavior; owners opt in via
+    // a non-zero value. Bound by TA-19 at canonical digest position 18.
+    stable_balance_floor: u64,
     preview_digest: [u8; 32],
 ) -> Result<()> {
     crate::reject_cpi!();
@@ -186,6 +191,8 @@ pub fn handler(
         // bound at digest positions 16/17.
         auto_promote_grays,
         auto_revoke_threshold,
+        // TA-12 (Phase 5 post-exec): owner-chosen reserve bound at position 18.
+        stable_balance_floor,
     });
     require!(
         recomputed_digest == preview_digest,
@@ -250,6 +257,11 @@ pub fn handler(
     policy.destination_graylist = Vec::new();
     // TA-17 (Phase 3): persist auto-revoke threshold; range pre-validated.
     policy.auto_revoke_threshold = auto_revoke_threshold;
+    // TA-12 (Phase 5): persist combined stablecoin floor. Bound by TA-19
+    // at canonical digest position 18 — the owner's chosen reserve is
+    // part of the signed configuration and cannot be silently lowered
+    // by a tampered SDK or pending-PDA mutation.
+    policy.stable_balance_floor = stable_balance_floor;
 
     // Initialize zero-copy tracker (buckets + protocol_counters zero-initialized by allocator)
     let mut tracker = ctx.accounts.tracker.load_init()?;

@@ -24,6 +24,7 @@
  *   15. operating_hours: u32 LE — TA-05 (Phase 3 pre-exec)
  *   16. auto_promote_grays: bool (1 byte 0/1) — TA-07 (Phase 3 pre-exec)
  *   17. auto_revoke_threshold: u8 — TA-17 (Phase 3 pre-exec)
+ *   18. stable_balance_floor: u64 LE — TA-12 (Phase 5 post-exec)
  */
 
 import { createHash } from "crypto";
@@ -73,6 +74,12 @@ export interface PolicyDigestFields {
    * handler requires this to be in [3, 20] at policy-write time.
    */
   autoRevokeThreshold?: number;
+  /**
+   * TA-12 (Phase 5 post-exec): owner-chosen hard reserve on combined
+   * USDC+USDT vault balance. 6-decimal USDC face value. Default 0
+   * (no reserve). Bound at digest position 18.
+   */
+  stableBalanceFloor?: BN | bigint | number;
 }
 
 function u64le(v: BN | bigint | number): Buffer {
@@ -137,6 +144,8 @@ export function computePolicyPreviewDigest(
   parts.push(u8(fields.autoPromoteGrays ? 1 : 0));
   // TA-17: auto_revoke_threshold at position 17.
   parts.push(u8(fields.autoRevokeThreshold ?? 0));
+  // TA-12: stable_balance_floor at position 18.
+  parts.push(u64le(fields.stableBalanceFloor ?? 0));
 
   const buf = Buffer.concat(parts);
   return Array.from(createHash("sha256").update(buf).digest());
@@ -194,6 +203,11 @@ export function initVaultPreviewDigest(args: {
    * for new tests; on-chain handler requires range [3, 20].
    */
   autoRevokeThreshold?: number;
+  /**
+   * TA-12 (Phase 5): stable_balance_floor in 6-decimal USDC face value.
+   * Default 0 (no reserve). Bound at digest position 18.
+   */
+  stableBalanceFloor?: BN | bigint | number;
 }): number[] {
   return computePolicyPreviewDigest({
     dailySpendingCapUsd: args.dailySpendingCapUsd,
@@ -213,6 +227,7 @@ export function initVaultPreviewDigest(args: {
     operatingHours: args.operatingHours ?? 0,
     autoPromoteGrays: args.autoPromoteGrays ?? false,
     autoRevokeThreshold: args.autoRevokeThreshold ?? 0,
+    stableBalanceFloor: args.stableBalanceFloor ?? 0,
   });
 }
 
@@ -253,6 +268,8 @@ export interface LiveLikePolicy {
   autoPromoteGrays?: boolean;
   /** TA-17 (Phase 3): bound by the canonical digest at position 17. */
   autoRevokeThreshold?: number;
+  /** TA-12 (Phase 5): bound by the canonical digest at position 18. */
+  stableBalanceFloor?: BN | bigint | number;
 }
 
 export interface QueueOverride {
@@ -275,6 +292,8 @@ export interface QueueOverride {
    */
   autoPromoteGrays?: boolean | null;
   autoRevokeThreshold?: number | null;
+  /** TA-12 (Phase 5): stable_balance_floor override. null = pass-through. */
+  stableBalanceFloor?: BN | bigint | number | null;
 }
 
 function pick<T>(override: T | null | undefined, fallback: T): T {
@@ -326,6 +345,11 @@ export function queuePolicyMergedDigest(
       override.autoRevokeThreshold,
       live.autoRevokeThreshold ?? 0,
     ),
+    // TA-12 (Phase 5): merged-effective stable_balance_floor.
+    stableBalanceFloor: pick(
+      override.stableBalanceFloor,
+      live.stableBalanceFloor ?? 0,
+    ),
   });
 }
 
@@ -372,6 +396,8 @@ export async function siblingHandlerDigest(
     // TA-07/17 (Phase 3): pass through.
     autoPromoteGrays: !!policy.autoPromoteGrays,
     autoRevokeThreshold: policy.autoRevokeThreshold ?? 0,
+    // TA-12 (Phase 5): pass-through. Sibling handlers never mutate this.
+    stableBalanceFloor: policy.stableBalanceFloor ?? 0,
   });
 }
 
@@ -408,6 +434,7 @@ export async function fetchAndComputeQueueDigest(
     operatingHours: policy.operatingHours ?? 0,
     autoPromoteGrays: !!policy.autoPromoteGrays,
     autoRevokeThreshold: policy.autoRevokeThreshold ?? 0,
+    stableBalanceFloor: policy.stableBalanceFloor ?? 0,
   };
   return queuePolicyMergedDigest(live, override, !!vault.observeOnly);
 }

@@ -400,4 +400,53 @@ pub enum SigilError {
     /// (M-5) reuses the same field semantics.
     #[msg("Session nonce mismatch — caller's expected_nonce does not match the session's stored nonce (durable-nonce replay defense)")]
     ErrSessionNonceMismatch,
+
+    // --- Phase 5 (post-execution invariants TA-12 + TA-13 + TA-14) ---
+    // Appended at END to preserve existing error codes 6000-6093.
+
+    /// 6094 — TA-12: combined USDC+USDT vault balance dropped below the
+    /// owner-configured `policy.stable_balance_floor` after a finalize.
+    /// This is the HARD reserve — no combination of attacks (CPI drain,
+    /// per-protocol cap bypass, fee inflation) may drain the vault below
+    /// this line. Asserted after the CPI balance audit so the floor is
+    /// the final post-execution invariant.
+    ///
+    /// Floor uses 6-decimal USDC face value (e.g. `$100 = 100_000_000`).
+    /// Default 0 = no reserve (existing vault behavior preserved). Bound
+    /// by TA-19 at canonical digest position 18 (owner-signed).
+    #[msg("Stable balance floor violated — combined USDC+USDT balance dropped below policy.stable_balance_floor")]
+    ErrStableFloorViolation,
+
+    /// 6095 — TA-13: per-protocol daily cap exceeded. Wired into
+    /// `finalize_session` since Phase 2 (`policy.has_protocol_caps` +
+    /// `policy.protocol_caps[i]`) but no dedicated error code existed —
+    /// callers got the generic `ProtocolCapExceeded`. Phase 5 ratifies
+    /// the existing enforcement with a distinct code so callers can
+    /// distinguish "rolling 24h per-protocol cap" from the legacy
+    /// "global protocol counter exhausted" case.
+    ///
+    /// NOTE: kept as a distinct variant rather than reusing
+    /// `ProtocolCapExceeded` because off-chain monitors + SDK telemetry
+    /// already pin to that older code for the legacy slot-exhaustion
+    /// path. The two semantics are intentionally separate.
+    #[msg("Per-protocol daily spending cap would be exceeded (rolling 24h)")]
+    ErrDailyCapExceeded,
+
+    /// 6096 — TA-14: per-recipient daily cap exceeded. The fixed-size
+    /// `tracker.per_recipient` array (≤10 entries, bounded per F-14)
+    /// tracks rolling 24h spend per recipient pubkey (resolved from the
+    /// SPL TokenAccount.owner of the destination meta — NOT the ATA
+    /// pubkey). When a single recipient's 24h outflow would exceed
+    /// `policy.per_recipient_daily_cap_usd`, reject.
+    ///
+    /// Eviction policy is AGE-BASED, never LRU. When the array is full
+    /// and a new recipient appears, eviction is permitted ONLY for
+    /// entries whose 24h window has already elapsed. If every slot is
+    /// still within its 24h window, the call rejects with this code —
+    /// preventing churn-eviction (an attacker recycling slots to bypass
+    /// the cap by paying many distinct recipients).
+    ///
+    /// Bound by TA-19 at canonical digest position 19 (owner-signed).
+    #[msg("Per-recipient daily cap exceeded — recipient outflow would breach policy.per_recipient_daily_cap_usd within the rolling 24h window, or per_recipient array full with no expired slot to evict")]
+    ErrRecipientCapExceeded,
 }

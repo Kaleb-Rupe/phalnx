@@ -129,6 +129,7 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
         0x00FFFFFF, // operatingHours — all 24h
         false, // autoPromoteGrays
         5, // autoRevokeThreshold — must be in [3, 20]
+        new BN(0), // stableBalanceFloor (TA-12 Phase 5 — no reserve)
         initVaultPreviewDigest({
           dailySpendingCapUsd: new BN(500_000_000),
           maxTransactionSizeUsd: new BN(100_000_000),
@@ -599,6 +600,8 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
         null,
         // Phase 3 (TA-05): operating_hours — null pass-through from live.
         null,
+        // Phase 5 (TA-12): stable_balance_floor — null pass-through from live.
+        null,
         // Phase 3 (TA-09): cosign_session — PublicKey.default = non-elevated
         // (single-sig owner mutation; daily_cap is non-elevated).
         PublicKey.default,
@@ -731,6 +734,7 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
         0x00FFFFFF, // operatingHours — all 24h
         false, // autoPromoteGrays
         5, // autoRevokeThreshold — must be in [3, 20]
+        new BN(0), // stableBalanceFloor (TA-12 Phase 5 — no reserve)
         initVaultPreviewDigest({
           dailySpendingCapUsd: new BN(500_000_000),
           maxTransactionSizeUsd: new BN(100_000_000),
@@ -945,6 +949,8 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
         null,
         null,
         // Phase 3 (TA-05): operating_hours — null pass-through from live.
+        null,
+        // Phase 5 (TA-12): stable_balance_floor — null pass-through from live.
         null,
         // Phase 3 (TA-09): cosign_session — PublicKey.default = non-elevated
         // (single-sig owner mutation; daily_cap is non-elevated).
@@ -1198,6 +1204,7 @@ describe("PEN-CROSS-2 — close+reinit replay protection", () => {
           0x00FFFFFF,
           false,
           5,
+          new BN(0), // stableBalanceFloor (TA-12 Phase 5 — no reserve)
           staleDigest,
         )
         .accounts({
@@ -1290,6 +1297,7 @@ describe("PEN-CROSS-2 — close+reinit replay protection", () => {
         0x00FFFFFF,
         false,
         5,
+        new BN(0), // stableBalanceFloor (TA-12 Phase 5 — no reserve)
         goodInit,
       )
       .accounts({
@@ -1405,6 +1413,7 @@ describe("PEN-CROSS-2 — close+reinit replay protection", () => {
         0x00FFFFFF,
         false,
         5,
+        new BN(0), // stableBalanceFloor (TA-12 Phase 5 — no reserve)
         goodDigest,
       )
       .accounts({

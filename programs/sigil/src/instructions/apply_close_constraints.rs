@@ -109,6 +109,10 @@ pub fn handler(
         // through from live policy — never mutated here.
         auto_promote_grays: policy.auto_promote_grays,
         auto_revoke_threshold: policy.auto_revoke_threshold,
+        // TA-12 (Phase 5): stable_balance_floor is policy-owned and bound
+        // by TA-19. apply_close_constraints never mutates it — pass
+        // through from live policy.
+        stable_balance_floor: policy.stable_balance_floor,
     });
     // PEN-CROSS-3: owner must have signed the post-mutation digest.
     require!(
