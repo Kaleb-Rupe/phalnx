@@ -327,9 +327,9 @@ When (in v1.1) the Stage 6 audit firm is engaged, the following package is deliv
 - Multisig verification script at `agent-middleware/scripts/verify-multisig.ts`.
 
 ### 14.5 Auditor's scope-of-work expectations
-- Verify TA-01..TA-16 enforce per [INTERFACES_V2.md](./INTERFACES_V2.md) semantics.
+- Verify TA-01..TA-15 + TA-17 + TA-19 enforce per [INTERFACES_V2.md](./INTERFACES_V2.md) semantics (TA-16 dropped per L-1; TA-18 is off-chain SDK helper).
 - Verify K1-K7 foundational substrate per [REVAMP_PLAN.md §3](./REVAMP_PLAN.md#3-kept-k1-k7-foundational-unchanged-from-prior-architecture).
-- Verify load-bearing 5 (K1, K6, K7, TA-10, TA-16) per Architect 2026-05-17 dependency audit + [THREAT_MODEL §4.1](./THREAT_MODEL_V2.md#41-k1-k7-foundational-coverage).
+- Verify load-bearing 5 (K1, K6, K7, TA-10, TA-19) per Architect 2026-05-17 dependency audit (revised under L-1: TA-16 dropped, TA-19 replaces) + [THREAT_MODEL §4.1](./THREAT_MODEL_V2.md#41-k1-k7-foundational-coverage).
 - Verify §3.5 formal-verification invariants 1-3.
 - Verify §3.6 test coverage tiers all pass.
 - Stress-test all 10 AC class concrete scenarios from [THREAT_MODEL §14](./THREAT_MODEL_V2.md#14-concrete-attack-scenarios-per-ac-class).

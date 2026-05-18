@@ -28,7 +28,7 @@ The following claims throughout this document are sourced from research artifact
 | **Fresh ClaudeResearcher 2026-05-17 (TA-K signed config)** | Accretion + Anchor 0.32 release notes + Squads V4 vault PDA + Codama IDL | Lighthouse `IdlCreateAccount` squat still latent in Anchor 0.32. TierRegistry design: hard-code Squads vault signer + idl_sha256 + bytecode_hash + version + freeze + asymmetric thresholds (4-of-5 registry > 3-of-5 program upgrade). |
 | **Fresh CodexResearcher 2026-05-17 (Codama + IDL diff)** | Anchor 0.30/0.31/0.32 release notes + Codama README + Drift/Marginfi/Kamino CI workflows | **CRITICAL CI FIX:** `> target/idl/sigil.json` redirect is wrong; `anchor idl build` writes the file directly. Use `jq -S` canonicalization + pin RUST/SOLANA/ANCHOR/LANG/SOURCE_DATE_EPOCH. **No production protocol runs IDL-diff CI; Sigil's guard is novel for the ecosystem.** |
 | **Fresh GeminiResearcher 2026-05-17 (validator)** | Direct GitHub + docs inspection | **MISMATCH corrections applied:** Lighthouse has 14 assertion types (not 8); Codama determinism attribution belongs to Anchor 0.30+ stable IDL format (not Codama itself); Maestro `swap_only` flag is unsourced fabrication (removed); AgentLayer envelope is off-chain Python runtime, not on-chain instructions. |
-| **Architect 2026-05-17 (tier-model + dependency audit)** | Per-primitive dependency graph | Load-bearing 5: **K1 + K6 + K7 + TA-10 + TA-16**. Deepest chain: TA-12 → TA-13 → TA-14. Highest-leverage single dependency: **K6 event emission**. |
+| **Architect 2026-05-17 (tier-model + dependency audit)** | Per-primitive dependency graph | Load-bearing 5 (revised under L-1): **K1 + K6 + K7 + TA-10 + TA-19**. TA-16 dropped per L-1; TA-19 `policy_preview_digest` replaces its parser-drift protection role. Deepest chain: TA-12 → TA-13 → TA-14. Highest-leverage single dependency: **K6 event emission**. |
 
 References below to "ClaudeResearcher Argument N" or "contrarian Argument N" mean the prior GrokResearcher fan. References to "Architect dependency audit" mean the 2026-05-17 Architect output.
 
@@ -124,7 +124,7 @@ Each removal has explicit rationale and addresses at least one prior audit findi
 
 ## 3. Kept (K1-K7 foundational, unchanged from prior architecture)
 
-> **Note: prior plans cited "21 Tier A primitives" which conflated K + TA. Corrected accounting: K1-K7 foundational (7) + TA-01..TA-16 new V2 (16) = 23 total constraint surface.**
+> **Note: prior plans cited "21 Tier A primitives" which conflated K + TA. Corrected accounting (post Option A / L-1): K1-K7 foundational (7) + TA-01..TA-15 + TA-17 + TA-19 active V2 (17) + TA-16 dropped + TA-18 off-chain SDK helper = 24 total constraint surface (TA-16 retired, TA-18 off-chain).**
 
 These are pre-V2 primitives carried forward unchanged. They form the substrate on which Tier A enforces. K1-K7 are NOT Tier A; they are foundational features (registered in [INTERFACES_V2.md](./INTERFACES_V2.md)).
 
@@ -165,7 +165,7 @@ These are pre-V2 primitives carried forward unchanged. They form the substrate o
 - **TA-10 sandwich integrity N2 via instructions-sysvar** — entry guard reads `instructions` sysvar and asserts: (a) 1..=4 `validate_and_authorize` + `finalize_session` pairs in transaction, (b) immediate-next instruction after each `validate_and_authorize` is an allowed protocol program ID (default-deny per TA-01), (c) no foreign instruction inside any seal window writes to protected accounts. **Load-bearing 5 (Architect 2026-05-17): if TA-10 fails, every other TA can be bypassed by injection.** Blocks AC-9 sandwich injection. See [INTERFACES_V2.md#ta-10](./INTERFACES_V2.md#ta-10--sandwich-integrity-n2-via-instructions-sysvar).
 - **TA-11 protected-writable deny-list N4** — protected set `{vault, tracker, session, policy}` PDAs. Entry guard rejects if any foreign instruction in the bundle lists a protected account as writable. Blocks AC-3 Sigil-program tampering, AC-5 protocol-fraud tampering. See [INTERFACES_V2.md#ta-11](./INTERFACES_V2.md#ta-11--protected-writable-deny-list-n4).
 
-### 4.3 Post-execution invariants (exit guard, TA-12..TA-16)
+### 4.3 Post-execution invariants (exit guard, TA-12..TA-15; TA-16 dropped)
 
 - **TA-12 stablecoin balance floor** — `PolicyConfig.stable_balance_floor: u64` (6-decimal USDC face value). `finalize_session` rejects if `usdc + usdt < floor`. **Novel primitive** — neither Sphere nor Ondo enforces a balance floor (per PerplexityResearcher 2026-05-16). Blocks AC-5 protocol loss + AC-6 depeg (in face-value units). See [INTERFACES_V2.md#ta-12](./INTERFACES_V2.md#ta-12--stablecoin-balance-floor).
 - **TA-13 rolling 24h tracker** — `SpendTracker` zero-copy PDA, 2,840 bytes, keyed by `(vault, agent, protocol)`. **Depends on K6 + TA-12 (Architect 2026-05-17: TA-12 → TA-13 → TA-14 is the deepest chain).** See [INTERFACES_V2.md#ta-13](./INTERFACES_V2.md#ta-13--rolling-24h-tracker).
@@ -492,8 +492,8 @@ The Sigil v2 revamp is structured as 7 stages, each producing a tagged git basel
 - TA-01..TA-09 (Pre-execution Constraints) handlers + state.
 - TA-10 + TA-11 (Atomic-Bundle Integrity) handlers.
 - TA-12..TA-15 (Post-execution Invariants) handlers + state.
-- TA-16 T1 parser version fail-closed (Track A: field on `InstructionConstraints`, no new ix per C23).
-- New error codes 6088..6105 per [INTERFACES_V2.md#error-code-allocation](./INTERFACES_V2.md#error-code-allocation).
+- TA-16 — DROPPED per L-1 (was T1 parser-version fail-closed; tier model deleted). TA-19 `policy_preview_digest` delivers the equivalent drift-detection role at the policy layer.
+- New error codes 6079..6102 per [ERROR_CODE_ALLOCATION_V2.md](./ERROR_CODE_ALLOCATION_V2.md) (post-Phase-1 compaction; codes 6034+ shifted down by 2 due to 2 Jupiter variants deleted; `SlippageBpsTooHigh` kept per D-5).
 **Acceptance gate:** git tag `stage-2-baseline`. ≥95% LiteSVM branch coverage for new code. CU consumption ≤ baseline + 20%.
 
 ### Stage 3 — Audit log + Freeze observation mode
@@ -558,7 +558,7 @@ Cataloged risks with mitigation strategy + owner. Each risk maps to one or more 
 | R11 | Pyth oracle staleness | OUT-OF-SCOPE V1 | n/a | D-09: folded into N1 TA-15 temporal binding | v1.1 |
 | R12 | Stablecoin depeg (USDC SVB 2023 precedent) | HIGH | LOW | D-03: unit of account = USDC face value at 1:1 (documented); no oracle | accepted |
 | R13 | Audit funding gap | MEDIUM (Stage 6 blocker) | MEDIUM | [ACCEPTANCE_V2.md §4](./ACCEPTANCE_V2.md#4-funding-plan) with [SIGNATURE PENDING] block | Kaleb |
-| R14 | Parser drift on T1 protocol upgrade | HIGH | HIGH (every protocol upgrade) | TA-16 parser version fail-closed (load-bearing 5) | Stage 2 |
+| R14 | Parser drift on T1 protocol upgrade | OUT-OF-SCOPE V1 | n/a | T1 tier model dropped per L-1; protocol-specific parser drift is no longer a V1 concern. Policy-shape drift handled by TA-19 `policy_preview_digest`. | n/a (was TA-16, now retired) |
 | R15 | Anchor 0.32 IDL determinism perturbations (CodexResearcher footguns) | MEDIUM | MEDIUM | `revamp-ci.yml` IDL diff job + locked toolchain pins | Stage 0 |
 
 ---
@@ -574,12 +574,12 @@ Per [ACCEPTANCE_V2.md §3.6](./ACCEPTANCE_V2.md#36--test-coverage), the V2 test 
 | Adversarial | protocol-scalability-tests | ≥100 attack vectors mapped to AC-1..AC-10; ALL must reject |
 | Cluster rehearsal | Surfpool mainnet-fork + devnet | Jupiter NM-E end-to-end + 9 T1-candidate structural-only flows |
 
-**Load-bearing 5 explicit gates** (Architect 2026-05-17 dependency audit identified K1, K6, K7, TA-10, TA-16 as the system's failure-mode roots):
+**Load-bearing 5 explicit gates** (Architect 2026-05-17 dependency audit identified K1, K6, K7, TA-10, TA-16 as the system's failure-mode roots; revised under L-1 to **K1, K6, K7, TA-10, TA-19** since TA-16 was dropped under Option A):
 - **K1 vault PDA** invariants: rent-exempt, owner-only mutation paths, immutable seeds — formal verification gate.
 - **K6 event emission**: CI static check that every `pub fn` in `lib.rs` calls `emit!(...)` **exactly once** before `Ok(())` (per Inv-K6 formal verification target in [ACCEPTANCE_V2.md §3.5](./ACCEPTANCE_V2.md#35--formal-verification-of-3-critical-invariants)). Multiple emissions per handler are a code smell suggesting unclear semantics; require single canonical event.
 - **K7 NM-E primitive**: T1-only gate; T2/T3 paths must NOT invoke NM-E (compile-time feature gate).
 - **TA-10 sandwich integrity**: comprehensive instruction-injection test suite (every position × every protected account × every foreign program ID).
-- **TA-16 parser version fail-closed**: test fixtures for each T1 parser confirming `ErrParserVersionMismatch` rejection.
+- **TA-19 `policy_preview_digest`** (replaces dropped TA-16): test fixtures confirming `ErrPolicyPreviewMismatch` rejection on any policy-field tampering between SDK render and on-chain submission. Field on `PolicyConfig` + `PendingPolicyUpdate`.
 
 ---
 
@@ -611,7 +611,7 @@ Per-primitive implementation status as of Stage 0 baseline. Updated at every sta
 | TA-13 | rolling 24h tracker | NOT-IMPL | NOT-IMPL | IMPLEMENT | KEEP | KEEP | audit | audit-fixed | live |
 | TA-14 | per-recipient daily cap | NOT-IMPL | NOT-IMPL | IMPLEMENT | KEEP | KEEP | audit | audit-fixed | live |
 | TA-15 | audit-log buffer + N1 | NOT-IMPL | NOT-IMPL | NOT-IMPL | IMPLEMENT (Track A/C) | KEEP | KEEP | audit | live |
-| TA-16 | T1 parser version fail-closed | NOT-IMPL | NOT-IMPL | IMPLEMENT | KEEP | KEEP | audit + formal verify | audit-fixed | live |
+| TA-16 | T1 parser version fail-closed — DROPPED per L-1 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
 | TierRegistry | Signed config PDA (D-06) | NOT-IMPL | NOT-IMPL | NOT-IMPL | NOT-IMPL | NOT-IMPL | NOT-IMPL | IMPLEMENT (Stage 6D) | live |
 | Squads V4 upgrade auth | D-05 | NOT-IMPL | NOT-IMPL | NOT-IMPL | NOT-IMPL | NOT-IMPL | NOT-IMPL | IMPLEMENT (Stage 6C) | live |
 
@@ -625,7 +625,7 @@ When Stage 5 concludes, the following must be true to make Stage 6 audit-engagea
 
 ### 18.1 Code freeze checklist
 - [ ] No `pub fn` changes for ≥2 weeks.
-- [ ] All TA-01..TA-16 + K1-K7 primitives implemented and Stage-2/3 baselined.
+- [ ] All TA-01..TA-15 + TA-17 + TA-19 + K1-K7 primitives implemented and Stage-2/3 baselined (TA-16 dropped per L-1; TA-18 is off-chain SDK helper).
 - [ ] All §RP CRIT+HIGH findings from Stages 1-5 RESOLVED with commit SHAs.
 - [ ] Cargo unit tests, LiteSVM, Surfpool, and protocol-scalability-tests all green on `stage-5-baseline`.
 - [ ] No `unwrap()` on `Option`/`Result` introduced in V2 paths (per project CLAUDE.md zero-tolerance).

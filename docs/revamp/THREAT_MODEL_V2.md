@@ -268,7 +268,7 @@ Cells in the §4 mapping table show whether a TA primitive **blocks** a given at
 **Description:** If Sigil naively counted every rejected bundle toward an auto-revoke threshold, an attacker could spam crafted-failing bundles to trigger forced session revocation, denying the legitimate agent service.
 
 **Mitigation (V1 design):**
-- **Auto-revoke is excluded from V1 Tier A** (deferred as **Def-6** per [REVAMP_PLAN §6.1](./REVAMP_PLAN.md#61-deferred-to-v11-post-mainnet) — not as TA-NN; reserved for v1.1 once UX patterns settle).
+- **Auto-revoke is now LOCKED as TA-17 per L-10** (2026-05-17 Phase 0.5 hygiene pass). Implementation lands in Phase 3 with configurable threshold (floor 3, ceiling 20, default 5) and `SigilError::*` policy-violation filter only — external causes (CU exhaustion, network errors) do NOT increment the counter, neutralizing this DoS class at runtime. State: `AgentEntry.consecutive_failures: u8`. Emits `AutoRevokedEvent` on disable.
 - For Stage 2, any rejection-counter logic MUST distinguish "policy-rejected" (counts) from "CU-exhausted" or "network-error" (does NOT count).
 - The threshold is rate-limited: at most 1 increment per `cooldown_seconds` (TA-06) window — so an attacker cannot increment the counter faster than legitimate operations advance it.
 
@@ -566,7 +566,7 @@ For Stage 0 to be `complete` per [§RP §12.7 Vocabulary](./REVAMP_PLAN.md#127-v
 1. **Every attacker class AC-1..AC-10 has at least one TA `✓` blocker OR explicit accept-the-risk rationale.** Verified: §4.2 coverage assessment.
 2. **Every CATASTROPHIC pre-mitigation class has post-mitigation residual ≤ MEDIUM.** Verified: §3 blast-radius matrix.
 3. **Workflow mitigations M-T21-1..4 are documented with concrete SDK/dashboard responsibilities.** Verified: §6.
-4. **Load-bearing 5 (K1, K6, K7, TA-10, TA-16) have explicit Stage 2-5 acceptance gates.** Verified: §4.1 K-coverage + REVAMP_PLAN.md §16 coverage test plan.
+4. **Load-bearing 5 (K1, K6, K7, TA-10, TA-19) have explicit Stage 2-5 acceptance gates.** (Revised under L-1: TA-16 dropped, TA-19 `policy_preview_digest` replaces its role.) Verified: §4.1 K-coverage + REVAMP_PLAN.md §16 coverage test plan.
 5. **AC-11 oracle staleness deferral has explicit D-09 entry.** Verified: REVAMP_PLAN.md §10 decision register.
 
 ---
@@ -675,7 +675,7 @@ Per K6 event emission substrate, every Sigil instruction emits a structured even
 - `Token2022ExtensionRejected` — TA-08 fires. Indicates AC-4 attempt or mint authority misconfiguration.
 - `SandwichIntegrityFailed` — TA-10 fires. Indicates AC-9 attempt.
 - `StableFloorViolation` — TA-12 fires. Indicates AC-5 (protocol drained more than expected) or AC-6 (depeg eating into floor).
-- `ParserVersionMismatch` — TA-16 fires. Indicates protocol upgrade out-of-band with Sigil SDK.
+- `PolicyPreviewMismatch` — TA-19 fires (replaces dropped TA-16 `ParserVersionMismatch`). Indicates the policy submitted on-chain does not match the policy hash the user attested in their wallet — possible SDK/RPC compromise or instruction-form divergence.
 
 ### 15.2 Forensic signals (TA-15 audit log)
 - Every successful seal() bundle records `(discriminator, target_protocol, balance_delta_in, balance_delta_out, timestamp, slot_hash, blockhash)`. Replay-protected (AC-10) via slot+blockhash double-bind per C22.
