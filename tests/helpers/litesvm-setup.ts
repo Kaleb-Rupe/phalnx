@@ -746,6 +746,10 @@ export function buildCreateConstraintsIxs(
   vault: PublicKey,
   policy: PublicKey,
   entries: any[],
+  // PEN-CROSS-3 (Phase 2 close-up): owner-signed expected digest covering the
+  // post-mutation policy state (`has_constraints=true`). The on-chain
+  // handler rejects on mismatch — required.
+  expectedDigest: number[],
 ): TransactionInstruction[] {
   const [constraintsPda] = PublicKey.findProgramAddressSync(
     [Buffer.from("constraints"), vault.toBuffer()],
@@ -772,9 +776,10 @@ export function buildCreateConstraintsIxs(
 
   // Step 5: Populate via existing createInstructionConstraints (Anchor-encoded data).
   // V2 (REVAMP_PLAN §2.2): strictMode parameter removed.
+  // PEN-CROSS-3 (Phase 2 close-up): pass owner-signed expected digest.
   const populateData = (program.coder.instruction as any).encode(
     "createInstructionConstraints",
-    { entries },
+    { entries, expectedDigest },
   );
   const populateIx = new TransactionInstruction({
     programId: program.programId,
@@ -801,15 +806,108 @@ export function createConstraintsAccount(
   vault: PublicKey,
   policy: PublicKey,
   entries: any[],
+  // PEN-CROSS-3 (Phase 2 close-up): if omitted, the helper auto-computes
+  // the digest from the live PolicyConfig + AgentVault with
+  // `has_constraints=true`. Callers that exercise the negative path can
+  // pass an explicit digest (e.g., all-zero) to force a mismatch.
+  expectedDigest?: number[],
 ): void {
+  let digest = expectedDigest;
+  if (digest === undefined) {
+    digest = autoSiblingHandlerDigest(svm, program, policy, vault, {
+      hasConstraints: true,
+    });
+  }
   const ixs = buildCreateConstraintsIxs(
     program,
     owner.publicKey,
     vault,
     policy,
     entries,
+    digest,
   );
   sendVersionedTx(svm, ixs, owner);
+}
+
+/**
+ * Synchronous LiteSVM-local sibling-handler digest helper. Mirrors
+ * `tests/helpers/policy-digest.ts::siblingHandlerDigest` but reads the live
+ * PolicyConfig + AgentVault directly off LiteSVM so it can run from a
+ * synchronous helper.
+ *
+ * PEN-CROSS-3 (Phase 2 close-up): caller passes `hasConstraints` /
+ * `hasPostAssertions` to override the flag the about-to-run handler will
+ * flip; rest of digest sourced from live state.
+ */
+export function autoSiblingHandlerDigest(
+  svm: LiteSVM,
+  program: Program<Sigil>,
+  policyPda: PublicKey,
+  vaultPda: PublicKey,
+  override: { hasConstraints?: boolean; hasPostAssertions?: number },
+): number[] {
+  const policyAccount = svm.getAccount(policyPda);
+  const vaultAccount = svm.getAccount(vaultPda);
+  if (!policyAccount || !vaultAccount) {
+    throw new Error(
+      `autoSiblingHandlerDigest: account not found at ${policyPda.toBase58()} / ${vaultPda.toBase58()}`,
+    );
+  }
+  const policy = program.coder.accounts.decode(
+    "policyConfig",
+    Buffer.from(policyAccount.data),
+  );
+  const vault = program.coder.accounts.decode(
+    "agentVault",
+    Buffer.from(vaultAccount.data),
+  );
+  // Inline encode (avoid circular dep on policy-digest.ts).
+  const crypto = require("crypto") as typeof import("crypto");
+  const BN = require("bn.js") as typeof import("bn.js");
+  const u64le = (v: any): Buffer => {
+    const buf = Buffer.alloc(8);
+    const bn = typeof v === "number" ? new BN(v) : v;
+    buf.writeBigUInt64LE(BigInt(bn.toString()));
+    return buf;
+  };
+  const u32le = (v: number) => {
+    const b = Buffer.alloc(4);
+    b.writeUInt32LE(v);
+    return b;
+  };
+  const u16le = (v: number) => {
+    const b = Buffer.alloc(2);
+    b.writeUInt16LE(v);
+    return b;
+  };
+  const u8 = (v: number) => Buffer.from([v & 0xff]);
+  const parts: Buffer[] = [];
+  parts.push(u64le(policy.dailySpendingCapUsd));
+  parts.push(u64le(policy.maxTransactionSizeUsd));
+  parts.push(u16le(policy.maxSlippageBps));
+  parts.push(u16le(policy.developerFeeRate ?? 0));
+  parts.push(u8(policy.protocolMode));
+  parts.push(u32le(policy.protocols.length));
+  for (const p of policy.protocols) parts.push(p.toBuffer());
+  parts.push(u8(policy.destinationMode));
+  parts.push(u32le(policy.allowedDestinations.length));
+  for (const p of policy.allowedDestinations) parts.push(p.toBuffer());
+  parts.push(u64le(policy.timelockDuration));
+  parts.push(u64le(policy.sessionExpirySeconds));
+  parts.push(u8(vault.observeOnly ? 1 : 0));
+  const hasConstraints =
+    override.hasConstraints !== undefined
+      ? override.hasConstraints
+      : !!policy.hasConstraints;
+  parts.push(u8(hasConstraints ? 1 : 0));
+  const hasPostAssertions =
+    override.hasPostAssertions !== undefined
+      ? override.hasPostAssertions
+      : (policy.hasPostAssertions as number);
+  parts.push(u8(hasPostAssertions));
+  parts.push(u64le(policy.createdAtSlot ?? 0));
+  const buf = Buffer.concat(parts);
+  return Array.from(crypto.createHash("sha256").update(buf).digest());
 }
 
 /**

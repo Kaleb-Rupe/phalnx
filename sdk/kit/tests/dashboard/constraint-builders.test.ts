@@ -51,6 +51,11 @@ const OWNER_ADDR = "11111111111111111111111111111114" as Address;
 const TARGET_PROGRAM = "11111111111111111111111111111115" as Address;
 const ACCOUNT_PUBKEY = "11111111111111111111111111111116" as Address;
 
+// PEN-CROSS-3 stub: pure-unit tx-shape tests don't exercise the on-chain
+// digest assertion path; they only verify ix bytes/layout. Pass any
+// well-formed 32-byte digest.
+const STUB_EXPECTED_DIGEST = new Uint8Array(32);
+
 function mockSigner(addr: Address = OWNER_ADDR): TransactionSigner {
   return {
     address: addr,
@@ -119,6 +124,7 @@ describe("buildCreateConstraintsIxs", () => {
       vault: VAULT,
       policy: POLICY,
       entries: entries(1),
+      expectedDigest: STUB_EXPECTED_DIGEST,
     });
     expect(ixs).to.have.lengthOf(5);
 
@@ -161,6 +167,7 @@ describe("buildCreateConstraintsIxs", () => {
       vault: VAULT,
       policy: POLICY,
       entries: entries(2),
+      expectedDigest: STUB_EXPECTED_DIGEST,
     });
     expect(ixs).to.have.lengthOf(5);
     const populate = parseCreateInstructionConstraintsInstruction(
@@ -177,6 +184,7 @@ describe("buildCreateConstraintsIxs", () => {
       vault: VAULT,
       policy: POLICY,
       entries: entries(3),
+      expectedDigest: STUB_EXPECTED_DIGEST,
     });
     expect(ixs).to.have.lengthOf(5);
     const populate = parseCreateInstructionConstraintsInstruction(
@@ -195,6 +203,7 @@ describe("buildCreateConstraintsIxs", () => {
         vault: VAULT,
         policy: POLICY,
         entries: entries(4),
+        expectedDigest: STUB_EXPECTED_DIGEST,
       });
     } catch (err) {
       caught = err;
@@ -215,6 +224,7 @@ describe("buildCreateConstraintsIxs", () => {
         vault: VAULT,
         policy: POLICY,
         entries: [],
+        expectedDigest: STUB_EXPECTED_DIGEST,
       });
     } catch (err) {
       caught = err;
@@ -228,6 +238,7 @@ describe("buildCreateConstraintsIxs", () => {
       owner,
       vault: VAULT,
       policy: POLICY,
+      expectedDigest: STUB_EXPECTED_DIGEST,
       entries: entries(1),
     });
     // ixs[3] is the final extend (index 3 of 5: alloc=0, extends=1..3, populate=4)
@@ -354,6 +365,7 @@ describe("buildQueueConstraintsUpdateIxs", () => {
       vault: VAULT,
       policy: POLICY,
       entries: entries(1),
+      expectedDigest: STUB_EXPECTED_DIGEST,
     });
     const queueIxs = await buildQueueConstraintsUpdateIxs({
       owner,

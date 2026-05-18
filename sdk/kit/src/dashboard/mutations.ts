@@ -94,6 +94,52 @@ import { toDxError } from "./errors.js";
 
 const CU_OWNER_ACTION = 200_000;
 
+/**
+ * PEN-CROSS-3 (Phase 2 close-up): compute the post-mutation
+ * policy_preview_digest for one of the 4 sibling handlers
+ * (create_instruction_constraints, apply_close_constraints,
+ * create_post_assertions, close_post_assertions).
+ *
+ * Reads the live PolicyConfig + AgentVault, applies the caller-specified
+ * flag override, then returns the canonical digest the on-chain handler
+ * will recompute and assert against. The owner signs this exact digest
+ * when calling the ix — defends against blind-sign by forcing explicit
+ * attestation of the flag flip.
+ */
+async function siblingHandlerExpectedDigest(
+  rpc: Rpc<SolanaRpcApi>,
+  vault: Address,
+  override: { hasConstraints?: boolean; hasPostAssertions?: number },
+): Promise<Uint8Array> {
+  const [policyAddress] = await getPolicyPDA(vault);
+  const [livePolicy, liveVault] = await Promise.all([
+    fetchPolicyConfig(rpc, policyAddress),
+    fetchAgentVault(rpc, vault),
+  ]);
+  return computePolicyPreviewDigest({
+    dailySpendingCapUsd: livePolicy.data.dailySpendingCapUsd,
+    maxTransactionSizeUsd: livePolicy.data.maxTransactionSizeUsd,
+    maxSlippageBps: livePolicy.data.maxSlippageBps,
+    developerFeeRate: livePolicy.data.developerFeeRate,
+    protocolMode: livePolicy.data.protocolMode,
+    protocols: livePolicy.data.protocols,
+    destinationMode: livePolicy.data.destinationMode,
+    allowedDestinations: livePolicy.data.allowedDestinations,
+    timelockDuration: livePolicy.data.timelockDuration,
+    sessionExpirySeconds: livePolicy.data.sessionExpirySeconds,
+    observeOnly: liveVault.data.observeOnly,
+    hasConstraints:
+      override.hasConstraints !== undefined
+        ? override.hasConstraints
+        : livePolicy.data.hasConstraints,
+    hasPostAssertions:
+      override.hasPostAssertions !== undefined
+        ? override.hasPostAssertions
+        : livePolicy.data.hasPostAssertions,
+    createdAtSlot: livePolicy.data.createdAtSlot,
+  });
+}
+
 async function run(
   rpc: Rpc<SolanaRpcApi>,
   owner: TransactionSigner,
@@ -725,11 +771,16 @@ export async function createConstraints(
     throw toDxError(new Error("Constraint entries must be a non-empty array"));
   try {
     const [policy] = await getPolicyPDA(vault);
+    // PEN-CROSS-3: bind the post-mutation digest (`has_constraints=true`).
+    const expectedDigest = await siblingHandlerExpectedDigest(rpc, vault, {
+      hasConstraints: true,
+    });
     const ixs = await buildCreateConstraintsIxs({
       owner,
       vault,
       policy,
       entries,
+      expectedDigest,
     });
     return run(rpc, owner, network, ixs, opts);
   } catch (err: unknown) {
@@ -808,7 +859,16 @@ export async function applyCloseConstraints(
   network: "devnet" | "mainnet",
   opts?: TxOpts,
 ): Promise<TxResult> {
-  const ix = await getApplyCloseConstraintsInstructionAsync({ owner, vault });
+  // PEN-CROSS-3: bind the post-mutation digest (`has_constraints=false`)
+  // into the ix. Handler rejects on mismatch — defends owner blind-sign.
+  const expectedDigest = await siblingHandlerExpectedDigest(rpc, vault, {
+    hasConstraints: false,
+  });
+  const ix = await getApplyCloseConstraintsInstructionAsync({
+    owner,
+    vault,
+    expectedDigest,
+  });
   return run(rpc, owner, network, [ix], opts);
 }
 
@@ -878,10 +938,15 @@ export async function createPostAssertions(
   // entry" promise. See post-assertion-validation.ts docblock.
   validatePostAssertionEntries(entries);
 
+  // PEN-CROSS-3: bind the post-mutation digest (`has_post_assertions=1`).
+  const expectedDigest = await siblingHandlerExpectedDigest(rpc, vault, {
+    hasPostAssertions: 1,
+  });
   const ix = await getCreatePostAssertionsInstructionAsync({
     owner,
     vault,
     entries,
+    expectedDigest,
   });
   return run(rpc, owner, network, [ix], opts);
 }
@@ -910,6 +975,14 @@ export async function closePostAssertions(
   network: "devnet" | "mainnet",
   opts?: TxOpts,
 ): Promise<TxResult> {
-  const ix = await getClosePostAssertionsInstructionAsync({ owner, vault });
+  // PEN-CROSS-3: bind the post-mutation digest (`has_post_assertions=0`).
+  const expectedDigest = await siblingHandlerExpectedDigest(rpc, vault, {
+    hasPostAssertions: 0,
+  });
+  const ix = await getClosePostAssertionsInstructionAsync({
+    owner,
+    vault,
+    expectedDigest,
+  });
   return run(rpc, owner, network, [ix], opts);
 }

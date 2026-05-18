@@ -43,7 +43,14 @@ pub struct ApplyCloseConstraints<'info> {
     pub pending_close_constraints: Account<'info, PendingCloseConstraints>,
 }
 
-pub fn handler(ctx: Context<ApplyCloseConstraints>) -> Result<()> {
+pub fn handler(
+    ctx: Context<ApplyCloseConstraints>,
+    // PEN-CROSS-3 (Phase 2 close-up): owner-signed expected digest covering
+    // the POST-mutation policy state (with `has_constraints=false`). Same
+    // defense rationale as `create_instruction_constraints` — closes the
+    // owner blind-sign vector.
+    expected_digest: [u8; 32],
+) -> Result<()> {
     crate::reject_cpi!();
 
     let clock = Clock::get()?;
@@ -95,6 +102,11 @@ pub fn handler(ctx: Context<ApplyCloseConstraints>) -> Result<()> {
         // PEN-CROSS-2: created_at_slot is immutable post-init.
         created_at_slot: policy.created_at_slot,
     });
+    // PEN-CROSS-3: owner must have signed the post-mutation digest.
+    require!(
+        recomputed_digest == expected_digest,
+        SigilError::PolicyPreviewMismatch
+    );
     policy.policy_preview_digest = recomputed_digest;
 
     // Bump policy version — removing constraints affects security posture

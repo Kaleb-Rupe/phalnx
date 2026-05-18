@@ -45,6 +45,11 @@ pub struct CreateInstructionConstraints<'info> {
 pub fn handler(
     ctx: Context<CreateInstructionConstraints>,
     entries: Vec<ConstraintEntry>,
+    // PEN-CROSS-3 (Phase 2 close-up): owner-signed expected digest covering
+    // the POST-mutation policy state (with `has_constraints=true`). Defends
+    // against owner blind-sign — the user must explicitly attest the digest
+    // change rather than trusting the handler's recompute.
+    expected_digest: [u8; 32],
 ) -> Result<()> {
     crate::reject_cpi!();
 
@@ -123,6 +128,14 @@ pub fn handler(
         // PEN-CROSS-2: created_at_slot is immutable post-init.
         created_at_slot: policy.created_at_slot,
     });
+    // PEN-CROSS-3: owner must have signed the post-mutation digest. Reject
+    // if the caller's signed digest does not match. Closes the owner
+    // blind-sign vector by forcing the user to explicitly attest the
+    // has_constraints=true digest before persisting.
+    require!(
+        recomputed_digest == expected_digest,
+        SigilError::PolicyPreviewMismatch
+    );
     policy.policy_preview_digest = recomputed_digest;
 
     policy.policy_version = policy

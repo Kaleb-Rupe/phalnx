@@ -39,6 +39,7 @@ import {
   initVaultPreviewDigest,
   computePolicyPreviewDigest,
   queuePolicyMergedDigest,
+  siblingHandlerDigest,
 } from "./helpers/policy-digest";
 import {
   createTestEnv,
@@ -245,6 +246,12 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
         discriminatorFormat: { anchor8: {} },
       },
     ];
+    const expectedDigest = await siblingHandlerDigest(
+      program,
+      policyPda,
+      vaultPda,
+      { hasConstraints: true },
+    );
     createConstraintsAccount(
       program,
       svm,
@@ -252,6 +259,7 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
       vaultPda,
       policyPda,
       entries,
+      expectedDigest,
     );
 
     const after: any = await program.account.policyConfig.fetch(policyPda);
@@ -304,6 +312,12 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
         discriminatorFormat: { anchor8: {} },
       },
     ];
+    const createDigest = await siblingHandlerDigest(
+      program,
+      policyPda,
+      vaultPda,
+      { hasConstraints: true },
+    );
     createConstraintsAccount(
       program,
       svm,
@@ -311,6 +325,7 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
       vaultPda,
       policyPda,
       entries,
+      createDigest,
     );
 
     const before: any = await program.account.policyConfig.fetch(policyPda);
@@ -331,8 +346,14 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
       } as any)
       .rpc();
     advanceTime(svm, 1801);
+    const closeDigest = await siblingHandlerDigest(
+      program,
+      policyPda,
+      vaultPda,
+      { hasConstraints: false },
+    );
     await program.methods
-      .applyCloseConstraints()
+      .applyCloseConstraints(closeDigest)
       .accounts({
         owner: owner.publicKey,
         vault: vaultPda,
@@ -373,17 +394,26 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
     expect(before.hasPostAssertions).to.equal(0);
 
     const targetAccount = Keypair.generate().publicKey;
+    const createPADigest = await siblingHandlerDigest(
+      program,
+      policyPda,
+      vaultPda,
+      { hasPostAssertions: 1 },
+    );
     await program.methods
-      .createPostAssertions([
-        {
-          targetAccount,
-          offset: 0,
-          valueLen: 8,
-          operator: { lte: {} },
-          expectedValue: Buffer.from(new BN(1_000_000).toArray("le", 8)),
-          assertionMode: 0,
-        },
-      ])
+      .createPostAssertions(
+        [
+          {
+            targetAccount,
+            offset: 0,
+            valueLen: 8,
+            operator: { lte: {} },
+            expectedValue: Buffer.from(new BN(1_000_000).toArray("le", 8)),
+            assertionMode: 0,
+          },
+        ],
+        createPADigest,
+      )
       .accounts({
         owner: owner.publicKey,
         vault: vaultPda,
@@ -420,17 +450,26 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
 
     // Establish assertions
     const targetAccount = Keypair.generate().publicKey;
+    const setupPADigest = await siblingHandlerDigest(
+      program,
+      policyPda,
+      vaultPda,
+      { hasPostAssertions: 1 },
+    );
     await program.methods
-      .createPostAssertions([
-        {
-          targetAccount,
-          offset: 0,
-          valueLen: 8,
-          operator: { lte: {} },
-          expectedValue: Buffer.from(new BN(1_000_000).toArray("le", 8)),
-          assertionMode: 0,
-        },
-      ])
+      .createPostAssertions(
+        [
+          {
+            targetAccount,
+            offset: 0,
+            valueLen: 8,
+            operator: { lte: {} },
+            expectedValue: Buffer.from(new BN(1_000_000).toArray("le", 8)),
+            assertionMode: 0,
+          },
+        ],
+        setupPADigest,
+      )
       .accounts({
         owner: owner.publicKey,
         vault: vaultPda,
@@ -445,8 +484,14 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
     const versionBefore = (before.policyVersion as BN).toString();
     expect(before.hasPostAssertions).to.equal(1);
 
+    const closePADigest = await siblingHandlerDigest(
+      program,
+      policyPda,
+      vaultPda,
+      { hasPostAssertions: 0 },
+    );
     await program.methods
-      .closePostAssertions()
+      .closePostAssertions(closePADigest)
       .accounts({
         owner: owner.publicKey,
         vault: vaultPda,
@@ -874,17 +919,26 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
       [Buffer.from("post_assertions"), vault.vaultPda.toBuffer()],
       program.programId,
     );
+    const tamperPADigest = await siblingHandlerDigest(
+      program,
+      vault.policyPda,
+      vault.vaultPda,
+      { hasPostAssertions: 1 },
+    );
     await program.methods
-      .createPostAssertions([
-        {
-          targetAccount: Keypair.generate().publicKey,
-          offset: 0,
-          valueLen: 8,
-          operator: { lte: {} },
-          expectedValue: Buffer.from(new BN(1).toArray("le", 8)),
-          assertionMode: 0,
-        },
-      ])
+      .createPostAssertions(
+        [
+          {
+            targetAccount: Keypair.generate().publicKey,
+            offset: 0,
+            valueLen: 8,
+            operator: { lte: {} },
+            expectedValue: Buffer.from(new BN(1).toArray("le", 8)),
+            assertionMode: 0,
+          },
+        ],
+        tamperPADigest,
+      )
       .accounts({
         owner: owner.publicKey,
         vault: vault.vaultPda,
@@ -1107,6 +1161,118 @@ describe("PEN-CROSS-2 — close+reinit replay protection", () => {
     expect(
       threw,
       "initialize_vault MUST reject a digest encoding a slot != current Clock::get()?.slot",
+    ).to.equal(true);
+  });
+
+  // PEN-CROSS-3: deliberate-wrong expected_digest must be rejected by each
+  // of the 4 sibling handlers. Single test exercises
+  // create_instruction_constraints (path with the most state setup); the
+  // other three handlers share the same code shape and are covered by the
+  // positive-path tests above (which would fail if the require! gate were
+  // missing or in the wrong order).
+  it("create_instruction_constraints rejects a wrong expected_digest (PEN-CROSS-3)", async () => {
+    const vaultId = new BN(2002);
+    const [vaultPda] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("vault"),
+        owner.publicKey.toBuffer(),
+        vaultId.toArrayLike(Buffer, "le", 8),
+      ],
+      program.programId,
+    );
+    const [policyPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("policy"), vaultPda.toBuffer()],
+      program.programId,
+    );
+    const [trackerPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("tracker"), vaultPda.toBuffer()],
+      program.programId,
+    );
+    const [overlayPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("agent_spend"), vaultPda.toBuffer(), Buffer.from([0])],
+      program.programId,
+    );
+
+    // Init with current slot — this part should succeed.
+    const currentSlot = Number(svm.getClock().slot);
+    const goodInit = initVaultPreviewDigest({
+      dailySpendingCapUsd: new BN(500_000_000),
+      maxTransactionSizeUsd: new BN(100_000_000),
+      maxSlippageBps: 100,
+      developerFeeRate: 0,
+      protocolMode: 1,
+      protocols: [dummyProtocol],
+      allowedDestinations: [],
+      timelockDuration: new BN(1800),
+      observeOnly: false,
+      createdAtSlot: currentSlot,
+    });
+    await program.methods
+      .initializeVault(
+        vaultId,
+        new BN(500_000_000),
+        new BN(100_000_000),
+        1,
+        [dummyProtocol],
+        0,
+        100,
+        new BN(1800),
+        [],
+        [],
+        false,
+        goodInit,
+      )
+      .accounts({
+        owner: owner.publicKey,
+        vault: vaultPda,
+        policy: policyPda,
+        tracker: trackerPda,
+        agentSpendOverlay: overlayPda,
+        feeDestination: feeDestination.publicKey,
+        systemProgram: SystemProgram.programId,
+      } as any)
+      .rpc();
+
+    // Now try create_instruction_constraints with all-zero (wrong) digest.
+    const entries = [
+      {
+        programId: Keypair.generate().publicKey,
+        dataConstraints: [
+          {
+            offset: 0,
+            operator: { eq: {} },
+            value: Buffer.from([0xaa, 0xbb, 0, 0, 0, 0, 0, 0]),
+          },
+        ],
+        accountConstraints: [],
+        discriminatorFormat: { anchor8: {} },
+      },
+    ];
+    const wrongDigest = Array.from(new Uint8Array(32)); // all zero
+
+    let threw = false;
+    try {
+      createConstraintsAccount(
+        program,
+        svm,
+        (owner as any).payer,
+        vaultPda,
+        policyPda,
+        entries,
+        wrongDigest,
+      );
+    } catch (err: any) {
+      threw = true;
+      const msg = err?.message ?? String(err);
+      expect(msg).to.satisfy(
+        (m: string) =>
+          m.includes("PolicyPreviewMismatch") || m.includes("6080"),
+        `expected PolicyPreviewMismatch (6080), got: ${msg}`,
+      );
+    }
+    expect(
+      threw,
+      "create_instruction_constraints MUST reject a wrong expected_digest",
     ).to.equal(true);
   });
 

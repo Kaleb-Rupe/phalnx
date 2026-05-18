@@ -713,7 +713,17 @@ export type Sigil = {
           }
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "expectedDigest",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
     },
     {
       "name": "applyConstraintsUpdate",
@@ -1584,7 +1594,17 @@ export type Sigil = {
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "expectedDigest",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
     },
     {
       "name": "closeVault",
@@ -1827,6 +1847,15 @@ export type Sigil = {
               }
             }
           }
+        },
+        {
+          "name": "expectedDigest",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
         }
       ]
     },
@@ -1951,6 +1980,15 @@ export type Sigil = {
                 "name": "postAssertionEntry"
               }
             }
+          }
+        },
+        {
+          "name": "expectedDigest",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
           }
         }
       ]

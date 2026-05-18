@@ -90,10 +90,12 @@ export type CreateInstructionConstraintsInstruction<
 export type CreateInstructionConstraintsInstructionData = {
   discriminator: ReadonlyUint8Array;
   entries: Array<ConstraintEntry>;
+  expectedDigest: ReadonlyUint8Array;
 };
 
 export type CreateInstructionConstraintsInstructionDataArgs = {
   entries: Array<ConstraintEntryArgs>;
+  expectedDigest: ReadonlyUint8Array;
 };
 
 export function getCreateInstructionConstraintsInstructionDataEncoder(): Encoder<CreateInstructionConstraintsInstructionDataArgs> {
@@ -101,6 +103,7 @@ export function getCreateInstructionConstraintsInstructionDataEncoder(): Encoder
     getStructEncoder([
       ["discriminator", fixEncoderSize(getBytesEncoder(), 8)],
       ["entries", getArrayEncoder(getConstraintEntryEncoder())],
+      ["expectedDigest", fixEncoderSize(getBytesEncoder(), 32)],
     ]),
     (value) => ({
       ...value,
@@ -113,6 +116,7 @@ export function getCreateInstructionConstraintsInstructionDataDecoder(): Decoder
   return getStructDecoder([
     ["discriminator", fixDecoderSize(getBytesDecoder(), 8)],
     ["entries", getArrayDecoder(getConstraintEntryDecoder())],
+    ["expectedDigest", fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }
 
@@ -138,6 +142,7 @@ export type CreateInstructionConstraintsAsyncInput<
   /** Verified in handler: correct size, program-owned, vault match, no discriminator yet. */
   constraints?: Address<TAccountConstraints>;
   entries: CreateInstructionConstraintsInstructionDataArgs["entries"];
+  expectedDigest: CreateInstructionConstraintsInstructionDataArgs["expectedDigest"];
 };
 
 export async function getCreateInstructionConstraintsInstructionAsync<
@@ -246,6 +251,7 @@ export type CreateInstructionConstraintsInput<
   /** Verified in handler: correct size, program-owned, vault match, no discriminator yet. */
   constraints: Address<TAccountConstraints>;
   entries: CreateInstructionConstraintsInstructionDataArgs["entries"];
+  expectedDigest: CreateInstructionConstraintsInstructionDataArgs["expectedDigest"];
 };
 
 export function getCreateInstructionConstraintsInstruction<

@@ -259,6 +259,47 @@ export function queuePolicyMergedDigest(
 }
 
 /**
+ * PEN-CROSS-3 (Phase 2 close-up): compute the expected post-mutation digest
+ * for one of the 4 sibling handlers. Mirrors the SDK helper
+ * `siblingHandlerExpectedDigest`.
+ *
+ * Pass `hasConstraints`/`hasPostAssertions` to override the flag the handler
+ * is about to flip. The rest of the digest fields are read off the live
+ * PolicyConfig + AgentVault.
+ */
+export async function siblingHandlerDigest(
+  program: any,
+  policyPda: PublicKey,
+  vaultPda: PublicKey,
+  override: { hasConstraints?: boolean; hasPostAssertions?: number },
+): Promise<number[]> {
+  const policy = await program.account.policyConfig.fetch(policyPda);
+  const vault = await program.account.agentVault.fetch(vaultPda);
+  return computePolicyPreviewDigest({
+    dailySpendingCapUsd: policy.dailySpendingCapUsd,
+    maxTransactionSizeUsd: policy.maxTransactionSizeUsd,
+    maxSlippageBps: policy.maxSlippageBps,
+    developerFeeRate: policy.developerFeeRate ?? 0,
+    protocolMode: policy.protocolMode,
+    protocols: policy.protocols,
+    destinationMode: policy.destinationMode,
+    allowedDestinations: policy.allowedDestinations,
+    timelockDuration: policy.timelockDuration,
+    sessionExpirySeconds: policy.sessionExpirySeconds,
+    observeOnly: !!vault.observeOnly,
+    hasConstraints:
+      override.hasConstraints !== undefined
+        ? override.hasConstraints
+        : !!policy.hasConstraints,
+    hasPostAssertions:
+      override.hasPostAssertions !== undefined
+        ? override.hasPostAssertions
+        : (policy.hasPostAssertions as number),
+    createdAtSlot: policy.createdAtSlot ?? 0,
+  });
+}
+
+/**
  * Async helper that fetches the live policy + vault from a Program client,
  * then computes the merged digest for a queue. Tests pass the program client,
  * policyPda, vaultPda, and the override object — the helper handles the rest.

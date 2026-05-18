@@ -203,8 +203,9 @@ pub mod sigil {
     pub fn create_instruction_constraints(
         ctx: Context<CreateInstructionConstraints>,
         entries: Vec<state::ConstraintEntry>,
+        expected_digest: [u8; 32],
     ) -> Result<()> {
-        instructions::create_instruction_constraints::handler(ctx, entries)
+        instructions::create_instruction_constraints::handler(ctx, entries, expected_digest)
     }
 
     // close_instruction_constraints DELETED — use queue_close_constraints → apply_close_constraints.
@@ -237,8 +238,11 @@ pub mod sigil {
 
     /// Apply a queued constraint closure after timelock expires.
     /// Closes the constraints PDA, clears policy.has_constraints, bumps policy_version.
-    pub fn apply_close_constraints(ctx: Context<ApplyCloseConstraints>) -> Result<()> {
-        instructions::apply_close_constraints::handler(ctx)
+    pub fn apply_close_constraints(
+        ctx: Context<ApplyCloseConstraints>,
+        expected_digest: [u8; 32],
+    ) -> Result<()> {
+        instructions::apply_close_constraints::handler(ctx, expected_digest)
     }
 
     /// Cancel a queued constraint closure.
@@ -260,13 +264,17 @@ pub mod sigil {
     pub fn create_post_assertions(
         ctx: Context<CreatePostAssertions>,
         entries: Vec<PostAssertionEntry>,
+        expected_digest: [u8; 32],
     ) -> Result<()> {
-        instructions::create_post_assertions::handler(ctx, entries)
+        instructions::create_post_assertions::handler(ctx, entries, expected_digest)
     }
 
     /// Close post-execution assertions for a vault. Returns rent to owner.
-    pub fn close_post_assertions(ctx: Context<ClosePostAssertions>) -> Result<()> {
-        instructions::close_post_assertions::handler(ctx)
+    pub fn close_post_assertions(
+        ctx: Context<ClosePostAssertions>,
+        expected_digest: [u8; 32],
+    ) -> Result<()> {
+        instructions::close_post_assertions::handler(ctx, expected_digest)
     }
 
     /// Transfer tokens from the vault to an allowed destination.

@@ -707,7 +707,17 @@
           }
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "expected_digest",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
     },
     {
       "name": "apply_constraints_update",
@@ -1578,7 +1588,17 @@
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "expected_digest",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
     },
     {
       "name": "close_vault",
@@ -1821,6 +1841,15 @@
               }
             }
           }
+        },
+        {
+          "name": "expected_digest",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
         }
       ]
     },
@@ -1945,6 +1974,15 @@
                 "name": "PostAssertionEntry"
               }
             }
+          }
+        },
+        {
+          "name": "expected_digest",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
           }
         }
       ]

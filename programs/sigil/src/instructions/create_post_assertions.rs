@@ -38,7 +38,13 @@ pub struct CreatePostAssertions<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(ctx: Context<CreatePostAssertions>, entries: Vec<PostAssertionEntry>) -> Result<()> {
+pub fn handler(
+    ctx: Context<CreatePostAssertions>,
+    entries: Vec<PostAssertionEntry>,
+    // PEN-CROSS-3 (Phase 2 close-up): owner-signed expected digest covering
+    // the POST-mutation policy state (with `has_post_assertions=1`).
+    expected_digest: [u8; 32],
+) -> Result<()> {
     crate::reject_cpi!();
 
     // Validate entries
@@ -94,6 +100,11 @@ pub fn handler(ctx: Context<CreatePostAssertions>, entries: Vec<PostAssertionEnt
         // PEN-CROSS-2: created_at_slot is immutable post-init.
         created_at_slot: policy.created_at_slot,
     });
+    // PEN-CROSS-3: owner must have signed the post-mutation digest.
+    require!(
+        recomputed_digest == expected_digest,
+        SigilError::PolicyPreviewMismatch
+    );
     policy.policy_preview_digest = recomputed_digest;
 
     policy.policy_version = policy

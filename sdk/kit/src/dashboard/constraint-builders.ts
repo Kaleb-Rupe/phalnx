@@ -161,6 +161,21 @@ export interface BuildCreateConstraintsInput {
    */
   policy: Address;
   entries: ConstraintEntry[];
+  /**
+   * PEN-CROSS-3 (Phase 2 close-up): owner-signed digest covering the
+   * post-mutation policy state (with `has_constraints=true`). The on-chain
+   * `create_instruction_constraints` handler recomputes the digest from the
+   * resulting `PolicyConfig` and rejects with `PolicyPreviewMismatch` if the
+   * caller's digest does not match. Required for `buildCreateConstraintsIxs`
+   * — forces the owner to explicitly attest the flag flip.
+   *
+   * NOT required for `buildQueueConstraintsUpdateIxs` (queue path doesn't
+   * mutate `has_constraints`); pass `undefined` there.
+   *
+   * Compute via `computePolicyPreviewDigest` with `hasConstraints: true` and
+   * all other fields read from live `PolicyConfig` + `AgentVault`.
+   */
+  expectedDigest?: Uint8Array;
   // strictMode field removed in V2 (REVAMP_PLAN §2.2): every entry is strictly
   // enforced. Callers no longer pass a mode flag.
 }
@@ -180,13 +195,20 @@ export interface BuildCreateConstraintsInput {
 export async function buildCreateConstraintsIxs(
   input: BuildCreateConstraintsInput,
 ): Promise<Instruction[]> {
-  const { owner, vault, policy, entries } = input;
+  const { owner, vault, policy, entries, expectedDigest } = input;
 
   if (!entries || entries.length === 0) {
     // Match the validation already performed in `mutations.createConstraints`.
     // Putting it here too means direct callers of the builder get the same
     // guard, and the mutation wrapper becomes trivially correct.
     throw new Error("Constraint entries must be a non-empty array");
+  }
+
+  // PEN-CROSS-3: this path mutates has_constraints. expectedDigest required.
+  if (!expectedDigest || expectedDigest.length !== 32) {
+    throw new Error(
+      "buildCreateConstraintsIxs: expectedDigest is required (32-byte SHA-256 of post-mutation policy fields). Compute via computePolicyPreviewDigest with hasConstraints=true.",
+    );
   }
 
   const constraintsPda = await findConstraintsPda(vault);
@@ -210,12 +232,14 @@ export async function buildCreateConstraintsIxs(
   );
 
   // Step N: populate (the original instruction the SDK was sending alone).
+  // PEN-CROSS-3: pass the owner-signed post-mutation digest.
   const populateIx = await getCreateInstructionConstraintsInstructionAsync({
     owner,
     vault,
     policy,
     constraints: constraintsPda,
     entries,
+    expectedDigest,
   });
 
   const ixs: Instruction[] = [allocateIx, ...extendIxs, populateIx];

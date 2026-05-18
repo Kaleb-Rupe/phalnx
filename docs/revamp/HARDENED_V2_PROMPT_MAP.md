@@ -881,6 +881,21 @@ COMMITS (3 expected):
 - feat(validate): TA-10 tighten sandwich integrity uniqueness
 - feat(validate): TA-11 dynamic seed-prefix family check + owner verify
 
+ABSORPTION NOTES (Phase 2 close-up extension, 2026-05-18):
+- Task X: PEN-CROSS-4 absorption — pre-filter `destination_check` helper
+  iteration list by `program_id` byte-read (avoid full TokenAccount
+  deserialization on every meta); cap iterations at 16 metas/ix. CU savings
+  ~5K per agent_transfer.
+- Task X: PEN-CROSS-5 absorption — bump `policy_version` on
+  `register_agent` / `revoke_agent` / `pause_agent` / `unpause_agent`. Phase 2
+  close-up surfaced ~80 hardcoded `expected_policy_version: new BN(0)` test
+  fixtures that would need refresh against the bumped value. Existing
+  `vault.is_agent` / `is_agent_paused` constraints already reject the TOCTOU
+  window, so this is a defense-in-depth OCC improvement, not a closure of an
+  open exploit. Bundle the bump with the Phase 4 TA-10 sandwich-integrity
+  work so the test-fixture refresh lands once for both. NEW Accounts struct
+  field: `policy: Account<PolicyConfig>` on all 4 agent-mutation ix.
+
 OUT OF SCOPE: post-execution stuff (Phase 5), Maestro borrows (Phase 6),
 audit log (Phase 7), ownership transfer (Phase 8 — but Phase 8 reuses nonce
 for ownership-transfer replay protection per M-5).
@@ -1357,6 +1372,24 @@ COMMITS (5 expected):
 - feat(ownership): C26 Squads V4 multisig acceptance variant (F-9)
 - feat(freeze): C27 freeze_reason u8 enum on AgentVault
 - feat(reactivate): C28 5-min observation cooldown + T-19 documentation
+
+ABSORPTION NOTES (Phase 2 close-up extension, 2026-05-18):
+- Task X: PEN-CROSS-1 absorption — add timelock-gated path for
+  `CAPABILITY_OPERATOR` (capability=2) grants in `register_agent` + expand
+  TA-19 digest scope to cover `vault.agents` pubkey + capability. Today
+  register_agent admits an Operator-class agent immediately on owner
+  signature; the digest does not bind the agent pubkey, so a compromised
+  owner-signer can blind-sign a new agent. Two-part fix:
+    1. State change: rename `register_agent` to handle Observer-class
+       grants directly, and split CAPABILITY_OPERATOR registration into
+       `queue_agent_grant` → `apply_agent_grant` (timelock-gated, default
+       MIN_TIMELOCK_DURATION=1800s) so the owner has the same observation
+       window as policy updates.
+    2. Digest scope: append `agent_set_hash: [u8; 32]` to TA-19
+       PolicyPreviewFields canonical encoding at position 15 (after
+       created_at_slot). Compute as SHA-256 over the Borsh encoding of
+       `vault.agents.iter().map(|a| (a.pubkey, a.capability)).collect()`.
+       Bind every existing handler that touches digest.
 
 OUT OF SCOPE: SDK ergonomic wrappers for ownership transfer (Phase 9).
 

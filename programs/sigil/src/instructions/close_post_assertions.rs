@@ -37,7 +37,12 @@ pub struct ClosePostAssertions<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(ctx: Context<ClosePostAssertions>) -> Result<()> {
+pub fn handler(
+    ctx: Context<ClosePostAssertions>,
+    // PEN-CROSS-3 (Phase 2 close-up): owner-signed expected digest covering
+    // the POST-mutation policy state (with `has_post_assertions=0`).
+    expected_digest: [u8; 32],
+) -> Result<()> {
     crate::reject_cpi!();
 
     let vault_key = ctx.accounts.vault.key();
@@ -66,6 +71,11 @@ pub fn handler(ctx: Context<ClosePostAssertions>) -> Result<()> {
         // PEN-CROSS-2: created_at_slot is immutable post-init.
         created_at_slot: policy.created_at_slot,
     });
+    // PEN-CROSS-3: owner must have signed the post-mutation digest.
+    require!(
+        recomputed_digest == expected_digest,
+        SigilError::PolicyPreviewMismatch
+    );
     policy.policy_preview_digest = recomputed_digest;
 
     policy.policy_version = policy

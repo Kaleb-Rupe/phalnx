@@ -21,7 +21,10 @@ import {
 } from "@solana/spl-token";
 import { expect } from "chai";
 import BN from "bn.js";
-import { initVaultPreviewDigest } from "./helpers/policy-digest";
+import {
+  initVaultPreviewDigest,
+  siblingHandlerDigest,
+} from "./helpers/policy-digest";
 import {
   createTestEnv,
   airdropSol,
@@ -350,8 +353,15 @@ describe("instruction-constraints", () => {
       } as any)
       .rpc();
     advanceTime(svm, timelockSeconds + 1);
+    // PEN-CROSS-3: compute the owner-signed digest for has_constraints=false.
+    const closeDigest = await siblingHandlerDigest(
+      program,
+      policy,
+      vault,
+      { hasConstraints: false },
+    );
     await program.methods
-      .applyCloseConstraints()
+      .applyCloseConstraints(closeDigest)
       .accounts({
         owner: owner.publicKey,
         vault,

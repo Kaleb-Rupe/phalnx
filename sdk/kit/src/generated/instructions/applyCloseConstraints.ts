@@ -85,13 +85,19 @@ export type ApplyCloseConstraintsInstruction<
 
 export type ApplyCloseConstraintsInstructionData = {
   discriminator: ReadonlyUint8Array;
+  expectedDigest: ReadonlyUint8Array;
 };
 
-export type ApplyCloseConstraintsInstructionDataArgs = {};
+export type ApplyCloseConstraintsInstructionDataArgs = {
+  expectedDigest: ReadonlyUint8Array;
+};
 
 export function getApplyCloseConstraintsInstructionDataEncoder(): FixedSizeEncoder<ApplyCloseConstraintsInstructionDataArgs> {
   return transformEncoder(
-    getStructEncoder([["discriminator", fixEncoderSize(getBytesEncoder(), 8)]]),
+    getStructEncoder([
+      ["discriminator", fixEncoderSize(getBytesEncoder(), 8)],
+      ["expectedDigest", fixEncoderSize(getBytesEncoder(), 32)],
+    ]),
     (value) => ({
       ...value,
       discriminator: APPLY_CLOSE_CONSTRAINTS_DISCRIMINATOR,
@@ -102,6 +108,7 @@ export function getApplyCloseConstraintsInstructionDataEncoder(): FixedSizeEncod
 export function getApplyCloseConstraintsInstructionDataDecoder(): FixedSizeDecoder<ApplyCloseConstraintsInstructionData> {
   return getStructDecoder([
     ["discriminator", fixDecoderSize(getBytesDecoder(), 8)],
+    ["expectedDigest", fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }
 
@@ -127,6 +134,7 @@ export type ApplyCloseConstraintsAsyncInput<
   policy?: Address<TAccountPolicy>;
   constraints?: Address<TAccountConstraints>;
   pendingCloseConstraints?: Address<TAccountPendingCloseConstraints>;
+  expectedDigest: ApplyCloseConstraintsInstructionDataArgs["expectedDigest"];
 };
 
 export async function getApplyCloseConstraintsInstructionAsync<
@@ -173,6 +181,9 @@ export async function getApplyCloseConstraintsInstructionAsync<
     keyof typeof originalAccounts,
     ResolvedInstructionAccount
   >;
+
+  // Original args.
+  const args = { ...input };
 
   // Resolve default values.
   if (!accounts.policy.value) {
@@ -237,7 +248,9 @@ export async function getApplyCloseConstraintsInstructionAsync<
         accounts.pendingCloseConstraints,
       ),
     ],
-    data: getApplyCloseConstraintsInstructionDataEncoder().encode({}),
+    data: getApplyCloseConstraintsInstructionDataEncoder().encode(
+      args as ApplyCloseConstraintsInstructionDataArgs,
+    ),
     programAddress,
   } as ApplyCloseConstraintsInstruction<
     TProgramAddress,
@@ -261,6 +274,7 @@ export type ApplyCloseConstraintsInput<
   policy: Address<TAccountPolicy>;
   constraints: Address<TAccountConstraints>;
   pendingCloseConstraints: Address<TAccountPendingCloseConstraints>;
+  expectedDigest: ApplyCloseConstraintsInstructionDataArgs["expectedDigest"];
 };
 
 export function getApplyCloseConstraintsInstruction<
@@ -306,6 +320,9 @@ export function getApplyCloseConstraintsInstruction<
     ResolvedInstructionAccount
   >;
 
+  // Original args.
+  const args = { ...input };
+
   const getAccountMeta = getAccountMetaFactory(programAddress, "programId");
   return Object.freeze({
     accounts: [
@@ -318,7 +335,9 @@ export function getApplyCloseConstraintsInstruction<
         accounts.pendingCloseConstraints,
       ),
     ],
-    data: getApplyCloseConstraintsInstructionDataEncoder().encode({}),
+    data: getApplyCloseConstraintsInstructionDataEncoder().encode(
+      args as ApplyCloseConstraintsInstructionDataArgs,
+    ),
     programAddress,
   } as ApplyCloseConstraintsInstruction<
     TProgramAddress,
