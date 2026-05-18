@@ -227,6 +227,62 @@ mod treasury_tests {
     }
 }
 
+#[cfg(test)]
+mod ta03_pinned_deposit_mint_tests {
+    use super::*;
+
+    /// TA-03: pinned-deposit predicate must accept USDC under the
+    /// non-devnet-testing build. cargo test for the lib runs with the
+    /// default `devnet` feature; `devnet-testing` is enabled only by the
+    /// dedicated `cargo test --features devnet-testing` job. We assert the
+    /// strict path here because the strict variant is the one shipped.
+    #[cfg(not(feature = "devnet-testing"))]
+    #[test]
+    fn pinned_deposit_accepts_usdc() {
+        assert!(
+            is_pinned_deposit_mint(&USDC_MINT),
+            "USDC mint must pass the pinned-deposit gate"
+        );
+    }
+
+    /// TA-03: pinned-deposit must accept USDT.
+    #[cfg(not(feature = "devnet-testing"))]
+    #[test]
+    fn pinned_deposit_accepts_usdt() {
+        assert!(
+            is_pinned_deposit_mint(&USDT_MINT),
+            "USDT mint must pass the pinned-deposit gate"
+        );
+    }
+
+    /// TA-03: pinned-deposit MUST reject an arbitrary unrecognized mint.
+    /// Closes the deposit-time gap where an exotic mint could be parked in
+    /// the vault and trigger `is_stablecoin_mint=true` only via the
+    /// devnet-testing escape — the strict build must reject.
+    #[cfg(not(feature = "devnet-testing"))]
+    #[test]
+    fn pinned_deposit_rejects_arbitrary_mint() {
+        let arbitrary = Pubkey::new_from_array([7u8; 32]);
+        assert!(
+            !is_pinned_deposit_mint(&arbitrary),
+            "arbitrary mint MUST be rejected by the pinned-deposit gate"
+        );
+    }
+
+    /// TA-03: under devnet-testing, the pin is open — same escape hatch as
+    /// `is_stablecoin_mint`. Required so LiteSVM + Surfpool integration
+    /// suites can drive deposits with arbitrary test mints.
+    #[cfg(feature = "devnet-testing")]
+    #[test]
+    fn pinned_deposit_devnet_testing_accepts_arbitrary_mint() {
+        let arbitrary = Pubkey::new_from_array([7u8; 32]);
+        assert!(
+            is_pinned_deposit_mint(&arbitrary),
+            "devnet-testing must keep the deposit gate open for integration suites"
+        );
+    }
+}
+
 /// Check if a mint address is a recognized stablecoin (USDC or USDT).
 /// With `devnet-testing` feature, accepts any mint for integration testing
 /// on devnet where Circle-controlled USDC cannot be minted.
@@ -237,6 +293,33 @@ pub fn is_stablecoin_mint(mint: &Pubkey) -> bool {
 
 #[cfg(feature = "devnet-testing")]
 pub fn is_stablecoin_mint(_mint: &Pubkey) -> bool {
+    true
+}
+
+/// TA-03 — pinned-deposit allowlist for `deposit_funds`.
+///
+/// `is_stablecoin_mint` above is used throughout the spending path (balance
+/// delta verification, output-mint checks, fee accounting). It must NOT widen
+/// or it loosens existing security paths. TA-03 introduces a separate,
+/// narrower predicate that gates **deposits only** to the exact set of mints
+/// the program has been built for.
+///
+/// Mainnet: exactly USDC + USDT.
+/// Devnet:  the devnet test-keypair USDC + USDT minted under our control.
+/// `devnet-testing` (LiteSVM integration / Surfpool runs): any mint accepted,
+/// matching the `is_stablecoin_mint` escape hatch — required because we can't
+/// mint Circle-controlled USDC in these environments.
+///
+/// Together with the existing compile-time `mainnet|devnet` feature gate
+/// (`compile_error!` in state/mod.rs), this provides build-time pinning: a
+/// mainnet binary literally cannot be built against an unpinned mint set.
+#[cfg(not(feature = "devnet-testing"))]
+pub fn is_pinned_deposit_mint(mint: &Pubkey) -> bool {
+    *mint == USDC_MINT || *mint == USDT_MINT
+}
+
+#[cfg(feature = "devnet-testing")]
+pub fn is_pinned_deposit_mint(_mint: &Pubkey) -> bool {
     true
 }
 

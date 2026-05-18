@@ -305,4 +305,68 @@ pub enum SigilError {
     /// explicitly inert by design, so this check is skipped for them.
     #[msg("Active (non-observe_only) vault must have at least one protocol or destination on the allowlist")]
     ActiveVaultRequiresAllowlist,
+
+    // --- Phase 3 (Option A pre-execution guards TA-03/05/06/07/08/09/17) ---
+    // Appended at END to preserve existing error codes 6000-6082.
+
+    /// 6083 — TA-03: deposit mint must be a build-time-pinned stablecoin
+    /// (USDC or USDT). With `devnet-testing` feature, any mint accepted.
+    /// Rejects exotic / hostile / typosquatted mints at the entry point so
+    /// downstream balance-delta logic in `finalize_session` cannot be evaded
+    /// by depositing a token whose `is_stablecoin_mint` test returns false.
+    #[msg("Deposit mint is not a build-time-pinned stablecoin (USDC or USDT)")]
+    ErrMintNotPinned,
+
+    /// 6084 — TA-05: operating_hours UTC bitmask rejects the current hour.
+    /// `operating_hours` is a 24-bit bitmask (bit `n` = hour `n` UTC). Default
+    /// 0xFFFFFF (all 24h enabled); owner narrows for agents that should only
+    /// run during business hours / market hours.
+    #[msg("Current UTC hour is outside the policy's operating_hours bitmask")]
+    ErrOutsideOperatingHours,
+
+    /// 6085 — TA-06: per-agent cooldown active. Per-agent (NOT per-vault per
+    /// F-16) — a per-vault cooldown would let one agent's traffic DoS all
+    /// other agents on the vault. Stored on `AgentSpendOverlay` per slot;
+    /// `last_action_unix` rewritten on successful `validate_and_authorize`.
+    #[msg("Agent cooldown period has not elapsed since the last action")]
+    ErrCooldownActive,
+
+    /// 6086 — TA-07: first-time-destination 24h graylist friction. New
+    /// destinations added to the allowlist enter a graylist with
+    /// `unlock_unix = now + 86400`. Until the unlock time elapses (or the
+    /// owner promotes the entry via `promote_graylist_destination`), spend
+    /// paths reject any tx routing value to that destination.
+    #[msg("Destination is graylisted (24h friction window — awaiting promote_graylist_destination or unlock)")]
+    ErrGraylistFriction,
+
+    /// 6087 — TA-07: graylist bound exceeded. `destination_graylist` is
+    /// bounded ≤10 entries to keep PolicyConfig SIZE deterministic. When
+    /// full, additional allowlist adds must wait for an existing entry to
+    /// unlock or be promoted.
+    #[msg("Destination graylist is full (max 10 entries) — wait for an existing entry to unlock or promote")]
+    ErrGraylistFull,
+
+    /// 6088 — TA-08: Token-2022 extension blocked. Deposit allowlists exactly
+    /// 3 extensions (MemoTransfer, MetadataPointer, NonTransferable). Anything
+    /// else — including future-added extensions — rejects with this code.
+    /// Forward-secure: unknown extension type IDs reject (do not skip).
+    #[msg("Token-2022 mint has a forbidden extension (only MemoTransfer + MetadataPointer + NonTransferable allowed)")]
+    ErrToken2022ExtensionForbidden,
+
+    /// 6089 — TA-09: cosign required for elevated policy mutations. Raising
+    /// daily_spending_cap_usd, raising max_transaction_size_usd, expanding
+    /// allowed_destinations / allowed_protocols, lowering stable_balance_floor,
+    /// or pre-graylist-bypass adds require an owner-signed session co-signature
+    /// alongside the owner. Scope: any session signed by the owner within the
+    /// vault's validity window (D-2 default).
+    #[msg("Elevated policy mutation requires an owner-signed cosigning session")]
+    ErrCosignRequired,
+
+    /// 6090 — TA-17: agent auto-revoked after `auto_revoke_threshold`
+    /// consecutive policy-violation failures. Only on-chain policy-violation
+    /// codes (6083-6100) count; external causes (CU exhaustion, nonce desync,
+    /// auth errors) do NOT increment. Owner re-enables via existing
+    /// `queue_agent_permissions_update`.
+    #[msg("Agent capability auto-revoked after consecutive policy-violation failures; owner must re-enable")]
+    ErrAutoRevoked,
 }

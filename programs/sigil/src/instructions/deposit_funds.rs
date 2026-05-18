@@ -52,6 +52,18 @@ pub fn handler(ctx: Context<DepositFunds>, amount: u64) -> Result<()> {
         SigilError::VaultAlreadyClosed
     );
 
+    // TA-03 (Phase 3 pre-execution guard #1): pin the deposit mint at the
+    // entry point to the build-time stablecoin allowlist. Closes the gap
+    // where an owner could deposit an exotic / typosquatted mint and confuse
+    // downstream balance-delta logic in `finalize_session` (which uses
+    // `is_stablecoin_mint` — a wider predicate used for output-mint
+    // accounting in the spending path, but historically NOT enforced at
+    // deposit). Devnet-testing builds keep the existing escape hatch.
+    require!(
+        is_pinned_deposit_mint(&ctx.accounts.mint.key()),
+        SigilError::ErrMintNotPinned
+    );
+
     // Transfer tokens from owner to vault PDA token account
     let cpi_accounts = Transfer {
         from: ctx.accounts.owner_token_account.to_account_info(),
