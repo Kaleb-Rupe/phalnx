@@ -89,7 +89,7 @@ import {
   getFinalizeSessionInstructionAsync,
   getFreezeVaultInstruction,
   getInitializeVaultInstructionAsync,
-  getPauseAgentInstruction,
+  getPauseAgentInstructionAsync,
   getPromoteGraylistDestinationInstructionAsync,
   getQueueAgentPermissionsUpdateInstructionAsync,
   getQueueCloseConstraintsInstructionAsync,
@@ -97,10 +97,10 @@ import {
   getQueuePolicyUpdateInstructionAsync,
   getReactivateVaultInstruction,
   getRecordAgentViolationInstructionAsync,
-  getRegisterAgentInstruction,
-  getRevokeAgentInstruction,
+  getRegisterAgentInstructionAsync,
+  getRevokeAgentInstructionAsync,
   getSetObserveOnlyInstructionAsync,
-  getUnpauseAgentInstruction,
+  getUnpauseAgentInstructionAsync,
   getValidateAndAuthorizeInstructionAsync,
   getWithdrawFundsInstructionAsync,
   parseAgentTransferInstruction,
@@ -194,7 +194,7 @@ import {
   type ParsedUnpauseAgentInstruction,
   type ParsedValidateAndAuthorizeInstruction,
   type ParsedWithdrawFundsInstruction,
-  type PauseAgentInput,
+  type PauseAgentAsyncInput,
   type PromoteGraylistDestinationAsyncInput,
   type QueueAgentPermissionsUpdateAsyncInput,
   type QueueCloseConstraintsAsyncInput,
@@ -202,10 +202,10 @@ import {
   type QueuePolicyUpdateAsyncInput,
   type ReactivateVaultInput,
   type RecordAgentViolationAsyncInput,
-  type RegisterAgentInput,
-  type RevokeAgentInput,
+  type RegisterAgentAsyncInput,
+  type RevokeAgentAsyncInput,
   type SetObserveOnlyAsyncInput,
-  type UnpauseAgentInput,
+  type UnpauseAgentAsyncInput,
   type ValidateAndAuthorizeAsyncInput,
   type WithdrawFundsAsyncInput,
 } from "../instructions/index.js";
@@ -1279,8 +1279,9 @@ export type SigilPluginInstructions = {
   ) => ReturnType<typeof getInitializeVaultInstructionAsync> &
     SelfPlanAndSendFunctions;
   pauseAgent: (
-    input: PauseAgentInput,
-  ) => ReturnType<typeof getPauseAgentInstruction> & SelfPlanAndSendFunctions;
+    input: PauseAgentAsyncInput,
+  ) => ReturnType<typeof getPauseAgentInstructionAsync> &
+    SelfPlanAndSendFunctions;
   promoteGraylistDestination: (
     input: PromoteGraylistDestinationAsyncInput,
   ) => ReturnType<typeof getPromoteGraylistDestinationInstructionAsync> &
@@ -1310,19 +1311,21 @@ export type SigilPluginInstructions = {
   ) => ReturnType<typeof getRecordAgentViolationInstructionAsync> &
     SelfPlanAndSendFunctions;
   registerAgent: (
-    input: RegisterAgentInput,
-  ) => ReturnType<typeof getRegisterAgentInstruction> &
+    input: RegisterAgentAsyncInput,
+  ) => ReturnType<typeof getRegisterAgentInstructionAsync> &
     SelfPlanAndSendFunctions;
   revokeAgent: (
-    input: RevokeAgentInput,
-  ) => ReturnType<typeof getRevokeAgentInstruction> & SelfPlanAndSendFunctions;
+    input: RevokeAgentAsyncInput,
+  ) => ReturnType<typeof getRevokeAgentInstructionAsync> &
+    SelfPlanAndSendFunctions;
   setObserveOnly: (
     input: SetObserveOnlyAsyncInput,
   ) => ReturnType<typeof getSetObserveOnlyInstructionAsync> &
     SelfPlanAndSendFunctions;
   unpauseAgent: (
-    input: UnpauseAgentInput,
-  ) => ReturnType<typeof getUnpauseAgentInstruction> & SelfPlanAndSendFunctions;
+    input: UnpauseAgentAsyncInput,
+  ) => ReturnType<typeof getUnpauseAgentInstructionAsync> &
+    SelfPlanAndSendFunctions;
   validateAndAuthorize: (
     input: ValidateAndAuthorizeAsyncInput,
   ) => ReturnType<typeof getValidateAndAuthorizeInstructionAsync> &
@@ -1491,7 +1494,7 @@ export function sigilProgram() {
           pauseAgent: (input) =>
             addSelfPlanAndSendFunctions(
               client,
-              getPauseAgentInstruction(input),
+              getPauseAgentInstructionAsync(input),
             ),
           promoteGraylistDestination: (input) =>
             addSelfPlanAndSendFunctions(
@@ -1531,12 +1534,12 @@ export function sigilProgram() {
           registerAgent: (input) =>
             addSelfPlanAndSendFunctions(
               client,
-              getRegisterAgentInstruction(input),
+              getRegisterAgentInstructionAsync(input),
             ),
           revokeAgent: (input) =>
             addSelfPlanAndSendFunctions(
               client,
-              getRevokeAgentInstruction(input),
+              getRevokeAgentInstructionAsync(input),
             ),
           setObserveOnly: (input) =>
             addSelfPlanAndSendFunctions(
@@ -1546,7 +1549,7 @@ export function sigilProgram() {
           unpauseAgent: (input) =>
             addSelfPlanAndSendFunctions(
               client,
-              getUnpauseAgentInstruction(input),
+              getUnpauseAgentInstructionAsync(input),
             ),
           validateAndAuthorize: (input) =>
             addSelfPlanAndSendFunctions(

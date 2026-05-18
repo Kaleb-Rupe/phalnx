@@ -14,6 +14,7 @@ import {
   getAddressEncoder,
   getBytesDecoder,
   getBytesEncoder,
+  getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
   SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
@@ -35,6 +36,7 @@ import {
 } from "@solana/kit";
 import {
   getAccountMetaFactory,
+  getAddressFromResolvedInstructionAccount,
   type ResolvedInstructionAccount,
 } from "@solana/program-client-core";
 import { SIGIL_PROGRAM_ADDRESS } from "../programs/index.js";
@@ -53,6 +55,7 @@ export type RevokeAgentInstruction<
   TProgram extends string = typeof SIGIL_PROGRAM_ADDRESS,
   TAccountOwner extends string | AccountMeta<string> = string,
   TAccountVault extends string | AccountMeta<string> = string,
+  TAccountPolicy extends string | AccountMeta<string> = string,
   TAccountAgentSpendOverlay extends string | AccountMeta<string> = string,
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
@@ -66,6 +69,9 @@ export type RevokeAgentInstruction<
       TAccountVault extends string
         ? WritableAccount<TAccountVault>
         : TAccountVault,
+      TAccountPolicy extends string
+        ? WritableAccount<TAccountPolicy>
+        : TAccountPolicy,
       TAccountAgentSpendOverlay extends string
         ? WritableAccount<TAccountAgentSpendOverlay>
         : TAccountAgentSpendOverlay,
@@ -107,13 +113,110 @@ export function getRevokeAgentInstructionDataCodec(): FixedSizeCodec<
   );
 }
 
-export type RevokeAgentInput<
+export type RevokeAgentAsyncInput<
   TAccountOwner extends string = string,
   TAccountVault extends string = string,
+  TAccountPolicy extends string = string,
   TAccountAgentSpendOverlay extends string = string,
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
+  policy?: Address<TAccountPolicy>;
+  /** Agent spend overlay — release slot on revocation. */
+  agentSpendOverlay: Address<TAccountAgentSpendOverlay>;
+  agentToRemove: RevokeAgentInstructionDataArgs["agentToRemove"];
+};
+
+export async function getRevokeAgentInstructionAsync<
+  TAccountOwner extends string,
+  TAccountVault extends string,
+  TAccountPolicy extends string,
+  TAccountAgentSpendOverlay extends string,
+  TProgramAddress extends Address = typeof SIGIL_PROGRAM_ADDRESS,
+>(
+  input: RevokeAgentAsyncInput<
+    TAccountOwner,
+    TAccountVault,
+    TAccountPolicy,
+    TAccountAgentSpendOverlay
+  >,
+  config?: { programAddress?: TProgramAddress },
+): Promise<
+  RevokeAgentInstruction<
+    TProgramAddress,
+    TAccountOwner,
+    TAccountVault,
+    TAccountPolicy,
+    TAccountAgentSpendOverlay
+  >
+> {
+  // Program address.
+  const programAddress = config?.programAddress ?? SIGIL_PROGRAM_ADDRESS;
+
+  // Original accounts.
+  const originalAccounts = {
+    owner: { value: input.owner ?? null, isWritable: false },
+    vault: { value: input.vault ?? null, isWritable: true },
+    policy: { value: input.policy ?? null, isWritable: true },
+    agentSpendOverlay: {
+      value: input.agentSpendOverlay ?? null,
+      isWritable: true,
+    },
+  };
+  const accounts = originalAccounts as Record<
+    keyof typeof originalAccounts,
+    ResolvedInstructionAccount
+  >;
+
+  // Original args.
+  const args = { ...input };
+
+  // Resolve default values.
+  if (!accounts.policy.value) {
+    accounts.policy.value = await getProgramDerivedAddress({
+      programAddress,
+      seeds: [
+        getBytesEncoder().encode(new Uint8Array([112, 111, 108, 105, 99, 121])),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            "vault",
+            accounts.vault.value,
+          ),
+        ),
+      ],
+    });
+  }
+
+  const getAccountMeta = getAccountMetaFactory(programAddress, "programId");
+  return Object.freeze({
+    accounts: [
+      getAccountMeta("owner", accounts.owner),
+      getAccountMeta("vault", accounts.vault),
+      getAccountMeta("policy", accounts.policy),
+      getAccountMeta("agentSpendOverlay", accounts.agentSpendOverlay),
+    ],
+    data: getRevokeAgentInstructionDataEncoder().encode(
+      args as RevokeAgentInstructionDataArgs,
+    ),
+    programAddress,
+  } as RevokeAgentInstruction<
+    TProgramAddress,
+    TAccountOwner,
+    TAccountVault,
+    TAccountPolicy,
+    TAccountAgentSpendOverlay
+  >);
+}
+
+export type RevokeAgentInput<
+  TAccountOwner extends string = string,
+  TAccountVault extends string = string,
+  TAccountPolicy extends string = string,
+  TAccountAgentSpendOverlay extends string = string,
+> = {
+  owner: TransactionSigner<TAccountOwner>;
+  vault: Address<TAccountVault>;
+  policy: Address<TAccountPolicy>;
   /** Agent spend overlay — release slot on revocation. */
   agentSpendOverlay: Address<TAccountAgentSpendOverlay>;
   agentToRemove: RevokeAgentInstructionDataArgs["agentToRemove"];
@@ -122,12 +225,14 @@ export type RevokeAgentInput<
 export function getRevokeAgentInstruction<
   TAccountOwner extends string,
   TAccountVault extends string,
+  TAccountPolicy extends string,
   TAccountAgentSpendOverlay extends string,
   TProgramAddress extends Address = typeof SIGIL_PROGRAM_ADDRESS,
 >(
   input: RevokeAgentInput<
     TAccountOwner,
     TAccountVault,
+    TAccountPolicy,
     TAccountAgentSpendOverlay
   >,
   config?: { programAddress?: TProgramAddress },
@@ -135,6 +240,7 @@ export function getRevokeAgentInstruction<
   TProgramAddress,
   TAccountOwner,
   TAccountVault,
+  TAccountPolicy,
   TAccountAgentSpendOverlay
 > {
   // Program address.
@@ -144,6 +250,7 @@ export function getRevokeAgentInstruction<
   const originalAccounts = {
     owner: { value: input.owner ?? null, isWritable: false },
     vault: { value: input.vault ?? null, isWritable: true },
+    policy: { value: input.policy ?? null, isWritable: true },
     agentSpendOverlay: {
       value: input.agentSpendOverlay ?? null,
       isWritable: true,
@@ -162,6 +269,7 @@ export function getRevokeAgentInstruction<
     accounts: [
       getAccountMeta("owner", accounts.owner),
       getAccountMeta("vault", accounts.vault),
+      getAccountMeta("policy", accounts.policy),
       getAccountMeta("agentSpendOverlay", accounts.agentSpendOverlay),
     ],
     data: getRevokeAgentInstructionDataEncoder().encode(
@@ -172,6 +280,7 @@ export function getRevokeAgentInstruction<
     TProgramAddress,
     TAccountOwner,
     TAccountVault,
+    TAccountPolicy,
     TAccountAgentSpendOverlay
   >);
 }
@@ -184,8 +293,9 @@ export type ParsedRevokeAgentInstruction<
   accounts: {
     owner: TAccountMetas[0];
     vault: TAccountMetas[1];
+    policy: TAccountMetas[2];
     /** Agent spend overlay — release slot on revocation. */
-    agentSpendOverlay: TAccountMetas[2];
+    agentSpendOverlay: TAccountMetas[3];
   };
   data: RevokeAgentInstructionData;
 };
@@ -198,12 +308,12 @@ export function parseRevokeAgentInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedRevokeAgentInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 3) {
+  if (instruction.accounts.length < 4) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 3,
+        expectedAccountMetas: 4,
       },
     );
   }
@@ -218,6 +328,7 @@ export function parseRevokeAgentInstruction<
     accounts: {
       owner: getNextAccount(),
       vault: getNextAccount(),
+      policy: getNextAccount(),
       agentSpendOverlay: getNextAccount(),
     },
     data: getRevokeAgentInstructionDataDecoder().decode(instruction.data),

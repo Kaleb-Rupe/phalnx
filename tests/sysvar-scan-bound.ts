@@ -217,6 +217,7 @@ describe("sysvar-scan-bound (M11 / SIMD-0296 pad-attack guard)", () => {
       .accounts({
         owner: owner.publicKey,
         vault: vaultPda,
+        policy: policyPda,
         agentSpendOverlay: overlayPda,
       } as any)
       .rpc();

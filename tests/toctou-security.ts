@@ -197,6 +197,7 @@ describe("TOCTOU Security Fix", () => {
       .accountsPartial({
         owner: owner.publicKey,
         vault: pdas.vaultPda,
+        policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pdas.vaultPda.toBuffer()], program.programId)[0],
         agentSpendOverlay: pdas.overlayPda,
       })
       .rpc();
@@ -282,9 +283,10 @@ describe("TOCTOU Security Fix", () => {
   it("rejects validate_and_authorize with stale policy version", async () => {
     const v = await setupFullVault(1800);
 
-    // Queue a policy change, advance time, apply it → version becomes 1
+    // PEN-CROSS-5: register_agent in setupFullVault bumped version to 1.
+    // Queue + apply policy change → version becomes 2.
     const newVersion = await queueAndApplyPolicy(v, 1800, new BN(400_000_000));
-    expect(newVersion).to.equal(1);
+    expect(newVersion).to.equal(2);
 
     // Build validate_and_authorize with stale expectedPolicyVersion: 0
     const sessionPda = PublicKey.findProgramAddressSync(
@@ -480,17 +482,20 @@ describe("TOCTOU Security Fix", () => {
   it("bumps policy_version when applying pending policy", async () => {
     const v = await setupFullVault(1800);
 
-    // Initial version should be 0
+    // PEN-CROSS-5 (Phase 4 absorption): register_agent now bumps
+    // policy_version (defense-in-depth OCC). setupFullVault calls
+    // register_agent once → baseline is 1, not 0.
     const policy0 = await program.account.policyConfig.fetch(v.policyPda);
-    expect((policy0 as any).policyVersion.toNumber()).to.equal(0);
+    const baseline = (policy0 as any).policyVersion.toNumber();
+    expect(baseline).to.equal(1);
 
-    // Queue + apply → version 1
+    // Queue + apply → bumps by 1
     const v1 = await queueAndApplyPolicy(v, 1800, new BN(400_000_000));
-    expect(v1).to.equal(1);
+    expect(v1).to.equal(baseline + 1);
 
-    // Queue + apply again → version 2
+    // Queue + apply again → bumps by 1
     const v2 = await queueAndApplyPolicy(v, 1800, new BN(300_000_000));
-    expect(v2).to.equal(2);
+    expect(v2).to.equal(baseline + 2);
   });
 
   // ─── Test 6: Version bump on apply_constraints_update ────────────────────
@@ -498,9 +503,10 @@ describe("TOCTOU Security Fix", () => {
   it("bumps policy_version when applying constraints update", async () => {
     const v = await setupFullVault(1800);
 
-    // Initial version
+    // PEN-CROSS-5: baseline is 1 (register_agent bumped).
     const policy0 = await program.account.policyConfig.fetch(v.policyPda);
-    expect((policy0 as any).policyVersion.toNumber()).to.equal(0);
+    const baseline = (policy0 as any).policyVersion.toNumber();
+    expect(baseline).to.equal(1);
 
     // Create instruction constraints PDA
     const [constraintsPda] = PublicKey.findProgramAddressSync(
@@ -583,12 +589,13 @@ describe("TOCTOU Security Fix", () => {
       } as any)
       .rpc();
 
-    // Verify policy version bumped to 2 — Phase 2 TA-19 PEN-CROSS-3 made
-    // `create_instruction_constraints` bump policy_version (sibling-handler
-    // digest re-bind), then `apply_constraints_update` bumps again. Total
-    // 0→1→2 across the create+apply pair.
+    // Verify policy version bumped to 3 — PEN-CROSS-5 register_agent (1) +
+    // Phase 2 TA-19 PEN-CROSS-3 `create_instruction_constraints` (1) +
+    // `apply_constraints_update` (1) = 3. Pre-PEN-CROSS-5 this expected 2
+    // (no register_agent bump). The triple sequence reflects each
+    // mutation's defense-in-depth OCC contribution.
     const policy1 = await program.account.policyConfig.fetch(v.policyPda);
-    expect((policy1 as any).policyVersion.toNumber()).to.equal(2);
+    expect((policy1 as any).policyVersion.toNumber()).to.equal(baseline + 2);
   });
 
   // ─── Test 7: Deleted instructions not callable ───────────────────────────

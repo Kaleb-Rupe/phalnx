@@ -16,6 +16,20 @@ pub struct RegisterAgent<'info> {
     )]
     pub vault: Account<'info, AgentVault>,
 
+    /// PEN-CROSS-5 (Phase 4 absorption) — policy is now mutated by
+    /// register/revoke/pause/unpause to bump `policy_version` as a
+    /// defense-in-depth OCC signal. Existing `vault.is_agent` /
+    /// `is_agent_paused` constraints already reject the TOCTOU window;
+    /// the version bump lets concurrent validate_and_authorize calls fail
+    /// fast with PolicyVersionMismatch instead of relying on the slower
+    /// constraint check.
+    #[account(
+        mut,
+        seeds = [b"policy", vault.key().as_ref()],
+        bump = policy.bump,
+    )]
+    pub policy: Account<'info, PolicyConfig>,
+
     /// Agent spend overlay — per-agent tracking slot.
     #[account(
         mut,
@@ -81,6 +95,18 @@ pub fn handler(
             }
         }
     }
+
+    // PEN-CROSS-5 (Phase 4 absorption): bump policy_version. Closes the
+    // OCC window where an in-flight validate_and_authorize could be
+    // sandwiched between an agent's registration and its first action.
+    // `vault.is_agent` constraint already rejects mid-flight, but the
+    // bump means concurrent validates fail fast with PolicyVersionMismatch
+    // instead of pushing into the agent-existence check.
+    let policy = &mut ctx.accounts.policy;
+    policy.policy_version = policy
+        .policy_version
+        .checked_add(1)
+        .ok_or(error!(SigilError::Overflow))?;
 
     let clock = Clock::get()?;
     emit!(AgentRegistered {

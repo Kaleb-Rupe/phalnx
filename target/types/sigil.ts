@@ -2812,6 +2812,22 @@ export type Sigil = {
               }
             ]
           }
+        },
+        {
+          "name": "policy",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [112, 111, 108, 105, 99, 121]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
         }
       ],
       "args": [
@@ -3800,6 +3816,22 @@ export type Sigil = {
           }
         },
         {
+          "name": "policy",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [112, 111, 108, 105, 99, 121]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
           "name": "agentSpendOverlay",
           "docs": [
             "Agent spend overlay — per-agent tracking slot."
@@ -3869,6 +3901,22 @@ export type Sigil = {
                 "kind": "account",
                 "path": "vault.vault_id",
                 "account": "agentVault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "policy",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [112, 111, 108, 105, 99, 121]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
               }
             ]
           }
@@ -4004,6 +4052,22 @@ export type Sigil = {
                 "kind": "account",
                 "path": "vault.vault_id",
                 "account": "agentVault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "policy",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [112, 111, 108, 105, 99, 121]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
               }
             ]
           }

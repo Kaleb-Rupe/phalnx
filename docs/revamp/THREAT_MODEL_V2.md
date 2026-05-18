@@ -446,9 +446,28 @@ Dashboard tags every vault transaction with the protocol's recognized-set status
 
 ---
 
-## 7. Operational Hazards (T-DoS-1, T-DoS-2, T-K6-1)
+## 7. Operational Hazards (T-DoS-1, T-DoS-2, T-DoS-3, T-K6-1)
 
 See §2 for full descriptions of T-DoS-1, T-DoS-2, T-21, and T-K6-1. These are tracked separately from AC-1..AC-10 because they are operational hazards (DoS / dependency failure) rather than attacker classes.
+
+### T-DoS-3 — ALT writable-flag preservation
+
+ALT writable-flag preservation. Solana's instructions sysvar correctly
+preserves is_writable=true for accounts loaded via
+MessageAddressTableLookup.writable_indexes. The SVM constructs the sysvar
+by calling SVMMessage::is_writable(account_index), which routes through
+LoadedMessage::is_writable_index for v0 transactions (solana-message
+v0/loaded.rs:118-136). Position-based indexing into the
+[static, ALT-writable, ALT-readonly] concatenation makes the writable
+distinction structural, not advisory. TA-11 therefore functions correctly
+with ALTs: a foreign instruction that includes a Sigil PDA via ALT
+writable_indexes will appear in load_instruction_at_checked(i).accounts[j]
+with is_writable=true, and the entry guard's writability scan will reject
+the bundle. Defense-in-depth: Solana's BPF loader still enforces the
+runtime owner-check — only Sigil can mutate Sigil-owned PDA data
+regardless of writable flag. Verified against solana-svm v2.3.13
+account_loader.rs:880-908, solana-instructions-sysvar/src/lib.rs:117-119,
+and Anchor 0.32.1 sysvar re-export.
 
 ---
 
@@ -524,7 +543,7 @@ flowchart TB
     class AC1,AC2,AC3,AC4,AC5,AC6,AC7,AC8,AC9,AC10 risk
 ```
 
-**Mapping to this document.** §2 enumerates the dashed AC-1..AC-10 risk-input nodes as full attacker-class characterizations. §4 maps the slate TA-01..TA-19 (TA-16 dropped) nodes across the three Pre/Bundle/Post subgraphs to those classes in a 17×10 matrix. §4.1 covers the blue K1-K7 foundational nodes separately as substrate. §5 records the deletion of the per-tier guarantee blocks under Option A (L-1, 2026-05-17) — all vaults get uniform protection. §6 covers the workflow mitigations (M-T21-1..4) that have no on-chain node representation because T-21 cannot be mitigated by primitives. §7 cross-references the operational hazards (T-DoS-1, T-DoS-2, T-K6-1) characterized in §2.
+**Mapping to this document.** §2 enumerates the dashed AC-1..AC-10 risk-input nodes as full attacker-class characterizations. §4 maps the slate TA-01..TA-19 (TA-16 dropped) nodes across the three Pre/Bundle/Post subgraphs to those classes in a 17×10 matrix. §4.1 covers the blue K1-K7 foundational nodes separately as substrate. §5 records the deletion of the per-tier guarantee blocks under Option A (L-1, 2026-05-17) — all vaults get uniform protection. §6 covers the workflow mitigations (M-T21-1..4) that have no on-chain node representation because T-21 cannot be mitigated by primitives. §7 cross-references the operational hazards (T-DoS-1, T-DoS-2, T-DoS-3, T-K6-1) characterized in §2 (T-DoS-3 verified inline under §7).
 
 ---
 

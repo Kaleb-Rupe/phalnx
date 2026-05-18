@@ -320,9 +320,12 @@ export async function provisionVault(
   ]);
 
   // 3. Build and send registerAgent
+  //    PEN-CROSS-5 (Phase 4 absorption): policy account now required for
+  //    policy_version bump.
   const registerIx = getRegisterAgentInstruction({
     owner,
     vault: vaultAddress,
+    policy: policyAddress,
     agentSpendOverlay: overlayPDA,
     agent: agent.address,
     capability: Number(permissions),

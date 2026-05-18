@@ -15,6 +15,17 @@ pub struct UnpauseAgent<'info> {
         bump = vault.bump,
     )]
     pub vault: Account<'info, AgentVault>,
+
+    /// PEN-CROSS-5 (Phase 4 absorption) — bump policy_version on unpause.
+    /// Symmetric with pause_agent; the four agent-mutation ix
+    /// (register / revoke / pause / unpause) all bump version so OCC
+    /// signals fire uniformly regardless of which mutation lands.
+    #[account(
+        mut,
+        seeds = [b"policy", vault.key().as_ref()],
+        bump = policy.bump,
+    )]
+    pub policy: Account<'info, PolicyConfig>,
 }
 
 pub fn handler(ctx: Context<UnpauseAgent>, agent_to_unpause: Pubkey) -> Result<()> {
@@ -39,6 +50,14 @@ pub fn handler(ctx: Context<UnpauseAgent>, agent_to_unpause: Pubkey) -> Result<(
     require!(agent_entry.paused, SigilError::AgentNotPaused);
 
     agent_entry.paused = false;
+
+    // PEN-CROSS-5 (Phase 4 absorption): bump policy_version. See
+    // revoke_agent.rs for rationale.
+    let policy = &mut ctx.accounts.policy;
+    policy.policy_version = policy
+        .policy_version
+        .checked_add(1)
+        .ok_or(error!(SigilError::Overflow))?;
 
     let clock = Clock::get()?;
     emit!(AgentUnpausedEvent {

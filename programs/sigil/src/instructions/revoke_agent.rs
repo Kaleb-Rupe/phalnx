@@ -17,6 +17,17 @@ pub struct RevokeAgent<'info> {
     )]
     pub vault: Account<'info, AgentVault>,
 
+    /// PEN-CROSS-5 (Phase 4 absorption) — bump policy_version on agent
+    /// revocation. See register_agent.rs for the OCC rationale; revoke
+    /// is the more important of the four (removing an agent must
+    /// invalidate concurrent validates that race the revoke).
+    #[account(
+        mut,
+        seeds = [b"policy", vault.key().as_ref()],
+        bump = policy.bump,
+    )]
+    pub policy: Account<'info, PolicyConfig>,
+
     /// Agent spend overlay — release slot on revocation.
     #[account(
         mut,
@@ -53,6 +64,18 @@ pub fn handler(ctx: Context<RevokeAgent>, agent_to_remove: Pubkey) -> Result<()>
     if vault.agents.is_empty() {
         vault.status = VaultStatus::Frozen;
     }
+
+    // PEN-CROSS-5 (Phase 4 absorption): bump policy_version. Critical for
+    // revoke specifically — a concurrent validate_and_authorize on the
+    // about-to-be-revoked agent could otherwise sneak through if the
+    // existing is_agent constraint check loses the TOCTOU race. The OCC
+    // bump means any in-flight validate built against the pre-revoke
+    // version rejects with PolicyVersionMismatch.
+    let policy = &mut ctx.accounts.policy;
+    policy.policy_version = policy
+        .policy_version
+        .checked_add(1)
+        .ok_or(error!(SigilError::Overflow))?;
 
     let clock = Clock::get()?;
     emit!(AgentRevoked {

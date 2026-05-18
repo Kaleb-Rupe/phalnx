@@ -380,6 +380,7 @@ export async function createFullVault(
       .accounts({
         owner: owner.publicKey,
         vault: pdas.vaultPda,
+        policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pdas.vaultPda.toBuffer()], program.programId)[0],
         agentSpendOverlay: overlayPda,
       } as any)
       .rpc();

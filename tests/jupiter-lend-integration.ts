@@ -285,6 +285,7 @@ describe("jupiter-lend-integration", () => {
       .accountsPartial({
         owner: owner.publicKey,
         vault: vaultPda,
+        policy: policyPda,
         agentSpendOverlay: overlayPda,
       })
       .rpc();
@@ -523,6 +524,7 @@ describe("jupiter-lend-integration", () => {
         .accountsPartial({
           owner: owner.publicKey,
           vault: frozenVault,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), frozenVault.toBuffer()], program.programId)[0],
           agentSpendOverlay: frozenOverlay,
         })
         .rpc();
@@ -537,6 +539,7 @@ describe("jupiter-lend-integration", () => {
         .accountsPartial({
           owner: owner.publicKey,
           vault: frozenVault,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), frozenVault.toBuffer()], program.programId)[0],
           agentSpendOverlay: frozenOverlayRevoke,
         })
         .rpc();
@@ -655,6 +658,7 @@ describe("jupiter-lend-integration", () => {
         .accountsPartial({
           owner: owner.publicKey,
           vault: rollingVault,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), rollingVault.toBuffer()], program.programId)[0],
           agentSpendOverlay: rollingOverlay,
         })
         .rpc();

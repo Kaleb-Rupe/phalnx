@@ -363,10 +363,13 @@ export async function createVault(
     previewDigest,
   });
 
-  // Step 5: Build registerAgent instruction
+  // Step 5: Build registerAgent instruction.
+  //   PEN-CROSS-5 (Phase 4 absorption): policy now required for
+  //   policy_version bump.
   const registerAgentIx = getRegisterAgentInstruction({
     owner: options.owner,
     vault: vaultAddress,
+    policy: policyAddress,
     agentSpendOverlay: agentOverlayAddress,
     agent: options.agent.address,
     capability: Number(options.permissions ?? FULL_PERMISSIONS),

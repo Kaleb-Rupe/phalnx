@@ -14,6 +14,7 @@ import {
   getAddressEncoder,
   getBytesDecoder,
   getBytesEncoder,
+  getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -39,6 +40,7 @@ import {
 } from "@solana/kit";
 import {
   getAccountMetaFactory,
+  getAddressFromResolvedInstructionAccount,
   type ResolvedInstructionAccount,
 } from "@solana/program-client-core";
 import { SIGIL_PROGRAM_ADDRESS } from "../programs/index.js";
@@ -57,6 +59,7 @@ export type RegisterAgentInstruction<
   TProgram extends string = typeof SIGIL_PROGRAM_ADDRESS,
   TAccountOwner extends string | AccountMeta<string> = string,
   TAccountVault extends string | AccountMeta<string> = string,
+  TAccountPolicy extends string | AccountMeta<string> = string,
   TAccountAgentSpendOverlay extends string | AccountMeta<string> = string,
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
@@ -70,6 +73,9 @@ export type RegisterAgentInstruction<
       TAccountVault extends string
         ? WritableAccount<TAccountVault>
         : TAccountVault,
+      TAccountPolicy extends string
+        ? WritableAccount<TAccountPolicy>
+        : TAccountPolicy,
       TAccountAgentSpendOverlay extends string
         ? WritableAccount<TAccountAgentSpendOverlay>
         : TAccountAgentSpendOverlay,
@@ -121,13 +127,112 @@ export function getRegisterAgentInstructionDataCodec(): FixedSizeCodec<
   );
 }
 
-export type RegisterAgentInput<
+export type RegisterAgentAsyncInput<
   TAccountOwner extends string = string,
   TAccountVault extends string = string,
+  TAccountPolicy extends string = string,
   TAccountAgentSpendOverlay extends string = string,
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
+  policy?: Address<TAccountPolicy>;
+  /** Agent spend overlay — per-agent tracking slot. */
+  agentSpendOverlay: Address<TAccountAgentSpendOverlay>;
+  agent: RegisterAgentInstructionDataArgs["agent"];
+  capability: RegisterAgentInstructionDataArgs["capability"];
+  spendingLimitUsd: RegisterAgentInstructionDataArgs["spendingLimitUsd"];
+};
+
+export async function getRegisterAgentInstructionAsync<
+  TAccountOwner extends string,
+  TAccountVault extends string,
+  TAccountPolicy extends string,
+  TAccountAgentSpendOverlay extends string,
+  TProgramAddress extends Address = typeof SIGIL_PROGRAM_ADDRESS,
+>(
+  input: RegisterAgentAsyncInput<
+    TAccountOwner,
+    TAccountVault,
+    TAccountPolicy,
+    TAccountAgentSpendOverlay
+  >,
+  config?: { programAddress?: TProgramAddress },
+): Promise<
+  RegisterAgentInstruction<
+    TProgramAddress,
+    TAccountOwner,
+    TAccountVault,
+    TAccountPolicy,
+    TAccountAgentSpendOverlay
+  >
+> {
+  // Program address.
+  const programAddress = config?.programAddress ?? SIGIL_PROGRAM_ADDRESS;
+
+  // Original accounts.
+  const originalAccounts = {
+    owner: { value: input.owner ?? null, isWritable: false },
+    vault: { value: input.vault ?? null, isWritable: true },
+    policy: { value: input.policy ?? null, isWritable: true },
+    agentSpendOverlay: {
+      value: input.agentSpendOverlay ?? null,
+      isWritable: true,
+    },
+  };
+  const accounts = originalAccounts as Record<
+    keyof typeof originalAccounts,
+    ResolvedInstructionAccount
+  >;
+
+  // Original args.
+  const args = { ...input };
+
+  // Resolve default values.
+  if (!accounts.policy.value) {
+    accounts.policy.value = await getProgramDerivedAddress({
+      programAddress,
+      seeds: [
+        getBytesEncoder().encode(new Uint8Array([112, 111, 108, 105, 99, 121])),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            "vault",
+            accounts.vault.value,
+          ),
+        ),
+      ],
+    });
+  }
+
+  const getAccountMeta = getAccountMetaFactory(programAddress, "programId");
+  return Object.freeze({
+    accounts: [
+      getAccountMeta("owner", accounts.owner),
+      getAccountMeta("vault", accounts.vault),
+      getAccountMeta("policy", accounts.policy),
+      getAccountMeta("agentSpendOverlay", accounts.agentSpendOverlay),
+    ],
+    data: getRegisterAgentInstructionDataEncoder().encode(
+      args as RegisterAgentInstructionDataArgs,
+    ),
+    programAddress,
+  } as RegisterAgentInstruction<
+    TProgramAddress,
+    TAccountOwner,
+    TAccountVault,
+    TAccountPolicy,
+    TAccountAgentSpendOverlay
+  >);
+}
+
+export type RegisterAgentInput<
+  TAccountOwner extends string = string,
+  TAccountVault extends string = string,
+  TAccountPolicy extends string = string,
+  TAccountAgentSpendOverlay extends string = string,
+> = {
+  owner: TransactionSigner<TAccountOwner>;
+  vault: Address<TAccountVault>;
+  policy: Address<TAccountPolicy>;
   /** Agent spend overlay — per-agent tracking slot. */
   agentSpendOverlay: Address<TAccountAgentSpendOverlay>;
   agent: RegisterAgentInstructionDataArgs["agent"];
@@ -138,12 +243,14 @@ export type RegisterAgentInput<
 export function getRegisterAgentInstruction<
   TAccountOwner extends string,
   TAccountVault extends string,
+  TAccountPolicy extends string,
   TAccountAgentSpendOverlay extends string,
   TProgramAddress extends Address = typeof SIGIL_PROGRAM_ADDRESS,
 >(
   input: RegisterAgentInput<
     TAccountOwner,
     TAccountVault,
+    TAccountPolicy,
     TAccountAgentSpendOverlay
   >,
   config?: { programAddress?: TProgramAddress },
@@ -151,6 +258,7 @@ export function getRegisterAgentInstruction<
   TProgramAddress,
   TAccountOwner,
   TAccountVault,
+  TAccountPolicy,
   TAccountAgentSpendOverlay
 > {
   // Program address.
@@ -160,6 +268,7 @@ export function getRegisterAgentInstruction<
   const originalAccounts = {
     owner: { value: input.owner ?? null, isWritable: false },
     vault: { value: input.vault ?? null, isWritable: true },
+    policy: { value: input.policy ?? null, isWritable: true },
     agentSpendOverlay: {
       value: input.agentSpendOverlay ?? null,
       isWritable: true,
@@ -178,6 +287,7 @@ export function getRegisterAgentInstruction<
     accounts: [
       getAccountMeta("owner", accounts.owner),
       getAccountMeta("vault", accounts.vault),
+      getAccountMeta("policy", accounts.policy),
       getAccountMeta("agentSpendOverlay", accounts.agentSpendOverlay),
     ],
     data: getRegisterAgentInstructionDataEncoder().encode(
@@ -188,6 +298,7 @@ export function getRegisterAgentInstruction<
     TProgramAddress,
     TAccountOwner,
     TAccountVault,
+    TAccountPolicy,
     TAccountAgentSpendOverlay
   >);
 }
@@ -200,8 +311,9 @@ export type ParsedRegisterAgentInstruction<
   accounts: {
     owner: TAccountMetas[0];
     vault: TAccountMetas[1];
+    policy: TAccountMetas[2];
     /** Agent spend overlay — per-agent tracking slot. */
-    agentSpendOverlay: TAccountMetas[2];
+    agentSpendOverlay: TAccountMetas[3];
   };
   data: RegisterAgentInstructionData;
 };
@@ -214,12 +326,12 @@ export function parseRegisterAgentInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedRegisterAgentInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 3) {
+  if (instruction.accounts.length < 4) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 3,
+        expectedAccountMetas: 4,
       },
     );
   }
@@ -234,6 +346,7 @@ export function parseRegisterAgentInstruction<
     accounts: {
       owner: getNextAccount(),
       vault: getNextAccount(),
+      policy: getNextAccount(),
       agentSpendOverlay: getNextAccount(),
     },
     data: getRegisterAgentInstructionDataDecoder().decode(instruction.data),

@@ -433,6 +433,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: vaultPda,
+          policy: policyPda,
           agentSpendOverlay: overlayPda,
         } as any)
         .rpc();
@@ -453,6 +454,7 @@ describe("sigil", () => {
           .accounts({
             owner: owner.publicKey,
             vault: vaultPda,
+            policy: policyPda,
             agentSpendOverlay: overlayPda,
           } as any)
           .rpc();
@@ -533,6 +535,7 @@ describe("sigil", () => {
           .accounts({
             owner: unauthorizedUser.publicKey,
             vault: v,
+            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), v.toBuffer()], program.programId)[0],
             agentSpendOverlay: vOverlay,
           } as any)
           .signers([unauthorizedUser])
@@ -757,6 +760,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: revokeVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), revokeVaultPda.toBuffer()], program.programId)[0],
           agentSpendOverlay: revokeOverlay,
         } as any)
         .rpc();
@@ -768,6 +772,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: revokeVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), revokeVaultPda.toBuffer()], program.programId)[0],
           agentSpendOverlay: revokeOverlay,
         } as any)
         .rpc();
@@ -785,6 +790,7 @@ describe("sigil", () => {
           .accounts({
             owner: owner.publicKey,
             vault: revokeVaultPda,
+            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), revokeVaultPda.toBuffer()], program.programId)[0],
             agentSpendOverlay: revokeOverlay,
           } as any)
           .rpc();
@@ -801,6 +807,7 @@ describe("sigil", () => {
           .accounts({
             owner: unauthorizedUser.publicKey,
             vault: revokeVaultPda,
+            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), revokeVaultPda.toBuffer()], program.programId)[0],
             agentSpendOverlay: revokeOverlay,
           } as any)
           .signers([unauthorizedUser])
@@ -891,6 +898,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: reactVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), reactVaultPda.toBuffer()], program.programId)[0],
           agentSpendOverlay: reactOverlay,
         } as any)
         .rpc();
@@ -900,6 +908,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: reactVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), reactVaultPda.toBuffer()], program.programId)[0],
           agentSpendOverlay: reactOverlay,
         } as any)
         .rpc();
@@ -934,6 +943,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: reactVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), reactVaultPda.toBuffer()], program.programId)[0],
           agentSpendOverlay: reactOverlay,
         } as any)
         .rpc();
@@ -962,6 +972,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: reactVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), reactVaultPda.toBuffer()], program.programId)[0],
           agentSpendOverlay: reactOverlay,
         } as any)
         .rpc();
@@ -2095,6 +2106,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: feeVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), feeVaultPda.toBuffer()], program.programId)[0],
           agentSpendOverlay: feeOverlay,
         } as any)
         .rpc();
@@ -2542,6 +2554,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: lifecycleVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), lifecycleVaultPda.toBuffer()], program.programId)[0],
           agentSpendOverlay: lifecycleOverlay,
         } as any)
         .rpc();
@@ -2804,6 +2817,7 @@ describe("sigil", () => {
           .accounts({
             owner: owner.publicKey,
             vault: v,
+            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), v.toBuffer()], program.programId)[0],
             agentSpendOverlay: vOverlay2,
           } as any)
           .rpc();
@@ -2849,6 +2863,7 @@ describe("sigil", () => {
           .accounts({
             owner: owner.publicKey,
             vault: rv,
+            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), rv.toBuffer()], program.programId)[0],
             agentSpendOverlay: rvOverlay,
           } as any)
           .rpc();
@@ -2983,6 +2998,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: fv,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), fv.toBuffer()], program.programId)[0],
           agentSpendOverlay: fvOverlay,
         } as any)
         .rpc();
@@ -2992,6 +3008,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: fv,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), fv.toBuffer()], program.programId)[0],
           agentSpendOverlay: fvOverlay,
         } as any)
         .rpc();
@@ -3202,6 +3219,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: cv,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), cv.toBuffer()], program.programId)[0],
           agentSpendOverlay: cvOverlay,
         } as any)
         .rpc();
@@ -3338,6 +3356,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: ringVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), ringVaultPda.toBuffer()], program.programId)[0],
           agentSpendOverlay: ringOverlay,
         } as any)
         .rpc();
@@ -3514,6 +3533,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: feeEdgeVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), feeEdgeVaultPda.toBuffer()], program.programId)[0],
           agentSpendOverlay: feeEdgeOverlay,
         } as any)
         .rpc();
@@ -3806,6 +3826,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: tlVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), tlVaultPda.toBuffer()], program.programId)[0],
           agentSpendOverlay: tlOverlay,
         } as any)
         .rpc();
@@ -4229,6 +4250,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: tlVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), tlVaultPda.toBuffer()], program.programId)[0],
           agentSpendOverlay: tlOverlay,
         } as any)
         .rpc();
@@ -4334,6 +4356,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: destVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), destVaultPda.toBuffer()], program.programId)[0],
           agentSpendOverlay: destOverlay,
         } as any)
         .rpc();
@@ -4377,7 +4400,7 @@ describe("sigil", () => {
       const balBefore = getTokenBalance(svm, allowedDestAta);
 
       await program.methods
-        .agentTransfer(new BN(10_000_000), new BN(0)) // 10 USDC
+        .agentTransfer(new BN(10_000_000), ((await program.account.policyConfig.fetch(destPolicyPda)).policyVersion as BN) ?? new BN(0)) // 10 USDC
         .accounts({
           agent: destAgent.publicKey,
           vault: destVaultPda,
@@ -4403,7 +4426,7 @@ describe("sigil", () => {
     it("agent_transfer to non-allowed destination fails", async () => {
       try {
         await program.methods
-          .agentTransfer(new BN(10_000_000), new BN(0))
+          .agentTransfer(new BN(10_000_000), ((await program.account.policyConfig.fetch(destPolicyPda)).policyVersion as BN) ?? new BN(0))
           .accounts({
             agent: destAgent.publicKey,
             vault: destVaultPda,
@@ -4495,6 +4518,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: anyVault,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), anyVault.toBuffer()], program.programId)[0],
           agentSpendOverlay: anyOverlay,
         } as any)
         .rpc();
@@ -4527,7 +4551,7 @@ describe("sigil", () => {
       // succeeded and drained up to the daily cap.
       try {
         await program.methods
-          .agentTransfer(new BN(5_000_000), new BN(0))
+          .agentTransfer(new BN(5_000_000), ((await program.account.policyConfig.fetch(anyPolicy)).policyVersion as BN) ?? new BN(0))
           .accounts({
             agent: destAgent.publicKey,
             vault: anyVault,
@@ -4724,7 +4748,7 @@ describe("sigil", () => {
       // push total to 510 USDC (exceeding 500 cap).
       for (let i = 0; i < 4; i++) {
         await program.methods
-          .agentTransfer(new BN(100_000_000), new BN(0)) // 100 USDC each
+          .agentTransfer(new BN(100_000_000), ((await program.account.policyConfig.fetch(destPolicyPda)).policyVersion as BN) ?? new BN(0)) // 100 USDC each
           .accounts({
             agent: destAgent.publicKey,
             vault: destVaultPda,
@@ -4745,7 +4769,7 @@ describe("sigil", () => {
       // Try 100 USDC → total would be 510 > 500 cap
       try {
         await program.methods
-          .agentTransfer(new BN(100_000_000), new BN(0)) // 100 USDC (would push past cap)
+          .agentTransfer(new BN(100_000_000), ((await program.account.policyConfig.fetch(destPolicyPda)).policyVersion as BN) ?? new BN(0)) // 100 USDC (would push past cap)
           .accounts({
             agent: destAgent.publicKey,
             vault: destVaultPda,
@@ -4771,7 +4795,7 @@ describe("sigil", () => {
       // Max tx size is 100 USDC
       try {
         await program.methods
-          .agentTransfer(new BN(101_000_000), new BN(0)) // 101 USDC (exceeds max tx)
+          .agentTransfer(new BN(101_000_000), ((await program.account.policyConfig.fetch(destPolicyPda)).policyVersion as BN) ?? new BN(0)) // 101 USDC (exceeds max tx)
           .accounts({
             agent: destAgent.publicKey,
             vault: destVaultPda,
@@ -4870,6 +4894,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: fv,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), fv.toBuffer()], program.programId)[0],
           agentSpendOverlay: fvOverlay2,
         } as any)
         .rpc();
@@ -4912,7 +4937,7 @@ describe("sigil", () => {
       // developer_fee = 10_000_000 * 500 / 1_000_000 = 5_000
       // net = 10_000_000 - 2_000 - 5_000 = 9_993_000
       await program.methods
-        .agentTransfer(new BN(10_000_000), new BN(0))
+        .agentTransfer(new BN(10_000_000), ((await program.account.policyConfig.fetch(fp)).policyVersion as BN) ?? new BN(0))
         .accounts({
           agent: destAgent.publicKey,
           vault: fv,
@@ -5046,6 +5071,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: maVault,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), maVault.toBuffer()], program.programId)[0],
           agentSpendOverlay: maOverlay,
         } as any)
         .rpc();
@@ -5056,6 +5082,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: maVault,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), maVault.toBuffer()], program.programId)[0],
           agentSpendOverlay: maOverlay,
         } as any)
         .rpc();
@@ -5204,6 +5231,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: maVault,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), maVault.toBuffer()], program.programId)[0],
           agentSpendOverlay: maOverlay,
         } as any)
         .rpc();
@@ -5222,6 +5250,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: maVault,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), maVault.toBuffer()], program.programId)[0],
           agentSpendOverlay: maOverlay,
         } as any)
         .rpc();
@@ -5247,6 +5276,7 @@ describe("sigil", () => {
           .accounts({
             owner: owner.publicKey,
             vault: maVault,
+            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), maVault.toBuffer()], program.programId)[0],
             agentSpendOverlay: maOverlay,
           } as any)
           .rpc();
@@ -5264,6 +5294,7 @@ describe("sigil", () => {
           .accounts({
             owner: owner.publicKey,
             vault: maVault,
+            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), maVault.toBuffer()], program.programId)[0],
             agentSpendOverlay: maOverlay,
           } as any)
           .rpc();
@@ -5282,6 +5313,7 @@ describe("sigil", () => {
           .accounts({
             owner: owner.publicKey,
             vault: maVault,
+            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), maVault.toBuffer()], program.programId)[0],
             agentSpendOverlay: maOverlay,
           } as any)
           .rpc();
@@ -5311,6 +5343,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: maVault,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), maVault.toBuffer()], program.programId)[0],
           agentSpendOverlay: maOverlay,
         } as any)
         .rpc();
@@ -5372,6 +5405,7 @@ describe("sigil", () => {
           .accounts({
             owner: owner.publicKey,
             vault: maVault,
+            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), maVault.toBuffer()], program.programId)[0],
             agentSpendOverlay: maOverlay,
           } as any)
           .rpc();
@@ -5484,6 +5518,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: epochVault,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), epochVault.toBuffer()], program.programId)[0],
           agentSpendOverlay: epochOverlay,
         } as any)
         .rpc();
@@ -5522,7 +5557,7 @@ describe("sigil", () => {
     it("accumulates spend across multiple epochs (catches old bug)", async () => {
       // Epoch 0: spend $500
       await program.methods
-        .agentTransfer(new BN(500_000_000), new BN(0))
+        .agentTransfer(new BN(500_000_000), ((await program.account.policyConfig.fetch(epochPolicy)).policyVersion as BN) ?? new BN(0))
         .accounts({
           agent: epochAgent.publicKey,
           vault: epochVault,
@@ -5545,7 +5580,7 @@ describe("sigil", () => {
 
       // Epoch 1: spend $300
       await program.methods
-        .agentTransfer(new BN(300_000_000), new BN(0))
+        .agentTransfer(new BN(300_000_000), ((await program.account.policyConfig.fetch(epochPolicy)).policyVersion as BN) ?? new BN(0))
         .accounts({
           agent: epochAgent.publicKey,
           vault: epochVault,
@@ -5570,7 +5605,7 @@ describe("sigil", () => {
       // exceeds the $1000 per-agent limit.
       try {
         await program.methods
-          .agentTransfer(new BN(250_000_000), new BN(0))
+          .agentTransfer(new BN(250_000_000), ((await program.account.policyConfig.fetch(epochPolicy)).policyVersion as BN) ?? new BN(0))
           .accounts({
             agent: epochAgent.publicKey,
             vault: epochVault,
@@ -5594,7 +5629,7 @@ describe("sigil", () => {
 
       // But spending $150 (total = $950 < $1000) should succeed
       await program.methods
-        .agentTransfer(new BN(150_000_000), new BN(0))
+        .agentTransfer(new BN(150_000_000), ((await program.account.policyConfig.fetch(epochPolicy)).policyVersion as BN) ?? new BN(0))
         .accounts({
           agent: epochAgent.publicKey,
           vault: epochVault,
@@ -5623,7 +5658,7 @@ describe("sigil", () => {
       // Total rolling: $450 (300 + 150 from ~23h ago).
       // Spending $500 more (total ~$950) should succeed since $500 expired.
       await program.methods
-        .agentTransfer(new BN(100_000_000), new BN(0)) // $100 — safe amount to verify window works
+        .agentTransfer(new BN(100_000_000), ((await program.account.policyConfig.fetch(epochPolicy)).policyVersion as BN) ?? new BN(0)) // $100 — safe amount to verify window works
         .accounts({
           agent: epochAgent.publicKey,
           vault: epochVault,
@@ -5647,7 +5682,7 @@ describe("sigil", () => {
       // Now everything should be expired. Spending $999 (under $1000 limit) should succeed
       // even though we've spent $1050 total historically.
       await program.methods
-        .agentTransfer(new BN(100_000_000), new BN(0)) // $100
+        .agentTransfer(new BN(100_000_000), ((await program.account.policyConfig.fetch(epochPolicy)).policyVersion as BN) ?? new BN(0)) // $100
         .accounts({
           agent: epochAgent.publicKey,
           vault: epochVault,
@@ -5797,6 +5832,7 @@ describe("sigil", () => {
         .accounts({
           owner: protoCapOwner.publicKey,
           vault: pcVault,
+          policy: pcPolicy,
           agentSpendOverlay: pcOverlay,
         } as any)
         .signers([protoCapOwner])
@@ -6264,6 +6300,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: freezeVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), freezeVaultPda.toBuffer()], program.programId)[0],
           agentSpendOverlay: freezeOverlay,
         } as any)
         .rpc();
@@ -6273,6 +6310,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: freezeVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), freezeVaultPda.toBuffer()], program.programId)[0],
           agentSpendOverlay: freezeOverlay,
         } as any)
         .rpc();
@@ -6501,6 +6539,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: pauseVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
           agentSpendOverlay: pauseOverlay,
         } as any)
         .rpc();
@@ -6510,6 +6549,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: pauseVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
           agentSpendOverlay: pauseOverlay,
         } as any)
         .rpc();
@@ -6521,6 +6561,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: pauseVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
         } as any)
         .rpc();
 
@@ -6538,6 +6579,7 @@ describe("sigil", () => {
           .accounts({
             owner: owner.publicKey,
             vault: pauseVaultPda,
+            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
           } as any)
           .rpc();
         expect.fail("Should have thrown");
@@ -6554,6 +6596,7 @@ describe("sigil", () => {
           .accounts({
             owner: owner.publicKey,
             vault: pauseVaultPda,
+            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
           } as any)
           .rpc();
         expect.fail("Should have thrown");
@@ -6569,6 +6612,7 @@ describe("sigil", () => {
           .accounts({
             owner: unauthorizedUser.publicKey,
             vault: pauseVaultPda,
+            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
           } as any)
           .signers([unauthorizedUser])
           .rpc();
@@ -6633,7 +6677,7 @@ describe("sigil", () => {
 
       try {
         await program.methods
-          .agentTransfer(new BN(100_000), new BN(0))
+          .agentTransfer(new BN(100_000), ((await program.account.policyConfig.fetch(pausePolicyPda)).policyVersion as BN) ?? new BN(0))
           .accounts({
             agent: pauseAgent.publicKey,
             vault: pauseVaultPda,
@@ -6671,6 +6715,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: pauseVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
         } as any)
         .rpc();
 
@@ -6690,6 +6735,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: pauseVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
         } as any)
         .rpc();
     });
@@ -6700,6 +6746,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: pauseVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
         } as any)
         .rpc();
 
@@ -6717,6 +6764,7 @@ describe("sigil", () => {
           .accounts({
             owner: owner.publicKey,
             vault: pauseVaultPda,
+            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
           } as any)
           .rpc();
         expect.fail("Should have thrown");
@@ -6732,6 +6780,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: pauseVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
         } as any)
         .rpc();
 
@@ -6741,6 +6790,7 @@ describe("sigil", () => {
           .accounts({
             owner: unauthorizedUser.publicKey,
             vault: pauseVaultPda,
+            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
           } as any)
           .signers([unauthorizedUser])
           .rpc();
@@ -6755,6 +6805,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: pauseVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
         } as any)
         .rpc();
     });
@@ -6766,6 +6817,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: pauseVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
         } as any)
         .rpc();
 
@@ -6774,6 +6826,7 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: pauseVaultPda,
+          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
         } as any)
         .rpc();
 

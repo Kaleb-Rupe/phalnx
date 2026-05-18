@@ -437,7 +437,14 @@ export async function pauseAgent(
   opts?: TxOpts,
 ): Promise<TxResult> {
   requireValidAddress(agent, "Agent address");
-  const ix = getPauseAgentInstruction({ owner, vault, agentToPause: agent });
+  // PEN-CROSS-5 (Phase 4 absorption): policy now required for policy_version bump.
+  const [policyPda] = await getPolicyPDA(vault);
+  const ix = getPauseAgentInstruction({
+    owner,
+    vault,
+    policy: policyPda,
+    agentToPause: agent,
+  });
   return run(rpc, owner, network, [ix], opts);
 }
 
@@ -450,9 +457,12 @@ export async function unpauseAgent(
   opts?: TxOpts,
 ): Promise<TxResult> {
   requireValidAddress(agent, "Agent address");
+  // PEN-CROSS-5 (Phase 4 absorption): policy now required for policy_version bump.
+  const [policyPda] = await getPolicyPDA(vault);
   const ix = getUnpauseAgentInstruction({
     owner,
     vault,
+    policy: policyPda,
     agentToUnpause: agent,
   });
   return run(rpc, owner, network, [ix], opts);
@@ -468,9 +478,12 @@ export async function revokeAgent(
 ): Promise<TxResult> {
   requireValidAddress(agent, "Agent address");
   const [overlayPda] = await getAgentOverlayPDA(vault, 0);
+  // PEN-CROSS-5 (Phase 4 absorption): policy now required for policy_version bump.
+  const [policyPda] = await getPolicyPDA(vault);
   const ix = getRevokeAgentInstruction({
     owner,
     vault,
+    policy: policyPda,
     agentSpendOverlay: overlayPda,
     agentToRemove: agent,
   });
@@ -490,9 +503,12 @@ export async function addAgent(
   requireValidAddress(agent, "Agent address");
   requireValidPermissions(permissions);
   const [overlayPda] = await getAgentOverlayPDA(vault, 0);
+  // PEN-CROSS-5 (Phase 4 absorption): policy now required for policy_version bump.
+  const [policyPda] = await getPolicyPDA(vault);
   const ix = getRegisterAgentInstruction({
     owner,
     vault,
+    policy: policyPda,
     agentSpendOverlay: overlayPda,
     agent,
     capability: Number(permissions),

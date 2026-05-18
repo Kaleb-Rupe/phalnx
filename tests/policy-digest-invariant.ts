@@ -778,6 +778,7 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
       .accountsPartial({
         owner: owner.publicKey,
         vault: vault.vaultPda,
+        policy: vault.policyPda,
         agentSpendOverlay: vault.overlayPda,
       })
       .rpc();
@@ -1047,6 +1048,7 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
       .accountsPartial({
         owner: owner.publicKey,
         vault: vault.vaultPda,
+        policy: vault.policyPda,
         agentSpendOverlay: vault.overlayPda,
       })
       .rpc();
