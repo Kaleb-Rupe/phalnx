@@ -5174,6 +5174,11 @@ export type Sigil = {
       "code": 6081,
       "name": "observeOnlyModeBlocksExecute",
       "msg": "Vault is in observe_only mode — validate_and_authorize is blocked"
+    },
+    {
+      "code": 6082,
+      "name": "activeVaultRequiresAllowlist",
+      "msg": "Active (non-observe_only) vault must have at least one protocol or destination on the allowlist"
     }
   ],
   "types": [

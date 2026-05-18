@@ -297,4 +297,12 @@ pub enum SigilError {
     /// before opening the execute path.
     #[msg("Vault is in observe_only mode — validate_and_authorize is blocked")]
     ObserveOnlyModeBlocksExecute,
+
+    /// 6082 — F-11 audit fix: an active (non-observe_only) vault must have at
+    /// least ONE protocol on the allowlist OR at least ONE destination on the
+    /// allowlist. Otherwise the vault is silently inert — accepts deposits but
+    /// can never authorize any spending action. observe_only vaults are
+    /// explicitly inert by design, so this check is skipped for them.
+    #[msg("Active (non-observe_only) vault must have at least one protocol or destination on the allowlist")]
+    ActiveVaultRequiresAllowlist,
 }

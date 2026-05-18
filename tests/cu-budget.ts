@@ -341,12 +341,21 @@ describe("cu-budget", () => {
       program.programId,
     );
 
+    // F-15 audit fix: protocolMode is unconditionally PROTOCOL_MODE_ALLOWLIST under
+    // Phase 2 Option A (mode 0/2 paths deleted). The prior ternary kept dead
+    // branches alive.
+    // F-11 audit fix: an active (non-observe_only) vault needs at least ONE
+    // protocol on the allowlist. Inject JUPITER_PROGRAM_ID as a safe baseline
+    // when the caller passes an empty list — every cu-budget scenario builds a
+    // bundle targeting JUPITER_PROGRAM_ID anyway, so this matches actual usage.
+    const initProtocols =
+      targetProtocols.length === 0 ? [JUPITER_PROGRAM_ID] : targetProtocols;
     await program.methods
       .initializeVault(vaultId,
           new BN(500_000_000),
           new BN(200_000_000),
-          targetProtocols.length === 0 ? 0 : 1,
-          targetProtocols,
+          1,
+          initProtocols,
           0,
           100,
           new BN(1800),
@@ -357,8 +366,8 @@ describe("cu-budget", () => {
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(200_000_000),
             maxSlippageBps: 100,
-            protocolMode: targetProtocols.length === 0 ? 0 : 1,
-            protocols: targetProtocols,
+            protocolMode: 1,
+            protocols: initProtocols,
             allowedDestinations: [],
             timelockDuration: new BN(1800),
           }),
@@ -582,7 +591,10 @@ describe("cu-budget", () => {
   // Scenario 1: validate-only (no DeFi ix; just validate→finalize)
   // ───────────────────────────────────────────────────────────────────────────
   it(`Scenario 1: validate-only ≤ ${THRESHOLDS.validateOnly.toLocaleString()} CU`, async () => {
-    const ctx = await setupVault(new BN(60001), []); // protocolMode=All, no constraints
+    // F-15/F-11: setupVault now uses PROTOCOL_MODE_ALLOWLIST + JUPITER baseline
+    // when caller passes []. Scenario is a non-spending validate so allowlist
+    // semantics don't load-bear; only CU floor matters.
+    const ctx = await setupVault(new BN(60001), []);
     const validateIx = await buildValidateIx(
       ctx,
       new BN(0), // non-spending — no DeFi ix required
@@ -779,7 +791,9 @@ describe("cu-budget", () => {
   // variants and System Program transfer noops to fill the 32 slots.
   // ───────────────────────────────────────────────────────────────────────────
   it(`Scenario 6: ComputeBudget×32 pad ≤ ${THRESHOLDS.computeBudgetPad32.toLocaleString()} CU`, async () => {
-    const ctx = await setupVault(new BN(60006), []); // protocolMode=All, no constraints
+    // F-15/F-11: setupVault now uses PROTOCOL_MODE_ALLOWLIST + JUPITER baseline.
+    // Non-spending validate-only scenario; allowlist not load-bearing.
+    const ctx = await setupVault(new BN(60006), []);
     const validateIx = await buildValidateIx(
       ctx,
       new BN(0),

@@ -115,6 +115,17 @@ pub fn handler(
         );
     }
 
+    // F-11: an active vault (non-observe_only) must have at least ONE protocol OR
+    // at least ONE destination on the allowlist. Otherwise the vault is silently
+    // inert — accepts deposits but cannot execute any spending action. observe_only
+    // vaults are explicitly inert by design, so the empty-allowlist check is skipped.
+    if !observe_only {
+        require!(
+            !protocols.is_empty() || !allowed_destinations.is_empty(),
+            SigilError::ActiveVaultRequiresAllowlist
+        );
+    }
+
     // Phase 2 TA-19: assert the owner's signed digest matches the recomputed
     // digest over the resulting policy fields. Closes pending-PDA tampering +
     // signer-blind-sign risks. The resulting policy uses RESTRICTED destination

@@ -120,7 +120,7 @@ Under compaction (post-Phase-1):
 - All variants previously at 6034-6080 shift down by 2 → now **6032-6078**.
 - For example: `InvalidDestinationMode` (was 6080) shifts to **6078**.
 
-**Post-Phase-1 state (compaction):** 79 V1 variants at codes 6000-6078. The lowest unused code was **6079**. Phase 2 appended 6079-6081 (InvalidCapability + PolicyPreviewMismatch + ObserveOnlyModeBlocksExecute). Post-Phase-2: 82 variants at codes 6000-6081; next free code is **6082**.
+**Post-Phase-1 state (compaction):** 79 V1 variants at codes 6000-6078. The lowest unused code was **6079**. Phase 2 appended 6079-6081 (InvalidCapability + PolicyPreviewMismatch + ObserveOnlyModeBlocksExecute). Phase 2 close-up appended 6082 (ActiveVaultRequiresAllowlist — F-11). Post-Phase-2-close-up: 83 variants at codes 6000-6082; next free code is **6083**.
 
 ---
 
@@ -133,30 +133,31 @@ These codes are reserved for V2 primitives introduced in Phases 2 through 8. The
 | 6079 | `InvalidCapability` | Phase 2 ✅ | TA-04 | Reserved capability values 3..=255 reject — LANDED |
 | 6080 | `PolicyPreviewMismatch` | Phase 2 ✅ | TA-19 | SHA-256 digest mismatch on PolicyConfig/PendingPolicyUpdate — LANDED |
 | 6081 | `ObserveOnlyModeBlocksExecute` | Phase 2 ✅ | TA-19 | observe_only vault rejects validate_and_authorize — LANDED |
-| 6082 | `ErrMintNotPinned` | Phase 3 | TA-03 | USDC/USDT cluster-pinned mint enforcement |
-| 6083 | `ErrOutsideOperatingHours` | Phase 3 | TA-05 | UTC operating-hours bitmask violation |
-| 6084 | `ErrCooldownActive` | Phase 3 | TA-06 | Per-agent cooldown (on AgentSpendOverlay) |
-| 6085 | `ErrGraylistFriction` | Phase 3 | TA-07 | First-time destination delay window |
-| 6086 | `ErrGraylistFull` | Phase 3 | TA-07 | Destination graylist bound (10 entries) |
-| 6087 | `ErrToken2022ExtensionForbidden` | Phase 3 | TA-08 | TLV check at deposit (3-item allowlist per D-4) |
-| 6088 | `ErrCosignRequired` | Phase 3 | TA-09 | Owner+session co-signature required |
-| 6089 | `ErrAutoRevoked` | Phase 3 | TA-17 | AgentEntry.consecutive_failures threshold tripped |
-| 6090 | `ErrSandwichIntegrity` | Phase 4 | TA-10 | Sandwich pair/bundle integrity violation |
-| 6091 | `ErrProtectedWritable` | Phase 4 | TA-11 | Protected PDA listed as writable in foreign ix |
-| 6092 | `ErrSessionNonceMismatch` | Phase 4 | AC-10 | Durable-nonce replay defense |
-| 6093 | `ErrStableFloorViolation` | Phase 5 | TA-12 | usdc+usdt balance below configured floor |
-| 6094 | `ErrDailyCapExceeded` | Phase 5 | TA-13 | Per-protocol rolling 24h cap (doc-fix) |
-| 6095 | `ErrRecipientCapExceeded` | Phase 5 | TA-14 | `[PerRecipientCounter; 10]` array overflow |
-| 6096 | `ErrMintDeltaCapExceeded` | Phase 6 | R-1 | Mint-level delta cap violation |
-| 6097 | `ErrAtaAuthorityChanged` | Phase 6 | R-2 | ATA owner/delegate changed mid-bundle |
-| 6098 | `ErrOutputBelowFloor` | Phase 6 | R-3 | Output amount below declared floor |
-| 6099 | `ErrDeclarationInconsistent` | Phase 6 | R-4 | Bundle declarations don't match observed state |
-| 6100 | `ErrPendingOwnershipExists` | Phase 8 | C26 | Pending ownership transfer collision |
-| 6101 | `ErrPendingOwnershipNotReady` | Phase 8 | C26 | Pending transfer not past timelock |
-| 6102 | `ErrInvalidFreezeReason` | Phase 8 | C27 | Reserved freeze_reason enum value |
-| 6103 | `ErrReactivateCooldownActive` | Phase 8 | C28 | Post-unfreeze observation window active |
+| 6082 | `ActiveVaultRequiresAllowlist` | Phase 2 close-up ✅ | F-11 | Active (non-observe_only) vault must have ≥1 protocol or destination — LANDED |
+| 6083 | `ErrMintNotPinned` | Phase 3 | TA-03 | USDC/USDT cluster-pinned mint enforcement |
+| 6084 | `ErrOutsideOperatingHours` | Phase 3 | TA-05 | UTC operating-hours bitmask violation |
+| 6085 | `ErrCooldownActive` | Phase 3 | TA-06 | Per-agent cooldown (on AgentSpendOverlay) |
+| 6086 | `ErrGraylistFriction` | Phase 3 | TA-07 | First-time destination delay window |
+| 6087 | `ErrGraylistFull` | Phase 3 | TA-07 | Destination graylist bound (10 entries) |
+| 6088 | `ErrToken2022ExtensionForbidden` | Phase 3 | TA-08 | TLV check at deposit (3-item allowlist per D-4) |
+| 6089 | `ErrCosignRequired` | Phase 3 | TA-09 | Owner+session co-signature required |
+| 6090 | `ErrAutoRevoked` | Phase 3 | TA-17 | AgentEntry.consecutive_failures threshold tripped |
+| 6091 | `ErrSandwichIntegrity` | Phase 4 | TA-10 | Sandwich pair/bundle integrity violation |
+| 6092 | `ErrProtectedWritable` | Phase 4 | TA-11 | Protected PDA listed as writable in foreign ix |
+| 6093 | `ErrSessionNonceMismatch` | Phase 4 | AC-10 | Durable-nonce replay defense |
+| 6094 | `ErrStableFloorViolation` | Phase 5 | TA-12 | usdc+usdt balance below configured floor |
+| 6095 | `ErrDailyCapExceeded` | Phase 5 | TA-13 | Per-protocol rolling 24h cap (doc-fix) |
+| 6096 | `ErrRecipientCapExceeded` | Phase 5 | TA-14 | `[PerRecipientCounter; 10]` array overflow |
+| 6097 | `ErrMintDeltaCapExceeded` | Phase 6 | R-1 | Mint-level delta cap violation |
+| 6098 | `ErrAtaAuthorityChanged` | Phase 6 | R-2 | ATA owner/delegate changed mid-bundle |
+| 6099 | `ErrOutputBelowFloor` | Phase 6 | R-3 | Output amount below declared floor |
+| 6100 | `ErrDeclarationInconsistent` | Phase 6 | R-4 | Bundle declarations don't match observed state |
+| 6101 | `ErrPendingOwnershipExists` | Phase 8 | C26 | Pending ownership transfer collision |
+| 6102 | `ErrPendingOwnershipNotReady` | Phase 8 | C26 | Pending transfer not past timelock |
+| 6103 | `ErrInvalidFreezeReason` | Phase 8 | C27 | Reserved freeze_reason enum value |
+| 6104 | `ErrReactivateCooldownActive` | Phase 8 | C28 | Post-unfreeze observation window active |
 
-**Total reserved:** 25 codes (6079-6103 inclusive).
+**Total reserved:** 26 codes (6079-6104 inclusive — Phase 2 close-up shifted Phase 3+ reservations down by 1 to accommodate 6082 `ActiveVaultRequiresAllowlist`).
 
 ---
 

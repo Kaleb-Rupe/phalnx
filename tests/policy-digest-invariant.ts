@@ -117,7 +117,7 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
         new BN(1800),
         [],
         [],
-        false, // observeOnly
+        true, // observeOnly — required for F-11 (no protocols/destinations)
         initVaultPreviewDigest({
           dailySpendingCapUsd: new BN(500_000_000),
           maxTransactionSizeUsd: new BN(100_000_000),
@@ -126,6 +126,7 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
           protocols: [],
           allowedDestinations: [],
           timelockDuration: new BN(1800),
+          observeOnly: true,
         }),
       )
       .accounts({
