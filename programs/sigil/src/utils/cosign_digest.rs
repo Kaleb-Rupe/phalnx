@@ -218,4 +218,105 @@ mod tests {
         };
         assert_ne!(compute_cosign_digest(&f_a), compute_cosign_digest(&f_b));
     }
+
+    /// G4 (audit close) — cross-impl byte-equality pin (minimal fixture).
+    ///
+    /// Pins a deterministic SHA-256 over the 37-byte canonical encoding for the
+    /// minimal-cosign case:
+    ///   - cosign_session = pk(1) → 32 bytes
+    ///   - all four Option<…> fields = None → 4 zero discriminator bytes
+    ///   - (no payload bytes for any Option since all are None)
+    /// = 36 bytes deterministic input.
+    ///
+    /// Same fixture is asserted byte-for-byte in
+    /// `sdk/kit/tests/policy/cosign-digest.test.ts` (HEX_MINIMAL). If either
+    /// side mutates the canonical encoding, BOTH digests change and the two
+    /// tests fail in lock-step — the goal, not silent acceptance of a
+    /// divergent format.
+    #[test]
+    fn cosign_digest_known_value_for_minimal() {
+        let cosigner = pk(1);
+        let f = CosignDigestFields {
+            cosign_session: &cosigner,
+            daily_spending_cap_usd: None,
+            max_transaction_amount_usd: None,
+            allowed_destinations: None,
+            protocols: None,
+        };
+        let digest = compute_cosign_digest(&f);
+        let expected: [u8; 32] = COSIGN_HEX_MINIMAL;
+        assert_eq!(
+            digest, expected,
+            "minimal-cosign digest must match SDK fixture (sdk/kit/tests/policy/cosign-digest.test.ts)"
+        );
+    }
+
+    /// G4 (audit close) — cross-impl byte-equality pin (realistic fixture).
+    ///
+    /// Realistic cosign args mirroring an "elevated mutation that raises the
+    /// daily cap, raises the max-tx, adds a destination, and adds a protocol".
+    ///   - cosign_session = pk(1)
+    ///   - daily_spending_cap_usd = Some(500_000_000)
+    ///   - max_transaction_amount_usd = Some(100_000_000)
+    ///   - allowed_destinations = Some(&[pk(10)])
+    ///   - protocols = Some(&[pk(1), pk(2)])
+    /// Encoding length:
+    ///   32 (session)
+    ///   + 1 + 8 (daily Some(u64))
+    ///   + 1 + 8 (max_tx Some(u64))
+    ///   + 1 + 4 + 32 (destinations Some(Vec<Pubkey> len=1))
+    ///   + 1 + 4 + 32*2 (protocols Some(Vec<Pubkey> len=2))
+    /// = 156 bytes deterministic input.
+    #[test]
+    fn cosign_digest_known_value_for_realistic() {
+        let cosigner = pk(1);
+        let dests = [pk(10)];
+        let protos = [pk(1), pk(2)];
+        let f = CosignDigestFields {
+            cosign_session: &cosigner,
+            daily_spending_cap_usd: Some(500_000_000),
+            max_transaction_amount_usd: Some(100_000_000),
+            allowed_destinations: Some(&dests),
+            protocols: Some(&protos),
+        };
+        let digest = compute_cosign_digest(&f);
+        let expected: [u8; 32] = COSIGN_HEX_REALISTIC;
+        assert_eq!(
+            digest, expected,
+            "realistic-cosign digest must match SDK fixture"
+        );
+    }
 }
+
+/// G4 (audit close) — pinned cosign digest for the minimal fixture.
+///
+/// Computed over the canonical 36-byte encoding:
+///   - cosign_session = pk(1) ([1u8; 32]) → 32 bytes
+///   - daily_spending_cap_usd = None → 1 zero byte
+///   - max_transaction_amount_usd = None → 1 zero byte
+///   - allowed_destinations = None → 1 zero byte
+///   - protocols = None → 1 zero byte
+///
+/// = `3f6c2724a21a3b29ef886a52aa414bec96c46f7af137c636065209ff892cee6c`
+///
+/// Same value pinned at `sdk/kit/tests/policy/cosign-digest.test.ts` as
+/// `HEX_MINIMAL`.
+#[cfg(test)]
+const COSIGN_HEX_MINIMAL: [u8; 32] = [
+    0x3f, 0x6c, 0x27, 0x24, 0xa2, 0x1a, 0x3b, 0x29, 0xef, 0x88, 0x6a, 0x52, 0xaa, 0x41, 0x4b, 0xec,
+    0x96, 0xc4, 0x6f, 0x7a, 0xf1, 0x37, 0xc6, 0x36, 0x06, 0x52, 0x09, 0xff, 0x89, 0x2c, 0xee, 0x6c,
+];
+
+/// G4 (audit close) — pinned cosign digest for the realistic fixture.
+///
+/// Computed over the canonical 156-byte encoding (see test for full layout).
+///
+/// = `5a881caee096c1c8d60348f3cca70bc966d5ca92b32ddaf014ebc0dbc8edf1af`
+///
+/// Same value pinned at `sdk/kit/tests/policy/cosign-digest.test.ts` as
+/// `HEX_REALISTIC`.
+#[cfg(test)]
+const COSIGN_HEX_REALISTIC: [u8; 32] = [
+    0x5a, 0x88, 0x1c, 0xae, 0xe0, 0x96, 0xc1, 0xc8, 0xd6, 0x03, 0x48, 0xf3, 0xcc, 0xa7, 0x0b, 0xc9,
+    0x66, 0xd5, 0xca, 0x92, 0xb3, 0x2d, 0xda, 0xf0, 0x14, 0xeb, 0xc0, 0xdb, 0xc8, 0xed, 0xf1, 0xaf,
+];
