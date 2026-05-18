@@ -16,13 +16,17 @@ pub struct AgentEntry {
     pub spending_limit_usd: u64, // 8 bytes — 0 = no per-agent limit
     pub paused: bool,   // 1 byte  — owner-controlled suspension
     /// TA-17 (Phase 3 pre-execution guard #7): consecutive policy-
-    /// violation failures by this agent. Incremented in finalize_session
-    /// when the failed seal's reject reason is an on-chain policy code
-    /// (numeric range POLICY_VIOLATION_RANGE = 6083..=6100 — see
-    /// finalize_session.rs). Reset to 0 on a successful seal. When
-    /// `>= policy.auto_revoke_threshold`, the agent's capability is set
-    /// to CAPABILITY_DISABLED and an AgentAutoRevoked event is emitted.
-    /// Owner re-enables via queue_agent_permissions_update.
+    /// violation failures by this agent. Solana's atomic-or-none execution
+    /// means a validate-time reject rolls back its own state mutation, so
+    /// the counter cannot self-increment inside the failing tx. Instead,
+    /// it is incremented by the owner-only `record_agent_violation` ix,
+    /// called by an off-chain monitor after observing a failed seal whose
+    /// reject reason is an on-chain policy code (numeric range
+    /// POLICY_VIOLATION_RANGE = 6083..=6100 — see `state/mod.rs::is_policy_violation_code`).
+    /// Reset to 0 inside `validate_and_authorize` on a successful seal.
+    /// When `>= policy.auto_revoke_threshold`, the agent's capability is
+    /// set to CAPABILITY_DISABLED and an `AgentAutoRevoked` event is
+    /// emitted. Owner re-enables via `queue_agent_permissions_update`.
     ///
     /// External codes (CU exhaustion 6047, nonce desync 6048, auth
     /// errors 6000-6082) do NOT increment — they're not the agent's

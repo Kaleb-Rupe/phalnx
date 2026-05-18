@@ -582,9 +582,12 @@ describe("TOCTOU Security Fix", () => {
       } as any)
       .rpc();
 
-    // Verify policy version bumped to 1
+    // Verify policy version bumped to 2 — Phase 2 TA-19 PEN-CROSS-3 made
+    // `create_instruction_constraints` bump policy_version (sibling-handler
+    // digest re-bind), then `apply_constraints_update` bumps again. Total
+    // 0→1→2 across the create+apply pair.
     const policy1 = await program.account.policyConfig.fetch(v.policyPda);
-    expect((policy1 as any).policyVersion.toNumber()).to.equal(1);
+    expect((policy1 as any).policyVersion.toNumber()).to.equal(2);
   });
 
   // ─── Test 7: Deleted instructions not callable ───────────────────────────
