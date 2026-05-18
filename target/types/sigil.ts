@@ -2696,6 +2696,19 @@ export type Sigil = {
           "type": {
             "vec": "u64"
           }
+        },
+        {
+          "name": "observeOnly",
+          "type": "bool"
+        },
+        {
+          "name": "previewDigest",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
         }
       ]
     },
@@ -3397,6 +3410,15 @@ export type Sigil = {
           "name": "destinationMode",
           "type": {
             "option": "u8"
+          }
+        },
+        {
+          "name": "newPolicyPreviewDigest",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
           }
         }
       ]
@@ -5136,7 +5158,22 @@ export type Sigil = {
     {
       "code": 6078,
       "name": "invalidDestinationMode",
-      "msg": "Invalid destination mode (must be 0 = Restricted or 1 = OpenWithCap)"
+      "msg": "Invalid destination mode (must be 0 = RESTRICTED)"
+    },
+    {
+      "code": 6079,
+      "name": "invalidCapability",
+      "msg": "Invalid agent capability value (must be 0 = Disabled, 1 = Observer, or 2 = Operator)"
+    },
+    {
+      "code": 6080,
+      "name": "policyPreviewMismatch",
+      "msg": "Policy preview digest mismatch — caller's signed digest differs from recomputed canonical digest"
+    },
+    {
+      "code": 6081,
+      "name": "observeOnlyModeBlocksExecute",
+      "msg": "Vault is in observe_only mode — validate_and_authorize is blocked"
     }
   ],
   "types": [
@@ -5780,6 +5817,22 @@ export type Sigil = {
               "close_vault requires this to be 0."
             ],
             "type": "u8"
+          },
+          {
+            "name": "observeOnly",
+            "docs": [
+              "Phase 2 TA-19: observe_only mode flag.",
+              "",
+              "When true, ALL `validate_and_authorize` calls reject with",
+              "`ObserveOnlyModeBlocksExecute`. Provides a hard, low-blast-radius",
+              "kill switch separate from `VaultStatus::Frozen` — owners can stand",
+              "up an observe-only vault to baseline agent behaviour before opening",
+              "the execute path. Set at `initialize_vault` time; flipping it post-",
+              "init is deferred to a later phase.",
+              "",
+              "APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability."
+            ],
+            "type": "bool"
           }
         ]
       }
@@ -6776,8 +6829,8 @@ export type Sigil = {
           {
             "name": "destinationMode",
             "docs": [
-              "Destination access control mode update (F-4 audit fix).",
-              "Some(0) = Restricted, Some(1) = OpenWithCap, None = leave unchanged."
+              "Destination access control mode update.",
+              "Phase 2 Option A: only Some(0) (RESTRICTED) is accepted. Some(1) was deleted."
             ],
             "type": {
               "option": "u8"
@@ -6789,6 +6842,30 @@ export type Sigil = {
               "Bump seed for PDA"
             ],
             "type": "u8"
+          },
+          {
+            "name": "newPolicyPreviewDigest",
+            "docs": [
+              "TA-19 (Phase 2): SHA-256 digest of the canonical Borsh encoding of the",
+              "policy fields THAT WOULD RESULT FROM APPLYING this pending update over",
+              "the live policy. Owner computes off-chain over the merged result and",
+              "includes the digest in `queue_policy_update`; `apply_pending_policy`",
+              "re-asserts the digest against a re-computed merged digest before any",
+              "field is copied to the live policy. Defends against pending-PDA",
+              "tampering between queue and apply (e.g., partial overwrite via a",
+              "rogue program with the same account discriminator).",
+              "",
+              "Encoding identical to `PolicyConfig.policy_preview_digest` — see that",
+              "field's doc-comment for the canonical encoding ordering.",
+              "",
+              "APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
           }
         ]
       }
@@ -6996,14 +7073,49 @@ export type Sigil = {
           {
             "name": "destinationMode",
             "docs": [
-              "Destination access control mode for `agent_transfer`:",
-              "0 = Restricted (DEFAULT) — destination MUST be in `allowed_destinations`.",
-              "1 = OpenWithCap — destination unrestricted; only `daily_spending_cap_usd` throttles drain.",
-              "Closes F-4 (third-pass audit): empty `allowed_destinations` no longer",
-              "implies default-allow. Owners must explicitly opt into OpenWithCap via",
-              "queue_policy_update / apply_pending_policy."
+              "Destination access control mode for `agent_transfer` and spending paths.",
+              "",
+              "Phase 2 Option A: only value 0 (RESTRICTED) is accepted. Permissive",
+              "OPEN_WITH_CAP (1) was deleted. Closes F-4 (third-pass audit) and the",
+              "subsequent owner-opt-in window definitively."
             ],
             "type": "u8"
+          },
+          {
+            "name": "policyPreviewDigest",
+            "docs": [
+              "TA-19 (Phase 2): SHA-256 digest of the canonical Borsh encoding of the",
+              "policy fields the owner approved at queue/init time. Bound at the same",
+              "instruction where the owner signs the change, re-asserted at apply, so",
+              "a compromised owner-signer or pending-PDA tampering cannot mutate the",
+              "applied policy without producing a digest mismatch.",
+              "",
+              "CANONICAL ENCODING (FIXED — DO NOT REORDER):",
+              "1. `daily_spending_cap_usd: u64`",
+              "2. `max_transaction_size_usd: u64`",
+              "3. `max_slippage_bps: u16`",
+              "4. `protocol_mode: u8`",
+              "5. `protocols: Vec<Pubkey>`",
+              "6. `destination_mode: u8`",
+              "7. `allowed_destinations: Vec<Pubkey>`",
+              "8. `timelock_duration: u64`",
+              "9. `session_expiry_seconds: u64`",
+              "10. `observe_only: bool`",
+              "11. `has_constraints: bool`",
+              "12. `has_post_assertions: u8`",
+              "",
+              "All fields encoded as Borsh: u8/u16/u64 little-endian, `bool` as `[u8; 1]`",
+              "(0 or 1), `Vec<Pubkey>` as `u32_le_len ++ pubkey_bytes_concatenated`.",
+              "The SDK helper `computePolicyPreviewDigest` mirrors this encoding exactly.",
+              "",
+              "APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
           }
         ]
       }
