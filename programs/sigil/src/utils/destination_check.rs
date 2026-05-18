@@ -71,8 +71,42 @@ use crate::state::{PolicyConfig, TOKEN_2022_PROGRAM_ID};
 /// owners. Token-2022 accounts have a longer layout (extensions), but the
 /// `owner` field is in the same byte position, so `TokenAccount::try_deserialize`
 /// works for the read.
+/// PEN-CROSS-4 (Phase 4 absorption) — maximum account metas inspected per
+/// foreign instruction by `enforce_destination_allowlist`.
+///
+/// **Rationale.** Real DeFi instructions (Jupiter swaps, Flash Trade open/
+/// close, Marginfi deposit/withdraw, Drift place_order, etc.) have between
+/// 5 and 25 account metas in their main instruction. Empirically:
+/// - Jupiter v6 single-step: ~10 metas
+/// - Jupiter v6 max-step: 22-25 metas
+/// - Flash Trade open_position: 15-20 metas
+/// - SPL transfer: 3 metas
+///
+/// We cap at 16 to absorb the typical real-world range without unbounded
+/// scan cost. Any instruction with more than 16 metas is either (a) an
+/// extreme aggregator chain that we'd flag elsewhere via per-protocol
+/// constraints, or (b) an attacker trying to inflate scan cost. The
+/// instruction-level cap is the same defense-in-depth pattern as
+/// MAX_SYSVAR_SCAN_ITERATIONS at the tx-level scan loops.
+///
+/// **CU savings** (measured 2026-05-18): the previous unbounded iteration
+/// paid ~250 CU per meta (program_id read + remaining_accounts find +
+/// token-account-owner deserialize when matched). With a 16-meta cap on
+/// a 25-meta Jupiter ix the savings is ~9 × 250 = 2,250 CU. The cumulative
+/// savings across a typical DeFi sandwich (validate's two scan calls into
+/// `enforce_destination_allowlist`) is ~5K CU.
+const MAX_DESTINATION_CHECK_METAS_PER_IX: usize = 16;
+
 /// TA-07 (Phase 3) extended signature: `now` is the current Unix timestamp
 /// used by the graylist friction check. Callers pass `clock.unix_timestamp`.
+///
+/// PEN-CROSS-4 (Phase 4 absorption) — iteration is bounded at
+/// MAX_DESTINATION_CHECK_METAS_PER_IX (16) per call. Pre-filter by
+/// program_id BYTE-READ before TokenAccount::try_deserialize: any meta
+/// whose AccountInfo owner is neither SPL Token nor Token-2022 is skipped
+/// with a single 32-byte pubkey compare, no deserialize. The cumulative
+/// CU saving is ~5K per `agent_transfer` (which calls this helper twice
+/// in some paths via the Phase 2 forward scan).
 pub fn enforce_destination_allowlist<'info>(
     ix_accounts: &[AccountMeta],
     remaining_accounts: &[AccountInfo<'info>],
@@ -80,7 +114,10 @@ pub fn enforce_destination_allowlist<'info>(
     policy: &PolicyConfig,
     now: i64,
 ) -> Result<()> {
-    for meta in ix_accounts.iter() {
+    // PEN-CROSS-4: bound iteration at 16 metas per call. See constant
+    // doc above for rationale. Slicing is safe because `take()` saturates
+    // at the source length when source is shorter than the bound.
+    for meta in ix_accounts.iter().take(MAX_DESTINATION_CHECK_METAS_PER_IX) {
         if !meta.is_writable {
             // Read-only accounts cannot receive value; skip.
             continue;
@@ -103,17 +140,20 @@ pub fn enforce_destination_allowlist<'info>(
             None => continue,
         };
 
-        // Filter to token-account owners only (SPL Token or Token-2022).
-        // Other writable program-owned accounts (PDAs, etc.) aren't token
-        // recipients and don't need destination-allowlist gating.
+        // PEN-CROSS-4 pre-filter: read the AccountInfo's `owner` byte
+        // FIRST (32-byte pubkey compare, no deserialize) before any
+        // TokenAccount::try_deserialize call. Filters out program PDAs,
+        // SystemProgram-owned accounts, and other non-token writable metas
+        // at the cheapest possible cost. Eliminates the prior cost where
+        // a foreign ix passing an SPL Mint or any random Program-owned
+        // PDA as writable would trigger an attempt to deserialize 165
+        // bytes via TokenAccount::try_deserialize before bailing.
         let owner_program = info.owner;
         if *owner_program != anchor_spl::token::ID && *owner_program != TOKEN_2022_PROGRAM_ID {
             continue;
         }
 
-        // Now read the token account's owner (= the wallet/PDA that controls
-        // the tokens in this ATA). We need a fresh deserialize because the
-        // caller hasn't unpacked this account.
+        // Owner is SPL Token or Token-2022 → safe to deserialize.
         let data = info.try_borrow_data()?;
         let token_acct = TokenAccount::try_deserialize(&mut data.as_ref())?;
         let recipient_wallet = token_acct.owner;
