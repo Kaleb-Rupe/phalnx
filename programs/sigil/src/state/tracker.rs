@@ -138,6 +138,64 @@ pub struct PerRecipientCounter {
     pub window_spend_usd: u64,
 }
 
+impl PerRecipientCounter {
+    /// Empty slot: `window_start == 0` AND `window_spend_usd == 0`.
+    ///
+    /// The invariant pairs the two fields so a zeroed slot is unambiguously
+    /// "never used", separate from "used and now elapsed" (where
+    /// `window_start > 0`). Allocation in `SpendTracker::record_recipient_spend`
+    /// relies on the per_recipient_count cursor rather than slot scanning,
+    /// but `is_empty()` is the canonical predicate for any future caller
+    /// that needs to identify never-used slots without touching the cursor.
+    pub fn is_empty(&self) -> bool {
+        self.window_start == 0 && self.window_spend_usd == 0
+    }
+
+    /// Expired: `now - window_start >= ROLLING_WINDOW_SECONDS` (86,400 s = 24h).
+    ///
+    /// Uses `saturating_sub` to stay consistent with the surrounding code
+    /// (a clock running backward yields 0, which is < the window and so
+    /// reports "not expired" — fail-closed for the eviction path that
+    /// relies on this check).
+    pub fn is_expired(&self, now: i64) -> bool {
+        now.saturating_sub(self.window_start) >= ROLLING_WINDOW_SECONDS
+    }
+
+    /// Same recipient pubkey as the passed slice. Byte-equality on the
+    /// raw 32-byte representation (zero-copy accounts cannot hold
+    /// `Pubkey` directly).
+    pub fn matches(&self, recipient: &[u8; 32]) -> bool {
+        &self.recipient == recipient
+    }
+
+    /// Accumulate `amount_usd` into the active rolling window. Caller
+    /// MUST have verified `matches() == true` (same recipient) AND
+    /// `is_expired() == false` (window still active) before invoking,
+    /// otherwise the addition mixes spend from a stale window into the
+    /// current one. Returns `Overflow` on `u64::MAX` saturation.
+    ///
+    /// Return type is the std `core::result::Result<(), SigilError>`
+    /// (not Anchor's `anchor_lang::Result<T>` alias) so the caller
+    /// receives the raw error variant and decides how to wrap it.
+    pub fn accumulate(&mut self, amount_usd: u64) -> core::result::Result<(), SigilError> {
+        self.window_spend_usd = self
+            .window_spend_usd
+            .checked_add(amount_usd)
+            .ok_or(SigilError::Overflow)?;
+        Ok(())
+    }
+
+    /// Reset this slot to a fresh window starting at `now` with the
+    /// given `recipient` and `initial_spend`. Used by both the
+    /// expired-window-on-same-recipient path and the empty-slot
+    /// allocation path in `record_recipient_spend`.
+    pub fn reset(&mut self, recipient: [u8; 32], now: i64, initial_spend: u64) {
+        self.recipient = recipient;
+        self.window_start = now;
+        self.window_spend_usd = initial_spend;
+    }
+}
+
 impl SpendTracker {
     /// Total account size including 8-byte discriminator.
     /// 8 disc + 32 vault + 144*16 buckets + 10*48 protocol_counters +
@@ -380,21 +438,24 @@ impl SpendTracker {
 
         // 1) Existing slot path
         for i in 0..active {
-            if self.per_recipient[i].recipient == recipient_bytes {
-                let window_age = now.saturating_sub(self.per_recipient[i].window_start);
-                if window_age >= ROLLING_WINDOW_SECONDS {
+            if self.per_recipient[i].matches(&recipient_bytes) {
+                if self.per_recipient[i].is_expired(now) {
                     // Window elapsed — reset to fresh window. NOT churn-
                     // eviction (same recipient is restarting their own
                     // window after natural expiry, which the no-churn
                     // rule explicitly permits).
-                    self.per_recipient[i].window_start = now;
-                    self.per_recipient[i].window_spend_usd = usd_amount;
+                    self.per_recipient[i].reset(recipient_bytes, now, usd_amount);
                 } else {
                     // Accumulate into active window.
-                    self.per_recipient[i].window_spend_usd = self.per_recipient[i]
-                        .window_spend_usd
-                        .checked_add(usd_amount)
-                        .ok_or(error!(SigilError::Overflow))?;
+                    // `accumulate` returns `Result<_, SigilError>`; wrap into
+                    // an Anchor error so the surrounding `Result<()>`
+                    // (anchor_lang::Result) propagates correctly. The only
+                    // failure mode is `SigilError::Overflow` (u64 saturation
+                    // on checked_add), which is what was previously raised
+                    // inline.
+                    self.per_recipient[i]
+                        .accumulate(usd_amount)
+                        .map_err(|_| error!(SigilError::Overflow))?;
                 }
                 return Ok(());
             }
@@ -403,9 +464,7 @@ impl SpendTracker {
         // 2a) Allocate new slot if any are free
         if active < MAX_PER_RECIPIENT_ENTRIES {
             let idx = active;
-            self.per_recipient[idx].recipient = recipient_bytes;
-            self.per_recipient[idx].window_start = now;
-            self.per_recipient[idx].window_spend_usd = usd_amount;
+            self.per_recipient[idx].reset(recipient_bytes, now, usd_amount);
             self.per_recipient_count = self
                 .per_recipient_count
                 .checked_add(1)
@@ -419,13 +478,11 @@ impl SpendTracker {
         let mut oldest_idx: Option<usize> = None;
         let mut oldest_ts: i64 = i64::MAX;
         for i in 0..MAX_PER_RECIPIENT_ENTRIES {
-            let entry_age = now.saturating_sub(self.per_recipient[i].window_start);
-            if entry_age >= ROLLING_WINDOW_SECONDS {
-                // Eligible — pick the oldest.
-                if self.per_recipient[i].window_start < oldest_ts {
-                    oldest_idx = Some(i);
-                    oldest_ts = self.per_recipient[i].window_start;
-                }
+            if self.per_recipient[i].is_expired(now)
+                && self.per_recipient[i].window_start < oldest_ts
+            {
+                oldest_idx = Some(i);
+                oldest_ts = self.per_recipient[i].window_start;
             }
         }
 
@@ -435,9 +492,101 @@ impl SpendTracker {
         };
 
         // Evict and install the new recipient.
-        self.per_recipient[idx].recipient = recipient_bytes;
-        self.per_recipient[idx].window_start = now;
-        self.per_recipient[idx].window_spend_usd = usd_amount;
+        self.per_recipient[idx].reset(recipient_bytes, now, usd_amount);
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod per_recipient_counter_tests {
+    use super::*;
+
+    fn counter(recipient: [u8; 32], window_start: i64, spend: u64) -> PerRecipientCounter {
+        PerRecipientCounter {
+            recipient,
+            window_start,
+            window_spend_usd: spend,
+        }
+    }
+
+    /// `is_empty()` requires BOTH `window_start == 0` AND
+    /// `window_spend_usd == 0`. A slot with a non-zero window_start is
+    /// "used" even if spend is currently zero.
+    #[test]
+    fn is_empty_only_when_both_fields_zero() {
+        assert!(counter([0u8; 32], 0, 0).is_empty(), "zeroed slot is empty");
+        assert!(
+            !counter([0u8; 32], 1, 0).is_empty(),
+            "non-zero window_start means slot is in use"
+        );
+        assert!(
+            !counter([0u8; 32], 0, 1).is_empty(),
+            "non-zero spend means slot is in use"
+        );
+        assert!(
+            !counter([1u8; 32], 100, 50).is_empty(),
+            "fully populated slot is not empty"
+        );
+    }
+
+    /// `is_expired()` uses the `>=` semantics: exactly 86,400 s after
+    /// `window_start` is the first instant the slot is expired.
+    #[test]
+    fn is_expired_uses_inclusive_boundary() {
+        let c = counter([1u8; 32], 1000, 50);
+        assert!(
+            !c.is_expired(1000 + ROLLING_WINDOW_SECONDS - 1),
+            "one second before boundary is still active"
+        );
+        assert!(
+            c.is_expired(1000 + ROLLING_WINDOW_SECONDS),
+            "exactly at boundary is expired (>= semantics)"
+        );
+        assert!(
+            c.is_expired(1000 + ROLLING_WINDOW_SECONDS + 1),
+            "well past boundary is expired"
+        );
+        // Clock running backward: saturating_sub yields 0 < 86_400 → not expired.
+        assert!(!c.is_expired(500), "clock skew (now < start) is not expired");
+    }
+
+    /// `matches()` is byte-equality on the raw 32-byte key.
+    #[test]
+    fn matches_compares_raw_bytes() {
+        let key_a = [0xAAu8; 32];
+        let key_b = [0xBBu8; 32];
+        let c = counter(key_a, 100, 0);
+        assert!(c.matches(&key_a), "same bytes must match");
+        assert!(!c.matches(&key_b), "different bytes must not match");
+    }
+
+    /// `accumulate()` performs a checked add and surfaces `Overflow` on
+    /// saturation rather than wrapping.
+    #[test]
+    fn accumulate_checked_add_and_overflow() {
+        let mut c = counter([1u8; 32], 100, 1_000);
+        c.accumulate(2_500).expect("normal add succeeds");
+        assert_eq!(c.window_spend_usd, 3_500);
+
+        let mut overflow = counter([1u8; 32], 100, u64::MAX);
+        let err = overflow.accumulate(1).expect_err("u64::MAX + 1 must overflow");
+        assert!(matches!(err, SigilError::Overflow), "expected Overflow");
+        // State unchanged on overflow.
+        assert_eq!(overflow.window_spend_usd, u64::MAX);
+    }
+
+    /// `reset()` overwrites all three fields atomically (from the
+    /// caller's perspective — there's no other field to leak across).
+    /// Critical: an expired slot reset to a new recipient must NOT
+    /// retain stale spend from the prior window.
+    #[test]
+    fn reset_overwrites_all_fields() {
+        let old_key = [0x11u8; 32];
+        let new_key = [0x22u8; 32];
+        let mut c = counter(old_key, 1_000, 999_999);
+        c.reset(new_key, 5_000, 42);
+        assert_eq!(c.recipient, new_key, "recipient overwritten");
+        assert_eq!(c.window_start, 5_000, "window_start overwritten");
+        assert_eq!(c.window_spend_usd, 42, "spend overwritten (no stale carry)");
     }
 }
