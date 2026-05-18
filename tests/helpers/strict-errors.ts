@@ -122,6 +122,21 @@ export const SIGIL_ERRORS = {
   InvalidCapability: 6079,
   PolicyPreviewMismatch: 6080,
   ObserveOnlyModeBlocksExecute: 6081,
+  // F-11 audit fix: active vault requires at least one allowlist entry
+  ActiveVaultRequiresAllowlist: 6082,
+  // Phase 3 TA-03/05/06/07/08/09/17
+  ErrMintNotPinned: 6083,
+  ErrOutsideOperatingHours: 6084,
+  ErrCooldownActive: 6085,
+  ErrGraylistFriction: 6086,
+  ErrGraylistFull: 6087,
+  ErrToken2022ExtensionForbidden: 6088,
+  ErrCosignRequired: 6089,
+  ErrAutoRevoked: 6090,
+  // Phase 4 TA-10 + TA-11 + AC-10 (bundle integrity)
+  ErrSandwichIntegrity: 6091,
+  ErrProtectedWritable: 6092,
+  ErrSessionNonceMismatch: 6093,
 } as const;
 
 export type SigilErrorName = keyof typeof SIGIL_ERRORS;

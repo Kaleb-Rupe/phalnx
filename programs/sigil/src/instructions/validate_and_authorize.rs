@@ -414,6 +414,88 @@ pub fn handler(
     }
     let finalize_hash = FINALIZE_SESSION_DISCRIMINATOR;
 
+    // ── TA-10 (Phase 4) sandwich-integrity uniqueness ───────────────
+    //
+    // Reject if there is ANOTHER `validate_and_authorize` instruction in
+    // the same transaction whose (vault, agent, mint) tuple matches the
+    // current execution's tuple.
+    //
+    // **Why this matters.** Phase 1/Phase 2 already enforced
+    // "immediate-next ix after validate is an allowed protocol" + the
+    // forward scan that finds finalize. What's still possible without this
+    // check: an attacker stages a second `validate_and_authorize` inside
+    // the same tx (between this validate and the first finalize) targeting
+    // the same (vault, agent, mint) tuple. The second authorize would
+    // open a fresh session with its own delegated amount BEFORE the first
+    // finalize revokes the SPL approval. If the second session has a
+    // different / larger authorized amount, the attacker has bypassed the
+    // outer authorize's spending intent.
+    //
+    // **Tuple match by account-meta pubkeys.** Codama-generated discriminator
+    // [22, 183, 48, 222, 218, 11, 197, 152]. From the Accounts struct:
+    //   accounts[0] = agent (signer)
+    //   accounts[1] = vault PDA
+    //   accounts[7] = token_mint_account
+    // We compare on these three pubkeys. The discriminator alone identifies
+    // the ix type; meta[1]/meta[0]/meta[7] disambiguate the tuple.
+    //
+    // **Allowed interleave (Q-6 default).** ComputeBudget + SystemProgram
+    // remain operationally interleaveable (no restriction on those types).
+    // This check ONLY counts SIBLING `validate_and_authorize` ixs with the
+    // SAME tuple — a second validate against a DIFFERENT vault/agent/mint
+    // is fine.
+    //
+    // **CU profile.** O(N) over instructions, no per-ix sub-loops; the
+    // discriminator/tuple compares are constant. Bounded by
+    // MAX_SYSVAR_SCAN_ITERATIONS (64) which is unreachable in legitimate
+    // flows (Solana v0 tx ix cap is 64). Worst-case ≈ 1K CU.
+    //
+    // **F-13 ordering preserved.** This scan runs AFTER observe_only
+    // short-circuit and TA-05 / TA-06 cheap checks but BEFORE any
+    // expensive constraints PDA loading or fee CPIs. A tx that violates
+    // sandwich integrity is rejected before paying for fee transfers.
+    let current_agent_key = ctx.accounts.agent.key();
+    let current_mint_account_key = ctx.accounts.token_mint_account.key();
+    let va_disc = VALIDATE_AND_AUTHORIZE_DISCRIMINATOR;
+    {
+        let mut ta10_iter: usize = 0;
+        let mut scan_idx: usize = 0;
+        while ta10_iter < MAX_SYSVAR_SCAN_ITERATIONS {
+            require!(
+                ta10_iter < MAX_SYSVAR_SCAN_ITERATIONS,
+                SigilError::SysvarScanBoundExceeded
+            );
+            // Skip the current instruction — only check siblings.
+            if scan_idx == current_idx_usize {
+                scan_idx = scan_idx.saturating_add(1);
+                ta10_iter = ta10_iter.saturating_add(1);
+                continue;
+            }
+            let Ok(sibling) = load_instruction_at_checked(scan_idx, &ix_sysvar) else {
+                break;
+            };
+            // Match: same program + same discriminator + at least 8 metas
+            // (we read accounts[0]/[1]/[7]).
+            if sibling.program_id == crate::ID
+                && sibling.data.len() >= 8
+                && sibling.data[..8] == va_disc
+                && sibling.accounts.len() > 7
+            {
+                let sib_agent = sibling.accounts[0].pubkey;
+                let sib_vault = sibling.accounts[1].pubkey;
+                let sib_mint = sibling.accounts[7].pubkey;
+                if sib_vault == vault_key
+                    && sib_agent == current_agent_key
+                    && sib_mint == current_mint_account_key
+                {
+                    return Err(error!(SigilError::ErrSandwichIntegrity));
+                }
+            }
+            scan_idx = scan_idx.saturating_add(1);
+            ta10_iter = ta10_iter.saturating_add(1);
+        }
+    }
+
     // ── Shared instruction scan helper ──────────────────────────────
     // Extracted from spending + non-spending paths to eliminate ~55 lines
     // of duplicated security checks. See ON-CHAIN-IMPLEMENTATION-PLAN Step 10.

@@ -155,6 +155,20 @@ pub fn is_policy_violation_code(code: u32) -> bool {
 /// to identify finalize_session instructions in the transaction.
 pub const FINALIZE_SESSION_DISCRIMINATOR: [u8; 8] = [34, 148, 144, 47, 37, 130, 206, 161];
 
+/// sha256("global:validate_and_authorize")[0..8] — used by validate_and_authorize
+/// to detect SIBLING `validate_and_authorize` ix in the same transaction.
+///
+/// TA-10 (Phase 4) sandwich-integrity uniqueness: at most ONE
+/// `validate_and_authorize` per (vault, agent, mint) tuple per transaction.
+/// A second matching ix would let an attacker stage a nested authorization
+/// inside the first (with the second session's expanded capability) before
+/// the first finalize's revocation runs.
+///
+/// Verified against codama-generated `VALIDATE_AND_AUTHORIZE_DISCRIMINATOR`
+/// in `sdk/kit/src/generated/instructions/validateAndAuthorize.ts`.
+pub const VALIDATE_AND_AUTHORIZE_DISCRIMINATOR: [u8; 8] =
+    [22, 183, 48, 222, 218, 11, 197, 152];
+
 /// Ceiling fee: ceil(amount * rate / FEE_RATE_DENOMINATOR).
 /// Guarantees non-zero fee for any non-zero amount with non-zero rate.
 /// Zero-product (amount=0 or rate=0) naturally returns 0.
