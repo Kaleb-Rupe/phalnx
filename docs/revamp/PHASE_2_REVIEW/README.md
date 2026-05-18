@@ -3,7 +3,47 @@
 **Phase:** 2 — Default-tightening + TA-19 policy_preview_digest + observe_only
 **Date:** 2026-05-18
 **Verdict (initial dispatch):** FIX-AND-RETEST → 1 HIGH + 2 MEDIUM + 1 LOW
-**Final state:** RESOLVED — Phase 2 cleared for Phase 3 dispatch
+**Final state:** RESOLVED — Phase 2 FINAL cleared for Phase 3 dispatch (post §RP-2 iter-2 + close-up extension + fixture cleanup, 2026-05-18)
+
+## Close-up extension findings (cross-phase audit 2026-05-18 → addressed in extension commits)
+
+| ID | Severity | Title | Fix commit |
+|---|---|---|---|
+| LC-2 | HIGH | HARDENED §4 reservation table 6080/6081 swap | `2245342` |
+| LC-3 | HIGH | SDK agent-errors.ts header out by 1 | `2245342` |
+| CR-3 | MEDIUM | InvalidSessionExpiry msg wrong units | `2245342` |
+| PEN-CROSS-6 | MEDIUM | developer_fee_rate not in TA-19 digest | `e79f31b` |
+| PEN-CROSS-2 | MEDIUM | close+reinit replay via missing created_at_slot | `b2bbe94` |
+| CR-4 | MEDIUM | apply_pending_policy digest positive test missing | `b2bbe94` |
+| PEN-CROSS-3 | HIGH | 4 sibling handlers state-mirror not auth gate | `d3fb49a` |
+| PEN-CROSS-7 | MEDIUM | Cross-impl encoding parity drift silent | `ee01794` |
+| CR-2 | MEDIUM | Stale protocol_mode doc-comment | `ee01794` |
+| LC-4 | MEDIUM | 2 stale T1 references in REVAMP_PLAN | `ee01794` |
+| LC-5 | MEDIUM | 2 stale audit refs in ACCEPTANCE_V2 | `ee01794` |
+| Fixture cleanup | — | 15 TS strict sites (sibling handlers + init args) | `1f2daa0` + `12ac275` |
+| §RP-2 bonus | MEDIUM | F-11 gap at apply_pending_policy | `5715e48` |
+
+## Deferred items (absorbed into later phases)
+
+| ID | Original severity | Absorbed into | Rationale |
+|---|---|---|---|
+| PEN-CROSS-1 | CRITICAL | **Phase 8** (ownership/freeze theme) | register_agent timelock + TA-19 vault.agents coverage; natural fit with C26/C27 timelock-gated owner-state mutations |
+| PEN-CROSS-4 | HIGH | **Phase 4** (TA-11 sandwich integrity) | destination_check CU pre-filter; TA-11 already needs bundle-introspection hardening |
+| PEN-CROSS-5 | MEDIUM | **Phase 4** (TA-10/11 work) | policy_version bumps in register_agent/revoke/pause/unpause; cascades into ~80 test fixtures, batch with TA-10 fixture refresh |
+
+## Final test counts
+
+- `cargo test --lib`: **116/0**
+- agent-middleware `pnpm test`: **131/0**
+- `cd sdk/kit && pnpm test`: **1,715/0**
+- LiteSVM 2-file + digest-invariant: 232 passing / 3 pending / 8 failing (8 pre-existing Signed/Bitmask test-sequencing — predates V2)
+
+## Schema math (final)
+
+- PolicyConfig: **863** bytes (855 + 8 for created_at_slot)
+- AgentVault: **634** bytes (+ 1 for observe_only)
+- TA-19 canonical encoding: 14 fields (developer_fee_rate at position 4, created_at_slot at position 14)
+- 4 sibling handlers require `expected_digest: [u8; 32]` arg
 
 ## Findings summary
 
