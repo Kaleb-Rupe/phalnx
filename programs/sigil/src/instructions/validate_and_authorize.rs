@@ -148,6 +148,21 @@ pub fn handler(
         policy.policy_version == expected_policy_version,
         SigilError::PolicyVersionMismatch
     );
+
+    // F-13 audit fix: observe_only short-circuit BEFORE the 35KB constraints
+    // PDA borrow. Previously this fired at line 216 after the zero-copy
+    // load + discriminator check + PDA-derivation recompute consumed ~10-15K
+    // CU. Moving it forward saves that work whenever the owner has parked
+    // the vault in observe-only mode.
+    //
+    // Independent from Phase 2 TA-19: this is purely a CU-locality optimization;
+    // the original at-entry observe_only check after vault.is_active() is now
+    // redundant and is deleted below.
+    require!(
+        !vault.observe_only,
+        SigilError::ObserveOnlyModeBlocksExecute
+    );
+
     let vault_key = vault.key();
     // Spending classification: amount > 0 = spending, amount == 0 = non-spending.
     let is_spending = amount > 0;
@@ -210,13 +225,9 @@ pub fn handler(
     // 1. Vault must be active
     require!(vault.is_active(), SigilError::VaultNotActive);
 
-    // Phase 2 TA-19: observe_only mode rejects every validate_and_authorize.
-    // Owners use this as a low-blast-radius kill switch separate from Frozen
-    // status (which is for emergency response after detection of an attack).
-    require!(
-        !vault.observe_only,
-        SigilError::ObserveOnlyModeBlocksExecute
-    );
+    // F-13 audit fix: observe_only check moved to BEFORE the constraints PDA
+    // load (see top of handler). The earlier short-circuit saves the 35KB
+    // borrow + discriminator check when the vault is in observe-only mode.
 
     // 1a-pre. Agent must not be paused
     require!(
