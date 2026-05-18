@@ -24,8 +24,8 @@
 
 | ID | Severity | Title | Fix commit |
 |---|---|---|---|
-| Vec-7 | LOW | AgentEntry docstring claimed "Incremented in finalize_session" (stale; actually `record_agent_violation`) | `1c5ec4f` |
-| Vec-9 | MEDIUM | toctou-security:587 expected policyVersion==1 but Phase 2 PEN-CROSS-3 made create_instruction_constraints bump | `1c5ec4f` |
+| Vec-7 | LOW | AgentEntry docstring claimed "Incremented in finalize_session" (stale; actually `record_agent_violation`) | `f5d3ce3` |
+| Vec-9 | MEDIUM | toctou-security:587 expected policyVersion==1 but Phase 2 PEN-CROSS-3 made create_instruction_constraints bump | `f5d3ce3` |
 
 §RP-1 attack vector scorecard: 10/10 PASS (verbatim transcript at [silent-failure-hunter.md](./silent-failure-hunter.md)).
 
