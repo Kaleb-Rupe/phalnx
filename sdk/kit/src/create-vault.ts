@@ -123,6 +123,19 @@ export interface CreateVaultOptions {
    * smoke tests) can pass a fixed bigint here to avoid mocking `getSlot`.
    */
   createdAtSlot?: bigint;
+  /**
+   * TA-05 (Phase 3): 24-bit UTC operating-hours bitmask. Bit `n` (0..=23)
+   * set → spending allowed during UTC hour `n`. Default `0x00FFFFFF` (all
+   * 24h enabled — equivalent to "no operating-hours constraint").
+   *
+   * Upper 8 bits MUST be zero; on-chain handler rejects otherwise with
+   * `ErrOutsideOperatingHours` (6084). Bound by TA-19 at canonical
+   * digest position 15.
+   *
+   * Production callers narrowing for market-hours / business-hours
+   * vaults should pass an explicit mask (e.g. `0x0001E000` for 13-17 UTC).
+   */
+  operatingHours?: number;
 }
 
 export interface CreateVaultResult {
@@ -301,6 +314,10 @@ export async function createVault(
     hasPostAssertions: 0,
     // PEN-CROSS-2: defends against close+reinit replay.
     createdAtSlot,
+    // TA-05 (Phase 3): default to all-24h enabled when caller doesn't
+    // narrow. Owner-facing config surface for narrowing lives at the
+    // dashboard-side mutation (not exposed via createVault yet).
+    operatingHours: options.operatingHours ?? 0x00ffffff,
   });
 
   const initializeVaultIx = await getInitializeVaultInstructionAsync({
@@ -318,6 +335,7 @@ export async function createVault(
     allowedDestinations,
     protocolCaps,
     observeOnly,
+    operatingHours: options.operatingHours ?? 0x00ffffff,
     previewDigest,
   });
 

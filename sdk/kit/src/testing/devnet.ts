@@ -288,6 +288,7 @@ export async function provisionVault(
     hasConstraints: false,
     hasPostAssertions: 0,
     createdAtSlot,
+    operatingHours: 0x00ffffff,
   });
 
   const initIx = await getInitializeVaultInstructionAsync({
@@ -305,6 +306,7 @@ export async function provisionVault(
     allowedDestinations: [],
     protocolCaps: [],
     observeOnly,
+    operatingHours: 0x00ffffff,
     previewDigest,
   });
 

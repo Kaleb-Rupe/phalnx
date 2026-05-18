@@ -180,6 +180,22 @@ export const SIGIL_ERROR__POLICY_PREVIEW_MISMATCH = 0x17c0; // 6080
 export const SIGIL_ERROR__OBSERVE_ONLY_MODE_BLOCKS_EXECUTE = 0x17c1; // 6081
 /** ActiveVaultRequiresAllowlist: Active (non-observe_only) vault must have at least one protocol or destination on the allowlist */
 export const SIGIL_ERROR__ACTIVE_VAULT_REQUIRES_ALLOWLIST = 0x17c2; // 6082
+/** ErrMintNotPinned: Deposit mint is not a build-time-pinned stablecoin (USDC or USDT) */
+export const SIGIL_ERROR__ERR_MINT_NOT_PINNED = 0x17c3; // 6083
+/** ErrOutsideOperatingHours: Current UTC hour is outside the policy's operating_hours bitmask */
+export const SIGIL_ERROR__ERR_OUTSIDE_OPERATING_HOURS = 0x17c4; // 6084
+/** ErrCooldownActive: Agent cooldown period has not elapsed since the last action */
+export const SIGIL_ERROR__ERR_COOLDOWN_ACTIVE = 0x17c5; // 6085
+/** ErrGraylistFriction: Destination is graylisted (24h friction window — awaiting promote_graylist_destination or unlock) */
+export const SIGIL_ERROR__ERR_GRAYLIST_FRICTION = 0x17c6; // 6086
+/** ErrGraylistFull: Destination graylist is full (max 10 entries) — wait for an existing entry to unlock or promote */
+export const SIGIL_ERROR__ERR_GRAYLIST_FULL = 0x17c7; // 6087
+/** ErrToken2022ExtensionForbidden: Token-2022 mint has a forbidden extension (only MemoTransfer + MetadataPointer + NonTransferable allowed) */
+export const SIGIL_ERROR__ERR_TOKEN2022_EXTENSION_FORBIDDEN = 0x17c8; // 6088
+/** ErrCosignRequired: Elevated policy mutation requires an owner-signed cosigning session */
+export const SIGIL_ERROR__ERR_COSIGN_REQUIRED = 0x17c9; // 6089
+/** ErrAutoRevoked: Agent capability auto-revoked after consecutive policy-violation failures; owner must re-enable */
+export const SIGIL_ERROR__ERR_AUTO_REVOKED = 0x17ca; // 6090
 
 export type SigilError =
   | typeof SIGIL_ERROR__ACCOUNT_WRITABILITY_MISMATCH
@@ -203,6 +219,14 @@ export type SigilError =
   | typeof SIGIL_ERROR__CPI_CALL_NOT_ALLOWED
   | typeof SIGIL_ERROR__DESTINATION_NOT_ALLOWED
   | typeof SIGIL_ERROR__DEVELOPER_FEE_TOO_HIGH
+  | typeof SIGIL_ERROR__ERR_AUTO_REVOKED
+  | typeof SIGIL_ERROR__ERR_COOLDOWN_ACTIVE
+  | typeof SIGIL_ERROR__ERR_COSIGN_REQUIRED
+  | typeof SIGIL_ERROR__ERR_GRAYLIST_FRICTION
+  | typeof SIGIL_ERROR__ERR_GRAYLIST_FULL
+  | typeof SIGIL_ERROR__ERR_MINT_NOT_PINNED
+  | typeof SIGIL_ERROR__ERR_OUTSIDE_OPERATING_HOURS
+  | typeof SIGIL_ERROR__ERR_TOKEN2022_EXTENSION_FORBIDDEN
   | typeof SIGIL_ERROR__INSUFFICIENT_BALANCE
   | typeof SIGIL_ERROR__INSUFFICIENT_PERMISSIONS
   | typeof SIGIL_ERROR__INVALID_AGENT_KEY
@@ -290,6 +314,14 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__CPI_CALL_NOT_ALLOWED]: `Instruction must be top-level (CPI calls not allowed)`,
     [SIGIL_ERROR__DESTINATION_NOT_ALLOWED]: `Destination not in allowed list`,
     [SIGIL_ERROR__DEVELOPER_FEE_TOO_HIGH]: `Developer fee rate exceeds maximum (500 / 1,000,000 = 5 BPS)`,
+    [SIGIL_ERROR__ERR_AUTO_REVOKED]: `Agent capability auto-revoked after consecutive policy-violation failures; owner must re-enable`,
+    [SIGIL_ERROR__ERR_COOLDOWN_ACTIVE]: `Agent cooldown period has not elapsed since the last action`,
+    [SIGIL_ERROR__ERR_COSIGN_REQUIRED]: `Elevated policy mutation requires an owner-signed cosigning session`,
+    [SIGIL_ERROR__ERR_GRAYLIST_FRICTION]: `Destination is graylisted (24h friction window — awaiting promote_graylist_destination or unlock)`,
+    [SIGIL_ERROR__ERR_GRAYLIST_FULL]: `Destination graylist is full (max 10 entries) — wait for an existing entry to unlock or promote`,
+    [SIGIL_ERROR__ERR_MINT_NOT_PINNED]: `Deposit mint is not a build-time-pinned stablecoin (USDC or USDT)`,
+    [SIGIL_ERROR__ERR_OUTSIDE_OPERATING_HOURS]: `Current UTC hour is outside the policy's operating_hours bitmask`,
+    [SIGIL_ERROR__ERR_TOKEN2022_EXTENSION_FORBIDDEN]: `Token-2022 mint has a forbidden extension (only MemoTransfer + MetadataPointer + NonTransferable allowed)`,
     [SIGIL_ERROR__INSUFFICIENT_BALANCE]: `Insufficient vault balance for withdrawal`,
     [SIGIL_ERROR__INSUFFICIENT_PERMISSIONS]: `Agent lacks permission for this action type`,
     [SIGIL_ERROR__INVALID_AGENT_KEY]: `Invalid agent: cannot be the zero address`,

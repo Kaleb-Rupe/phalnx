@@ -70,6 +70,8 @@ pub fn handler(ctx: Context<ApplyAgentPermissionsUpdate>) -> Result<()> {
     let agent = pending.agent;
     let new_capability = pending.new_capability;
     let spending_limit_usd = pending.spending_limit_usd;
+    // TA-06 (Phase 3): pull pending cooldown_seconds for slot apply below.
+    let pending_cooldown_seconds = pending.cooldown_seconds;
 
     // Phase 2 TA-04 (Audit #2 F-4): defense in depth. The pending PDA was
     // validated at queue time, but a rogue program with the same account
@@ -94,6 +96,7 @@ pub fn handler(ctx: Context<ApplyAgentPermissionsUpdate>) -> Result<()> {
 
     // Manage overlay slot when spending limit changes
     // (lifted verbatim from update_agent_permissions.rs:66-81)
+    // TA-06 (Phase 3): also apply per-agent cooldown_seconds onto the slot.
     if let Ok(mut overlay) = ctx.accounts.agent_spend_overlay.load_mut() {
         let has_slot = overlay.find_agent_slot(&agent).is_some();
 
@@ -108,6 +111,15 @@ pub fn handler(ctx: Context<ApplyAgentPermissionsUpdate>) -> Result<()> {
             if let Some(idx) = overlay.find_agent_slot(&agent) {
                 overlay.release_slot(idx);
             }
+        }
+
+        // TA-06 (Phase 3): apply cooldown_seconds onto the agent's slot if
+        // present. If the slot was just released above (spending_limit→0),
+        // skip cooldown update — there's no slot to write into. The next
+        // re-registration / spending_limit-raise will claim a fresh slot
+        // with cooldown_seconds = 0 (cleared by `release_slot`).
+        if let Some(idx) = overlay.find_agent_slot(&agent) {
+            overlay.set_cooldown_seconds(idx, pending_cooldown_seconds)?;
         }
     }
 

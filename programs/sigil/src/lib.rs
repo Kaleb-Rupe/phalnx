@@ -295,17 +295,22 @@ pub mod sigil {
 
     /// Queue an agent permissions update. Timelock-gated.
     /// Per-agent PDA allows concurrent pending updates for different agents.
+    /// TA-06 (Phase 3): adds `cooldown_seconds` — per-agent cooldown stored
+    /// on `AgentSpendOverlay.cooldown_seconds[slot]`. 0 disables. Bound at
+    /// queue time and applied at apply time onto the agent's overlay slot.
     pub fn queue_agent_permissions_update(
         ctx: Context<QueueAgentPermissionsUpdate>,
         agent: Pubkey,
         new_capability: u8,
         spending_limit_usd: u64,
+        cooldown_seconds: u64,
     ) -> Result<()> {
         instructions::queue_agent_permissions_update::handler(
             ctx,
             agent,
             new_capability,
             spending_limit_usd,
+            cooldown_seconds,
         )
     }
 

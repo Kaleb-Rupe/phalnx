@@ -2817,7 +2817,10 @@ export type Sigil = {
       "name": "queueAgentPermissionsUpdate",
       "docs": [
         "Queue an agent permissions update. Timelock-gated.",
-        "Per-agent PDA allows concurrent pending updates for different agents."
+        "Per-agent PDA allows concurrent pending updates for different agents.",
+        "TA-06 (Phase 3): adds `cooldown_seconds` — per-agent cooldown stored",
+        "on `AgentSpendOverlay.cooldown_seconds[slot]`. 0 disables. Bound at",
+        "queue time and applied at apply time onto the agent's overlay slot."
       ],
       "discriminator": [
         182,
@@ -2945,6 +2948,10 @@ export type Sigil = {
         },
         {
           "name": "spendingLimitUsd",
+          "type": "u64"
+        },
+        {
+          "name": "cooldownSeconds",
           "type": "u64"
         }
       ]
@@ -5738,8 +5745,9 @@ export type Sigil = {
         "",
         "Supports up to 10 agents (matches MAX_AGENTS_PER_VAULT).",
         "",
-        "Size calculation:",
-        "8 (discriminator) + 32 (vault) + 232 × 10 (entries) + 1 (bump) + 7 (padding) + 80 (lifetime_spend) + 80 (lifetime_tx_count) = 2,528 bytes"
+        "Size calculation (PRE-TA-06):",
+        "8 (discriminator) + 32 (vault) + 232 × 10 (entries) + 1 (bump) + 7 (padding) + 80 (lifetime_spend) + 80 (lifetime_tx_count) = 2,528 bytes",
+        "Size calculation (POST-TA-06): +80 cooldown_seconds + 80 last_action_unix = 2,688 bytes"
       ],
       "serialization": "bytemuck",
       "repr": {
@@ -5819,6 +5827,52 @@ export type Sigil = {
             "type": {
               "array": [
                 "u64",
+                10
+              ]
+            }
+          },
+          {
+            "name": "cooldownSeconds",
+            "docs": [
+              "TA-06 (Phase 3 pre-execution guard #3): per-agent cooldown in seconds.",
+              "Index matches entries[i].",
+              "",
+              "Per-AGENT, not per-vault — a per-vault cooldown was rejected per F-16",
+              "because one agent's traffic would DoS all other agents on the same",
+              "vault. With per-agent cooldown, each agent has its own pacing limit",
+              "configured by the owner.",
+              "",
+              "0 = no cooldown (default). Owner configures via",
+              "`queue_agent_permissions_update` (P3).",
+              "",
+              "Appended AFTER lifetime_spend/lifetime_tx_count to preserve existing",
+              "zero-copy byte offsets per the established APPEND-ONLY pattern."
+            ],
+            "type": {
+              "array": [
+                "u64",
+                10
+              ]
+            }
+          },
+          {
+            "name": "lastActionUnix",
+            "docs": [
+              "TA-06 (Phase 3): per-agent last successful validate_and_authorize",
+              "Unix timestamp. Index matches entries[i]. Written at the end of",
+              "validate_and_authorize on a successful authorization. The cooldown",
+              "gate compares `(now - last_action_unix) >= cooldown_seconds[i]`.",
+              "",
+              "0 = no prior action recorded (first authorization for this agent",
+              "after registration / overlay reset). The cooldown check uses",
+              "`i64::checked_sub` and treats a 0 baseline as \"no previous action\"",
+              "→ cooldown auto-passes.",
+              "",
+              "Appended AFTER cooldown_seconds to preserve zero-copy byte offsets."
+            ],
+            "type": {
+              "array": [
+                "i64",
                 10
               ]
             }
@@ -6792,6 +6846,15 @@ export type Sigil = {
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "cooldownSeconds",
+            "docs": [
+              "TA-06 (Phase 3): per-agent cooldown in seconds. 0 disables. Bound",
+              "at apply time onto `AgentSpendOverlay.cooldown_seconds[slot]`.",
+              "APPENDED at end per F-14 APPEND-ONLY rule for Borsh stability."
+            ],
+            "type": "u64"
           }
         ]
       }

@@ -41,6 +41,7 @@ pub fn handler(
     agent: Pubkey,
     new_capability: u8,
     spending_limit_usd: u64,
+    cooldown_seconds: u64,
 ) -> Result<()> {
     crate::reject_cpi!();
 
@@ -84,6 +85,9 @@ pub fn handler(
     // F-10 audit fix: capture queue slot for slot-bounded freshness check.
     pending.queued_at_slot = clock.slot;
     pending.bump = ctx.bumps.pending_agent_perms;
+    // TA-06 (Phase 3): per-agent cooldown_seconds bound at queue time;
+    // applied at apply onto AgentSpendOverlay.cooldown_seconds[slot].
+    pending.cooldown_seconds = cooldown_seconds;
 
     emit!(AgentPermissionsChangeQueued {
         vault: vault.key(),

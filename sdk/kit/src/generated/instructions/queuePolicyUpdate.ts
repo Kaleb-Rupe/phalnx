@@ -25,6 +25,8 @@ import {
   getStructEncoder,
   getU16Decoder,
   getU16Encoder,
+  getU32Decoder,
+  getU32Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -113,6 +115,7 @@ export type QueuePolicyUpdateInstructionData = {
   hasProtocolCaps: Option<boolean>;
   protocolCaps: Option<Array<bigint>>;
   destinationMode: Option<number>;
+  operatingHours: Option<number>;
   newPolicyPreviewDigest: ReadonlyUint8Array;
 };
 
@@ -129,6 +132,7 @@ export type QueuePolicyUpdateInstructionDataArgs = {
   hasProtocolCaps: OptionOrNullable<boolean>;
   protocolCaps: OptionOrNullable<Array<number | bigint>>;
   destinationMode: OptionOrNullable<number>;
+  operatingHours: OptionOrNullable<number>;
   newPolicyPreviewDigest: ReadonlyUint8Array;
 };
 
@@ -151,6 +155,7 @@ export function getQueuePolicyUpdateInstructionDataEncoder(): Encoder<QueuePolic
       ["hasProtocolCaps", getOptionEncoder(getBooleanEncoder())],
       ["protocolCaps", getOptionEncoder(getArrayEncoder(getU64Encoder()))],
       ["destinationMode", getOptionEncoder(getU8Encoder())],
+      ["operatingHours", getOptionEncoder(getU32Encoder())],
       ["newPolicyPreviewDigest", fixEncoderSize(getBytesEncoder(), 32)],
     ]),
     (value) => ({ ...value, discriminator: QUEUE_POLICY_UPDATE_DISCRIMINATOR }),
@@ -175,6 +180,7 @@ export function getQueuePolicyUpdateInstructionDataDecoder(): Decoder<QueuePolic
     ["hasProtocolCaps", getOptionDecoder(getBooleanDecoder())],
     ["protocolCaps", getOptionDecoder(getArrayDecoder(getU64Decoder()))],
     ["destinationMode", getOptionDecoder(getU8Decoder())],
+    ["operatingHours", getOptionDecoder(getU32Decoder())],
     ["newPolicyPreviewDigest", fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }
@@ -213,6 +219,7 @@ export type QueuePolicyUpdateAsyncInput<
   hasProtocolCaps: QueuePolicyUpdateInstructionDataArgs["hasProtocolCaps"];
   protocolCaps: QueuePolicyUpdateInstructionDataArgs["protocolCaps"];
   destinationMode: QueuePolicyUpdateInstructionDataArgs["destinationMode"];
+  operatingHours: QueuePolicyUpdateInstructionDataArgs["operatingHours"];
   newPolicyPreviewDigest: QueuePolicyUpdateInstructionDataArgs["newPolicyPreviewDigest"];
 };
 
@@ -346,6 +353,7 @@ export type QueuePolicyUpdateInput<
   hasProtocolCaps: QueuePolicyUpdateInstructionDataArgs["hasProtocolCaps"];
   protocolCaps: QueuePolicyUpdateInstructionDataArgs["protocolCaps"];
   destinationMode: QueuePolicyUpdateInstructionDataArgs["destinationMode"];
+  operatingHours: QueuePolicyUpdateInstructionDataArgs["operatingHours"];
   newPolicyPreviewDigest: QueuePolicyUpdateInstructionDataArgs["newPolicyPreviewDigest"];
 };
 

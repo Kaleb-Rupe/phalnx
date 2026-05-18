@@ -31,6 +31,8 @@ import {
   getStructEncoder,
   getU16Decoder,
   getU16Encoder,
+  getU32Decoder,
+  getU32Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -94,6 +96,13 @@ export type PendingPolicyUpdate = {
   /** Bump seed for PDA */
   bump: number;
   /**
+   * TA-05 (Phase 3): optional update to `PolicyConfig.operating_hours`.
+   * 24-bit UTC bitmask; upper 8 bits MUST be zero. Bound by TA-19 at
+   * canonical position 15.
+   * APPENDED at end per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  operatingHours: Option<number>;
+  /**
    * TA-19 (Phase 2): SHA-256 digest of the canonical Borsh encoding of the
    * policy fields THAT WOULD RESULT FROM APPLYING this pending update over
    * the live policy. Owner computes off-chain over the merged result and
@@ -143,6 +152,13 @@ export type PendingPolicyUpdateArgs = {
   /** Bump seed for PDA */
   bump: number;
   /**
+   * TA-05 (Phase 3): optional update to `PolicyConfig.operating_hours`.
+   * 24-bit UTC bitmask; upper 8 bits MUST be zero. Bound by TA-19 at
+   * canonical position 15.
+   * APPENDED at end per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  operatingHours: OptionOrNullable<number>;
+  /**
    * TA-19 (Phase 2): SHA-256 digest of the canonical Borsh encoding of the
    * policy fields THAT WOULD RESULT FROM APPLYING this pending update over
    * the live policy. Owner computes off-chain over the merged result and
@@ -185,6 +201,7 @@ export function getPendingPolicyUpdateEncoder(): Encoder<PendingPolicyUpdateArgs
       ["protocolCaps", getOptionEncoder(getArrayEncoder(getU64Encoder()))],
       ["destinationMode", getOptionEncoder(getU8Encoder())],
       ["bump", getU8Encoder()],
+      ["operatingHours", getOptionEncoder(getU32Encoder())],
       ["newPolicyPreviewDigest", fixEncoderSize(getBytesEncoder(), 32)],
     ]),
     (value) => ({
@@ -218,6 +235,7 @@ export function getPendingPolicyUpdateDecoder(): Decoder<PendingPolicyUpdate> {
     ["protocolCaps", getOptionDecoder(getArrayDecoder(getU64Decoder()))],
     ["destinationMode", getOptionDecoder(getU8Decoder())],
     ["bump", getU8Decoder()],
+    ["operatingHours", getOptionDecoder(getU32Decoder())],
     ["newPolicyPreviewDigest", fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }

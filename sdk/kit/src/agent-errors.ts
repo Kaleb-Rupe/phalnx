@@ -1297,6 +1297,121 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
+  // ─── Phase 3 pre-execution guards (TA-03/05/06/07/08/09/17) ───────────────
+  // 6083-6090 codes added by Phase 3 — each is an on-chain policy-violation
+  // surface that the SDK surfaces to dashboard / agent consumers.
+  6083: {
+    name: "ErrMintNotPinned",
+    message:
+      "Deposit mint is not on the build-time stablecoin allowlist (USDC + USDT). Reject prevents exotic / typosquatted mints from being parked in the vault.",
+    category: "INPUT_VALIDATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "use_pinned_stablecoin",
+        description:
+          "Re-issue the deposit using the USDC or USDT mint. Other tokens are not accepted by the vault.",
+      },
+    ],
+  },
+  6084: {
+    name: "ErrOutsideOperatingHours",
+    message:
+      "Current UTC hour is outside the policy's operating_hours bitmask. The vault is configured to spend only during specific UTC hours.",
+    category: "POLICY_VIOLATION",
+    retryable: true,
+    recovery_actions: [
+      {
+        action: "retry_in_window",
+        description:
+          "Wait until a UTC hour permitted by the policy's operating_hours bitmask, or have the owner widen the mask via queue_policy_update.",
+      },
+    ],
+  },
+  6085: {
+    name: "ErrCooldownActive",
+    message:
+      "Agent cooldown has not elapsed since the last successful action. Per-agent cooldown is configured by the owner.",
+    category: "POLICY_VIOLATION",
+    retryable: true,
+    recovery_actions: [
+      {
+        action: "wait_cooldown",
+        description:
+          "Wait until the per-agent cooldown (in seconds) has elapsed since the agent's last successful action.",
+      },
+    ],
+  },
+  6086: {
+    name: "ErrGraylistFriction",
+    message:
+      "Destination is on the graylist — a 24h friction window applied to newly-added allowlist destinations. Promote via promote_graylist_destination or wait for unlock.",
+    category: "POLICY_VIOLATION",
+    retryable: true,
+    recovery_actions: [
+      {
+        action: "wait_or_promote",
+        description:
+          "Owner can promote the destination to active via promote_graylist_destination, or wait the remaining time until automatic unlock.",
+      },
+    ],
+  },
+  6087: {
+    name: "ErrGraylistFull",
+    message:
+      "Graylist bound exceeded (max 10 entries). Wait for an existing entry to unlock or promote.",
+    category: "INPUT_VALIDATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "promote_or_wait",
+        description:
+          "Promote at least one graylist entry to active or wait for unlock. Then re-issue the destination-allowlist add.",
+      },
+    ],
+  },
+  6088: {
+    name: "ErrToken2022ExtensionForbidden",
+    message:
+      "Token-2022 mint has a forbidden extension. Only MemoTransfer, MetadataPointer, and NonTransferable extensions are permitted at deposit.",
+    category: "INPUT_VALIDATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "use_supported_mint",
+        description:
+          "Use a Token-2022 mint with no extensions, or one limited to MemoTransfer/MetadataPointer/NonTransferable.",
+      },
+    ],
+  },
+  6089: {
+    name: "ErrCosignRequired",
+    message:
+      "Elevated policy mutation requires an owner-signed cosigning session. Raising daily cap, raising max-tx, expanding destinations/protocols, etc. all need cosign.",
+    category: "PERMISSION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "supply_cosigner",
+        description:
+          "Re-issue the queue_policy_update with cosign_session set to an owner-signed session pubkey within the vault's validity window.",
+      },
+    ],
+  },
+  6090: {
+    name: "ErrAutoRevoked",
+    message:
+      "Agent capability was auto-revoked after consecutive policy-violation failures. Owner must re-enable via queue_agent_permissions_update.",
+    category: "PERMISSION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "owner_reenable",
+        description:
+          "Owner queues a fresh queue_agent_permissions_update setting the agent's capability back to Observer or Operator.",
+      },
+    ],
+  },
 };
 
 // ---------------------------------------------------------------------------

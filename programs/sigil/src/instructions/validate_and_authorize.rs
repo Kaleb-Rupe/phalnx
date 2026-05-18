@@ -176,6 +176,30 @@ pub fn handler(
         SigilError::ErrOutsideOperatingHours
     );
 
+    // TA-06 (Phase 3 pre-execution guard #3): per-agent cooldown.
+    // Per-AGENT, not per-vault (F-16): a per-vault cooldown would let one
+    // agent's traffic DoS all other agents on the vault.
+    //
+    // Load the overlay, locate the agent's slot, check the elapsed time
+    // against the configured cooldown_seconds. Failure surfaces as 6085
+    // ErrCooldownActive. Agents without a configured cooldown
+    // (cooldown_seconds == 0) auto-pass.
+    {
+        let overlay = ctx.accounts.agent_spend_overlay.load()?;
+        let agent_key = ctx.accounts.agent.key();
+        if let Some(slot_idx) = overlay.find_agent_slot(&agent_key) {
+            require!(
+                overlay.is_cooldown_elapsed(slot_idx, clock.unix_timestamp),
+                SigilError::ErrCooldownActive
+            );
+        }
+        // No overlay slot → no cooldown enforced. Owner-configured cooldown
+        // requires a slot; the slot is auto-claimed at register_agent for
+        // any agent with spending_limit_usd > 0 (existing F-16 fail-closed
+        // path). Agents without a slot are read-only / non-spending and
+        // bypass the cooldown — they have no spending state to pace.
+    }
+
     let vault_key = vault.key();
     // Spending classification: amount > 0 = spending, amount == 0 = non-spending.
     let is_spending = amount > 0;
@@ -874,6 +898,23 @@ pub fn handler(
             .active_sessions
             .checked_add(1)
             .ok_or(SigilError::Overflow)?;
+    }
+
+    // TA-06 (Phase 3): record last_action_unix on successful authorization.
+    // Written at the END of validate after all checks pass and delegation
+    // is approved — a transaction that errors mid-validate does NOT
+    // advance the cooldown clock (the on-chain state-mutation rule is
+    // atomic-or-none).
+    //
+    // Only update if the agent has an overlay slot. Agents without a slot
+    // bypass cooldown enforcement entirely (cf. the gate above), so they
+    // also have no last_action timestamp to track.
+    {
+        let agent_key = ctx.accounts.agent.key();
+        let mut overlay = ctx.accounts.agent_spend_overlay.load_mut()?;
+        if let Some(slot_idx) = overlay.find_agent_slot(&agent_key) {
+            overlay.record_action_unix(slot_idx, clock.unix_timestamp)?;
+        }
     }
 
     Ok(())

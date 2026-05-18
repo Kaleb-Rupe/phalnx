@@ -44,8 +44,9 @@ pub struct AgentContributionEntry {
 ///
 /// Supports up to 10 agents (matches MAX_AGENTS_PER_VAULT).
 ///
-/// Size calculation:
+/// Size calculation (PRE-TA-06):
 ///   8 (discriminator) + 32 (vault) + 232 × 10 (entries) + 1 (bump) + 7 (padding) + 80 (lifetime_spend) + 80 (lifetime_tx_count) = 2,528 bytes
+/// Size calculation (POST-TA-06): +80 cooldown_seconds + 80 last_action_unix = 2,688 bytes
 #[account(zero_copy)]
 pub struct AgentSpendOverlay {
     /// Associated vault pubkey
@@ -74,19 +75,52 @@ pub struct AgentSpendOverlay {
     /// Incremented in finalize_session for EVERY successful spending session.
     /// Used for: avg TX size (lifetime_spend / lifetime_tx_count), agent activity ranking.
     pub lifetime_tx_count: [u64; MAX_OVERLAY_ENTRIES], // 80 bytes
+
+    /// TA-06 (Phase 3 pre-execution guard #3): per-agent cooldown in seconds.
+    /// Index matches entries[i].
+    ///
+    /// Per-AGENT, not per-vault — a per-vault cooldown was rejected per F-16
+    /// because one agent's traffic would DoS all other agents on the same
+    /// vault. With per-agent cooldown, each agent has its own pacing limit
+    /// configured by the owner.
+    ///
+    /// 0 = no cooldown (default). Owner configures via
+    /// `queue_agent_permissions_update` (P3).
+    ///
+    /// Appended AFTER lifetime_spend/lifetime_tx_count to preserve existing
+    /// zero-copy byte offsets per the established APPEND-ONLY pattern.
+    pub cooldown_seconds: [u64; MAX_OVERLAY_ENTRIES], // 80 bytes
+
+    /// TA-06 (Phase 3): per-agent last successful validate_and_authorize
+    /// Unix timestamp. Index matches entries[i]. Written at the end of
+    /// validate_and_authorize on a successful authorization. The cooldown
+    /// gate compares `(now - last_action_unix) >= cooldown_seconds[i]`.
+    ///
+    /// 0 = no prior action recorded (first authorization for this agent
+    /// after registration / overlay reset). The cooldown check uses
+    /// `i64::checked_sub` and treats a 0 baseline as "no previous action"
+    /// → cooldown auto-passes.
+    ///
+    /// Appended AFTER cooldown_seconds to preserve zero-copy byte offsets.
+    pub last_action_unix: [i64; MAX_OVERLAY_ENTRIES], // 80 bytes
 }
-// Total data: 2,360 + 80 + 80 bytes + 8 (discriminator) = 2,528 bytes
+// Total data (post-TA-06): 2,360 + 80 + 80 + 80 + 80 = 2,680 bytes
+// Total account size: 2,680 + 8 (discriminator) = 2,688 bytes
 
 impl AgentSpendOverlay {
-    /// Total account size including 8-byte discriminator
+    /// Total account size including 8-byte discriminator.
+    /// TA-06 grew the overlay by 160 bytes (+80 cooldown_seconds, +80
+    /// last_action_unix); new SIZE = 2,688 (was 2,528 pre-Phase-3).
     pub const SIZE: usize = 8
         + 32
         + (232 * MAX_OVERLAY_ENTRIES)
         + 1
         + 7
-        + (8 * MAX_OVERLAY_ENTRIES)
-        + (8 * MAX_OVERLAY_ENTRIES);
-    // = 8 + 32 + 2320 + 1 + 7 + 80 + 80 = 2,528
+        + (8 * MAX_OVERLAY_ENTRIES) // lifetime_spend
+        + (8 * MAX_OVERLAY_ENTRIES) // lifetime_tx_count
+        + (8 * MAX_OVERLAY_ENTRIES) // cooldown_seconds [TA-06]
+        + (8 * MAX_OVERLAY_ENTRIES); // last_action_unix [TA-06]
+    // = 8 + 32 + 2320 + 1 + 7 + 80 + 80 + 80 + 80 = 2,688
 
     /// Find the slot index for a given agent, or None if not present.
     pub fn find_agent_slot(&self, agent: &Pubkey) -> Option<usize> {
@@ -120,6 +154,11 @@ impl AgentSpendOverlay {
         }
         self.lifetime_spend[slot_idx] = 0;
         self.lifetime_tx_count[slot_idx] = 0;
+        // TA-06 (Phase 3): clear cooldown state on revoke so a re-registered
+        // agent starts with a clean baseline. Owner must reconfigure cooldown
+        // via queue_agent_permissions_update on re-registration.
+        self.cooldown_seconds[slot_idx] = 0;
+        self.last_action_unix[slot_idx] = 0;
     }
 
     /// Zero contribution buckets in the gap between last_write_epoch and current_epoch.
@@ -221,6 +260,59 @@ impl AgentSpendOverlay {
         }
     }
 
+    /// TA-06 (Phase 3 pre-execution guard #3): is the agent's cooldown
+    /// elapsed at `now`?
+    ///
+    /// Returns `true` if the agent at `slot_idx` may proceed (cooldown
+    /// elapsed OR no cooldown configured OR no prior action). Returns
+    /// `false` if the agent is still within its cooldown window.
+    ///
+    /// `cooldown_seconds[slot_idx] == 0` means "no cooldown" — auto-pass.
+    /// `last_action_unix[slot_idx] == 0` means "no prior action recorded" —
+    /// also auto-pass (fresh agent or post-revoke re-register).
+    ///
+    /// Defense-in-depth: uses `checked_sub` so a clock that runs backward
+    /// produces a `None` (treated as "not elapsed", fail closed).
+    pub fn is_cooldown_elapsed(&self, slot_idx: usize, now: i64) -> bool {
+        if slot_idx >= MAX_OVERLAY_ENTRIES {
+            return false; // defensive: out-of-bounds slot, fail closed
+        }
+        let cooldown = self.cooldown_seconds[slot_idx];
+        if cooldown == 0 {
+            return true; // no cooldown configured → auto-pass
+        }
+        let last = self.last_action_unix[slot_idx];
+        if last == 0 {
+            return true; // no prior action → auto-pass
+        }
+        // checked_sub guards against clock skew producing a negative delta.
+        match now.checked_sub(last) {
+            Some(delta) if delta >= 0 => (delta as u64) >= cooldown,
+            _ => false, // fail closed on clock skew / overflow
+        }
+    }
+
+    /// TA-06: record a successful action timestamp for the agent at
+    /// `slot_idx`. Called from validate_and_authorize on a successful
+    /// authorization after all other guards pass.
+    pub fn record_action_unix(&mut self, slot_idx: usize, now: i64) -> Result<()> {
+        if slot_idx >= MAX_OVERLAY_ENTRIES {
+            return Err(error!(SigilError::Overflow));
+        }
+        self.last_action_unix[slot_idx] = now;
+        Ok(())
+    }
+
+    /// TA-06: set the per-agent cooldown in seconds. 0 disables. Called
+    /// from `queue_agent_permissions_update`/`apply_*` (P3).
+    pub fn set_cooldown_seconds(&mut self, slot_idx: usize, cooldown: u64) -> Result<()> {
+        if slot_idx >= MAX_OVERLAY_ENTRIES {
+            return Err(error!(SigilError::Overflow));
+        }
+        self.cooldown_seconds[slot_idx] = cooldown;
+        Ok(())
+    }
+
     /// Record an agent's spend contribution in the current epoch.
     pub fn record_agent_contribution(
         &mut self,
@@ -248,5 +340,140 @@ impl AgentSpendOverlay {
         self.entries[slot_idx].last_write_epoch = current_epoch;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod ta06_cooldown_tests {
+    use super::*;
+
+    fn zeroed_overlay() -> AgentSpendOverlay {
+        // SAFETY: AgentSpendOverlay is #[account(zero_copy)] = #[repr(C)] +
+        // Pod. All fields are integer arrays / fixed-size byte arrays.
+        // The standard `bytemuck::Zeroable` pattern via unsafe std::mem::zeroed
+        // produces a valid all-zero instance — same path the loader uses on
+        // a freshly-allocated PDA.
+        unsafe { core::mem::zeroed() }
+    }
+
+    /// TA-06: cooldown_seconds = 0 means "no cooldown" — auto-pass.
+    #[test]
+    fn cooldown_zero_means_no_gate() {
+        let mut o = zeroed_overlay();
+        o.cooldown_seconds[0] = 0;
+        o.last_action_unix[0] = 100;
+        assert!(
+            o.is_cooldown_elapsed(0, 101),
+            "cooldown=0 must auto-pass even 1s after last action"
+        );
+    }
+
+    /// TA-06: no prior action (last_action_unix = 0) auto-passes even with
+    /// configured cooldown. First action after registration is always allowed.
+    #[test]
+    fn cooldown_no_prior_action_passes() {
+        let mut o = zeroed_overlay();
+        o.cooldown_seconds[0] = 3600;
+        o.last_action_unix[0] = 0;
+        assert!(
+            o.is_cooldown_elapsed(0, 100),
+            "no prior action (last=0) must auto-pass"
+        );
+    }
+
+    /// TA-06: action within cooldown window — REJECT.
+    #[test]
+    fn cooldown_within_window_rejects() {
+        let mut o = zeroed_overlay();
+        o.cooldown_seconds[0] = 3600;
+        o.last_action_unix[0] = 1000;
+        // 1000 + 59m = 4540 < 1000 + 3600 = 4600 → REJECT
+        assert!(
+            !o.is_cooldown_elapsed(0, 4540),
+            "59 minutes after action with 60-min cooldown must reject"
+        );
+    }
+
+    /// TA-06: action exactly at cooldown boundary — ACCEPT (>= semantics).
+    #[test]
+    fn cooldown_at_boundary_accepts() {
+        let mut o = zeroed_overlay();
+        o.cooldown_seconds[0] = 3600;
+        o.last_action_unix[0] = 1000;
+        // Exactly 3600 seconds elapsed — >=, so ACCEPT
+        assert!(
+            o.is_cooldown_elapsed(0, 4600),
+            "exactly at cooldown boundary must accept (>=)"
+        );
+    }
+
+    /// TA-06: action well after cooldown — ACCEPT.
+    #[test]
+    fn cooldown_well_past_accepts() {
+        let mut o = zeroed_overlay();
+        o.cooldown_seconds[0] = 60;
+        o.last_action_unix[0] = 1000;
+        assert!(
+            o.is_cooldown_elapsed(0, 5000),
+            "well past cooldown must accept"
+        );
+    }
+
+    /// TA-06: clock running backward must fail closed.
+    #[test]
+    fn cooldown_clock_backward_fails_closed() {
+        let mut o = zeroed_overlay();
+        o.cooldown_seconds[0] = 60;
+        o.last_action_unix[0] = 1000;
+        assert!(
+            !o.is_cooldown_elapsed(0, 500),
+            "clock backward (now < last) must fail closed"
+        );
+    }
+
+    /// TA-06 (F-16): cooldown is per-AGENT. One agent's last_action does
+    /// not gate another agent on the same vault.
+    #[test]
+    fn cooldown_is_per_agent_not_per_vault() {
+        let mut o = zeroed_overlay();
+        // Agent 0: just used, in cooldown
+        o.cooldown_seconds[0] = 3600;
+        o.last_action_unix[0] = 1000;
+        // Agent 1: never used, cooldown configured
+        o.cooldown_seconds[1] = 3600;
+        o.last_action_unix[1] = 0;
+        // Agent 2: well past cooldown
+        o.cooldown_seconds[2] = 60;
+        o.last_action_unix[2] = 100;
+
+        let now = 1500;
+        assert!(!o.is_cooldown_elapsed(0, now), "agent 0 should be gated");
+        assert!(
+            o.is_cooldown_elapsed(1, now),
+            "agent 1 must NOT be gated by agent 0's last action"
+        );
+        assert!(o.is_cooldown_elapsed(2, now), "agent 2 must pass");
+    }
+
+    /// TA-06: out-of-bounds slot returns false (fail closed).
+    #[test]
+    fn cooldown_out_of_bounds_fails_closed() {
+        let o = zeroed_overlay();
+        assert!(
+            !o.is_cooldown_elapsed(MAX_OVERLAY_ENTRIES, 100),
+            "OOB slot must fail closed"
+        );
+    }
+
+    /// TA-06: release_slot clears cooldown fields so re-registration
+    /// starts with a clean baseline.
+    #[test]
+    fn cooldown_release_slot_clears_fields() {
+        let mut o = zeroed_overlay();
+        o.cooldown_seconds[3] = 3600;
+        o.last_action_unix[3] = 12345;
+        o.release_slot(3);
+        assert_eq!(o.cooldown_seconds[3], 0, "release must zero cooldown");
+        assert_eq!(o.last_action_unix[3], 0, "release must zero last_action");
     }
 }

@@ -17,13 +17,18 @@ pub struct PendingAgentPermissionsUpdate {
     /// attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog).
     pub queued_at_slot: u64,
     pub bump: u8,
+    /// TA-06 (Phase 3): per-agent cooldown in seconds. 0 disables. Bound
+    /// at apply time onto `AgentSpendOverlay.cooldown_seconds[slot]`.
+    /// APPENDED at end per F-14 APPEND-ONLY rule for Borsh stability.
+    pub cooldown_seconds: u64,
 }
 
 impl PendingAgentPermissionsUpdate {
     /// 8 (discriminator) + 32 (vault) + 32 (agent) + 8 (new_capability + reserved)
     /// + 8 (spending_limit_usd) + 8 (queued_at) + 8 (executes_at)
-    /// + 8 (queued_at_slot, F-10) + 1 (bump)
-    pub const SIZE: usize = 113;
+    /// + 8 (queued_at_slot, F-10) + 1 (bump) + 8 (cooldown_seconds TA-06)
+    /// = 121 bytes
+    pub const SIZE: usize = 121;
 
     pub fn is_ready(&self, current_timestamp: i64) -> bool {
         current_timestamp >= self.executes_at

@@ -1016,7 +1016,7 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
     let threw = false;
     try {
       await program.methods
-        .queueAgentPermissionsUpdate(agent.publicKey, 5, new BN(0))
+        .queueAgentPermissionsUpdate(agent.publicKey, 5, new BN(0), new BN(0))
         .accounts({
           owner: owner.publicKey,
           vault: vault.vaultPda,

@@ -137,6 +137,9 @@ async function siblingHandlerExpectedDigest(
         ? override.hasPostAssertions
         : livePolicy.data.hasPostAssertions,
     createdAtSlot: livePolicy.data.createdAtSlot,
+    // TA-05 (Phase 3): operating_hours is policy-owned. Sibling handlers
+    // (constraints/post-assertions) never mutate it — pass through.
+    operatingHours: livePolicy.data.operatingHours,
   });
 }
 
@@ -644,6 +647,10 @@ export async function queuePolicyUpdate(
     hasPostAssertions: livePolicy.data.hasPostAssertions,
     // PEN-CROSS-2: created_at_slot is immutable post-init — read from live.
     createdAtSlot: livePolicy.data.createdAtSlot,
+    // TA-05 (Phase 3): operating_hours is policy-owned and bound by TA-19.
+    // queueAgentPermissions does not currently mutate it through the
+    // dashboard mutation surface — read from live policy.
+    operatingHours: livePolicy.data.operatingHours,
   });
 
   const ix = await getQueuePolicyUpdateInstructionAsync({
@@ -662,6 +669,9 @@ export async function queuePolicyUpdate(
     hasProtocolCaps: changes.hasProtocolCaps ?? null,
     protocolCaps: changes.protocolCaps ?? null,
     destinationMode: changes.destinationMode ?? null,
+    // TA-05 (Phase 3): operating_hours is not mutated by this mutation
+    // surface — pass null to fall through to live policy at on-chain merge.
+    operatingHours: null,
     newPolicyPreviewDigest,
   });
   return run(rpc, owner, network, [ix], opts);
@@ -698,6 +708,10 @@ export async function queueAgentPermissions(
   permissions: CapabilityTier,
   spendingLimit: UsdBaseUnits,
   opts?: TxOpts,
+  // TA-06 (Phase 3): per-agent cooldown_seconds. 0 = disabled. Optional so
+  // existing dashboard callers continue compiling; pass non-zero when
+  // configuring agents that need pacing.
+  cooldownSeconds: bigint = 0n,
 ): Promise<TxResult> {
   requireValidAddress(agent, "Agent address");
   requireValidPermissions(permissions);
@@ -707,6 +721,7 @@ export async function queueAgentPermissions(
     agent,
     newCapability: Number(permissions),
     spendingLimitUsd: spendingLimit,
+    cooldownSeconds,
   });
   return run(rpc, owner, network, [ix], opts);
 }

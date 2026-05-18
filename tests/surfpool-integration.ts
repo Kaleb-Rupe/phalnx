@@ -2492,6 +2492,7 @@ describe("surfpool-integration", function () {
           swapSetup.agent.publicKey,
           FULL_CAPABILITY,
           new BN(0),
+          new BN(0), // cooldown_seconds (TA-06 Phase 3 — disabled)
         )
         .accounts({
           owner: env.payer.publicKey,

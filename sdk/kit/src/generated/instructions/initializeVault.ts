@@ -23,6 +23,8 @@ import {
   getStructEncoder,
   getU16Decoder,
   getU16Encoder,
+  getU32Decoder,
+  getU32Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -117,6 +119,7 @@ export type InitializeVaultInstructionData = {
   allowedDestinations: Array<Address>;
   protocolCaps: Array<bigint>;
   observeOnly: boolean;
+  operatingHours: number;
   previewDigest: ReadonlyUint8Array;
 };
 
@@ -132,6 +135,7 @@ export type InitializeVaultInstructionDataArgs = {
   allowedDestinations: Array<Address>;
   protocolCaps: Array<number | bigint>;
   observeOnly: boolean;
+  operatingHours: number;
   previewDigest: ReadonlyUint8Array;
 };
 
@@ -150,6 +154,7 @@ export function getInitializeVaultInstructionDataEncoder(): Encoder<InitializeVa
       ["allowedDestinations", getArrayEncoder(getAddressEncoder())],
       ["protocolCaps", getArrayEncoder(getU64Encoder())],
       ["observeOnly", getBooleanEncoder()],
+      ["operatingHours", getU32Encoder()],
       ["previewDigest", fixEncoderSize(getBytesEncoder(), 32)],
     ]),
     (value) => ({ ...value, discriminator: INITIALIZE_VAULT_DISCRIMINATOR }),
@@ -170,6 +175,7 @@ export function getInitializeVaultInstructionDataDecoder(): Decoder<InitializeVa
     ["allowedDestinations", getArrayDecoder(getAddressDecoder())],
     ["protocolCaps", getArrayDecoder(getU64Decoder())],
     ["observeOnly", getBooleanDecoder()],
+    ["operatingHours", getU32Decoder()],
     ["previewDigest", fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }
@@ -213,6 +219,7 @@ export type InitializeVaultAsyncInput<
   allowedDestinations: InitializeVaultInstructionDataArgs["allowedDestinations"];
   protocolCaps: InitializeVaultInstructionDataArgs["protocolCaps"];
   observeOnly: InitializeVaultInstructionDataArgs["observeOnly"];
+  operatingHours: InitializeVaultInstructionDataArgs["operatingHours"];
   previewDigest: InitializeVaultInstructionDataArgs["previewDigest"];
 };
 
@@ -381,6 +388,7 @@ export type InitializeVaultInput<
   allowedDestinations: InitializeVaultInstructionDataArgs["allowedDestinations"];
   protocolCaps: InitializeVaultInstructionDataArgs["protocolCaps"];
   observeOnly: InitializeVaultInstructionDataArgs["observeOnly"];
+  operatingHours: InitializeVaultInstructionDataArgs["operatingHours"];
   previewDigest: InitializeVaultInstructionDataArgs["previewDigest"];
 };
 

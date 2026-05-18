@@ -110,6 +110,9 @@ export function createMockVaultState(
       // tests use this state for reads only. Pad with zeros.
       policyPreviewDigest: new Uint8Array(32),
       createdAtSlot: 0n,
+      // TA-05 (Phase 3): operating_hours is read by SDK consumers; default
+      // all-24h matches the on-chain "no operating-hours constraint" semantics.
+      operatingHours: 0x00ffffff,
     },
     tracker: null,
     overlay: null,

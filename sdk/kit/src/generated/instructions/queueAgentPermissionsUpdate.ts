@@ -95,12 +95,14 @@ export type QueueAgentPermissionsUpdateInstructionData = {
   agent: Address;
   newCapability: number;
   spendingLimitUsd: bigint;
+  cooldownSeconds: bigint;
 };
 
 export type QueueAgentPermissionsUpdateInstructionDataArgs = {
   agent: Address;
   newCapability: number;
   spendingLimitUsd: number | bigint;
+  cooldownSeconds: number | bigint;
 };
 
 export function getQueueAgentPermissionsUpdateInstructionDataEncoder(): FixedSizeEncoder<QueueAgentPermissionsUpdateInstructionDataArgs> {
@@ -110,6 +112,7 @@ export function getQueueAgentPermissionsUpdateInstructionDataEncoder(): FixedSiz
       ["agent", getAddressEncoder()],
       ["newCapability", getU8Encoder()],
       ["spendingLimitUsd", getU64Encoder()],
+      ["cooldownSeconds", getU64Encoder()],
     ]),
     (value) => ({
       ...value,
@@ -124,6 +127,7 @@ export function getQueueAgentPermissionsUpdateInstructionDataDecoder(): FixedSiz
     ["agent", getAddressDecoder()],
     ["newCapability", getU8Decoder()],
     ["spendingLimitUsd", getU64Decoder()],
+    ["cooldownSeconds", getU64Decoder()],
   ]);
 }
 
@@ -152,6 +156,7 @@ export type QueueAgentPermissionsUpdateAsyncInput<
   agent: QueueAgentPermissionsUpdateInstructionDataArgs["agent"];
   newCapability: QueueAgentPermissionsUpdateInstructionDataArgs["newCapability"];
   spendingLimitUsd: QueueAgentPermissionsUpdateInstructionDataArgs["spendingLimitUsd"];
+  cooldownSeconds: QueueAgentPermissionsUpdateInstructionDataArgs["cooldownSeconds"];
 };
 
 export async function getQueueAgentPermissionsUpdateInstructionAsync<
@@ -282,6 +287,7 @@ export type QueueAgentPermissionsUpdateInput<
   agent: QueueAgentPermissionsUpdateInstructionDataArgs["agent"];
   newCapability: QueueAgentPermissionsUpdateInstructionDataArgs["newCapability"];
   spendingLimitUsd: QueueAgentPermissionsUpdateInstructionDataArgs["spendingLimitUsd"];
+  cooldownSeconds: QueueAgentPermissionsUpdateInstructionDataArgs["cooldownSeconds"];
 };
 
 export function getQueueAgentPermissionsUpdateInstruction<

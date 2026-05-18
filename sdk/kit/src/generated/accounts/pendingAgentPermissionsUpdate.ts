@@ -67,6 +67,12 @@ export type PendingAgentPermissionsUpdate = {
    */
   queuedAtSlot: bigint;
   bump: number;
+  /**
+   * TA-06 (Phase 3): per-agent cooldown in seconds. 0 disables. Bound
+   * at apply time onto `AgentSpendOverlay.cooldown_seconds[slot]`.
+   * APPENDED at end per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  cooldownSeconds: bigint;
 };
 
 export type PendingAgentPermissionsUpdateArgs = {
@@ -84,6 +90,12 @@ export type PendingAgentPermissionsUpdateArgs = {
    */
   queuedAtSlot: number | bigint;
   bump: number;
+  /**
+   * TA-06 (Phase 3): per-agent cooldown in seconds. 0 disables. Bound
+   * at apply time onto `AgentSpendOverlay.cooldown_seconds[slot]`.
+   * APPENDED at end per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  cooldownSeconds: number | bigint;
 };
 
 /** Gets the encoder for {@link PendingAgentPermissionsUpdateArgs} account data. */
@@ -100,6 +112,7 @@ export function getPendingAgentPermissionsUpdateEncoder(): FixedSizeEncoder<Pend
       ["executesAt", getI64Encoder()],
       ["queuedAtSlot", getU64Encoder()],
       ["bump", getU8Encoder()],
+      ["cooldownSeconds", getU64Encoder()],
     ]),
     (value) => ({
       ...value,
@@ -121,6 +134,7 @@ export function getPendingAgentPermissionsUpdateDecoder(): FixedSizeDecoder<Pend
     ["executesAt", getI64Decoder()],
     ["queuedAtSlot", getU64Decoder()],
     ["bump", getU8Decoder()],
+    ["cooldownSeconds", getU64Decoder()],
   ]);
 }
 
@@ -211,5 +225,5 @@ export async function fetchAllMaybePendingAgentPermissionsUpdate(
 }
 
 export function getPendingAgentPermissionsUpdateSize(): number {
-  return 113;
+  return 121;
 }

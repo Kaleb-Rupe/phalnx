@@ -27,6 +27,8 @@ import {
   getStructEncoder,
   getU16Decoder,
   getU16Encoder,
+  getU32Decoder,
+  getU32Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -67,10 +69,9 @@ export type PolicyConfig = {
   /** Maximum single transaction size in USD (6 decimals). */
   maxTransactionSizeUsd: bigint;
   /**
-   * Protocol access control mode:
-   * 0 = all allowed (protocols list ignored)
-   * 1 = allowlist (only protocols in list)
-   * 2 = denylist (all except protocols in list)
+   * Protocol allowlist mode. Phase 2 Option A: ONLY value 1 (ALLOWLIST)
+   * permitted. Modes 0 (ALL) and 2 (DENYLIST) deleted under L-1. Handler
+   * rejects any other value with `ErrInvalidProtocolMode`.
    */
   protocolMode: number;
   /**
@@ -196,6 +197,21 @@ export type PolicyConfig = {
    * APPENDED at end of struct per F-14 APPEND-ONLY rule.
    */
   createdAtSlot: bigint;
+  /**
+   * TA-05 (Phase 3 pre-execution guard #2): 24-bit UTC operating-hours
+   * bitmask. Bit `n` (0 ≤ n ≤ 23) set → spending allowed when
+   * `clock.unix_timestamp / 3600 % 24 == n`. Upper 8 bits (24..=31)
+   * MUST be zero; rejected at write-time.
+   *
+   * Default for owners who don't narrow: 0xFFFFFF (all 24 hours enabled
+   * — equivalent to "no operating-hours constraint"). New vaults set
+   * this explicitly via the digest the owner signs; back-compat
+   * consideration removed per L-3 (Phase 2 TA-19 bound the field anyway).
+   *
+   * Bound by TA-19 at position 15 of the canonical digest encoding.
+   * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  operatingHours: number;
 };
 
 export type PolicyConfigArgs = {
@@ -209,10 +225,9 @@ export type PolicyConfigArgs = {
   /** Maximum single transaction size in USD (6 decimals). */
   maxTransactionSizeUsd: number | bigint;
   /**
-   * Protocol access control mode:
-   * 0 = all allowed (protocols list ignored)
-   * 1 = allowlist (only protocols in list)
-   * 2 = denylist (all except protocols in list)
+   * Protocol allowlist mode. Phase 2 Option A: ONLY value 1 (ALLOWLIST)
+   * permitted. Modes 0 (ALL) and 2 (DENYLIST) deleted under L-1. Handler
+   * rejects any other value with `ErrInvalidProtocolMode`.
    */
   protocolMode: number;
   /**
@@ -338,6 +353,21 @@ export type PolicyConfigArgs = {
    * APPENDED at end of struct per F-14 APPEND-ONLY rule.
    */
   createdAtSlot: number | bigint;
+  /**
+   * TA-05 (Phase 3 pre-execution guard #2): 24-bit UTC operating-hours
+   * bitmask. Bit `n` (0 ≤ n ≤ 23) set → spending allowed when
+   * `clock.unix_timestamp / 3600 % 24 == n`. Upper 8 bits (24..=31)
+   * MUST be zero; rejected at write-time.
+   *
+   * Default for owners who don't narrow: 0xFFFFFF (all 24 hours enabled
+   * — equivalent to "no operating-hours constraint"). New vaults set
+   * this explicitly via the digest the owner signs; back-compat
+   * consideration removed per L-3 (Phase 2 TA-19 bound the field anyway).
+   *
+   * Bound by TA-19 at position 15 of the canonical digest encoding.
+   * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  operatingHours: number;
 };
 
 /** Gets the encoder for {@link PolicyConfigArgs} account data. */
@@ -365,6 +395,7 @@ export function getPolicyConfigEncoder(): Encoder<PolicyConfigArgs> {
       ["destinationMode", getU8Encoder()],
       ["policyPreviewDigest", fixEncoderSize(getBytesEncoder(), 32)],
       ["createdAtSlot", getU64Encoder()],
+      ["operatingHours", getU32Encoder()],
     ]),
     (value) => ({ ...value, discriminator: POLICY_CONFIG_DISCRIMINATOR }),
   );
@@ -394,6 +425,7 @@ export function getPolicyConfigDecoder(): Decoder<PolicyConfig> {
     ["destinationMode", getU8Decoder()],
     ["policyPreviewDigest", fixDecoderSize(getBytesDecoder(), 32)],
     ["createdAtSlot", getU64Decoder()],
+    ["operatingHours", getU32Decoder()],
   ]);
 }
 

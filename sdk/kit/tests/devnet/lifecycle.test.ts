@@ -152,6 +152,8 @@ describe("Kit SDK Devnet — Vault Lifecycle", function () {
       hasPostAssertions: livePolicy.data.hasPostAssertions,
       // PEN-CROSS-2: created_at_slot is immutable post-init.
       createdAtSlot: livePolicy.data.createdAtSlot,
+      // TA-05 (Phase 3): operating_hours is policy-owned.
+      operatingHours: livePolicy.data.operatingHours,
     });
 
     const queueIx = await getQueuePolicyUpdateInstructionAsync({
@@ -169,6 +171,7 @@ describe("Kit SDK Devnet — Vault Lifecycle", function () {
       hasProtocolCaps: null,
       protocolCaps: null,
       destinationMode: null,
+      operatingHours: null,
       newPolicyPreviewDigest,
     });
 
