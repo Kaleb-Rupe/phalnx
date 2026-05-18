@@ -923,32 +923,10 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
     // H-1: Decrement active session counter (unconditional — both success and expired)
     vault.active_sessions = vault.active_sessions.saturating_sub(1);
 
-    // AC-10 (Phase 4): increment session nonce on the in-memory copy before
-    // the runtime closes the account.
-    //
-    // **Atomicity:** the increment lives inside the handler, so if any later
-    // check (post-finalize scan, post-assertion CPI in remaining_accounts,
-    // etc.) errors before the handler returns Ok(()), the runtime rolls back
-    // the entire tx and the persisted nonce stays at the pre-increment value.
-    // There is no "partial finalize" state where the nonce moved but the
-    // session did not close.
-    //
-    // **Current V2 semantics:** the session account is `close =
-    // session_rent_recipient`, so the persisted nonce after a successful
-    // finalize is irrelevant — the account is deleted. The increment is
-    // structural so that:
-    //   1. Phase 8 ownership-transfer flow (M-5) can reuse the same field
-    //      with a non-close model without an additional handler change.
-    //   2. If a future change introduces `init_if_needed` for session reuse
-    //      (e.g. amortizing the rent across a multi-protocol batch), the
-    //      increment is already in place to defeat durable-nonce replay
-    //      across reuses.
-    //
-    // Saturating_add is acceptable because hitting `u64::MAX` finalizes for
-    // a single (vault, agent, mint) session is not reachable in any realistic
-    // operational lifetime. We use `checked_add` defensively anyway to keep
-    // the math style consistent with the rest of the program (no silent
-    // wrap on a value that crosses a security boundary).
+    // AC-10 (Phase 4): increment session nonce. This write is dead-on-close
+    // under current V2 semantics (session is `close = session_rent_recipient`),
+    // but lives here for Phase 8 M-5 reuse (non-close ownership-transfer flow
+    // and/or future `init_if_needed` session reuse).
     {
         let session = &mut ctx.accounts.session;
         session.nonce = session
