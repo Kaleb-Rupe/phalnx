@@ -166,8 +166,10 @@ describe("jupiter-integration", () => {
     );
 
     // 2. Validate and authorize
+    // Fetch live policy version for expected_policy_version arg (TOCTOU guard)
+    const livePolicy = await program.account.policyConfig.fetch(policy);
     const validateIx = await program.methods
-      .validateAndAuthorize(tokenMint, amount, targetProtocol, new BN(0))
+      .validateAndAuthorize(tokenMint, amount, targetProtocol, livePolicy.policyVersion, new BN(0))
       .accountsPartial({
         agent: agentKp.publicKey,
         vault,
@@ -285,6 +287,9 @@ describe("jupiter-integration", () => {
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(200_000_000),
@@ -564,6 +569,9 @@ describe("jupiter-integration", () => {
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(200_000_000),
@@ -705,6 +713,9 @@ describe("jupiter-integration", () => {
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(100_000_000),
             maxTransactionSizeUsd: new BN(60_000_000),
