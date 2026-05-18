@@ -242,12 +242,11 @@ pub fn is_stablecoin_mint(_mint: &Pubkey) -> bool {
 
 // --- Protocol program IDs (same address on mainnet and devnet) ---
 
-/// Jupiter V6 program
-/// Base58: JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4
-pub const JUPITER_PROGRAM: Pubkey = Pubkey::new_from_array([
-    4, 121, 213, 91, 242, 49, 192, 110, 238, 116, 197, 110, 206, 104, 21, 7, 253, 177, 178, 222,
-    163, 244, 142, 81, 2, 177, 205, 162, 86, 188, 19, 143,
-]);
+// JUPITER_PROGRAM constant removed in Phase 1 (Option A demolition). The Jupiter
+// V6 program ID is no longer referenced by on-chain code. SDK-side allowlist
+// configuration uses the literal pubkey string `JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4`
+// passed through PolicyConfig.protocols at vault creation time — generic primitive,
+// not Jupiter-specific.
 
 /// Flash Trade (Perpetuals) program
 /// Base58: FLASH6Lo6h3iasJKWDs2F8TkW2UKf3s15C8PMGuVfgBn

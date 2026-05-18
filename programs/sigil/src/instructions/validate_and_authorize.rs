@@ -9,7 +9,7 @@ use crate::errors::SigilError;
 use crate::events::{ActionAuthorized, FeesCollected};
 use crate::state::*;
 
-use super::integrations::{generic_constraints, jupiter};
+use super::integrations::generic_constraints;
 
 /// Maximum instructions to scan from any sysvar introspection loop.
 ///
@@ -475,34 +475,15 @@ pub fn handler(
         Ok(ScanAction::PassedSharedChecks)
     }
 
-    // ── Jupiter slippage enforcement helper ─────────────────────────────
-    // Pentester finding (MED): the spending branch's inline `verify_jupiter_slippage`
-    // call left a gap — agents calling Sigil with `amount=0` (taking the
-    // non-spending branch) could pass a Jupiter swap and bypass slippage policy.
-    // Extracting the check into a helper called from BOTH branches closes the bypass
-    // unconditionally, regardless of the `is_spending = amount > 0` derivation.
-    //
-    // Note: kept as a separate helper (not folded into `scan_instruction_shared`)
-    // so the spending branch can preserve its existing check ordering — the
-    // `is_recognized_defi` / `ProtocolMismatch` check must run BEFORE slippage
-    // (existing test `target_protocol=FlashTrade but Jupiter ix → ProtocolMismatch`
-    // sends a Jupiter ix with dummy data and expects ProtocolMismatch, not
-    // InvalidJupiterInstruction).
-    fn enforce_jupiter_slippage_if_jupiter(
-        ix: &Instruction,
-        max_slippage_bps: u16,
-    ) -> anchor_lang::Result<()> {
-        if ix.program_id == JUPITER_PROGRAM {
-            jupiter::verify_jupiter_slippage(&ix.data, max_slippage_bps)?;
-        }
-        Ok(())
-    }
+    // Jupiter slippage helper removed in Phase 1 (Option A demolition).
+    // The generic `policy.max_slippage_bps` config primitive is retained (D-5)
+    // for runtime checks performed by post-execution assertions (Phase 6) or
+    // off-chain SDK simulators — not by an on-chain Jupiter-specific parser.
 
     // 6. Instruction scan — validates all instructions between validate and finalize.
     // Shared checks (scan_instruction_shared): SPL/Token-2022 blocking, infrastructure
     // whitelist, protocol allowlist, generic constraints.
     // Spending-only checks (inline): recognized DeFi, ProtocolMismatch, defi_ix_count.
-    // Jupiter slippage: enforced via `enforce_jupiter_slippage_if_jupiter` in BOTH branches.
     if is_spending {
         let mut defi_ix_count: u8 = 0;
         let mut found_finalize = false;
@@ -535,9 +516,13 @@ pub fn handler(
                 ScanAction::PassedSharedChecks => {
                     // === SPENDING-ONLY CHECKS (must remain inline) ===
 
-                    // Recognized DeFi: protocol mismatch + defi_ix_count
-                    let is_recognized_defi = ix.program_id == JUPITER_PROGRAM
-                        || ix.program_id == FLASH_TRADE_PROGRAM
+                    // Recognized DeFi: protocol mismatch + defi_ix_count.
+                    // JUPITER_PROGRAM removed in Phase 1 (Option A demolition) —
+                    // Jupiter V6 swaps are no longer special-cased on-chain.
+                    // Slippage enforcement against `policy.max_slippage_bps` is
+                    // delegated to off-chain SDK simulators or generic
+                    // post-execution assertions (Phase 6).
+                    let is_recognized_defi = ix.program_id == FLASH_TRADE_PROGRAM
                         || ix.program_id == JUPITER_LEND_PROGRAM
                         || ix.program_id == JUPITER_EARN_PROGRAM
                         || ix.program_id == JUPITER_BORROW_PROGRAM;
@@ -549,12 +534,6 @@ pub fn handler(
                         );
                         defi_ix_count = defi_ix_count.saturating_add(1);
                     }
-
-                    // Slippage verification on Jupiter V6 swaps.
-                    // Runs AFTER ProtocolMismatch so target/program-id mismatches surface
-                    // first (preserves existing test expectations). Same call also runs
-                    // unconditionally in the non-spending branch — see helper docs above.
-                    enforce_jupiter_slippage_if_jupiter(&ix, policy.max_slippage_bps)?;
                 }
             }
             scan_idx = scan_idx.saturating_add(1);
@@ -601,14 +580,9 @@ pub fn handler(
                     continue;
                 }
                 ScanAction::PassedSharedChecks => {
-                    // Pentester MED — non-spending forward scan must enforce Jupiter
-                    // slippage too. Without this call, an agent could send a
-                    // `validate_and_authorize` with `amount=0` (taking the
-                    // `is_spending=false` path) followed by a Jupiter swap with
-                    // arbitrary slippage and fully bypass the policy's
-                    // `max_slippage_bps` cap. Same helper as the spending branch
-                    // — single source of truth for slippage enforcement.
-                    enforce_jupiter_slippage_if_jupiter(&ix, policy.max_slippage_bps)?;
+                    // Non-spending branch has no per-instruction work after
+                    // shared checks pass. Jupiter slippage call removed in
+                    // Phase 1 (Option A demolition).
                 }
             }
             idx = idx.saturating_add(1);
