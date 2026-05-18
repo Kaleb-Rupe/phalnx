@@ -1,10 +1,10 @@
 # ACCEPTANCE_V2.md — Sigil v2 Mainnet Acceptance Criteria
 
-**Status:** Living document — binary mainnet acceptance gates + funding plan.
+**Status:** Living document — V1 devnet acceptance gates. (Mainnet-bound audit/bounty/funding sections deleted in Phase 1 Option A demolition per L-2, 2026-05-17.)
 **Last updated:** 2026-05-17
 **Branch:** `revamp/v2-2026-05`
 **Companion docs:** [REVAMP_PLAN.md](./REVAMP_PLAN.md), [THREAT_MODEL_V2.md](./THREAT_MODEL_V2.md), [INTERFACES_V2.md](./INTERFACES_V2.md)
-**Architecture diagram:** [tier-model.mmd](./tier-model.mmd) (canonical) + embedded in §7 below.
+**Architecture diagram:** Embedded in §7 below (the canonical `tier-model.mmd` was deleted in Phase 1 Option A demolition, 2026-05-17).
 
 This document is the answer to "what must be true before Sigil v2 ships to mainnet?"
 
@@ -17,7 +17,7 @@ Each acceptance gate has:
 - **Evidence required** — concrete artifact that proves the gate.
 - **Pass criterion** — binary, measurable.
 - **Blocker** — what happens if missing (e.g., no mainnet deploy, no SDK release, etc.).
-- **§4 Funding** dependency — explicit if the gate requires the funding plan to be signed.
+- **§4 Funding** dependency — DROPPED per L-2 (Option A 2026-05-17). All surviving §3 gates are funding-independent.
 
 ### 1.1 Cross-doc anchors
 
@@ -29,50 +29,28 @@ All artifacts produced under this document go through the §RP Review Protocol p
 
 ---
 
-## 2. Testnet vs Mainnet Acceptance
+## 2. V1 Acceptance Scope (Option A, L-2 + L-8 2026-05-17)
 
-**Testnet (V1 GA — devnet program ID `4ZeVCqnj...`, no audit, no mainnet):**
-- All on-chain primitives implemented and tested per Stage 1-5 acceptance gates.
+**V1 (devnet only — fresh program ID at Stage 10, NOT the existing `4ZeVCqnj…` per L-7):**
+- All on-chain primitives implemented and tested per Phases 1-9 acceptance gates.
 - LiteSVM + Surfpool tests passing.
-- Adversarial §RP review fan complete (silent-failure-hunter + code-reviewer + comment-analyzer + reverify).
+- Adversarial §RP review fan complete every phase (silent-failure-hunter + code-reviewer + reverify).
 - Dashboard wired through.
-- No external audit required.
-- No bug bounty required.
-- §4 Funding plan exists but unsigned.
+- No external audit required (L-2).
+- No bug bounty required (L-2).
+- No funding gate (L-2).
 
-**Mainnet (this document's primary scope):**
-- All testnet criteria, PLUS the 8 gates below.
-- §4 Funding plan SIGNED by Kaleb.
-- New program ID generated; deployment under Squads V4 upgrade authority.
+**Mainnet:** Out of scope for V1 (L-8). The deleted §3.1, §3.3, §3.5, and §4 sections will be revisited in a v1.1 governance doc when mainnet is reconsidered.
 
 ---
 
-## 3. Mainnet Acceptance Gates
+## 3. V1 Acceptance Gate (Option A, L-2 2026-05-17)
 
-### 3.1 — External audit complete
+V1 ships under devnet redeploy at Stage 10. **Mainnet is not in scope for V1.**
 
-**Trigger condition:** Sigil V2 program code is feature-complete and frozen (no logic changes for ≥2 weeks). `stage-5-baseline` tag exists.
+§RP review pipeline (silent-failure-hunter + code-reviewer + free-tier security tooling: Sec3 X-Ray + Trident fuzz) is the V1 acceptance gate. The prior §3.1 external audit, §3.3 bug bounty, §3.5 formal verification, and §4 funding plan sections are deleted under L-2 (no audit / no bounty / no funding gate in V1 scope). Any mainnet-bound version of these gates will land in a v1.1 governance doc.
 
-**Evidence required:**
-- Audit engagement letter signed.
-- Audit report published.
-- All CRITICAL and HIGH findings remediated and verified by the auditor in a re-review.
-- MEDIUM findings either fixed or accepted-with-rationale in a public response document.
-
-**Vendor short-list:**
-- **OtterSec** — Solana-native, fastest engagement window, strongest pattern recognition on PDA/CPI bugs.
-- **Neodyme** — Strongest manual-review depth on Anchor + low-level SVM; track record on Squads V4, Marginfi, Drift.
-- **Trail of Bits** — Strongest CPS background, formal-methods-curious.
-- **Certora** — Formal verification (paired with manual audit from OtterSec or Neodyme). Squads V4 was the first formally verified Solana contract; Sigil should follow.
-- **Sec3 (X-Ray)** — Secondary review + automated security tooling. ~$30K-$50K. Used as Stage 6B complement.
-
-**Recommended engagement:** Two firms in parallel — **OtterSec or Neodyme** (manual) + **Certora** (formal verification of the 3 critical invariants from §3.5). This pattern matches Squads V4's audit strategy.
-
-**Pass criterion:** Zero open CRITICAL or HIGH findings at mainnet-cut-tag. MEDIUM count ≤ 5, each with rationale committed to `agent-middleware/docs/audits/<vendor>_<YYYY-MM-DD>.md` and linked from the repo README.
-
-**Blocker:** No mainnet deploy until evidence is in repo at `agent-middleware/docs/audits/`.
-
-**Funding dependency:** YES — §4 Funding plan must be signed (audit firm engagement cost is $50K-$150K).
+### 3.1 — External audit complete — DELETED per L-2 (Option A 2026-05-17)
 
 ### 3.2 — Squads V4 multisig as upgrade authority (D-05)
 
@@ -100,26 +78,7 @@ All artifacts produced under this document go through the §RP Review Protocol p
 
 **Funding dependency:** NO — multisig setup is operational, not paid.
 
-### 3.3 — Bug bounty live (D-04)
-
-**Trigger condition:** Mainnet program deployed.
-
-**Evidence required:**
-- Bug bounty published on Immunefi (or equivalent — Sec3, HackenProof).
-- Scope document specifies in-scope contracts (Sigil program ID, SDK), out-of-scope (front-end UI, third-party dependencies).
-- Reward table specifies CRITICAL → $50K+ USDC reserve.
-- Disclosure window: 30 days from first report to public.
-
-**Reserve sizing rationale:**
-- $50K minimum is the **floor** to attract serious researcher attention. Squads V4 uses $300K for fund-theft severity.
-- For a vault-managing program targeting institutional flows, $50K is the lower bound. Recommend $100K for fund-theft if budget allows.
-- Reserve must be **locked** in a Squads-controlled multisig, not just promised.
-
-**Pass criterion:** Bounty live, reserve locked, scope public.
-
-**Blocker:** No mainnet announcement / customer onboarding until live. Pre-launch is acceptable; pre-announcement is not.
-
-**Funding dependency:** YES — §4 Funding plan must commit $50K-$150K bounty reserve.
+### 3.3 — Bug bounty live — DELETED per L-2 (Option A 2026-05-17)
 
 ### 3.4 — Incident response runbook + drill on devnet
 
@@ -149,54 +108,9 @@ All 5 criteria must be met; partial completion (e.g., freeze in 12 min but no po
 
 **Funding dependency:** NO — drill is operational.
 
-### 3.5 — Formal verification of 3 critical invariants
+### 3.5 — Formal verification (Certora) — DELETED per L-2 (Option A 2026-05-17)
 
-**Trigger condition:** Program code feature-complete (stage-5-baseline).
-
-**Evidence required:**
-- Certora (or equivalent) verifies the following invariants:
-
-**Invariant 1 (Freeze-respecting, scoped to Sigil instructions):**
-```
-For all Sigil instructions I and vaults V:
-  if V.status == VaultStatus::Frozen at any point during I,
-  then I returns error with code ErrVaultFrozen.
-Property (monotonic freeze): within a single atomic bundle,
-  freeze cannot be reversed — once V.status == Frozen is observed,
-  the bundle reverts.
-```
-Closes the prior DEEP-2 escrow freeze-bypass bug-class (escrow itself was removed in V2 per [REVAMP_PLAN.md §2.1](./REVAMP_PLAN.md#21-escrow-escrowdeposit-account-settle_escrow-instruction); this invariant locks the freeze semantics for all V2 paths).
-
-**Invariant 2 (Session-nonce monotonicity, K2 + AC-10):**
-```
-For all successful seal() bundles consuming session S
-  ending at instruction finalize_session F:
-  S.nonce at F.end = S.nonce at F.start + 1.
-And: for all entry-guard instructions I targeting session S:
-  if I.expected_nonce != S.nonce, I returns ErrSessionNonceMismatch.
-```
-Closes AC-10 durable nonce replay. `S.nonce` is V2-new (Stage 1 work).
-
-**Invariant 3 (Stablecoin floor preservation, scoped to finalize_session moment):**
-```
-For all successful seal() bundles on vault V with PolicyConfig P
-  ending at instruction finalize_session F:
-  V.usdc_balance + V.usdt_balance at F.end ≥ P.stable_balance_floor.
-```
-Closes the load-bearing TA-12 post-execution invariant.
-
-**Optional Stage 5 stretch invariant (Inv-K6 per Architect 2026-05-17):**
-```
-For all successful Sigil instruction handlers, exactly one
-emit!() call executes before Ok(()).
-```
-Closes T-K6-1 silent-emit hazard. Stretch goal; may slip to v1.1.
-
-**Pass criterion:** All 3 primary invariants proven; counterexample-free. Proof artifact in `agent-middleware/docs/verification/`.
-
-**Blocker:** No mainnet deploy. Formal verification is a non-negotiable mainnet gate.
-
-**Funding dependency:** YES — Certora engagement is paid ($30K-$80K depending on scope). Package together with audit (§3.1) for funding planning.
+Was: Certora formal verification of 3 critical invariants (freeze-respecting, session-nonce monotonicity, stablecoin floor). All three properties remain V1 design goals but are validated by §RP review + targeted Rust unit tests + LiteSVM/Surfpool integration scenarios, not by paid formal-verification tooling. The original Certora text and invariants are preserved in git history (`docs/revamp/ACCEPTANCE_V2.md` pre-Phase-1).
 
 ### 3.6 — Test coverage
 
@@ -209,18 +123,18 @@ Closes T-K6-1 silent-emit hazard. Stretch goal; may slip to v1.1.
 | Unit | LiteSVM (in-process VM) | ≥ 500 tests, ≥95% branch coverage on Tier A handlers | < 60s total |
 | Integration | Surfpool | ≥ 50 scenarios covering each TA primitive in isolation + 5 multi-TA chains | < 120s total |
 | Adversarial | protocol-scalability-tests | ≥ 100 attack vectors mapped to AC-1..AC-10, ALL passing (passing = program rejects attack); MUST cover all CRIT and HIGH classes from `docs/review/ADVERSARIAL_REVIEW_*.md`; committed inventory at `protocol-scalability-tests/INVENTORY.md`; new CRIT findings require new vectors before mainnet cut | < 600s total |
-| Cluster rehearsal | Surfpool mainnet-fork (USDT supported) + devnet (USDC), seal() flows: Jupiter NM-E end-to-end + 9 structural-only T1-candidate protocols (Kamino, Drift, Marginfi, Flash Trade, Sanctum, Orca, Raydium, Meteora, Lulo). NM-E coverage for the 9 non-Jupiter T1 candidates is **explicitly tested at T2-guarantee level (structural + vault-balance NM-E only)**; per-instruction NM-E expansion is v1.1 (Def-5 in REVAMP_PLAN.md §6.1) | ≥ 20 scenarios | < 1800s total |
+| Cluster rehearsal | Surfpool mainnet-fork (USDT supported) + devnet (USDC), seal() flows for at least 5 representative protocols from the recognized-protocols allowlist. Under Option A (L-1, 2026-05-17), every protocol receives uniform generic-guardrail enforcement; no per-protocol NM-E parser ships in V1. | ≥ 20 scenarios | < 1800s total |
 
-**Pass criterion:** All four tiers green on CI for the mainnet-cut commit. Test count thresholds met. Per-tier coverage report in `agent-middleware/docs/testing/COVERAGE_REPORT.md`. Adversarial inventory linked from coverage report.
+**Pass criterion:** All four tiers green on CI for the devnet-redeploy commit. Test count thresholds met. Per-tier coverage report in `agent-middleware/docs/testing/COVERAGE_REPORT.md`. Adversarial inventory linked from coverage report.
 
-**Load-bearing 5 explicit gates** (per Architect 2026-05-17 + [REVAMP_PLAN.md §16](./REVAMP_PLAN.md#16-coverage-test-plan-stage-0-acceptance)):
-- K1 vault PDA invariants — formal verification gate (Stage 5 §3.5).
+**Load-bearing primitive gates** (per Architect 2026-05-17, updated for Option A):
+- K1 vault PDA invariants — Rust unit tests + LiteSVM coverage gate.
 - K6 event emission — CI static check (every `pub fn` calls `emit!()` at least once).
-- K7 NM-E primitive — T1-only feature gate at compile time.
 - TA-10 sandwich integrity — comprehensive instruction-injection test suite.
-- TA-16 parser version fail-closed — per-parser version-mismatch test fixtures.
+- TA-19 policy_preview_digest — preview/approve/execute envelope tests (Phase 2).
+- (K7 mode-0 / TA-16 entries removed under L-1: K7 mode-1/mode-2 dropped per L-13; TA-16 dropped per L-1.)
 
-**Blocker:** No mainnet deploy until CI artifact committed.
+**Blocker:** No devnet redeploy until CI artifact committed.
 
 **Funding dependency:** NO — tests are owned by Sigil core team.
 
@@ -256,128 +170,38 @@ Closes T-K6-1 silent-emit hazard. Stretch goal; may slip to v1.1.
 
 ---
 
-## 4. Funding Plan
+## 4. Funding Plan — DELETED per L-2 (Option A 2026-05-17)
 
-Mainnet acceptance (gates §3.1, §3.3, §3.5) requires paid services totaling **$100K-$350K** depending on scope. This section enumerates sources and the signed-commitment block.
-
-### 4.1 Cost breakdown
-
-| Item | Min | Max | Source recommendation |
-|------|-----|-----|----------------------|
-| External audit (OtterSec or Neodyme manual) | $50K | $150K | Solana Foundation grant or investor |
-| Certora formal verification (3 invariants) | $30K | $80K | Bundled with audit firm package |
-| Bug bounty reserve (locked in Squads multisig) | $50K | $150K | Treasury or scope-reduce |
-| Squads V4 + hardware wallet diversification | $1K | $5K | Treasury (operational) |
-| **Core total** | **$131K** | **$385K** | (4 line items above; required for any mainnet path) |
-| Sec3 secondary review + automated tooling | $30K | $50K | OPTIONAL — Premium scenario only |
-| Audit re-review + remediation iteration | $10K | $20K | OPTIONAL — bundled with original engagement |
-| **Premium total (all 6 items)** | **$171K** | **$455K** | (only Premium path) |
-| **Stated range (per /goal):** | **$100K-$350K** | | Maps to Scope-reduce ($100K) and Standard ($350K). Core minimum is $131K, slightly above $100K floor; if treasury-tight, drop Certora to make $100K floor reachable. |
-
-### 4.2 Source enumeration
-
-**Source 1: Solana Foundation Grant (Q3 2026)**
-- Target: $100K-$150K via Solana Foundation Grant program.
-- Apply for in Q3 2026 once Stage 4 SDK is in design partner hands (demonstrable usage).
-- Solo founder + open-source middleware = strong fit for SF grant criteria.
-
-**Source 2: Investor (seed or strategic)**
-- Target: $200K-$500K SAFE or priced round.
-- Use of funds: full $171K-$455K audit + bounty + 6-month runway.
-- Requires investor materials (deck, demo, traction data); deferred until V1 testnet has ≥10 design partners.
-
-**Source 3: Sigil treasury**
-- Status: Solo founder with no current treasury per memory `feedback_no_paid_services_no_audit.md` (amends with v2 briefing 2026-05-16: external audit now NON-NEGOTIABLE).
-- Bootstrap from owner's personal capital — feasible for the low end ($171K) over 6-month timeline.
-
-**Source 4: Scope-reduce to $50K Sec3-only audit**
-- Sec3 X-Ray (~$30K) + minimal manual review (~$20K) = $50K total audit cost.
-- Skip Certora formal verification (defer to v1.1).
-- Skip OtterSec/Neodyme premium engagement.
-- This is the fallback if Sources 1-3 don't materialize before mainnet target window.
-- **Risk:** lower audit assurance — should pair with extended bug bounty period (6 months) before public mainnet announcement.
-
-### 4.3 Stage 6E gating
-
-Per [REVAMP_PLAN.md §14 Stage 6](./REVAMP_PLAN.md#14-stage-sequencing), the Stage 6E sub-deliverable (bug bounty live) is **explicitly funding-gated**. Stage 6A-6D can proceed under treasury budget; 6E requires Source 1, 2, or treasury reserve dedicated for the bounty.
-
-### 4.4 Funding decision matrix
-
-| Scenario | Audit firm | Formal verify | Bounty reserve | Total (matches §4.1 line items) | Timeline |
-|----------|-----------|---------------|----------------|-------|----------|
-| **A — Premium (preferred)** | OtterSec or Neodyme ($50K-$150K) | Certora 3 invariants ($30K-$80K) | $100K Immunefi (locked) | **$181K-$335K** (= audit + Certora + bounty + Squads $1K-$5K hardware) | Q3-Q4 2026 |
-| **B — Standard** | OtterSec OR Neodyme ($50K-$150K) | Certora optional ($0-$80K) | $50K Immunefi | **$101K-$285K** (= audit + optional Certora + bounty + Squads hardware) | Q3-Q4 2026 |
-| **C — Scope-reduce** | Sec3 X-Ray + minimal manual ($30K-$50K) | Defer to v1.1 ($0) | $50K extended bounty | **$81K-$105K** (= Sec3 + bounty + Squads hardware) | Q4 2026 - Q1 2027 |
-| **D — Cannot fund** | — | — | — | — | Mainnet blocked indefinitely |
-
-Each scenario total reconciles to §4.1 line items: Audit + Certora + Bounty + Squads hardware ($1K-$5K) = Scenario total. (Sec3 secondary review and audit re-review iteration are NOT included in any scenario — those are Premium-only optional adders accounted for under §4.1 OPTIONAL rows.)
-
-### 4.5 Decision: signed commitment
-
-By signing below, Kaleb Rupe commits to executing one of Scenarios A, B, or C above. Scenario D ("Cannot fund") is the failure mode (not a path to sign for) — if no funding source materializes within 6 months of Stage 5 completion, the project defaults to Scenario D and mainnet is indefinitely blocked.
-
-```
-SIGNATURE BLOCK
-
-Scenario selected: [SELECT — A Premium / B Standard / C Scope-reduce / D Cannot fund]
-
-Source breakdown (commit to specific path):
-- Audit firm: [PENDING — name + estimated cost]
-- Formal verification: [PENDING — name + estimated cost]
-- Bug bounty reserve: [PENDING — Immunefi / Sec3 / other + commit amount]
-
-Signed: ____________________________     [SIGNATURE PENDING]
-        Kaleb Rupe
-Date:   ____________________________     [DATE PENDING — pre-Stage 6E]
-```
-
-**This signature gate blocks Stage 6E and mainnet announcement, NOT Stage 0/1/2/3/4/5 development.** Stage 0 ships with `[SIGNATURE PENDING]`; Kaleb commits externally before Stage 6E.
+V1 has no funding gate. No external audit, no formal verification, no bug bounty in V1 scope. The original §4 cost breakdown / source enumeration / signed-commitment block is removed wholesale. If revisited under v1.1 mainnet pathway, the funding analysis will land in a separate v1.1 governance doc.
 
 ---
 
 ## 5. Sequence Diagram
 
 ```
-testnet GA prep
-   │
-   ├──▶ §3.7 unit-of-account doc (zero-cost, lands at testnet)
-   │
-testnet GA (V1 stage-5-baseline)
+phase 1 demolition (current)
    │
    ▼
-revenue or capital event (audit budget unlocked via §4 SIGNED)
+phases 2-9 implementation (TA-01..TA-19 build-out)
    │
    ▼
-§3.1 audit + §3.5 formal verification  ──┐
-§3.6 test coverage                       │
-§3.8 SDK v0.16.0 published               ├──▶ all gates green
-                                         │
-§3.4 IR runbook + drill                  │
-  (on mainnet-candidate build,           │
-   AFTER §3.1 + §3.5 land)               │
-                                      ────┘
+phase 10 devnet redeploy with fresh program ID
    │
    ▼
-§3.2 deploy mainnet under Squads V4 upgrade auth (Stage 6C)
-   │
-   ▼
-§3.3 bug bounty live + public announcement (Stage 6E)
-   │
-   ▼
-mainnet GA (Stage 7)
+V1 GA on devnet (Stage 10)
 ```
 
 Sequence rationale:
-- §3.7 (unit-of-account doc) is zero-cost and lands at testnet to set user expectations early.
-- §3.4 (IR drill) MUST be on the mainnet-candidate build — i.e., after §3.1 + §3.5 (any audit-driven changes must be in the build being drilled).
-- §3.3 (bug bounty) goes live the day of mainnet announcement; reserve locked before announcement.
+- V1 is devnet-only (L-8). Mainnet is out of scope.
+- §RP review pipeline at every phase boundary gates §3.6 (test coverage) + §3.7 (unit-of-account doc) + §3.8 (SDK changeset).
+- §3.2 (Squads V4 multisig) and §3.4 (IR runbook) are operational gates that survive Phase 1; they are not funding-dependent.
 
 ---
 
 ## 6. Cross-doc Index
 
 - **Tier A primitives** (definitions, PDA seeds, semantics): [INTERFACES_V2.md](./INTERFACES_V2.md).
-- **Architecture diagram**: [REVAMP_PLAN.md §8](./REVAMP_PLAN.md#8-unified-architecture-diagram) + [tier-model.mmd](./tier-model.mmd).
+- **Architecture diagram**: [REVAMP_PLAN.md §8](./REVAMP_PLAN.md#8-unified-architecture-diagram). The legacy `tier-model.mmd` was deleted in Phase 1 Option A demolition (2026-05-17).
 - **Attacker classes + blast-radius**: [THREAT_MODEL_V2.md §2](./THREAT_MODEL_V2.md#2-attacker-classes--environmental-hazards).
 - **Trust-assumption inversion (T-21)**: [THREAT_MODEL_V2.md §2 T-21](./THREAT_MODEL_V2.md#t-21--owner-policy-underspecification-load-bearing-trust-assumption).
 - **§RP Review Protocol**: [REVAMP_PLAN.md §12](./REVAMP_PLAN.md#12-rp-review-protocol).
@@ -387,104 +211,22 @@ Sequence rationale:
 
 ## 7. Unified Architecture Diagram
 
-```mermaid
-flowchart TB
-    classDef t1 fill:#1f6f3a,stroke:#0d3d1f,color:#fff
-    classDef t2 fill:#b88a00,stroke:#6b4f00,color:#000
-    classDef t3 fill:#a02121,stroke:#5a0d0d,color:#fff
-    classDef flow fill:#2d3748,stroke:#1a202c,color:#fff
-    classDef risk fill:#e2e8f0,stroke:#718096,color:#1a202c,stroke-dasharray:5 5
-    classDef foundation fill:#2b6cb0,stroke:#1a4480,color:#fff
-
-    subgraph FOUND["K1-K7 Foundational (cross-tier)"]
-        K1[K1 Vault PDA]
-        K2[K2 Session keys]
-        K3[K3 freeze_vault]
-        K4[K4 register/revoke/pause agent]
-        K5[K5 Timelock policy mutations]
-        K6[K6 Mandatory Anchor events]
-        K7[K7 NM-E primitive T1-only]
-    end
-
-    subgraph PRE["Pre-execution Constraints TA-01..TA-09"]
-        TA01[TA-01 protocol allowlist]
-        TA02[TA-02 wallet allowlist]
-        TA03[TA-03 USDC/USDT mint pin]
-        TA04[TA-04 capability split]
-        TA05[TA-05 operating hours]
-        TA06[TA-06 per-action cooldown]
-        TA07[TA-07 first-time friction]
-        TA08[TA-08 Token-2022 ext blocklist]
-        TA09[TA-09 cosign workflow]
-    end
-
-    subgraph BUNDLE["Atomic-Bundle Integrity TA-10..TA-11"]
-        TA10[TA-10 sandwich integrity N2]
-        TA11[TA-11 protected-writable deny N4]
-    end
-
-    subgraph POST["Post-execution Invariants TA-12..TA-16"]
-        TA12[TA-12 stablecoin floor]
-        TA13[TA-13 rolling 24h tracker]
-        TA14[TA-14 per-recipient daily cap]
-        TA15[TA-15 audit-log circular N1 binding]
-        TA16[TA-16 T1 parser version fail-closed]
-    end
-
-    subgraph TIERS["Tier Swim Lanes"]
-        T1[T1 Verified ~10 protocols L1+L2+L3+L4 + NM-E]
-        T2[T2 Anchor-IDL ~48 protocols structural + NM-E balance, fail-closed]
-        T3[T3 No-IDL ceiling-only N1+N2+N4, fail-closed]
-    end
-
-    CLIENT[Client signs] --> SDK[SDK builds tx]
-    SDK --> SEAL[seal composes bundle]
-    SEAL --> VAL[validate_and_authorize]
-    VAL --> DEFI[DeFi instruction]
-    DEFI --> FIN[finalize_session]
-
-    FOUND --> VAL
-    PRE --> VAL
-    BUNDLE --> SEAL
-    POST --> FIN
-    TIERS --> VAL
-
-    AC1[AC-1 agent key leak] -.-> VAL
-    AC2[AC-2 owner key leak] -.-> FOUND
-    AC3[AC-3 Sigil program bug] -.-> SEAL
-    AC4[AC-4 Token-2022 silent drain] -.-> TA08
-    AC5[AC-5 protocol exploit] -.-> DEFI
-    AC6[AC-6 stablecoin depeg] -.-> TA12
-    AC7[AC-7 network halt] -.-> FIN
-    AC8[AC-8 CU exhaustion] -.-> SEAL
-    AC9[AC-9 sandwich injection] -.-> TA10
-    AC10[AC-10 durable nonce replay] -.-> TA15
-
-    class K1,K2,K3,K4,K5,K6,K7 foundation
-    class TA01,TA02,TA03,TA04,TA05,TA06,TA07,TA08,TA09,TA10,TA11,TA12,TA13,TA14,TA15,TA16 flow
-    class T1 t1
-    class T2 t2
-    class T3 t3
-    class CLIENT,SDK,SEAL,VAL,DEFI,FIN flow
-    class AC1,AC2,AC3,AC4,AC5,AC6,AC7,AC8,AC9,AC10 risk
-```
-
-**Mapping to this document.** Every mainnet gate in §3 maps to one or more nodes in this diagram. §3.1 (audit) and §3.5 (formal verification) target the green/yellow/red TIERS lanes — the audit firm verifies that each tier's claimed guarantees actually hold. §3.2 (Squads V4 upgrade auth) protects the substrate (K1-K7 + the program ID itself). §3.3 (bug bounty) is a post-mainnet feedback loop covering everything in the diagram. §3.4 (IR runbook + drill) exercises the K3 freeze + K4 revoke paths under AC-1 / AC-2 attack simulations. §3.6 (test coverage) requires explicit coverage gates for the **load-bearing 5** nodes: K1, K6, K7, TA-10, TA-16 — these are highlighted in [REVAMP_PLAN.md §16](./REVAMP_PLAN.md#16-coverage-test-plan-stage-0-acceptance) per the Architect 2026-05-17 dependency audit. §3.7 (unit-of-account documentation) constrains how the AC-6 depeg input interacts with TA-12. §3.8 (SDK v0.16.0) is the CLIENT → SDK boundary in the diagram — owners install the new SDK to seal() transactions under the V2 enforcement set.
+Canonical diagram lives in [REVAMP_PLAN.md §8](./REVAMP_PLAN.md#8-unified-architecture-diagram) (updated 2026-05-17 to drop tier swim-lanes under Option A / L-1). The Option A enforcement model: a single uniform K1-K7 + TA-01..TA-15 + TA-17 + TA-19 set is applied at every seal() bundle, regardless of which DeFi protocol the agent targets. No tier model; no per-protocol parsers; TA-16 dropped.
 
 ---
 
-## 8. Acceptance Gate Summary Table
+## 8. V1 Acceptance Gate Summary Table
 
 | Gate | Title | Pass criterion | Blocker if missing | Funding-gated |
 |------|-------|----------------|--------------------|--------------|
-| §3.1 | External audit | Zero open CRITICAL/HIGH | No mainnet | YES |
-| §3.2 | Squads V4 upgrade auth | Multisig PDA + 3-of-5 + autonomous + 48-72h timelock | No mainnet | NO |
-| §3.3 | Bug bounty live | Reserve locked, scope public | No customer announce | YES |
-| §3.4 | IR runbook + drill | 5-criterion checklist all pass | No mainnet | NO |
-| §3.5 | Formal verification | 3 invariants proven | No mainnet | YES |
-| §3.6 | Test coverage | All 4 tiers green + load-bearing 5 gates | No mainnet | NO |
-| §3.7 | Unit-of-account docs | Statement in REVAMP_PLAN + dashboard | No mainnet announce | NO |
-| §3.8 | SDK v0.16.0 | NPM-published + migration guide | No mainnet announce | NO |
+| §3.1 | External audit — DELETED per L-2 (Option A 2026-05-17) | — | — | — |
+| §3.2 | Squads V4 upgrade auth | Multisig PDA + 3-of-5 + autonomous + 48-72h timelock | No devnet redeploy | NO |
+| §3.3 | Bug bounty live — DELETED per L-2 (Option A 2026-05-17) | — | — | — |
+| §3.4 | IR runbook + drill | 5-criterion checklist all pass | No devnet redeploy | NO |
+| §3.5 | Formal verification — DELETED per L-2 (Option A 2026-05-17) | — | — | — |
+| §3.6 | Test coverage | All 4 tiers green + load-bearing primitive gates | No devnet redeploy | NO |
+| §3.7 | Unit-of-account docs | Statement in REVAMP_PLAN + dashboard | No devnet redeploy announce | NO |
+| §3.8 | SDK v0.16.0 | NPM-published + migration guide | No devnet redeploy announce | NO |
 
 ---
 
@@ -512,12 +254,12 @@ Per [REVAMP_PLAN §12 §RP](./REVAMP_PLAN.md#12-rp-review-protocol), every CRITI
 
 For Stage 0 to be `complete` per [§RP §12.7 Vocabulary](./REVAMP_PLAN.md#127-vocabulary), this document must satisfy:
 
-1. **All 8 mainnet gates defined with binary pass criteria.** Verified: §3.1-§3.8.
-2. **§4 Funding plan present with [SIGNATURE PENDING] block.** Verified: §4.5.
-3. **Sequence diagram captures Stage 6 dependencies.** Verified: §5.
-4. **Architecture diagram embedded (matches tier-model.mmd canonical).** Verified: §7.
+1. **Surviving V1 acceptance gates defined with binary pass criteria.** Verified: §3.2, §3.4, §3.6, §3.7, §3.8 (§3.1, §3.3, §3.5 deleted under L-2).
+2. **§4 Funding plan** — DELETED per L-2 (Option A 2026-05-17). No signature gate required.
+3. **Sequence diagram captures phase 1-10 dependencies.** Verified: §5.
+4. **Architecture diagram embedded.** Verified: §7 (canonical lives in REVAMP_PLAN.md §8).
 5. **Cross-doc index complete.** Verified: §6.
-6. **Load-bearing 5 explicit acceptance gates.** Verified: §3.6.
+6. **Load-bearing primitive gates.** Verified: §3.6.
 
 ---
 
@@ -525,15 +267,15 @@ For Stage 0 to be `complete` per [§RP §12.7 Vocabulary](./REVAMP_PLAN.md#127-v
 
 This glossary is the canonical reference for terms used in this document. For full term registry across all Stage 0 docs, see [REVAMP_PLAN.md §19](./REVAMP_PLAN.md#19-glossary).
 
-- **§3.1..§3.8** — Mainnet acceptance gates per §3.
-- **§4** — Funding plan + [SIGNATURE PENDING] block.
+- **§3.1..§3.8** — V1 acceptance gates per §3 (§3.1, §3.3, §3.5 deleted under L-2; §3.2, §3.4, §3.6, §3.7, §3.8 survive).
+- **§4** — Funding plan section, DELETED per L-2 (Option A 2026-05-17).
 - **CRITICAL / HIGH / MEDIUM / LOW** — §RP severity classifications.
-- **OtterSec / Neodyme / Trail of Bits / Certora / Sec3** — Audit firm names per §3.1.
-- **Premium / Standard / Scope-reduce / Cannot fund** — Funding scenarios per §4.4.
+- **OtterSec / Neodyme / Trail of Bits / Certora / Sec3** — Audit firm names from the deleted §3.1; retained as historical references only.
+- **Premium / Standard / Scope-reduce / Cannot fund** — Funding scenarios from the deleted §4.4; retained as historical references only.
 - **D-03 (unit-of-account = USDC face)** — see [INTERFACES_V2.md](./INTERFACES_V2.md#d-03--unit-of-account).
-- **D-04 (Funding gate)** — see [INTERFACES_V2.md](./INTERFACES_V2.md#d-04--funding-gate).
+- **D-04 — DROPPED per L-2** (was Funding gate; see [INTERFACES_V2.md §D-04](./INTERFACES_V2.md#d-04--token-2022-deposit-path-tlv-allowlist-locked-per-option-a) for its V2 Option A reuse as Token-2022 TLV allowlist).
 - **D-05 (Squads V4 upgrade auth)** — see [INTERFACES_V2.md](./INTERFACES_V2.md#d-05--squads-v4-upgrade-authority).
-- **D-06 (TierRegistry asymmetric threshold)** — see [INTERFACES_V2.md](./INTERFACES_V2.md#d-06--tierregistry-asymmetric-threshold).
+- **D-06 — DROPPED per L-1** (was TierRegistry asymmetric threshold; tier model removed under Option A).
 - **Stage 6A/B/C/D/E/F** — Stage 6 sub-deliverables per [REVAMP_PLAN §14](./REVAMP_PLAN.md#14-stage-sequencing).
 - **stage-N-baseline** — git tag after Stage N §RP-clean + CI-green.
 
@@ -547,13 +289,15 @@ This glossary is the canonical reference for terms used in this document. For fu
 | §RP reviewer 1 | pr-review-toolkit:code-reviewer | (in `STAGE_0_REVIEW/reviewer.md`) | (post-§RP pass 1) |
 | §RP reviewer 2 | pr-review-toolkit:silent-failure-hunter | (in `STAGE_0_REVIEW/hunter.md`) | (post-§RP pass 1) |
 | §RP reverify | swapped reviewers | (in `STAGE_0_REVIEW/reverify.md`) | (post-§RP pass 2) |
-| Funding signoff | Kaleb Rupe | §4.5 `[SIGNATURE PENDING]` block | (pre-Stage 6E) |
+| Funding signoff | — | DROPPED per L-2 (Option A 2026-05-17) | — |
 
 ---
 
-## 14. Audit Engagement Onboarding (Stage 6 handoff package)
+## 14. Audit Engagement Onboarding — DEFERRED to v1.1 (L-2 Option A 2026-05-17)
 
-When the Stage 6 audit firm is engaged, the following package is delivered to them:
+The §14 mainnet audit onboarding package is deferred to v1.1 alongside §3.1, §3.3, §3.5, and §4. The original content below is retained for v1.1 reference and is **not** an active V1 gate.
+
+When (in v1.1) the Stage 6 audit firm is engaged, the following package is delivered to them:
 
 ### 14.1 Documentation
 - This doc (ACCEPTANCE_V2.md) — gates + funding plan + sequence.
@@ -599,9 +343,11 @@ When the Stage 6 audit firm is engaged, the following package is delivered to th
 
 ---
 
-## 15. Mainnet Deployment Runbook (Stage 6C-6F)
+## 15. Mainnet Deployment Runbook — DEFERRED to v1.1 (L-2 + L-8 Option A 2026-05-17)
 
-Step-by-step mainnet deployment procedure. Each step has a checklist of verifications before proceeding.
+V1 ships to devnet only; no mainnet deploy is in scope. The §15 mainnet runbook content below is retained for v1.1 reference and is **not** an active V1 procedure. The TierRegistry deployment step (§15.3) is permanently superseded (no TierRegistry under Option A — L-1).
+
+Step-by-step (historical) mainnet deployment procedure:
 
 ### 15.1 Pre-deployment (Stage 6A-6B prerequisites)
 - [ ] §3.1 audit complete — zero CRIT+HIGH.
@@ -673,7 +419,9 @@ Deployment steps:
 
 ---
 
-## 16. Bug Bounty Scope Template (§3.3 detail)
+## 16. Bug Bounty Scope Template — DEFERRED to v1.1 (L-2 Option A 2026-05-17)
+
+The §16 bounty scope below is retained for v1.1 reference and is **not** an active V1 program. §3.3 was deleted in Phase 1.
 
 ### 16.1 In-scope
 - Sigil mainnet program (program ID: TBD after Stage 6F).
@@ -708,9 +456,11 @@ Deployment steps:
 
 ---
 
-## 17. Audit Firm Comparison Matrix
+## 17. Audit Firm Comparison Matrix — DEFERRED to v1.1 (L-2 Option A 2026-05-17)
 
-For §3.1 vendor selection. Updated as of 2026-05-17 per GeminiResearcher 2026-05-17 + memory `project_sigil_v2_revamp_briefing.md`.
+The §17 audit-firm comparison below is retained for v1.1 reference and is **not** an active V1 selection process. §3.1 was deleted in Phase 1.
+
+For (v1.1) vendor selection. Compiled 2026-05-17 per GeminiResearcher 2026-05-17 + memory `project_sigil_v2_revamp_briefing.md`.
 
 | Firm | Solana-native? | Anchor 0.32 depth | Audit history | Estimated cost | Engagement lead time |
 |------|---------------|-------------------|---------------|---------------|---------------------|
@@ -728,9 +478,11 @@ For §3.1 vendor selection. Updated as of 2026-05-17 per GeminiResearcher 2026-0
 
 ---
 
-## 18. Mainnet Announcement Checklist
+## 18. Mainnet Announcement Checklist — DEFERRED to v1.1 (L-2 + L-8 Option A 2026-05-17)
 
-Per §3.3 + §15.6, the mainnet announcement is gated on these items.
+The §18 announcement checklist below is retained for v1.1 reference and is **not** an active V1 procedure (V1 ships devnet-only). §3.3 was deleted in Phase 1.
+
+Per (v1.1) §3.3 + §15.6, the mainnet announcement is gated on these items.
 
 ### 18.1 Technical readiness
 - [ ] All §3.1-§3.8 gates green.

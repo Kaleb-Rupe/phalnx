@@ -1154,10 +1154,11 @@ describe("sigil", () => {
         sendVersionedTx(svm, [validateIx, finalizeIx, splTransferIx], agent);
         expect.fail("Should have thrown");
       } catch (err: any) {
-        // Error 6063 = UnauthorizedPostFinalizeInstruction (code shifted from
-        // 6065 → 6056 (after escrow removal renumber) after phantom-error cleanup). Checked at finalize
+        // UnauthorizedPostFinalizeInstruction (code: 6054 post-Phase-1 — shifted
+        // from 6056 by the Phase 1 Option A demolition which deleted the two
+        // Jupiter-specific variants at 6030/6031). Checked at finalize
         // instruction (index 1).
-        expect(err.toString()).to.include("6056");
+        expect(err.toString()).to.include("6054");
       }
     });
   });
@@ -3731,7 +3732,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "TimelockTooShort", code: 6058 });
+        expectSigilError(err, { name: "TimelockTooShort", code: 6056 });
       }
     });
 
@@ -4791,7 +4792,7 @@ describe("sigil", () => {
         sendVersionedTx(svm, [validateIx, finalizeIx], agent);
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "InsufficientPermissions", code: 6037 });
+        expectSigilError(err, { name: "InsufficientPermissions", code: 6035 });
       }
     });
 
@@ -4866,7 +4867,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "MaxAgentsReached", code: 6036 });
+        expectSigilError(err, { name: "MaxAgentsReached", code: 6034 });
       }
     });
 
@@ -4973,7 +4974,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "InvalidPermissions", code: 6038 });
+        expectSigilError(err, { name: "InvalidPermissions", code: 6036 });
       }
     });
   });
@@ -5167,7 +5168,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have exceeded per-agent spend limit");
       } catch (err: any) {
-        expectSigilError(err, { name: "AgentSpendLimitExceeded", code: 6043 });
+        expectSigilError(err, { name: "AgentSpendLimitExceeded", code: 6041 });
       }
 
       // But spending $150 (total = $950 < $1000) should succeed
@@ -5652,7 +5653,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "ProtocolCapsMismatch", code: 6050 });
+        expectSigilError(err, { name: "ProtocolCapsMismatch", code: 6048 });
       }
     });
 
@@ -5707,7 +5708,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "ProtocolCapsMismatch", code: 6050 });
+        expectSigilError(err, { name: "ProtocolCapsMismatch", code: 6048 });
       }
     });
   });
@@ -6045,7 +6046,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "AgentAlreadyPaused", code: 6054 });
+        expectSigilError(err, { name: "AgentAlreadyPaused", code: 6052 });
       }
     });
 
@@ -6154,7 +6155,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "AgentPaused", code: 6053 });
+        expectSigilError(err, { name: "AgentPaused", code: 6051 });
       }
     });
 
@@ -6224,7 +6225,7 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "AgentNotPaused", code: 6055 });
+        expectSigilError(err, { name: "AgentNotPaused", code: 6053 });
       }
     });
 

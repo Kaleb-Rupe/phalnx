@@ -4,7 +4,7 @@
 **Last updated:** 2026-05-17
 **Branch:** `revamp/v2-2026-05`
 **Companion docs:** [REVAMP_PLAN.md](./REVAMP_PLAN.md), [ACCEPTANCE_V2.md](./ACCEPTANCE_V2.md), [INTERFACES_V2.md](./INTERFACES_V2.md)
-**Architecture diagram:** [tier-model.mmd](./tier-model.mmd) (canonical) + embedded in §8 below.
+**Architecture diagram:** Embedded in §8 below (the canonical `tier-model.mmd` was deleted in Phase 1 Option A demolition, 2026-05-17, since no tier model ships in V1).
 
 ---
 
@@ -14,8 +14,8 @@ This document derives its attacker-class enumeration, blast-radius reasoning, an
 
 Key research-derived inputs to this threat model:
 
-- **GeminiResearcher 2026-05-17 MISMATCH corrections**: Lighthouse has 14 (not 8) assertion types; Maestro `swap_only` flag is fabrication (Maestro-floor = anti-rug + anti-MEV + privacy/rate guardrails); AgentLayer envelope is off-chain Python runtime (not on-chain). Threat model accounts for these corrections in §5 per-tier guarantees and §6 workflow mitigations.
-- **Architect 2026-05-17 dependency audit**: Load-bearing 5 = K1, K6, K7, TA-10, TA-16. K6 event emission is the highest-leverage single dependency — its silent failure cascades through TA-13/TA-15/TA-06 invisibly. Threat model §7 calls out K6 silent-emit as a dedicated risk (T-DoS-1 + a new T-K6-1).
+- **GeminiResearcher 2026-05-17 MISMATCH corrections**: Lighthouse has 14 (not 8) assertion types; Maestro `swap_only` flag is fabrication (Maestro-floor = anti-rug + anti-MEV + privacy/rate guardrails); AgentLayer envelope is off-chain Python runtime (not on-chain). Threat model accounts for these corrections in §5 universal guarantees (under Option A — see §5.2) and §6 workflow mitigations.
+- **Architect 2026-05-17 dependency audit**: Originally identified load-bearing 5 = K1, K6, K7, TA-10, TA-16. Under Phase 1 Option A demolition (L-1, 2026-05-17), TA-16 is dropped and the load-bearing-5 list reduces to K1, K6, TA-10, TA-19 (TA-19 replaces TA-16's role via policy-preview digest binding). K6 event emission remains the highest-leverage single dependency — its silent failure cascades through TA-13/TA-15/TA-06 invisibly. Threat model §7 calls out K6 silent-emit as a dedicated risk (T-DoS-1 + T-K6-1).
 - **GrokResearcher prior (contrarian Arg 5)**: Trust-assumption inversion (Owner Policy Underspecification) is the system's load-bearing weakness. Embedded as T-21 in §2.
 - **CodexResearcher prior (Argent precedent)**: Argent V3 guardian-majority + 7-day timelock pattern. Squads V4 substitutes only in autonomous mode. Translated to D-05 + D-06 multisig configuration.
 
@@ -23,7 +23,7 @@ Key research-derived inputs to this threat model:
 
 ## 1. Methodology
 
-Sigil v2 is a constraint enforcement layer for AI-agent custody of Solana DeFi assets. The threat model enumerates the actor classes and environmental hazards that put vault assets at risk, characterizes each by capability and blast radius, and maps each Tier A on-chain primitive (TA-01..TA-16) to the classes it blocks.
+Sigil v2 is a constraint enforcement layer for AI-agent custody of Solana DeFi assets. The threat model enumerates the actor classes and environmental hazards that put vault assets at risk, characterizes each by capability and blast radius, and maps each Tier A on-chain primitive (TA-01..TA-15, TA-17, TA-19; TA-16 dropped per L-1) to the classes it blocks.
 
 ### 1.1 Class notation
 
@@ -120,7 +120,7 @@ Cells in the §4 mapping table show whether a TA primitive **blocks** a given at
 **Pre-mitigation blast-radius:** CATASTROPHIC across all Sigil vaults simultaneously.
 
 **Post-mitigation blast-radius (V1 Tier A):** HIGH (still catastrophic per-vault if the bug fully bypasses, but containment is improved) —
-- TA-04 capability split: an agent compromise via bug is bounded by the session's capability tier (DISABLED / OBSERVER / OPERATOR).
+- TA-04 capability split: an agent compromise via bug is bounded by the session's capability level (DISABLED / OBSERVER / OPERATOR).
 - TA-10 sandwich integrity + TA-11 protected-writable deny-list: foreign programs cannot tamper with Sigil's PDAs in the same bundle, narrowing exploit primitives.
 - **Auto-revoke is deferred for V1** (NOT a numbered TA primitive; reserved for v1.1 once UX patterns settle). Documented as a v1.1 deferral candidate per [REVAMP_PLAN §6](./REVAMP_PLAN.md#6-deferred--skipped). When implemented in v1.1, the counter MUST exclude AC-8 CU-exhaustion and AC-3 successful-bug-exploits (those don't reject bundles) — only policy-rejected bundles count.
 - **Audit + formal verification** (see [ACCEPTANCE_V2.md §3.5](./ACCEPTANCE_V2.md#35--formal-verification-of-3-critical-invariants)) is the primary mitigation; on-chain primitives are containment, not prevention.
@@ -181,7 +181,7 @@ Cells in the §4 mapping table show whether a TA primitive **blocks** a given at
 
 **Post-mitigation blast-radius (V1 Tier A):** **PER-DESIGN: Sigil does not price-protect against depeg. Unit-of-account = USDC face value, not USD.**
 - This is an explicit acceptance of risk per D-03 (see [REVAMP_PLAN §10](./REVAMP_PLAN.md#10-decision-register)).
-- **Rationale for dropping Pyth (formerly DEEP-5):** Pyth integration was evaluated and rejected for V1 because (1) per-tx oracle reads cost ~10K CU and would push seal() bundles near the 1.4M ceiling under T1 NM-E; (2) Sigil's structural stable-touch rule (every seal() bundle touches USDC or USDT) makes USDC face-value as the unit-of-account semantically coherent — Sigil already commits to those mints; (3) Maestro and Trojan both ship face-value caps with $24B+ of validated production volume on Solana alone.
+- **Rationale for dropping Pyth (formerly DEEP-5):** Pyth integration was evaluated and rejected for V1 because (1) per-tx oracle reads cost ~10K CU and would push seal() bundles near the 1.4M ceiling; (2) Sigil's structural stable-touch rule (every seal() bundle touches USDC or USDT) makes USDC face-value as the unit-of-account semantically coherent — Sigil already commits to those mints; (3) Maestro and Trojan both ship face-value caps with $24B+ of validated production volume on Solana alone.
 - TA-12 stablecoin floor in USDC face value: protects against quantity loss, not value loss.
 - **Residual:** Owner must monitor depeg externally (dashboard surfaces 7-day deviation but does not enforce). AC-6 has no `✓` blocker in the §4 matrix; this is by design (per the rationale above), not an oversight.
 
@@ -341,7 +341,7 @@ Summary of pre-mitigation vs V1 post-mitigation blast-radius per class, with det
 
 ---
 
-## 4. Tier A → Attacker Class Mapping (16 × 10)
+## 4. Tier A → Attacker Class Mapping (15 × 10; TA-16 dropped)
 
 Cells show which classes a primitive **blocks**. `✓` = primary blocker (load-bearing for that class), `+` = defense-in-depth contribution, `(detect)` = forensic detection signal only, `(W)` = workflow mitigation. K1-K7 foundational coverage is in §4.1.
 
@@ -362,11 +362,12 @@ Cells show which classes a primitive **blocks**. `✓` = primary blocker (load-b
 | TA-13 rolling 24h tracker | ✓ | | | | + | | | | | |
 | TA-14 per-recipient cap | + | | | | | | | | | |
 | TA-15 audit-log + N1 binding | (detect) | (detect) | (detect) | (detect) | (detect) | | | | (detect) | ✓ |
-| TA-16 T1 parser version | | | | | ✓ | | | | | |
+| TA-17 auto-revoke on N failures | + | | | | | | | + | | |
+| TA-19 policy_preview_digest | + | ✓ | | | | | | | | |
 | **M-T21-1 learning mode (workflow)** | | | | | | | | | | (none — T-21) |
 | **M-T21-2 attestation (workflow)** | | | | | | | | | | (none — T-21) |
 | **M-T21-3 onboarding wizard (workflow)** | | | | | | | | | | (none — T-21) |
-| **M-T21-4 tier-visibility UI (workflow)** | | | | | | | | | | (none — T-21) |
+| **M-T21-4 policy-visibility UI (workflow)** | | | | | | | | | | (none — T-21) |
 
 ### 4.1 K1-K7 Foundational coverage
 
@@ -380,7 +381,7 @@ K1-K7 are not Tier A but provide essential coverage; documented separately so th
 | K4 register/revoke/pause | Substrate for TA-04, TA-09 |
 | K5 Timelock policy mutations | + for AC-2 (timelock weakens-window bound) |
 | K6 Mandatory `emit!()` | Substrate for TA-15, TA-13, TA-06 detection; load-bearing 5 (highest-leverage single dep) |
-| K7 NM-E (T1-only) | ✓ for AC-5 protocol-exploit residual in T1; load-bearing 5 |
+| K7 Generic byte-offset assertion (mode-0) | + for AC-5 protocol-exploit residual when owner configures byte-offset constraints; per L-13, mode-1/2 (tier-flavored) modes dropped under Option A |
 
 ### 4.2 Coverage assessment
 
@@ -393,51 +394,35 @@ K1-K7 are not Tier A but provide essential coverage; documented separately so th
 
 ---
 
-## 5. Per-Tier Guarantees
+## 5. Universal Guarantees (Option A 2026-05-17, L-1)
 
-Sigil v2's three tiers (T1/T2/T3) provide differentiated guarantees. The §2 attacker classes apply universally; the per-tier guarantees clarify which TA primitives are active per tier.
+Under Option A, Sigil v2 has **no tier model**. Every vault, regardless of which DeFi protocol the agent targets, gets the same enforcement floor: the §2 attacker classes apply universally; the TA-01..TA-15 + TA-17 + TA-19 + K1-K7 primitives apply uniformly.
 
-### 5.1 T1 Verified (full 16/16 + NM-E)
+### 5.1 Per-vault guarantees (uniform across all protocols)
 
 **Guarantees:**
-- Every TA-01..TA-16 enforced on-chain (16/16).
+- Every TA-01..TA-15 enforced on-chain at every seal() bundle.
+- TA-17 auto-revoke on N consecutive policy-violation failures (Phase 3).
+- TA-19 `policy_preview_digest` binding visible-policy to on-chain encoding (Phase 2).
 - K1-K7 foundational substrate.
-- K7 NM-E per-instruction semantic delta assertions for the protocol's known instruction set.
-- TA-16 T1 parser version fail-closed — if SDK ≠ on-chain version, reject (load-bearing 5).
+- K7 generic byte-offset assertion (mode-0 only) for owner-configured constraints PDA.
 - Cluster mint pins reviewed at every Sigil SDK release.
-
-**V1 NM-E coverage:** Jupiter only (per HIGH-DEEP-14 V1 decision). The other 9 T1 candidates (Kamino, Drift, Marginfi, Flash Trade, Sanctum, Orca, Raydium, Meteora, Lulo) have structural-only constraints in V1. NM-E expansion is v1.1 work (Def-5).
-
-**Limitations:**
-- A V1 T1 candidate without NM-E still has the structural T2 guarantees (TA-01..TA-15). NM-E gap means a contrarian Argument 1 attack (slippage tunneling, position-side flip, obligation-borrow) is unmitigated by NM-E in V1 for the 9 non-Jupiter T1 candidates.
-- T1 status requires re-audit on every protocol upgrade. If the protocol upgrades faster than Sigil audits, the vault temporarily falls to T2-guarantee level (TA-16 catches this).
-
-### 5.2 T2 Anchor-IDL (structural-only)
-
-**Guarantees:**
-- TA-01, TA-02, TA-03, TA-04, TA-05, TA-06, TA-07, TA-08, TA-09, TA-10, TA-11, TA-12, TA-13, TA-14, TA-15 (15 of 16; TA-16 is T1-only).
-- K1-K7 foundational substrate.
-- IDL hash pinned in Sigil SDK at build time via `idl_sha256` (NOT trusting on-chain `IdlCreateAccount` which is permissionless first-come).
-- NM-E is **vault-balance delta only** — no per-instruction field-level decode.
+- TA-12 stablecoin balance floor enforced at `finalize_session`.
 
 **Limitations:**
-- Cannot constrain field values (e.g., slippage_bps, direction, obligation_owner).
-- Contrarian Argument 1 attacks (slippage tunneling, position flip, obligation-borrow) are unmitigated at the field level. Mitigation comes from TA-12 stablecoin floor + TA-13 24h tracker post-execution.
-- A T2 protocol upgrade that changes the IDL invalidates the pinned hash; vault refuses operations until SDK ships a new pin (via TierRegistry write per D-06).
+- Field-level decoding inside opaque program calls is NOT performed. The K7 mode-0 generic byte-offset primitive is available for owner-configured constraints but is NOT a per-protocol parser.
+- Contrarian Argument 1 attacks (slippage tunneling, position-side flip, obligation-borrow) cannot be field-level mitigated. Mitigation comes from:
+  - TA-12 stablecoin floor (catches drains below the configured threshold).
+  - TA-13 rolling 24h tracker + TA-14 per-recipient daily cap (bound exposure).
+  - Post-execution assertions K6 events (off-chain detection within minutes).
+  - R-1 mint-delta cap (Phase 6) — bounds per-mint outflow per-bundle.
+- The owner accepts the residual field-level risk for every protocol they allowlist via TA-01.
 
-### 5.3 T3 No-IDL (ceiling-only N1+N2+N4)
+**Critical fail-closed default:** Protocols not in `PolicyConfig.allowed_protocols` are REJECTED at `validate_and_authorize`. Owner explicitly opts every protocol into the allowlist; there is no "permissive" default.
 
-**Guarantees:**
-- TA-01, TA-02, TA-03, TA-08, TA-10, TA-11, TA-12 (7 of 16). N1 (account allowlist via TA-01+TA-02 + temporal binding via TA-15 if present) + N2 (sandwich integrity via TA-10) + N4 (protected-writable via TA-11).
-- K1-K7 foundational substrate.
-- No field-level decode, no NM-E.
+### 5.2 Per-tier guarantees — DELETED 2026-05-17 (L-1, Option A)
 
-**Critical fail-closed default:** T3 protocols are REJECTED by default. Owner must sign an explicit "experimental protocol" attestation (M-T21-2) to enable.
-
-**Limitations:**
-- Cannot constrain anything inside the opaque program call. The owner accepts that any field value is possible.
-- The only meaningful protection is the stablecoin floor (TA-12) — if the call drains the vault below the floor, it reverts.
-- Dashboard tags every T3 transaction with a visible "T3 / unconstrained" badge so the owner cannot misinterpret coverage (M-T21-4).
+The §5.1 / §5.2 / §5.3 per-tier guarantee blocks are removed. Under Option A there are no T1/T2/T3 tiers; every vault has the §5.1 uniform guarantees above.
 
 ---
 
@@ -448,14 +433,14 @@ T-21 (Owner Policy Underspecification) is the load-bearing trust assumption. Sig
 ### M-T21-1 — Learning mode
 First 7 days of agent operation, the agent runs in **shadow mode** — instructions are logged but rejected unless they match an inferred policy bootstrap. Owner reviews the inferred policy and approves before activation. Inspired by AgentLayer's preview→approve→execute envelope. Off-chain runtime in SDK; on-chain anchor is `SessionAuthority.preview_digest`.
 
-### M-T21-2 — Attestation for experimental protocols
-T3 protocols require owner to sign an explicit "I accept this protocol with no field-level constraints" attestation transaction. Dashboard surfaces a CATASTROPHIC-LOSS-RISK banner with the specific risks.
+### M-T21-2 — Attestation for protocols outside the recognized set
+Under Option A (L-1) every protocol allowlisted via TA-01 is treated identically — there is no tier-flavored fail-closed default. Instead, the SDK/dashboard surfaces a CATASTROPHIC-LOSS-RISK banner when an owner adds a protocol that is not in Sigil's curated recognized-set (off-chain SDK metadata). Owner signs an explicit "I accept this protocol with no field-level constraints" attestation in the dashboard before the policy update is queued.
 
 ### M-T21-3 — Default-policy review in onboarding
 New vault wizard does NOT let owners click through defaults. Each policy field requires an explicit yes/no decision. Per Maestro 60%+ default-policy data, this is the single highest-leverage intervention.
 
-### M-T21-4 — Tier visibility tagging
-Dashboard tags every vault transaction with the protocol's tier (T1/T2/T3) so owners cannot accidentally interpret "Sigil supports this DeFi protocol" as "Sigil constrains it to T1 standard." First T3 drain becomes the Sigil-killer otherwise.
+### M-T21-4 — Policy-visibility tagging
+Dashboard tags every vault transaction with the protocol's recognized-set status (Recognized / Unrecognized) so owners cannot accidentally interpret "Sigil supports this DeFi protocol" as "Sigil has field-level constraints on it." First unrecognized-protocol drain becomes the Sigil-killer otherwise.
 
 **Detection signal:** Policy diff vs cohort baseline. Owners whose policy is 90%+ default are flagged for outreach.
 
@@ -471,24 +456,21 @@ See §2 for full descriptions of T-DoS-1, T-DoS-2, T-21, and T-K6-1. These are t
 
 ```mermaid
 flowchart TB
-    classDef t1 fill:#1f6f3a,stroke:#0d3d1f,color:#fff
-    classDef t2 fill:#b88a00,stroke:#6b4f00,color:#000
-    classDef t3 fill:#a02121,stroke:#5a0d0d,color:#fff
     classDef flow fill:#2d3748,stroke:#1a202c,color:#fff
     classDef risk fill:#e2e8f0,stroke:#718096,color:#1a202c,stroke-dasharray:5 5
     classDef foundation fill:#2b6cb0,stroke:#1a4480,color:#fff
 
-    subgraph FOUND["K1-K7 Foundational (cross-tier)"]
+    subgraph FOUND["K1-K7 Foundational"]
         K1[K1 Vault PDA]
         K2[K2 Session keys]
         K3[K3 freeze_vault]
         K4[K4 register/revoke/pause agent]
         K5[K5 Timelock policy mutations]
         K6[K6 Mandatory Anchor events]
-        K7[K7 NM-E primitive T1-only]
+        K7[K7 Generic byte-offset assertion mode-0]
     end
 
-    subgraph PRE["Pre-execution Constraints TA-01..TA-09"]
+    subgraph PRE["Pre-execution Constraints TA-01..TA-09 + TA-17 + TA-19"]
         TA01[TA-01 protocol allowlist]
         TA02[TA-02 wallet allowlist]
         TA03[TA-03 USDC/USDT mint pin]
@@ -498,6 +480,8 @@ flowchart TB
         TA07[TA-07 first-time friction]
         TA08[TA-08 Token-2022 ext blocklist]
         TA09[TA-09 cosign workflow]
+        TA17[TA-17 auto-revoke on N failures]
+        TA19[TA-19 policy_preview_digest]
     end
 
     subgraph BUNDLE["Atomic-Bundle Integrity TA-10..TA-11"]
@@ -505,18 +489,11 @@ flowchart TB
         TA11[TA-11 protected-writable deny N4]
     end
 
-    subgraph POST["Post-execution Invariants TA-12..TA-16"]
+    subgraph POST["Post-execution Invariants TA-12..TA-15"]
         TA12[TA-12 stablecoin floor]
         TA13[TA-13 rolling 24h tracker]
         TA14[TA-14 per-recipient daily cap]
         TA15[TA-15 audit-log circular N1 binding]
-        TA16[TA-16 T1 parser version fail-closed]
-    end
-
-    subgraph TIERS["Tier Swim Lanes"]
-        T1[T1 Verified ~10 protocols L1+L2+L3+L4 + NM-E]
-        T2[T2 Anchor-IDL ~48 protocols structural + NM-E balance, fail-closed]
-        T3[T3 No-IDL ceiling-only N1+N2+N4, fail-closed]
     end
 
     CLIENT[Client signs] --> SDK[SDK builds tx]
@@ -529,7 +506,6 @@ flowchart TB
     PRE --> VAL
     BUNDLE --> SEAL
     POST --> FIN
-    TIERS --> VAL
 
     AC1[AC-1 agent key leak] -.-> VAL
     AC2[AC-2 owner key leak] -.-> FOUND
@@ -543,22 +519,19 @@ flowchart TB
     AC10[AC-10 durable nonce replay] -.-> TA15
 
     class K1,K2,K3,K4,K5,K6,K7 foundation
-    class TA01,TA02,TA03,TA04,TA05,TA06,TA07,TA08,TA09,TA10,TA11,TA12,TA13,TA14,TA15,TA16 flow
-    class T1 t1
-    class T2 t2
-    class T3 t3
+    class TA01,TA02,TA03,TA04,TA05,TA06,TA07,TA08,TA09,TA10,TA11,TA12,TA13,TA14,TA15,TA17,TA19 flow
     class CLIENT,SDK,SEAL,VAL,DEFI,FIN flow
     class AC1,AC2,AC3,AC4,AC5,AC6,AC7,AC8,AC9,AC10 risk
 ```
 
-**Mapping to this document.** §2 enumerates the dashed AC-1..AC-10 risk-input nodes as full attacker-class characterizations. §4 maps the slate TA-01..TA-16 nodes (across the three Pre/Bundle/Post subgraphs) to those classes in a 16×10 matrix. §4.1 covers the blue K1-K7 foundational nodes separately as substrate. §5 defines what each green/yellow/red swim lane (T1/T2/T3) actually guarantees. §6 covers the workflow mitigations (M-T21-1..4) that have no on-chain node representation because T-21 cannot be mitigated by primitives. §7 cross-references the operational hazards (T-DoS-1, T-DoS-2, T-K6-1) characterized in §2.
+**Mapping to this document.** §2 enumerates the dashed AC-1..AC-10 risk-input nodes as full attacker-class characterizations. §4 maps the slate TA-01..TA-19 (TA-16 dropped) nodes across the three Pre/Bundle/Post subgraphs to those classes in a 17×10 matrix. §4.1 covers the blue K1-K7 foundational nodes separately as substrate. §5 records the deletion of the per-tier guarantee blocks under Option A (L-1, 2026-05-17) — all vaults get uniform protection. §6 covers the workflow mitigations (M-T21-1..4) that have no on-chain node representation because T-21 cannot be mitigated by primitives. §7 cross-references the operational hazards (T-DoS-1, T-DoS-2, T-K6-1) characterized in §2.
 
 ---
 
 ## 9. Cross-doc Index
 
 - **Tier A primitives** (definitions, PDA seeds, semantics): see [INTERFACES_V2.md](./INTERFACES_V2.md).
-- **Architecture diagram** (canonical Mermaid): see [tier-model.mmd](./tier-model.mmd) + embedded above in §8.
+- **Architecture diagram** (canonical Mermaid): embedded above in §8. The legacy `tier-model.mmd` file was deleted in Phase 1 Option A demolition (2026-05-17).
 - **Architecture pivot rationale + Council outputs**: see [REVAMP_PLAN.md](./REVAMP_PLAN.md) §1 + §11.
 - **Mainnet gates** (audit, multisig, bounty, IR, formal verification, funding): see [ACCEPTANCE_V2.md](./ACCEPTANCE_V2.md).
 - **Stage 1 demolition log**: see [STAGE_1_REMOVED.md](./STAGE_1_REMOVED.md) (if Stage 1 work has re-landed).

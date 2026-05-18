@@ -4895,256 +4895,246 @@ export type Sigil = {
     },
     {
       "code": 6030,
-      "name": "swapSlippageExceeded",
-      "msg": "Swap slippage exceeds policy max_slippage_bps or quoted output is zero"
-    },
-    {
-      "code": 6031,
-      "name": "invalidJupiterInstruction",
-      "msg": "Cannot parse Jupiter swap instruction data"
-    },
-    {
-      "code": 6032,
       "name": "unauthorizedTokenTransfer",
       "msg": "Top-level SPL Token transfer not allowed between validate and finalize"
     },
     {
-      "code": 6033,
+      "code": 6031,
       "name": "slippageBpsTooHigh",
       "msg": "Slippage BPS exceeds maximum (5000 = 50%)"
     },
     {
-      "code": 6034,
+      "code": 6032,
       "name": "protocolMismatch",
       "msg": "DeFi instruction program does not match declared target_protocol"
     },
     {
-      "code": 6035,
+      "code": 6033,
       "name": "tooManyDeFiInstructions",
       "msg": "Spending allows at most one DeFi instruction"
     },
     {
-      "code": 6036,
+      "code": 6034,
       "name": "maxAgentsReached",
       "msg": "Maximum agents per vault reached (limit: 10)"
     },
     {
-      "code": 6037,
+      "code": 6035,
       "name": "insufficientPermissions",
       "msg": "Agent lacks permission for this action type"
     },
     {
-      "code": 6038,
+      "code": 6036,
       "name": "invalidPermissions",
       "msg": "Permission bitmask contains invalid bits"
     },
     {
-      "code": 6039,
+      "code": 6037,
       "name": "invalidConstraintConfig",
       "msg": "Invalid constraint configuration: bounds exceeded"
     },
     {
-      "code": 6040,
+      "code": 6038,
       "name": "constraintViolated",
       "msg": "Instruction constraint violated"
     },
     {
-      "code": 6041,
+      "code": 6039,
       "name": "invalidConstraintsPda",
       "msg": "Invalid constraints PDA: wrong owner or vault"
     },
     {
-      "code": 6042,
+      "code": 6040,
       "name": "invalidPendingConstraintsPda",
       "msg": "Invalid pending constraints PDA: wrong owner or vault"
     },
     {
-      "code": 6043,
+      "code": 6041,
       "name": "agentSpendLimitExceeded",
       "msg": "Agent rolling 24h spend exceeds per-agent spending limit"
     },
     {
-      "code": 6044,
+      "code": 6042,
       "name": "overlaySlotExhausted",
       "msg": "Per-agent overlay is full; cannot register agent with spending limit"
     },
     {
-      "code": 6045,
+      "code": 6043,
       "name": "agentSlotNotFound",
       "msg": "Agent has per-agent spending limit but no overlay tracking slot"
     },
     {
-      "code": 6046,
+      "code": 6044,
       "name": "unauthorizedTokenApproval",
       "msg": "Unauthorized SPL Token Approve between validate and finalize"
     },
     {
-      "code": 6047,
+      "code": 6045,
       "name": "invalidSessionExpiry",
       "msg": "Session expiry slots out of range (10-450)"
     },
     {
-      "code": 6048,
+      "code": 6046,
       "name": "unconstrainedProgramBlocked",
       "msg": "Program has no matching constraint entry — every instruction must match one"
     },
     {
-      "code": 6049,
+      "code": 6047,
       "name": "protocolCapExceeded",
       "msg": "Per-protocol rolling 24h spending cap would be exceeded"
     },
     {
-      "code": 6050,
+      "code": 6048,
       "name": "protocolCapsMismatch",
       "msg": "protocol_caps length must match protocols length when has_protocol_caps is true"
     },
     {
-      "code": 6051,
+      "code": 6049,
       "name": "constraintsNotClosed",
       "msg": "Instruction constraints must be closed before closing vault"
     },
     {
-      "code": 6052,
+      "code": 6050,
       "name": "pendingPolicyExists",
       "msg": "Pending policy update must be applied or cancelled before closing vault"
     },
     {
-      "code": 6053,
+      "code": 6051,
       "name": "agentPaused",
       "msg": "Agent is paused and cannot execute actions"
     },
     {
-      "code": 6054,
+      "code": 6052,
       "name": "agentAlreadyPaused",
       "msg": "Agent is already paused"
     },
     {
-      "code": 6055,
+      "code": 6053,
       "name": "agentNotPaused",
       "msg": "Agent is not paused"
     },
     {
-      "code": 6056,
+      "code": 6054,
       "name": "unauthorizedPostFinalizeInstruction",
       "msg": "Instructions after finalize_session must be ComputeBudget or SystemProgram only"
     },
     {
-      "code": 6057,
+      "code": 6055,
       "name": "unexpectedBalanceDecrease",
       "msg": "Vault balance decreased more than delegated amount — potential CPI attack"
     },
     {
-      "code": 6058,
+      "code": 6056,
       "name": "timelockTooShort",
       "msg": "Timelock duration below minimum (1800 seconds / 30 minutes)"
     },
     {
-      "code": 6059,
+      "code": 6057,
       "name": "policyVersionMismatch",
       "msg": "Policy version mismatch — policy changed since agent's last RPC read"
     },
     {
-      "code": 6060,
+      "code": 6058,
       "name": "activeSessionsExist",
       "msg": "Cannot close vault with active sessions (finalize pending sessions first)"
     },
     {
-      "code": 6061,
+      "code": 6059,
       "name": "postAssertionFailed",
       "msg": "Post-execution assertion failed: account state did not satisfy constraint"
     },
     {
-      "code": 6062,
+      "code": 6060,
       "name": "invalidPostAssertionIndex",
       "msg": "Post-assertion constraint references invalid instruction index"
     },
     {
-      "code": 6063,
+      "code": 6061,
       "name": "unauthorizedPreValidateInstruction",
       "msg": "Non-infrastructure instruction detected before validate_and_authorize"
     },
     {
-      "code": 6064,
+      "code": 6062,
       "name": "snapshotNotCaptured",
       "msg": "Delta assertion snapshot was not captured in validate_and_authorize"
     },
     {
-      "code": 6065,
+      "code": 6063,
       "name": "invalidConstraintOperator",
       "msg": "Constraint operator value is not a valid ConstraintOperator discriminant"
     },
     {
-      "code": 6066,
+      "code": 6064,
       "name": "constraintsVaultMismatch",
       "msg": "Zero-copy constraints account has wrong vault"
     },
     {
-      "code": 6067,
+      "code": 6065,
       "name": "blockedSplOpcode",
       "msg": "SPL opcode is blocked at runtime and cannot be used in constraints"
     },
     {
-      "code": 6068,
+      "code": 6066,
       "name": "queuedUpdateExpired",
       "msg": "Queued update is too old (>MAX_APPLY_AGE_SLOTS) — re-queue to apply. Defends against durable-nonce pre-signing."
     },
     {
-      "code": 6069,
+      "code": 6067,
       "name": "accountWritabilityMismatch",
       "msg": "Account writability flag does not match constraint requirement"
     },
     {
-      "code": 6070,
+      "code": 6068,
       "name": "sysvarScanBoundExceeded",
       "msg": "Sysvar instruction scan exceeded the per-tx safety bound"
     },
     {
-      "code": 6071,
+      "code": 6069,
       "name": "asyncFulfillmentNotPermitted",
       "msg": "Async-fulfillment program is not permitted in V1 (Jupiter Perps, Drift, Drift JIT). Spending cannot be measured because keeper submits the actual transfer in a separate transaction after finalize_session returns."
     },
     {
-      "code": 6072,
+      "code": 6070,
       "name": "constraintsAlreadyPopulated",
       "msg": "Cannot clean an active constraints PDA; use queue+apply_close_constraints"
     },
     {
-      "code": 6073,
+      "code": 6071,
       "name": "orphanPdaWrongOwner",
       "msg": "PDA at constraints seeds is not program-owned"
     },
     {
-      "code": 6074,
+      "code": 6072,
       "name": "orphanPdaPopulated",
       "msg": "PDA is fully populated; not an orphan"
     },
     {
-      "code": 6075,
+      "code": 6073,
       "name": "confidentialTransferBlocked",
       "msg": "Token-2022 ConfidentialTransfer not permitted between validate and finalize"
     },
     {
-      "code": 6076,
+      "code": 6074,
       "name": "permanentDelegateBlocked",
       "msg": "Token-2022 PermanentDelegate not permitted between validate and finalize"
     },
     {
-      "code": 6077,
+      "code": 6075,
       "name": "transferHookBlocked",
       "msg": "Token-2022 TransferHook not permitted between validate and finalize"
     },
     {
-      "code": 6078,
+      "code": 6076,
       "name": "lamportDrainBlocked",
       "msg": "Token-2022 destructive-balance ix (opcodes 38/45/46) not permitted between validate and finalize"
     },
     {
-      "code": 6079,
+      "code": 6077,
       "name": "batchInstructionBlocked",
       "msg": "Token-2022 Batch instruction (opcode 255) is blocked outright — wraps inner instructions and bypasses byte-0 blocklist"
     },
     {
-      "code": 6080,
+      "code": 6078,
       "name": "invalidDestinationMode",
       "msg": "Invalid destination mode (must be 0 = Restricted or 1 = OpenWithCap)"
     }
@@ -6905,9 +6895,13 @@ export type Sigil = {
           {
             "name": "maxSlippageBps",
             "docs": [
-              "Maximum slippage tolerance for Jupiter swaps in basis points.",
-              "0 = reject all swaps (vault owner must explicitly configure).",
-              "Enforced on-chain via instruction introspection of Jupiter data."
+              "Maximum slippage tolerance (basis points) — generic config primitive",
+              "preserved per D-5 across Phase 1 Option A demolition. Per L-1 there is",
+              "no on-chain Jupiter slippage verifier in V1; this field is consumed by",
+              "off-chain SDK simulators and (Phase 6) generic post-execution assertions",
+              "(R-1 mint-delta cap). Validated at config time via",
+              "`max_slippage_bps <= MAX_SLIPPAGE_BPS` (= 5000 BPS = 50% ceiling).",
+              "0 = no slippage protection configured."
             ],
             "type": "u16"
           },
@@ -7041,7 +7035,10 @@ export type Sigil = {
     {
       "name": "postAssertionEntry",
       "docs": [
-        "Borsh-serializable assertion entry (instruction parameter form)."
+        "Borsh-serializable assertion entry (instruction parameter form).",
+        "",
+        "Phase B3 fields (cross_field_offset_b, cross_field_multiplier_bps,",
+        "cross_field_flags) DELETED in Phase 1 Option A demolition."
       ],
       "type": {
         "kind": "struct",
@@ -7069,27 +7066,6 @@ export type Sigil = {
           {
             "name": "assertionMode",
             "type": "u8"
-          },
-          {
-            "name": "crossFieldOffsetB",
-            "docs": [
-              "Phase B3: second field offset for CrossFieldLte (0 if unused)"
-            ],
-            "type": "u16"
-          },
-          {
-            "name": "crossFieldMultiplierBps",
-            "docs": [
-              "Phase B3: multiplier in BPS for CrossFieldLte (0 if unused)"
-            ],
-            "type": "u32"
-          },
-          {
-            "name": "crossFieldFlags",
-            "docs": [
-              "Phase B3: flags byte — bit 0 = enable CrossFieldLte (0 if unused)"
-            ],
-            "type": "u8"
           }
         ]
       }
@@ -7105,7 +7081,12 @@ export type Sigil = {
         "vault owner configures byte offsets from protocol documentation.",
         "",
         "Phase B1: absolute value assertions (check field ≤ max, field ≥ min).",
-        "Phase B3 will add CrossFieldLte for leverage ratio enforcement."
+        "Phase B2: delta-mode assertions (MaxDecrease, MaxIncrease, NoChange).",
+        "",
+        "Phase B3 CrossFieldLte fields (cross_field_offset_b, cross_field_multiplier_bps,",
+        "cross_field_flags) DELETED in Phase 1 Option A demolition (L-1). The two-field",
+        "ratio check (field_A × 10000 ≤ multiplier_bps × field_B) was Jupiter-Perps-flavored",
+        "leverage-cap logic that doesn't generalize to a per-vault generic primitive."
       ],
       "serialization": "bytemuck",
       "repr": {
@@ -7175,41 +7156,13 @@ export type Sigil = {
             "type": "u8"
           },
           {
-            "name": "crossFieldOffsetB",
+            "name": "padding",
             "docs": [
-              "Phase B3: Second field offset for CrossFieldLte (little-endian u16).",
-              "When cross_field_flags & 0x01: read field_B at offset_b (value_len bytes) from same target.",
-              "Check: field_A × 10000 ≤ multiplier_bps × field_B (using u128 arithmetic).",
-              "Stored as [u8; 2] for zero-copy Pod alignment compatibility."
-            ],
-            "type": {
-              "array": [
-                "u8",
-                2
-              ]
-            }
-          },
-          {
-            "name": "crossFieldMultiplierBps",
-            "docs": [
-              "Phase B3: Multiplier in basis points for CrossFieldLte (little-endian u32).",
-              "10000 = 1.0x, 100000 = 10x, 5000000 = 500x.",
-              "Must be > 0 when cross_field_flags is enabled.",
-              "Stored as [u8; 4] for zero-copy Pod alignment compatibility."
-            ],
-            "type": {
-              "array": [
-                "u8",
-                4
-              ]
-            }
-          },
-          {
-            "name": "crossFieldFlags",
-            "docs": [
-              "Phase B3: Flags byte. Bit 0 = enable CrossFieldLte.",
-              "When enabled, assertion_mode MUST be 0 (Absolute).",
-              "Unknown bits (1-7) must be 0."
+              "Explicit padding to make total entry size even (Pod requires no implicit",
+              "padding; struct alignment is 2 because of `offset: u16`). Without this",
+              "byte, derive(Pod) panics with \"type with padding\" since 69 is odd.",
+              "Added in Phase 1 Option A demolition after Phase B3 CrossFieldLte",
+              "fields (7 bytes) were deleted."
             ],
             "type": "u8"
           }

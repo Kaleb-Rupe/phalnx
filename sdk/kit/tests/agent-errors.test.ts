@@ -17,15 +17,15 @@ describe("agent-errors", () => {
   // ─── On-chain error map completeness ──────────────────────────────────────
 
   describe("ON_CHAIN_ERROR_MAP completeness", () => {
-    it("maps all 81 error codes (6000-6080)", () => {
+    it("maps all 79 error codes (6000-6078) post-Phase-1", () => {
       const codes = getAllOnChainErrorCodes();
-      expect(codes).to.have.lengthOf(81);
+      expect(codes).to.have.lengthOf(79);
       expect(codes[0]).to.equal(6000);
-      expect(codes[codes.length - 1]).to.equal(6080);
+      expect(codes[codes.length - 1]).to.equal(6078);
     });
 
-    it("every code from 6000-6080 is present with no gaps", () => {
-      for (let code = 6000; code <= 6080; code++) {
+    it("every code from 6000-6078 is present with no gaps post-Phase-1", () => {
+      for (let code = 6000; code <= 6078; code++) {
         const entry = ON_CHAIN_ERROR_MAP[code];
         expect(entry, `Missing error code ${code}`).to.exist;
         expect(entry.name).to.be.a("string").and.not.be.empty;
@@ -84,11 +84,13 @@ describe("agent-errors", () => {
       expect(err!.context.error_name).to.equal("VaultNotActive");
     });
 
-    it("parses numeric code 6056 (UnauthorizedPostFinalizeInstruction)", () => {
-      // V2 demolition: escrow codes removed shifted post-finalize from 6063→6056.
-      const err = parseOnChainErrorCode(6056);
+    it("parses numeric code 6054 (UnauthorizedPostFinalizeInstruction post-Phase-1)", () => {
+      // V2 demolition (Phase 0): escrow codes removed shifted post-finalize from
+      // 6063→6056. Phase 1 Option A then deleted 2 Jupiter variants at 6030/6031,
+      // shifting post-finalize further: 6056 → 6054.
+      const err = parseOnChainErrorCode(6054);
       expect(err).to.not.be.null;
-      expect(err!.code).to.equal("6056");
+      expect(err!.code).to.equal("6054");
       expect(err!.category).to.equal("POLICY_VIOLATION");
       expect(err!.context.error_name).to.equal(
         "UnauthorizedPostFinalizeInstruction",
@@ -102,18 +104,20 @@ describe("agent-errors", () => {
       expect(err!.context.error_name).to.equal("VaultNotActive");
     });
 
-    it("parses hex string 0x17A1 (= 6049 ProtocolCapExceeded)", () => {
-      // V2 demolition: escrow codes removed shifted ProtocolCapExceeded from 6055→6049.
-      const err = parseOnChainErrorCode("0x17A1");
+    it("parses hex string 0x179F (= 6047 ProtocolCapExceeded post-Phase-1)", () => {
+      // V2 demolition (Phase 0): shifted ProtocolCapExceeded from 6055 → 6049.
+      // Phase 1 Option A then shifted further to 6047 (= 0x179F).
+      const err = parseOnChainErrorCode("0x179F");
       expect(err).to.not.be.null;
-      expect(err!.code).to.equal("6049");
+      expect(err!.code).to.equal("6047");
       expect(err!.context.error_name).to.equal("ProtocolCapExceeded");
     });
 
-    it("parses decimal string '6044'", () => {
-      const err = parseOnChainErrorCode("6044");
+    it("parses decimal string '6042' post-Phase-1", () => {
+      // Was 6044 pre-Phase-1; shifted to 6042 by Phase 1 Option A demolition.
+      const err = parseOnChainErrorCode("6042");
       expect(err).to.not.be.null;
-      expect(err!.code).to.equal("6044");
+      expect(err!.code).to.equal("6042");
       expect(err!.category).to.equal("INPUT_VALIDATION");
     });
 

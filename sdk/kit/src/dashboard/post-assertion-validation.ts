@@ -40,11 +40,7 @@ const MAX_OPERATOR_VALUE = 6;
 /** AssertionMode IDs (0..=3) — see `programs/sigil/src/state/post_assertions.rs AssertionMode`. */
 const MAX_ASSERTION_MODE_VALUE = 3;
 
-/** CrossFieldLte enable bit. Every other bit is reserved; validator rejects unknown flags. */
-const CROSS_FIELD_LTE_FLAG = 0x01;
-/** CrossField payloads are parsed as u64 on-chain; 8 is the max byte length. */
-const CROSS_FIELD_MAX_VALUE_LEN = 8;
-/** Delta modes (MaxDecrease=1, MaxIncrease=2, NoChange=3) also parse as u64. */
+/** Delta modes (MaxDecrease=1, MaxIncrease=2, NoChange=3) parse the snapshot as u64. */
 const DELTA_MAX_VALUE_LEN = 8;
 
 // ─── Public API ───────────────────────────────────────────────────────────
@@ -250,27 +246,7 @@ function validateSingleEntry(entry: PostAssertionEntry, index: number): void {
     "assertion_mode_out_of_range",
     index,
   );
-  requireUintInRange(
-    entry.crossFieldOffsetB,
-    "cross_field_offset_b",
-    0xffff,
-    "cross_field_offset_b_out_of_range",
-    index,
-  );
-  requireUintInRange(
-    entry.crossFieldMultiplierBps,
-    "cross_field_multiplier_bps",
-    0xffffffff,
-    "cross_field_multiplier_bps_out_of_range",
-    index,
-  );
-  requireUintInRange(
-    entry.crossFieldFlags,
-    "cross_field_flags",
-    0xff,
-    "cross_field_flags_out_of_range",
-    index,
-  );
+  // CrossFieldLte field range checks DELETED in Phase 1 Option A demolition.
 
   // value_len must additionally be >= 1 (the shared range check allows 0;
   // on-chain requires > 0 because a zero-length value is a semantic no-op).
@@ -306,66 +282,9 @@ function validateSingleEntry(entry: PostAssertionEntry, index: number): void {
     }
   }
 
-  // CrossFieldLte enable bit. Since we already asserted integrality of
-  // crossFieldFlags above, the bitwise AND here is safe — no silent Int32
-  // truncation of a fractional input.
-  const crossFieldEnabled =
-    (entry.crossFieldFlags & CROSS_FIELD_LTE_FLAG) !== 0;
-
-  if (crossFieldEnabled) {
-    // CrossFieldLte parses both field_A and field_B as u64 via le_bytes[0..8].
-    // Payload must fit. Upstream attacker path: value_len=16 with a crafted
-    // field would bypass the ratio check by silently truncating.
-    if (entry.valueLen > CROSS_FIELD_MAX_VALUE_LEN) {
-      throw new PostAssertionValidationError(
-        "cross_field_value_len_too_large",
-        index,
-        `PostAssertion[${index}]: CrossFieldLte requires value_len <= ${CROSS_FIELD_MAX_VALUE_LEN}, got ${entry.valueLen}`,
-      );
-    }
-
-    // CrossFieldLte is a ratio check and only composes with Absolute mode.
-    // Combining it with delta modes would read the snapshot as field_A,
-    // which is semantically nonsensical — the on-chain program hard-rejects.
-    if (entry.assertionMode !== 0) {
-      throw new PostAssertionValidationError(
-        "cross_field_requires_absolute_mode",
-        index,
-        `PostAssertion[${index}]: CrossFieldLte requires assertion_mode=0 (Absolute), got ${entry.assertionMode}`,
-      );
-    }
-
-    // multiplier_bps > 0. A zero multiplier collapses the ratio check to
-    // `field_A * 10000 <= 0 * field_B` (always false unless field_A == 0),
-    // which is either a no-op or a trap. Reject at authoring time.
-    if (entry.crossFieldMultiplierBps === 0) {
-      throw new PostAssertionValidationError(
-        "cross_field_multiplier_must_be_positive",
-        index,
-        `PostAssertion[${index}]: CrossFieldLte multiplier_bps must be > 0`,
-      );
-    }
-
-    // Only bit 0 is defined. Any other bit set indicates future-flag drift
-    // or misuse; the on-chain program rejects via `flags & 0xFE == 0`.
-    if ((entry.crossFieldFlags & 0xfe) !== 0) {
-      throw new PostAssertionValidationError(
-        "cross_field_unknown_flags",
-        index,
-        `PostAssertion[${index}]: cross_field_flags has reserved bits set: 0x${entry.crossFieldFlags.toString(16).padStart(2, "0")} (only bit 0 is defined)`,
-      );
-    }
-  } else {
-    // CrossFieldLte disabled → both auxiliary fields MUST be zero.
-    // A nonzero value here is a callsite bug (forgot to clear fields after
-    // switching from CrossFieldLte to plain assertion) and the program
-    // rejects via matching check.
-    if (entry.crossFieldOffsetB !== 0 || entry.crossFieldMultiplierBps !== 0) {
-      throw new PostAssertionValidationError(
-        "cross_field_disabled_fields_must_be_zero",
-        index,
-        `PostAssertion[${index}]: CrossFieldLte disabled but cross_field_offset_b=${entry.crossFieldOffsetB}, cross_field_multiplier_bps=${entry.crossFieldMultiplierBps} (both must be 0)`,
-      );
-    }
-  }
+  // CrossFieldLte validation block DELETED in Phase 1 Option A demolition.
+  // The B3 fields (crossFieldOffsetB, crossFieldMultiplierBps, crossFieldFlags)
+  // no longer exist on PostAssertionEntry — Codama-regenerated type omits them
+  // after Rust struct deletion. The on-chain validate_entries() check is
+  // similarly stripped of B3 logic.
 }

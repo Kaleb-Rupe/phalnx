@@ -194,5 +194,5 @@ export async function fetchAllMaybePostExecutionAssertions(
 }
 
 export function getPostExecutionAssertionsSize(): number {
-  return 352;
+  return 328;
 }

@@ -223,10 +223,12 @@ export function isAccountNotFoundError(
  * specific "the vault's rules prevented this" message.
  */
 const ANCHOR_ERROR_MIN = 6000;
-/** Upper bound of the Anchor on-chain error range. V2 ships 81 codes
- *  (6000-6080); the highest variant is `InvalidDestinationMode = 6080`.
- *  See `sdk/kit/src/generated/errors/sigil.ts` for the canonical list. */
-const ANCHOR_ERROR_MAX = 6080;
+/** Upper bound of the Anchor on-chain error range. Post-Phase-1 (Option A
+ *  demolition 2026-05-17): V1 ships 79 codes (6000-6078); the highest
+ *  variant is `InvalidDestinationMode = 6078`. Pre-Phase-1 had 81 codes at
+ *  6000-6080. See `sdk/kit/src/generated/errors/sigil.ts` for the canonical
+ *  list. */
+const ANCHOR_ERROR_MAX = 6078;
 
 /**
  * Lower bound of the SDK / dashboard logic error range (FE↔BE §6.3).
@@ -271,8 +273,9 @@ export type DxErrorCategory = "user" | "network" | "program" | "unknown";
  * Friendly category for a `DxError` (FE↔BE contract §6.3 helper).
  *
  * Returns one of:
- *   - `"program"` — Anchor on-chain error (6000-6080). Tx reached the
- *     program and was rejected by program logic.
+ *   - `"program"` — Anchor on-chain error (6000-6078 post-Phase-1; was
+ *     6000-6080 pre-Phase-1). Tx reached the program and was rejected by
+ *     program logic.
  *   - `"user"` — SDK / dashboard logic error (7000-7099). Client-side
  *     validation failure the user can fix.
  *   - `"network"` — RPC / network error (7100-7199). Transport layer;

@@ -26,21 +26,21 @@
     },
     {
       "name": "Security exploit scenarios",
-      "count": 177,
+      "count": 168,
       "onChain": true,
       "claudePattern": "tests/security-exploits.ts` (ts-mocha + LiteSVM, %d tests)"
     },
     {
       "name": "Instruction constraints (generic enforcement)",
-      "count": 70,
+      "count": 69,
       "onChain": true,
       "claudePattern": "tests/instruction-constraints.ts` (ts-mocha + LiteSVM, %d tests)"
     },
     {
       "name": "Escrow integration (deposit/settle/refund)",
-      "count": 15,
+      "count": 0,
       "onChain": true,
-      "claudePattern": "tests/escrow-integration.ts` (ts-mocha + LiteSVM, %d tests)"
+      "claudePattern": "tests/escrow-integration.ts` (removed; escrow primitive deleted in v2 revamp Stage 1)"
     },
     {
       "name": "TOCTOU security (policy version + timelock)",
@@ -55,10 +55,10 @@
       "claudePattern": "tests/analytics-counters.ts` (ts-mocha + LiteSVM, %d tests)"
     },
     {
-      "name": "Post-execution assertions E2E (CrossFieldLte golden/evil + fail-closed)",
-      "count": 9,
+      "name": "Post-execution assertions E2E (DELETED in Phase 1 Option A demolition — CrossFieldLte primitive removed)",
+      "count": 0,
       "onChain": true,
-      "claudePattern": "tests/post-assertion-integration.ts` (ts-mocha + LiteSVM, %d tests)"
+      "claudePattern": "DELETED post-Phase-1: tests/post-assertion-integration.ts removed wholesale (was 9 tests for CrossFieldLte leverage cap)"
     },
     {
       "name": "Devnet integration tests (real network)",
@@ -67,7 +67,7 @@
     },
     {
       "name": "Surfpool integration tests (local Surfnet)",
-      "count": 59,
+      "count": 52,
       "surfpool": true,
       "claudePattern": "tests/surfpool-integration.ts` (ts-mocha + Surfnet, %d tests)"
     },
@@ -85,9 +85,9 @@
     },
     {
       "name": "Kit-native SDK (`@usesigil/kit` — includes merged core + dashboard)",
-      "count": 1784,
+      "count": 1654,
       "ciStepName": "Kit SDK tests",
-      "claudePattern": "sdk/kit/tests/` (mocha + tsx, %d tests — includes core + dashboard + errors + post-assertions + protocol-registry + protocol-tier + agent-bootstrap + preview-create-vault)"
+      "claudePattern": "sdk/kit/tests/` (mocha + tsx, %d tests — core + dashboard + errors + agent-bootstrap + preview-create-vault. Post-Phase-1: post-assertions/* + dashboard/mutations-post-assertions + dashboard/post-assertion-validation suites DELETED with the CrossFieldLte primitive)"
     },
     {
       "name": "Kit SDK devnet tests (`@usesigil/kit` devnet)",
@@ -103,13 +103,13 @@
     },
     {
       "name": "Rust unit tests (cargo test)",
-      "count": 138,
+      "count": 110,
       "onChain": true,
-      "claudePattern": "cargo test --manifest-path programs/sigil/Cargo.toml` (%d tests)"
+      "claudePattern": "cargo test --manifest-path programs/sigil/Cargo.toml` (%d tests — post-Phase-1: -22 from deleted Jupiter slippage verifier inline unit tests, -7 from deleted Phase B3 CrossFieldLte tests)"
     },
     {
       "name": "Devnet extended scenarios (flash-trade + stress)",
-      "count": 45,
+      "count": 43,
       "devnet": true,
       "claudePattern": "tests/devnet/` (flash-trade-devnet + stress-test, %d tests)"
     },

@@ -239,34 +239,36 @@ AC-11 (oracle staleness) is explicitly out-of-scope for V1. Folded into N1 TA-15
 **Current state (post-Stage-1, V1 baseline):**
 - **6000-6080:** 81 V1 variants (verified line-by-line against `programs/sigil/src/errors.rs`).
 
-**Phase 1 deletions:** 3 Jupiter-specific variants (codes 6030 `SwapSlippageExceeded`, 6031 `InvalidJupiterInstruction`, 6033 `SlippageBpsTooHigh`) are removed. Phase 1 implementation chooses between (a) compaction (renumbers later codes) and (b) deprecation placeholders (preserves codes). The choice is documented at Phase 1 implementation time and reflected in the canonical doc.
+**Phase 1 deletions (LANDED 2026-05-17):** 2 Jupiter-runtime variants deleted: 6030 `SwapSlippageExceeded`, 6031 `InvalidJupiterInstruction`. The 3rd variant from the prompt's deletion list — `SlippageBpsTooHigh` (was 6033) — was **kept** because it is the only error variant used by the surviving `max_slippage_bps <= MAX_SLIPPAGE_BPS` config-bound check in `initialize_vault.rs:88` and `queue_policy_update.rs:99`, which D-5 explicitly preserves as a generic slippage primitive (not Jupiter-specific). Deleting it would have required either deleting the D-5-preserved validation or redirecting to a misleading existing error. This deviation is recorded in the Phase 1 commit message and in the canonical [ERROR_CODE_ALLOCATION_V2.md](./ERROR_CODE_ALLOCATION_V2.md).
 
-**V2 reservation table (6078-6102 — assumes the *compaction* strategy per [ERROR_CODE_ALLOCATION_V2.md §3](./ERROR_CODE_ALLOCATION_V2.md). If Phase 1 chooses deprecation placeholders instead, this entire range shifts to 6081-6105 per §2 of the canonical doc):**
-- 6078 `ErrInvalidCapability` (TA-04, Phase 2)
-- 6079 `ErrObserveOnlyModeBlocksExecute` (TA-04, Phase 2)
-- 6080 `ErrPolicyPreviewMismatch` (TA-19, Phase 2)
-- 6081 `ErrMintNotPinned` (TA-03, Phase 3)
-- 6082 `ErrOutsideOperatingHours` (TA-05, Phase 3)
-- 6083 `ErrCooldownActive` (TA-06, Phase 3)
-- 6084 `ErrGraylistFriction` (TA-07, Phase 3)
-- 6085 `ErrGraylistFull` (TA-07, Phase 3)
-- 6086 `ErrToken2022ExtensionForbidden` (TA-08, Phase 3)
-- 6087 `ErrCosignRequired` (TA-09, Phase 3)
-- 6088 `ErrAutoRevoked` (TA-17, Phase 3)
-- 6089 `ErrSandwichIntegrity` (TA-10, Phase 4)
-- 6090 `ErrProtectedWritable` (TA-11, Phase 4)
-- 6091 `ErrSessionNonceMismatch` (AC-10, Phase 4)
-- 6092 `ErrStableFloorViolation` (TA-12, Phase 5)
-- 6093 `ErrDailyCapExceeded` (TA-13, Phase 5)
-- 6094 `ErrRecipientCapExceeded` (TA-14, Phase 5)
-- 6095 `ErrMintDeltaCapExceeded` (R-1, Phase 6)
-- 6096 `ErrAtaAuthorityChanged` (R-2, Phase 6)
-- 6097 `ErrOutputBelowFloor` (R-3, Phase 6)
-- 6098 `ErrDeclarationInconsistent` (R-4, Phase 6)
-- 6099 `ErrPendingOwnershipExists` (C26, Phase 8)
-- 6100 `ErrPendingOwnershipNotReady` (C26, Phase 8)
-- 6101 `ErrInvalidFreezeReason` (C27, Phase 8)
-- 6102 `ErrReactivateCooldownActive` (C28, Phase 8)
+**Post-Phase-1 V1 count:** 79 variants at codes 6000-6078 (NOT 78/6000-6077 as the prompt assumed). Compaction strategy chosen; all codes from 6030 onward shifted down by 2.
+
+**V2 reservation table starts at 6079** (compaction; the first new V2 variant `ErrInvalidCapability` lands at 6079, not 6078):
+- 6079 `ErrInvalidCapability` (TA-04, Phase 2)
+- 6080 `ErrObserveOnlyModeBlocksExecute` (TA-04, Phase 2)
+- 6081 `ErrPolicyPreviewMismatch` (TA-19, Phase 2)
+- 6082 `ErrMintNotPinned` (TA-03, Phase 3)
+- 6083 `ErrOutsideOperatingHours` (TA-05, Phase 3)
+- 6084 `ErrCooldownActive` (TA-06, Phase 3)
+- 6085 `ErrGraylistFriction` (TA-07, Phase 3)
+- 6086 `ErrGraylistFull` (TA-07, Phase 3)
+- 6087 `ErrToken2022ExtensionForbidden` (TA-08, Phase 3)
+- 6088 `ErrCosignRequired` (TA-09, Phase 3)
+- 6089 `ErrAutoRevoked` (TA-17, Phase 3)
+- 6090 `ErrSandwichIntegrity` (TA-10, Phase 4)
+- 6091 `ErrProtectedWritable` (TA-11, Phase 4)
+- 6092 `ErrSessionNonceMismatch` (AC-10, Phase 4)
+- 6093 `ErrStableFloorViolation` (TA-12, Phase 5)
+- 6094 `ErrDailyCapExceeded` (TA-13, Phase 5)
+- 6095 `ErrRecipientCapExceeded` (TA-14, Phase 5)
+- 6096 `ErrMintDeltaCapExceeded` (R-1, Phase 6)
+- 6097 `ErrAtaAuthorityChanged` (R-2, Phase 6)
+- 6098 `ErrOutputBelowFloor` (R-3, Phase 6)
+- 6099 `ErrDeclarationInconsistent` (R-4, Phase 6)
+- 6100 `ErrPendingOwnershipExists` (C26, Phase 8)
+- 6101 `ErrPendingOwnershipNotReady` (C26, Phase 8)
+- 6102 `ErrInvalidFreezeReason` (C27, Phase 8)
+- 6103 `ErrReactivateCooldownActive` (C28, Phase 8)
 
 **Notes:**
 - TA-16 is DELETED per L-1; `ErrParserVersionMismatch` is NOT allocated.

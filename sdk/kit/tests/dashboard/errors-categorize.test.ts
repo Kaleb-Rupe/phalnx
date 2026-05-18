@@ -32,26 +32,28 @@ describe("isOnChainReverted — exact range boundaries", () => {
     expect(isOnChainReverted(6000)).to.equal(true);
   });
 
-  it("true at 6080 (upper bound — V2 max code, InvalidDestinationMode)", () => {
-    expect(isOnChainReverted(6080)).to.equal(true);
+  it("true at 6078 (upper bound — post-Phase-1 V1 max code, InvalidDestinationMode)", () => {
+    expect(isOnChainReverted(6078)).to.equal(true);
   });
 
   it("false at 5999 (one below)", () => {
     expect(isOnChainReverted(5999)).to.equal(false);
   });
 
-  it("false at 6081 (one above the V2 ceiling)", () => {
-    expect(isOnChainReverted(6081)).to.equal(false);
+  it("false at 6079 (one above the post-Phase-1 V1 ceiling)", () => {
+    expect(isOnChainReverted(6079)).to.equal(false);
   });
 
   it("CRIT-3 invariant: imported SIGIL_ERROR__INVALID_DESTINATION_MODE constant matches the upper bound", async () => {
     // Asserts that the highest generated SDK error code IS classified as
     // on-chain. If the program grows a new error variant and the SDK is
     // regenerated without bumping ANCHOR_ERROR_MAX, this test fails.
+    // Post-Phase-1 Option A: was 6080, now 6078 (shifted by -2 after Jupiter
+    // variants at 6030/6031 deleted).
     const { SIGIL_ERROR__INVALID_DESTINATION_MODE } = await import(
       "../../src/generated/errors/sigil.js"
     );
-    expect(SIGIL_ERROR__INVALID_DESTINATION_MODE).to.equal(6080);
+    expect(SIGIL_ERROR__INVALID_DESTINATION_MODE).to.equal(6078);
     expect(isOnChainReverted(SIGIL_ERROR__INVALID_DESTINATION_MODE)).to.equal(
       true,
     );
@@ -83,10 +85,10 @@ describe("categorizeDxError — exact range boundaries", () => {
     category: DxErrorCategory;
     description: string;
   }> = [
-    // Program range (Anchor 6000-6080)
+    // Program range (Anchor 6000-6078 post-Phase-1 Option A; was 6000-6080)
     { code: 6000, category: "program", description: "program lower bound" },
-    { code: 6080, category: "program", description: "program upper bound" },
-    { code: 6030, category: "program", description: "mid program range" },
+    { code: 6078, category: "program", description: "program upper bound" },
+    { code: 6050, category: "program", description: "mid program range" },
 
     // User / SDK range (7000-7099)
     { code: 7000, category: "user", description: "user lower bound" },
@@ -100,7 +102,7 @@ describe("categorizeDxError — exact range boundaries", () => {
 
     // Unknown — outside all defined ranges
     { code: 5999, category: "unknown", description: "one below program range" },
-    { code: 6081, category: "unknown", description: "one above program range" },
+    { code: 6079, category: "unknown", description: "one above program range" },
     { code: 6999, category: "unknown", description: "one below user range" },
     { code: 7200, category: "unknown", description: "one above network range" },
     { code: 7999, category: "unknown", description: "DX_ERROR_CODE_UNMAPPED" },
@@ -148,7 +150,7 @@ describe("toDxError — populates onChainReverted", () => {
     const err = { message: "custom program error: 0x1776" };
     const dx = toDxError(err);
     expect(dx.code).to.be.at.least(6000);
-    expect(dx.code).to.be.at.most(6080);
+    expect(dx.code).to.be.at.most(6078);
     expect(dx.onChainReverted).to.equal(true);
   });
 

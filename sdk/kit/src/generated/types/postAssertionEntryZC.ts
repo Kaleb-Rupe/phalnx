@@ -33,7 +33,12 @@ import {
  * vault owner configures byte offsets from protocol documentation.
  *
  * Phase B1: absolute value assertions (check field ≤ max, field ≥ min).
- * Phase B3 will add CrossFieldLte for leverage ratio enforcement.
+ * Phase B2: delta-mode assertions (MaxDecrease, MaxIncrease, NoChange).
+ *
+ * Phase B3 CrossFieldLte fields (cross_field_offset_b, cross_field_multiplier_bps,
+ * cross_field_flags) DELETED in Phase 1 Option A demolition (L-1). The two-field
+ * ratio check (field_A × 10000 ≤ multiplier_bps × field_B) was Jupiter-Perps-flavored
+ * leverage-cap logic that doesn't generalize to a per-vault generic primitive.
  */
 export type PostAssertionEntryZC = {
   /**
@@ -61,25 +66,13 @@ export type PostAssertionEntryZC = {
    */
   assertionMode: number;
   /**
-   * Phase B3: Second field offset for CrossFieldLte (little-endian u16).
-   * When cross_field_flags & 0x01: read field_B at offset_b (value_len bytes) from same target.
-   * Check: field_A × 10000 ≤ multiplier_bps × field_B (using u128 arithmetic).
-   * Stored as [u8; 2] for zero-copy Pod alignment compatibility.
+   * Explicit padding to make total entry size even (Pod requires no implicit
+   * padding; struct alignment is 2 because of `offset: u16`). Without this
+   * byte, derive(Pod) panics with "type with padding" since 69 is odd.
+   * Added in Phase 1 Option A demolition after Phase B3 CrossFieldLte
+   * fields (7 bytes) were deleted.
    */
-  crossFieldOffsetB: ReadonlyUint8Array;
-  /**
-   * Phase B3: Multiplier in basis points for CrossFieldLte (little-endian u32).
-   * 10000 = 1.0x, 100000 = 10x, 5000000 = 500x.
-   * Must be > 0 when cross_field_flags is enabled.
-   * Stored as [u8; 4] for zero-copy Pod alignment compatibility.
-   */
-  crossFieldMultiplierBps: ReadonlyUint8Array;
-  /**
-   * Phase B3: Flags byte. Bit 0 = enable CrossFieldLte.
-   * When enabled, assertion_mode MUST be 0 (Absolute).
-   * Unknown bits (1-7) must be 0.
-   */
-  crossFieldFlags: number;
+  padding: number;
 };
 
 export type PostAssertionEntryZCArgs = PostAssertionEntryZC;
@@ -92,9 +85,7 @@ export function getPostAssertionEntryZCEncoder(): FixedSizeEncoder<PostAssertion
     ["operator", getU8Encoder()],
     ["expectedValue", fixEncoderSize(getBytesEncoder(), 32)],
     ["assertionMode", getU8Encoder()],
-    ["crossFieldOffsetB", fixEncoderSize(getBytesEncoder(), 2)],
-    ["crossFieldMultiplierBps", fixEncoderSize(getBytesEncoder(), 4)],
-    ["crossFieldFlags", getU8Encoder()],
+    ["padding", getU8Encoder()],
   ]);
 }
 
@@ -106,9 +97,7 @@ export function getPostAssertionEntryZCDecoder(): FixedSizeDecoder<PostAssertion
     ["operator", getU8Decoder()],
     ["expectedValue", fixDecoderSize(getBytesDecoder(), 32)],
     ["assertionMode", getU8Decoder()],
-    ["crossFieldOffsetB", fixDecoderSize(getBytesDecoder(), 2)],
-    ["crossFieldMultiplierBps", fixDecoderSize(getBytesDecoder(), 4)],
-    ["crossFieldFlags", getU8Decoder()],
+    ["padding", getU8Decoder()],
   ]);
 }
 

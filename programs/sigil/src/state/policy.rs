@@ -41,9 +41,13 @@ pub struct PolicyConfig {
     /// transaction. Max MAX_DEVELOPER_FEE_RATE (500 = 5 BPS).
     pub developer_fee_rate: u16,
 
-    /// Maximum slippage tolerance for Jupiter swaps in basis points.
-    /// 0 = reject all swaps (vault owner must explicitly configure).
-    /// Enforced on-chain via instruction introspection of Jupiter data.
+    /// Maximum slippage tolerance (basis points) — generic config primitive
+    /// preserved per D-5 across Phase 1 Option A demolition. Per L-1 there is
+    /// no on-chain Jupiter slippage verifier in V1; this field is consumed by
+    /// off-chain SDK simulators and (Phase 6) generic post-execution assertions
+    /// (R-1 mint-delta cap). Validated at config time via
+    /// `max_slippage_bps <= MAX_SLIPPAGE_BPS` (= 5000 BPS = 50% ceiling).
+    /// 0 = no slippage protection configured.
     pub max_slippage_bps: u16,
 
     /// Timelock duration in seconds for policy changes. 0 = no timelock.

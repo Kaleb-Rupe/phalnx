@@ -1,7 +1,7 @@
 # ERROR_CODE_ALLOCATION_V2.md — Canonical Error Code Allocation
 
 **Status:** Canonical source of truth for `SigilError` numeric codes.
-**Last updated:** 2026-05-17
+**Last updated:** 2026-05-17 (Phase 1 Option A demolition — landed)
 **Source:** `programs/sigil/src/errors.rs` (verified line-by-line on `revamp/v2-2026-05`).
 **Supersedes:** Any prior error-code listing in `INTERFACES_V2.md`, `CLAUDE.md`, or `docs/ERROR-CODES.md`.
 
@@ -9,9 +9,9 @@
 
 ---
 
-## 1. Current V1 allocation (81 variants, codes 6000-6080)
+## 1. Pre-Phase-1 V1 allocation (81 variants, codes 6000-6080) — HISTORICAL
 
-Verified against `programs/sigil/src/errors.rs` on `revamp/v2-2026-05` (commit `554796e`).
+Verified against `programs/sigil/src/errors.rs` on `revamp/v2-2026-05` (commit `554796e`, prior to Phase 1 deletions). After Phase 1 the surviving 79 variants are at codes 6000-6078 — see §2 for the deletion details and §6 for the post-Phase-1 numeric layout.
 
 | Code | Variant | Source line | Category |
 |------|---------|-------------|----------|
@@ -101,60 +101,62 @@ Verified against `programs/sigil/src/errors.rs` on `revamp/v2-2026-05` (commit `
 
 ---
 
-## 2. Phase 1 demolition deletions (3 Jupiter-specific variants)
+## 2. Phase 1 demolition deletions — LANDED 2026-05-17 (2 variants deleted, 1 retained)
 
-Per `HARDENED_V2_PROMPT_MAP.md` §4 and F-21, Phase 1 deletes these Jupiter-specific variants:
+Per `HARDENED_V2_PROMPT_MAP.md` §4 and F-21, Phase 1 was prompted to delete three Jupiter-specific variants:
 
-- `SwapSlippageExceeded` (currently 6030)
-- `InvalidJupiterInstruction` (currently 6031)
-- `SlippageBpsTooHigh` (currently 6033)
+- `SwapSlippageExceeded` (was 6030) — DELETED
+- `InvalidJupiterInstruction` (was 6031) — DELETED
+- `SlippageBpsTooHigh` (was 6033) — **RETAINED**
 
-**Code re-numbering behavior:** Anchor assigns codes by variant ordinal at compile time. Deleting variants mid-enum causes all subsequent variants to shift down. The prompt map's reservation table (§3 below) assumes the **compaction** strategy: after Phase 1, the 78 surviving V1 variants occupy codes **6000-6077**, and new V2 variants append starting at **6078**.
+**Plan deviation (surfaced per prompt's STOP-and-surface clause):** `SlippageBpsTooHigh` is the only error variant used by the surviving `max_slippage_bps <= MAX_SLIPPAGE_BPS` config-bound check in `initialize_vault.rs:88` and `queue_policy_update.rs:99`. Per D-5, `max_slippage_bps` is preserved as a generic slippage primitive (not Jupiter-specific). Deleting `SlippageBpsTooHigh` would have required either deleting the D-5-preserved validation (contradiction) or redirecting the validation to a misleading existing error. Both options are worse than keeping a config-bound error whose name correctly describes its semantic role; the variant's `#[msg]` is unchanged.
 
-Under compaction:
-- The 21 variants currently at codes 6000-6020 keep their codes (they appear before the first deleted variant).
-- The 9 variants currently at codes 6021-6029 keep their codes (they appear before the first deleted variant at 6030).
-- Variants currently at 6031, 6032, 6034-6080 shift down by 1, 2, or 3 depending on how many earlier deletions occurred. For example: `InvalidDestinationMode` (currently 6080) shifts to **6077**.
+**Code re-numbering behavior (compaction strategy chosen):** Anchor assigns codes by variant ordinal at compile time. Deleting variants mid-enum causes all subsequent variants to shift down. The two deleted variants were adjacent at 6030+6031; deletions therefore shift later codes down by **2** (not 3 as the prompt assumed).
 
-**Phase 1 must explicitly verify the post-deletion numeric layout** and update this document with the actual post-Phase-1 §1-equivalent table before Phase 2 reserves new codes. If Phase 1 instead chooses to preserve numbers via `#[deprecated]` placeholder variants, the reservation table in §3 shifts accordingly (every code +3 from 6081 onward).
+Under compaction (post-Phase-1):
+- Codes 6000-6029 unchanged (30 variants before the first deleted variant at 6030).
+- `UnauthorizedTokenTransfer` (was 6032) → now **6030**.
+- `SlippageBpsTooHigh` (was 6033) → now **6031**.
+- All variants previously at 6034-6080 shift down by 2 → now **6032-6078**.
+- For example: `InvalidDestinationMode` (was 6080) shifts to **6078**.
 
-**Post-Phase-1 expected state (compaction):** 78 V1 variants at codes 6000-6077. The lowest unused code is **6078**.
+**Post-Phase-1 state (compaction):** 79 V1 variants at codes 6000-6078. The lowest unused code is **6079**. This is the canonical post-Phase-1 layout.
 
 ---
 
-## 3. Post-Phase-1 reservation table (V2 additions, codes 6078-6102)
+## 3. Post-Phase-1 reservation table (V2 additions, codes 6079-6103)
 
-These codes are reserved for V2 primitives introduced in Phases 2 through 8. They are listed here in the order they are scheduled to land in the enum.
+These codes are reserved for V2 primitives introduced in Phases 2 through 8. They are listed here in the order they are scheduled to land in the enum. Starts at **6079** (not 6078 as the prompt assumed) because Phase 1 retained `SlippageBpsTooHigh` — see §2.
 
 | Code | Name | Phase | Primitive | Notes |
 |------|------|-------|-----------|-------|
-| 6078 | `ErrInvalidCapability` | Phase 2 | TA-04 | Reserved capability values 3..=255 reject |
-| 6079 | `ErrObserveOnlyModeBlocksExecute` | Phase 2 | TA-04 | Observer capability blocks execute path |
-| 6080 | `ErrPolicyPreviewMismatch` | Phase 2 | TA-19 | SHA-256 digest mismatch on PolicyConfig/PendingPolicyUpdate |
-| 6081 | `ErrMintNotPinned` | Phase 3 | TA-03 | USDC/USDT cluster-pinned mint enforcement |
-| 6082 | `ErrOutsideOperatingHours` | Phase 3 | TA-05 | UTC operating-hours bitmask violation |
-| 6083 | `ErrCooldownActive` | Phase 3 | TA-06 | Per-agent cooldown (on AgentSpendOverlay) |
-| 6084 | `ErrGraylistFriction` | Phase 3 | TA-07 | First-time destination delay window |
-| 6085 | `ErrGraylistFull` | Phase 3 | TA-07 | Destination graylist bound (10 entries) |
-| 6086 | `ErrToken2022ExtensionForbidden` | Phase 3 | TA-08 | TLV check at deposit (3-item allowlist per D-4) |
-| 6087 | `ErrCosignRequired` | Phase 3 | TA-09 | Owner+session co-signature required |
-| 6088 | `ErrAutoRevoked` | Phase 3 | TA-17 | AgentEntry.consecutive_failures threshold tripped |
-| 6089 | `ErrSandwichIntegrity` | Phase 4 | TA-10 | Sandwich pair/bundle integrity violation |
-| 6090 | `ErrProtectedWritable` | Phase 4 | TA-11 | Protected PDA listed as writable in foreign ix |
-| 6091 | `ErrSessionNonceMismatch` | Phase 4 | AC-10 | Durable-nonce replay defense |
-| 6092 | `ErrStableFloorViolation` | Phase 5 | TA-12 | usdc+usdt balance below configured floor |
-| 6093 | `ErrDailyCapExceeded` | Phase 5 | TA-13 | Per-protocol rolling 24h cap (doc-fix) |
-| 6094 | `ErrRecipientCapExceeded` | Phase 5 | TA-14 | `[PerRecipientCounter; 10]` array overflow |
-| 6095 | `ErrMintDeltaCapExceeded` | Phase 6 | R-1 | Mint-level delta cap violation |
-| 6096 | `ErrAtaAuthorityChanged` | Phase 6 | R-2 | ATA owner/delegate changed mid-bundle |
-| 6097 | `ErrOutputBelowFloor` | Phase 6 | R-3 | Output amount below declared floor |
-| 6098 | `ErrDeclarationInconsistent` | Phase 6 | R-4 | Bundle declarations don't match observed state |
-| 6099 | `ErrPendingOwnershipExists` | Phase 8 | C26 | Pending ownership transfer collision |
-| 6100 | `ErrPendingOwnershipNotReady` | Phase 8 | C26 | Pending transfer not past timelock |
-| 6101 | `ErrInvalidFreezeReason` | Phase 8 | C27 | Reserved freeze_reason enum value |
-| 6102 | `ErrReactivateCooldownActive` | Phase 8 | C28 | Post-unfreeze observation window active |
+| 6079 | `ErrInvalidCapability` | Phase 2 | TA-04 | Reserved capability values 3..=255 reject |
+| 6080 | `ErrObserveOnlyModeBlocksExecute` | Phase 2 | TA-04 | Observer capability blocks execute path |
+| 6081 | `ErrPolicyPreviewMismatch` | Phase 2 | TA-19 | SHA-256 digest mismatch on PolicyConfig/PendingPolicyUpdate |
+| 6082 | `ErrMintNotPinned` | Phase 3 | TA-03 | USDC/USDT cluster-pinned mint enforcement |
+| 6083 | `ErrOutsideOperatingHours` | Phase 3 | TA-05 | UTC operating-hours bitmask violation |
+| 6084 | `ErrCooldownActive` | Phase 3 | TA-06 | Per-agent cooldown (on AgentSpendOverlay) |
+| 6085 | `ErrGraylistFriction` | Phase 3 | TA-07 | First-time destination delay window |
+| 6086 | `ErrGraylistFull` | Phase 3 | TA-07 | Destination graylist bound (10 entries) |
+| 6087 | `ErrToken2022ExtensionForbidden` | Phase 3 | TA-08 | TLV check at deposit (3-item allowlist per D-4) |
+| 6088 | `ErrCosignRequired` | Phase 3 | TA-09 | Owner+session co-signature required |
+| 6089 | `ErrAutoRevoked` | Phase 3 | TA-17 | AgentEntry.consecutive_failures threshold tripped |
+| 6090 | `ErrSandwichIntegrity` | Phase 4 | TA-10 | Sandwich pair/bundle integrity violation |
+| 6091 | `ErrProtectedWritable` | Phase 4 | TA-11 | Protected PDA listed as writable in foreign ix |
+| 6092 | `ErrSessionNonceMismatch` | Phase 4 | AC-10 | Durable-nonce replay defense |
+| 6093 | `ErrStableFloorViolation` | Phase 5 | TA-12 | usdc+usdt balance below configured floor |
+| 6094 | `ErrDailyCapExceeded` | Phase 5 | TA-13 | Per-protocol rolling 24h cap (doc-fix) |
+| 6095 | `ErrRecipientCapExceeded` | Phase 5 | TA-14 | `[PerRecipientCounter; 10]` array overflow |
+| 6096 | `ErrMintDeltaCapExceeded` | Phase 6 | R-1 | Mint-level delta cap violation |
+| 6097 | `ErrAtaAuthorityChanged` | Phase 6 | R-2 | ATA owner/delegate changed mid-bundle |
+| 6098 | `ErrOutputBelowFloor` | Phase 6 | R-3 | Output amount below declared floor |
+| 6099 | `ErrDeclarationInconsistent` | Phase 6 | R-4 | Bundle declarations don't match observed state |
+| 6100 | `ErrPendingOwnershipExists` | Phase 8 | C26 | Pending ownership transfer collision |
+| 6101 | `ErrPendingOwnershipNotReady` | Phase 8 | C26 | Pending transfer not past timelock |
+| 6102 | `ErrInvalidFreezeReason` | Phase 8 | C27 | Reserved freeze_reason enum value |
+| 6103 | `ErrReactivateCooldownActive` | Phase 8 | C28 | Post-unfreeze observation window active |
 
-**Total reserved:** 25 codes (6078-6102 inclusive).
+**Total reserved:** 25 codes (6079-6103 inclusive).
 
 ---
 
@@ -162,37 +164,47 @@ These codes are reserved for V2 primitives introduced in Phases 2 through 8. The
 
 The following existing variants are explicitly re-used by V2 primitives (no new code allocation needed). Use the existing variant; if the user-facing `#[msg(...)]` needs to change, update the message text in place but DO NOT renumber.
 
-**Codes below are stated under the current (pre-Phase-1) layout from §1.** After Phase 1 compaction, all codes from `SwapSlippageExceeded` (6030) onward shift down by 3; the table below must be re-stated against the post-Phase-1 numeric layout at the start of Phase 2.
+**Codes below are stated under both pre-Phase-1 and post-Phase-1 layouts.** After Phase 1 compaction (2 variants deleted at 6030+6031), all codes from `UnauthorizedTokenTransfer` (was 6032) onward shift down by 2.
 
-| Existing variant | Code (pre-Phase-1) | V2 primitive that re-uses it |
-|------------------|--------------------|------------------------------|
-| `DestinationNotAllowed` | 6024 | TA-02 (tightens defaults; no new code) |
-| `InvalidProtocolMode` | 6026 | TA-01 (UPDATE msg to "must be 1=ALLOWLIST") |
-| `InvalidDestinationMode` | 6080 (→ 6077 post-Phase-1) | TA-02 (UPDATE msg to "must be 0=RESTRICTED") |
-| `ConfidentialTransferBlocked` | 6075 (→ 6072 post-Phase-1) | TA-08 deposit-path re-use |
-| `PermanentDelegateBlocked` | 6076 (→ 6073 post-Phase-1) | TA-08 re-use |
-| `TransferHookBlocked` | 6077 (→ 6074 post-Phase-1) | TA-08 re-use |
-| `LamportDrainBlocked` | 6078 (→ 6075 post-Phase-1) | TA-08 re-use |
-| `BatchInstructionBlocked` | 6079 (→ 6076 post-Phase-1) | TA-08 re-use |
-| `BlockedSplOpcode` | 6067 | TA-10 re-use |
-| `AccountWritabilityMismatch` | 6069 | TA-11 re-use |
-| `UnauthorizedPreValidateInstruction` | 6063 | TA-10 re-use |
-| `UnauthorizedPostFinalizeInstruction` | 6056 | TA-10 re-use |
+| Existing variant | Code (pre-Phase-1) | Code (post-Phase-1) | V2 primitive that re-uses it |
+|------------------|--------------------|---------------------|------------------------------|
+| `DestinationNotAllowed` | 6024 | 6024 | TA-02 (tightens defaults; no new code) |
+| `InvalidProtocolMode` | 6026 | 6026 | TA-01 (UPDATE msg to "must be 1=ALLOWLIST") |
+| `InvalidDestinationMode` | 6080 | **6078** | TA-02 (UPDATE msg to "must be 0=RESTRICTED") |
+| `ConfidentialTransferBlocked` | 6075 | **6073** | TA-08 deposit-path re-use |
+| `PermanentDelegateBlocked` | 6076 | **6074** | TA-08 re-use |
+| `TransferHookBlocked` | 6077 | **6075** | TA-08 re-use |
+| `LamportDrainBlocked` | 6078 | **6076** | TA-08 re-use |
+| `BatchInstructionBlocked` | 6079 | **6077** | TA-08 re-use |
+| `BlockedSplOpcode` | 6067 | **6065** | TA-10 re-use |
+| `AccountWritabilityMismatch` | 6069 | **6067** | TA-11 re-use |
+| `UnauthorizedPreValidateInstruction` | 6063 | **6061** | TA-10 re-use |
+| `UnauthorizedPostFinalizeInstruction` | 6056 | **6054** | TA-10 re-use |
 
-**Numbering invariant Phase 2 must establish:**
-- All V1 surviving variants at codes 6000-6077 (post-compaction).
-- `ErrInvalidCapability` (TA-04) at 6078, the first new V2 variant.
-- §3 reservation table continues 6079, 6080, ... 6102.
+**Numbering invariant established by Phase 1:**
+- All V1 surviving variants at codes **6000-6078** (post-compaction; 79 variants).
+- `ErrInvalidCapability` (TA-04) at **6079**, the first new V2 variant.
+- §3 reservation table continues 6080, 6081, ... 6103.
 
-If Phase 1 deviates from compaction (e.g., uses deprecation placeholders), the reservation table in §3 must be re-stated before Phase 2 lands code.
+## 6. Post-Phase-1 numeric layout — CANONICAL
+
+For Phase 2+ consumption, the full post-Phase-1 numeric layout is:
+
+- 6000-6029: unchanged (30 variants).
+- 6030: `UnauthorizedTokenTransfer` (was 6032).
+- 6031: `SlippageBpsTooHigh` (was 6033, retained per §2 deviation).
+- 6032-6078: variants previously at 6034-6080 shifted down by 2.
+- Total: **79 variants at 6000-6078**. Next free code: **6079**.
+
+The committed `target/idl/sigil.json` (regenerated at end of Phase 1) is the canonical numeric source of truth. The auto-generated `sdk/kit/src/testing/errors/names.generated.ts` mirrors that IDL.
 
 ---
 
-## 5. Cross-doc reconciliation
+## 7. Cross-doc reconciliation
 
-- `INTERFACES_V2.md §"Error Code Allocation"` (current) lists codes 6081-6097 with different names and a different ordering. **This document supersedes that listing.** A follow-up edit to `INTERFACES_V2.md` should either (a) delete its error-code section and link here, or (b) be updated to match this table verbatim.
+- `INTERFACES_V2.md §"Error Code Allocation"` was updated in Phase 1 to reflect the actual post-Phase-1 layout (79 variants, 6000-6078, V2 reservations start at 6079).
 - `agent-middleware/docs/ERROR-CODES.md` documents user-facing error semantics; it is not a numeric source of truth. Update there is required when V2 codes land in Phase 2+.
-- The repo-root `CLAUDE.md` cites "6000-6070" — this is stale (V1 actually occupies 6000-6080). Correction is out of L-6 scope for Phase 0.5; flagged for v1.1 housekeeping.
+- The repo-root `CLAUDE.md` cites "6000-6070" — this is stale (V1 baseline actually occupied 6000-6080; post-Phase-1 occupies 6000-6078). Correction is out of L-6 scope; flagged for v1.1 housekeeping.
 
 ---
 
