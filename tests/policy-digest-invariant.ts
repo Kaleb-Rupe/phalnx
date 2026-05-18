@@ -131,6 +131,7 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
         5, // autoRevokeThreshold — must be in [3, 20]
         new BN(0), // stableBalanceFloor (TA-12 Phase 5 — no reserve)
         new BN(0), // perRecipientDailyCapUsd (TA-14 Phase 5 — no cap)
+        false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
         initVaultPreviewDigest({
           dailySpendingCapUsd: new BN(500_000_000),
           maxTransactionSizeUsd: new BN(100_000_000),
@@ -207,6 +208,13 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
       // policy-owned. destination_graylist itself is NOT in digest.
       autoPromoteGrays: !!policy.autoPromoteGrays,
       autoRevokeThreshold: policy.autoRevokeThreshold ?? 0,
+      // Phase 5 (TA-12/14): pass-through from live policy at digest
+      // positions 18/19. Required for byte parity with on-chain handler.
+      stableBalanceFloor: policy.stableBalanceFloor ?? 0,
+      perRecipientDailyCapUsd: policy.perRecipientDailyCapUsd ?? 0,
+      // G6 (audit 2026-05-18 cosign opt-in): pass-through from live
+      // policy at canonical digest position 20.
+      cosignRequired: !!policy.cosignRequired,
     });
   }
 
@@ -605,6 +613,9 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
         null,
         // Phase 5 (TA-14): per_recipient_daily_cap_usd — null pass-through.
         null,
+        // G6 (audit 2026-05-18 cosign opt-in): cosign_required — null
+        // pass-through. Toggling cosign goes through a separate test path.
+        null,
         // Phase 3 (TA-09): cosign_session — PublicKey.default = non-elevated
         // (single-sig owner mutation; daily_cap is non-elevated).
         PublicKey.default,
@@ -739,6 +750,7 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
         5, // autoRevokeThreshold — must be in [3, 20]
         new BN(0), // stableBalanceFloor (TA-12 Phase 5 — no reserve)
         new BN(0), // perRecipientDailyCapUsd (TA-14 Phase 5 — no cap)
+        false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
         initVaultPreviewDigest({
           dailySpendingCapUsd: new BN(500_000_000),
           maxTransactionSizeUsd: new BN(100_000_000),
@@ -957,6 +969,9 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
         // Phase 5 (TA-12): stable_balance_floor — null pass-through from live.
         null,
         // Phase 5 (TA-14): per_recipient_daily_cap_usd — null pass-through.
+        null,
+        // G6 (audit 2026-05-18 cosign opt-in): cosign_required — null
+        // pass-through. Toggling cosign goes through a separate test path.
         null,
         // Phase 3 (TA-09): cosign_session — PublicKey.default = non-elevated
         // (single-sig owner mutation; daily_cap is non-elevated).
@@ -1212,6 +1227,7 @@ describe("PEN-CROSS-2 — close+reinit replay protection", () => {
           5,
           new BN(0), // stableBalanceFloor (TA-12 Phase 5 — no reserve)
           new BN(0), // perRecipientDailyCapUsd (TA-14 Phase 5 — no cap)
+          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
           staleDigest,
         )
         .accounts({
@@ -1306,6 +1322,7 @@ describe("PEN-CROSS-2 — close+reinit replay protection", () => {
         5,
         new BN(0), // stableBalanceFloor (TA-12 Phase 5 — no reserve)
         new BN(0), // perRecipientDailyCapUsd (TA-14 Phase 5 — no cap)
+        false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
         goodInit,
       )
       .accounts({
@@ -1423,6 +1440,7 @@ describe("PEN-CROSS-2 — close+reinit replay protection", () => {
         5,
         new BN(0), // stableBalanceFloor (TA-12 Phase 5 — no reserve)
         new BN(0), // perRecipientDailyCapUsd (TA-14 Phase 5 — no cap)
+        false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
         goodDigest,
       )
       .accounts({
