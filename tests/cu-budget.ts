@@ -627,14 +627,16 @@ describe("cu-budget", () => {
     // Sanity: Sigil's validate ran successfully BEFORE mock-defi failed at
     // the program-id check. The error must come from the JUPITER ix at
     // index 1, NOT from validate at index 0. If validate failed (e.g., due
-    // to a malformed Jupiter route data buffer), we'd see index:0.
+    // to a structural problem with the bundle), we'd see index:0.
     expect(
       result.errStr,
       "expected failure at jupiter ix, not validate",
     ).to.match(/index:\s*1/);
-    // Verify validate ran the slippage parser successfully — a failed
-    // verify_jupiter_slippage would produce InvalidJupiterInstruction and
-    // truncate the validate instruction at index 0.
+    // Verify validate ran successfully. Post-Phase-1 (Option A demolition,
+    // 2026-05-17) the on-chain Jupiter slippage parser
+    // (`verify_jupiter_slippage`) was deleted; validate now treats the
+    // Jupiter program ID as a generic, non-parsed DeFi program in the
+    // forward scan. A failed validate would truncate at index 0.
     const validateRanOk = result.logs.some((l) =>
       l.includes("Instruction: ValidateAndAuthorize"),
     );

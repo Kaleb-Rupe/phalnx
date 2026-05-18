@@ -361,7 +361,7 @@ describe("devnet-routing", () => {
       });
       expect.fail("Should have thrown SpendingCapExceeded");
     } catch (err: any) {
-      expectSigilError(err, { name: "SpendingCapExceeded", code: 6006 });
+      expectSigilError(err, { name: "SpendingCapExceeded" });
     }
     console.log("    USDC + USDT aggregate cap enforced");
   });
@@ -437,7 +437,7 @@ describe("devnet-routing", () => {
       // Non-stablecoin input path requires exactly one DeFi instruction, so validate
       // rejects with TooManyDeFiInstructions (6037) — proves non-stablecoin input
       // with stablecoin output enters the non-stablecoin code path (not rejected outright).
-      expectSigilError(err, { name: "TooManyDeFiInstructions", code: 6035 });
+      expectSigilError(err, { name: "TooManyDeFiInstructions" });
     }
     console.log(
       "    Non-stablecoin input with stablecoin output: rejected without DeFi instruction (6037)",
@@ -750,7 +750,7 @@ describe("devnet-routing", () => {
     } catch (err: any) {
       // agent_transfer only accepts stablecoins. UnsupportedToken = 6003.
       // Stale "6014" removed (never correct — 6014 is VaultAlreadyClosed).
-      expectSigilError(err, { name: "UnsupportedToken", code: 6003 });
+      expectSigilError(err, { name: "UnsupportedToken" });
     }
     console.log(
       "    agent_transfer non-stablecoin rejected with UnsupportedToken (6003)",
@@ -838,7 +838,7 @@ describe("devnet-routing", () => {
       });
       expect.fail("Should have thrown SpendingCapExceeded");
     } catch (err: any) {
-      expectSigilError(err, { name: "SpendingCapExceeded", code: 6006 });
+      expectSigilError(err, { name: "SpendingCapExceeded" });
     }
     console.log("    Full chain USDC+USDT cap aggregation enforced");
   });

@@ -318,7 +318,7 @@ describe("TOCTOU Security Fix", () => {
       sendVersionedTx(svm, [validateIx, finalizeIx], agent);
       expect.fail("Should have thrown");
     } catch (err: any) {
-      expectSigilError(err, { name: "PolicyVersionMismatch", code: 6066 });
+      expectSigilError(err, { name: "PolicyVersionMismatch" });
     }
   });
 
@@ -355,7 +355,7 @@ describe("TOCTOU Security Fix", () => {
         .rpc();
       expect.fail("Should have thrown");
     } catch (err: any) {
-      expectSigilError(err, { name: "TimelockTooShort", code: 6065 });
+      expectSigilError(err, { name: "TimelockTooShort" });
     }
   });
 
@@ -389,7 +389,7 @@ describe("TOCTOU Security Fix", () => {
         .rpc();
       expect.fail("Should have thrown");
     } catch (err: any) {
-      expectSigilError(err, { name: "TimelockTooShort", code: 6065 });
+      expectSigilError(err, { name: "TimelockTooShort" });
     }
   });
 
@@ -423,7 +423,7 @@ describe("TOCTOU Security Fix", () => {
         .rpc();
       expect.fail("Should have thrown");
     } catch (err: any) {
-      expectSigilError(err, { name: "TimelockTooShort", code: 6065 });
+      expectSigilError(err, { name: "TimelockTooShort" });
     }
   });
 

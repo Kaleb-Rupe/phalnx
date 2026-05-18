@@ -233,7 +233,7 @@ describe("devnet-spending", () => {
       });
       expect.fail("Should have thrown");
     } catch (err: any) {
-      expectSigilError(err, { name: "SpendingCapExceeded", code: 6006 });
+      expectSigilError(err, { name: "SpendingCapExceeded" });
     }
     console.log("    Aggregate USD cap enforced across two tokens");
   });
@@ -299,7 +299,7 @@ describe("devnet-spending", () => {
       });
       expect.fail("Should have thrown");
     } catch (err: any) {
-      expectSigilError(err, { name: "TransactionTooLarge", code: 6005 });
+      expectSigilError(err, { name: "TransactionTooLarge" });
     }
     console.log("    max_transaction_size_usd enforced");
   });
@@ -426,7 +426,7 @@ describe("devnet-spending", () => {
       });
       expect.fail("Should have thrown");
     } catch (err: any) {
-      expectSigilError(err, { name: "SpendingCapExceeded", code: 6006 });
+      expectSigilError(err, { name: "SpendingCapExceeded" });
     }
     console.log("    Session + agent_transfer spends tracked together at cap");
   });

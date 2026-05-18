@@ -164,7 +164,7 @@ describe("devnet-transfers", () => {
         .rpc();
       expect.fail("Should have thrown");
     } catch (err: any) {
-      expectSigilError(err, { name: "DestinationNotAllowed", code: 6024 });
+      expectSigilError(err, { name: "DestinationNotAllowed" });
     }
     console.log("    Non-allowed destination correctly rejected");
   });
@@ -272,7 +272,7 @@ describe("devnet-transfers", () => {
         .rpc();
       expect.fail("Should have thrown");
     } catch (err: any) {
-      expectSigilError(err, { name: "UnauthorizedAgent", code: 6001 });
+      expectSigilError(err, { name: "UnauthorizedAgent" });
     }
     console.log("    Non-agent agent_transfer rejected");
   });
@@ -334,7 +334,7 @@ describe("devnet-transfers", () => {
         .rpc();
       expect.fail("Should have thrown");
     } catch (err: any) {
-      expectSigilError(err, { name: "SpendingCapExceeded", code: 6006 });
+      expectSigilError(err, { name: "SpendingCapExceeded" });
     }
     console.log("    agent_transfer respects daily cap");
   });

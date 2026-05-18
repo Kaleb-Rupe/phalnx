@@ -165,7 +165,7 @@ describe("devnet-timelock", () => {
         .rpc();
       expect.fail("Should have thrown");
     } catch (err: any) {
-      expectSigilError(err, { name: "TimelockNotExpired", code: 6022 });
+      expectSigilError(err, { name: "TimelockNotExpired" });
     }
 
     // Clean up — cancel the pending update

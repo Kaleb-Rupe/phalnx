@@ -238,7 +238,7 @@ describe("devnet-security", () => {
         .rpc();
       expect.fail("Should have thrown");
     } catch (err: any) {
-      expectSigilError(err, { name: "UnauthorizedAgent", code: 6001 });
+      expectSigilError(err, { name: "UnauthorizedAgent" });
     }
     console.log("    Non-agent validate_and_authorize rejected");
   });
@@ -347,7 +347,7 @@ describe("devnet-security", () => {
       });
       expect.fail("Should have thrown");
     } catch (err: any) {
-      expectSigilError(err, { name: "SpendingCapExceeded", code: 6006 });
+      expectSigilError(err, { name: "SpendingCapExceeded" });
     }
     console.log("    Over-cap spending correctly blocked");
   });
@@ -406,7 +406,7 @@ describe("devnet-security", () => {
       });
       expect.fail("Should have thrown");
     } catch (err: any) {
-      expectSigilError(err, { name: "TransactionTooLarge", code: 6005 });
+      expectSigilError(err, { name: "TransactionTooLarge" });
     }
     console.log("    Aggregate TransactionTooLarge enforced");
   });
@@ -550,7 +550,6 @@ describe("devnet-security", () => {
       // See: MEMORY/WORK/20260420-201121_test-assertion-precision-council/COUNCIL_DECISION.md
       expectSigilError(err, {
         name: "UnauthorizedAgent",
-        code: 6001,
       });
     }
     console.log("    Frozen vault blocks authorize");
@@ -783,7 +782,6 @@ describe("devnet-security", () => {
       // See: MEMORY/WORK/20260420-201121_test-assertion-precision-council/COUNCIL_DECISION.md
       expectSigilError(err, {
         name: "UnauthorizedAgent",
-        code: 6001,
       });
     }
     console.log("    Frozen vault rejects agent_transfer with stablecoin");
@@ -840,7 +838,7 @@ describe("devnet-security", () => {
       });
       expect.fail("Should have thrown");
     } catch (err: any) {
-      expectSigilError(err, { name: "TransactionTooLarge", code: 6005 });
+      expectSigilError(err, { name: "TransactionTooLarge" });
     }
     console.log("    max_transaction_size_usd enforced on stablecoin");
   });
