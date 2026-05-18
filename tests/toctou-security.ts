@@ -27,6 +27,7 @@ import {
 } from "@solana/spl-token";
 import { expect } from "chai";
 import BN from "bn.js";
+import { initVaultPreviewDigest, fetchAndComputeQueueDigest } from "./helpers/policy-digest";
 import {
   createTestEnv,
   airdropSol,
@@ -153,18 +154,27 @@ describe("TOCTOU Security Fix", () => {
     );
 
     await program.methods
-      .initializeVault(
-        pdas.vaultId,
-        new BN(500_000_000), // daily cap: 500 USDC
-        new BN(100_000_000), // max tx: 100 USDC
-        0, // protocol mode: all
-        [jupiterProgramId],
-        0, // developer_fee_rate
-        500, // maxSlippageBps
-        new BN(timelockDuration),
-        [], // allowedDestinations
-        [], // protocolCaps
-      )
+      .initializeVault(pdas.vaultId,
+          new BN(500_000_000),
+          new BN(100_000_000),
+          1,
+          [jupiterProgramId],
+          0,
+          500,
+          new BN(timelockDuration),
+          [],
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 500,
+            protocolMode: 1,
+            protocols: [jupiterProgramId],
+            allowedDestinations: [],
+            timelockDuration: new BN(timelockDuration),
+          }),
+        )
       .accounts({
         owner: owner.publicKey,
         vault: pdas.vaultPda,
@@ -212,20 +222,28 @@ describe("TOCTOU Security Fix", () => {
     timelockSeconds: number,
     dailyCap?: BN,
   ) {
+    // Phase 2 TA-19: compute the digest of the merged-effective policy.
+    const newDigest = await fetchAndComputeQueueDigest(
+      program,
+      v.policyPda,
+      v.vaultPda,
+      { dailySpendingCapUsd: dailyCap ?? null },
+    );
     await program.methods
-      .queuePolicyUpdate(
-        dailyCap ?? null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null, // sessionExpirySeconds
-        null, // hasProtocolCaps
-        null, // protocolCaps
-      )
+      .queuePolicyUpdate(dailyCap ?? null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null, // destinationMode,
+          newDigest,
+        )
       .accounts({
         owner: owner.publicKey,
         vault: v.vaultPda,
@@ -331,17 +349,26 @@ describe("TOCTOU Security Fix", () => {
 
     try {
       await program.methods
-        .initializeVault(
-          pdas.vaultId,
+        .initializeVault(pdas.vaultId,
           new BN(500_000_000),
           new BN(100_000_000),
-          0,
+          1,
           [jupiterProgramId],
           0,
           500,
-          new BN(0), // timelockDuration: 0 — below minimum (NEGATIVE TEST)
+          new BN(0),
           [],
           [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 500,
+            protocolMode: 1,
+            protocols: [jupiterProgramId],
+            allowedDestinations: [],
+            timelockDuration: new BN(0),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -366,18 +393,19 @@ describe("TOCTOU Security Fix", () => {
 
     try {
       await program.methods
-        .queuePolicyUpdate(
+        .queuePolicyUpdate(null,
           null,
           null,
           null,
           null,
           null,
+          new BN(900),
           null,
-          new BN(900), // timelockDuration: 900 — below 1800 minimum
           null,
-          null, // sessionExpirySeconds
-          null, // hasProtocolCaps
-          null, // protocolCaps
+          null,
+          null,
+          null, // destinationMode,
+          new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
         )
         .accounts({
           owner: owner.publicKey,
@@ -400,18 +428,19 @@ describe("TOCTOU Security Fix", () => {
 
     try {
       await program.methods
-        .queuePolicyUpdate(
+        .queuePolicyUpdate(null,
           null,
           null,
           null,
           null,
           null,
+          new BN(0),
           null,
-          new BN(0), // timelockDuration: 0 — removal blocked (NEGATIVE TEST)
           null,
-          null, // sessionExpirySeconds
-          null, // hasProtocolCaps
-          null, // protocolCaps
+          null,
+          null,
+          null, // destinationMode,
+          new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
         )
         .accounts({
           owner: owner.publicKey,

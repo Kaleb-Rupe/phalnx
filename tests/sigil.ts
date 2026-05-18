@@ -20,6 +20,7 @@ import {
 } from "@solana/spl-token";
 import { expect } from "chai";
 import BN from "bn.js";
+import { initVaultPreviewDigest, fetchAndComputeQueueDigest } from "./helpers/policy-digest";
 import {
   createTestEnv,
   airdropSol,
@@ -173,17 +174,26 @@ describe("sigil", () => {
       const maxTxSize = new BN(100_000_000); // 100 USDC
 
       await program.methods
-        .initializeVault(
-          vaultId,
+        .initializeVault(vaultId,
           dailyCap,
           maxTxSize,
-          1, // protocolMode: allowlist
+          1,
           [jupiterProgramId],
-          0, // developer_fee_rate
-          100, // maxSlippageBps (1%)
-          new BN(1800), // timelockDuration (MIN_TIMELOCK_DURATION)
-          [], // allowedDestinations
-          [], // protocolCaps
+          0,
+          100,
+          new BN(1800),
+          [],
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: dailyCap,
+            maxTransactionSizeUsd: maxTxSize,
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [jupiterProgramId],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -228,18 +238,27 @@ describe("sigil", () => {
     it("rejects duplicate vault_id (PDA already exists)", async () => {
       try {
         await program.methods
-          .initializeVault(
-            vaultId, // same vault_id
-            new BN(100),
-            new BN(100),
-            0, // protocolMode: all
-            [],
-            0,
-            100, // maxSlippageBps
-            new BN(1800),
-            [],
-            [], // protocolCaps
-          )
+          .initializeVault(vaultId,
+          new BN(100),
+          new BN(100),
+          1,
+          [],
+          0,
+          100,
+          new BN(1800),
+          [],
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(100),
+            maxTransactionSizeUsd: new BN(100),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
+        )
           .accounts({
             owner: owner.publicKey,
             vault: vaultPda,
@@ -283,18 +302,27 @@ describe("sigil", () => {
       // protocol_mode = 3 is invalid (valid values: 0=all, 1=allowlist, 2=denylist)
       try {
         await program.methods
-          .initializeVault(
-            vaultId2,
-            new BN(100),
-            new BN(100),
-            3,
-            [],
-            0,
-            100, // maxSlippageBps
-            new BN(1800),
-            [],
-            [], // protocolCaps
-          )
+          .initializeVault(vaultId2,
+          new BN(100),
+          new BN(100),
+          3,
+          [],
+          0,
+          100,
+          new BN(1800),
+          [],
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(100),
+            maxTransactionSizeUsd: new BN(100),
+            maxSlippageBps: 100,
+            protocolMode: 3,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
+        )
           .accounts({
             owner: owner.publicKey,
             vault: vault2,
@@ -442,17 +470,26 @@ describe("sigil", () => {
 
       // First create the vault
       await program.methods
-        .initializeVault(
-          vid,
+        .initializeVault(vid,
           new BN(1000),
           new BN(1000),
-          0,
+          1,
           [],
           0,
-          100, // maxSlippageBps
-          new BN(1800), // MIN_TIMELOCK_DURATION
+          100,
+          new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(1000),
+            maxTransactionSizeUsd: new BN(1000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -498,19 +535,19 @@ describe("sigil", () => {
 
     it("updates individual policy fields via queue+apply", async () => {
       await program.methods
-        .queuePolicyUpdate(
-          new BN(200_000_000), // new daily cap: 200 USDC
-          null, // keep max_transaction_size
-          null, // keep protocol_mode
+        .queuePolicyUpdate(new BN(200_000_000),
           null,
-          null, // keep developer_fee_rate
-          null, // keep maxSlippageBps
-          null, // keep timelockDuration
-          null, // keep allowedDestinations
-          null, // keep sessionExpirySeconds
-          null, // hasProtocolCaps
-          null, // protocolCaps
-          null, // destinationMode
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { dailySpendingCapUsd: new BN(200_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -547,20 +584,20 @@ describe("sigil", () => {
       );
       try {
         await program.methods
-          .queuePolicyUpdate(
-            new BN(999),
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null, // hasProtocolCaps
-            null, // protocolCaps
-            null, // destinationMode
-          )
+          .queuePolicyUpdate(new BN(999),
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { dailySpendingCapUsd: new BN(999) })), // newPolicyPreviewDigest (Phase 2 TA-19)
+        )
           .accounts({
             owner: unauthorizedUser.publicKey,
             vault: vaultPda,
@@ -583,20 +620,20 @@ describe("sigil", () => {
       );
       try {
         await program.methods
-          .queuePolicyUpdate(
-            null,
-            null,
-            null,
-            tooManyProtocols,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null, // hasProtocolCaps
-            null, // protocolCaps
-            null, // destinationMode
-          )
+          .queuePolicyUpdate(null,
+          null,
+          null,
+          tooManyProtocols,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { protocols: tooManyProtocols })), // newPolicyPreviewDigest (Phase 2 TA-19)
+        )
           .accounts({
             owner: owner.publicKey,
             vault: vaultPda,
@@ -648,17 +685,26 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(
-          revokeVaultId,
+        .initializeVault(revokeVaultId,
           new BN(1000),
           new BN(1000),
-          0,
+          1,
           [],
           0,
-          100, // maxSlippageBps
-          new BN(1800), // MIN_TIMELOCK_DURATION
+          100,
+          new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(1000),
+            maxTransactionSizeUsd: new BN(1000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -765,17 +811,26 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(
-          reactVaultId,
+        .initializeVault(reactVaultId,
           new BN(1000),
           new BN(1000),
-          0,
+          1,
           [],
           0,
-          100, // maxSlippageBps
-          new BN(1800), // MIN_TIMELOCK_DURATION
+          100,
+          new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(1000),
+            maxTransactionSizeUsd: new BN(1000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -1512,17 +1567,26 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(
-          closeVaultId,
+        .initializeVault(closeVaultId,
           new BN(1000),
           new BN(1000),
-          0,
+          1,
           [],
           0,
-          100, // maxSlippageBps
-          new BN(1800), // MIN_TIMELOCK_DURATION
+          100,
+          new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(1000),
+            maxTransactionSizeUsd: new BN(1000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -1586,17 +1650,26 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(
-          vid,
+        .initializeVault(vid,
           new BN(1000),
           new BN(1000),
-          0,
+          1,
           [],
           0,
-          100, // maxSlippageBps
-          new BN(1800), // MIN_TIMELOCK_DURATION
+          100,
+          new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(1000),
+            maxTransactionSizeUsd: new BN(1000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -1664,17 +1737,26 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(
-          feeVaultId,
+        .initializeVault(feeVaultId,
           new BN(500_000_000),
           new BN(100_000_000),
-          1, // protocolMode: allowlist
+          1,
           [jupiterProgramId],
-          30, // developer_fee_rate = 30 (0.3 BPS)
-          100, // maxSlippageBps
-          new BN(1800), // MIN_TIMELOCK_DURATION
+          30,
+          100,
+          new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [jupiterProgramId],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -1716,18 +1798,27 @@ describe("sigil", () => {
 
       try {
         await program.methods
-          .initializeVault(
-            badVaultId,
-            new BN(1000),
-            new BN(1000),
-            0,
-            [],
-            501,
-            100, // maxSlippageBps
-            new BN(1800),
-            [],
-            [], // protocolCaps
-          )
+          .initializeVault(badVaultId,
+          new BN(1000),
+          new BN(1000),
+          1,
+          [],
+          501,
+          100,
+          new BN(1800),
+          [],
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(1000),
+            maxTransactionSizeUsd: new BN(1000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
+        )
           .accounts({
             owner: owner.publicKey,
             vault: bv,
@@ -1752,8 +1843,7 @@ describe("sigil", () => {
 
       // Use the fee vault created above, first set to 0
       await program.methods
-        .queuePolicyUpdate(
-          null,
+        .queuePolicyUpdate(null,
           null,
           null,
           null,
@@ -1762,9 +1852,10 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null, // hasProtocolCaps
-          null, // protocolCaps
-          null, // destinationMode
+          null,
+          null,
+          null,
+          (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -1793,8 +1884,7 @@ describe("sigil", () => {
 
       // Now update to 30
       await program.methods
-        .queuePolicyUpdate(
-          null,
+        .queuePolicyUpdate(null,
           null,
           null,
           null,
@@ -1803,9 +1893,10 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null, // hasProtocolCaps
-          null, // protocolCaps
-          null, // destinationMode
+          null,
+          null,
+          null,
+          (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -1840,20 +1931,20 @@ describe("sigil", () => {
       );
       try {
         await program.methods
-          .queuePolicyUpdate(
-            null,
-            null,
-            null,
-            null,
-            501,
-            null,
-            null,
-            null,
-            null,
-            null, // hasProtocolCaps
-            null, // protocolCaps
-            null, // destinationMode
-          )
+          .queuePolicyUpdate(null,
+          null,
+          null,
+          null,
+          501,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
+        )
           .accounts({
             owner: owner.publicKey,
             vault: feeVaultPda,
@@ -1875,8 +1966,7 @@ describe("sigil", () => {
       );
       // Set developer fee to 0
       await program.methods
-        .queuePolicyUpdate(
-          null,
+        .queuePolicyUpdate(null,
           null,
           null,
           null,
@@ -1885,9 +1975,10 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null, // hasProtocolCaps
-          null, // protocolCaps
-          null, // destinationMode
+          null,
+          null,
+          null,
+          (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -2017,8 +2108,7 @@ describe("sigil", () => {
       );
       // Set developer fee to 500 (max, 5 BPS)
       await program.methods
-        .queuePolicyUpdate(
-          null,
+        .queuePolicyUpdate(null,
           null,
           null,
           null,
@@ -2027,9 +2117,10 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null, // hasProtocolCaps
-          null, // protocolCaps
-          null, // destinationMode
+          null,
+          null,
+          null,
+          (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -2222,17 +2313,26 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(
-          maxFeeVaultId,
+        .initializeVault(maxFeeVaultId,
           new BN(1000),
           new BN(1000),
-          0,
+          1,
           [],
           500,
-          100, // maxSlippageBps
-          new BN(1800), // MIN_TIMELOCK_DURATION
+          100,
+          new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(1000),
+            maxTransactionSizeUsd: new BN(1000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -2303,17 +2403,26 @@ describe("sigil", () => {
 
       // Create vault with USDC allowed
       await program.methods
-        .initializeVault(
-          lifecycleVaultId,
+        .initializeVault(lifecycleVaultId,
           new BN(500_000_000),
           new BN(100_000_000),
-          1, // protocolMode: allowlist
+          1,
           [jupiterProgramId],
           0,
-          100, // maxSlippageBps
-          new BN(1800), // MIN_TIMELOCK_DURATION
+          100,
+          new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [jupiterProgramId],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -2548,17 +2657,26 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(
-          vid,
+        .initializeVault(vid,
           new BN(1000),
           new BN(1000),
-          0,
+          1,
           [],
           0,
-          100, // maxSlippageBps
-          new BN(1800), // MIN_TIMELOCK_DURATION
+          100,
+          new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(1000),
+            maxTransactionSizeUsd: new BN(1000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -2710,17 +2828,26 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(
-          frozenVaultId,
+        .initializeVault(frozenVaultId,
           new BN(1000),
           new BN(1000),
-          0,
+          1,
           [],
           0,
-          100, // maxSlippageBps
-          new BN(1800), // MIN_TIMELOCK_DURATION
+          100,
+          new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(1000),
+            maxTransactionSizeUsd: new BN(1000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -2800,17 +2927,26 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(
-          closedVaultId,
+        .initializeVault(closedVaultId,
           new BN(1000),
           new BN(1000),
-          0,
+          1,
           [],
           0,
-          100, // maxSlippageBps
-          new BN(1800), // MIN_TIMELOCK_DURATION
+          100,
+          new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(1000),
+            maxTransactionSizeUsd: new BN(1000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -2899,17 +3035,26 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(
-          closedVaultId,
+        .initializeVault(closedVaultId,
           new BN(1000),
           new BN(1000),
           1,
           [jupiterProgramId],
           0,
-          100, // maxSlippageBps
-          new BN(1800), // MIN_TIMELOCK_DURATION
+          100,
+          new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(1000),
+            maxTransactionSizeUsd: new BN(1000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [jupiterProgramId],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -3021,17 +3166,26 @@ describe("sigil", () => {
         program.programId,
       );
       await program.methods
-        .initializeVault(
-          ringVaultId,
-          new BN(999_000_000_000), // 999k USDC daily cap
-          new BN(100_000_000), // 100 USDC max tx
-          1, // protocolMode: allowlist
+        .initializeVault(ringVaultId,
+          new BN(999_000_000_000),
+          new BN(100_000_000),
+          1,
           [jupiterProgramId],
           0,
-          100, // maxSlippageBps
-          new BN(1800), // MIN_TIMELOCK_DURATION
+          100,
+          new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(999_000_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [jupiterProgramId],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -3181,17 +3335,26 @@ describe("sigil", () => {
         program.programId,
       );
       await program.methods
-        .initializeVault(
-          feeEdgeVaultId,
+        .initializeVault(feeEdgeVaultId,
           new BN(999_000_000),
           new BN(100_000_000),
-          1, // protocolMode: allowlist
+          1,
           [jupiterProgramId],
-          0, // developer_fee_rate = 0
-          100, // maxSlippageBps
-          new BN(1800), // MIN_TIMELOCK_DURATION
+          0,
+          100,
+          new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(999_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [jupiterProgramId],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -3455,17 +3618,26 @@ describe("sigil", () => {
         program.programId,
       );
       await program.methods
-        .initializeVault(
-          tlVaultId,
+        .initializeVault(tlVaultId,
           new BN(500_000_000),
           new BN(100_000_000),
-          1, // protocolMode: allowlist
+          1,
           [jupiterProgramId],
           0,
-          100, // maxSlippageBps
-          new BN(1800), // MIN_TIMELOCK_DURATION (30 minutes)
+          100,
+          new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [jupiterProgramId],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -3489,8 +3661,7 @@ describe("sigil", () => {
 
     it("queue policy update succeeds when timelock > 0", async () => {
       await program.methods
-        .queuePolicyUpdate(
-          new BN(200_000_000), // new daily cap
+        .queuePolicyUpdate(new BN(200_000_000),
           null,
           null,
           null,
@@ -3499,9 +3670,10 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null, // hasProtocolCaps
-          null, // protocolCaps
-          null, // destinationMode
+          null,
+          null,
+          null,
+          (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(200_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -3568,8 +3740,7 @@ describe("sigil", () => {
     it("cancel pending policy succeeds and returns rent", async () => {
       // Queue another update
       await program.methods
-        .queuePolicyUpdate(
-          new BN(300_000_000),
+        .queuePolicyUpdate(new BN(300_000_000),
           null,
           null,
           null,
@@ -3578,9 +3749,10 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null, // hasProtocolCaps
-          null, // protocolCaps
-          null, // destinationMode
+          null,
+          null,
+          null,
+          (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(300_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -3615,8 +3787,7 @@ describe("sigil", () => {
     it("only one pending update at a time (init fails if PDA exists)", async () => {
       // Queue an update
       await program.methods
-        .queuePolicyUpdate(
-          new BN(400_000_000),
+        .queuePolicyUpdate(new BN(400_000_000),
           null,
           null,
           null,
@@ -3625,9 +3796,10 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null, // hasProtocolCaps
-          null, // protocolCaps
-          null, // destinationMode
+          null,
+          null,
+          null,
+          (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(400_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -3641,20 +3813,20 @@ describe("sigil", () => {
       // Try to queue another (should fail — PDA already exists)
       try {
         await program.methods
-          .queuePolicyUpdate(
-            new BN(500_000_000),
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null, // hasProtocolCaps
-            null, // protocolCaps
-            null, // destinationMode
-          )
+          .queuePolicyUpdate(new BN(500_000_000),
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(500_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
+        )
           .accounts({
             owner: owner.publicKey,
             vault: tlVaultPda,
@@ -3706,18 +3878,27 @@ describe("sigil", () => {
 
       try {
         await program.methods
-          .initializeVault(
-            noTlVaultId,
-            new BN(1000),
-            new BN(1000),
-            0,
-            [],
-            0,
-            100, // maxSlippageBps
-            new BN(0), // below MIN_TIMELOCK_DURATION — should fail
-            [],
-            [], // protocolCaps
-          )
+          .initializeVault(noTlVaultId,
+          new BN(1000),
+          new BN(1000),
+          1,
+          [],
+          0,
+          100,
+          new BN(0),
+          [],
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(1000),
+            maxTransactionSizeUsd: new BN(1000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(0),
+          }),
+        )
           .accounts({
             owner: owner.publicKey,
             vault: noTlVault,
@@ -3737,19 +3918,19 @@ describe("sigil", () => {
     it("changing timelock_duration itself goes through queue", async () => {
       // Queue a timelock change from 1800 to 3600
       await program.methods
-        .queuePolicyUpdate(
+        .queuePolicyUpdate(null,
           null,
           null,
           null,
           null,
           null,
+          new BN(3600),
           null,
-          new BN(3600), // new timelock_duration
           null,
           null,
-          null, // hasProtocolCaps
-          null, // protocolCaps
-          null, // destinationMode
+          null,
+          null,
+          (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { timelockDuration: new BN(3600) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -3780,19 +3961,19 @@ describe("sigil", () => {
     it("lowering timelock back to MIN via queue", async () => {
       // Queue timelock change from 3600 back to 1800 (MIN_TIMELOCK_DURATION)
       await program.methods
-        .queuePolicyUpdate(
+        .queuePolicyUpdate(null,
           null,
           null,
           null,
           null,
           null,
+          new BN(1800),
           null,
-          new BN(1800), // back to MIN_TIMELOCK_DURATION
           null,
           null,
-          null, // hasProtocolCaps
-          null, // protocolCaps
-          null, // destinationMode
+          null,
+          null,
+          (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { timelockDuration: new BN(1800) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -3821,8 +4002,7 @@ describe("sigil", () => {
 
       // Verify further updates still require queue/apply
       await program.methods
-        .queuePolicyUpdate(
-          new BN(999_000_000),
+        .queuePolicyUpdate(new BN(999_000_000),
           null,
           null,
           null,
@@ -3831,9 +4011,10 @@ describe("sigil", () => {
           null,
           null,
           null,
-          null, // hasProtocolCaps
-          null, // protocolCaps
-          null, // destinationMode
+          null,
+          null,
+          null,
+          (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(999_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -3932,17 +4113,26 @@ describe("sigil", () => {
         program.programId,
       );
       await program.methods
-        .initializeVault(
-          destVaultId,
-          new BN(500_000_000), // 500 USDC daily cap
-          new BN(100_000_000), // 100 USDC max tx
-          1, // protocolMode: allowlist
+        .initializeVault(destVaultId,
+          new BN(500_000_000),
+          new BN(100_000_000),
+          1,
           [jupiterProgramId],
           0,
-          100, // maxSlippageBps
-          new BN(1800), // MIN_TIMELOCK_DURATION
-          [allowedDest.publicKey], // only allow transfers to this address
-          [], // protocolCaps
+          100,
+          new BN(1800),
+          [allowedDest.publicKey],
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [jupiterProgramId],
+            allowedDestinations: [allowedDest.publicKey],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -4078,17 +4268,26 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(
-          anyDestVaultId,
+        .initializeVault(anyDestVaultId,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
           [jupiterProgramId],
           0,
-          100, // maxSlippageBps
-          new BN(1800), // MIN_TIMELOCK_DURATION
-          [], // empty allowlist — under default Restricted mode this rejects everything
-          [], // protocolCaps
+          100,
+          new BN(1800),
+          [],
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [jupiterProgramId],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -4168,85 +4367,47 @@ describe("sigil", () => {
       (sharedAnyDest as any).vaultAta = anyVaultAta;
     });
 
-    it("OpenWithCap mode allows any destination after queue+apply (F-4 opt-in)", async () => {
+    // Phase 2 Option A: OpenWithCap mode (destination_mode=1) was deleted.
+    // The test now verifies that the queue rejects destination_mode=1 with
+    // InvalidDestinationMode (6078), instead of the previous "opt-in to drain"
+    // behavior. Companion test "queue with destination_mode=2" below covers
+    // the >1 case.
+    it("rejects destination_mode=1 (OpenWithCap deleted in Phase 2 Option A)", async () => {
       const anyVault = (sharedAnyDest as any).vault as PublicKey;
       const anyPolicy = (sharedAnyDest as any).policy as PublicKey;
-      const anyTracker = (sharedAnyDest as any).tracker as PublicKey;
-      const anyOverlay = (sharedAnyDest as any).overlay as PublicKey;
-      const anyVaultAta = (sharedAnyDest as any).vaultAta as PublicKey;
       const [anyPendingPda] = PublicKey.findProgramAddressSync(
         [Buffer.from("pending_policy"), anyVault.toBuffer()],
         program.programId,
       );
 
-      // Owner queues destination_mode = 1 (OpenWithCap)
-      await program.methods
-        .queuePolicyUpdate(
-          null, // dailyCap
-          null, // maxTx
-          null, // protocolMode
-          null, // protocols
-          null, // devFeeRate
-          null, // maxSlippageBps
-          null, // timelock
-          null, // allowedDestinations
-          null, // sessionExpirySlots
-          null, // hasProtocolCaps
-          null, // protocolCaps
-          1, // destinationMode = OpenWithCap
+      try {
+        await program.methods
+          .queuePolicyUpdate(null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          1,
+          (await fetchAndComputeQueueDigest(program, anyPolicy, anyVault, { destinationMode: 1 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
-        .accounts({
-          owner: owner.publicKey,
-          vault: anyVault,
-          policy: anyPolicy,
-          pendingPolicy: anyPendingPda,
-          systemProgram: SystemProgram.programId,
-        } as any)
-        .rpc();
-
-      advanceTime(svm, 1801);
-
-      await program.methods
-        .applyPendingPolicy()
-        .accounts({
-          owner: owner.publicKey,
-          vault: anyVault,
-          policy: anyPolicy,
-          tracker: anyTracker,
-          pendingPolicy: anyPendingPda,
-        } as any)
-        .rpc();
-
-      // Verify mode flipped.
-      const updatedPolicy = await program.account.policyConfig.fetch(anyPolicy);
-      expect((updatedPolicy as any).destinationMode).to.equal(1);
-
-      // Now agent_transfer to the previously blocked destination must succeed.
-      // Daily cap remains the throttle.
-      const balBefore = getTokenBalance(svm, blockedDestAta);
-      await program.methods
-        .agentTransfer(
-          new BN(5_000_000),
-          (updatedPolicy as any).policyVersion ?? new BN(0),
-        )
-        .accounts({
-          agent: destAgent.publicKey,
-          vault: anyVault,
-          policy: anyPolicy,
-          tracker: anyTracker,
-          agentSpendOverlay: anyOverlay,
-          vaultTokenAccount: anyVaultAta,
-          tokenMintAccount: usdcMint,
-          destinationTokenAccount: blockedDestAta,
-          feeDestinationTokenAccount: null,
-          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        } as any)
-        .signers([destAgent])
-        .rpc();
-
-      const balAfter = getTokenBalance(svm, blockedDestAta);
-      expect(Number(balAfter)).to.be.greaterThan(Number(balBefore));
+          .accounts({
+            owner: owner.publicKey,
+            vault: anyVault,
+            policy: anyPolicy,
+            pendingPolicy: anyPendingPda,
+            systemProgram: SystemProgram.programId,
+          } as any)
+          .rpc();
+        expect.fail("destination_mode=1 should reject under Phase 2");
+      } catch (err: any) {
+        expectSigilError(err, { name: "InvalidDestinationMode" });
+      }
     });
 
     it("queue with destination_mode=2 (invalid) rejects with InvalidDestinationMode", async () => {
@@ -4259,20 +4420,20 @@ describe("sigil", () => {
 
       try {
         await program.methods
-          .queuePolicyUpdate(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            2, // destinationMode out of range
-          )
+          .queuePolicyUpdate(null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          2,
+          (await fetchAndComputeQueueDigest(program, anyPolicy, anyVault, { destinationMode: 2 })), // newPolicyPreviewDigest (Phase 2 TA-19)
+        )
           .accounts({
             owner: owner.publicKey,
             vault: anyVault,
@@ -4318,18 +4479,27 @@ describe("sigil", () => {
 
       try {
         await program.methods
-          .initializeVault(
-            badVid,
-            new BN(1000),
-            new BN(1000),
-            0,
-            [],
-            0,
-            100, // maxSlippageBps
-            new BN(1800), // MIN_TIMELOCK_DURATION
-            tooMany,
-            [], // protocolCaps
-          )
+          .initializeVault(badVid,
+          new BN(1000),
+          new BN(1000),
+          1,
+          [],
+          0,
+          100,
+          new BN(1800),
+          tooMany,
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(1000),
+            maxTransactionSizeUsd: new BN(1000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: tooMany,
+            timelockDuration: new BN(1800),
+          }),
+        )
           .accounts({
             owner: owner.publicKey,
             vault: bv,
@@ -4456,17 +4626,26 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(
-          feeDestVaultId,
+        .initializeVault(feeDestVaultId,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
           [jupiterProgramId],
-          500, // developer_fee_rate = 500 (5 BPS)
-          100, // maxSlippageBps
-          new BN(1800), // MIN_TIMELOCK_DURATION
-          [allowedDest.publicKey], // F-4 fix: explicit allowlist required under default Restricted
-          [], // protocolCaps
+          500,
+          100,
+          new BN(1800),
+          [allowedDest.publicKey],
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [jupiterProgramId],
+            allowedDestinations: [allowedDest.publicKey],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -4592,17 +4771,26 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(
-          maVaultId,
+        .initializeVault(maVaultId,
           new BN(1_000_000_000),
           new BN(500_000_000),
           1,
           [jupiterProgramId],
           0,
           100,
-          new BN(1800), // MIN_TIMELOCK_DURATION
+          new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(1_000_000_000),
+            maxTransactionSizeUsd: new BN(500_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [jupiterProgramId],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -4959,7 +5147,7 @@ describe("sigil", () => {
       expect(entry!.capability).to.equal(FULL_CAPABILITY);
     });
 
-    it("invalid capability value → InvalidPermissions (6040)", async () => {
+    it("invalid capability value → InvalidCapability (6079, Phase 2 TA-04)", async () => {
       const badAgent = Keypair.generate();
       try {
         await program.methods
@@ -4972,7 +5160,10 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectSigilError(err, { name: "InvalidPermissions" });
+        // Phase 2 TA-04 replaced the generic `InvalidPermissions` with the
+        // specific `InvalidCapability` so callers can distinguish "bad
+        // capability value" from other permission errors.
+        expectSigilError(err, { name: "InvalidCapability" });
       }
     });
   });
@@ -5028,17 +5219,26 @@ describe("sigil", () => {
 
       // Create vault with $2000 daily cap, $1000 per-tx limit
       await program.methods
-        .initializeVault(
-          epochVaultId,
-          new BN(2_000_000_000), // 2000 USDC daily cap
-          new BN(1_000_000_000), // 1000 USDC max tx
+        .initializeVault(epochVaultId,
+          new BN(2_000_000_000),
+          new BN(1_000_000_000),
           1,
           [jupiterProgramId],
           0,
           100,
-          new BN(1800), // MIN_TIMELOCK_DURATION
-          [epochDest.publicKey], // F-4 fix: must explicitly allow this destination under default Restricted mode
-          [], // protocolCaps
+          new BN(1800),
+          [epochDest.publicKey],
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(2_000_000_000),
+            maxTransactionSizeUsd: new BN(1_000_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [jupiterProgramId],
+            allowedDestinations: [epochDest.publicKey],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -5329,17 +5529,26 @@ describe("sigil", () => {
       // protocolA: 100 USDC cap, protocolB: 200 USDC cap
       // Global cap: 1000 USDC, Max tx: 500 USDC
       await program.methods
-        .initializeVault(
-          protoCapVaultId,
-          new BN(1_000_000_000), // 1000 USDC global cap
-          new BN(500_000_000), // 500 USDC max tx
-          1, // ALLOWLIST mode
+        .initializeVault(protoCapVaultId,
+          new BN(1_000_000_000),
+          new BN(500_000_000),
+          1,
           [protocolA, protocolB],
-          0, // no dev fee
-          100, // maxSlippageBps
-          new BN(1800), // MIN_TIMELOCK_DURATION
-          [], // no dest restrictions
-          [new BN(100_000_000), new BN(200_000_000)], // protocolCaps: [100 USDC, 200 USDC]
+          0,
+          100,
+          new BN(1800),
+          [],
+          [new BN(100_000_000), new BN(200_000_000)],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(1_000_000_000),
+            maxTransactionSizeUsd: new BN(500_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [protocolA, protocolB],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: protoCapOwner.publicKey,
@@ -5438,7 +5647,7 @@ describe("sigil", () => {
 
       // Update protocolA cap to 0 (unlimited)
       await program.methods
-        .queuePolicyUpdate(
+        .queuePolicyUpdate(null,
           null,
           null,
           null,
@@ -5447,10 +5656,10 @@ describe("sigil", () => {
           null,
           null,
           null,
+          true,
+          [new BN(0), new BN(200_000_000)],
           null,
-          true, // hasProtocolCaps
-          [new BN(0), new BN(200_000_000)], // protocolA: 0 (unlimited), protocolB: 200
-          null, // destinationMode
+          (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: protoCapOwner.publicKey,
@@ -5481,8 +5690,7 @@ describe("sigil", () => {
 
       // Restore caps
       await program.methods
-        .queuePolicyUpdate(
-          null,
+        .queuePolicyUpdate(null,
           null,
           null,
           null,
@@ -5493,7 +5701,8 @@ describe("sigil", () => {
           null,
           true,
           [new BN(100_000_000), new BN(200_000_000)],
-          null, // destinationMode
+          null,
+          (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: protoCapOwner.publicKey,
@@ -5536,7 +5745,7 @@ describe("sigil", () => {
 
       // Disable per-protocol caps
       await program.methods
-        .queuePolicyUpdate(
+        .queuePolicyUpdate(null,
           null,
           null,
           null,
@@ -5545,10 +5754,10 @@ describe("sigil", () => {
           null,
           null,
           null,
+          false,
           null,
-          false, // hasProtocolCaps = false
           null,
-          null, // destinationMode
+          (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: protoCapOwner.publicKey,
@@ -5579,8 +5788,7 @@ describe("sigil", () => {
 
       // Re-enable caps for next test
       await program.methods
-        .queuePolicyUpdate(
-          null,
+        .queuePolicyUpdate(null,
           null,
           null,
           null,
@@ -5591,7 +5799,8 @@ describe("sigil", () => {
           null,
           true,
           [new BN(100_000_000), new BN(200_000_000)],
-          null, // destinationMode
+          null,
+          (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: protoCapOwner.publicKey,
@@ -5626,20 +5835,20 @@ describe("sigil", () => {
       // Try to set protocol_caps with wrong length (1 cap for 2 protocols)
       try {
         await program.methods
-          .queuePolicyUpdate(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            true,
-            [new BN(100_000_000)], // only 1 cap but 2 protocols
-            null, // destinationMode
-          )
+          .queuePolicyUpdate(null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          true,
+          [new BN(100_000_000)],
+          null,
+          (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
+        )
           .accounts({
             owner: protoCapOwner.publicKey,
             vault: pcVault,
@@ -5681,18 +5890,27 @@ describe("sigil", () => {
 
       try {
         await program.methods
-          .initializeVault(
-            badVaultId,
-            new BN(1_000_000_000),
-            new BN(500_000_000),
-            0, // ALL mode
-            [],
-            0,
-            100,
-            new BN(1800),
-            [],
-            [new BN(100_000_000)], // caps with ALL mode → mismatch
-          )
+          .initializeVault(badVaultId,
+          new BN(1_000_000_000),
+          new BN(500_000_000),
+          1,
+          [],
+          0,
+          100,
+          new BN(1800),
+          [],
+          [new BN(100_000_000)],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(1_000_000_000),
+            maxTransactionSizeUsd: new BN(500_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
+        )
           .accounts({
             owner: protoCapOwner.publicKey,
             vault: bv,
@@ -5753,17 +5971,26 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(
-          freezeVaultId,
+        .initializeVault(freezeVaultId,
           new BN(1000_000_000),
           new BN(1000_000_000),
-          0,
+          1,
           [],
           0,
           100,
-          new BN(1800), // MIN_TIMELOCK_DURATION
+          new BN(1800),
           [],
           [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(1000_000_000),
+            maxTransactionSizeUsd: new BN(1000_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -5975,17 +6202,26 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(
-          pauseVaultId,
+        .initializeVault(pauseVaultId,
           new BN(1000_000_000),
           new BN(1000_000_000),
-          0,
+          1,
           [jupiterProgramId],
           0,
           100,
-          new BN(1800), // MIN_TIMELOCK_DURATION
+          new BN(1800),
           [],
           [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(1000_000_000),
+            maxTransactionSizeUsd: new BN(1000_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [jupiterProgramId],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,

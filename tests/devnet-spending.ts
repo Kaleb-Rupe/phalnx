@@ -466,19 +466,20 @@ describe("devnet-spending", () => {
 
     // Queue a policy cap change (verify queue mechanism works on devnet)
     await program.methods
-      .queuePolicyUpdate(
-        new BN(1_000_000_000), // queued cap: 1B
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null, // sessionExpirySeconds
-        null, // hasProtocolCaps
-        null, // protocolCaps
-      )
+      .queuePolicyUpdate(new BN(1_000_000_000),
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null, // destinationMode,
+          new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
+        )
       .accounts({
         owner: owner.publicKey,
         vault: vault.vaultPda,

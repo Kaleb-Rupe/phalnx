@@ -20,6 +20,7 @@ import {
 } from "@solana/spl-token";
 import { expect } from "chai";
 import BN from "bn.js";
+import { initVaultPreviewDigest } from "./helpers/policy-digest";
 // Inlined constants — sdk/typescript was deleted in Phase 0 nuclear cleanup
 const FLASH_TRADE_PROGRAM_ID = new PublicKey(
   "FLASH6Lo6h3iasJKWDs2F8TkW2UKf3s15C8PMGuVfgBn",
@@ -239,18 +240,27 @@ describe("flash-trade-integration", () => {
 
     // Initialize vault with perp-friendly policy
     await program.methods
-      .initializeVault(
-        vaultId,
-        new BN(1_000_000_000), // daily cap: 1000 USDC
-        new BN(500_000_000), // max tx: 500 USDC
-        0, // protocolMode
-        [flashProtocol],
-        0, // developer fee rate
-        100, // maxSlippageBps
-        new BN(1800), // timelockDuration (mandatory minimum: 30 min)
-        [], // allowedDestinations
-        [], // protocolCaps
-      )
+      .initializeVault(vaultId,
+          new BN(1_000_000_000),
+          new BN(500_000_000),
+          1,
+          [flashProtocol],
+          0,
+          100,
+          new BN(1800),
+          [],
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(1_000_000_000),
+            maxTransactionSizeUsd: new BN(500_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [flashProtocol],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
+        )
       .accountsPartial({
         owner: owner.publicKey,
         vault: vaultPda,
@@ -417,17 +427,26 @@ describe("flash-trade-integration", () => {
       );
 
       await program.methods
-        .initializeVault(
-          frozenVaultId,
+        .initializeVault(frozenVaultId,
           new BN(1_000_000_000),
           new BN(500_000_000),
-          0, // protocolMode
+          1,
           [flashProtocol],
-          0, // developer fee rate
-          100, // maxSlippageBps
+          0,
+          100,
           new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(1_000_000_000),
+            maxTransactionSizeUsd: new BN(500_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [flashProtocol],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accountsPartial({
           owner: owner.publicKey,
@@ -584,19 +603,30 @@ describe("flash-trade-integration", () => {
         program.programId,
       );
 
-      // Daily cap = 200 USDC, max tx = 200 USDC, all protocols allowed
+      // Daily cap = 200 USDC, max tx = 200 USDC, allowlist contains mockProtocol
+      // (Phase 2 Option A: protocol_mode is hard-coded to 1 = ALLOWLIST; "all
+      // protocols allowed" is no longer expressible — owners must enumerate.)
       await program.methods
-        .initializeVault(
-          capVaultId,
-          new BN(200_000_000), // $200 daily cap
-          new BN(200_000_000), // $200 max tx
-          0, // protocol mode: all allowed
+        .initializeVault(capVaultId,
+          new BN(200_000_000),
+          new BN(200_000_000),
+          1,
+          [mockProtocol],
+          0,
+          100,
+          new BN(1800),
           [],
-          0, // no dev fee
-          100, // maxSlippageBps
-          new BN(1800), // timelockDuration (mandatory minimum: 30 min)
-          [], // no destination allowlist
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(200_000_000),
+            maxTransactionSizeUsd: new BN(200_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [mockProtocol],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accountsPartial({
           owner: owner.publicKey,

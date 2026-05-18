@@ -59,6 +59,7 @@ import BN from "bn.js";
 import { createHash } from "crypto";
 import * as path from "path";
 import { FailedTransactionMetadata } from "litesvm";
+import { initVaultPreviewDigest } from "./helpers/policy-digest";
 import {
   createTestEnv,
   airdropSol,
@@ -341,18 +342,27 @@ describe("cu-budget", () => {
     );
 
     await program.methods
-      .initializeVault(
-        vaultId,
-        new BN(500_000_000), // daily cap = 500 USDC
-        new BN(200_000_000), // max tx = 200 USDC
-        targetProtocols.length === 0 ? 0 : 1, // protocolMode: 0=All, 1=Allowlist
-        targetProtocols,
-        0, // developer fee = 0
-        100, // maxSlippageBps = 100 (slippage_bps=50 in our data passes)
-        new BN(1800), // timelock = 30 min
-        [],
-        [],
-      )
+      .initializeVault(vaultId,
+          new BN(500_000_000),
+          new BN(200_000_000),
+          targetProtocols.length === 0 ? 0 : 1,
+          targetProtocols,
+          0,
+          100,
+          new BN(1800),
+          [],
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(200_000_000),
+            maxSlippageBps: 100,
+            protocolMode: targetProtocols.length === 0 ? 0 : 1,
+            protocols: targetProtocols,
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
+        )
       .accountsPartial({
         owner: owner.publicKey,
         vault,

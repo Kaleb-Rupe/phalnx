@@ -21,6 +21,7 @@ import {
 } from "@solana/spl-token";
 import { expect } from "chai";
 import BN from "bn.js";
+import { initVaultPreviewDigest } from "./helpers/policy-digest";
 import {
   createTestEnv,
   airdropSol,
@@ -157,18 +158,27 @@ describe("instruction-constraints", () => {
 
     // Initialize vault (protocolMode=0 = all allowed, timelock=1800)
     await program.methods
-      .initializeVault(
-        vaultId,
-        new BN(500_000_000), // 500 USDC daily cap
-        new BN(100_000_000), // 100 USDC max tx
-        0, // protocolMode: all
-        [],
-        0, // no developer fee
-        100, // maxSlippageBps
-        new BN(1800), // 1800s timelock (MIN_TIMELOCK_DURATION)
-        [],
-        [], // protocolCaps
-      )
+      .initializeVault(vaultId,
+          new BN(500_000_000),
+          new BN(100_000_000),
+          1,
+          [],
+          0,
+          100,
+          new BN(1800),
+          [],
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
+        )
       .accounts({
         owner: owner.publicKey,
         vault: vaultPda,
@@ -585,17 +595,26 @@ describe("instruction-constraints", () => {
         program.programId,
       );
       await program.methods
-        .initializeVault(
-          vaultId2,
+        .initializeVault(vaultId2,
           new BN(500_000_000),
           new BN(100_000_000),
-          0,
+          1,
           [],
           0,
           100,
           new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -888,17 +907,26 @@ describe("instruction-constraints", () => {
 
       // Init vault with timelock = 1800 seconds (MIN_TIMELOCK_DURATION)
       await program.methods
-        .initializeVault(
-          tlVaultId,
+        .initializeVault(tlVaultId,
           new BN(500_000_000),
           new BN(100_000_000),
-          0,
+          1,
           [],
           0,
           100,
-          new BN(1800), // 1800s timelock (MIN_TIMELOCK_DURATION)
+          new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -1079,18 +1107,27 @@ describe("instruction-constraints", () => {
 
       try {
         await program.methods
-          .initializeVault(
-            noTlVaultId,
-            new BN(500_000_000),
-            new BN(100_000_000),
-            0,
-            [],
-            0,
-            100,
-            new BN(0), // timelockDuration: 0 — NEGATIVE TEST (should fail)
-            [],
-            [],
-          )
+          .initializeVault(noTlVaultId,
+          new BN(500_000_000),
+          new BN(100_000_000),
+          1,
+          [],
+          0,
+          100,
+          new BN(0),
+          [],
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(0),
+          }),
+        )
           .accounts({
             owner: owner.publicKey,
             vault: noTlVault,
@@ -2034,17 +2071,26 @@ describe("instruction-constraints", () => {
 
       // Init vault with protocolMode=0, timelock=1800 (MIN_TIMELOCK_DURATION)
       await program.methods
-        .initializeVault(
-          cvVaultId,
+        .initializeVault(cvVaultId,
           new BN(1_000_000_000),
           new BN(500_000_000),
-          0,
+          1,
           [],
           0,
           100,
           new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(1_000_000_000),
+            maxTransactionSizeUsd: new BN(500_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -2499,17 +2545,26 @@ describe("instruction-constraints", () => {
 
       // Init vault with timelock=1800 (MIN_TIMELOCK_DURATION)
       await program.methods
-        .initializeVault(
-          tlVaultId,
+        .initializeVault(tlVaultId,
           new BN(1_000_000_000),
           new BN(500_000_000),
-          0,
+          1,
           [],
           0,
           100,
           new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(1_000_000_000),
+            maxTransactionSizeUsd: new BN(500_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -2723,17 +2778,26 @@ describe("instruction-constraints", () => {
       );
 
       await program.methods
-        .initializeVault(
-          id,
+        .initializeVault(id,
           new BN(500_000_000),
           new BN(100_000_000),
-          0,
+          1,
           [],
           0,
           100,
           new BN(1800),
           [],
           [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -3124,17 +3188,26 @@ describe("instruction-constraints", () => {
       );
 
       await program.methods
-        .initializeVault(
-          id,
+        .initializeVault(id,
           new BN(500_000_000),
           new BN(100_000_000),
-          0,
+          1,
           [],
           0,
           100,
           new BN(1800),
           [],
           [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -3570,17 +3643,26 @@ describe("instruction-constraints", () => {
       );
 
       await program.methods
-        .initializeVault(
-          f1VaultId,
+        .initializeVault(f1VaultId,
           new BN(500_000_000),
           new BN(100_000_000),
-          0,
+          1,
           [],
           0,
           100,
           new BN(1800),
           [],
           [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,
@@ -3931,17 +4013,26 @@ describe("instruction-constraints", () => {
       );
 
       await program.methods
-        .initializeVault(
-          id,
+        .initializeVault(id,
           new BN(500_000_000),
           new BN(100_000_000),
-          0,
+          1,
           [],
           0,
           100,
           new BN(1800),
           [],
           [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: owner.publicKey,

@@ -14,6 +14,7 @@ import {
 } from "@solana/spl-token";
 import { expect } from "chai";
 import BN from "bn.js";
+import { initVaultPreviewDigest } from "./helpers/policy-digest";
 import {
   createTestEnv,
   airdropSol,
@@ -130,18 +131,27 @@ describe("analytics-counters", () => {
 
     // Initialize vault
     await program.methods
-      .initializeVault(
-        vaultId,
-        new BN(1_000_000_000), // 1000 USDC daily cap
-        new BN(500_000_000), // 500 USDC max tx
-        0, // protocol mode: all
-        [],
-        0, // developer_fee_rate
-        5000, // maxSlippageBps (50%)
-        new BN(1800), // timelockDuration (mandatory minimum: 30 min)
-        [], // allowedDestinations
-        [], // protocolCaps
-      )
+      .initializeVault(vaultId,
+          new BN(1_000_000_000),
+          new BN(500_000_000),
+          1,
+          [],
+          0,
+          5000,
+          new BN(1800),
+          [],
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(1_000_000_000),
+            maxTransactionSizeUsd: new BN(500_000_000),
+            maxSlippageBps: 5000,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
+        )
       .accounts({
         owner: owner.publicKey,
         vault: vaultPda,

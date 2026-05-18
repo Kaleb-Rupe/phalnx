@@ -30,6 +30,7 @@ import {
 } from "@solana/spl-token";
 import { expect } from "chai";
 import BN from "bn.js";
+import { initVaultPreviewDigest } from "./helpers/policy-digest";
 import {
   PROTOCOL_TREASURY,
   getDevnetProvider,
@@ -139,18 +140,27 @@ describe("devnet-smoke-test", () => {
       program.programId,
     );
     await program.methods
-      .initializeVault(
-        vaultId,
-        new BN(500_000_000), // daily cap: 500
-        new BN(100_000_000), // max tx: 100
-        1, // protocolMode: allowlist
-        [jupiterProgramId],
-        0, // developer_fee_rate: 0 bps
-        500, // maxSlippageBps: 5%
-        new BN(1800), // timelockDuration (mandatory minimum: 30 min)
-        [], // allowedDestinations
-        [], // protocolCaps
-      )
+      .initializeVault(vaultId,
+          new BN(500_000_000),
+          new BN(100_000_000),
+          1,
+          [jupiterProgramId],
+          0,
+          500,
+          new BN(1800),
+          [],
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 500,
+            protocolMode: 1,
+            protocols: [jupiterProgramId],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
+        )
       .accounts({
         owner: owner.publicKey,
         vault: vaultPda,
@@ -213,19 +223,20 @@ describe("devnet-smoke-test", () => {
     // updatePolicy deleted; all mutations go through queue/apply.
     // With timelockDuration=1800, we can't apply in a test — just verify the queue.
     await program.methods
-      .queuePolicyUpdate(
-        null, // keep daily cap
-        null, // keep max tx
-        null, // keep protocolMode
-        null,
-        null, // keep developer_fee_rate
-        null, // keep maxSlippageBps
-        null, // keep timelockDuration
-        null, // keep allowedDestinations
-        null, // sessionExpirySeconds
-        null, // hasProtocolCaps
-        null, // protocolCaps
-      )
+      .queuePolicyUpdate(null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null, // destinationMode,
+          new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
+        )
       .accounts({
         owner: owner.publicKey,
         vault: vaultPda,

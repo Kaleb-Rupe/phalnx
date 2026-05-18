@@ -120,7 +120,7 @@ Under compaction (post-Phase-1):
 - All variants previously at 6034-6080 shift down by 2 → now **6032-6078**.
 - For example: `InvalidDestinationMode` (was 6080) shifts to **6078**.
 
-**Post-Phase-1 state (compaction):** 79 V1 variants at codes 6000-6078. The lowest unused code is **6079**. This is the canonical post-Phase-1 layout.
+**Post-Phase-1 state (compaction):** 79 V1 variants at codes 6000-6078. The lowest unused code was **6079**. Phase 2 appended 6079-6081 (InvalidCapability + PolicyPreviewMismatch + ObserveOnlyModeBlocksExecute). Post-Phase-2: 82 variants at codes 6000-6081; next free code is **6082**.
 
 ---
 
@@ -130,9 +130,9 @@ These codes are reserved for V2 primitives introduced in Phases 2 through 8. The
 
 | Code | Name | Phase | Primitive | Notes |
 |------|------|-------|-----------|-------|
-| 6079 | `ErrInvalidCapability` | Phase 2 | TA-04 | Reserved capability values 3..=255 reject |
-| 6080 | `ErrObserveOnlyModeBlocksExecute` | Phase 2 | TA-04 | Observer capability blocks execute path |
-| 6081 | `ErrPolicyPreviewMismatch` | Phase 2 | TA-19 | SHA-256 digest mismatch on PolicyConfig/PendingPolicyUpdate |
+| 6079 | `InvalidCapability` | Phase 2 ✅ | TA-04 | Reserved capability values 3..=255 reject — LANDED |
+| 6080 | `PolicyPreviewMismatch` | Phase 2 ✅ | TA-19 | SHA-256 digest mismatch on PolicyConfig/PendingPolicyUpdate — LANDED |
+| 6081 | `ObserveOnlyModeBlocksExecute` | Phase 2 ✅ | TA-19 | observe_only vault rejects validate_and_authorize — LANDED |
 | 6082 | `ErrMintNotPinned` | Phase 3 | TA-03 | USDC/USDT cluster-pinned mint enforcement |
 | 6083 | `ErrOutsideOperatingHours` | Phase 3 | TA-05 | UTC operating-hours bitmask violation |
 | 6084 | `ErrCooldownActive` | Phase 3 | TA-06 | Per-agent cooldown (on AgentSpendOverlay) |

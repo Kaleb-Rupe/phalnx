@@ -118,6 +118,10 @@ export const SIGIL_ERRORS = {
   BatchInstructionBlocked: 6077,
   // F-4 audit fix: explicit destination mode (default Restricted closes default-allow drain)
   InvalidDestinationMode: 6078,
+  // Phase 2 TA-04 + TA-19
+  InvalidCapability: 6079,
+  PolicyPreviewMismatch: 6080,
+  ObserveOnlyModeBlocksExecute: 6081,
 } as const;
 
 export type SigilErrorName = keyof typeof SIGIL_ERRORS;

@@ -107,7 +107,7 @@ describe("devnet-security", () => {
   it("1. non-owner cannot queue_policy_update", async () => {
     try {
       await program.methods
-        .queuePolicyUpdate(
+        .queuePolicyUpdate(null,
           null,
           null,
           null,
@@ -116,9 +116,10 @@ describe("devnet-security", () => {
           null,
           null,
           null,
-          null, // sessionExpirySeconds
-          null, // hasProtocolCaps
-          null, // protocolCaps
+          null,
+          null,
+          null, // destinationMode,
+          new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
         )
         .accounts({
           owner: attacker.publicKey,
@@ -246,7 +247,7 @@ describe("devnet-security", () => {
   it("6. agent cannot call queue_policy_update (owner-only)", async () => {
     try {
       await program.methods
-        .queuePolicyUpdate(
+        .queuePolicyUpdate(null,
           null,
           null,
           null,
@@ -255,9 +256,10 @@ describe("devnet-security", () => {
           null,
           null,
           null,
-          null, // sessionExpirySeconds
-          null, // hasProtocolCaps
-          null, // protocolCaps
+          null,
+          null,
+          null, // destinationMode,
+          new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
         )
         .accounts({
           owner: agent.publicKey,

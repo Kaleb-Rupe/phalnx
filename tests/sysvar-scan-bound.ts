@@ -43,6 +43,7 @@ import {
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { expect } from "chai";
 import BN from "bn.js";
+import { initVaultPreviewDigest } from "./helpers/policy-digest";
 import {
   createTestEnv,
   airdropSol,
@@ -150,18 +151,27 @@ describe("sysvar-scan-bound (M11 / SIMD-0296 pad-attack guard)", () => {
 
     // Initialize vault
     await program.methods
-      .initializeVault(
-        vaultId,
-        new BN(500_000_000),
-        new BN(100_000_000),
-        1, // protocolMode: allowlist
-        [jupiterProgramId],
-        0,
-        100,
-        new BN(1800),
-        [],
-        [],
-      )
+      .initializeVault(vaultId,
+          new BN(500_000_000),
+          new BN(100_000_000),
+          1,
+          [jupiterProgramId],
+          0,
+          100,
+          new BN(1800),
+          [],
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [jupiterProgramId],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
+        )
       .accounts({
         owner: owner.publicKey,
         vault: vaultPda,

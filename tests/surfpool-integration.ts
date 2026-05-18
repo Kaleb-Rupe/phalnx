@@ -27,6 +27,7 @@ import {
 } from "@solana/spl-token";
 import { expect } from "chai";
 import BN from "bn.js";
+import { initVaultPreviewDigest, fetchAndComputeQueueDigest } from "./helpers/policy-digest";
 import {
   createSurfpoolTestEnv,
   SurfpoolTestEnv,
@@ -141,17 +142,26 @@ describe("surfpool-integration", function () {
       const maxTxSize = new BN(100_000_000); // 100 USDC
 
       await program.methods
-        .initializeVault(
-          vaultId,
+        .initializeVault(vaultId,
           dailyCap,
           maxTxSize,
-          0, // protocolMode: all
+          1,
           [],
-          0, // developer_fee_rate
-          100, // maxSlippageBps (1%)
-          new BN(1800), // timelockDuration
-          [], // allowedDestinations
-          [], // protocolCaps
+          0,
+          100,
+          new BN(1800),
+          [],
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: dailyCap,
+            maxTransactionSizeUsd: maxTxSize,
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: env.payer.publicKey,
@@ -319,17 +329,26 @@ describe("surfpool-integration", function () {
 
       // Initialize vault
       await program.methods
-        .initializeVault(
-          vaultId,
+        .initializeVault(vaultId,
           new BN(500_000_000),
           new BN(100_000_000),
-          0,
+          1,
           [],
           0,
           100,
           new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: env.payer.publicKey,
@@ -584,17 +603,26 @@ describe("surfpool-integration", function () {
       );
 
       await program.methods
-        .initializeVault(
-          vaultId,
+        .initializeVault(vaultId,
           new BN(500_000_000),
           new BN(100_000_000),
-          0,
+          1,
           [],
           0,
           100,
           new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: env.payer.publicKey,
@@ -877,17 +905,26 @@ describe("surfpool-integration", function () {
       );
 
       await program.methods
-        .initializeVault(
-          vaultId,
+        .initializeVault(vaultId,
           new BN(500_000_000),
           new BN(100_000_000),
-          0,
+          1,
           [],
           0,
           100,
           new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: env.payer.publicKey,
@@ -1055,17 +1092,26 @@ describe("surfpool-integration", function () {
       );
 
       await program.methods
-        .initializeVault(
-          vaultId,
+        .initializeVault(vaultId,
           new BN(500_000_000),
           new BN(100_000_000),
-          0,
+          1,
           [],
           0,
           100,
           new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: env.payer.publicKey,
@@ -1202,17 +1248,26 @@ describe("surfpool-integration", function () {
       );
 
       const tx = await program.methods
-        .initializeVault(
-          profileVaultId,
+        .initializeVault(profileVaultId,
           new BN(500_000_000),
           new BN(100_000_000),
-          0,
+          1,
           [],
           0,
           100,
           new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: env.payer.publicKey,
@@ -1280,17 +1335,26 @@ describe("surfpool-integration", function () {
       );
 
       await program.methods
-        .initializeVault(
-          testVaultId,
+        .initializeVault(testVaultId,
           new BN(500_000_000),
           new BN(100_000_000),
-          0,
+          1,
           [],
           0,
           100,
           new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: env.payer.publicKey,
@@ -1333,17 +1397,26 @@ describe("surfpool-integration", function () {
       );
 
       await program.methods
-        .initializeVault(
-          preResetVaultId,
+        .initializeVault(preResetVaultId,
           new BN(500_000_000),
           new BN(100_000_000),
-          0,
+          1,
           [],
           0,
           100,
           new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: env.payer.publicKey,
@@ -1401,17 +1474,26 @@ describe("surfpool-integration", function () {
       );
 
       await program.methods
-        .initializeVault(
-          postResetVaultId,
+        .initializeVault(postResetVaultId,
           new BN(500_000_000),
           new BN(100_000_000),
-          0,
+          1,
           [],
           0,
           100,
           new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: env.payer.publicKey,
@@ -1459,17 +1541,26 @@ describe("surfpool-integration", function () {
 
       // Create vault WITH timelock (1800 seconds = MIN_TIMELOCK_DURATION)
       await program.methods
-        .initializeVault(
-          vaultId,
+        .initializeVault(vaultId,
           new BN(500_000_000),
           new BN(100_000_000),
-          0,
+          1,
           [],
           0,
           100,
-          new BN(1800), // 1800s timelock (MIN_TIMELOCK_DURATION)
+          new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(100_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accounts({
           owner: env.payer.publicKey,
@@ -1486,8 +1577,7 @@ describe("surfpool-integration", function () {
     it("queue + time travel + apply succeeds", async () => {
       // Queue policy update
       await program.methods
-        .queuePolicyUpdate(
-          new BN(200_000_000), // new daily cap: 200 USDC
+        .queuePolicyUpdate(new BN(200_000_000),
           null,
           null,
           null,
@@ -1495,10 +1585,11 @@ describe("surfpool-integration", function () {
           null,
           null,
           null,
-          null, // sessionExpirySeconds
-          null, // hasProtocolCaps
-          null, // protocolCaps
-          null, // destinationMode
+          null,
+          null,
+          null,
+          null,
+          (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { dailySpendingCapUsd: new BN(200_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: env.payer.publicKey,
@@ -1541,8 +1632,7 @@ describe("surfpool-integration", function () {
       // Queue another update (use sendVersionedTx since Anchor .rpc()
       // can have issues after time travel)
       const queueIx = await program.methods
-        .queuePolicyUpdate(
-          new BN(300_000_000),
+        .queuePolicyUpdate(new BN(300_000_000),
           null,
           null,
           null,
@@ -1550,10 +1640,11 @@ describe("surfpool-integration", function () {
           null,
           null,
           null,
-          null, // sessionExpirySeconds
-          null, // hasProtocolCaps
-          null, // protocolCaps
-          null, // destinationMode
+          null,
+          null,
+          null,
+          null,
+          (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { dailySpendingCapUsd: new BN(300_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: env.payer.publicKey,

@@ -29,6 +29,7 @@ import {
 } from "@solana/spl-token";
 import { expect } from "chai";
 import BN from "bn.js";
+import { initVaultPreviewDigest } from "./policy-digest";
 
 // ─── Test-controlled stablecoin mint keypairs ────────────────────────────────
 // These pubkeys MUST match the Rust USDC_MINT and USDT_MINT devnet constants
@@ -334,18 +335,27 @@ export async function createFullVault(
     program.programId,
   );
   await program.methods
-    .initializeVault(
-      vaultId,
-      dailyCap,
-      maxTx,
-      protocolMode,
-      allowedProtocols,
-      devFeeRate,
-      maxSlippageBps,
-      timelockDuration,
-      allowedDestinations,
-      [], // protocolCaps
-    )
+    .initializeVault(vaultId,
+          dailyCap,
+          maxTx,
+          protocolMode,
+          allowedProtocols,
+          devFeeRate,
+          maxSlippageBps,
+          timelockDuration,
+          allowedDestinations,
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: dailyCap,
+            maxTransactionSizeUsd: maxTx,
+            maxSlippageBps: maxSlippageBps,
+            protocolMode: protocolMode,
+            protocols: allowedProtocols,
+            allowedDestinations: allowedDestinations,
+            timelockDuration: timelockDuration,
+          }),
+        )
     .accounts({
       owner: owner.publicKey,
       vault: pdas.vaultPda,

@@ -30,6 +30,7 @@ import BN from "bn.js";
 import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
+import { initVaultPreviewDigest } from "./policy-digest";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -715,6 +716,9 @@ export interface SetupVaultOpts {
   owner?: Keypair;
   protocolCaps?: any[];
   skipAgent?: boolean;
+  /** Phase 2 Option A: protocol_mode is hard-coded to 1 (ALLOWLIST). Pass the
+   * actual protocol pubkeys here. Empty array = no DeFi permitted. */
+  protocols?: PublicKey[];
 }
 
 export interface VaultSetupResult {
@@ -763,19 +767,31 @@ export async function setupVaultWithAgent(
   const pdas = derivePDAs(owner.publicKey, vaultId, program.programId);
   const overlayPda = deriveOverlayPda(pdas.vaultPda, program.programId);
 
+  // Phase 2 Option A: protocol_mode must be 1 (ALLOWLIST). Empty protocols
+  // means "no DeFi permitted yet" — callers that need a permissive default
+  // pass `opts.protocols = [...]` explicitly.
   await program.methods
-    .initializeVault(
-      vaultId,
-      dailyCap,
-      maxTxSize,
-      0, // protocolMode: all
-      [],
-      developerFeeRate,
-      maxSlippageBps,
-      timelockDuration,
-      allowedDestinations,
-      protocolCaps,
-    )
+    .initializeVault(vaultId,
+          dailyCap,
+          maxTxSize,
+          1,
+          opts.protocols ?? [],
+          developerFeeRate,
+          maxSlippageBps,
+          timelockDuration,
+          allowedDestinations,
+          protocolCaps,
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: dailyCap,
+            maxTransactionSizeUsd: maxTxSize,
+            maxSlippageBps: maxSlippageBps,
+            protocolMode: 1,
+            protocols: opts.protocols ?? [],
+            allowedDestinations: allowedDestinations,
+            timelockDuration: timelockDuration,
+          }),
+        )
     .accounts({
       owner: owner.publicKey,
       vault: pdas.vaultPda,

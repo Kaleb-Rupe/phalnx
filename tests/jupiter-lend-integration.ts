@@ -17,6 +17,7 @@ import {
 } from "@solana/spl-token";
 import { expect } from "chai";
 import BN from "bn.js";
+import { initVaultPreviewDigest } from "./helpers/policy-digest";
 // Inlined constants — sdk/typescript was deleted in Phase 0 nuclear cleanup
 const JUPITER_LEND_PROGRAM_ID = new PublicKey(
   "JLend2fEim9xUFcaHsyGePEoBzFLvkjMi3MnPcSuCdu",
@@ -239,18 +240,27 @@ describe("jupiter-lend-integration", () => {
 
     // Initialize vault with Jupiter Lend in allowlist
     await program.methods
-      .initializeVault(
-        vaultId,
-        new BN(500_000_000), // daily cap: 500 USDC
-        new BN(200_000_000), // max tx: 200 USDC
-        1, // protocolMode: allowlist
-        [lendProtocol],
-        0, // developer fee rate
-        100, // maxSlippageBps
-        new BN(1800), // timelockDuration
-        [], // allowedDestinations
-        [], // protocolCaps
-      )
+      .initializeVault(vaultId,
+          new BN(500_000_000),
+          new BN(200_000_000),
+          1,
+          [lendProtocol],
+          0,
+          100,
+          new BN(1800),
+          [],
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(200_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [lendProtocol],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
+        )
       .accountsPartial({
         owner: owner.publicKey,
         vault: vaultPda,
@@ -463,17 +473,26 @@ describe("jupiter-lend-integration", () => {
       );
 
       await program.methods
-        .initializeVault(
-          frozenVaultId,
+        .initializeVault(frozenVaultId,
           new BN(500_000_000),
           new BN(200_000_000),
-          0,
+          1,
           [lendProtocol],
           0,
           100,
           new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(500_000_000),
+            maxTransactionSizeUsd: new BN(200_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [lendProtocol],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accountsPartial({
           owner: owner.publicKey,
@@ -580,17 +599,26 @@ describe("jupiter-lend-integration", () => {
 
       // Create vault with tight cap: 100 USDC daily, 60 USDC max tx
       await program.methods
-        .initializeVault(
-          rollingVaultId,
-          new BN(100_000_000), // 100 USDC daily cap
-          new BN(60_000_000), // 60 USDC max tx
-          0,
+        .initializeVault(rollingVaultId,
+          new BN(100_000_000),
+          new BN(60_000_000),
+          1,
           [lendProtocol],
           0,
           100,
           new BN(1800),
           [],
-          [], // protocolCaps
+          [],
+          false, // observeOnly (Phase 2 TA-19)
+          initVaultPreviewDigest({
+            dailySpendingCapUsd: new BN(100_000_000),
+            maxTransactionSizeUsd: new BN(60_000_000),
+            maxSlippageBps: 100,
+            protocolMode: 1,
+            protocols: [lendProtocol],
+            allowedDestinations: [],
+            timelockDuration: new BN(1800),
+          }),
         )
         .accountsPartial({
           owner: owner.publicKey,
