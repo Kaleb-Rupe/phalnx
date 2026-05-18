@@ -545,6 +545,19 @@ export {
 } from "./policy/compute-cosign-digest.js";
 export type { CosignDigestFields } from "./policy/compute-cosign-digest.js";
 
+// ─── TA-18 / G6 — Squads V4 Detection Helper (audit 2026-05-18) ─────────────
+// Read-only off-chain helper that inspects whether a vault owner pubkey is
+// owned by the Squads V4 multisig program. Used by the dashboard to decide
+// whether to suppress the "single-signer protection" warning banner when
+// `policy.cosign_required = false`. NOT an on-chain enforcement primitive —
+// Sigil makes no assumption about the multisig's threshold or configuration.
+// See sdk/kit/src/squadsDetection.ts for the full AC-2 mode framing.
+export {
+  SQUADS_V4_PROGRAM_ID,
+  detectSquadsV4Owner,
+} from "./squadsDetection.js";
+export type { SquadsDetectionResult } from "./squadsDetection.js";
+
 // ─── Error Classification (typed predicates + transport classifier) ─────────
 //
 // Shared helpers used across `seal`, `shielded-fetch`, `facilitator-verify`,
