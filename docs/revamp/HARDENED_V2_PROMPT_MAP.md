@@ -566,8 +566,10 @@ TASKS:
       protocol_mode, protocols, destination_mode, allowed_destinations,
       timelock_duration, session_expiry_seconds, observe_only, has_constraints,
       has_post_assertions). Field order is FIXED (document in policy.rs).
-     Assert recomputed == preview_digest. Reject with new error 6081
-     ErrPolicyPreviewMismatch.
+     Assert recomputed == preview_digest. Reject with new error 6080
+     ErrPolicyPreviewMismatch (G5 audit fix 2026-05-18: prior "6081" in
+     this §6 body was reversed against §4 reservation table — §4 is
+     authoritative).
    - instructions/queue_policy_update.rs: same digest enforcement on pending.
    - instructions/apply_pending_policy.rs: RE-ASSERT pending.new_policy_preview_digest
      matches recomputed digest of fields being copied to live (defense against
@@ -580,7 +582,9 @@ TASKS:
      non-empty allowlists required (or queue policy update can be empty for
      ramp-up).
    - instructions/validate_and_authorize.rs: at entry, if vault.observe_only,
-     reject with new error 6080 ErrObserveOnlyModeBlocksExecute.
+     reject with new error 6081 ErrObserveOnlyModeBlocksExecute (G5 audit
+     fix 2026-05-18: prior "6080" in this §6 body was reversed against §4
+     reservation table — §4 is authoritative).
 
    **Phase 2 close-up addition (F-12, landed post-Phase-2 dispatch):**
    - instructions/set_observe_only.rs: NEW direct owner-only flip ix.

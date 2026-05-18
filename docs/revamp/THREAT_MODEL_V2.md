@@ -102,8 +102,9 @@ Cells in the §4 mapping table show whether a TA primitive **blocks** a given at
 **Post-mitigation blast-radius (V1 Tier A):** MEDIUM —
 - K5 timelock on policy updates: 48-hour minimum.
 - D-05 + SDK Squads V4 detection helper (Stage 4): if owner is a multisig PDA, key leak is bounded by multisig threshold — single-key compromise has no policy-mutation power.
-- TA-09 cosign workflow: elevated ops require owner+session co-sign, preventing lateral movement post-compromise.
-- **Residual:** Single-key owner (non-multisig) deployments remain CATASTROPHIC if the attacker waits the timelock + executes during a low-attention window. Mitigation: STRONGLY recommend Squads V4 3-of-5 + 24-72hr timelock + hardware diversification per [REVAMP_PLAN §4.4 / D-05](./REVAMP_PLAN.md#10-decision-register). Drift's April 2026 $285M loss on 2-of-5 + durable-nonce social engineering is the canonical negative precedent.
+- TA-09 cosign workflow: elevated ops require owner+session co-sign, preventing lateral movement post-compromise. **G3 audit fix 2026-05-18 extended elevated set:** TA-12 stable_balance_floor lowering and TA-14 per_recipient_daily_cap_usd raising now also require cosign (previously gap).
+- **OPEN — PEN-CROSS-1 (G5 audit fix 2026-05-18 — added to threat model per Ava finding):** `register_agent` currently has NO timelock, NO TA-19-style digest binding, and is NOT in the TA-09 elevated set. Owner-key phishing → instant operator grant (capability=FULL, spending_limit_usd=u64::MAX). Mitigation in V2: STRONGLY require Squads V4 3-of-5 as vault owner (single-key owners SHOULD NOT deploy until Phase 8 ships register_agent timelock + ownership-transfer M-5 nonce binding). Deferred to Phase 8 absorption per cross-phase audit memory.
+- **Residual:** Single-key owner (non-multisig) deployments remain CATASTROPHIC if the attacker waits the timelock + executes during a low-attention window. Plus the PEN-CROSS-1 open path above. Mitigation: STRONGLY recommend Squads V4 3-of-5 + 24-72hr timelock + hardware diversification per [REVAMP_PLAN §4.4 / D-05](./REVAMP_PLAN.md#10-decision-register). Drift's April 2026 $285M loss on 2-of-5 + durable-nonce social engineering is the canonical negative precedent.
 
 **Detection signal:** `PendingPolicyUpdate` event emitted via K6. Owners must subscribe to the event stream; the dashboard's notification subsystem is the user-facing detector.
 
@@ -115,7 +116,7 @@ Cells in the §4 mapping table show whether a TA primitive **blocks** a given at
 - Whatever the bug grants. Worst case: full vault drain via crafted instruction sequence.
 - Affects all vaults using the deployed program version.
 
-**Likelihood:** MEDIUM at Stage 2-5; LOW after Stage 6 audit-fixed.
+**Likelihood:** MEDIUM at Stage 2-5; LOW after V1 mainnet-ready review (G5 audit fix 2026-05-18 — prior "Stage 6 audit-fixed" framing struck per L-2 deletion of paid audit; persisted §RP transcripts at `PHASE_N_REVIEW/` substitute for the audit firm letter).
 
 **Pre-mitigation blast-radius:** CATASTROPHIC across all Sigil vaults simultaneously.
 
@@ -123,8 +124,8 @@ Cells in the §4 mapping table show whether a TA primitive **blocks** a given at
 - TA-04 capability split: an agent compromise via bug is bounded by the session's capability level (DISABLED / OBSERVER / OPERATOR).
 - TA-10 sandwich integrity + TA-11 protected-writable deny-list: foreign programs cannot tamper with Sigil's PDAs in the same bundle, narrowing exploit primitives.
 - **Auto-revoke is deferred for V1** (NOT a numbered TA primitive; reserved for v1.1 once UX patterns settle). Documented as a v1.1 deferral candidate per [REVAMP_PLAN §6](./REVAMP_PLAN.md#6-deferred--skipped). When implemented in v1.1, the counter MUST exclude AC-8 CU-exhaustion and AC-3 successful-bug-exploits (those don't reject bundles) — only policy-rejected bundles count.
-- **Audit + formal verification** (see [ACCEPTANCE_V2.md §3.5](./ACCEPTANCE_V2.md#35--formal-verification-of-3-critical-invariants)) is the primary mitigation; on-chain primitives are containment, not prevention.
-- **Residual:** Auditable program bugs are an inherent risk. Bug bounty (see [ACCEPTANCE_V2.md §3.3](./ACCEPTANCE_V2.md#33--bug-bounty-live)) is the post-deployment defense.
+- **Persisted §RP review transcripts** at `docs/revamp/PHASE_N_REVIEW/` (G5 audit fix 2026-05-18 — prior "audit + formal verification" + "bug bounty" refs were ACCEPTANCE_V2 §3.3/§3.5 artifacts, both deleted under L-2 budget constraint). The §RP pipeline (silent-failure-hunter + code-reviewer + Pentester subagents) has caught CRITICALs every phase; the persisted transcripts substitute for the audit firm letter.
+- **Residual:** Auditable program bugs are an inherent risk. Mitigation post-deployment: §RP re-runs against any new attack-surface phase; community-reported issues via Github; Certora formal verification deferred to v1.1.
 
 **Detection signal:** Audit log buffer (TA-15) + dashboard anomaly alerts. Per Architect 2026-05-17, this depends on K6 emit fidelity (load-bearing dep).
 
@@ -255,11 +256,11 @@ Cells in the §4 mapping table show whether a TA primitive **blocks** a given at
 **Pre-mitigation blast-radius:** HIGH — pre-signed seal() instructions can be replayed after policy changes.
 
 **Post-mitigation blast-radius (V1 Tier A):** LOW —
-- K2 session-authority PDA: each seal() execution increments a `nonce: u64` on the session. The entry guard rejects with `ErrSessionNonceMismatch` if the session nonce does not match the expected next value.
+- **K2 session-authority PDA + AC-10 nonce field (G5 audit fix 2026-05-18 — clarified):** In V2 the `nonce: u64` on `SessionAuthority` is structural / forward-compatible for Phase 8 M-5 ownership-transfer replay protection. It is NOT the active defense in V2 because the session PDA uses Anchor's `init` (not `init_if_needed`), so the account closes on every finalize and the next validate creates a fresh `nonce = 0` account. The actual V2 active defense against durable-nonce replay is the **`policy_version` equality check** at `validate_and_authorize.rs:172-175` — a pre-signed seal observed at policy_version N rejects with `PolicyVersionMismatch` after the owner bumps to N+1 via any of the 10+ mutation paths (apply_pending_policy, register/revoke/pause/unpause agent, set_observe_only, apply_constraints_update, apply_close_constraints, record_agent_violation, apply_agent_permissions_update). `ErrSessionNonceMismatch (6093)` remains in the surface as the Phase 8 hook; until Phase 8 lands, callers MUST pass `expected_nonce = 0`.
 - TA-15 N1 temporal binding (slot+blockhash double-bind per C22): a pre-signed instruction recorded at slot N cannot replay at slot N+M with M > tolerance.
 - K5 timelock + TA-05 operating hours: bound when a pre-signed instruction can land.
 - Runbook (per Drift precedent): owners audit signers' durable nonce accounts before any sensitive operation.
-- **Residual:** A pre-signed seal that matches the current nonce CAN replay until consumed. Bound = 1 instruction in flight. Sigil DOES NOT use durable nonces internally; the risk is solely on durable-nonce-bearing wallets that the owner uses.
+- **Residual:** A pre-signed seal that matches the CURRENT `policy_version` AND survives the slot+blockhash check CAN replay until the next policy_version bump. Bound = 1 instruction in flight per (policy_version, slot-tolerance) window. Sigil DOES NOT use durable nonces internally; the risk is solely on durable-nonce-bearing wallets that the owner uses.
 
 **Detection signal:** Session nonce mismatch event emitted via K6 → TA-15 audit log + dashboard alert.
 
@@ -649,7 +650,7 @@ For each attacker class, a concrete scenario showing how the attack plays out un
 - **Step 3:** TA-10 off-by-one permits the extra instruction. `malicious_drain_ix` executes (perhaps transfers vault ATA to attacker).
 - **Step 4:** TA-11 protected-writable deny-list may or may not catch it depending on which account is targeted.
 - **Bound:** CATASTROPHIC per-vault if TA-11 also misses. Affects all Sigil vaults using the buggy program version.
-- **Detection:** Bug bounty + Cantina / Sherlock contests. Mitigation: external audit (Stage 6) + formal verification of TA-10 invariant.
+- **Detection:** Persisted adversarial §RP review pipeline (silent-failure-hunter + code-reviewer + Pentester subagents — see `PHASE_N_REVIEW/` transcripts). Mitigation: §RP transcripts substituting for paid audit per L-2 budget constraint (G5 audit fix 2026-05-18 — prior "external audit (Stage 6) + bug bounty" references were ACCEPTANCE_V2 §3.1/3.5 artifacts, both deleted under L-2). Formal verification of TA-10 invariant via Certora deferred to v1.1.
 
 ### AC-4 — Token-2022 silent drain scenario
 - **Setup:** Vault owner mistakenly initializes vault with a malicious mint `FAKE_USDC` that has `TransferHook` extension.
@@ -770,9 +771,11 @@ Per [ACCEPTANCE_V2.md §3.4](./ACCEPTANCE_V2.md#34--incident-response-runbook--d
 
 ---
 
-## 17. Audit-Ready Summary (Stage 5 → Stage 6 handoff)
+## 17. V1 Mainnet-Ready Summary (Stage 5 → V1 ship)
 
-When this document is ready for the Stage 6 audit firm engagement, the following must be true:
+*G5 audit fix 2026-05-18: "Stage 6 audit firm" framing struck per L-2 budget constraint (no paid audit in V1). Replacement gate: persisted §RP transcripts at `PHASE_N_REVIEW/` substitute for the audit firm letter. Reads as if the §RP-transcript-archive IS the deliverable.*
+
+When this document is ready for V1 mainnet ship, the following must be true:
 
 1. **All §RP CRIT+HIGH from Stages 1-5 RESOLVED.** Cross-reference §11 Stage 0 Fix Log + STAGE_N_REVIEW/ for each stage.
 2. **All Open Questions in §10 closed.** Specifically Q1 (3 formal verification invariants), Q5 (Inv-K6 provable).

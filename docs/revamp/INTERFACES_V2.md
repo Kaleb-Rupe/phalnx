@@ -70,7 +70,7 @@ Per-agent `cooldown_seconds: u32` + `last_action_unix: i64` stored on `AgentSpen
 `PolicyConfig.destination_graylist: Vec<(Pubkey, i64)>` runtime-bounded to 10. New destination → graylist with `unlock_unix = now + 86400`. `auto_promote_grays: bool` defaults `false`. Applies uniformly.
 
 ### TA-08 — Token-2022 dangerous-extension blocklist (deposit-path)
-Deposit-path TLV check with a 3-item ALLOWLIST per D-4 (`MemoTransfer`, `MetadataPointer`, `NonTransferable`). All other extensions reject. Additive to the existing validate-time opcode blocklist at `validate_and_authorize.rs:417-429`. Applies uniformly.
+Deposit-path TLV check with a 3-item ALLOWLIST per D-4 (`MemoTransfer`, `MetadataPointer`, `NonTransferable`). All other extensions reject. Additive to the existing validate-time opcode blocklist (search for `BlockedSplOpcode` — runtime check lives in `validate_and_authorize.rs`; G5 audit fix 2026-05-18 — prior fixed line-range `validate_and_authorize.rs:417-429` was stale after Phase 3 refactor). Applies uniformly.
 
 ### TA-09 — Cosign workflow
 Elevated owner operations (raise daily cap, expand allowlist) require owner+session co-signature on the policy-update instruction. Applies uniformly.
@@ -79,7 +79,7 @@ Elevated owner operations (raise daily cap, expand allowlist) require owner+sess
 Entry guard reads `instructions` sysvar and asserts: (a) 1..=4 `validate_and_authorize` + `finalize_session` pairs in transaction, (b) immediate-next instruction after each `validate_and_authorize` is an allowed protocol program ID, (c) no foreign instruction inside any seal window writes to protected accounts. Applies uniformly.
 
 ### TA-11 — Protected-writable deny-list N4
-Protected set: `{vault, tracker, session, policy}` PDAs (dynamic seed-prefix family check). Entry guard rejects if any foreign instruction in the bundle lists a protected account as writable. Applies uniformly.
+Protected set: **16 PROTECTED_SEED_PREFIXES** (G5 audit fix 2026-05-18 — prior `{vault, tracker, session, policy}` listing was grossly understated). Active runtime set: 12 prefixes (vault, policy, tracker, session, post_assertions, pending_policy, pending_constraints, pending_agent_perms, pending_close_constraints, pending_owner, constraints, agent_spend) + 1 sentinel slot `Pubkey::default()` = 13-entry array. Forward-compat documentation prefixes: audit_success, audit_rejected, cosign, recipient (4 — Phase 7+ ships these PDAs). Entry guard rejects if any foreign instruction in the bundle lists a protected account as writable. Applies uniformly.
 
 ### TA-12 — Stablecoin balance floor
 `PolicyConfig.stable_balance_floor: u64` (6-decimal USDC face value). `finalize_session` rejects if `usdc_balance + usdt_balance < stable_balance_floor`. Applies uniformly.
@@ -109,7 +109,7 @@ Was `InstructionConstraints.parser_version: u8` under the tier model (C23). **DE
 
 **Behavior on trip:** AgentEntry transitions to a paused/revoked state; emits a K6 event with the trip reason. Owner-only `unpause_agent` / `revoke_agent` resets the counter to 0. Successful finalize also resets to 0 (Phase 3 decides whether to use a saturating decrement or hard reset).
 
-**Error code:** `ErrAutoRevoked` = 6088 — see [ERROR_CODE_ALLOCATION_V2.md](./ERROR_CODE_ALLOCATION_V2.md).
+**Error code:** `ErrAutoRevoked` = **6090** (G5 audit fix 2026-05-18 — prior "6088" was stale; 6088 is `ErrToken2022ExtensionForbidden`) — see [ERROR_CODE_ALLOCATION_V2.md](./ERROR_CODE_ALLOCATION_V2.md).
 
 **DoS guard:** T-DoS-1 (auto-revoke spam) is mitigated by pairing TA-17 with TA-06 (per-agent cooldown). A storming adversary cannot increment the counter faster than the cooldown allows.
 
@@ -129,7 +129,7 @@ Was `InstructionConstraints.parser_version: u8` under the tier model (C23). **DE
 
 **Canonical form:** Borsh-serialize the policy in a strict field order (defined at Phase 2 implementation time), with all `Vec<T>` sorted lexically. The canonical encoding is a separate library function shared by the SDK and the program so that both compute the same digest.
 
-**Handler behavior:** Every owner-initiated policy mutation (queue + apply) recomputes the digest from the canonical form and `require!` it matches `new_policy_preview_digest`. Mismatch rejects with `ErrPolicyPreviewMismatch` (code 6081 — see [ERROR_CODE_ALLOCATION_V2.md](./ERROR_CODE_ALLOCATION_V2.md)).
+**Handler behavior:** Every owner-initiated policy mutation (queue + apply) recomputes the digest from the canonical form and `require!` it matches `new_policy_preview_digest`. Mismatch rejects with `ErrPolicyPreviewMismatch` (code **6080** — G5 audit fix 2026-05-18; prior "6081" was stale, that code is `ObserveOnlyModeBlocksExecute`) — see [ERROR_CODE_ALLOCATION_V2.md](./ERROR_CODE_ALLOCATION_V2.md).
 
 **Attack closed:** Audit #3 — SDK builds preview that owner sees and signs, but the on-chain instruction encodes a different policy (e.g., an extra allowlist entry the dashboard didn't render). The digest binds the visible preview to the executed form, making this discrepancy detectable.
 
@@ -277,7 +277,7 @@ AC-11 (oracle staleness) is explicitly out-of-scope for V1. Folded into N1 TA-15
 
 **Notes:**
 - TA-16 is DELETED per L-1; `ErrParserVersionMismatch` is NOT allocated.
-- TA-17's `ErrAutoRevoked` IS allocated at 6088 (auto-revoke is in V2 scope under Option A — TA-17 is locked, with TA-06 cooldown as its T-DoS-1 mitigation).
+- TA-17's `ErrAutoRevoked` IS allocated at **6090** (G5 audit fix 2026-05-18; the §4 reservation table at `ERROR_CODE_ALLOCATION_V2.md` is authoritative). Auto-revoke is in V2 scope under Option A — TA-17 is locked, with TA-06 cooldown as its T-DoS-1 mitigation.
 - The repo-root `CLAUDE.md` cites range "6000-6070" — that is stale (real count is 6000-6080). Correction is out of L-6 scope for Phase 0.5; flagged for v1.1 housekeeping.
 
 ---
