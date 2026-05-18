@@ -16,6 +16,8 @@
  */
 
 import { expect } from "chai";
+import * as fc from "fast-check";
+import { createHash } from "node:crypto";
 import { computePolicyPreviewDigest } from "../../src/policy/compute-policy-preview-digest.js";
 
 // Post-PEN-CROSS-2 (Phase 2 close-up): created_at_slot added at position 14
@@ -222,5 +224,196 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
         createdAtSlot: 0n,
       }),
     ).to.throw(/base58/);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// PEN-CROSS-7 (Phase 2 close-up): property test for cross-impl encoding
+// parity.
+//
+// Strategy: for random fixtures, compute the digest via the SDK helper AND
+// via a hand-encoded byte buffer written directly in this test. Both must
+// match. The hand-encoded path is a deliberate independent implementation of
+// the canonical encoding spec — if a future SDK refactor silently drops a
+// field or shifts byte order, this property test fails in lock-step. If a
+// future Rust handler diverges from the same spec, the existing
+// HEX_MINIMAL/HEX_REALISTIC cross-impl pin (above) catches it.
+// ─────────────────────────────────────────────────────────────────────────
+
+const BASE58_ALPHABET =
+  "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+// Encode 32 raw bytes back to base58 — minimal helper avoiding extra deps.
+function base58Encode(bytes: Uint8Array): string {
+  let leadingZeros = 0;
+  while (leadingZeros < bytes.length && bytes[leadingZeros] === 0) {
+    leadingZeros++;
+  }
+  const digits: number[] = [];
+  for (let i = 0; i < bytes.length; i++) {
+    let carry = bytes[i]!;
+    for (let j = 0; j < digits.length; j++) {
+      carry += digits[j]! * 256;
+      digits[j] = carry % 58;
+      carry = (carry / 58) | 0;
+    }
+    while (carry > 0) {
+      digits.push(carry % 58);
+      carry = (carry / 58) | 0;
+    }
+  }
+  let out = "";
+  for (let i = 0; i < leadingZeros; i++) out += "1";
+  for (let i = digits.length - 1; i >= 0; i--) {
+    out += BASE58_ALPHABET[digits[i]!];
+  }
+  return out;
+}
+
+/**
+ * Reference encoder — hand-written from the spec in
+ * `programs/sigil/src/utils/policy_digest.rs` and
+ * `compute-policy-preview-digest.ts`'s docblock. Intentionally re-derived
+ * (not imported) so it catches silent encoder drift in the SDK.
+ */
+function referenceDigest(fields: {
+  dailySpendingCapUsd: bigint;
+  maxTransactionSizeUsd: bigint;
+  maxSlippageBps: number;
+  developerFeeRate: number;
+  protocolMode: number;
+  protocolBytes: readonly Uint8Array[];
+  destinationMode: number;
+  destinationBytes: readonly Uint8Array[];
+  timelockDuration: bigint;
+  sessionExpirySeconds: bigint;
+  observeOnly: boolean;
+  hasConstraints: boolean;
+  hasPostAssertions: number;
+  createdAtSlot: bigint;
+}): string {
+  const parts: number[] = [];
+  const pushU64 = (v: bigint) => {
+    const b = Buffer.alloc(8);
+    b.writeBigUInt64LE(v);
+    for (const x of b) parts.push(x);
+  };
+  const pushU32 = (v: number) => {
+    const b = Buffer.alloc(4);
+    b.writeUInt32LE(v);
+    for (const x of b) parts.push(x);
+  };
+  const pushU16 = (v: number) => {
+    const b = Buffer.alloc(2);
+    b.writeUInt16LE(v);
+    for (const x of b) parts.push(x);
+  };
+  const pushU8 = (v: number) => parts.push(v & 0xff);
+
+  pushU64(fields.dailySpendingCapUsd);
+  pushU64(fields.maxTransactionSizeUsd);
+  pushU16(fields.maxSlippageBps);
+  pushU16(fields.developerFeeRate);
+  pushU8(fields.protocolMode);
+  pushU32(fields.protocolBytes.length);
+  for (const b of fields.protocolBytes) {
+    for (const x of b) parts.push(x);
+  }
+  pushU8(fields.destinationMode);
+  pushU32(fields.destinationBytes.length);
+  for (const b of fields.destinationBytes) {
+    for (const x of b) parts.push(x);
+  }
+  pushU64(fields.timelockDuration);
+  pushU64(fields.sessionExpirySeconds);
+  pushU8(fields.observeOnly ? 1 : 0);
+  pushU8(fields.hasConstraints ? 1 : 0);
+  pushU8(fields.hasPostAssertions);
+  pushU64(fields.createdAtSlot);
+
+  const buf = Buffer.from(parts);
+  return createHash("sha256").update(buf).digest("hex");
+}
+
+describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7)", () => {
+  it("100 random fixtures match between SDK and hand-encoded reference", () => {
+    const pubkeyArb = fc
+      .uint8Array({ minLength: 32, maxLength: 32 })
+      .map((u8: Uint8Array) => u8 as Uint8Array);
+
+    fc.assert(
+      fc.property(
+        fc.bigUint({ max: (1n << 64n) - 1n }), // daily_spending_cap_usd
+        fc.bigUint({ max: (1n << 64n) - 1n }), // max_transaction_size_usd
+        fc.integer({ min: 0, max: 65535 }), // max_slippage_bps
+        fc.integer({ min: 0, max: 65535 }), // developer_fee_rate
+        fc.integer({ min: 0, max: 255 }), // protocol_mode (handler rejects most, but encoder must handle all)
+        fc.array(pubkeyArb, { minLength: 0, maxLength: 10 }), // protocols
+        fc.integer({ min: 0, max: 255 }), // destination_mode
+        fc.array(pubkeyArb, { minLength: 0, maxLength: 10 }), // allowed_destinations
+        fc.bigUint({ max: (1n << 64n) - 1n }), // timelock_duration
+        fc.bigUint({ max: (1n << 64n) - 1n }), // session_expiry_seconds
+        fc.boolean(), // observe_only
+        fc.boolean(), // has_constraints
+        fc.integer({ min: 0, max: 255 }), // has_post_assertions
+        fc.bigUint({ max: (1n << 64n) - 1n }), // created_at_slot
+        (
+          dailyCap,
+          maxTx,
+          slippage,
+          feeRate,
+          protocolMode,
+          protocolBytes,
+          destinationMode,
+          destinationBytes,
+          timelock,
+          sessionExpiry,
+          observeOnly,
+          hasConstraints,
+          hasPostAssertions,
+          createdAtSlot,
+        ) => {
+          const sdkDigest = computePolicyPreviewDigest({
+            dailySpendingCapUsd: dailyCap,
+            maxTransactionSizeUsd: maxTx,
+            maxSlippageBps: slippage,
+            developerFeeRate: feeRate,
+            protocolMode,
+            protocols: protocolBytes.map((b: Uint8Array) => base58Encode(b)),
+            destinationMode,
+            allowedDestinations: destinationBytes.map((b: Uint8Array) =>
+              base58Encode(b),
+            ),
+            timelockDuration: timelock,
+            sessionExpirySeconds: sessionExpiry,
+            observeOnly,
+            hasConstraints,
+            hasPostAssertions,
+            createdAtSlot,
+          });
+          const refDigest = referenceDigest({
+            dailySpendingCapUsd: dailyCap,
+            maxTransactionSizeUsd: maxTx,
+            maxSlippageBps: slippage,
+            developerFeeRate: feeRate,
+            protocolMode,
+            protocolBytes,
+            destinationMode,
+            destinationBytes,
+            timelockDuration: timelock,
+            sessionExpirySeconds: sessionExpiry,
+            observeOnly,
+            hasConstraints,
+            hasPostAssertions,
+            createdAtSlot,
+          });
+          const sdkHex = Array.from(sdkDigest)
+            .map((x) => x.toString(16).padStart(2, "0"))
+            .join("");
+          return sdkHex === refDigest;
+        },
+      ),
+      { numRuns: 100 },
+    );
   });
 });

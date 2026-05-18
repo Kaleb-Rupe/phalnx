@@ -36,10 +36,9 @@ pub struct PolicyConfig {
     /// Maximum single transaction size in USD (6 decimals).
     pub max_transaction_size_usd: u64,
 
-    /// Protocol access control mode:
-    ///   0 = all allowed (protocols list ignored)
-    ///   1 = allowlist (only protocols in list)
-    ///   2 = denylist (all except protocols in list)
+    /// Protocol allowlist mode. Phase 2 Option A: ONLY value 1 (ALLOWLIST)
+    /// permitted. Modes 0 (ALL) and 2 (DENYLIST) deleted under L-1. Handler
+    /// rejects any other value with `ErrInvalidProtocolMode`.
     pub protocol_mode: u8,
 
     /// Protocol pubkeys for allowlist/denylist.

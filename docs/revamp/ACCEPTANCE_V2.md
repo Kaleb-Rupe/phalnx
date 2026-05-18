@@ -509,7 +509,7 @@ Per (v1.1) §3.3 + §15.6, the mainnet announcement is gated on these items.
 ### 18.4 Legal / compliance readiness
 - [ ] Terms of Service updated for mainnet.
 - [ ] Privacy policy updated.
-- [ ] Risk disclosure published (audit summary + bug bounty + known limitations).
+- [ ] **STALE — v1.1 only per L-2 (no audit/bounty gate in V1).** Risk disclosure published (audit summary + bug bounty + known limitations).
 - [ ] [If applicable] Tax/regulatory consultations completed.
 
 ### 18.5 Marketing readiness
@@ -565,6 +565,6 @@ Risks explicitly accepted by Sigil v2 mainnet, even with all §3.1-§3.8 gates g
 
 ## Appendix: Stage 6 Critical Path Summary
 
-The Stage 6 critical path runs in this order: audit (§3.1) → formal verification (§3.5) → multisig deploy (§3.2/§15.2) → TierRegistry deploy (§15.3) → program deploy (§15.4) → bug bounty live (§3.3/§15.5) → mainnet announcement (§15.6). Any earlier-numbered gate failing blocks all later gates. Total estimated wall-clock: 8-16 weeks post-funding-signature.
+**STALE — v1.1 only per L-2 (no funding/audit gate in V1).** V1 ships under devnet redeploy at Phase 10; mainnet is v1.1 scope. The Stage 6 critical path runs in this order: audit (§3.1) → formal verification (§3.5) → multisig deploy (§3.2/§15.2) → TierRegistry deploy (§15.3) → program deploy (§15.4) → bug bounty live (§3.3/§15.5) → mainnet announcement (§15.6). Any earlier-numbered gate failing blocks all later gates. Total estimated wall-clock: 8-16 weeks post-funding-signature.
 
 **END OF ACCEPTANCE_V2.md V2.0 (Stage 0 baseline) — 2026-05-17**

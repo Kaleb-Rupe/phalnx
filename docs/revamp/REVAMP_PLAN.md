@@ -554,7 +554,7 @@ Cataloged risks with mitigation strategy + owner. Each risk maps to one or more 
 | R5 | Sandwich injection between guards | CATASTROPHIC | HIGH | TA-10 sandwich integrity N2 (load-bearing 5) | Stage 2 |
 | R6 | Durable nonce replay attack (Drift April 2026 $285M precedent) | HIGH | MEDIUM | K2 session nonce + TA-15 N1 temporal binding (slot+blockhash) | Stage 2 |
 | R7 | Owner policy underspecification (contrarian Arg 5) | HIGH | HIGH (default-policy ~60% per Maestro data) | Workflow mitigations M-T21-1..4 in [THREAT_MODEL_V2.md §6](./THREAT_MODEL_V2.md#6-workflow-mitigations-m-t21-14) | Stage 4 (SDK + dashboard) |
-| R8 | Tier-promotion attack (T3 → T1 via malicious upgrade) | CATASTROPHIC | LOW (multisig gate) | D-06 asymmetric 4-of-5 threshold | Stage 6 |
+| R8 | Tier-promotion attack (T3 → T1 via malicious upgrade) | **STALE — superseded by L-1: no tier model under Option A; this risk class does not apply.** | n/a | n/a | n/a |
 | R9 | Pre-V2 PDA decode catastrophic (in-place upgrade) | CATASTROPHIC | MEDIUM (operational) | Stage 6 deploys under NEW program ID; devnet `4ZeVCqnj...` orphaned | Stage 6 |
 | R10 | K6 silent emit failure (highest-leverage single dep per Architect) | HIGH | LOW (load-bearing test coverage) | Stage 2 explicit emit assertions + CI static check | Stage 2 |
 | R11 | Pyth oracle staleness | OUT-OF-SCOPE V1 | n/a | D-09: folded into N1 TA-15 temporal binding | v1.1 |
@@ -597,7 +597,7 @@ Per-primitive implementation status as of Stage 0 baseline. Updated at every sta
 | K4 | register/revoke/pause | EXISTING | KEEP | KEEP | KEEP | KEEP | KEEP | KEEP | KEEP |
 | K5 | Timelock policy mutations | EXISTING | KEEP | KEEP | KEEP | KEEP | KEEP | KEEP | KEEP |
 | K6 | Mandatory `emit!()` | EXISTING | KEEP + CI static check | KEEP | KEEP | KEEP | KEEP | KEEP | KEEP |
-| K7 | NM-E primitive (T1-only) | EXISTING (universal) | scope-reduce to T1-only | T1 parsers | KEEP | KEEP | KEEP | KEEP | KEEP |
+| K7 | NM-E primitive | STALE — K7 in Option A is generic vault-balance delta (mode-0 only); T1-only scoping deleted under L-1. | STALE | STALE | STALE | STALE | STALE | STALE | STALE |
 | TA-01 | protocol allowlist | NOT-IMPL | NOT-IMPL | IMPLEMENT | KEEP | KEEP | audit | audit-fixed | live |
 | TA-02 | wallet allowlist | NOT-IMPL | NOT-IMPL | IMPLEMENT | KEEP | KEEP | audit | audit-fixed | live |
 | TA-03 | USDC/USDT mint pin | NOT-IMPL | NOT-IMPL | IMPLEMENT | KEEP | KEEP | audit | audit-fixed | live |
