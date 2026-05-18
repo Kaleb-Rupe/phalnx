@@ -315,6 +315,9 @@ describe("createVault()", () => {
       spendingLimitUsd: 100_000_000n as never,
       dailySpendingCapUsd: 500_000_000n as never,
       timelockDuration: 1800,
+      // PEN-CROSS-2: stub the digest's slot binding for the PDA-derivation
+      // smoke test (no live RPC).
+      createdAtSlot: 0n,
     });
 
     expect(result.vaultAddress).to.be.a("string");
@@ -356,6 +359,7 @@ describe("createVault()", () => {
       spendingLimitUsd: 100_000_000n as never,
       dailySpendingCapUsd: 500_000_000n as never,
       timelockDuration: 1800,
+      createdAtSlot: 0n,
     });
     const r2 = await createVault({
       rpc: {} as any,
@@ -366,6 +370,7 @@ describe("createVault()", () => {
       spendingLimitUsd: 100_000_000n as never,
       dailySpendingCapUsd: 500_000_000n as never,
       timelockDuration: 1800,
+      createdAtSlot: 0n,
     });
     expect(r1.vaultAddress).to.equal(r2.vaultAddress);
     expect(r1.policyAddress).to.equal(r2.policyAddress);
@@ -385,6 +390,11 @@ function mockRpc() {
           lastValidBlockHeight: 200n,
         },
       }),
+    }),
+    // PEN-CROSS-2: createVault reads the current slot off the RPC to bind
+    // it into the TA-19 digest. Mock with a deterministic value.
+    getSlot: () => ({
+      send: async () => 100n,
     }),
   } as any;
 }
@@ -547,6 +557,7 @@ describe("SigilClient", () => {
       spendingLimitUsd: 100_000_000n as never,
       dailySpendingCapUsd: 500_000_000n as never,
       timelockDuration: 1800,
+      createdAtSlot: 0n,
     });
 
     expect(result.vaultAddress).to.be.a("string");

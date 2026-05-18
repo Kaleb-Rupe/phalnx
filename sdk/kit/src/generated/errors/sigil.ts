@@ -66,7 +66,7 @@ export const SIGIL_ERROR__NO_TIMELOCK_CONFIGURED = 0x1787; // 6023
 export const SIGIL_ERROR__DESTINATION_NOT_ALLOWED = 0x1788; // 6024
 /** TooManyDestinations: Too many destinations (max 10) */
 export const SIGIL_ERROR__TOO_MANY_DESTINATIONS = 0x1789; // 6025
-/** InvalidProtocolMode: Invalid protocol mode (must be 0, 1, or 2) */
+/** InvalidProtocolMode: Invalid protocol mode (must be 1 = ALLOWLIST) */
 export const SIGIL_ERROR__INVALID_PROTOCOL_MODE = 0x178a; // 6026
 /** CpiCallNotAllowed: Instruction must be top-level (CPI calls not allowed) */
 export const SIGIL_ERROR__CPI_CALL_NOT_ALLOWED = 0x178b; // 6027
@@ -104,7 +104,7 @@ export const SIGIL_ERROR__OVERLAY_SLOT_EXHAUSTED = 0x179a; // 6042
 export const SIGIL_ERROR__AGENT_SLOT_NOT_FOUND = 0x179b; // 6043
 /** UnauthorizedTokenApproval: Unauthorized SPL Token Approve between validate and finalize */
 export const SIGIL_ERROR__UNAUTHORIZED_TOKEN_APPROVAL = 0x179c; // 6044
-/** InvalidSessionExpiry: Session expiry slots out of range (10-450) */
+/** InvalidSessionExpiry: Session expiry seconds out of range (5-90) */
 export const SIGIL_ERROR__INVALID_SESSION_EXPIRY = 0x179d; // 6045
 /** UnconstrainedProgramBlocked: Program has no matching constraint entry — every instruction must match one */
 export const SIGIL_ERROR__UNCONSTRAINED_PROGRAM_BLOCKED = 0x179e; // 6046
@@ -178,10 +178,13 @@ export const SIGIL_ERROR__INVALID_CAPABILITY = 0x17bf; // 6079
 export const SIGIL_ERROR__POLICY_PREVIEW_MISMATCH = 0x17c0; // 6080
 /** ObserveOnlyModeBlocksExecute: Vault is in observe_only mode — validate_and_authorize is blocked */
 export const SIGIL_ERROR__OBSERVE_ONLY_MODE_BLOCKS_EXECUTE = 0x17c1; // 6081
+/** ActiveVaultRequiresAllowlist: Active (non-observe_only) vault must have at least one protocol or destination on the allowlist */
+export const SIGIL_ERROR__ACTIVE_VAULT_REQUIRES_ALLOWLIST = 0x17c2; // 6082
 
 export type SigilError =
   | typeof SIGIL_ERROR__ACCOUNT_WRITABILITY_MISMATCH
   | typeof SIGIL_ERROR__ACTIVE_SESSIONS_EXIST
+  | typeof SIGIL_ERROR__ACTIVE_VAULT_REQUIRES_ALLOWLIST
   | typeof SIGIL_ERROR__AGENT_ALREADY_PAUSED
   | typeof SIGIL_ERROR__AGENT_ALREADY_REGISTERED
   | typeof SIGIL_ERROR__AGENT_IS_OWNER
@@ -268,6 +271,7 @@ if (process.env.NODE_ENV !== "production") {
   sigilErrorMessages = {
     [SIGIL_ERROR__ACCOUNT_WRITABILITY_MISMATCH]: `Account writability flag does not match constraint requirement`,
     [SIGIL_ERROR__ACTIVE_SESSIONS_EXIST]: `Cannot close vault with active sessions (finalize pending sessions first)`,
+    [SIGIL_ERROR__ACTIVE_VAULT_REQUIRES_ALLOWLIST]: `Active (non-observe_only) vault must have at least one protocol or destination on the allowlist`,
     [SIGIL_ERROR__AGENT_ALREADY_PAUSED]: `Agent is already paused`,
     [SIGIL_ERROR__AGENT_ALREADY_REGISTERED]: `Agent already registered for this vault`,
     [SIGIL_ERROR__AGENT_IS_OWNER]: `Invalid agent: agent cannot be the vault owner`,
@@ -298,10 +302,10 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__INVALID_PENDING_CONSTRAINTS_PDA]: `Invalid pending constraints PDA: wrong owner or vault`,
     [SIGIL_ERROR__INVALID_PERMISSIONS]: `Permission bitmask contains invalid bits`,
     [SIGIL_ERROR__INVALID_POST_ASSERTION_INDEX]: `Post-assertion constraint references invalid instruction index`,
-    [SIGIL_ERROR__INVALID_PROTOCOL_MODE]: `Invalid protocol mode (must be 0, 1, or 2)`,
+    [SIGIL_ERROR__INVALID_PROTOCOL_MODE]: `Invalid protocol mode (must be 1 = ALLOWLIST)`,
     [SIGIL_ERROR__INVALID_PROTOCOL_TREASURY]: `Protocol treasury account does not match expected address`,
     [SIGIL_ERROR__INVALID_SESSION]: `Invalid session: does not belong to this vault`,
-    [SIGIL_ERROR__INVALID_SESSION_EXPIRY]: `Session expiry slots out of range (10-450)`,
+    [SIGIL_ERROR__INVALID_SESSION_EXPIRY]: `Session expiry seconds out of range (5-90)`,
     [SIGIL_ERROR__INVALID_TOKEN_ACCOUNT]: `Token account does not belong to vault or has wrong mint`,
     [SIGIL_ERROR__LAMPORT_DRAIN_BLOCKED]: `Token-2022 destructive-balance ix (opcodes 38/45/46) not permitted between validate and finalize`,
     [SIGIL_ERROR__MAX_AGENTS_REACHED]: `Maximum agents per vault reached (limit: 10)`,

@@ -269,6 +269,9 @@ export async function provisionVault(
 
   // 2. Build and send initializeVault
   const timelockDuration = opts?.timelockDuration ?? 1800n;
+  // PEN-CROSS-2: the on-chain handler captures Clock::get()?.slot — read the
+  // current devnet slot so the digest the owner signs matches.
+  const createdAtSlot = await rpc.getSlot({ commitment: "confirmed" }).send();
   const previewDigest = computePolicyPreviewDigest({
     dailySpendingCapUsd: dailyCap,
     maxTransactionSizeUsd: maxTx,
@@ -284,6 +287,7 @@ export async function provisionVault(
     observeOnly,
     hasConstraints: false,
     hasPostAssertions: 0,
+    createdAtSlot,
   });
 
   const initIx = await getInitializeVaultInstructionAsync({

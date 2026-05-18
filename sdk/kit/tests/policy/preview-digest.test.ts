@@ -18,14 +18,22 @@
 import { expect } from "chai";
 import { computePolicyPreviewDigest } from "../../src/policy/compute-policy-preview-digest.js";
 
-// Post-PEN-CROSS-6 (Phase 2 close-up): developer_fee_rate added at position 4
-// of the canonical encoding shifts both fixture digests. Pre-fix values were
-//   HEX_MINIMAL   = 29f9a0caa6851902abe7de24ac30380ef50c220d25d541f8fe1762793152b623
-//   HEX_REALISTIC = 33d743a9643fcc6d39c30ac5f8c159d6e94d31ce354d6dd3843367773b3a8502
+// Post-PEN-CROSS-2 (Phase 2 close-up): created_at_slot added at position 14
+// of the canonical encoding shifts both fixture digests again.
+// Prior values:
+//   Pre-PEN-CROSS-6:
+//     HEX_MINIMAL   = 29f9a0caa6851902abe7de24ac30380ef50c220d25d541f8fe1762793152b623
+//     HEX_REALISTIC = 33d743a9643fcc6d39c30ac5f8c159d6e94d31ce354d6dd3843367773b3a8502
+//   Post-PEN-CROSS-6 (pre-PEN-CROSS-2):
+//     HEX_MINIMAL   = 0ad67bf0d81b972c60abe82ebea425d4b30d0ef910bcc7b76584fae36a0f1252
+//     HEX_REALISTIC = ed9ac12d21e0f03933bbf789eae99944c311f2ff6f1baff992058307174de316
+//
+// HEX_REALISTIC fixture exercises a non-zero created_at_slot (12345) to lock
+// the byte layout of an active vault; HEX_MINIMAL stays at 0.
 const HEX_MINIMAL =
-  "0ad67bf0d81b972c60abe82ebea425d4b30d0ef910bcc7b76584fae36a0f1252";
+  "63974a2661afc539fc8f1e55245adcef9e3b91f82a191c757ed3c795e8e59148";
 const HEX_REALISTIC =
-  "ed9ac12d21e0f03933bbf789eae99944c311f2ff6f1baff992058307174de316";
+  "ac54284579f4b8afd714b290ec22df745bddbede9a5b366f17c8db776fab53c7";
 
 // Base58 encodings of fixed test pubkeys [1u8;32], [2u8;32], [10u8;32].
 // Computed once (see Rust unit-test fixtures `pk(1) / pk(2) / pk(10)`).
@@ -55,6 +63,7 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       observeOnly: false,
       hasConstraints: false,
       hasPostAssertions: 0,
+      createdAtSlot: 0n,
     });
     expect(toHex(digest)).to.equal(HEX_MINIMAL);
   });
@@ -74,6 +83,7 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       observeOnly: false,
       hasConstraints: false,
       hasPostAssertions: 0,
+      createdAtSlot: 12345n,
     });
     expect(toHex(digest)).to.equal(HEX_REALISTIC);
   });
@@ -93,6 +103,7 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       observeOnly: false,
       hasConstraints: false,
       hasPostAssertions: 0,
+      createdAtSlot: 0n,
     } as const;
     const d1 = computePolicyPreviewDigest(fields);
     const d2 = computePolicyPreviewDigest(fields);
@@ -114,6 +125,7 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       observeOnly: false,
       hasConstraints: false,
       hasPostAssertions: 0,
+      createdAtSlot: 0n,
     } as const;
     const d1 = computePolicyPreviewDigest(base);
     const d2 = computePolicyPreviewDigest({ ...base, observeOnly: true });
@@ -135,6 +147,7 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       observeOnly: false,
       hasConstraints: false,
       hasPostAssertions: 0,
+      createdAtSlot: 0n,
     } as const;
     const b = { ...a, protocols: [PK_2, PK_1] } as const;
     const d1 = computePolicyPreviewDigest(a);
@@ -159,9 +172,34 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       observeOnly: false,
       hasConstraints: false,
       hasPostAssertions: 0,
+      createdAtSlot: 0n,
     } as const;
     const d1 = computePolicyPreviewDigest(base);
     const d2 = computePolicyPreviewDigest({ ...base, developerFeeRate: 25 });
+    expect(toHex(d1)).to.not.equal(toHex(d2));
+  });
+
+  // PEN-CROSS-2 cross-impl pin: created_at_slot is bound by the digest.
+  // Two policies with identical fields but distinct slots MUST hash differently.
+  it("created_at_slot flip changes the digest (PEN-CROSS-2)", () => {
+    const base = {
+      dailySpendingCapUsd: 500_000_000n,
+      maxTransactionSizeUsd: 100_000_000n,
+      maxSlippageBps: 100,
+      developerFeeRate: 0,
+      protocolMode: 1,
+      protocols: [PK_1],
+      destinationMode: 0,
+      allowedDestinations: [PK_10],
+      timelockDuration: 1800n,
+      sessionExpirySeconds: 30n,
+      observeOnly: false,
+      hasConstraints: false,
+      hasPostAssertions: 0,
+      createdAtSlot: 12345n,
+    } as const;
+    const d1 = computePolicyPreviewDigest(base);
+    const d2 = computePolicyPreviewDigest({ ...base, createdAtSlot: 67890n });
     expect(toHex(d1)).to.not.equal(toHex(d2));
   });
 
@@ -181,6 +219,7 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
         observeOnly: false,
         hasConstraints: false,
         hasPostAssertions: 0,
+        createdAtSlot: 0n,
       }),
     ).to.throw(/base58/);
   });

@@ -109,6 +109,7 @@ export function createMockVaultState(
       // Mock fixtures don't exercise the on-chain digest assertion path —
       // tests use this state for reads only. Pad with zeros.
       policyPreviewDigest: new Uint8Array(32),
+      createdAtSlot: 0n,
     },
     tracker: null,
     overlay: null,

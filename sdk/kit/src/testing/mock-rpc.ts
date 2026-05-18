@@ -82,6 +82,11 @@ export function createMockRpc(overrides?: MockRpcOverrides): Rpc<SolanaRpcApi> {
         return defaultRent(size);
       },
     }),
+    // PEN-CROSS-2: `createVault` reads the current slot to bind into the
+    // TA-19 digest. Deterministic mock value so test fixtures don't drift.
+    getSlot: () => ({
+      send: async () => 100n,
+    }),
   } as unknown as Rpc<SolanaRpcApi>;
 }
 

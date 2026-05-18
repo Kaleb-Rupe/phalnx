@@ -113,6 +113,16 @@ export interface CreateVaultOptions {
   timelockDuration: number;
   allowedDestinations?: Address[];
   vaultId?: bigint;
+  /**
+   * PEN-CROSS-2 (Phase 2 close-up): the slot to bind into the TA-19 digest.
+   * If omitted, `createVault` reads `rpc.getSlot()` — that's what production
+   * callers should do so the digest matches the slot the on-chain handler
+   * captures at execution.
+   *
+   * Tests / fixtures that don't care about replay protection (PDA derivation
+   * smoke tests) can pass a fixed bigint here to avoid mocking `getSlot`.
+   */
+  createdAtSlot?: bigint;
 }
 
 export interface CreateVaultResult {
@@ -255,6 +265,19 @@ export async function createVault(
 
   const allowedDestinations = options.allowedDestinations ?? [];
   const observeOnly = options.observeOnly ?? false;
+  // PEN-CROSS-2 (Phase 2 close-up): the on-chain `initialize_vault` handler
+  // captures `Clock::get()?.slot` at handler entry and binds it into the
+  // canonical digest. The SDK must encode that same slot in the digest the
+  // owner signs. We use the RPC's current slot — typically off by 0-1 from
+  // the slot the handler executes in. If a slot rollover lands between
+  // `getSlot()` and execution, the user sees a recoverable
+  // `PolicyPreviewMismatch` and the SDK consumer retries with a fresh slot.
+  //
+  // Callers can override `createdAtSlot` for tests / fixtures that don't have
+  // a live RPC. Production submission paths should let this RPC-fetch run.
+  const createdAtSlot =
+    options.createdAtSlot ??
+    (await options.rpc.getSlot({ commitment: "confirmed" }).send());
   // Phase 2 TA-19: compute the canonical policy-preview digest off-chain.
   // The on-chain `initialize_vault` handler recomputes this from the resulting
   // policy state and rejects with `PolicyPreviewMismatch` if they differ.
@@ -276,6 +299,8 @@ export async function createVault(
     observeOnly,
     hasConstraints: false,
     hasPostAssertions: 0,
+    // PEN-CROSS-2: defends against close+reinit replay.
+    createdAtSlot,
   });
 
   const initializeVaultIx = await getInitializeVaultInstructionAsync({

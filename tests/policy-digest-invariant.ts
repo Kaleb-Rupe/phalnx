@@ -187,6 +187,8 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
         override.hasPostAssertions !== undefined
           ? override.hasPostAssertions
           : (policy.hasPostAssertions as number),
+      // PEN-CROSS-2: read created_at_slot off live PolicyConfig.
+      createdAtSlot: policy.createdAtSlot ?? 0,
     });
   }
 
@@ -475,6 +477,101 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
       "policy_version must strictly increase across close_post_assertions",
     );
   });
+
+  // CR-4 (Phase 2 close-up): apply_pending_policy must re-assert the canonical
+  // digest from the merged live state. The existing F-16 negative test (below)
+  // covers the rejection path; THIS positive test pins the success path —
+  // after apply, the live PolicyConfig.policy_preview_digest is byte-equal to
+  // the SDK-recomputed digest from the post-merge fields. If either side
+  // drifts the byte layout, this test fails in lock-step.
+  it("apply_pending_policy re-asserts digest from merged live policy state (CR-4)", async () => {
+    const { vaultPda, policyPda } = await freshVault(904);
+
+    // Queue: change daily_spending_cap_usd to a known value.
+    const newCap = new BN(750_000_000);
+    const livePolicy: any = await program.account.policyConfig.fetch(policyPda);
+    const newPolicyPreviewDigest = queuePolicyMergedDigest(
+      {
+        dailySpendingCapUsd: livePolicy.dailySpendingCapUsd,
+        maxTransactionSizeUsd: livePolicy.maxTransactionSizeUsd,
+        maxSlippageBps: livePolicy.maxSlippageBps,
+        developerFeeRate: livePolicy.developerFeeRate ?? 0,
+        protocolMode: livePolicy.protocolMode,
+        protocols: livePolicy.protocols,
+        destinationMode: livePolicy.destinationMode,
+        allowedDestinations: livePolicy.allowedDestinations,
+        timelockDuration: livePolicy.timelockDuration,
+        sessionExpirySeconds: livePolicy.sessionExpirySeconds,
+        hasConstraints: !!livePolicy.hasConstraints,
+        hasPostAssertions: livePolicy.hasPostAssertions as number,
+        createdAtSlot: livePolicy.createdAtSlot ?? 0,
+      },
+      { dailySpendingCapUsd: newCap },
+      true, // observeOnly — freshVault uses observe_only=true
+    );
+
+    const [pendingPolicyPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("pending_policy"), vaultPda.toBuffer()],
+      program.programId,
+    );
+
+    await program.methods
+      .queuePolicyUpdate(
+        newCap,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        newPolicyPreviewDigest,
+      )
+      .accounts({
+        owner: owner.publicKey,
+        vault: vaultPda,
+        policy: policyPda,
+        pendingPolicy: pendingPolicyPda,
+        systemProgram: SystemProgram.programId,
+      } as any)
+      .rpc();
+
+    advanceTime(svm, 1801);
+
+    await program.methods
+      .applyPendingPolicy()
+      .accounts({
+        owner: owner.publicKey,
+        vault: vaultPda,
+        policy: policyPda,
+        pendingPolicy: pendingPolicyPda,
+      } as any)
+      .rpc();
+
+    // Verify: live PolicyConfig.policy_preview_digest matches both the
+    // ix arg AND the SDK-recomputed digest from the post-merge fields.
+    const merged: any = await program.account.policyConfig.fetch(policyPda);
+    const storedDigest = merged.policyPreviewDigest as number[];
+
+    expect(digestHex(storedDigest)).to.equal(
+      digestHex(newPolicyPreviewDigest),
+      "stored digest MUST equal the owner-signed digest",
+    );
+
+    const recomputed = await expectedDigestFor(policyPda, vaultPda);
+    expect(digestHex(storedDigest)).to.equal(
+      digestHex(recomputed),
+      "stored digest MUST equal the SDK recompute from post-merge live policy",
+    );
+    expect(merged.dailySpendingCapUsd.toString()).to.equal(
+      newCap.toString(),
+      "daily cap must reflect the queued change",
+    );
+  });
 });
 
 // ============================================================================
@@ -732,6 +829,7 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
         sessionExpirySeconds: livePolicy.sessionExpirySeconds,
         hasConstraints: !!livePolicy.hasConstraints,
         hasPostAssertions: livePolicy.hasPostAssertions as number,
+        createdAtSlot: livePolicy.createdAtSlot ?? 0,
       },
       { dailySpendingCapUsd: new BN(750_000_000) },
       false, // observeOnly
@@ -883,5 +981,202 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
       threw,
       "queue_agent_permissions_update MUST reject capability values > 2",
     ).to.equal(true);
+  });
+});
+
+// ============================================================================
+// PEN-CROSS-2 (Phase 2 close-up): close+reinit replay protection
+// ============================================================================
+//
+// Narrow attack: owner closes vault V1, later re-inits with the same
+// (owner, vault_id), and an attacker replays the original signed init tx.
+// Defense: `created_at_slot` is bound into the TA-19 digest. The signed
+// init digest encodes the OLD slot; the fresh PDA re-init runs at a NEW
+// slot, the on-chain handler recomputes the digest with the NEW slot, and
+// the mismatch rejects with `PolicyPreviewMismatch`.
+
+describe("PEN-CROSS-2 — close+reinit replay protection", () => {
+  let env: TestEnv;
+  let svm: LiteSVM;
+  let program: Program<Sigil>;
+  let owner: anchor.Wallet;
+  const feeDestination = Keypair.generate();
+  const dummyProtocol = Keypair.generate().publicKey;
+
+  before(async () => {
+    env = createTestEnv();
+    svm = env.svm;
+    program = env.program;
+    owner = env.provider.wallet;
+
+    airdropSol(svm, owner.publicKey, 200 * LAMPORTS_PER_SOL);
+    airdropSol(svm, feeDestination.publicKey, 2 * LAMPORTS_PER_SOL);
+
+    createMintAtAddress(svm, DEVNET_USDC_MINT, owner.publicKey, 6);
+  });
+
+  it("init at slot=N then re-init at slot=N+1 with stale digest → PolicyPreviewMismatch", async () => {
+    // Re-using the same `vault_id` simulates the close+reinit scenario at
+    // the PDA-derivation level (the original PDA must be closed before a
+    // second `init` succeeds; here we just exercise the digest-mismatch
+    // path on a fresh PDA at a different slot).
+    const vaultId = new BN(2000);
+    const [vaultPda] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("vault"),
+        owner.publicKey.toBuffer(),
+        vaultId.toArrayLike(Buffer, "le", 8),
+      ],
+      program.programId,
+    );
+    const [policyPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("policy"), vaultPda.toBuffer()],
+      program.programId,
+    );
+    const [trackerPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("tracker"), vaultPda.toBuffer()],
+      program.programId,
+    );
+    const [overlayPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("agent_spend"), vaultPda.toBuffer(), Buffer.from([0])],
+      program.programId,
+    );
+
+    // Capture the slot the OLD init was signed against. The replay attacker
+    // owns a tx with this slot embedded in the digest.
+    const oldSlot = Number(svm.getClock().slot);
+
+    // Advance slot — simulates: "owner closed vault, then time passed, then
+    // tried to re-init". Even a single-slot delta produces a mismatch.
+    const advancePastSlotFn = (
+      await import("./helpers/litesvm-setup")
+    ).advancePastSlot;
+    advancePastSlotFn(svm, oldSlot + 5);
+
+    // Build the STALE signed init: digest encodes oldSlot. The attacker
+    // replays this exact ix against the fresh PDA after the new slot.
+    const staleDigest = initVaultPreviewDigest({
+      dailySpendingCapUsd: new BN(500_000_000),
+      maxTransactionSizeUsd: new BN(100_000_000),
+      maxSlippageBps: 100,
+      developerFeeRate: 0,
+      protocolMode: 1,
+      protocols: [dummyProtocol],
+      allowedDestinations: [],
+      timelockDuration: new BN(1800),
+      observeOnly: false,
+      createdAtSlot: oldSlot,
+    });
+
+    let threw = false;
+    try {
+      await program.methods
+        .initializeVault(
+          vaultId,
+          new BN(500_000_000),
+          new BN(100_000_000),
+          1,
+          [dummyProtocol],
+          0,
+          100,
+          new BN(1800),
+          [],
+          [],
+          false,
+          staleDigest,
+        )
+        .accounts({
+          owner: owner.publicKey,
+          vault: vaultPda,
+          policy: policyPda,
+          tracker: trackerPda,
+          agentSpendOverlay: overlayPda,
+          feeDestination: feeDestination.publicKey,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+    } catch (err: any) {
+      threw = true;
+      const msg = err?.message ?? String(err);
+      expect(msg).to.satisfy(
+        (m: string) =>
+          m.includes("PolicyPreviewMismatch") || m.includes("6080"),
+        `expected PolicyPreviewMismatch (6080), got: ${msg}`,
+      );
+    }
+    expect(
+      threw,
+      "initialize_vault MUST reject a digest encoding a slot != current Clock::get()?.slot",
+    ).to.equal(true);
+  });
+
+  it("init with current-slot digest succeeds → defense doesn't false-positive", async () => {
+    const vaultId = new BN(2001);
+    const [vaultPda] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("vault"),
+        owner.publicKey.toBuffer(),
+        vaultId.toArrayLike(Buffer, "le", 8),
+      ],
+      program.programId,
+    );
+    const [policyPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("policy"), vaultPda.toBuffer()],
+      program.programId,
+    );
+    const [trackerPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("tracker"), vaultPda.toBuffer()],
+      program.programId,
+    );
+    const [overlayPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("agent_spend"), vaultPda.toBuffer(), Buffer.from([0])],
+      program.programId,
+    );
+
+    const currentSlot = Number(svm.getClock().slot);
+    const goodDigest = initVaultPreviewDigest({
+      dailySpendingCapUsd: new BN(500_000_000),
+      maxTransactionSizeUsd: new BN(100_000_000),
+      maxSlippageBps: 100,
+      developerFeeRate: 0,
+      protocolMode: 1,
+      protocols: [dummyProtocol],
+      allowedDestinations: [],
+      timelockDuration: new BN(1800),
+      observeOnly: false,
+      createdAtSlot: currentSlot,
+    });
+
+    await program.methods
+      .initializeVault(
+        vaultId,
+        new BN(500_000_000),
+        new BN(100_000_000),
+        1,
+        [dummyProtocol],
+        0,
+        100,
+        new BN(1800),
+        [],
+        [],
+        false,
+        goodDigest,
+      )
+      .accounts({
+        owner: owner.publicKey,
+        vault: vaultPda,
+        policy: policyPda,
+        tracker: trackerPda,
+        agentSpendOverlay: overlayPda,
+        feeDestination: feeDestination.publicKey,
+        systemProgram: SystemProgram.programId,
+      } as any)
+      .rpc();
+
+    const policy: any = await program.account.policyConfig.fetch(policyPda);
+    expect(policy.createdAtSlot.toNumber()).to.equal(
+      currentSlot,
+      "on-chain stored slot must match the slot at handler entry",
+    );
   });
 });

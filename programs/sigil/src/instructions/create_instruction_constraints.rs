@@ -120,6 +120,8 @@ pub fn handler(
         observe_only: ctx.accounts.vault.observe_only,
         has_constraints: policy.has_constraints,
         has_post_assertions: policy.has_post_assertions,
+        // PEN-CROSS-2: created_at_slot is immutable post-init.
+        created_at_slot: policy.created_at_slot,
     });
     policy.policy_preview_digest = recomputed_digest;
 

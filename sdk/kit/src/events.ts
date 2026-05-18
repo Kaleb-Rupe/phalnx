@@ -46,6 +46,7 @@ import {
   getPostAssertionsCreatedDecoder,
   getPostAssertionsClosedDecoder,
   getOrphanConstraintsPdaCleanedDecoder,
+  getObserveOnlyChangedDecoder,
 } from "./generated/types/index.js";
 
 /** All known Sigil event names */
@@ -176,6 +177,7 @@ const EVENT_DECODER_MAP: Record<
   PostAssertionsCreated: getPostAssertionsCreatedDecoder(),
   PostAssertionsClosed: getPostAssertionsClosedDecoder(),
   OrphanConstraintsPdaCleaned: getOrphanConstraintsPdaCleanedDecoder(),
+  ObserveOnlyChanged: getObserveOnlyChangedDecoder(),
 };
 
 // Validate decoder map completeness at module init — catches drift when events are added/removed

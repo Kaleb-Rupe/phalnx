@@ -20,6 +20,7 @@
  *   11. observe_only: bool (1 byte 0/1)
  *   12. has_constraints: bool (1 byte 0/1)
  *   13. has_post_assertions: u8
+ *   14. created_at_slot: u64 LE — PEN-CROSS-2 (Phase 2 close-up)
  */
 
 import { createHash } from "crypto";
@@ -44,6 +45,13 @@ export interface PolicyDigestFields {
   observeOnly: boolean;
   hasConstraints?: boolean;
   hasPostAssertions?: number;
+  /**
+   * PEN-CROSS-2 (Phase 2 close-up): now part of the canonical digest encoding.
+   * Optional with default 0 so legacy callers continue to compute the digest
+   * for vaults whose `policy.created_at_slot` is still 0 (handler captures the
+   * actual slot at init).
+   */
+  createdAtSlot?: BN | bigint | number;
 }
 
 function u64le(v: BN | bigint | number): Buffer {
@@ -100,6 +108,8 @@ export function computePolicyPreviewDigest(
   parts.push(u8(fields.observeOnly ? 1 : 0));
   parts.push(u8(fields.hasConstraints ? 1 : 0));
   parts.push(u8(fields.hasPostAssertions ?? 0));
+  // PEN-CROSS-2: created_at_slot at position 14 of canonical encoding.
+  parts.push(u64le(fields.createdAtSlot ?? 0));
 
   const buf = Buffer.concat(parts);
   return Array.from(createHash("sha256").update(buf).digest());
@@ -134,6 +144,16 @@ export function initVaultPreviewDigest(args: {
   allowedDestinations: PublicKey[];
   timelockDuration: BN | bigint | number;
   observeOnly?: boolean;
+  /**
+   * PEN-CROSS-2 (Phase 2 close-up): the slot at which `initialize_vault`
+   * will mint the live policy. The on-chain handler captures
+   * `Clock::get()?.slot` at handler entry; the digest the caller signs MUST
+   * encode that exact slot. Pass the LiteSVM clock slot here (e.g.
+   * `Number(svm.getClock().slot)`). Default is 0, matching LiteSVM's
+   * initial clock when `withTransactionHistory(0n)` was used and no time
+   * has advanced.
+   */
+  createdAtSlot?: BN | bigint | number;
 }): number[] {
   return computePolicyPreviewDigest({
     dailySpendingCapUsd: args.dailySpendingCapUsd,
@@ -149,6 +169,7 @@ export function initVaultPreviewDigest(args: {
     observeOnly: args.observeOnly ?? false,
     hasConstraints: false,
     hasPostAssertions: 0,
+    createdAtSlot: args.createdAtSlot ?? 0,
   });
 }
 
@@ -178,6 +199,11 @@ export interface LiveLikePolicy {
   sessionExpirySeconds: BN | bigint;
   hasConstraints: boolean;
   hasPostAssertions: number;
+  /**
+   * PEN-CROSS-2: bound by the canonical digest. Read from
+   * `PolicyConfig.createdAtSlot` (typed as BN by Anchor).
+   */
+  createdAtSlot?: BN | bigint | number;
 }
 
 export interface QueueOverride {
@@ -226,6 +252,9 @@ export function queuePolicyMergedDigest(
     observeOnly,
     hasConstraints: live.hasConstraints,
     hasPostAssertions: live.hasPostAssertions,
+    // PEN-CROSS-2: created_at_slot is immutable post-init — always sourced
+    // from live policy. Queue does NOT mutate it; no override is exposed.
+    createdAtSlot: live.createdAtSlot ?? 0,
   });
 }
 
@@ -258,6 +287,7 @@ export async function fetchAndComputeQueueDigest(
     sessionExpirySeconds: policy.sessionExpirySeconds,
     hasConstraints: policy.hasConstraints,
     hasPostAssertions: policy.hasPostAssertions,
+    createdAtSlot: policy.createdAtSlot ?? 0,
   };
   return queuePolicyMergedDigest(live, override, !!vault.observeOnly);
 }

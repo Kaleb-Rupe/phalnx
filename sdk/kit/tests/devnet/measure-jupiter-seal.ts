@@ -111,6 +111,7 @@ function mockState(): ResolvedVaultState {
       hasPostAssertions: 0,
       destinationMode: 0,
       policyPreviewDigest: new Uint8Array(32),
+      createdAtSlot: 0n,
     },
     tracker: null,
     overlay: null,

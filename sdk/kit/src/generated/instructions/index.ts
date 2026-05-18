@@ -35,6 +35,7 @@ export * from "./queuePolicyUpdate.js";
 export * from "./reactivateVault.js";
 export * from "./registerAgent.js";
 export * from "./revokeAgent.js";
+export * from "./setObserveOnly.js";
 export * from "./unpauseAgent.js";
 export * from "./validateAndAuthorize.js";
 export * from "./withdrawFunds.js";

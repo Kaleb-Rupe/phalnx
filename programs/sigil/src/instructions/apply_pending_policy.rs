@@ -129,6 +129,8 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
         observe_only: ctx.accounts.vault.observe_only,
         has_constraints: policy.has_constraints,
         has_post_assertions: policy.has_post_assertions,
+        // PEN-CROSS-2: re-bind to live policy's immutable creation slot.
+        created_at_slot: policy.created_at_slot,
     });
     require!(
         recomputed_digest == pending.new_policy_preview_digest,

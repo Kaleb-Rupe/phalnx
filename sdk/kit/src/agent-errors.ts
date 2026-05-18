@@ -1280,6 +1280,23 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
+  // Phase 2 F-11: active vault (observe_only=false) requires at least one
+  // entry on the protocol allowlist OR destination allowlist. An empty
+  // allowlist would leave the vault silently inert.
+  6082: {
+    name: "ActiveVaultRequiresAllowlist",
+    message:
+      "Active vault (observe_only=false) requires at least one protocol or destination on its allowlist.",
+    category: "INPUT_VALIDATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "add_allowlist_entry",
+        description:
+          "Either add at least one program to `protocols`, at least one wallet to `allowed_destinations`, or pass `observe_only=true` (intentional inert vault).",
+      },
+    ],
+  },
 };
 
 // ---------------------------------------------------------------------------

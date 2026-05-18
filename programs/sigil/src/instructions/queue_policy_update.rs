@@ -194,6 +194,9 @@ pub fn handler(
         observe_only: eff_observe_only,
         has_constraints: eff_has_constraints,
         has_post_assertions: eff_has_post_assertions,
+        // PEN-CROSS-2: created_at_slot is bound to vault lifetime — never
+        // mutates after init, so pass through from live policy.
+        created_at_slot: policy.created_at_slot,
     });
     require!(
         recomputed_digest == new_policy_preview_digest,

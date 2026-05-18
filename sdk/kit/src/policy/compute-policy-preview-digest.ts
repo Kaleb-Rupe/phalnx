@@ -32,6 +32,7 @@
  *   11. observe_only: bool as 1 byte (0 or 1)
  *   12. has_constraints: bool as 1 byte (0 or 1)
  *   13. has_post_assertions: u8 (1 byte)
+ *   14. created_at_slot: u64 LE (8 bytes) — PEN-CROSS-2 (Phase 2 close-up)
  *
  * Total bounded by MAX_ALLOWED_PROTOCOLS=10 + MAX_ALLOWED_DESTINATIONS=10 at
  * 32 bytes each + fixed scalars ≈ 700 bytes worst case.
@@ -74,6 +75,12 @@ export interface PolicyPreviewFields {
   hasConstraints: boolean;
   /** Whether post-execution assertions are configured (0 = no, non-zero = yes). */
   hasPostAssertions: number;
+  /**
+   * PEN-CROSS-2 (Phase 2 close-up): the slot at which `initialize_vault`
+   * minted the live policy. Bound by TA-19 at position 14. Closes the
+   * close+reinit replay window.
+   */
+  createdAtSlot: bigint;
 }
 
 // ── Base58 decode (no external dep) ──────────────────────────────────────────
@@ -181,7 +188,8 @@ export function computePolicyPreviewDigest(
     8 + // session_expiry_seconds
     1 + // observe_only
     1 + // has_constraints
-    1; // has_post_assertions
+    1 + // has_post_assertions
+    8; // created_at_slot (PEN-CROSS-2)
   const variableSize = protoBytes.length * 32 + destBytes.length * 32;
   const buf = new Uint8Array(fixedSize + variableSize);
   const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
@@ -209,6 +217,8 @@ export function computePolicyPreviewDigest(
   buf[off++] = fields.observeOnly ? 1 : 0;
   buf[off++] = fields.hasConstraints ? 1 : 0;
   buf[off++] = fields.hasPostAssertions;
+  // PEN-CROSS-2: created_at_slot at position 14 of canonical encoding.
+  off = writeU64Le(view, off, fields.createdAtSlot);
 
   // Defensive: assert we wrote exactly what we sized
   if (off !== buf.length) {

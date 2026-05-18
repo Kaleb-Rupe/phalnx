@@ -596,6 +596,8 @@ export async function queuePolicyUpdate(
     observeOnly: liveVault.data.observeOnly,
     hasConstraints: livePolicy.data.hasConstraints,
     hasPostAssertions: livePolicy.data.hasPostAssertions,
+    // PEN-CROSS-2: created_at_slot is immutable post-init — read from live.
+    createdAtSlot: livePolicy.data.createdAtSlot,
   });
 
   const ix = await getQueuePolicyUpdateInstructionAsync({

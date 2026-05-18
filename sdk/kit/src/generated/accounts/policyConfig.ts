@@ -162,15 +162,17 @@ export type PolicyConfig = {
    * 1. `daily_spending_cap_usd: u64`
    * 2. `max_transaction_size_usd: u64`
    * 3. `max_slippage_bps: u16`
-   * 4. `protocol_mode: u8`
-   * 5. `protocols: Vec<Pubkey>`
-   * 6. `destination_mode: u8`
-   * 7. `allowed_destinations: Vec<Pubkey>`
-   * 8. `timelock_duration: u64`
-   * 9. `session_expiry_seconds: u64`
-   * 10. `observe_only: bool`
-   * 11. `has_constraints: bool`
-   * 12. `has_post_assertions: u8`
+   * 4. `developer_fee_rate: u16` — PEN-CROSS-6 (Phase 2 close-up)
+   * 5. `protocol_mode: u8`
+   * 6. `protocols: Vec<Pubkey>`
+   * 7. `destination_mode: u8`
+   * 8. `allowed_destinations: Vec<Pubkey>`
+   * 9. `timelock_duration: u64`
+   * 10. `session_expiry_seconds: u64`
+   * 11. `observe_only: bool`
+   * 12. `has_constraints: bool`
+   * 13. `has_post_assertions: u8`
+   * 14. `created_at_slot: u64` — PEN-CROSS-2 (Phase 2 close-up)
    *
    * All fields encoded as Borsh: u8/u16/u64 little-endian, `bool` as `[u8; 1]`
    * (0 or 1), `Vec<Pubkey>` as `u32_le_len ++ pubkey_bytes_concatenated`.
@@ -179,6 +181,21 @@ export type PolicyConfig = {
    * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
    */
   policyPreviewDigest: ReadonlyUint8Array;
+  /**
+   * PEN-CROSS-2 (Phase 2 close-up): the slot at which `initialize_vault`
+   * minted this PolicyConfig. Bound by TA-19 at position 14 of the
+   * canonical digest encoding.
+   *
+   * Closes the close+reinit replay window: an owner who closes a vault
+   * (via `close_vault`) and later re-inits a fresh PDA at the same
+   * (owner, vault_id) gets a new `created_at_slot`. The signed
+   * `initialize_vault` ix from the old vault encodes the OLD slot in its
+   * preview digest, so replaying that signed tx against the fresh PDA
+   * produces a digest mismatch and `PolicyPreviewMismatch` rejects it.
+   *
+   * APPENDED at end of struct per F-14 APPEND-ONLY rule.
+   */
+  createdAtSlot: bigint;
 };
 
 export type PolicyConfigArgs = {
@@ -287,15 +304,17 @@ export type PolicyConfigArgs = {
    * 1. `daily_spending_cap_usd: u64`
    * 2. `max_transaction_size_usd: u64`
    * 3. `max_slippage_bps: u16`
-   * 4. `protocol_mode: u8`
-   * 5. `protocols: Vec<Pubkey>`
-   * 6. `destination_mode: u8`
-   * 7. `allowed_destinations: Vec<Pubkey>`
-   * 8. `timelock_duration: u64`
-   * 9. `session_expiry_seconds: u64`
-   * 10. `observe_only: bool`
-   * 11. `has_constraints: bool`
-   * 12. `has_post_assertions: u8`
+   * 4. `developer_fee_rate: u16` — PEN-CROSS-6 (Phase 2 close-up)
+   * 5. `protocol_mode: u8`
+   * 6. `protocols: Vec<Pubkey>`
+   * 7. `destination_mode: u8`
+   * 8. `allowed_destinations: Vec<Pubkey>`
+   * 9. `timelock_duration: u64`
+   * 10. `session_expiry_seconds: u64`
+   * 11. `observe_only: bool`
+   * 12. `has_constraints: bool`
+   * 13. `has_post_assertions: u8`
+   * 14. `created_at_slot: u64` — PEN-CROSS-2 (Phase 2 close-up)
    *
    * All fields encoded as Borsh: u8/u16/u64 little-endian, `bool` as `[u8; 1]`
    * (0 or 1), `Vec<Pubkey>` as `u32_le_len ++ pubkey_bytes_concatenated`.
@@ -304,6 +323,21 @@ export type PolicyConfigArgs = {
    * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
    */
   policyPreviewDigest: ReadonlyUint8Array;
+  /**
+   * PEN-CROSS-2 (Phase 2 close-up): the slot at which `initialize_vault`
+   * minted this PolicyConfig. Bound by TA-19 at position 14 of the
+   * canonical digest encoding.
+   *
+   * Closes the close+reinit replay window: an owner who closes a vault
+   * (via `close_vault`) and later re-inits a fresh PDA at the same
+   * (owner, vault_id) gets a new `created_at_slot`. The signed
+   * `initialize_vault` ix from the old vault encodes the OLD slot in its
+   * preview digest, so replaying that signed tx against the fresh PDA
+   * produces a digest mismatch and `PolicyPreviewMismatch` rejects it.
+   *
+   * APPENDED at end of struct per F-14 APPEND-ONLY rule.
+   */
+  createdAtSlot: number | bigint;
 };
 
 /** Gets the encoder for {@link PolicyConfigArgs} account data. */
@@ -330,6 +364,7 @@ export function getPolicyConfigEncoder(): Encoder<PolicyConfigArgs> {
       ["hasPostAssertions", getU8Encoder()],
       ["destinationMode", getU8Encoder()],
       ["policyPreviewDigest", fixEncoderSize(getBytesEncoder(), 32)],
+      ["createdAtSlot", getU64Encoder()],
     ]),
     (value) => ({ ...value, discriminator: POLICY_CONFIG_DISCRIMINATOR }),
   );
@@ -358,6 +393,7 @@ export function getPolicyConfigDecoder(): Decoder<PolicyConfig> {
     ["hasPostAssertions", getU8Decoder()],
     ["destinationMode", getU8Decoder()],
     ["policyPreviewDigest", fixDecoderSize(getBytesDecoder(), 32)],
+    ["createdAtSlot", getU64Decoder()],
   ]);
 }
 

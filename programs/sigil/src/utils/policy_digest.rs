@@ -22,6 +22,7 @@
 //! 11. `observe_only: bool`           (1 byte, 0 or 1)
 //! 12. `has_constraints: bool`        (1 byte, 0 or 1)
 //! 13. `has_post_assertions: u8`      (1 byte)
+//! 14. `created_at_slot: u64`         (8 bytes, LE) — PEN-CROSS-2 (Phase 2 close-up)
 
 use anchor_lang::prelude::*;
 // Note: `anchor_lang::solana_program::hash` is NOT re-exported in Anchor 0.32.1.
@@ -50,6 +51,11 @@ pub struct PolicyPreviewFields<'a> {
     pub observe_only: bool,
     pub has_constraints: bool,
     pub has_post_assertions: u8,
+    /// PEN-CROSS-2 (Phase 2 close-up): the slot at which the vault was
+    /// initialized. Closes the close+reinit replay window — replaying a
+    /// signed `initialize_vault` against a fresh (owner, vault_id) PDA
+    /// produces a slot mismatch and `PolicyPreviewMismatch` rejects it.
+    pub created_at_slot: u64,
 }
 
 /// SHA-256 over the canonical Borsh encoding of the preview fields.
@@ -95,6 +101,8 @@ pub fn compute_policy_preview_digest(fields: &PolicyPreviewFields<'_>) -> [u8; 3
     buf.push(u8::from(fields.has_constraints));
     // 13. has_post_assertions: u8
     buf.push(fields.has_post_assertions);
+    // 14. created_at_slot: u64 LE — PEN-CROSS-2 (Phase 2 close-up)
+    buf.extend_from_slice(&fields.created_at_slot.to_le_bytes());
 
     hashv(&[&buf]).to_bytes()
 }
@@ -125,6 +133,7 @@ mod tests {
             observe_only: false,
             has_constraints: false,
             has_post_assertions: 0,
+            created_at_slot: 0,
         };
         let d1 = compute_policy_preview_digest(&f);
         let d2 = compute_policy_preview_digest(&f);
@@ -149,6 +158,7 @@ mod tests {
             observe_only: false,
             has_constraints: false,
             has_post_assertions: 0,
+            created_at_slot: 0,
         };
         let mut flipped = base.daily_spending_cap_usd;
         let _ = &mut flipped; // suppress unused
@@ -182,6 +192,7 @@ mod tests {
             observe_only: false,
             has_constraints: false,
             has_post_assertions: 0,
+            created_at_slot: 0,
         };
         let f2 = PolicyPreviewFields {
             protocols: &b,
@@ -210,23 +221,27 @@ mod tests {
             observe_only: false,
             has_constraints: false,
             has_post_assertions: 0,
+            created_at_slot: 0,
         };
         // Encoding: 8 zero + 8 zero + 2 zero + 2 zero (developer_fee_rate)
         //   + 0x01 + 4 zero + 0x00 + 4 zero + 8 zero + 8 zero + 0 + 0 + 0
-        // = 49 bytes deterministic input.
+        //   + 8 zero (created_at_slot)
+        // = 57 bytes deterministic input.
         let digest = compute_policy_preview_digest(&f);
         // Cross-impl pin — same fixture is asserted byte-for-byte in
         // sdk/kit/tests/policy/preview-digest.test.ts. If either side
         // changes the canonical encoding, BOTH digests change and the
-        // two tests fail in lock-step. Pre-PEN-CROSS-6 digest was
-        //   29f9a0caa6851902abe7de24ac30380ef50c220d25d541f8fe1762793152b623.
-        // Adding 2 bytes of zero (developer_fee_rate=0) at position 4 shifts
-        // the encoding and forces a new known-good digest below.
-        // Post-PEN-CROSS-6 known-good digest of the 49-byte encoding above.
+        // two tests fail in lock-step. Prior digests:
+        //   Pre-PEN-CROSS-6:
+        //     29f9a0caa6851902abe7de24ac30380ef50c220d25d541f8fe1762793152b623
+        //   Post-PEN-CROSS-6 (pre-PEN-CROSS-2):
+        //     0ad67bf0d81b972c60abe82ebea425d4b30d0ef910bcc7b76584fae36a0f1252
+        // Adding 8 bytes of zero (created_at_slot=0) at position 14 shifts the
+        // encoding once more and forces the new known-good digest below.
         let expected: [u8; 32] = [
-            0x0a, 0xd6, 0x7b, 0xf0, 0xd8, 0x1b, 0x97, 0x2c, 0x60, 0xab, 0xe8, 0x2e, 0xbe, 0xa4,
-            0x25, 0xd4, 0xb3, 0x0d, 0x0e, 0xf9, 0x10, 0xbc, 0xc7, 0xb7, 0x65, 0x84, 0xfa, 0xe3,
-            0x6a, 0x0f, 0x12, 0x52,
+            0x63, 0x97, 0x4a, 0x26, 0x61, 0xaf, 0xc5, 0x39, 0xfc, 0x8f, 0x1e, 0x55, 0x24, 0x5a,
+            0xdc, 0xef, 0x9e, 0x3b, 0x91, 0xf8, 0x2a, 0x19, 0x1c, 0x75, 0x7e, 0xd3, 0xc7, 0x95,
+            0xe8, 0xe5, 0x91, 0x48,
         ];
         assert_eq!(
             digest, expected,
@@ -255,14 +270,22 @@ mod tests {
             observe_only: false,
             has_constraints: false,
             has_post_assertions: 0,
+            // PEN-CROSS-2: realistic fixture exercises a non-zero
+            // created_at_slot to lock the byte layout of an active vault.
+            created_at_slot: 12345,
         };
         let digest = compute_policy_preview_digest(&f);
-        // Post-PEN-CROSS-6 known-good digest. Pre-fix was
-        //   33d743a9643fcc6d39c30ac5f8c159d6e94d31ce354d6dd3843367773b3a8502.
+        // Prior digests:
+        //   Pre-PEN-CROSS-6:
+        //     33d743a9643fcc6d39c30ac5f8c159d6e94d31ce354d6dd3843367773b3a8502
+        //   Post-PEN-CROSS-6 (pre-PEN-CROSS-2, created_at_slot=0 not yet encoded):
+        //     ed9ac12d21e0f03933bbf789eae99944c311f2ff6f1baff992058307174de316
+        // Adding 8 bytes of created_at_slot=12345 at position 14 forces the
+        // new known-good digest below.
         let expected: [u8; 32] = [
-            0xed, 0x9a, 0xc1, 0x2d, 0x21, 0xe0, 0xf0, 0x39, 0x33, 0xbb, 0xf7, 0x89, 0xea, 0xe9,
-            0x99, 0x44, 0xc3, 0x11, 0xf2, 0xff, 0x6f, 0x1b, 0xaf, 0xf9, 0x92, 0x05, 0x83, 0x07,
-            0x17, 0x4d, 0xe3, 0x16,
+            0xac, 0x54, 0x28, 0x45, 0x79, 0xf4, 0xb8, 0xaf, 0xd7, 0x14, 0xb2, 0x90, 0xec, 0x22,
+            0xdf, 0x74, 0x5b, 0xdd, 0xbe, 0xde, 0x9a, 0x5b, 0x36, 0x6f, 0x17, 0xc8, 0xdb, 0x77,
+            0x6f, 0xab, 0x53, 0xc7,
         ];
         assert_eq!(
             digest, expected,

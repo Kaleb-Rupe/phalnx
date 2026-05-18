@@ -97,6 +97,7 @@ import {
   getReactivateVaultInstruction,
   getRegisterAgentInstruction,
   getRevokeAgentInstruction,
+  getSetObserveOnlyInstructionAsync,
   getUnpauseAgentInstruction,
   getValidateAndAuthorizeInstructionAsync,
   getWithdrawFundsInstructionAsync,
@@ -129,6 +130,7 @@ import {
   parseReactivateVaultInstruction,
   parseRegisterAgentInstruction,
   parseRevokeAgentInstruction,
+  parseSetObserveOnlyInstruction,
   parseUnpauseAgentInstruction,
   parseValidateAndAuthorizeInstruction,
   parseWithdrawFundsInstruction,
@@ -182,6 +184,7 @@ import {
   type ParsedReactivateVaultInstruction,
   type ParsedRegisterAgentInstruction,
   type ParsedRevokeAgentInstruction,
+  type ParsedSetObserveOnlyInstruction,
   type ParsedUnpauseAgentInstruction,
   type ParsedValidateAndAuthorizeInstruction,
   type ParsedWithdrawFundsInstruction,
@@ -193,6 +196,7 @@ import {
   type ReactivateVaultInput,
   type RegisterAgentInput,
   type RevokeAgentInput,
+  type SetObserveOnlyAsyncInput,
   type UnpauseAgentInput,
   type ValidateAndAuthorizeAsyncInput,
   type WithdrawFundsAsyncInput,
@@ -376,6 +380,7 @@ export enum SigilInstruction {
   ReactivateVault,
   RegisterAgent,
   RevokeAgent,
+  SetObserveOnly,
   UnpauseAgent,
   ValidateAndAuthorize,
   WithdrawFunds,
@@ -708,6 +713,17 @@ export function identifySigilInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([36, 88, 141, 35, 179, 134, 54, 12]),
+      ),
+      0,
+    )
+  ) {
+    return SigilInstruction.SetObserveOnly;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([46, 125, 165, 212, 241, 143, 190, 95]),
       ),
       0,
@@ -833,6 +849,9 @@ export type ParsedSigilInstruction<
   | ({
       instructionType: SigilInstruction.RevokeAgent;
     } & ParsedRevokeAgentInstruction<TProgram>)
+  | ({
+      instructionType: SigilInstruction.SetObserveOnly;
+    } & ParsedSetObserveOnlyInstruction<TProgram>)
   | ({
       instructionType: SigilInstruction.UnpauseAgent;
     } & ParsedUnpauseAgentInstruction<TProgram>)
@@ -1051,6 +1070,13 @@ export function parseSigilInstruction<TProgram extends string>(
         ...parseRevokeAgentInstruction(instruction),
       };
     }
+    case SigilInstruction.SetObserveOnly: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: SigilInstruction.SetObserveOnly,
+        ...parseSetObserveOnlyInstruction(instruction),
+      };
+    }
     case SigilInstruction.UnpauseAgent: {
       assertIsInstructionWithAccounts(instruction);
       return {
@@ -1230,6 +1256,10 @@ export type SigilPluginInstructions = {
   revokeAgent: (
     input: RevokeAgentInput,
   ) => ReturnType<typeof getRevokeAgentInstruction> & SelfPlanAndSendFunctions;
+  setObserveOnly: (
+    input: SetObserveOnlyAsyncInput,
+  ) => ReturnType<typeof getSetObserveOnlyInstructionAsync> &
+    SelfPlanAndSendFunctions;
   unpauseAgent: (
     input: UnpauseAgentInput,
   ) => ReturnType<typeof getUnpauseAgentInstruction> & SelfPlanAndSendFunctions;
@@ -1437,6 +1467,11 @@ export function sigilProgram() {
             addSelfPlanAndSendFunctions(
               client,
               getRevokeAgentInstruction(input),
+            ),
+          setObserveOnly: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getSetObserveOnlyInstructionAsync(input),
             ),
           unpauseAgent: (input) =>
             addSelfPlanAndSendFunctions(

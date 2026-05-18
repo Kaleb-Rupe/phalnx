@@ -126,6 +126,16 @@ pub fn handler(
         );
     }
 
+    // PEN-CROSS-2 (Phase 2 close-up): capture init slot BEFORE the digest
+    // check so the close+reinit replay window is closed. A signed
+    // initialize_vault tx that ran against a previously closed vault encodes
+    // the OLD slot in its preview digest; replaying that tx against the
+    // freshly-allocated PDA at the same (owner, vault_id) compares the
+    // OLD slot encoded in `preview_digest` against the NEW slot here and
+    // mismatches.
+    let clock = Clock::get()?;
+    let created_at_slot = clock.slot;
+
     // Phase 2 TA-19: assert the owner's signed digest matches the recomputed
     // digest over the resulting policy fields. Closes pending-PDA tampering +
     // signer-blind-sign risks. The resulting policy uses RESTRICTED destination
@@ -146,13 +156,13 @@ pub fn handler(
         observe_only,
         has_constraints: false,
         has_post_assertions: 0,
+        // PEN-CROSS-2: defends against close+reinit replay.
+        created_at_slot,
     });
     require!(
         recomputed_digest == preview_digest,
         SigilError::PolicyPreviewMismatch
     );
-
-    let clock = Clock::get()?;
 
     // Initialize vault
     let vault = &mut ctx.accounts.vault;
@@ -195,6 +205,8 @@ pub fn handler(
     policy.destination_mode = DESTINATION_MODE_RESTRICTED;
     // Phase 2 TA-19: pin the owner-signed digest into live policy.
     policy.policy_preview_digest = preview_digest;
+    // PEN-CROSS-2 (Phase 2 close-up): persist the slot bound by TA-19.
+    policy.created_at_slot = created_at_slot;
 
     // Initialize zero-copy tracker (buckets + protocol_counters zero-initialized by allocator)
     let mut tracker = ctx.accounts.tracker.load_init()?;
