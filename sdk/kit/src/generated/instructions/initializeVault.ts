@@ -14,6 +14,8 @@ import {
   getAddressEncoder,
   getArrayDecoder,
   getArrayEncoder,
+  getBooleanDecoder,
+  getBooleanEncoder,
   getBytesDecoder,
   getBytesEncoder,
   getProgramDerivedAddress,
@@ -114,6 +116,8 @@ export type InitializeVaultInstructionData = {
   timelockDuration: bigint;
   allowedDestinations: Array<Address>;
   protocolCaps: Array<bigint>;
+  observeOnly: boolean;
+  previewDigest: ReadonlyUint8Array;
 };
 
 export type InitializeVaultInstructionDataArgs = {
@@ -127,6 +131,8 @@ export type InitializeVaultInstructionDataArgs = {
   timelockDuration: number | bigint;
   allowedDestinations: Array<Address>;
   protocolCaps: Array<number | bigint>;
+  observeOnly: boolean;
+  previewDigest: ReadonlyUint8Array;
 };
 
 export function getInitializeVaultInstructionDataEncoder(): Encoder<InitializeVaultInstructionDataArgs> {
@@ -143,6 +149,8 @@ export function getInitializeVaultInstructionDataEncoder(): Encoder<InitializeVa
       ["timelockDuration", getU64Encoder()],
       ["allowedDestinations", getArrayEncoder(getAddressEncoder())],
       ["protocolCaps", getArrayEncoder(getU64Encoder())],
+      ["observeOnly", getBooleanEncoder()],
+      ["previewDigest", fixEncoderSize(getBytesEncoder(), 32)],
     ]),
     (value) => ({ ...value, discriminator: INITIALIZE_VAULT_DISCRIMINATOR }),
   );
@@ -161,6 +169,8 @@ export function getInitializeVaultInstructionDataDecoder(): Decoder<InitializeVa
     ["timelockDuration", getU64Decoder()],
     ["allowedDestinations", getArrayDecoder(getAddressDecoder())],
     ["protocolCaps", getArrayDecoder(getU64Decoder())],
+    ["observeOnly", getBooleanDecoder()],
+    ["previewDigest", fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }
 
@@ -202,6 +212,8 @@ export type InitializeVaultAsyncInput<
   timelockDuration: InitializeVaultInstructionDataArgs["timelockDuration"];
   allowedDestinations: InitializeVaultInstructionDataArgs["allowedDestinations"];
   protocolCaps: InitializeVaultInstructionDataArgs["protocolCaps"];
+  observeOnly: InitializeVaultInstructionDataArgs["observeOnly"];
+  previewDigest: InitializeVaultInstructionDataArgs["previewDigest"];
 };
 
 export async function getInitializeVaultInstructionAsync<
@@ -368,6 +380,8 @@ export type InitializeVaultInput<
   timelockDuration: InitializeVaultInstructionDataArgs["timelockDuration"];
   allowedDestinations: InitializeVaultInstructionDataArgs["allowedDestinations"];
   protocolCaps: InitializeVaultInstructionDataArgs["protocolCaps"];
+  observeOnly: InitializeVaultInstructionDataArgs["observeOnly"];
+  previewDigest: InitializeVaultInstructionDataArgs["previewDigest"];
 };
 
 export function getInitializeVaultInstruction<

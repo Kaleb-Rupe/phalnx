@@ -36,6 +36,7 @@ import { getRegisterAgentInstruction } from "../generated/instructions/registerA
 import { getDepositFundsInstructionAsync } from "../generated/instructions/depositFunds.js";
 import { inscribe } from "../inscribe.js";
 import { getAgentOverlayPDA, getTrackerPDA } from "../resolve-accounts.js";
+import { computePolicyPreviewDigest } from "../policy/compute-policy-preview-digest.js";
 import { sendAndConfirmTransaction, BlockhashCache } from "../rpc-helpers.js";
 import {
   USDC_MINT_DEVNET,
@@ -216,6 +217,8 @@ export interface ProvisionVaultOpts {
   spendingLimitUsd?: bigint;
   skipDeposit?: boolean;
   timelockDuration?: bigint;
+  /** Phase 2 TA-19: provision vault in observe-only mode. */
+  observeOnly?: boolean;
 }
 
 export interface ProvisionVaultResult {
@@ -243,9 +246,14 @@ export async function provisionVault(
 ): Promise<ProvisionVaultResult> {
   const dailyCap = opts.dailySpendingCapUsd ?? 500_000_000n;
   const maxTx = opts.maxTransactionSizeUsd ?? 100_000_000n;
-  const protocolMode = opts.protocolMode ?? 0; // allow all
+  // Phase 2 Option A: on-chain handler rejects protocolMode != 1 (ALLOWLIST).
+  // Devnet test default is now ALLOWLIST with empty protocols (no DeFi permitted
+  // by default — callers add protocols explicitly).
+  const protocolMode = opts.protocolMode ?? 1;
   const permissions = opts.permissions ?? FULL_CAPABILITY;
   const spendingLimitUsd = opts.spendingLimitUsd ?? 0n;
+  // Phase 2 TA-19: observe_only defaults to false unless caller opts in.
+  const observeOnly = opts.observeOnly ?? false;
 
   // 1. Derive PDAs via inscribe()
   const inscribeResult = await inscribe({
@@ -260,6 +268,22 @@ export async function provisionVault(
   const [overlayPDA] = await getAgentOverlayPDA(vaultAddress, 0);
 
   // 2. Build and send initializeVault
+  const timelockDuration = opts?.timelockDuration ?? 1800n;
+  const previewDigest = computePolicyPreviewDigest({
+    dailySpendingCapUsd: dailyCap,
+    maxTransactionSizeUsd: maxTx,
+    maxSlippageBps: 500,
+    protocolMode,
+    protocols: [],
+    destinationMode: 0,
+    allowedDestinations: [],
+    timelockDuration,
+    sessionExpirySeconds: 0n,
+    observeOnly,
+    hasConstraints: false,
+    hasPostAssertions: 0,
+  });
+
   const initIx = await getInitializeVaultInstructionAsync({
     owner,
     agentSpendOverlay: overlayPDA,
@@ -271,9 +295,11 @@ export async function provisionVault(
     protocols: [],
     developerFeeRate: 0,
     maxSlippageBps: 500,
-    timelockDuration: opts?.timelockDuration ?? 1800n, // MIN_TIMELOCK_DURATION (TOCTOU fix)
+    timelockDuration, // MIN_TIMELOCK_DURATION (TOCTOU fix)
     allowedDestinations: [],
     protocolCaps: [],
+    observeOnly,
+    previewDigest,
   });
 
   await sendKitTransaction(rpc, owner, [

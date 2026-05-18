@@ -144,14 +144,41 @@ export type PolicyConfig = {
    */
   hasPostAssertions: number;
   /**
-   * Destination access control mode for `agent_transfer`:
-   * 0 = Restricted (DEFAULT) — destination MUST be in `allowed_destinations`.
-   * 1 = OpenWithCap — destination unrestricted; only `daily_spending_cap_usd` throttles drain.
-   * Closes F-4 (third-pass audit): empty `allowed_destinations` no longer
-   * implies default-allow. Owners must explicitly opt into OpenWithCap via
-   * queue_policy_update / apply_pending_policy.
+   * Destination access control mode for `agent_transfer` and spending paths.
+   *
+   * Phase 2 Option A: only value 0 (RESTRICTED) is accepted. Permissive
+   * OPEN_WITH_CAP (1) was deleted. Closes F-4 (third-pass audit) and the
+   * subsequent owner-opt-in window definitively.
    */
   destinationMode: number;
+  /**
+   * TA-19 (Phase 2): SHA-256 digest of the canonical Borsh encoding of the
+   * policy fields the owner approved at queue/init time. Bound at the same
+   * instruction where the owner signs the change, re-asserted at apply, so
+   * a compromised owner-signer or pending-PDA tampering cannot mutate the
+   * applied policy without producing a digest mismatch.
+   *
+   * CANONICAL ENCODING (FIXED — DO NOT REORDER):
+   * 1. `daily_spending_cap_usd: u64`
+   * 2. `max_transaction_size_usd: u64`
+   * 3. `max_slippage_bps: u16`
+   * 4. `protocol_mode: u8`
+   * 5. `protocols: Vec<Pubkey>`
+   * 6. `destination_mode: u8`
+   * 7. `allowed_destinations: Vec<Pubkey>`
+   * 8. `timelock_duration: u64`
+   * 9. `session_expiry_seconds: u64`
+   * 10. `observe_only: bool`
+   * 11. `has_constraints: bool`
+   * 12. `has_post_assertions: u8`
+   *
+   * All fields encoded as Borsh: u8/u16/u64 little-endian, `bool` as `[u8; 1]`
+   * (0 or 1), `Vec<Pubkey>` as `u32_le_len ++ pubkey_bytes_concatenated`.
+   * The SDK helper `computePolicyPreviewDigest` mirrors this encoding exactly.
+   *
+   * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  policyPreviewDigest: ReadonlyUint8Array;
 };
 
 export type PolicyConfigArgs = {
@@ -242,14 +269,41 @@ export type PolicyConfigArgs = {
    */
   hasPostAssertions: number;
   /**
-   * Destination access control mode for `agent_transfer`:
-   * 0 = Restricted (DEFAULT) — destination MUST be in `allowed_destinations`.
-   * 1 = OpenWithCap — destination unrestricted; only `daily_spending_cap_usd` throttles drain.
-   * Closes F-4 (third-pass audit): empty `allowed_destinations` no longer
-   * implies default-allow. Owners must explicitly opt into OpenWithCap via
-   * queue_policy_update / apply_pending_policy.
+   * Destination access control mode for `agent_transfer` and spending paths.
+   *
+   * Phase 2 Option A: only value 0 (RESTRICTED) is accepted. Permissive
+   * OPEN_WITH_CAP (1) was deleted. Closes F-4 (third-pass audit) and the
+   * subsequent owner-opt-in window definitively.
    */
   destinationMode: number;
+  /**
+   * TA-19 (Phase 2): SHA-256 digest of the canonical Borsh encoding of the
+   * policy fields the owner approved at queue/init time. Bound at the same
+   * instruction where the owner signs the change, re-asserted at apply, so
+   * a compromised owner-signer or pending-PDA tampering cannot mutate the
+   * applied policy without producing a digest mismatch.
+   *
+   * CANONICAL ENCODING (FIXED — DO NOT REORDER):
+   * 1. `daily_spending_cap_usd: u64`
+   * 2. `max_transaction_size_usd: u64`
+   * 3. `max_slippage_bps: u16`
+   * 4. `protocol_mode: u8`
+   * 5. `protocols: Vec<Pubkey>`
+   * 6. `destination_mode: u8`
+   * 7. `allowed_destinations: Vec<Pubkey>`
+   * 8. `timelock_duration: u64`
+   * 9. `session_expiry_seconds: u64`
+   * 10. `observe_only: bool`
+   * 11. `has_constraints: bool`
+   * 12. `has_post_assertions: u8`
+   *
+   * All fields encoded as Borsh: u8/u16/u64 little-endian, `bool` as `[u8; 1]`
+   * (0 or 1), `Vec<Pubkey>` as `u32_le_len ++ pubkey_bytes_concatenated`.
+   * The SDK helper `computePolicyPreviewDigest` mirrors this encoding exactly.
+   *
+   * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  policyPreviewDigest: ReadonlyUint8Array;
 };
 
 /** Gets the encoder for {@link PolicyConfigArgs} account data. */
@@ -275,6 +329,7 @@ export function getPolicyConfigEncoder(): Encoder<PolicyConfigArgs> {
       ["policyVersion", getU64Encoder()],
       ["hasPostAssertions", getU8Encoder()],
       ["destinationMode", getU8Encoder()],
+      ["policyPreviewDigest", fixEncoderSize(getBytesEncoder(), 32)],
     ]),
     (value) => ({ ...value, discriminator: POLICY_CONFIG_DISCRIMINATOR }),
   );
@@ -302,6 +357,7 @@ export function getPolicyConfigDecoder(): Decoder<PolicyConfig> {
     ["policyVersion", getU64Decoder()],
     ["hasPostAssertions", getU8Decoder()],
     ["destinationMode", getU8Decoder()],
+    ["policyPreviewDigest", fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }
 

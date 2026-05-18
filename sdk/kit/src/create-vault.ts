@@ -27,6 +27,7 @@ import {
   type CapabilityTier,
   type UsdBaseUnits,
 } from "./types.js";
+import { computePolicyPreviewDigest } from "./policy/compute-policy-preview-digest.js";
 import { buildOwnerTransaction } from "./owner-transaction.js";
 import { signAndEncode, sendAndConfirmTransaction } from "./rpc-helpers.js";
 import type { SendAndConfirmOptions } from "./rpc-helpers.js";
@@ -85,6 +86,14 @@ export interface CreateVaultOptions {
    */
   protocolCaps?: bigint[];
   maxSlippageBps?: number;
+  /**
+   * Phase 2 TA-19: observe-only mode at vault creation. When `true`, all
+   * `validate_and_authorize` calls reject with `ObserveOnlyModeBlocksExecute`.
+   * Used to stand up a vault that baselines agent behaviour before the owner
+   * opens the execute path. Default: `false` (full execute permitted, gated
+   * by policy).
+   */
+  observeOnly?: boolean;
   /**
    * Timelock duration in seconds for owner-initiated policy changes.
    * Required since v0.9.0 — previously defaulted silently to 0 (no
@@ -244,6 +253,28 @@ export async function createVault(
       ? options.protocolCaps
       : protocols.map(() => 0n);
 
+  const allowedDestinations = options.allowedDestinations ?? [];
+  const observeOnly = options.observeOnly ?? false;
+  // Phase 2 TA-19: compute the canonical policy-preview digest off-chain.
+  // The on-chain `initialize_vault` handler recomputes this from the resulting
+  // policy state and rejects with `PolicyPreviewMismatch` if they differ.
+  // session_expiry_seconds is always 0 at init (uses default); has_constraints
+  // + has_post_assertions are always 0 at init (constraints are created later).
+  const previewDigest = computePolicyPreviewDigest({
+    dailySpendingCapUsd: options.dailySpendingCapUsd,
+    maxTransactionSizeUsd,
+    maxSlippageBps: options.maxSlippageBps ?? 100,
+    protocolMode,
+    protocols,
+    destinationMode: 0, // Phase 2 Option A: RESTRICTED is the only valid value
+    allowedDestinations,
+    timelockDuration: BigInt(options.timelockDuration),
+    sessionExpirySeconds: 0n,
+    observeOnly,
+    hasConstraints: false,
+    hasPostAssertions: 0,
+  });
+
   const initializeVaultIx = await getInitializeVaultInstructionAsync({
     owner: options.owner,
     agentSpendOverlay: agentOverlayAddress,
@@ -256,8 +287,10 @@ export async function createVault(
     developerFeeRate: options.developerFeeRate ?? 0,
     maxSlippageBps: options.maxSlippageBps ?? 100,
     timelockDuration: options.timelockDuration,
-    allowedDestinations: options.allowedDestinations ?? [],
+    allowedDestinations,
     protocolCaps,
+    observeOnly,
+    previewDigest,
   });
 
   // Step 5: Build registerAgent instruction

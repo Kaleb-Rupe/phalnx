@@ -88,6 +88,7 @@ function mockState(): ResolvedVaultState {
       totalWithdrawnUsd: 0n,
       totalFailedTransactions: 0n,
       activeSessions: 0,
+      observeOnly: false,
     },
     policy: {
       discriminator: new Uint8Array(8),
@@ -109,6 +110,7 @@ function mockState(): ResolvedVaultState {
       policyVersion: 0n,
       hasPostAssertions: 0,
       destinationMode: 0,
+      policyPreviewDigest: new Uint8Array(32),
     },
     tracker: null,
     overlay: null,

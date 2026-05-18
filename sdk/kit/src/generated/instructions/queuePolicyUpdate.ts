@@ -113,6 +113,7 @@ export type QueuePolicyUpdateInstructionData = {
   hasProtocolCaps: Option<boolean>;
   protocolCaps: Option<Array<bigint>>;
   destinationMode: Option<number>;
+  newPolicyPreviewDigest: ReadonlyUint8Array;
 };
 
 export type QueuePolicyUpdateInstructionDataArgs = {
@@ -128,6 +129,7 @@ export type QueuePolicyUpdateInstructionDataArgs = {
   hasProtocolCaps: OptionOrNullable<boolean>;
   protocolCaps: OptionOrNullable<Array<number | bigint>>;
   destinationMode: OptionOrNullable<number>;
+  newPolicyPreviewDigest: ReadonlyUint8Array;
 };
 
 export function getQueuePolicyUpdateInstructionDataEncoder(): Encoder<QueuePolicyUpdateInstructionDataArgs> {
@@ -149,6 +151,7 @@ export function getQueuePolicyUpdateInstructionDataEncoder(): Encoder<QueuePolic
       ["hasProtocolCaps", getOptionEncoder(getBooleanEncoder())],
       ["protocolCaps", getOptionEncoder(getArrayEncoder(getU64Encoder()))],
       ["destinationMode", getOptionEncoder(getU8Encoder())],
+      ["newPolicyPreviewDigest", fixEncoderSize(getBytesEncoder(), 32)],
     ]),
     (value) => ({ ...value, discriminator: QUEUE_POLICY_UPDATE_DISCRIMINATOR }),
   );
@@ -172,6 +175,7 @@ export function getQueuePolicyUpdateInstructionDataDecoder(): Decoder<QueuePolic
     ["hasProtocolCaps", getOptionDecoder(getBooleanDecoder())],
     ["protocolCaps", getOptionDecoder(getArrayDecoder(getU64Decoder()))],
     ["destinationMode", getOptionDecoder(getU8Decoder())],
+    ["newPolicyPreviewDigest", fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }
 
@@ -209,6 +213,7 @@ export type QueuePolicyUpdateAsyncInput<
   hasProtocolCaps: QueuePolicyUpdateInstructionDataArgs["hasProtocolCaps"];
   protocolCaps: QueuePolicyUpdateInstructionDataArgs["protocolCaps"];
   destinationMode: QueuePolicyUpdateInstructionDataArgs["destinationMode"];
+  newPolicyPreviewDigest: QueuePolicyUpdateInstructionDataArgs["newPolicyPreviewDigest"];
 };
 
 export async function getQueuePolicyUpdateInstructionAsync<
@@ -341,6 +346,7 @@ export type QueuePolicyUpdateInput<
   hasProtocolCaps: QueuePolicyUpdateInstructionDataArgs["hasProtocolCaps"];
   protocolCaps: QueuePolicyUpdateInstructionDataArgs["protocolCaps"];
   destinationMode: QueuePolicyUpdateInstructionDataArgs["destinationMode"];
+  newPolicyPreviewDigest: QueuePolicyUpdateInstructionDataArgs["newPolicyPreviewDigest"];
 };
 
 export function getQueuePolicyUpdateInstruction<

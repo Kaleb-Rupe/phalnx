@@ -122,6 +122,35 @@ describe("Kit SDK Devnet — Vault Lifecycle", function () {
   it("queuePolicyUpdate + cancel via Codama builder (can't apply on devnet — 30min timelock)", async function () {
     const newCap = 1_000_000_000n; // $1000
 
+    // Phase 2 TA-19: re-compute the merged policy digest off-chain and bind
+    // it to the queue. We fetch live policy + vault so the projection is
+    // accurate; only daily_spending_cap_usd is changing in this test.
+    const { fetchAgentVault } = await import(
+      "../../src/generated/accounts/agentVault.js"
+    );
+    const { fetchPolicyConfig } = await import(
+      "../../src/generated/accounts/policyConfig.js"
+    );
+    const { computePolicyPreviewDigest } = await import(
+      "../../src/policy/compute-policy-preview-digest.js"
+    );
+    const livePolicy = await fetchPolicyConfig(rpc, vault.policyAddress);
+    const liveVault = await fetchAgentVault(rpc, vault.vaultAddress);
+    const newPolicyPreviewDigest = computePolicyPreviewDigest({
+      dailySpendingCapUsd: newCap, // changed
+      maxTransactionSizeUsd: livePolicy.data.maxTransactionSizeUsd,
+      maxSlippageBps: livePolicy.data.maxSlippageBps,
+      protocolMode: livePolicy.data.protocolMode,
+      protocols: livePolicy.data.protocols,
+      destinationMode: livePolicy.data.destinationMode,
+      allowedDestinations: livePolicy.data.allowedDestinations,
+      timelockDuration: livePolicy.data.timelockDuration,
+      sessionExpirySeconds: livePolicy.data.sessionExpirySeconds,
+      observeOnly: liveVault.data.observeOnly,
+      hasConstraints: livePolicy.data.hasConstraints,
+      hasPostAssertions: livePolicy.data.hasPostAssertions,
+    });
+
     const queueIx = await getQueuePolicyUpdateInstructionAsync({
       owner,
       vault: vault.vaultAddress,
@@ -137,6 +166,7 @@ describe("Kit SDK Devnet — Vault Lifecycle", function () {
       hasProtocolCaps: null,
       protocolCaps: null,
       destinationMode: null,
+      newPolicyPreviewDigest,
     });
 
     await sendKitTransaction(rpc, owner, [queueIx as Instruction]);

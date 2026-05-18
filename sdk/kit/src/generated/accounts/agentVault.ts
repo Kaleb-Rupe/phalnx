@@ -19,6 +19,8 @@ import {
   getAddressEncoder,
   getArrayDecoder,
   getArrayEncoder,
+  getBooleanDecoder,
+  getBooleanEncoder,
   getBytesDecoder,
   getBytesEncoder,
   getI64Decoder,
@@ -111,6 +113,19 @@ export type AgentVault = {
    * close_vault requires this to be 0.
    */
   activeSessions: number;
+  /**
+   * Phase 2 TA-19: observe_only mode flag.
+   *
+   * When true, ALL `validate_and_authorize` calls reject with
+   * `ObserveOnlyModeBlocksExecute`. Provides a hard, low-blast-radius
+   * kill switch separate from `VaultStatus::Frozen` — owners can stand
+   * up an observe-only vault to baseline agent behaviour before opening
+   * the execute path. Set at `initialize_vault` time; flipping it post-
+   * init is deferred to a later phase.
+   *
+   * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  observeOnly: boolean;
 };
 
 export type AgentVaultArgs = {
@@ -162,6 +177,19 @@ export type AgentVaultArgs = {
    * close_vault requires this to be 0.
    */
   activeSessions: number;
+  /**
+   * Phase 2 TA-19: observe_only mode flag.
+   *
+   * When true, ALL `validate_and_authorize` calls reject with
+   * `ObserveOnlyModeBlocksExecute`. Provides a hard, low-blast-radius
+   * kill switch separate from `VaultStatus::Frozen` — owners can stand
+   * up an observe-only vault to baseline agent behaviour before opening
+   * the execute path. Set at `initialize_vault` time; flipping it post-
+   * init is deferred to a later phase.
+   *
+   * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  observeOnly: boolean;
 };
 
 /** Gets the encoder for {@link AgentVaultArgs} account data. */
@@ -183,6 +211,7 @@ export function getAgentVaultEncoder(): Encoder<AgentVaultArgs> {
       ["totalWithdrawnUsd", getU64Encoder()],
       ["totalFailedTransactions", getU64Encoder()],
       ["activeSessions", getU8Encoder()],
+      ["observeOnly", getBooleanEncoder()],
     ]),
     (value) => ({ ...value, discriminator: AGENT_VAULT_DISCRIMINATOR }),
   );
@@ -206,6 +235,7 @@ export function getAgentVaultDecoder(): Decoder<AgentVault> {
     ["totalWithdrawnUsd", getU64Decoder()],
     ["totalFailedTransactions", getU64Decoder()],
     ["activeSessions", getU8Decoder()],
+    ["observeOnly", getBooleanDecoder()],
   ]);
 }
 

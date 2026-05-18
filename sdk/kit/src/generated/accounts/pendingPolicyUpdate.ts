@@ -87,12 +87,28 @@ export type PendingPolicyUpdate = {
   hasProtocolCaps: Option<boolean>;
   protocolCaps: Option<Array<bigint>>;
   /**
-   * Destination access control mode update (F-4 audit fix).
-   * Some(0) = Restricted, Some(1) = OpenWithCap, None = leave unchanged.
+   * Destination access control mode update.
+   * Phase 2 Option A: only Some(0) (RESTRICTED) is accepted. Some(1) was deleted.
    */
   destinationMode: Option<number>;
   /** Bump seed for PDA */
   bump: number;
+  /**
+   * TA-19 (Phase 2): SHA-256 digest of the canonical Borsh encoding of the
+   * policy fields THAT WOULD RESULT FROM APPLYING this pending update over
+   * the live policy. Owner computes off-chain over the merged result and
+   * includes the digest in `queue_policy_update`; `apply_pending_policy`
+   * re-asserts the digest against a re-computed merged digest before any
+   * field is copied to the live policy. Defends against pending-PDA
+   * tampering between queue and apply (e.g., partial overwrite via a
+   * rogue program with the same account discriminator).
+   *
+   * Encoding identical to `PolicyConfig.policy_preview_digest` — see that
+   * field's doc-comment for the canonical encoding ordering.
+   *
+   * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  newPolicyPreviewDigest: ReadonlyUint8Array;
 };
 
 export type PendingPolicyUpdateArgs = {
@@ -120,12 +136,28 @@ export type PendingPolicyUpdateArgs = {
   hasProtocolCaps: OptionOrNullable<boolean>;
   protocolCaps: OptionOrNullable<Array<number | bigint>>;
   /**
-   * Destination access control mode update (F-4 audit fix).
-   * Some(0) = Restricted, Some(1) = OpenWithCap, None = leave unchanged.
+   * Destination access control mode update.
+   * Phase 2 Option A: only Some(0) (RESTRICTED) is accepted. Some(1) was deleted.
    */
   destinationMode: OptionOrNullable<number>;
   /** Bump seed for PDA */
   bump: number;
+  /**
+   * TA-19 (Phase 2): SHA-256 digest of the canonical Borsh encoding of the
+   * policy fields THAT WOULD RESULT FROM APPLYING this pending update over
+   * the live policy. Owner computes off-chain over the merged result and
+   * includes the digest in `queue_policy_update`; `apply_pending_policy`
+   * re-asserts the digest against a re-computed merged digest before any
+   * field is copied to the live policy. Defends against pending-PDA
+   * tampering between queue and apply (e.g., partial overwrite via a
+   * rogue program with the same account discriminator).
+   *
+   * Encoding identical to `PolicyConfig.policy_preview_digest` — see that
+   * field's doc-comment for the canonical encoding ordering.
+   *
+   * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  newPolicyPreviewDigest: ReadonlyUint8Array;
 };
 
 /** Gets the encoder for {@link PendingPolicyUpdateArgs} account data. */
@@ -153,6 +185,7 @@ export function getPendingPolicyUpdateEncoder(): Encoder<PendingPolicyUpdateArgs
       ["protocolCaps", getOptionEncoder(getArrayEncoder(getU64Encoder()))],
       ["destinationMode", getOptionEncoder(getU8Encoder())],
       ["bump", getU8Encoder()],
+      ["newPolicyPreviewDigest", fixEncoderSize(getBytesEncoder(), 32)],
     ]),
     (value) => ({
       ...value,
@@ -185,6 +218,7 @@ export function getPendingPolicyUpdateDecoder(): Decoder<PendingPolicyUpdate> {
     ["protocolCaps", getOptionDecoder(getArrayDecoder(getU64Decoder()))],
     ["destinationMode", getOptionDecoder(getU8Decoder())],
     ["bump", getU8Decoder()],
+    ["newPolicyPreviewDigest", fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }
 

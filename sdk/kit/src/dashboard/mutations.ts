@@ -46,6 +46,9 @@ import { redactCause } from "../network-errors.js";
 import { SIGIL_PROGRAM_ADDRESS, MAX_ALLOWED_PROTOCOLS } from "../types.js";
 import type { Network } from "../types.js";
 import type { AgentVault } from "../generated/accounts/agentVault.js";
+import { fetchAgentVault } from "../generated/accounts/agentVault.js";
+import { fetchPolicyConfig } from "../generated/accounts/policyConfig.js";
+import { computePolicyPreviewDigest } from "../policy/compute-policy-preview-digest.js";
 
 // Phase 3: Simple mutations
 import { getFreezeVaultInstruction } from "../generated/instructions/freezeVault.js";
@@ -546,14 +549,56 @@ export async function queuePolicyUpdate(
       ),
     );
   }
+  // Phase 2 TA-19: fetch live policy + vault state to compute the digest of
+  // the merged-effective policy that WILL result if this update is applied.
+  // The on-chain handler re-asserts the same digest at queue time, so any
+  // owner blind-sign that diverges from the SDK-projected update is rejected.
+  const [policyPda] = await getPolicyPDA(vault);
+  const livePolicy = await fetchPolicyConfig(rpc, policyPda);
+  const liveVault = await fetchAgentVault(rpc, vault);
+
+  const newProtocolMode = changes.protocolMode
+    ? mapProtocolMode(changes.protocolMode)
+    : null;
+  const effProtocolMode = newProtocolMode ?? livePolicy.data.protocolMode;
+  const effProtocols = changes.approvedApps ?? livePolicy.data.protocols;
+  const effDestinationMode =
+    changes.destinationMode ?? livePolicy.data.destinationMode;
+  const effDestinations =
+    changes.allowedDestinations ?? livePolicy.data.allowedDestinations;
+  const effDaily = changes.dailyCap ?? livePolicy.data.dailySpendingCapUsd;
+  const effMaxTx =
+    changes.maxPerTrade ?? livePolicy.data.maxTransactionSizeUsd;
+  const effMaxSlip =
+    changes.maxSlippageBps ?? livePolicy.data.maxSlippageBps;
+  const effTimelock =
+    changes.timelock != null
+      ? BigInt(changes.timelock)
+      : livePolicy.data.timelockDuration;
+  const effSessionExpiry =
+    changes.sessionExpirySeconds ?? livePolicy.data.sessionExpirySeconds;
+
+  const newPolicyPreviewDigest = computePolicyPreviewDigest({
+    dailySpendingCapUsd: effDaily,
+    maxTransactionSizeUsd: effMaxTx,
+    maxSlippageBps: effMaxSlip,
+    protocolMode: effProtocolMode,
+    protocols: effProtocols,
+    destinationMode: effDestinationMode,
+    allowedDestinations: effDestinations,
+    timelockDuration: effTimelock,
+    sessionExpirySeconds: effSessionExpiry,
+    observeOnly: liveVault.data.observeOnly,
+    hasConstraints: livePolicy.data.hasConstraints,
+    hasPostAssertions: livePolicy.data.hasPostAssertions,
+  });
+
   const ix = await getQueuePolicyUpdateInstructionAsync({
     owner,
     vault,
     dailySpendingCapUsd: changes.dailyCap ?? null,
     maxTransactionAmountUsd: changes.maxPerTrade ?? null,
-    protocolMode: changes.protocolMode
-      ? mapProtocolMode(changes.protocolMode)
-      : null,
+    protocolMode: newProtocolMode,
     protocols: changes.approvedApps ?? null,
     developerFeeRate: changes.developerFeeRate ?? null,
     maxSlippageBps: changes.maxSlippageBps ?? null,
@@ -564,6 +609,7 @@ export async function queuePolicyUpdate(
     hasProtocolCaps: changes.hasProtocolCaps ?? null,
     protocolCaps: changes.protocolCaps ?? null,
     destinationMode: changes.destinationMode ?? null,
+    newPolicyPreviewDigest,
   });
   return run(rpc, owner, network, [ix], opts);
 }

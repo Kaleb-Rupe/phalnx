@@ -5,7 +5,7 @@
  * Every error includes a category, retryability flag, and
  * recovery actions that tell the agent exactly what to do next.
  *
- * Maps all 79 on-chain error codes (6000-6078) post Phase 1 compaction
+ * Maps all 82 on-chain error codes (6000-6081) post Phase 2 additions
  * (Option A V2; Jupiter swap integration + 2 error variants deleted) plus
  * 34 SDK error codes (7000-7033) to AgentError with machine-readable metadata.
  *
@@ -1220,18 +1220,62 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
-  // F-4 audit fix: explicit destination_mode (default Restricted closes default-allow drain)
+  // F-4 audit fix: explicit destination_mode. Phase 2 Option A tightens to
+  // 0 = RESTRICTED only — OPEN_WITH_CAP path deleted.
   6078: {
     name: "InvalidDestinationMode",
-    message:
-      "Invalid destination mode (must be 0 = Restricted or 1 = OpenWithCap).",
+    message: "Invalid destination mode (must be 0 = RESTRICTED).",
     category: "INPUT_VALIDATION",
     retryable: false,
     recovery_actions: [
       {
         action: "fix_policy",
         description:
-          "Pass destination_mode = 0 (Restricted, default) or 1 (OpenWithCap, explicit opt-in to drain blast radius).",
+          "Pass destination_mode = 0 (RESTRICTED). Phase 2 deleted the permissive OPEN_WITH_CAP path.",
+      },
+    ],
+  },
+  // Phase 2 TA-04: reserved AgentEntry.capability values 3..=255 reject.
+  6079: {
+    name: "InvalidCapability",
+    message:
+      "Invalid agent capability value (must be 0 = Disabled, 1 = Observer, or 2 = Operator).",
+    category: "INPUT_VALIDATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "fix_policy",
+        description:
+          "Pass capability = 0, 1, or 2. Reserved values 3..=255 are explicitly rejected by register_agent / queue_agent_permissions_update / apply_agent_permissions_update.",
+      },
+    ],
+  },
+  // Phase 2 TA-19: policy_preview_digest mismatch — owner blind-sign defense.
+  6080: {
+    name: "PolicyPreviewMismatch",
+    message:
+      "Policy preview digest mismatch — caller's signed digest differs from recomputed canonical digest.",
+    category: "INPUT_VALIDATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "recompute_digest",
+        description:
+          "Recompute the policy preview digest via computePolicyPreviewDigest() against the actual policy fields and resubmit. Likely cause: owner signed a digest produced from stale fields, or a pending PDA was tampered with between queue and apply.",
+      },
+    ],
+  },
+  // Phase 2 TA-19: observe_only mode rejects all validate_and_authorize calls.
+  6081: {
+    name: "ObserveOnlyModeBlocksExecute",
+    message: "Vault is in observe_only mode — validate_and_authorize is blocked.",
+    category: "POLICY_VIOLATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "switch_vault_mode",
+        description:
+          "Owner must queue + apply a policy update to flip observe_only off (or create a separate vault without observe_only set).",
       },
     ],
   },

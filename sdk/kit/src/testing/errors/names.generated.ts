@@ -14,7 +14,7 @@
  */
 
 // ────────────────────────────────────────────────────────────────
-// Sigil program errors (6000-6078)
+// Sigil program errors (6000-6081)
 // ────────────────────────────────────────────────────────────────
 
 export const SIGIL_ERRORS = {
@@ -97,6 +97,9 @@ export const SIGIL_ERRORS = {
   LamportDrainBlocked: 6076,
   BatchInstructionBlocked: 6077,
   InvalidDestinationMode: 6078,
+  InvalidCapability: 6079,
+  PolicyPreviewMismatch: 6080,
+  ObserveOnlyModeBlocksExecute: 6081,
 } as const;
 
 /**

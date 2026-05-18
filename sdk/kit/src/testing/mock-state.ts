@@ -33,6 +33,8 @@ export interface MockVaultStateOverrides {
   totalWithdrawnUsd?: bigint;
   stablecoinBalances?: { usdc: bigint; usdt: bigint };
   maxTransactionSizeUsd?: bigint;
+  /** Phase 2 TA-19 mock override (default false). */
+  observeOnly?: boolean;
 }
 
 // ─── Factory ────────────────────────────────────────────────────────────────
@@ -82,6 +84,7 @@ export function createMockVaultState(
       totalWithdrawnUsd: overrides?.totalWithdrawnUsd ?? 0n,
       totalFailedTransactions: 0n,
       activeSessions: 0,
+      observeOnly: overrides?.observeOnly ?? false,
     },
     policy: {
       discriminator: new Uint8Array(8),
@@ -103,6 +106,9 @@ export function createMockVaultState(
       policyVersion: 0n,
       hasPostAssertions: 0,
       destinationMode: 0,
+      // Mock fixtures don't exercise the on-chain digest assertion path —
+      // tests use this state for reads only. Pad with zeros.
+      policyPreviewDigest: new Uint8Array(32),
     },
     tracker: null,
     overlay: null,

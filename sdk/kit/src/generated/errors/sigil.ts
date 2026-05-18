@@ -170,8 +170,14 @@ export const SIGIL_ERROR__TRANSFER_HOOK_BLOCKED = 0x17bb; // 6075
 export const SIGIL_ERROR__LAMPORT_DRAIN_BLOCKED = 0x17bc; // 6076
 /** BatchInstructionBlocked: Token-2022 Batch instruction (opcode 255) is blocked outright — wraps inner instructions and bypasses byte-0 blocklist */
 export const SIGIL_ERROR__BATCH_INSTRUCTION_BLOCKED = 0x17bd; // 6077
-/** InvalidDestinationMode: Invalid destination mode (must be 0 = Restricted or 1 = OpenWithCap) */
+/** InvalidDestinationMode: Invalid destination mode (must be 0 = RESTRICTED) */
 export const SIGIL_ERROR__INVALID_DESTINATION_MODE = 0x17be; // 6078
+/** InvalidCapability: Invalid agent capability value (must be 0 = Disabled, 1 = Observer, or 2 = Operator) */
+export const SIGIL_ERROR__INVALID_CAPABILITY = 0x17bf; // 6079
+/** PolicyPreviewMismatch: Policy preview digest mismatch — caller's signed digest differs from recomputed canonical digest */
+export const SIGIL_ERROR__POLICY_PREVIEW_MISMATCH = 0x17c0; // 6080
+/** ObserveOnlyModeBlocksExecute: Vault is in observe_only mode — validate_and_authorize is blocked */
+export const SIGIL_ERROR__OBSERVE_ONLY_MODE_BLOCKS_EXECUTE = 0x17c1; // 6081
 
 export type SigilError =
   | typeof SIGIL_ERROR__ACCOUNT_WRITABILITY_MISMATCH
@@ -197,6 +203,7 @@ export type SigilError =
   | typeof SIGIL_ERROR__INSUFFICIENT_BALANCE
   | typeof SIGIL_ERROR__INSUFFICIENT_PERMISSIONS
   | typeof SIGIL_ERROR__INVALID_AGENT_KEY
+  | typeof SIGIL_ERROR__INVALID_CAPABILITY
   | typeof SIGIL_ERROR__INVALID_CONSTRAINT_CONFIG
   | typeof SIGIL_ERROR__INVALID_CONSTRAINT_OPERATOR
   | typeof SIGIL_ERROR__INVALID_CONSTRAINTS_PDA
@@ -216,12 +223,14 @@ export type SigilError =
   | typeof SIGIL_ERROR__NO_AGENT_REGISTERED
   | typeof SIGIL_ERROR__NON_TRACKED_SWAP_MUST_RETURN_STABLECOIN
   | typeof SIGIL_ERROR__NO_TIMELOCK_CONFIGURED
+  | typeof SIGIL_ERROR__OBSERVE_ONLY_MODE_BLOCKS_EXECUTE
   | typeof SIGIL_ERROR__ORPHAN_PDA_POPULATED
   | typeof SIGIL_ERROR__ORPHAN_PDA_WRONG_OWNER
   | typeof SIGIL_ERROR__OVERFLOW
   | typeof SIGIL_ERROR__OVERLAY_SLOT_EXHAUSTED
   | typeof SIGIL_ERROR__PENDING_POLICY_EXISTS
   | typeof SIGIL_ERROR__PERMANENT_DELEGATE_BLOCKED
+  | typeof SIGIL_ERROR__POLICY_PREVIEW_MISMATCH
   | typeof SIGIL_ERROR__POLICY_VERSION_MISMATCH
   | typeof SIGIL_ERROR__POST_ASSERTION_FAILED
   | typeof SIGIL_ERROR__PROTOCOL_CAP_EXCEEDED
@@ -280,10 +289,11 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__INSUFFICIENT_BALANCE]: `Insufficient vault balance for withdrawal`,
     [SIGIL_ERROR__INSUFFICIENT_PERMISSIONS]: `Agent lacks permission for this action type`,
     [SIGIL_ERROR__INVALID_AGENT_KEY]: `Invalid agent: cannot be the zero address`,
+    [SIGIL_ERROR__INVALID_CAPABILITY]: `Invalid agent capability value (must be 0 = Disabled, 1 = Observer, or 2 = Operator)`,
     [SIGIL_ERROR__INVALID_CONSTRAINT_CONFIG]: `Invalid constraint configuration: bounds exceeded`,
     [SIGIL_ERROR__INVALID_CONSTRAINT_OPERATOR]: `Constraint operator value is not a valid ConstraintOperator discriminant`,
     [SIGIL_ERROR__INVALID_CONSTRAINTS_PDA]: `Invalid constraints PDA: wrong owner or vault`,
-    [SIGIL_ERROR__INVALID_DESTINATION_MODE]: `Invalid destination mode (must be 0 = Restricted or 1 = OpenWithCap)`,
+    [SIGIL_ERROR__INVALID_DESTINATION_MODE]: `Invalid destination mode (must be 0 = RESTRICTED)`,
     [SIGIL_ERROR__INVALID_FEE_DESTINATION]: `Fee destination account invalid`,
     [SIGIL_ERROR__INVALID_PENDING_CONSTRAINTS_PDA]: `Invalid pending constraints PDA: wrong owner or vault`,
     [SIGIL_ERROR__INVALID_PERMISSIONS]: `Permission bitmask contains invalid bits`,
@@ -299,12 +309,14 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__NO_AGENT_REGISTERED]: `No agent registered for this vault`,
     [SIGIL_ERROR__NON_TRACKED_SWAP_MUST_RETURN_STABLECOIN]: `Non-stablecoin swap must return stablecoin (balance did not increase)`,
     [SIGIL_ERROR__NO_TIMELOCK_CONFIGURED]: `No timelock configured on this vault`,
+    [SIGIL_ERROR__OBSERVE_ONLY_MODE_BLOCKS_EXECUTE]: `Vault is in observe_only mode — validate_and_authorize is blocked`,
     [SIGIL_ERROR__ORPHAN_PDA_POPULATED]: `PDA is fully populated; not an orphan`,
     [SIGIL_ERROR__ORPHAN_PDA_WRONG_OWNER]: `PDA at constraints seeds is not program-owned`,
     [SIGIL_ERROR__OVERFLOW]: `Arithmetic overflow`,
     [SIGIL_ERROR__OVERLAY_SLOT_EXHAUSTED]: `Per-agent overlay is full; cannot register agent with spending limit`,
     [SIGIL_ERROR__PENDING_POLICY_EXISTS]: `Pending policy update must be applied or cancelled before closing vault`,
     [SIGIL_ERROR__PERMANENT_DELEGATE_BLOCKED]: `Token-2022 PermanentDelegate not permitted between validate and finalize`,
+    [SIGIL_ERROR__POLICY_PREVIEW_MISMATCH]: `Policy preview digest mismatch — caller's signed digest differs from recomputed canonical digest`,
     [SIGIL_ERROR__POLICY_VERSION_MISMATCH]: `Policy version mismatch — policy changed since agent's last RPC read`,
     [SIGIL_ERROR__POST_ASSERTION_FAILED]: `Post-execution assertion failed: account state did not satisfy constraint`,
     [SIGIL_ERROR__PROTOCOL_CAP_EXCEEDED]: `Per-protocol rolling 24h spending cap would be exceeded`,
