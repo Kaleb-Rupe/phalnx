@@ -128,6 +128,18 @@ impl AgentSpendOverlay {
         self.entries.iter().position(|e| e.agent == agent_bytes)
     }
 
+    /// Return the `AgentContributionEntry` for the given agent, or None
+    /// if not present. Convenience wrapper around `find_agent_slot()` for
+    /// read paths that want the entry struct rather than the slot index.
+    ///
+    /// Bounded by `MAX_OVERLAY_ENTRIES` (10) via `find_agent_slot`.
+    /// Mutation paths must NOT go through this helper — `&self` here
+    /// would silently re-borrow at the call site. Use `find_agent_slot`
+    /// + direct `self.entries[idx]` indexing for any write path.
+    pub fn get_agent_entry(&self, agent: &Pubkey) -> Option<&AgentContributionEntry> {
+        self.find_agent_slot(agent).map(|i| &self.entries[i])
+    }
+
     /// Claim an empty slot for a new agent. Returns the slot index, or None if full.
     /// An empty slot has agent == [0u8; 32].
     pub fn claim_slot(&mut self, agent: &Pubkey) -> Option<usize> {
@@ -475,5 +487,51 @@ mod ta06_cooldown_tests {
         o.release_slot(3);
         assert_eq!(o.cooldown_seconds[3], 0, "release must zero cooldown");
         assert_eq!(o.last_action_unix[3], 0, "release must zero last_action");
+    }
+
+    /// `find_agent_slot` returns the position of the agent if registered,
+    /// None otherwise. Equivalent to manual `.entries.iter().position()`
+    /// but bounded by MAX_OVERLAY_ENTRIES and the canonical lookup.
+    #[test]
+    fn find_agent_slot_returns_correct_index() {
+        let mut o = zeroed_overlay();
+        let agent_a = Pubkey::new_unique();
+        let agent_b = Pubkey::new_unique();
+        let unknown = Pubkey::new_unique();
+
+        o.entries[2].agent = agent_a.to_bytes();
+        o.entries[5].agent = agent_b.to_bytes();
+
+        assert_eq!(o.find_agent_slot(&agent_a), Some(2));
+        assert_eq!(o.find_agent_slot(&agent_b), Some(5));
+        assert_eq!(o.find_agent_slot(&unknown), None);
+    }
+
+    /// `get_agent_entry` returns the entry struct for a registered agent,
+    /// preserving the fields the inner iteration would have exposed.
+    #[test]
+    fn get_agent_entry_returns_struct_for_registered_agent() {
+        let mut o = zeroed_overlay();
+        let agent = Pubkey::new_unique();
+        o.entries[4].agent = agent.to_bytes();
+        o.entries[4].last_write_epoch = 12345;
+        o.entries[4].contributions[7] = 999;
+
+        let entry = o.get_agent_entry(&agent).expect("entry must be present");
+        assert_eq!(entry.agent, agent.to_bytes(), "agent key matches");
+        assert_eq!(entry.last_write_epoch, 12345, "last_write_epoch matches");
+        assert_eq!(entry.contributions[7], 999, "contribution preserved");
+    }
+
+    /// `get_agent_entry` returns None for an unregistered agent — does
+    /// not fall back to an arbitrary zeroed slot.
+    #[test]
+    fn get_agent_entry_returns_none_for_unknown_agent() {
+        let o = zeroed_overlay();
+        let unknown = Pubkey::new_unique();
+        assert!(
+            o.get_agent_entry(&unknown).is_none(),
+            "unknown agent must return None, not slot 0"
+        );
     }
 }
