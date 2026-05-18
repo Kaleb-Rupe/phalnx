@@ -788,6 +788,23 @@ MAX_SYSVAR_SCAN_ITERATIONS=64. SessionAuthority has NO nonce field.
 TASKS:
 
 1. AC-10 session.nonce closure (per Audit #1 C-1):
+
+   FORWARD-COMPAT NOTE (§RP-1 clarification, 2026-05-18): In V2 the active
+   defense against the documented durable-nonce replay attack class is the
+   `policy_version` check at validate_and_authorize.rs:172-175 — every
+   successful agent-mutation (register/revoke/pause/unpause) bumps
+   `policy.policy_version`, and validate_and_authorize hard-fails with
+   `ErrPolicyVersionMismatch` when the caller's `expected_policy_version`
+   doesn't match. AC-10 closes the spec contract and is forward-compat for
+   Phase 8 M-5 (ownership-transfer replay) where the session PDA may be
+   re-used via `init_if_needed`. AC-10 is NOT load-bearing for the
+   documented attack class in V2 because the session PDA uses `init`
+   (not `init_if_needed`) — every successful validate creates a fresh
+   nonce=0 SessionAuthority. The two defenses are intentionally
+   independent: policy_version invalidates stale validates at the policy
+   layer, while AC-10 binds replay protection into the session lifetime
+   for Phase 8.
+
    - state/session.rs: append `pub nonce: u64` to SessionAuthority. APPEND-ONLY.
    - instructions/validate_and_authorize.rs: accept new arg expected_nonce: u64.
      If session exists (re-use case): require session.nonce == expected_nonce.

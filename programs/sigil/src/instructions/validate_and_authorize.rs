@@ -528,6 +528,21 @@ pub fn handler(
     // documentation but the derivation step is skipped because no PDA of
     // that family yet exists for the current vault (Phase 7+ ship them).
     //
+    // **Prefix count (§RP-1 clarification, 2026-05-18).** PROTECTED_SEED_PREFIXES
+    // currently lists 16 entries split as **12 active + 4 forward-compat**:
+    //   ACTIVE (12): vault, policy, tracker, session, post_assertions,
+    //     pending_policy, pending_constraints, pending_agent_perms,
+    //     pending_close_constraints, pending_owner, constraints, agent_spend.
+    //   FORWARD-COMPAT (4): audit_success, audit_rejected (Phase 7 audit log),
+    //     cosign (Phase 3 cosign session — no live PDA in V2 register yet),
+    //     recipient (post-exec per-recipient cap).
+    // The runtime `protected: [Pubkey; 13]` array below is a derived view —
+    // 12 real keys + 1 `Pubkey::default()` sentinel slot reserved for the
+    // 4 forward-compat families (all 4 collapse into the single sentinel
+    // because their derivations are unavailable in V2). Sentinel can never
+    // match a real account meta because `Pubkey::default()` is the off-curve
+    // null key and cannot be a derived PDA.
+    //
     // **CU profile (measured 2026-05-18 via LiteSVM in
     // tests/sysvar-scan-bound.ts "TA-11 protected-writable scan CU profile").**
     //   - 30-sibling-noop bundle end-to-end: ~170K CU (validate + finalize +
