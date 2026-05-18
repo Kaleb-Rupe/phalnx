@@ -122,31 +122,32 @@ New variants append starting at 6079:
 
 | Code | Name | Phase |
 |---|---|---|
-| 6079 | `ErrInvalidCapability` (reserved values 3..=255) | Phase 2 |
-| 6080 | `ErrObserveOnlyModeBlocksExecute` | Phase 2 |
-| 6081 | `ErrPolicyPreviewMismatch` (TA-19) | Phase 2 |
-| 6082 | `ErrMintNotPinned` (TA-03) | Phase 3 |
-| 6083 | `ErrOutsideOperatingHours` (TA-05) | Phase 3 |
-| 6084 | `ErrCooldownActive` (TA-06) | Phase 3 |
-| 6085 | `ErrGraylistFriction` (TA-07) | Phase 3 |
-| 6086 | `ErrGraylistFull` (TA-07) | Phase 3 |
-| 6087 | `ErrToken2022ExtensionForbidden` (TA-08) | Phase 3 |
-| 6088 | `ErrCosignRequired` (TA-09) | Phase 3 |
-| 6089 | `ErrAutoRevoked` (TA-17) | Phase 3 |
-| 6090 | `ErrSandwichIntegrity` (TA-10 tightening) | Phase 4 |
-| 6091 | `ErrProtectedWritable` (TA-11) | Phase 4 |
-| 6092 | `ErrSessionNonceMismatch` (AC-10) | Phase 4 |
-| 6093 | `ErrStableFloorViolation` (TA-12) | Phase 5 |
-| 6094 | `ErrDailyCapExceeded` (TA-13 doc-fix) | Phase 5 |
-| 6095 | `ErrRecipientCapExceeded` (TA-14) | Phase 5 |
-| 6096 | `ErrMintDeltaCapExceeded` (R-1) | Phase 6 |
-| 6097 | `ErrAtaAuthorityChanged` (R-2) | Phase 6 |
-| 6098 | `ErrOutputBelowFloor` (R-3) | Phase 6 |
-| 6099 | `ErrDeclarationInconsistent` (R-4) | Phase 6 |
-| 6100 | `ErrPendingOwnershipExists` (C26) | Phase 8 |
-| 6101 | `ErrPendingOwnershipNotReady` (C26) | Phase 8 |
-| 6102 | `ErrInvalidFreezeReason` (C27) | Phase 8 |
-| 6103 | `ErrReactivateCooldownActive` (C28) | Phase 8 |
+| 6079 | `ErrInvalidCapability` (reserved values 3..=255) | Phase 2 — LANDED |
+| 6080 | `ErrPolicyPreviewMismatch` (TA-19) | Phase 2 — LANDED |
+| 6081 | `ErrObserveOnlyModeBlocksExecute` | Phase 2 — LANDED |
+| 6082 | `ErrActiveVaultRequiresAllowlist` (F-11 close-up) | Phase 2 close-up — LANDED |
+| 6083 | `ErrMintNotPinned` (TA-03) | Phase 3 |
+| 6084 | `ErrOutsideOperatingHours` (TA-05) | Phase 3 |
+| 6085 | `ErrCooldownActive` (TA-06) | Phase 3 |
+| 6086 | `ErrGraylistFriction` (TA-07) | Phase 3 |
+| 6087 | `ErrGraylistFull` (TA-07) | Phase 3 |
+| 6088 | `ErrToken2022ExtensionForbidden` (TA-08) | Phase 3 |
+| 6089 | `ErrCosignRequired` (TA-09) | Phase 3 |
+| 6090 | `ErrAutoRevoked` (TA-17) | Phase 3 |
+| 6091 | `ErrSandwichIntegrity` (TA-10 tightening) | Phase 4 |
+| 6092 | `ErrProtectedWritable` (TA-11) | Phase 4 |
+| 6093 | `ErrSessionNonceMismatch` (AC-10) | Phase 4 |
+| 6094 | `ErrStableFloorViolation` (TA-12) | Phase 5 |
+| 6095 | `ErrDailyCapExceeded` (TA-13 doc-fix) | Phase 5 |
+| 6096 | `ErrRecipientCapExceeded` (TA-14) | Phase 5 |
+| 6097 | `ErrMintDeltaCapExceeded` (R-1) | Phase 6 |
+| 6098 | `ErrAtaAuthorityChanged` (R-2) | Phase 6 |
+| 6099 | `ErrOutputBelowFloor` (R-3) | Phase 6 |
+| 6100 | `ErrDeclarationInconsistent` (R-4) | Phase 6 |
+| 6101 | `ErrPendingOwnershipExists` (C26) | Phase 8 |
+| 6102 | `ErrPendingOwnershipNotReady` (C26) | Phase 8 |
+| 6103 | `ErrInvalidFreezeReason` (C27) | Phase 8 |
+| 6104 | `ErrReactivateCooldownActive` (C28) | Phase 8 |
 
 Phase 0.5 docs commit makes ERROR_CODE_ALLOCATION_V2.md the canonical source.
 

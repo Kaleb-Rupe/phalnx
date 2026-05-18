@@ -155,7 +155,7 @@ pub enum SigilError {
     #[msg("Unauthorized SPL Token Approve between validate and finalize")]
     UnauthorizedTokenApproval,
 
-    #[msg("Session expiry slots out of range (10-450)")]
+    #[msg("Session expiry seconds out of range (5-90)")]
     InvalidSessionExpiry,
 
     // --- Generic constraints V2 errors ---

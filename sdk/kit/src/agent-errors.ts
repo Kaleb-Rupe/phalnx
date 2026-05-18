@@ -5,8 +5,9 @@
  * Every error includes a category, retryability flag, and
  * recovery actions that tell the agent exactly what to do next.
  *
- * Maps all 82 on-chain error codes (6000-6081) post Phase 2 additions
- * (Option A V2; Jupiter swap integration + 2 error variants deleted) plus
+ * Maps all 83 on-chain error codes (6000-6082) post Phase 2 + close-up additions
+ * (Option A V2; Jupiter swap integration + 2 error variants deleted; Phase 2 close-up
+ * appended `ErrActiveVaultRequiresAllowlist` at 6082) plus
  * 34 SDK error codes (7000-7033) to AgentError with machine-readable metadata.
  *
  * Zero dependency on @solana/web3.js or @coral-xyz/anchor.
