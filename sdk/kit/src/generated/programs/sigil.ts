@@ -96,6 +96,7 @@ import {
   getQueueConstraintsUpdateInstructionAsync,
   getQueuePolicyUpdateInstructionAsync,
   getReactivateVaultInstruction,
+  getRecordAgentViolationInstructionAsync,
   getRegisterAgentInstruction,
   getRevokeAgentInstruction,
   getSetObserveOnlyInstructionAsync,
@@ -130,6 +131,7 @@ import {
   parseQueueConstraintsUpdateInstruction,
   parseQueuePolicyUpdateInstruction,
   parseReactivateVaultInstruction,
+  parseRecordAgentViolationInstruction,
   parseRegisterAgentInstruction,
   parseRevokeAgentInstruction,
   parseSetObserveOnlyInstruction,
@@ -185,6 +187,7 @@ import {
   type ParsedQueueConstraintsUpdateInstruction,
   type ParsedQueuePolicyUpdateInstruction,
   type ParsedReactivateVaultInstruction,
+  type ParsedRecordAgentViolationInstruction,
   type ParsedRegisterAgentInstruction,
   type ParsedRevokeAgentInstruction,
   type ParsedSetObserveOnlyInstruction,
@@ -198,6 +201,7 @@ import {
   type QueueConstraintsUpdateAsyncInput,
   type QueuePolicyUpdateAsyncInput,
   type ReactivateVaultInput,
+  type RecordAgentViolationAsyncInput,
   type RegisterAgentInput,
   type RevokeAgentInput,
   type SetObserveOnlyAsyncInput,
@@ -383,6 +387,7 @@ export enum SigilInstruction {
   QueueConstraintsUpdate,
   QueuePolicyUpdate,
   ReactivateVault,
+  RecordAgentViolation,
   RegisterAgent,
   RevokeAgent,
   SetObserveOnly,
@@ -707,6 +712,17 @@ export function identifySigilInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([131, 113, 120, 227, 219, 36, 160, 109]),
+      ),
+      0,
+    )
+  ) {
+    return SigilInstruction.RecordAgentViolation;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([135, 157, 66, 195, 2, 113, 175, 30]),
       ),
       0,
@@ -862,6 +878,9 @@ export type ParsedSigilInstruction<
   | ({
       instructionType: SigilInstruction.ReactivateVault;
     } & ParsedReactivateVaultInstruction<TProgram>)
+  | ({
+      instructionType: SigilInstruction.RecordAgentViolation;
+    } & ParsedRecordAgentViolationInstruction<TProgram>)
   | ({
       instructionType: SigilInstruction.RegisterAgent;
     } & ParsedRegisterAgentInstruction<TProgram>)
@@ -1082,6 +1101,13 @@ export function parseSigilInstruction<TProgram extends string>(
         ...parseReactivateVaultInstruction(instruction),
       };
     }
+    case SigilInstruction.RecordAgentViolation: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: SigilInstruction.RecordAgentViolation,
+        ...parseRecordAgentViolationInstruction(instruction),
+      };
+    }
     case SigilInstruction.RegisterAgent: {
       assertIsInstructionWithAccounts(instruction);
       return {
@@ -1278,6 +1304,10 @@ export type SigilPluginInstructions = {
   reactivateVault: (
     input: ReactivateVaultInput,
   ) => ReturnType<typeof getReactivateVaultInstruction> &
+    SelfPlanAndSendFunctions;
+  recordAgentViolation: (
+    input: RecordAgentViolationAsyncInput,
+  ) => ReturnType<typeof getRecordAgentViolationInstructionAsync> &
     SelfPlanAndSendFunctions;
   registerAgent: (
     input: RegisterAgentInput,
@@ -1492,6 +1522,11 @@ export function sigilProgram() {
             addSelfPlanAndSendFunctions(
               client,
               getReactivateVaultInstruction(input),
+            ),
+          recordAgentViolation: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getRecordAgentViolationInstructionAsync(input),
             ),
           registerAgent: (input) =>
             addSelfPlanAndSendFunctions(

@@ -34,6 +34,7 @@ export * from "./queueCloseConstraints.js";
 export * from "./queueConstraintsUpdate.js";
 export * from "./queuePolicyUpdate.js";
 export * from "./reactivateVault.js";
+export * from "./recordAgentViolation.js";
 export * from "./registerAgent.js";
 export * from "./revokeAgent.js";
 export * from "./setObserveOnly.js";

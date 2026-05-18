@@ -38,6 +38,25 @@ export type AgentEntry = {
   capability: number;
   spendingLimitUsd: bigint;
   paused: boolean;
+  /**
+   * TA-17 (Phase 3 pre-execution guard #7): consecutive policy-
+   * violation failures by this agent. Incremented in finalize_session
+   * when the failed seal's reject reason is an on-chain policy code
+   * (numeric range POLICY_VIOLATION_RANGE = 6083..=6100 — see
+   * finalize_session.rs). Reset to 0 on a successful seal. When
+   * `>= policy.auto_revoke_threshold`, the agent's capability is set
+   * to CAPABILITY_DISABLED and an AgentAutoRevoked event is emitted.
+   * Owner re-enables via queue_agent_permissions_update.
+   *
+   * External codes (CU exhaustion 6047, nonce desync 6048, auth
+   * errors 6000-6082) do NOT increment — they're not the agent's
+   * fault and auto-revoking on them would let an attacker brick
+   * a working agent.
+   *
+   * Uses 1 byte from the prior `_reserved: [u8; 7]`. 6 bytes remain
+   * reserved for future fields.
+   */
+  consecutiveFailures: number;
   reserved: ReadonlyUint8Array;
 };
 
@@ -50,6 +69,25 @@ export type AgentEntryArgs = {
   capability: number;
   spendingLimitUsd: number | bigint;
   paused: boolean;
+  /**
+   * TA-17 (Phase 3 pre-execution guard #7): consecutive policy-
+   * violation failures by this agent. Incremented in finalize_session
+   * when the failed seal's reject reason is an on-chain policy code
+   * (numeric range POLICY_VIOLATION_RANGE = 6083..=6100 — see
+   * finalize_session.rs). Reset to 0 on a successful seal. When
+   * `>= policy.auto_revoke_threshold`, the agent's capability is set
+   * to CAPABILITY_DISABLED and an AgentAutoRevoked event is emitted.
+   * Owner re-enables via queue_agent_permissions_update.
+   *
+   * External codes (CU exhaustion 6047, nonce desync 6048, auth
+   * errors 6000-6082) do NOT increment — they're not the agent's
+   * fault and auto-revoking on them would let an attacker brick
+   * a working agent.
+   *
+   * Uses 1 byte from the prior `_reserved: [u8; 7]`. 6 bytes remain
+   * reserved for future fields.
+   */
+  consecutiveFailures: number;
   reserved: ReadonlyUint8Array;
 };
 
@@ -59,7 +97,8 @@ export function getAgentEntryEncoder(): FixedSizeEncoder<AgentEntryArgs> {
     ["capability", getU8Encoder()],
     ["spendingLimitUsd", getU64Encoder()],
     ["paused", getBooleanEncoder()],
-    ["reserved", fixEncoderSize(getBytesEncoder(), 7)],
+    ["consecutiveFailures", getU8Encoder()],
+    ["reserved", fixEncoderSize(getBytesEncoder(), 6)],
   ]);
 }
 
@@ -69,7 +108,8 @@ export function getAgentEntryDecoder(): FixedSizeDecoder<AgentEntry> {
     ["capability", getU8Decoder()],
     ["spendingLimitUsd", getU64Decoder()],
     ["paused", getBooleanDecoder()],
-    ["reserved", fixDecoderSize(getBytesDecoder(), 7)],
+    ["consecutiveFailures", getU8Decoder()],
+    ["reserved", fixDecoderSize(getBytesDecoder(), 6)],
   ]);
 }
 

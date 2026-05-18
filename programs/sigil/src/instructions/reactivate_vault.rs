@@ -58,7 +58,8 @@ pub fn handler(
         vault.agents.push(AgentEntry {
             pubkey: agent_key,
             capability,
-            _reserved: [0u8; 7],
+            consecutive_failures: 0, // TA-17 (Phase 3): fresh counter on reactivation
+            _reserved: [0u8; 6],
             spending_limit_usd: 0, // reactivation agent starts with no per-agent limit
             paused: false,
         });

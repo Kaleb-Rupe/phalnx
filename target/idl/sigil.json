@@ -3646,6 +3646,103 @@
       ]
     },
     {
+      "name": "record_agent_violation",
+      "docs": [
+        "TA-17 (Phase 3): record an on-chain policy-violation failure for",
+        "an agent. Owner-only. `error_code` MUST be in the policy-violation",
+        "range (6083-6100); external codes (CU exhaustion, auth, init)",
+        "reject with InvalidPermissions.",
+        "",
+        "When `agent.consecutive_failures >= policy.auto_revoke_threshold`,",
+        "the agent's capability is set to DISABLED, policy_version bumps,",
+        "and `AgentAutoRevoked` event fires. Subsequent",
+        "validate_and_authorize calls reject with `ErrAutoRevoked` (6090).",
+        "Owner re-enables via existing queue_agent_permissions_update."
+      ],
+      "discriminator": [
+        131,
+        113,
+        120,
+        227,
+        219,
+        36,
+        160,
+        109
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "vault.vault_id",
+                "account": "AgentVault"
+              }
+            ]
+          },
+          "relations": [
+            "policy"
+          ]
+        },
+        {
+          "name": "policy",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "agent",
+          "type": "pubkey"
+        },
+        {
+          "name": "error_code",
+          "type": "u32"
+        }
+      ]
+    },
+    {
       "name": "register_agent",
       "docs": [
         "Register an agent's signing key to this vault with per-agent permissions.",
@@ -5738,11 +5835,33 @@
             "type": "bool"
           },
           {
+            "name": "consecutive_failures",
+            "docs": [
+              "TA-17 (Phase 3 pre-execution guard #7): consecutive policy-",
+              "violation failures by this agent. Incremented in finalize_session",
+              "when the failed seal's reject reason is an on-chain policy code",
+              "(numeric range POLICY_VIOLATION_RANGE = 6083..=6100 — see",
+              "finalize_session.rs). Reset to 0 on a successful seal. When",
+              "`>= policy.auto_revoke_threshold`, the agent's capability is set",
+              "to CAPABILITY_DISABLED and an AgentAutoRevoked event is emitted.",
+              "Owner re-enables via queue_agent_permissions_update.",
+              "",
+              "External codes (CU exhaustion 6047, nonce desync 6048, auth",
+              "errors 6000-6082) do NOT increment — they're not the agent's",
+              "fault and auto-revoking on them would let an attacker brick",
+              "a working agent.",
+              "",
+              "Uses 1 byte from the prior `_reserved: [u8; 7]`. 6 bytes remain",
+              "reserved for future fields."
+            ],
+            "type": "u8"
+          },
+          {
             "name": "_reserved",
             "type": {
               "array": [
                 "u8",
-                7
+                6
               ]
             }
           }

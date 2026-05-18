@@ -124,6 +124,33 @@ pub const AUTO_REVOKE_THRESHOLD_MAX: u8 = 20;
 /// TA-17 (Phase 3): default auto_revoke_threshold for new vaults.
 pub const AUTO_REVOKE_THRESHOLD_DEFAULT: u8 = 5;
 
+/// TA-17 (Phase 3): numeric range of on-chain "policy-violation" error
+/// codes that count toward the consecutive-failures counter.
+///
+/// 6083..=6100 covers:
+///   - 6083 ErrMintNotPinned (TA-03)
+///   - 6084 ErrOutsideOperatingHours (TA-05)
+///   - 6085 ErrCooldownActive (TA-06)
+///   - 6086 ErrGraylistFriction (TA-07)
+///   - 6087 ErrGraylistFull (TA-07)
+///   - 6088 ErrToken2022ExtensionForbidden (TA-08)
+///   - 6089 ErrCosignRequired (TA-09)
+///   - 6090 ErrAutoRevoked (TA-17)
+///   - 6091-6100 reserved for Phase 4 + Phase 5 post-exec assertions
+///
+/// EXCLUDED:
+///   - 6047 SysvarScanBoundExceeded (CU exhaustion / external pad attack)
+///   - 6048 AsyncFulfillmentNotPermitted (external program-id quirk)
+///   - 6000-6082 auth / init / wrapping errors (not policy violations;
+///     auto-revoking on UnauthorizedOwner 6002 would let an attacker
+///     brick a working agent by spamming wrong-key seal attempts)
+///
+/// The filter is by NUMERIC RANGE, not string match — robust against
+/// future error message changes.
+pub fn is_policy_violation_code(code: u32) -> bool {
+    (6083..=6100).contains(&code)
+}
+
 /// sha256("global:finalize_session")[0..8] — used by validate_and_authorize
 /// to identify finalize_session instructions in the transaction.
 pub const FINALIZE_SESSION_DISCRIMINATOR: [u8; 8] = [34, 148, 144, 47, 37, 130, 206, 161];
@@ -253,6 +280,73 @@ mod treasury_tests {
         );
         assert!(MAX_AGENTS_PER_VAULT > 0, "must allow at least one agent");
         assert!(FULL_CAPABILITY > 0, "capability value must be non-zero");
+    }
+}
+
+#[cfg(test)]
+mod ta17_policy_violation_filter_tests {
+    use super::*;
+
+    /// TA-17: codes 6083-6100 are policy violations.
+    #[test]
+    fn policy_violation_accepts_phase3_codes() {
+        assert!(is_policy_violation_code(6083), "TA-03 ErrMintNotPinned");
+        assert!(is_policy_violation_code(6084), "TA-05 ErrOutsideOperatingHours");
+        assert!(is_policy_violation_code(6085), "TA-06 ErrCooldownActive");
+        assert!(is_policy_violation_code(6086), "TA-07 ErrGraylistFriction");
+        assert!(is_policy_violation_code(6087), "TA-07 ErrGraylistFull");
+        assert!(is_policy_violation_code(6088), "TA-08 ErrToken2022ExtensionForbidden");
+        assert!(is_policy_violation_code(6089), "TA-09 ErrCosignRequired");
+        assert!(is_policy_violation_code(6090), "TA-17 ErrAutoRevoked");
+    }
+
+    /// TA-17: reserved range 6091-6100 also accepted (Phase 4/5 future).
+    #[test]
+    fn policy_violation_accepts_reserved_phase45_range() {
+        for code in 6091..=6100 {
+            assert!(is_policy_violation_code(code), "reserved {} must accept", code);
+        }
+    }
+
+    /// TA-17: CU exhaustion (6047) is NOT a policy violation — external.
+    #[test]
+    fn policy_violation_rejects_cu_exhaustion() {
+        assert!(!is_policy_violation_code(6047));
+    }
+
+    /// TA-17: AsyncFulfillment (6048) is NOT a policy violation — external
+    /// program-id quirk.
+    #[test]
+    fn policy_violation_rejects_async_fulfillment() {
+        assert!(!is_policy_violation_code(6048));
+    }
+
+    /// TA-17: UnauthorizedOwner (6002) is NOT a policy violation. Auto-
+    /// revoking on auth errors would let an attacker brick a working
+    /// agent by spamming wrong-key seal attempts.
+    #[test]
+    fn policy_violation_rejects_unauthorized_owner() {
+        assert!(!is_policy_violation_code(6002));
+    }
+
+    /// TA-17: Codes outside 6083-6100 reject (lower boundary 6082).
+    #[test]
+    fn policy_violation_rejects_just_below_range() {
+        assert!(!is_policy_violation_code(6082), "ActiveVaultRequiresAllowlist");
+    }
+
+    /// TA-17: Codes outside 6083-6100 reject (upper boundary 6101).
+    #[test]
+    fn policy_violation_rejects_just_above_range() {
+        assert!(!is_policy_violation_code(6101));
+    }
+
+    /// TA-17: arbitrary error codes (lower range) reject.
+    #[test]
+    fn policy_violation_rejects_arbitrary_low() {
+        assert!(!is_policy_violation_code(0));
+        assert!(!is_policy_violation_code(1000));
+        assert!(!is_policy_violation_code(6000));
     }
 }
 

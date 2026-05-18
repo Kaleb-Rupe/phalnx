@@ -15,9 +15,26 @@ pub struct AgentEntry {
     pub capability: u8, // 1 byte (was permissions: u64, 8 bytes)
     pub spending_limit_usd: u64, // 8 bytes — 0 = no per-agent limit
     pub paused: bool,   // 1 byte  — owner-controlled suspension
-    pub _reserved: [u8; 7], // 7 bytes — maintain layout size for account stability
+    /// TA-17 (Phase 3 pre-execution guard #7): consecutive policy-
+    /// violation failures by this agent. Incremented in finalize_session
+    /// when the failed seal's reject reason is an on-chain policy code
+    /// (numeric range POLICY_VIOLATION_RANGE = 6083..=6100 — see
+    /// finalize_session.rs). Reset to 0 on a successful seal. When
+    /// `>= policy.auto_revoke_threshold`, the agent's capability is set
+    /// to CAPABILITY_DISABLED and an AgentAutoRevoked event is emitted.
+    /// Owner re-enables via queue_agent_permissions_update.
+    ///
+    /// External codes (CU exhaustion 6047, nonce desync 6048, auth
+    /// errors 6000-6082) do NOT increment — they're not the agent's
+    /// fault and auto-revoking on them would let an attacker brick
+    /// a working agent.
+    ///
+    /// Uses 1 byte from the prior `_reserved: [u8; 7]`. 6 bytes remain
+    /// reserved for future fields.
+    pub consecutive_failures: u8, // 1 byte
+    pub _reserved: [u8; 6], // 6 bytes — was 7 pre-TA-17
 }
-// Total: 49 bytes per entry (32 + 1 + 8 + 1 + 7 = 49, same as old layout with permissions: u64)
+// Total: 49 bytes per entry (32 + 1 + 8 + 1 + 1 + 6 = 49, same as old layout)
 
 #[account]
 pub struct AgentVault {

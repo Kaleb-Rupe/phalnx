@@ -367,6 +367,24 @@ pub mod sigil {
         instructions::unpause_agent::handler(ctx, agent_to_unpause)
     }
 
+    /// TA-17 (Phase 3): record an on-chain policy-violation failure for
+    /// an agent. Owner-only. `error_code` MUST be in the policy-violation
+    /// range (6083-6100); external codes (CU exhaustion, auth, init)
+    /// reject with InvalidPermissions.
+    ///
+    /// When `agent.consecutive_failures >= policy.auto_revoke_threshold`,
+    /// the agent's capability is set to DISABLED, policy_version bumps,
+    /// and `AgentAutoRevoked` event fires. Subsequent
+    /// validate_and_authorize calls reject with `ErrAutoRevoked` (6090).
+    /// Owner re-enables via existing queue_agent_permissions_update.
+    pub fn record_agent_violation(
+        ctx: Context<RecordAgentViolation>,
+        agent: Pubkey,
+        error_code: u32,
+    ) -> Result<()> {
+        instructions::record_agent_violation::handler(ctx, agent, error_code)
+    }
+
     /// TA-07 (Phase 3): owner-only fast-track promotion of a destination
     /// out of the 24h graylist window. The destination must already be on
     /// the allowlist (otherwise rejected as DestinationNotAllowed). Sets

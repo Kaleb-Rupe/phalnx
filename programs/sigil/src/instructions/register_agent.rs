@@ -56,7 +56,9 @@ pub fn handler(
     vault.agents.push(AgentEntry {
         pubkey: agent,
         capability,
-        _reserved: [0u8; 7],
+        // TA-17 (Phase 3): new agent starts with no consecutive failures.
+        consecutive_failures: 0,
+        _reserved: [0u8; 6],
         spending_limit_usd,
         paused: false,
     });

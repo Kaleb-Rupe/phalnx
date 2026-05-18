@@ -272,6 +272,22 @@ pub fn handler(
         SigilError::AgentPaused
     );
 
+    // TA-17 (Phase 3): distinguish auto-revoked agents from manually-
+    // disabled ones. If the agent's capability is DISABLED AND its
+    // consecutive_failures hit the policy threshold, surface
+    // ErrAutoRevoked (6090) instead of InsufficientPermissions — owner
+    // observability into auto-revoke events. Owner re-enables via
+    // queue_agent_permissions_update.
+    let agent_key_check = ctx.accounts.agent.key();
+    if let Some(entry) = vault.get_agent(&agent_key_check) {
+        if entry.capability == CAPABILITY_DISABLED
+            && entry.consecutive_failures >= policy.auto_revoke_threshold
+            && policy.auto_revoke_threshold > 0
+        {
+            return Err(error!(SigilError::ErrAutoRevoked));
+        }
+    }
+
     // 1a. Agent must have capability for the spending level
     require!(
         vault.has_capability(&ctx.accounts.agent.key(), is_spending),
@@ -915,6 +931,21 @@ pub fn handler(
         let mut overlay = ctx.accounts.agent_spend_overlay.load_mut()?;
         if let Some(slot_idx) = overlay.find_agent_slot(&agent_key) {
             overlay.record_action_unix(slot_idx, clock.unix_timestamp)?;
+        }
+    }
+
+    // TA-17 (Phase 3): on a successful validate_and_authorize, reset the
+    // agent's consecutive_failures counter to 0. The full bundle isn't
+    // executed yet (the DeFi instruction runs after this), but a
+    // successful authorize is the strongest signal we have that the
+    // agent is operating within policy. The reset prevents a long-
+    // running agent from accruing stale failures that would auto-revoke
+    // on the next isolated misconfiguration.
+    {
+        let agent_key = ctx.accounts.agent.key();
+        let vault_mut = &mut ctx.accounts.vault;
+        if let Some(entry) = vault_mut.agents.iter_mut().find(|a| a.pubkey == agent_key) {
+            entry.consecutive_failures = 0;
         }
     }
 

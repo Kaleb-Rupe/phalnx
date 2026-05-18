@@ -70,7 +70,9 @@ export function createMockVaultState(
               ),
               spendingLimitUsd: 0n,
               paused: overrides?.agentPaused ?? false,
-              reserved: new Uint8Array(7),
+              // TA-17 (Phase 3): fresh agent has no consecutive failures.
+              consecutiveFailures: 0,
+              reserved: new Uint8Array(6),
             },
           ],
       feeDestination,
