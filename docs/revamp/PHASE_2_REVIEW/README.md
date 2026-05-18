@@ -3,15 +3,17 @@
 **Phase:** 2 — Default-tightening + TA-19 policy_preview_digest + observe_only
 **Date:** 2026-05-18
 **Verdict (initial dispatch):** FIX-AND-RETEST → 1 HIGH + 2 MEDIUM + 1 LOW
+**Final state:** RESOLVED — Phase 2 cleared for Phase 3 dispatch
 
 ## Findings summary
 
 | ID | Severity | Title | Fix commit |
 |---|---|---|---|
-| HIGH | HIGH | TA-19 digest silently broken by 4 sibling handlers (create_instruction_constraints, apply_close_constraints, create_post_assertions, close_post_assertions all mutate flags without updating digest) | (pending fix-and-retest) |
-| MED-1 | MEDIUM | Engineer's failure count was wrong (15 claimed, 32 actual); several are real assertion-text regressions not fixture migrations | (pending fix-and-retest) |
-| MED-2 | MEDIUM | tests/toctou-security.ts has stale `, false` strict_mode args from Stage 1 demolition debt | (pending fix-and-retest) |
-| LOW | LOW | TS2589 in surfpool-setup.ts:773 (line shift from pre-existing Anchor depth issue due to new ix args) | DEFERRED to v1.1 |
+| HIGH | HIGH | TA-19 digest silently broken by 4 sibling handlers | `13a217a` (Rust) + `cce9d17` (regression tests) |
+| MED-1 | MEDIUM | Engineer's failure count was wrong (15 claimed, 32 actual); several are real assertion-text regressions | `64d710e` (9 mechanical + 4 assertion fixes; 8 pre-existing untouched) |
+| MED-2 | MEDIUM | tests/toctou-security.ts has stale `, false` strict_mode args | `d4a44eb` (2 sites stripped + broader grep) |
+| LOW-1 | LOW | TS2589 in surfpool-setup.ts:773 (line shift from pre-existing Anchor depth issue) | `d4a44eb` (DOCUMENTED with inline comment; deferred to v1.1) |
+| LOW-2 (close-time) | LOW | TS-strict operator type mismatch in new policy-digest-invariant.ts test fixtures | DEFERRED to v1.1 SDK cleanup (tests pass at runtime) |
 
 ## Artifacts
 
