@@ -450,7 +450,7 @@ describe("cu-budget", () => {
       program.programId,
     );
     let builder = program.methods
-      .validateAndAuthorize(usdcMint, amount, targetProtocol, new BN(0))
+      .validateAndAuthorize(usdcMint, amount, targetProtocol, new BN(0), new BN(0))
       .accountsPartial({
         agent: agent.publicKey,
         vault: ctx.vault,

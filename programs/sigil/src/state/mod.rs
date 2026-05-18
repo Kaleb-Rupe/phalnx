@@ -169,6 +169,53 @@ pub const FINALIZE_SESSION_DISCRIMINATOR: [u8; 8] = [34, 148, 144, 47, 37, 130, 
 pub const VALIDATE_AND_AUTHORIZE_DISCRIMINATOR: [u8; 8] =
     [22, 183, 48, 222, 218, 11, 197, 152];
 
+/// TA-11 (Phase 4) — protected seed-prefix family for the dynamic
+/// writable-PDA check.
+///
+/// Every Sigil-owned PDA seed prefix that MUST NOT appear as a writable
+/// account-meta inside a foreign instruction between validate and finalize.
+/// The bundle-entry scan at `validate_and_authorize` derives each family's
+/// pubkeys for the current vault context (owner / vault_id / agent / mint)
+/// and rejects with `ErrProtectedWritable` if any sibling instruction passes
+/// one of those pubkeys with `is_writable=true`.
+///
+/// **Why a prefix list, not an enum.** The list is iterated by the derivation
+/// helper but each entry's "extra seeds" vary (vault has owner+vault_id;
+/// session has vault+agent+mint; constraints has vault). The prefix is the
+/// load-bearing identifier — derivation is per-prefix in the scan code.
+///
+/// **Forward-looking entries.** `audit_success` / `audit_rejected` (Phase 7
+/// audit log), `cosign` (Phase 3 cosign session), `recipient` (post-exec
+/// per-recipient cap), `pending_owner` (Phase 8 ownership transfer) are
+/// listed proactively: when those PDAs ship, no Phase 4 amendment is
+/// required to protect them. The derivation loop will skip families whose
+/// seeds aren't yet known at the current vault (no false positives).
+///
+/// **Defense-in-depth pairing.** The seed-prefix list alone is insufficient
+/// because an attacker could deploy their own program at the derived pubkey
+/// (impossible without an address collision but defensible). Per F-20 + F-30,
+/// the scan ALSO verifies `account.owner == sigil_program_id` for any
+/// candidate match before rejecting (see validate_and_authorize.rs TA-11
+/// scan site).
+pub const PROTECTED_SEED_PREFIXES: [&[u8]; 16] = [
+    b"vault",
+    b"policy",
+    b"tracker",
+    b"session",
+    b"post_assertions",
+    b"audit_success",
+    b"audit_rejected",
+    b"cosign",
+    b"recipient",
+    b"pending_policy",
+    b"pending_constraints",
+    b"pending_agent_perms",
+    b"pending_close_constraints",
+    b"pending_owner",
+    b"constraints",
+    b"agent_spend",
+];
+
 /// Ceiling fee: ceil(amount * rate / FEE_RATE_DENOMINATOR).
 /// Guarantees non-zero fee for any non-zero amount with non-zero rate.
 /// Zero-product (amount=0 or rate=0) naturally returns 0.

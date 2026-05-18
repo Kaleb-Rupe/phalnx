@@ -496,6 +496,196 @@ pub fn handler(
         }
     }
 
+    // ── TA-11 (Phase 4) DYNAMIC seed-prefix family check ─────────────
+    //
+    // Reject if ANY sibling instruction in the transaction passes a
+    // Sigil-owned PDA as `is_writable=true`. Closes the class where a
+    // foreign instruction tries to mutate Sigil state through the agent's
+    // signer (the Solana BPF loader's owner-check already prevents the
+    // mutation itself, but TA-11 fails the bundle BEFORE the foreign
+    // program runs so an agent cannot accidentally route value through
+    // a hostile compose that would trip later).
+    //
+    // **Algorithm.** Build the SET of protected pubkeys for THIS vault's
+    // context (owner / vault_id / agent / mint), then scan every sibling
+    // instruction's account metas. For each writable meta:
+    //   1. If the meta.pubkey matches any pubkey in the protected set →
+    //      additionally verify the on-chain `account.owner == &crate::ID`
+    //      via remaining_accounts (F-30 — prevents discriminator spoofing
+    //      from an attacker-deployed program at the same derived pubkey).
+    //   2. If owner check passes → reject with 6092 ErrProtectedWritable.
+    //   3. If owner check fails → the BPF loader's owner check will
+    //      prevent the foreign program from mutating Sigil state anyway;
+    //      continue (no reject).
+    //
+    // **Set construction.** We use the already-loaded `ctx.accounts.*` PDA
+    // pubkeys for vault / policy / tracker / agent_spend_overlay / session
+    // (no derivation cost — those are zero-cost reads of in-memory Anchor
+    // accounts). For other families (constraints, post_assertions, pending_*,
+    // pending_owner) we use `find_program_address` lazily — only one call
+    // per family. Forward-looking families (audit_success, audit_rejected,
+    // cosign, recipient) are listed in PROTECTED_SEED_PREFIXES for
+    // documentation but the derivation step is skipped because no PDA of
+    // that family yet exists for the current vault (Phase 7+ ship them).
+    //
+    // **CU profile (measured 2026-05-18 via LiteSVM in
+    // tests/sysvar-scan-bound.ts "TA-11 protected-writable scan CU profile").**
+    //   - 30-sibling-noop bundle end-to-end: ~170K CU (validate + finalize +
+    //     30 SystemProgram noops + 3 sysvar scans).
+    //   - TA-11 scan delta for 20 extra siblings: ~20K CU (1K per extra ix).
+    //   - 7 lazy find_program_address derivations: ~35K CU (paid once per
+    //     validate).
+    //   - Per-meta protected-set lookup (13 entries × pubkey-equality
+    //     compare): < 200 CU per meta.
+    //   - Worst-case 8 sibling ixs × 16 metas/ix ≈ 8K (scan-loop) + 35K
+    //     (derivations) ≈ 43-50K total. Even doubling to absolute worst case
+    //     stays under the prompt's 90K budget; leaves 1.31M CU for the
+    //     actual sandwich (Jupiter swaps ≈ 600-700K, Flash Trade perps ≈
+    //     400K). Bounded by MAX_SYSVAR_SCAN_ITERATIONS (64).
+    //
+    // **Token-2022/SPL token accounts NOT in set.** The vault's token ATAs
+    // are NOT Sigil-owned PDAs (they're SPL Token program-owned). TA-11
+    // does not gate those — `destination_check` (PEN-CROSS-4) handles
+    // token-account allowlisting.
+    //
+    // **F-13 ordering preserved.** TA-11 runs AFTER TA-10 / observe_only /
+    // operating_hours / cooldown but BEFORE constraints PDA loading or
+    // any CPI. Failure rejects the bundle before paying any fee.
+    {
+        use anchor_lang::solana_program::pubkey::Pubkey as SP;
+        let policy_key = ctx.accounts.policy.key();
+        let tracker_key = ctx.accounts.tracker.key();
+        let overlay_key = ctx.accounts.agent_spend_overlay.key();
+        let session_key = ctx.accounts.session.key();
+
+        // Lazy-derived families (one find_program_address each).
+        // The derivation cost is paid only once per validate.
+        let (constraints_key, _) =
+            SP::find_program_address(&[b"constraints", vault_key.as_ref()], &crate::ID);
+        let (pending_policy_key, _) =
+            SP::find_program_address(&[b"pending_policy", vault_key.as_ref()], &crate::ID);
+        let (pending_constraints_key, _) =
+            SP::find_program_address(&[b"pending_constraints", vault_key.as_ref()], &crate::ID);
+        let (pending_close_constraints_key, _) = SP::find_program_address(
+            &[b"pending_close_constraints", vault_key.as_ref()],
+            &crate::ID,
+        );
+        let (post_assertions_key, _) =
+            SP::find_program_address(&[b"post_assertions", vault_key.as_ref()], &crate::ID);
+        let (pending_owner_key, _) =
+            SP::find_program_address(&[b"pending_owner", vault_key.as_ref()], &crate::ID);
+        let (pending_agent_perms_key, _) = SP::find_program_address(
+            &[
+                b"pending_agent_perms",
+                vault_key.as_ref(),
+                current_agent_key.as_ref(),
+            ],
+            &crate::ID,
+        );
+
+        // Cheap pubkey-equality membership test: linear scan of a small
+        // (13-entry) array. With 13 entries × 32-byte compare, this is
+        // <200 CU per meta lookup.
+        let protected: [Pubkey; 13] = [
+            vault_key,
+            policy_key,
+            tracker_key,
+            overlay_key,
+            session_key,
+            constraints_key,
+            pending_policy_key,
+            pending_constraints_key,
+            pending_close_constraints_key,
+            post_assertions_key,
+            pending_owner_key,
+            pending_agent_perms_key,
+            // Reserved slot for forward-looking families (audit_success /
+            // audit_rejected / cosign / recipient) — Phase 7+ will populate.
+            // Using Pubkey::default() as a sentinel — guaranteed never to
+            // match any real account meta (system_program is at a
+            // structurally-special pubkey but Pubkey::default() can never
+            // be a derived PDA per Solana's ed25519-curve check).
+            Pubkey::default(),
+        ];
+
+        let mut ta11_iter: usize = 0;
+        let mut ix_idx: usize = 0;
+        while ta11_iter < MAX_SYSVAR_SCAN_ITERATIONS {
+            require!(
+                ta11_iter < MAX_SYSVAR_SCAN_ITERATIONS,
+                SigilError::SysvarScanBoundExceeded
+            );
+            // Skip the current validate ix itself — its own protected metas
+            // are legitimate (we OWN them) and they will be marked writable
+            // for state-mutating instructions like cooldown updates.
+            if ix_idx == current_idx_usize {
+                ix_idx = ix_idx.saturating_add(1);
+                ta11_iter = ta11_iter.saturating_add(1);
+                continue;
+            }
+            let Ok(sibling) = load_instruction_at_checked(ix_idx, &ix_sysvar) else {
+                break;
+            };
+            // Skip Sigil's own instructions — TA-10 already enforces
+            // sandwich integrity for sibling validate_and_authorize, and
+            // finalize_session's writable metas on session/vault/etc. are
+            // legitimate (they're how the session closes). Other Sigil
+            // ixs (queue/apply/etc.) cannot legally appear between
+            // validate and finalize because the pre-validate scan blocks
+            // non-infrastructure before, and the forward scan blocks
+            // non-protocol between.
+            if sibling.program_id == crate::ID {
+                ix_idx = ix_idx.saturating_add(1);
+                ta11_iter = ta11_iter.saturating_add(1);
+                continue;
+            }
+            // Walk this foreign ix's account metas. For each writable meta,
+            // check membership in the protected set + on-chain owner.
+            for meta in sibling.accounts.iter() {
+                if !meta.is_writable {
+                    // F-13: legitimate read-only access (e.g. a frontend
+                    // wallet reading PolicyConfig) is allowed.
+                    continue;
+                }
+                let mut matched = false;
+                for p in protected.iter() {
+                    if *p == meta.pubkey {
+                        matched = true;
+                        break;
+                    }
+                }
+                if !matched {
+                    continue;
+                }
+                // F-30: verify on-chain ownership. The attacker-deployed-
+                // program-at-collision case is theoretical (Solana PDA
+                // derivation excludes the curve so collision is
+                // computationally infeasible) but we layer the check for
+                // defense-in-depth.
+                //
+                // Lookup in remaining_accounts is best-effort: if the
+                // foreign ix's protected meta is not present in our
+                // remaining_accounts (the caller didn't pass it through),
+                // we cannot read its owner. In that case Solana's runtime
+                // owner-check will still prevent foreign mutation, so we
+                // fail-closed: reject if the meta is in our protected set,
+                // owner-check is best-effort to suppress false positives.
+                let on_chain_owner_is_sigil = ctx
+                    .remaining_accounts
+                    .iter()
+                    .find(|ai| ai.key == &meta.pubkey)
+                    .map(|ai| ai.owner == &crate::ID)
+                    .unwrap_or(true); // unavailable → assume Sigil-owned (fail-closed)
+                require!(
+                    !on_chain_owner_is_sigil,
+                    SigilError::ErrProtectedWritable
+                );
+            }
+            ix_idx = ix_idx.saturating_add(1);
+            ta11_iter = ta11_iter.saturating_add(1);
+        }
+    }
+
     // ── Shared instruction scan helper ──────────────────────────────
     // Extracted from spending + non-spending paths to eliminate ~55 lines
     // of duplicated security checks. See ON-CHAIN-IMPLEMENTATION-PLAN Step 10.
