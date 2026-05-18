@@ -95,6 +95,35 @@ pub const MIN_TIMELOCK_DURATION: u64 = 1800;
 /// update is stale and must be re-queued by the owner.
 pub const MAX_APPLY_AGE_SLOTS: u64 = 216_000;
 
+/// TA-07 (Phase 3): 24-hour graylist friction window in seconds.
+///
+/// New destinations added to `allowed_destinations` via
+/// `queue_policy_update` enter `PolicyConfig.destination_graylist` with
+/// `unlock_unix = now + GRAYLIST_FRICTION_SECONDS`. Until either
+/// (a) the unlock time elapses OR (b) the owner promotes the destination
+/// via `promote_graylist_destination`, spending paths reject the
+/// destination with `ErrGraylistFriction`.
+///
+/// 86,400s = 24h. Owner-side `auto_promote_grays` bypass is available
+/// (digest-bound).
+pub const GRAYLIST_FRICTION_SECONDS: i64 = 86_400;
+
+/// TA-17 (Phase 3): minimum auto_revoke_threshold owners can configure.
+///
+/// Floor of 3 prevents trivial brick-by-3 attacks (one bad seal in a
+/// burst would revoke a working agent). Lower thresholds aren't accepted.
+pub const AUTO_REVOKE_THRESHOLD_MIN: u8 = 3;
+
+/// TA-17 (Phase 3): maximum auto_revoke_threshold owners can configure.
+///
+/// Ceiling of 20 prevents owners from setting the threshold impractically
+/// high to disable the gate (a no-op auto-revoke is worse than no
+/// auto-revoke, because it gives a false sense of security).
+pub const AUTO_REVOKE_THRESHOLD_MAX: u8 = 20;
+
+/// TA-17 (Phase 3): default auto_revoke_threshold for new vaults.
+pub const AUTO_REVOKE_THRESHOLD_DEFAULT: u8 = 5;
+
 /// sha256("global:finalize_session")[0..8] — used by validate_and_authorize
 /// to identify finalize_session instructions in the transaction.
 pub const FINALIZE_SESSION_DISCRIMINATOR: [u8; 8] = [34, 148, 144, 47, 37, 130, 206, 161];

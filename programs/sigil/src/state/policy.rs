@@ -165,6 +165,73 @@ pub struct PolicyConfig {
     /// Bound by TA-19 at position 15 of the canonical digest encoding.
     /// APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
     pub operating_hours: u32,
+
+    /// TA-07 (Phase 3 pre-execution guard #4): first-time-destination
+    /// 24-hour graylist friction. When a NEW destination is added to
+    /// `allowed_destinations` (via queue_policy_update), it enters this
+    /// graylist with `unlock_unix = now + 86400` (24h). Until either
+    /// (a) the unlock time elapses OR (b) the owner calls
+    /// `promote_graylist_destination` to fast-track, spending paths
+    /// reject any tx routing value to that destination with
+    /// `ErrGraylistFriction` (6086).
+    ///
+    /// Tuple is `(destination_pubkey, unlock_unix)`. Bounded ≤10 entries
+    /// (max_destinations). When full, additional allowlist adds reject
+    /// with `ErrGraylistFull` (6087) until an existing entry unlocks or
+    /// is promoted.
+    ///
+    /// DESIGN: graylist entries are derived/ephemeral state — the owner's
+    /// signed digest already binds the allowlist (canonical position 8),
+    /// and graylist friction only delays an already-authorised destination.
+    /// Therefore the graylist itself is NOT in the canonical digest
+    /// encoding. Promoting accelerates the unlock but cannot widen the
+    /// allowlist beyond what the owner signed.
+    ///
+    /// APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
+    pub destination_graylist: Vec<DestinationGraylistEntry>,
+
+    /// TA-07 (Phase 3): if true, new destinations added to the allowlist
+    /// skip the 24h graylist entirely (audit trail still recorded via
+    /// emitted events). Bound by TA-19 at canonical digest position 16
+    /// so the owner's choice to bypass friction is part of the signed
+    /// configuration — not silently flipped.
+    ///
+    /// Default false. APPENDED at end per F-14 APPEND-ONLY rule.
+    pub auto_promote_grays: bool,
+
+    /// TA-17 (Phase 3 pre-execution guard #7): consecutive-failure
+    /// threshold after which an agent's capability is auto-revoked.
+    /// Owner-configurable in range 3..=20; out-of-range values rejected
+    /// at policy-write time with `InvalidPermissions`. Default 5.
+    ///
+    /// Only on-chain policy-violation codes (6083-6100) count — see
+    /// `POLICY_VIOLATION_RANGE` in finalize_session. External codes
+    /// (CU exhaustion, nonce desync, auth) do NOT increment.
+    ///
+    /// Bound by TA-19 at canonical digest position 17. APPENDED per
+    /// F-14 APPEND-ONLY rule.
+    pub auto_revoke_threshold: u8,
+}
+
+/// TA-07 (Phase 3): one entry in `PolicyConfig.destination_graylist`.
+///
+/// `destination` is the wallet/PDA pubkey whose ATAs are being graylisted
+/// (matches the entry in `allowed_destinations`). `unlock_unix` is the
+/// Unix timestamp at which the destination becomes spendable without
+/// the owner having to promote it.
+///
+/// Layout: 32 + 8 = 40 bytes per entry. Bounded ≤MAX_ALLOWED_DESTINATIONS
+/// (10) so the worst-case Vec contribution to PolicyConfig SIZE is
+/// `4 + 40*10 = 404` bytes.
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq)]
+pub struct DestinationGraylistEntry {
+    pub destination: Pubkey,
+    pub unlock_unix: i64,
+}
+
+impl DestinationGraylistEntry {
+    /// Borsh-encoded size: 32 (Pubkey) + 8 (i64) = 40 bytes.
+    pub const SIZE: usize = 32 + 8;
 }
 
 impl PolicyConfig {
@@ -176,8 +243,11 @@ impl PolicyConfig {
     /// has_pending_policy (1) + has_protocol_caps (1) +
     /// protocol_caps vec (4 + 8 * MAX) + session_expiry_seconds (8) + bump (1) +
     /// policy_version (8) + has_post_assertions (1) + destination_mode (1) +
-    /// policy_preview_digest (32) + created_at_slot (8) + operating_hours (4)
-    /// [TA-19, Phase 2; PEN-CROSS-2 Phase 2 close-up; TA-05 Phase 3 pre-exec]
+    /// policy_preview_digest (32) + created_at_slot (8) + operating_hours (4) +
+    /// destination_graylist vec (4 + 40 * MAX_ALLOWED_DESTINATIONS) +
+    /// auto_promote_grays (1) + auto_revoke_threshold (1)
+    /// [TA-19, Phase 2; PEN-CROSS-2 Phase 2 close-up;
+    ///  TA-05/07/17 Phase 3 pre-exec]
     pub const SIZE: usize = 8
         + 32
         + 8
@@ -199,7 +269,10 @@ impl PolicyConfig {
         + 1 // destination_mode
         + 32 // policy_preview_digest [TA-19]
         + 8 // created_at_slot [PEN-CROSS-2]
-        + 4; // operating_hours [TA-05 Phase 3]
+        + 4 // operating_hours [TA-05 Phase 3]
+        + (4 + DestinationGraylistEntry::SIZE * MAX_ALLOWED_DESTINATIONS) // graylist [TA-07]
+        + 1 // auto_promote_grays [TA-07]
+        + 1; // auto_revoke_threshold [TA-17]
 
     /// Check if a protocol is allowed.
     ///
@@ -250,6 +323,24 @@ impl PolicyConfig {
         } else {
             self.session_expiry_seconds
         }
+    }
+
+    /// TA-07 (Phase 3): is the destination currently in the graylist AND
+    /// still locked? Returns `(true, unlock_unix)` if so, else `(false, _)`.
+    ///
+    /// A destination that's NOT in the graylist returns `(false, 0)`. A
+    /// destination that's in the graylist but past unlock returns
+    /// `(false, unlock_unix)` — entries left in the graylist past unlock
+    /// are harmless (they auto-pass) and are cleaned up by the
+    /// `promote_graylist_destination` ix or by overwrite when the
+    /// destination is re-added.
+    pub fn is_destination_graylisted(&self, destination: &Pubkey, now: i64) -> (bool, i64) {
+        for entry in self.destination_graylist.iter() {
+            if entry.destination == *destination {
+                return (now < entry.unlock_unix, entry.unlock_unix);
+            }
+        }
+        (false, 0)
     }
 
     /// TA-05 (Phase 3): is the given Unix timestamp's UTC hour permitted

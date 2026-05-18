@@ -28,6 +28,7 @@ export * from "./finalizeSession.js";
 export * from "./freezeVault.js";
 export * from "./initializeVault.js";
 export * from "./pauseAgent.js";
+export * from "./promoteGraylistDestination.js";
 export * from "./queueAgentPermissionsUpdate.js";
 export * from "./queueCloseConstraints.js";
 export * from "./queueConstraintsUpdate.js";

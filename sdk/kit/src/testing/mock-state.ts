@@ -113,6 +113,11 @@ export function createMockVaultState(
       // TA-05 (Phase 3): operating_hours is read by SDK consumers; default
       // all-24h matches the on-chain "no operating-hours constraint" semantics.
       operatingHours: 0x00ffffff,
+      // TA-07 (Phase 3): empty graylist + default-off auto-promote.
+      destinationGraylist: [],
+      autoPromoteGrays: false,
+      // TA-17 (Phase 3): default threshold of 5.
+      autoRevokeThreshold: 5,
     },
     tracker: null,
     overlay: null,

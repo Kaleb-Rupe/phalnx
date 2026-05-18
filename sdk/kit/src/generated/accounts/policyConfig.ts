@@ -46,6 +46,12 @@ import {
   type MaybeEncodedAccount,
   type ReadonlyUint8Array,
 } from "@solana/kit";
+import {
+  getDestinationGraylistEntryDecoder,
+  getDestinationGraylistEntryEncoder,
+  type DestinationGraylistEntry,
+  type DestinationGraylistEntryArgs,
+} from "../types/index.js";
 
 export const POLICY_CONFIG_DISCRIMINATOR = new Uint8Array([
   219, 7, 79, 84, 175, 51, 148, 146,
@@ -212,6 +218,55 @@ export type PolicyConfig = {
    * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
    */
   operatingHours: number;
+  /**
+   * TA-07 (Phase 3 pre-execution guard #4): first-time-destination
+   * 24-hour graylist friction. When a NEW destination is added to
+   * `allowed_destinations` (via queue_policy_update), it enters this
+   * graylist with `unlock_unix = now + 86400` (24h). Until either
+   * (a) the unlock time elapses OR (b) the owner calls
+   * `promote_graylist_destination` to fast-track, spending paths
+   * reject any tx routing value to that destination with
+   * `ErrGraylistFriction` (6086).
+   *
+   * Tuple is `(destination_pubkey, unlock_unix)`. Bounded ≤10 entries
+   * (max_destinations). When full, additional allowlist adds reject
+   * with `ErrGraylistFull` (6087) until an existing entry unlocks or
+   * is promoted.
+   *
+   * DESIGN: graylist entries are derived/ephemeral state — the owner's
+   * signed digest already binds the allowlist (canonical position 8),
+   * and graylist friction only delays an already-authorised destination.
+   * Therefore the graylist itself is NOT in the canonical digest
+   * encoding. Promoting accelerates the unlock but cannot widen the
+   * allowlist beyond what the owner signed.
+   *
+   * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  destinationGraylist: Array<DestinationGraylistEntry>;
+  /**
+   * TA-07 (Phase 3): if true, new destinations added to the allowlist
+   * skip the 24h graylist entirely (audit trail still recorded via
+   * emitted events). Bound by TA-19 at canonical digest position 16
+   * so the owner's choice to bypass friction is part of the signed
+   * configuration — not silently flipped.
+   *
+   * Default false. APPENDED at end per F-14 APPEND-ONLY rule.
+   */
+  autoPromoteGrays: boolean;
+  /**
+   * TA-17 (Phase 3 pre-execution guard #7): consecutive-failure
+   * threshold after which an agent's capability is auto-revoked.
+   * Owner-configurable in range 3..=20; out-of-range values rejected
+   * at policy-write time with `InvalidPermissions`. Default 5.
+   *
+   * Only on-chain policy-violation codes (6083-6100) count — see
+   * `POLICY_VIOLATION_RANGE` in finalize_session. External codes
+   * (CU exhaustion, nonce desync, auth) do NOT increment.
+   *
+   * Bound by TA-19 at canonical digest position 17. APPENDED per
+   * F-14 APPEND-ONLY rule.
+   */
+  autoRevokeThreshold: number;
 };
 
 export type PolicyConfigArgs = {
@@ -368,6 +423,55 @@ export type PolicyConfigArgs = {
    * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
    */
   operatingHours: number;
+  /**
+   * TA-07 (Phase 3 pre-execution guard #4): first-time-destination
+   * 24-hour graylist friction. When a NEW destination is added to
+   * `allowed_destinations` (via queue_policy_update), it enters this
+   * graylist with `unlock_unix = now + 86400` (24h). Until either
+   * (a) the unlock time elapses OR (b) the owner calls
+   * `promote_graylist_destination` to fast-track, spending paths
+   * reject any tx routing value to that destination with
+   * `ErrGraylistFriction` (6086).
+   *
+   * Tuple is `(destination_pubkey, unlock_unix)`. Bounded ≤10 entries
+   * (max_destinations). When full, additional allowlist adds reject
+   * with `ErrGraylistFull` (6087) until an existing entry unlocks or
+   * is promoted.
+   *
+   * DESIGN: graylist entries are derived/ephemeral state — the owner's
+   * signed digest already binds the allowlist (canonical position 8),
+   * and graylist friction only delays an already-authorised destination.
+   * Therefore the graylist itself is NOT in the canonical digest
+   * encoding. Promoting accelerates the unlock but cannot widen the
+   * allowlist beyond what the owner signed.
+   *
+   * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  destinationGraylist: Array<DestinationGraylistEntryArgs>;
+  /**
+   * TA-07 (Phase 3): if true, new destinations added to the allowlist
+   * skip the 24h graylist entirely (audit trail still recorded via
+   * emitted events). Bound by TA-19 at canonical digest position 16
+   * so the owner's choice to bypass friction is part of the signed
+   * configuration — not silently flipped.
+   *
+   * Default false. APPENDED at end per F-14 APPEND-ONLY rule.
+   */
+  autoPromoteGrays: boolean;
+  /**
+   * TA-17 (Phase 3 pre-execution guard #7): consecutive-failure
+   * threshold after which an agent's capability is auto-revoked.
+   * Owner-configurable in range 3..=20; out-of-range values rejected
+   * at policy-write time with `InvalidPermissions`. Default 5.
+   *
+   * Only on-chain policy-violation codes (6083-6100) count — see
+   * `POLICY_VIOLATION_RANGE` in finalize_session. External codes
+   * (CU exhaustion, nonce desync, auth) do NOT increment.
+   *
+   * Bound by TA-19 at canonical digest position 17. APPENDED per
+   * F-14 APPEND-ONLY rule.
+   */
+  autoRevokeThreshold: number;
 };
 
 /** Gets the encoder for {@link PolicyConfigArgs} account data. */
@@ -396,6 +500,12 @@ export function getPolicyConfigEncoder(): Encoder<PolicyConfigArgs> {
       ["policyPreviewDigest", fixEncoderSize(getBytesEncoder(), 32)],
       ["createdAtSlot", getU64Encoder()],
       ["operatingHours", getU32Encoder()],
+      [
+        "destinationGraylist",
+        getArrayEncoder(getDestinationGraylistEntryEncoder()),
+      ],
+      ["autoPromoteGrays", getBooleanEncoder()],
+      ["autoRevokeThreshold", getU8Encoder()],
     ]),
     (value) => ({ ...value, discriminator: POLICY_CONFIG_DISCRIMINATOR }),
   );
@@ -426,6 +536,12 @@ export function getPolicyConfigDecoder(): Decoder<PolicyConfig> {
     ["policyPreviewDigest", fixDecoderSize(getBytesDecoder(), 32)],
     ["createdAtSlot", getU64Decoder()],
     ["operatingHours", getU32Decoder()],
+    [
+      "destinationGraylist",
+      getArrayDecoder(getDestinationGraylistEntryDecoder()),
+    ],
+    ["autoPromoteGrays", getBooleanDecoder()],
+    ["autoRevokeThreshold", getU8Decoder()],
   ]);
 }
 

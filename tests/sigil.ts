@@ -186,6 +186,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: dailyCap,
             maxTransactionSizeUsd: maxTxSize,
@@ -195,6 +197,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
         .accounts({
@@ -252,6 +256,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(100),
             maxTransactionSizeUsd: new BN(100),
@@ -261,6 +267,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
           .accounts({
@@ -318,6 +326,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(100),
             maxTransactionSizeUsd: new BN(100),
@@ -327,6 +337,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
           .accounts({
@@ -488,6 +500,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -497,6 +511,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
         .accounts({
@@ -708,6 +724,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -717,6 +735,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
         .accounts({
@@ -836,6 +856,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -845,6 +867,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
         .accounts({
@@ -1594,6 +1618,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -1603,6 +1629,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
         .accounts({
@@ -1679,6 +1707,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -1688,6 +1718,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
         .accounts({
@@ -1768,6 +1800,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -1778,6 +1812,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
         .accounts({
@@ -1832,6 +1868,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -1841,6 +1879,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
           .accounts({
@@ -2354,6 +2394,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -2364,6 +2406,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
         .accounts({
@@ -2447,6 +2491,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -2456,6 +2502,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
         .accounts({
@@ -2703,6 +2751,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -2712,6 +2762,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
         .accounts({
@@ -2876,6 +2928,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -2885,6 +2939,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
         .accounts({
@@ -2977,6 +3033,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -2986,6 +3044,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
         .accounts({
@@ -3087,6 +3147,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -3096,6 +3158,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
         .accounts({
@@ -3220,6 +3284,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(999_000_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -3229,6 +3295,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
         .accounts({
@@ -3391,6 +3459,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(999_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -3400,6 +3470,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
         .accounts({
@@ -3676,6 +3748,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -3685,6 +3759,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
         .accounts({
@@ -3942,6 +4018,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -3951,6 +4029,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(0),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
           .accounts({
@@ -4182,6 +4262,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -4191,6 +4273,8 @@ describe("sigil", () => {
             allowedDestinations: [allowedDest.publicKey],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
         .accounts({
@@ -4339,6 +4423,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -4348,6 +4434,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
         .accounts({
@@ -4554,6 +4642,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000),
             maxTransactionSizeUsd: new BN(1000),
@@ -4563,6 +4653,8 @@ describe("sigil", () => {
             allowedDestinations: tooMany,
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
           .accounts({
@@ -4703,6 +4795,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -4713,6 +4807,8 @@ describe("sigil", () => {
             allowedDestinations: [allowedDest.publicKey],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
         .accounts({
@@ -4851,6 +4947,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1_000_000_000),
             maxTransactionSizeUsd: new BN(500_000_000),
@@ -4860,6 +4958,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
         .accounts({
@@ -5302,6 +5402,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(2_000_000_000),
             maxTransactionSizeUsd: new BN(1_000_000_000),
@@ -5311,6 +5413,8 @@ describe("sigil", () => {
             allowedDestinations: [epochDest.publicKey],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
         .accounts({
@@ -5614,6 +5718,8 @@ describe("sigil", () => {
           [new BN(100_000_000), new BN(200_000_000)],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1_000_000_000),
             maxTransactionSizeUsd: new BN(500_000_000),
@@ -5623,6 +5729,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
         .accounts({
@@ -5987,6 +6095,8 @@ describe("sigil", () => {
           [new BN(100_000_000)],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1_000_000_000),
             maxTransactionSizeUsd: new BN(500_000_000),
@@ -5996,6 +6106,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
           .accounts({
@@ -6070,6 +6182,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000_000_000),
             maxTransactionSizeUsd: new BN(1000_000_000),
@@ -6079,6 +6193,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
         .accounts({
@@ -6303,6 +6419,8 @@ describe("sigil", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(1000_000_000),
             maxTransactionSizeUsd: new BN(1000_000_000),
@@ -6312,6 +6430,8 @@ describe("sigil", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
         .accounts({

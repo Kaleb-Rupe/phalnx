@@ -289,6 +289,8 @@ export async function provisionVault(
     hasPostAssertions: 0,
     createdAtSlot,
     operatingHours: 0x00ffffff,
+    autoPromoteGrays: false,
+    autoRevokeThreshold: 5,
   });
 
   const initIx = await getInitializeVaultInstructionAsync({
@@ -307,6 +309,8 @@ export async function provisionVault(
     protocolCaps: [],
     observeOnly,
     operatingHours: 0x00ffffff,
+    autoPromoteGrays: false,
+    autoRevokeThreshold: 5,
     previewDigest,
   });
 

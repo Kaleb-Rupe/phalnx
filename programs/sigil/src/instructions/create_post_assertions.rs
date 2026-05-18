@@ -102,6 +102,9 @@ pub fn handler(
         // TA-05 (Phase 3): operating_hours is policy-owned and bound by TA-19.
         // Sibling handler reads from live policy — never mutated here.
         operating_hours: policy.operating_hours,
+        // TA-07/17 (Phase 3): bound by TA-19, never mutated by this ix.
+        auto_promote_grays: policy.auto_promote_grays,
+        auto_revoke_threshold: policy.auto_revoke_threshold,
     });
     // PEN-CROSS-3: owner must have signed the post-mutation digest.
     require!(

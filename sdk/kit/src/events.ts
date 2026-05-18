@@ -47,6 +47,10 @@ import {
   getPostAssertionsClosedDecoder,
   getOrphanConstraintsPdaCleanedDecoder,
   getObserveOnlyChangedDecoder,
+  // Phase 3 (TA-07/17) events
+  getGraylistEnteredDecoder,
+  getGraylistPromotedDecoder,
+  getAgentAutoRevokedDecoder,
 } from "./generated/types/index.js";
 
 /** All known Sigil event names */
@@ -178,6 +182,10 @@ const EVENT_DECODER_MAP: Record<
   PostAssertionsClosed: getPostAssertionsClosedDecoder(),
   OrphanConstraintsPdaCleaned: getOrphanConstraintsPdaCleanedDecoder(),
   ObserveOnlyChanged: getObserveOnlyChangedDecoder(),
+  // Phase 3 (TA-07/17) events
+  GraylistEntered: getGraylistEnteredDecoder(),
+  GraylistPromoted: getGraylistPromotedDecoder(),
+  AgentAutoRevoked: getAgentAutoRevokedDecoder(),
 };
 
 // Validate decoder map completeness at module init — catches drift when events are added/removed

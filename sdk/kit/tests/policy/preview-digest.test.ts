@@ -20,8 +20,8 @@ import * as fc from "fast-check";
 import { createHash } from "node:crypto";
 import { computePolicyPreviewDigest } from "../../src/policy/compute-policy-preview-digest.js";
 
-// Post-TA-05 (Phase 3 pre-exec): operating_hours added at position 15 of the
-// canonical encoding shifts both fixture digests again.
+// Post-TA-07/17 (Phase 3 pre-exec): auto_promote_grays + auto_revoke_threshold
+// appended at positions 16-17 of the canonical encoding.
 // Prior values:
 //   Pre-PEN-CROSS-6:
 //     HEX_MINIMAL   = 29f9a0caa6851902abe7de24ac30380ef50c220d25d541f8fe1762793152b623
@@ -32,14 +32,17 @@ import { computePolicyPreviewDigest } from "../../src/policy/compute-policy-prev
 //   Post-PEN-CROSS-2 (pre-TA-05):
 //     HEX_MINIMAL   = 63974a2661afc539fc8f1e55245adcef9e3b91f82a191c757ed3c795e8e59148
 //     HEX_REALISTIC = ac54284579f4b8afd714b290ec22df745bddbede9a5b366f17c8db776fab53c7
+//   Post-TA-05 (pre-TA-07/17):
+//     HEX_MINIMAL   = f48fb07695e4b5da504654ad5281f0d39e9fcff6fa9cde64a463f1d8a8471322
+//     HEX_REALISTIC = af3990ea433e3de25baa05627f9a38ab497dffcba1e202aac99343b1de9cfc8c
 //
-// TA-05 fixtures:
-//   - HEX_MINIMAL: operatingHours = 0 (inert configuration — deterministic bytes)
-//   - HEX_REALISTIC: operatingHours = 0x00FFFFFF (all-hours default — a representative production value)
+// TA-07/17 fixtures:
+//   - HEX_MINIMAL: autoPromoteGrays=false, autoRevokeThreshold=0
+//   - HEX_REALISTIC: autoPromoteGrays=false, autoRevokeThreshold=5
 const HEX_MINIMAL =
-  "f48fb07695e4b5da504654ad5281f0d39e9fcff6fa9cde64a463f1d8a8471322";
+  "eec4230cd52f7f567e06e9b197a0dacdc3955808d1a5a256d5975a4ac1177beb";
 const HEX_REALISTIC =
-  "af3990ea433e3de25baa05627f9a38ab497dffcba1e202aac99343b1de9cfc8c";
+  "35ed9a9f97b0fa21ca581bd45f11b28c2932525101e9be063cc0d2f6bebc3c48";
 
 // Base58 encodings of fixed test pubkeys [1u8;32], [2u8;32], [10u8;32].
 // Computed once (see Rust unit-test fixtures `pk(1) / pk(2) / pk(10)`).
@@ -72,6 +75,8 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       createdAtSlot: 0n,
       // TA-05: minimal fixture uses inert operating_hours=0
       operatingHours: 0,
+      autoPromoteGrays: false,
+      autoRevokeThreshold: 0,
     });
     expect(toHex(digest)).to.equal(HEX_MINIMAL);
   });
@@ -94,6 +99,10 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
       createdAtSlot: 12345n,
       // TA-05: realistic fixture pins all-hours default
       operatingHours: 0x00ffffff,
+      // TA-07: realistic fixture pins auto_promote_grays=false
+      autoPromoteGrays: false,
+      // TA-17: realistic fixture pins auto_revoke_threshold=5 (the default)
+      autoRevokeThreshold: 5,
     });
     expect(toHex(digest)).to.equal(HEX_REALISTIC);
   });
@@ -268,6 +277,64 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
     });
     expect(toHex(d1)).to.not.equal(toHex(d2));
   });
+
+  // TA-07 cross-impl pin: auto_promote_grays is bound by the digest.
+  it("auto_promote_grays flip changes the digest (TA-07)", () => {
+    const base = {
+      dailySpendingCapUsd: 500_000_000n,
+      maxTransactionSizeUsd: 100_000_000n,
+      maxSlippageBps: 100,
+      developerFeeRate: 0,
+      protocolMode: 1,
+      protocols: [PK_1],
+      destinationMode: 0,
+      allowedDestinations: [PK_10],
+      timelockDuration: 1800n,
+      sessionExpirySeconds: 30n,
+      observeOnly: false,
+      hasConstraints: false,
+      hasPostAssertions: 0,
+      createdAtSlot: 12345n,
+      operatingHours: 0x00ffffff,
+      autoPromoteGrays: false,
+      autoRevokeThreshold: 5,
+    } as const;
+    const d1 = computePolicyPreviewDigest(base);
+    const d2 = computePolicyPreviewDigest({
+      ...base,
+      autoPromoteGrays: true,
+    });
+    expect(toHex(d1)).to.not.equal(toHex(d2));
+  });
+
+  // TA-17 cross-impl pin: auto_revoke_threshold is bound by the digest.
+  it("auto_revoke_threshold flip changes the digest (TA-17)", () => {
+    const base = {
+      dailySpendingCapUsd: 500_000_000n,
+      maxTransactionSizeUsd: 100_000_000n,
+      maxSlippageBps: 100,
+      developerFeeRate: 0,
+      protocolMode: 1,
+      protocols: [PK_1],
+      destinationMode: 0,
+      allowedDestinations: [PK_10],
+      timelockDuration: 1800n,
+      sessionExpirySeconds: 30n,
+      observeOnly: false,
+      hasConstraints: false,
+      hasPostAssertions: 0,
+      createdAtSlot: 12345n,
+      operatingHours: 0x00ffffff,
+      autoPromoteGrays: false,
+      autoRevokeThreshold: 5,
+    } as const;
+    const d1 = computePolicyPreviewDigest(base);
+    const d2 = computePolicyPreviewDigest({
+      ...base,
+      autoRevokeThreshold: 3,
+    });
+    expect(toHex(d1)).to.not.equal(toHex(d2));
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -335,6 +402,8 @@ function referenceDigest(fields: {
   hasPostAssertions: number;
   createdAtSlot: bigint;
   operatingHours: number;
+  autoPromoteGrays: boolean;
+  autoRevokeThreshold: number;
 }): string {
   const parts: number[] = [];
   const pushU64 = (v: bigint) => {
@@ -376,6 +445,10 @@ function referenceDigest(fields: {
   pushU64(fields.createdAtSlot);
   // TA-05: operating_hours at position 15
   pushU32(fields.operatingHours);
+  // TA-07: auto_promote_grays at position 16
+  pushU8(fields.autoPromoteGrays ? 1 : 0);
+  // TA-17: auto_revoke_threshold at position 17
+  pushU8(fields.autoRevokeThreshold);
 
   const buf = Buffer.from(parts);
   return createHash("sha256").update(buf).digest("hex");
@@ -404,6 +477,8 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
         fc.integer({ min: 0, max: 255 }), // has_post_assertions
         fc.bigUint({ max: (1n << 64n) - 1n }), // created_at_slot
         fc.integer({ min: 0, max: 0xffffffff }), // operating_hours (TA-05; encoder must handle any u32)
+        fc.boolean(), // auto_promote_grays (TA-07)
+        fc.integer({ min: 0, max: 255 }), // auto_revoke_threshold (TA-17; encoder handles any u8)
         (
           dailyCap,
           maxTx,
@@ -420,6 +495,8 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
           hasPostAssertions,
           createdAtSlot,
           operatingHours,
+          autoPromoteGrays,
+          autoRevokeThreshold,
         ) => {
           const sdkDigest = computePolicyPreviewDigest({
             dailySpendingCapUsd: dailyCap,
@@ -439,6 +516,8 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
             hasPostAssertions,
             createdAtSlot,
             operatingHours,
+            autoPromoteGrays,
+            autoRevokeThreshold,
           });
           const refDigest = referenceDigest({
             dailySpendingCapUsd: dailyCap,
@@ -456,6 +535,8 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
             hasPostAssertions,
             createdAtSlot,
             operatingHours,
+            autoPromoteGrays,
+            autoRevokeThreshold,
           });
           const sdkHex = Array.from(sdkDigest)
             .map((x) => x.toString(16).padStart(2, "0"))

@@ -112,6 +112,8 @@ async function createVault(opts: {
         allowedDestinations: opts.destinations ?? [],
         timelockDuration: new BN(1800),
         operatingHours: 0x00FFFFFF,
+        autoPromoteGrays: false,
+        autoRevokeThreshold: 5,
       }),
     )
     .accounts({

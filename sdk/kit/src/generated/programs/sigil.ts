@@ -90,6 +90,7 @@ import {
   getFreezeVaultInstruction,
   getInitializeVaultInstructionAsync,
   getPauseAgentInstruction,
+  getPromoteGraylistDestinationInstructionAsync,
   getQueueAgentPermissionsUpdateInstructionAsync,
   getQueueCloseConstraintsInstructionAsync,
   getQueueConstraintsUpdateInstructionAsync,
@@ -123,6 +124,7 @@ import {
   parseFreezeVaultInstruction,
   parseInitializeVaultInstruction,
   parsePauseAgentInstruction,
+  parsePromoteGraylistDestinationInstruction,
   parseQueueAgentPermissionsUpdateInstruction,
   parseQueueCloseConstraintsInstruction,
   parseQueueConstraintsUpdateInstruction,
@@ -177,6 +179,7 @@ import {
   type ParsedFreezeVaultInstruction,
   type ParsedInitializeVaultInstruction,
   type ParsedPauseAgentInstruction,
+  type ParsedPromoteGraylistDestinationInstruction,
   type ParsedQueueAgentPermissionsUpdateInstruction,
   type ParsedQueueCloseConstraintsInstruction,
   type ParsedQueueConstraintsUpdateInstruction,
@@ -189,6 +192,7 @@ import {
   type ParsedValidateAndAuthorizeInstruction,
   type ParsedWithdrawFundsInstruction,
   type PauseAgentInput,
+  type PromoteGraylistDestinationAsyncInput,
   type QueueAgentPermissionsUpdateAsyncInput,
   type QueueCloseConstraintsAsyncInput,
   type QueueConstraintsUpdateAsyncInput,
@@ -373,6 +377,7 @@ export enum SigilInstruction {
   FreezeVault,
   InitializeVault,
   PauseAgent,
+  PromoteGraylistDestination,
   QueueAgentPermissionsUpdate,
   QueueCloseConstraints,
   QueueConstraintsUpdate,
@@ -636,6 +641,17 @@ export function identifySigilInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([227, 87, 73, 141, 202, 251, 202, 228]),
+      ),
+      0,
+    )
+  ) {
+    return SigilInstruction.PromoteGraylistDestination;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([182, 37, 105, 181, 28, 195, 223, 167]),
       ),
       0,
@@ -829,6 +845,9 @@ export type ParsedSigilInstruction<
       instructionType: SigilInstruction.PauseAgent;
     } & ParsedPauseAgentInstruction<TProgram>)
   | ({
+      instructionType: SigilInstruction.PromoteGraylistDestination;
+    } & ParsedPromoteGraylistDestinationInstruction<TProgram>)
+  | ({
       instructionType: SigilInstruction.QueueAgentPermissionsUpdate;
     } & ParsedQueueAgentPermissionsUpdateInstruction<TProgram>)
   | ({
@@ -1019,6 +1038,13 @@ export function parseSigilInstruction<TProgram extends string>(
       return {
         instructionType: SigilInstruction.PauseAgent,
         ...parsePauseAgentInstruction(instruction),
+      };
+    }
+    case SigilInstruction.PromoteGraylistDestination: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: SigilInstruction.PromoteGraylistDestination,
+        ...parsePromoteGraylistDestinationInstruction(instruction),
       };
     }
     case SigilInstruction.QueueAgentPermissionsUpdate: {
@@ -1229,6 +1255,10 @@ export type SigilPluginInstructions = {
   pauseAgent: (
     input: PauseAgentInput,
   ) => ReturnType<typeof getPauseAgentInstruction> & SelfPlanAndSendFunctions;
+  promoteGraylistDestination: (
+    input: PromoteGraylistDestinationAsyncInput,
+  ) => ReturnType<typeof getPromoteGraylistDestinationInstructionAsync> &
+    SelfPlanAndSendFunctions;
   queueAgentPermissionsUpdate: (
     input: QueueAgentPermissionsUpdateAsyncInput,
   ) => ReturnType<typeof getQueueAgentPermissionsUpdateInstructionAsync> &
@@ -1432,6 +1462,11 @@ export function sigilProgram() {
             addSelfPlanAndSendFunctions(
               client,
               getPauseAgentInstruction(input),
+            ),
+          promoteGraylistDestination: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getPromoteGraylistDestinationInstructionAsync(input),
             ),
           queueAgentPermissionsUpdate: (input) =>
             addSelfPlanAndSendFunctions(

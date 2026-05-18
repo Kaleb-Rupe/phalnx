@@ -70,6 +70,8 @@ pub fn handler(
     protocol_caps: Vec<u64>,
     observe_only: bool,
     operating_hours: u32,
+    auto_promote_grays: bool,
+    auto_revoke_threshold: u8,
     preview_digest: [u8; 32],
 ) -> Result<()> {
     crate::reject_cpi!();
@@ -88,6 +90,15 @@ pub fn handler(
     require!(
         operating_hours & !OPERATING_HOURS_VALID_MASK == 0,
         SigilError::ErrOutsideOperatingHours
+    );
+
+    // TA-17 (Phase 3 pre-execution guard #7): auto_revoke_threshold bounded
+    // to [3, 20] at policy-write time. Floor 3 prevents trivial brick-by-3
+    // attacks where minor agent errors auto-revoke; ceiling 20 prevents
+    // owners disabling the gate by setting it impractically high.
+    require!(
+        (AUTO_REVOKE_THRESHOLD_MIN..=AUTO_REVOKE_THRESHOLD_MAX).contains(&auto_revoke_threshold),
+        SigilError::InvalidPermissions
     );
     require!(
         protocols.len() <= MAX_ALLOWED_PROTOCOLS,
@@ -171,6 +182,10 @@ pub fn handler(
         created_at_slot,
         // TA-05 (Phase 3 pre-exec): operating_hours bound at digest position 15.
         operating_hours,
+        // TA-07/17 (Phase 3 pre-exec): auto_promote_grays + auto_revoke_threshold
+        // bound at digest positions 16/17.
+        auto_promote_grays,
+        auto_revoke_threshold,
     });
     require!(
         recomputed_digest == preview_digest,
@@ -226,6 +241,15 @@ pub fn handler(
     // this on the digest ensures owner-blind-sign cannot slip a permissive
     // mask when the owner thought they signed a narrow one.
     policy.operating_hours = operating_hours;
+    // TA-07 (Phase 3): persist owner's graylist-bypass choice. Default
+    // false — the owner opts in to skip the 24h friction window.
+    policy.auto_promote_grays = auto_promote_grays;
+    // TA-07 (Phase 3): empty graylist at init (no destinations have been
+    // added yet via queue_policy_update; the initial allowedDestinations
+    // is owner-signed at init and considered pre-vetted).
+    policy.destination_graylist = Vec::new();
+    // TA-17 (Phase 3): persist auto-revoke threshold; range pre-validated.
+    policy.auto_revoke_threshold = auto_revoke_threshold;
 
     // Initialize zero-copy tracker (buckets + protocol_counters zero-initialized by allocator)
     let mut tracker = ctx.accounts.tracker.load_init()?;

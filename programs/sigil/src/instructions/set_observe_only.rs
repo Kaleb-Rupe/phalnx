@@ -80,6 +80,9 @@ pub fn handler(ctx: Context<SetObserveOnly>, new_value: bool) -> Result<()> {
         // TA-05 (Phase 3): operating_hours is policy-owned and bound by TA-19.
         // set_observe_only never mutates operating_hours — read live policy.
         operating_hours: policy.operating_hours,
+        // TA-07/17 (Phase 3): bound by TA-19, never mutated by this ix.
+        auto_promote_grays: policy.auto_promote_grays,
+        auto_revoke_threshold: policy.auto_revoke_threshold,
     });
     policy.policy_preview_digest = recomputed_digest;
     policy.policy_version = policy

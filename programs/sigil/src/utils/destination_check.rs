@@ -71,11 +71,14 @@ use crate::state::{PolicyConfig, TOKEN_2022_PROGRAM_ID};
 /// owners. Token-2022 accounts have a longer layout (extensions), but the
 /// `owner` field is in the same byte position, so `TokenAccount::try_deserialize`
 /// works for the read.
+/// TA-07 (Phase 3) extended signature: `now` is the current Unix timestamp
+/// used by the graylist friction check. Callers pass `clock.unix_timestamp`.
 pub fn enforce_destination_allowlist<'info>(
     ix_accounts: &[AccountMeta],
     remaining_accounts: &[AccountInfo<'info>],
     vault_pubkey: &Pubkey,
     policy: &PolicyConfig,
+    now: i64,
 ) -> Result<()> {
     for meta in ix_accounts.iter() {
         if !meta.is_writable {
@@ -129,6 +132,15 @@ pub fn enforce_destination_allowlist<'info>(
             policy.is_destination_allowed(&recipient_wallet),
             SigilError::DestinationNotAllowed,
         );
+
+        // TA-07 (Phase 3): graylist friction check. If the destination is on
+        // the graylist AND still within its unlock window, reject — the
+        // owner authorised it via allowlist add but it has not yet served
+        // its 24h friction (unless auto_promote_grays or owner promoted via
+        // promote_graylist_destination, which would have cleared the entry).
+        let (graylisted, _unlock) =
+            policy.is_destination_graylisted(&recipient_wallet, now);
+        require!(!graylisted, SigilError::ErrGraylistFriction);
     }
 
     Ok(())

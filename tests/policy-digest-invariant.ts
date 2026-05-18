@@ -133,6 +133,8 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
           timelockDuration: new BN(1800),
           observeOnly: true,
           operatingHours: 0x00FFFFFF,
+          autoPromoteGrays: false,
+          autoRevokeThreshold: 5,
         }),
       )
       .accounts({
@@ -191,6 +193,12 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
           : (policy.hasPostAssertions as number),
       // PEN-CROSS-2: read created_at_slot off live PolicyConfig.
       createdAtSlot: policy.createdAtSlot ?? 0,
+      // TA-05 (Phase 3): read operating_hours off live PolicyConfig.
+      operatingHours: policy.operatingHours ?? 0,
+      // TA-07/17 (Phase 3): graylist-bypass + auto-revoke-threshold are
+      // policy-owned. destination_graylist itself is NOT in digest.
+      autoPromoteGrays: !!policy.autoPromoteGrays,
+      autoRevokeThreshold: policy.autoRevokeThreshold ?? 0,
     });
   }
 
@@ -709,6 +717,8 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
           timelockDuration: new BN(1800),
           observeOnly,
           operatingHours: 0x00FFFFFF,
+          autoPromoteGrays: false,
+          autoRevokeThreshold: 5,
         }),
       )
       .accounts({
@@ -1123,6 +1133,8 @@ describe("PEN-CROSS-2 — close+reinit replay protection", () => {
       observeOnly: false,
       createdAtSlot: oldSlot,
       operatingHours: 0x00FFFFFF,
+      autoPromoteGrays: false,
+      autoRevokeThreshold: 5,
     });
 
     let threw = false;
@@ -1210,6 +1222,8 @@ describe("PEN-CROSS-2 — close+reinit replay protection", () => {
       observeOnly: false,
       createdAtSlot: currentSlot,
       operatingHours: 0x00FFFFFF,
+      autoPromoteGrays: false,
+      autoRevokeThreshold: 5,
     });
     await program.methods
       .initializeVault(
@@ -1316,6 +1330,8 @@ describe("PEN-CROSS-2 — close+reinit replay protection", () => {
       observeOnly: false,
       createdAtSlot: currentSlot,
       operatingHours: 0x00FFFFFF,
+      autoPromoteGrays: false,
+      autoRevokeThreshold: 5,
     });
 
     await program.methods

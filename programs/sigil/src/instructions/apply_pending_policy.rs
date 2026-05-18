@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::SigilError;
-use crate::events::PolicyChangeApplied;
+use crate::events::{GraylistEntered, PolicyChangeApplied};
 use crate::state::*;
 use crate::utils::policy_digest::{compute_policy_preview_digest, PolicyPreviewFields};
 
@@ -82,6 +82,58 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
         policy.timelock_duration = tl;
     }
     if let Some(ref destinations) = pending.allowed_destinations {
+        // TA-07 (Phase 3): for each destination that is NEW (not in the
+        // pre-update allowedDestinations), add it to the graylist with
+        // unlock_unix = now + GRAYLIST_FRICTION_SECONDS — UNLESS the owner
+        // has opted into `auto_promote_grays` (digest-bound choice).
+        //
+        // If `auto_promote_grays` is true, the new destination still enters
+        // the audit trail (event), but `unlock_unix = clock.unix_timestamp`
+        // (effective immediately). This preserves the owner's choice while
+        // keeping a uniform code path.
+        //
+        // Graylist bound: ≤MAX_ALLOWED_DESTINATIONS (10) entries. Hit the
+        // bound and we reject with ErrGraylistFull — the queue/apply pair
+        // is atomic so this rejects the whole update.
+        let now = clock.unix_timestamp;
+        let unlock = if policy.auto_promote_grays {
+            now
+        } else {
+            now.checked_add(GRAYLIST_FRICTION_SECONDS)
+                .ok_or(error!(SigilError::Overflow))?
+        };
+        for d in destinations.iter() {
+            if !policy.allowed_destinations.contains(d) {
+                // Newly added destination — enter / refresh graylist.
+                // Find existing entry first (idempotent overwrite).
+                let mut found = false;
+                for entry in policy.destination_graylist.iter_mut() {
+                    if entry.destination == *d {
+                        entry.unlock_unix = unlock;
+                        found = true;
+                        break;
+                    }
+                }
+                if !found {
+                    require!(
+                        policy.destination_graylist.len() < MAX_ALLOWED_DESTINATIONS,
+                        SigilError::ErrGraylistFull
+                    );
+                    policy.destination_graylist.push(DestinationGraylistEntry {
+                        destination: *d,
+                        unlock_unix: unlock,
+                    });
+                }
+                emit!(GraylistEntered {
+                    vault: ctx.accounts.vault.key(),
+                    destination: *d,
+                    unlock_unix: unlock,
+                    auto_promoted: policy.auto_promote_grays,
+                    timestamp: now,
+                });
+            }
+        }
+        // Now copy the destinations themselves.
         policy.allowed_destinations = destinations.clone();
     }
     if let Some(expiry) = pending.session_expiry_seconds {
@@ -155,10 +207,14 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
         // PEN-CROSS-2: re-bind to live policy's immutable creation slot.
         created_at_slot: policy.created_at_slot,
         // TA-05 (Phase 3): operating_hours is policy-owned and bound by
-        // TA-19. apply_pending_policy currently does not mutate it (this
-        // ix copies through Option<u8> fields only). Read the live value so
-        // the second-pass digest re-assertion matches the queue-time digest.
+        // TA-19. apply_pending_policy reads the live value after the
+        // optional pending merge above, so the second-pass digest matches
+        // the queue-time digest.
         operating_hours: policy.operating_hours,
+        // TA-07/17 (Phase 3): also bound by TA-19. Read live (applied
+        // values if pending overrode them).
+        auto_promote_grays: policy.auto_promote_grays,
+        auto_revoke_threshold: policy.auto_revoke_threshold,
     });
     require!(
         recomputed_digest == pending.new_policy_preview_digest,

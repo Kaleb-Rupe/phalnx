@@ -140,6 +140,9 @@ async function siblingHandlerExpectedDigest(
     // TA-05 (Phase 3): operating_hours is policy-owned. Sibling handlers
     // (constraints/post-assertions) never mutate it — pass through.
     operatingHours: livePolicy.data.operatingHours,
+    // TA-07/17 (Phase 3): also pass-through from live policy.
+    autoPromoteGrays: livePolicy.data.autoPromoteGrays,
+    autoRevokeThreshold: livePolicy.data.autoRevokeThreshold,
   });
 }
 
@@ -651,6 +654,9 @@ export async function queuePolicyUpdate(
     // queueAgentPermissions does not currently mutate it through the
     // dashboard mutation surface — read from live policy.
     operatingHours: livePolicy.data.operatingHours,
+    // TA-07/17 (Phase 3): same — not mutated by this dashboard surface.
+    autoPromoteGrays: livePolicy.data.autoPromoteGrays,
+    autoRevokeThreshold: livePolicy.data.autoRevokeThreshold,
   });
 
   const ix = await getQueuePolicyUpdateInstructionAsync({

@@ -140,9 +140,10 @@ describe("events", () => {
   });
 
   describe("getEventNames", () => {
-    it("returns 36 names", () => {
-      // 36 events post Phase 2 (ObserveOnlyChanged was the most recent addition).
-      expect(getEventNames()).to.have.length(36);
+    it("returns 39 names", () => {
+      // 39 events post Phase 3 (added GraylistEntered, GraylistPromoted,
+      // AgentAutoRevoked for TA-07/17 pre-execution guards).
+      expect(getEventNames()).to.have.length(39);
     });
 
     it("includes known names", () => {
@@ -398,8 +399,9 @@ describe("events", () => {
         );
       }
       // The runtime sync assertion in events.ts would have thrown at import time
-      // if any entry was missing, so reaching this point proves completeness
-      expect(discriminatorNames.size).to.equal(36);
+      // if any entry was missing, so reaching this point proves completeness.
+      // Phase 3: +3 events (GraylistEntered, GraylistPromoted, AgentAutoRevoked).
+      expect(discriminatorNames.size).to.equal(39);
     });
   });
 });

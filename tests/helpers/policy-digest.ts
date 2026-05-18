@@ -22,6 +22,8 @@
  *   13. has_post_assertions: u8
  *   14. created_at_slot: u64 LE — PEN-CROSS-2 (Phase 2 close-up)
  *   15. operating_hours: u32 LE — TA-05 (Phase 3 pre-exec)
+ *   16. auto_promote_grays: bool (1 byte 0/1) — TA-07 (Phase 3 pre-exec)
+ *   17. auto_revoke_threshold: u8 — TA-17 (Phase 3 pre-exec)
  */
 
 import { createHash } from "crypto";
@@ -60,6 +62,17 @@ export interface PolicyDigestFields {
    * should pass `0x00FFFFFF` (all 24h) explicitly.
    */
   operatingHours?: number;
+  /**
+   * TA-07 (Phase 3): owner-side toggle to bypass the 24h graylist friction.
+   * Default false. Bound by TA-19 at digest position 16.
+   */
+  autoPromoteGrays?: boolean;
+  /**
+   * TA-17 (Phase 3): consecutive-failure threshold for agent auto-revoke.
+   * Default 0 (legacy callers). Bound at digest position 17. On-chain
+   * handler requires this to be in [3, 20] at policy-write time.
+   */
+  autoRevokeThreshold?: number;
 }
 
 function u64le(v: BN | bigint | number): Buffer {
@@ -120,6 +133,10 @@ export function computePolicyPreviewDigest(
   parts.push(u64le(fields.createdAtSlot ?? 0));
   // TA-05: operating_hours at position 15 of canonical encoding.
   parts.push(u32le(fields.operatingHours ?? 0));
+  // TA-07: auto_promote_grays at position 16.
+  parts.push(u8(fields.autoPromoteGrays ? 1 : 0));
+  // TA-17: auto_revoke_threshold at position 17.
+  parts.push(u8(fields.autoRevokeThreshold ?? 0));
 
   const buf = Buffer.concat(parts);
   return Array.from(createHash("sha256").update(buf).digest());
@@ -170,6 +187,13 @@ export function initVaultPreviewDigest(args: {
    * so validate_and_authorize doesn't reject. Upper 8 bits must be zero.
    */
   operatingHours?: number;
+  /** TA-07 (Phase 3): owner's graylist-bypass choice. Default false. */
+  autoPromoteGrays?: boolean;
+  /**
+   * TA-17 (Phase 3): consecutive-failure auto-revoke threshold. Default 5
+   * for new tests; on-chain handler requires range [3, 20].
+   */
+  autoRevokeThreshold?: number;
 }): number[] {
   return computePolicyPreviewDigest({
     dailySpendingCapUsd: args.dailySpendingCapUsd,
@@ -187,6 +211,8 @@ export function initVaultPreviewDigest(args: {
     hasPostAssertions: 0,
     createdAtSlot: args.createdAtSlot ?? 0,
     operatingHours: args.operatingHours ?? 0,
+    autoPromoteGrays: args.autoPromoteGrays ?? false,
+    autoRevokeThreshold: args.autoRevokeThreshold ?? 0,
   });
 }
 
@@ -223,6 +249,10 @@ export interface LiveLikePolicy {
   createdAtSlot?: BN | bigint | number;
   /** TA-05 (Phase 3): bound by the canonical digest at position 15. */
   operatingHours?: number;
+  /** TA-07 (Phase 3): bound by the canonical digest at position 16. */
+  autoPromoteGrays?: boolean;
+  /** TA-17 (Phase 3): bound by the canonical digest at position 17. */
+  autoRevokeThreshold?: number;
 }
 
 export interface QueueOverride {
@@ -238,6 +268,13 @@ export interface QueueOverride {
   sessionExpirySeconds?: BN | bigint | number | null;
   /** TA-05 (Phase 3): operating_hours override. */
   operatingHours?: number | null;
+  /**
+   * TA-07/17 (Phase 3): not mutable via queue_policy_update in V1, but the
+   * helper signature accepts them for explicit symmetry — null means
+   * pass-through from live policy.
+   */
+  autoPromoteGrays?: boolean | null;
+  autoRevokeThreshold?: number | null;
 }
 
 function pick<T>(override: T | null | undefined, fallback: T): T {
@@ -279,6 +316,16 @@ export function queuePolicyMergedDigest(
     // TA-05 (Phase 3): operating_hours is mutable via queue (override) or
     // pass-through from live.
     operatingHours: pick(override.operatingHours, live.operatingHours ?? 0),
+    // TA-07/17 (Phase 3): pass-through from live policy (queue does not
+    // mutate these in V1, but override is exposed for future flexibility).
+    autoPromoteGrays: pick(
+      override.autoPromoteGrays,
+      live.autoPromoteGrays ?? false,
+    ),
+    autoRevokeThreshold: pick(
+      override.autoRevokeThreshold,
+      live.autoRevokeThreshold ?? 0,
+    ),
   });
 }
 
@@ -322,6 +369,9 @@ export async function siblingHandlerDigest(
     createdAtSlot: policy.createdAtSlot ?? 0,
     // TA-05 (Phase 3): sibling handlers never mutate operating_hours.
     operatingHours: policy.operatingHours ?? 0,
+    // TA-07/17 (Phase 3): pass through.
+    autoPromoteGrays: !!policy.autoPromoteGrays,
+    autoRevokeThreshold: policy.autoRevokeThreshold ?? 0,
   });
 }
 
@@ -356,6 +406,8 @@ export async function fetchAndComputeQueueDigest(
     hasPostAssertions: policy.hasPostAssertions,
     createdAtSlot: policy.createdAtSlot ?? 0,
     operatingHours: policy.operatingHours ?? 0,
+    autoPromoteGrays: !!policy.autoPromoteGrays,
+    autoRevokeThreshold: policy.autoRevokeThreshold ?? 0,
   };
   return queuePolicyMergedDigest(live, override, !!vault.observeOnly);
 }

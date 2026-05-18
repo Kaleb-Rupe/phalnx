@@ -314,3 +314,40 @@ pub struct ObserveOnlyChanged {
     pub new_policy_preview_digest: [u8; 32],
     pub timestamp: i64,
 }
+
+// --- Phase 3 pre-execution guards events ---
+
+/// TA-07 (Phase 3): a destination entered the graylist with a 24h unlock
+/// (or `unlock_unix == now` if `auto_promote_grays` was true). Emitted
+/// from `apply_pending_policy` when allowed_destinations gains a new entry.
+#[event]
+pub struct GraylistEntered {
+    pub vault: Pubkey,
+    pub destination: Pubkey,
+    pub unlock_unix: i64,
+    pub auto_promoted: bool,
+    pub timestamp: i64,
+}
+
+/// TA-07 (Phase 3): owner promoted a destination out of the graylist via
+/// `promote_graylist_destination`. `promoted = false` when the destination
+/// was already past unlock (no-op promotion — still emitted for audit).
+#[event]
+pub struct GraylistPromoted {
+    pub vault: Pubkey,
+    pub destination: Pubkey,
+    pub promoted: bool,
+    pub timestamp: i64,
+}
+
+/// TA-17 (Phase 3): an agent's capability was auto-revoked after
+/// `consecutive_failures >= policy.auto_revoke_threshold` policy-violation
+/// failures. Owner re-enables via `queue_agent_permissions_update`.
+#[event]
+pub struct AgentAutoRevoked {
+    pub vault: Pubkey,
+    pub agent: Pubkey,
+    pub threshold: u8,
+    pub consecutive_failures: u8,
+    pub timestamp: i64,
+}

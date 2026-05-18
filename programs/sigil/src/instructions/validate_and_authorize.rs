@@ -603,6 +603,7 @@ pub fn handler(
                         ctx.remaining_accounts,
                         &vault_key,
                         policy,
+                        clock.unix_timestamp,
                     )?;
                 }
             }

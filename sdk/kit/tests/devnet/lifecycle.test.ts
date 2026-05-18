@@ -154,6 +154,9 @@ describe("Kit SDK Devnet — Vault Lifecycle", function () {
       createdAtSlot: livePolicy.data.createdAtSlot,
       // TA-05 (Phase 3): operating_hours is policy-owned.
       operatingHours: livePolicy.data.operatingHours,
+      // TA-07/17 (Phase 3): pass-through from live policy.
+      autoPromoteGrays: livePolicy.data.autoPromoteGrays,
+      autoRevokeThreshold: livePolicy.data.autoRevokeThreshold,
     });
 
     const queueIx = await getQueuePolicyUpdateInstructionAsync({

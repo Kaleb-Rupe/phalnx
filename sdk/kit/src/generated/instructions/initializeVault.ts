@@ -120,6 +120,8 @@ export type InitializeVaultInstructionData = {
   protocolCaps: Array<bigint>;
   observeOnly: boolean;
   operatingHours: number;
+  autoPromoteGrays: boolean;
+  autoRevokeThreshold: number;
   previewDigest: ReadonlyUint8Array;
 };
 
@@ -136,6 +138,8 @@ export type InitializeVaultInstructionDataArgs = {
   protocolCaps: Array<number | bigint>;
   observeOnly: boolean;
   operatingHours: number;
+  autoPromoteGrays: boolean;
+  autoRevokeThreshold: number;
   previewDigest: ReadonlyUint8Array;
 };
 
@@ -155,6 +159,8 @@ export function getInitializeVaultInstructionDataEncoder(): Encoder<InitializeVa
       ["protocolCaps", getArrayEncoder(getU64Encoder())],
       ["observeOnly", getBooleanEncoder()],
       ["operatingHours", getU32Encoder()],
+      ["autoPromoteGrays", getBooleanEncoder()],
+      ["autoRevokeThreshold", getU8Encoder()],
       ["previewDigest", fixEncoderSize(getBytesEncoder(), 32)],
     ]),
     (value) => ({ ...value, discriminator: INITIALIZE_VAULT_DISCRIMINATOR }),
@@ -176,6 +182,8 @@ export function getInitializeVaultInstructionDataDecoder(): Decoder<InitializeVa
     ["protocolCaps", getArrayDecoder(getU64Decoder())],
     ["observeOnly", getBooleanDecoder()],
     ["operatingHours", getU32Decoder()],
+    ["autoPromoteGrays", getBooleanDecoder()],
+    ["autoRevokeThreshold", getU8Decoder()],
     ["previewDigest", fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }
@@ -220,6 +228,8 @@ export type InitializeVaultAsyncInput<
   protocolCaps: InitializeVaultInstructionDataArgs["protocolCaps"];
   observeOnly: InitializeVaultInstructionDataArgs["observeOnly"];
   operatingHours: InitializeVaultInstructionDataArgs["operatingHours"];
+  autoPromoteGrays: InitializeVaultInstructionDataArgs["autoPromoteGrays"];
+  autoRevokeThreshold: InitializeVaultInstructionDataArgs["autoRevokeThreshold"];
   previewDigest: InitializeVaultInstructionDataArgs["previewDigest"];
 };
 
@@ -389,6 +399,8 @@ export type InitializeVaultInput<
   protocolCaps: InitializeVaultInstructionDataArgs["protocolCaps"];
   observeOnly: InitializeVaultInstructionDataArgs["observeOnly"];
   operatingHours: InitializeVaultInstructionDataArgs["operatingHours"];
+  autoPromoteGrays: InitializeVaultInstructionDataArgs["autoPromoteGrays"];
+  autoRevokeThreshold: InitializeVaultInstructionDataArgs["autoRevokeThreshold"];
   previewDigest: InitializeVaultInstructionDataArgs["previewDigest"];
 };
 

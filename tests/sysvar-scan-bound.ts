@@ -163,6 +163,8 @@ describe("sysvar-scan-bound (M11 / SIMD-0296 pad-attack guard)", () => {
           [],
           false, // observeOnly (Phase 2 TA-19)
           0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           initVaultPreviewDigest({
             dailySpendingCapUsd: new BN(500_000_000),
             maxTransactionSizeUsd: new BN(100_000_000),
@@ -172,6 +174,8 @@ describe("sysvar-scan-bound (M11 / SIMD-0296 pad-attack guard)", () => {
             allowedDestinations: [],
             timelockDuration: new BN(1800),
             operatingHours: 0x00FFFFFF,
+            autoPromoteGrays: false,
+            autoRevokeThreshold: 5,
           }),
         )
       .accounts({

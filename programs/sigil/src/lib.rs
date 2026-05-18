@@ -38,6 +38,8 @@ pub mod sigil {
         protocol_caps: Vec<u64>,
         observe_only: bool,
         operating_hours: u32,
+        auto_promote_grays: bool,
+        auto_revoke_threshold: u8,
         preview_digest: [u8; 32],
     ) -> Result<()> {
         instructions::initialize_vault::handler(
@@ -54,6 +56,8 @@ pub mod sigil {
             protocol_caps,
             observe_only,
             operating_hours,
+            auto_promote_grays,
+            auto_revoke_threshold,
             preview_digest,
         )
     }
@@ -355,6 +359,22 @@ pub mod sigil {
     /// Only the owner can call this.
     pub fn unpause_agent(ctx: Context<UnpauseAgent>, agent_to_unpause: Pubkey) -> Result<()> {
         instructions::unpause_agent::handler(ctx, agent_to_unpause)
+    }
+
+    /// TA-07 (Phase 3): owner-only fast-track promotion of a destination
+    /// out of the 24h graylist window. The destination must already be on
+    /// the allowlist (otherwise rejected as DestinationNotAllowed). Sets
+    /// the entry's `unlock_unix` to `clock.unix_timestamp` so spending
+    /// paths accept it immediately.
+    ///
+    /// No timelock. Promotion is a strict subset of the already-signed
+    /// allowlist authorisation; the owner pays a friction cost by
+    /// default but can opt out per-destination.
+    pub fn promote_graylist_destination(
+        ctx: Context<PromoteGraylistDestination>,
+        destination: Pubkey,
+    ) -> Result<()> {
+        instructions::promote_graylist_destination::handler(ctx, destination)
     }
 
     /// F-12 audit fix: direct owner-only flip of `vault.observe_only`.

@@ -211,6 +211,12 @@ pub fn handler(
         created_at_slot: policy.created_at_slot,
         // TA-05 (Phase 3): merged-effective operating_hours bound by TA-19.
         operating_hours: eff_operating_hours,
+        // TA-07/17 (Phase 3): auto_promote_grays + auto_revoke_threshold are
+        // not mutated by queue_policy_update in V1 — V2 may expose
+        // dedicated set ix. Read live policy so the digest matches the
+        // owner's signed digest when the owner didn't intend to change them.
+        auto_promote_grays: policy.auto_promote_grays,
+        auto_revoke_threshold: policy.auto_revoke_threshold,
     });
     require!(
         recomputed_digest == new_policy_preview_digest,

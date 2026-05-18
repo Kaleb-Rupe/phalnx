@@ -136,6 +136,23 @@ export interface CreateVaultOptions {
    * vaults should pass an explicit mask (e.g. `0x0001E000` for 13-17 UTC).
    */
   operatingHours?: number;
+  /**
+   * TA-07 (Phase 3): if true, NEW destinations added via
+   * queue_policy_update skip the 24h graylist friction. Default false —
+   * the owner pays the friction cost by default. Bound by TA-19 at
+   * canonical digest position 16.
+   */
+  autoPromoteGrays?: boolean;
+  /**
+   * TA-17 (Phase 3): consecutive-failure threshold after which an
+   * agent's capability is auto-revoked. Range 3..=20 (on-chain reject
+   * out-of-range with `InvalidPermissions`). Default 5.
+   *
+   * Only on-chain policy-violation codes 6083-6100 count — external
+   * causes (CU exhaustion, nonce desync, auth) do NOT increment.
+   * Bound by TA-19 at canonical digest position 17.
+   */
+  autoRevokeThreshold?: number;
 }
 
 export interface CreateVaultResult {
@@ -318,6 +335,11 @@ export async function createVault(
     // narrow. Owner-facing config surface for narrowing lives at the
     // dashboard-side mutation (not exposed via createVault yet).
     operatingHours: options.operatingHours ?? 0x00ffffff,
+    // TA-07 (Phase 3): default to enforce 24h friction (auto_promote off).
+    autoPromoteGrays: options.autoPromoteGrays ?? false,
+    // TA-17 (Phase 3): default auto-revoke threshold of 5 — matches the
+    // on-chain default constant. Range 3..=20 enforced by the handler.
+    autoRevokeThreshold: options.autoRevokeThreshold ?? 5,
   });
 
   const initializeVaultIx = await getInitializeVaultInstructionAsync({
@@ -336,6 +358,8 @@ export async function createVault(
     protocolCaps,
     observeOnly,
     operatingHours: options.operatingHours ?? 0x00ffffff,
+    autoPromoteGrays: options.autoPromoteGrays ?? false,
+    autoRevokeThreshold: options.autoRevokeThreshold ?? 5,
     previewDigest,
   });
 

@@ -34,6 +34,8 @@
  *   13. has_post_assertions: u8 (1 byte)
  *   14. created_at_slot: u64 LE (8 bytes) — PEN-CROSS-2 (Phase 2 close-up)
  *   15. operating_hours: u32 LE (4 bytes) — TA-05 (Phase 3 pre-exec)
+ *   16. auto_promote_grays: bool as 1 byte (0/1) — TA-07 (Phase 3 pre-exec)
+ *   17. auto_revoke_threshold: u8 (1 byte) — TA-17 (Phase 3 pre-exec)
  *
  * Phase 3 append-only additions (TA-05/07/17): operating_hours,
  * auto_promote_grays, auto_revoke_threshold are appended at positions 15-17
@@ -104,6 +106,20 @@ export interface PolicyPreviewFields {
    * of the canonical encoding.
    */
   operatingHours?: number;
+  /**
+   * TA-07 (Phase 3): owner-side toggle to bypass the 24h graylist friction
+   * for newly-added destinations. Default false (friction enforced).
+   * Bound by TA-19 at canonical position 16 so silent flips can't change
+   * the friction model.
+   */
+  autoPromoteGrays?: boolean;
+  /**
+   * TA-17 (Phase 3): consecutive-failure threshold for agent auto-revoke.
+   * Range 3..=20. Default 0 (legacy callers — but on-chain handler now
+   * requires this to be in [3, 20] at policy-write time). Bound at
+   * canonical position 17.
+   */
+  autoRevokeThreshold?: number;
 }
 
 // ── Base58 decode (no external dep) ──────────────────────────────────────────
@@ -213,7 +229,9 @@ export function computePolicyPreviewDigest(
     1 + // has_constraints
     1 + // has_post_assertions
     8 + // created_at_slot (PEN-CROSS-2)
-    4; // operating_hours (TA-05 Phase 3)
+    4 + // operating_hours (TA-05 Phase 3)
+    1 + // auto_promote_grays (TA-07 Phase 3)
+    1; // auto_revoke_threshold (TA-17 Phase 3)
   const variableSize = protoBytes.length * 32 + destBytes.length * 32;
   const buf = new Uint8Array(fixedSize + variableSize);
   const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
@@ -247,6 +265,10 @@ export function computePolicyPreviewDigest(
   // Default 0 when omitted by legacy callers; production SDK consumers
   // should pass 0xFFFFFF explicitly via `initializeVault`/`queuePolicyUpdate`.
   off = writeU32Le(view, off, fields.operatingHours ?? 0);
+  // TA-07 (Phase 3): auto_promote_grays at position 16.
+  buf[off++] = fields.autoPromoteGrays ? 1 : 0;
+  // TA-17 (Phase 3): auto_revoke_threshold at position 17.
+  buf[off++] = fields.autoRevokeThreshold ?? 0;
 
   // Defensive: assert we wrote exactly what we sized
   if (off !== buf.length) {

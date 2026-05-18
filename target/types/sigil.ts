@@ -2744,6 +2744,14 @@ export type Sigil = {
           "type": "u32"
         },
         {
+          "name": "autoPromoteGrays",
+          "type": "bool"
+        },
+        {
+          "name": "autoRevokeThreshold",
+          "type": "u8"
+        },
+        {
           "name": "previewDigest",
           "type": {
             "array": [
@@ -2809,6 +2817,97 @@ export type Sigil = {
       "args": [
         {
           "name": "agentToPause",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "promoteGraylistDestination",
+      "docs": [
+        "TA-07 (Phase 3): owner-only fast-track promotion of a destination",
+        "out of the 24h graylist window. The destination must already be on",
+        "the allowlist (otherwise rejected as DestinationNotAllowed). Sets",
+        "the entry's `unlock_unix` to `clock.unix_timestamp` so spending",
+        "paths accept it immediately.",
+        "",
+        "No timelock. Promotion is a strict subset of the already-signed",
+        "allowlist authorisation; the owner pays a friction cost by",
+        "default but can opt out per-destination."
+      ],
+      "discriminator": [
+        227,
+        87,
+        73,
+        141,
+        202,
+        251,
+        202,
+        228
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "vault.vault_id",
+                "account": "agentVault"
+              }
+            ]
+          },
+          "relations": [
+            "policy"
+          ]
+        },
+        {
+          "name": "policy",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "destination",
           "type": "pubkey"
         }
       ]
@@ -4446,6 +4545,19 @@ export type Sigil = {
       ]
     },
     {
+      "name": "agentAutoRevoked",
+      "discriminator": [
+        13,
+        133,
+        66,
+        153,
+        126,
+        96,
+        191,
+        221
+      ]
+    },
+    {
       "name": "agentPausedEvent",
       "discriminator": [
         39,
@@ -4690,6 +4802,32 @@ export type Sigil = {
         92,
         11,
         118
+      ]
+    },
+    {
+      "name": "graylistEntered",
+      "discriminator": [
+        71,
+        189,
+        127,
+        11,
+        219,
+        84,
+        46,
+        219
+      ]
+    },
+    {
+      "name": "graylistPromoted",
+      "discriminator": [
+        169,
+        36,
+        32,
+        86,
+        203,
+        34,
+        0,
+        36
       ]
     },
     {
@@ -5478,6 +5616,39 @@ export type Sigil = {
           {
             "name": "delegated",
             "type": "bool"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "agentAutoRevoked",
+      "docs": [
+        "TA-17 (Phase 3): an agent's capability was auto-revoked after",
+        "`consecutive_failures >= policy.auto_revoke_threshold` policy-violation",
+        "failures. Owner re-enables via `queue_agent_permissions_update`."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "agent",
+            "type": "pubkey"
+          },
+          {
+            "name": "threshold",
+            "type": "u8"
+          },
+          {
+            "name": "consecutiveFailures",
+            "type": "u8"
           },
           {
             "name": "timestamp",
@@ -6435,6 +6606,34 @@ export type Sigil = {
       }
     },
     {
+      "name": "destinationGraylistEntry",
+      "docs": [
+        "TA-07 (Phase 3): one entry in `PolicyConfig.destination_graylist`.",
+        "",
+        "`destination` is the wallet/PDA pubkey whose ATAs are being graylisted",
+        "(matches the entry in `allowed_destinations`). `unlock_unix` is the",
+        "Unix timestamp at which the destination becomes spendable without",
+        "the owner having to promote it.",
+        "",
+        "Layout: 32 + 8 = 40 bytes per entry. Bounded ≤MAX_ALLOWED_DESTINATIONS",
+        "(10) so the worst-case Vec contribution to PolicyConfig SIZE is",
+        "`4 + 40*10 = 404` bytes."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "destination",
+            "type": "pubkey"
+          },
+          {
+            "name": "unlockUnix",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
       "name": "discriminatorFormat",
       "docs": [
         "Discriminator format for the first DataConstraint in a ConstraintEntry.",
@@ -6582,6 +6781,68 @@ export type Sigil = {
           {
             "name": "destination",
             "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "graylistEntered",
+      "docs": [
+        "TA-07 (Phase 3): a destination entered the graylist with a 24h unlock",
+        "(or `unlock_unix == now` if `auto_promote_grays` was true). Emitted",
+        "from `apply_pending_policy` when allowed_destinations gains a new entry."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "destination",
+            "type": "pubkey"
+          },
+          {
+            "name": "unlockUnix",
+            "type": "i64"
+          },
+          {
+            "name": "autoPromoted",
+            "type": "bool"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "graylistPromoted",
+      "docs": [
+        "TA-07 (Phase 3): owner promoted a destination out of the graylist via",
+        "`promote_graylist_destination`. `promoted = false` when the destination",
+        "was already past unlock (no-op promotion — still emitted for audit)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "destination",
+            "type": "pubkey"
+          },
+          {
+            "name": "promoted",
+            "type": "bool"
           },
           {
             "name": "timestamp",
@@ -7449,6 +7710,70 @@ export type Sigil = {
               "APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability."
             ],
             "type": "u32"
+          },
+          {
+            "name": "destinationGraylist",
+            "docs": [
+              "TA-07 (Phase 3 pre-execution guard #4): first-time-destination",
+              "24-hour graylist friction. When a NEW destination is added to",
+              "`allowed_destinations` (via queue_policy_update), it enters this",
+              "graylist with `unlock_unix = now + 86400` (24h). Until either",
+              "(a) the unlock time elapses OR (b) the owner calls",
+              "`promote_graylist_destination` to fast-track, spending paths",
+              "reject any tx routing value to that destination with",
+              "`ErrGraylistFriction` (6086).",
+              "",
+              "Tuple is `(destination_pubkey, unlock_unix)`. Bounded ≤10 entries",
+              "(max_destinations). When full, additional allowlist adds reject",
+              "with `ErrGraylistFull` (6087) until an existing entry unlocks or",
+              "is promoted.",
+              "",
+              "DESIGN: graylist entries are derived/ephemeral state — the owner's",
+              "signed digest already binds the allowlist (canonical position 8),",
+              "and graylist friction only delays an already-authorised destination.",
+              "Therefore the graylist itself is NOT in the canonical digest",
+              "encoding. Promoting accelerates the unlock but cannot widen the",
+              "allowlist beyond what the owner signed.",
+              "",
+              "APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability."
+            ],
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "destinationGraylistEntry"
+                }
+              }
+            }
+          },
+          {
+            "name": "autoPromoteGrays",
+            "docs": [
+              "TA-07 (Phase 3): if true, new destinations added to the allowlist",
+              "skip the 24h graylist entirely (audit trail still recorded via",
+              "emitted events). Bound by TA-19 at canonical digest position 16",
+              "so the owner's choice to bypass friction is part of the signed",
+              "configuration — not silently flipped.",
+              "",
+              "Default false. APPENDED at end per F-14 APPEND-ONLY rule."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "autoRevokeThreshold",
+            "docs": [
+              "TA-17 (Phase 3 pre-execution guard #7): consecutive-failure",
+              "threshold after which an agent's capability is auto-revoked.",
+              "Owner-configurable in range 3..=20; out-of-range values rejected",
+              "at policy-write time with `InvalidPermissions`. Default 5.",
+              "",
+              "Only on-chain policy-violation codes (6083-6100) count — see",
+              "`POLICY_VIOLATION_RANGE` in finalize_session. External codes",
+              "(CU exhaustion, nonce desync, auth) do NOT increment.",
+              "",
+              "Bound by TA-19 at canonical digest position 17. APPENDED per",
+              "F-14 APPEND-ONLY rule."
+            ],
+            "type": "u8"
           }
         ]
       }

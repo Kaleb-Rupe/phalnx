@@ -24,6 +24,8 @@
 //! 13. `has_post_assertions: u8`      (1 byte)
 //! 14. `created_at_slot: u64`         (8 bytes, LE) — PEN-CROSS-2 (Phase 2 close-up)
 //! 15. `operating_hours: u32`         (4 bytes, LE) — TA-05 (Phase 3 pre-exec)
+//! 16. `auto_promote_grays: bool`     (1 byte, 0/1)  — TA-07 (Phase 3 pre-exec)
+//! 17. `auto_revoke_threshold: u8`    (1 byte)       — TA-17 (Phase 3 pre-exec)
 //!
 //! Phase 3 append-only additions (TA-05/07/17): the three new policy-owned
 //! fields are appended at positions 15-17 to preserve the existing 14-field
@@ -39,7 +41,9 @@
 //! cannot widen the allowlist. So including the graylist would force the
 //! owner to re-sign the digest on every unlock-time advancement, which is
 //! ephemeral noise. The allowlist (position 8) carries the load-bearing
-//! authorisation; the graylist is unsigned friction.
+//! authorisation; the graylist is unsigned friction. By contrast,
+//! `auto_promote_grays` IS in the digest: the owner's CHOICE to bypass
+//! friction is configuration, not ephemeral state.
 
 use anchor_lang::prelude::*;
 // Note: `anchor_lang::solana_program::hash` is NOT re-exported in Anchor 0.32.1.
@@ -80,6 +84,15 @@ pub struct PolicyPreviewFields<'a> {
     /// mask. Upper 8 bits (24..=31) MUST be zero — handler rejects with
     /// `ErrOutsideOperatingHours` if violated.
     pub operating_hours: u32,
+    /// TA-07 (Phase 3): owner's "skip 24h graylist friction" toggle. The
+    /// graylist Vec itself is NOT in the digest (derived/ephemeral, gated
+    /// by the already-bound allowlist at position 8), but the owner's
+    /// CHOICE to bypass it IS — silent flips can't change the friction
+    /// model. Bound at position 16.
+    pub auto_promote_grays: bool,
+    /// TA-17 (Phase 3): consecutive-failure threshold for auto-revoke.
+    /// Range 3..=20 enforced at policy-write time. Bound at position 17.
+    pub auto_revoke_threshold: u8,
 }
 
 /// SHA-256 over the canonical Borsh encoding of the preview fields.
@@ -129,6 +142,10 @@ pub fn compute_policy_preview_digest(fields: &PolicyPreviewFields<'_>) -> [u8; 3
     buf.extend_from_slice(&fields.created_at_slot.to_le_bytes());
     // 15. operating_hours: u32 LE — TA-05 (Phase 3 pre-exec)
     buf.extend_from_slice(&fields.operating_hours.to_le_bytes());
+    // 16. auto_promote_grays: bool as 1 byte (0/1) — TA-07 (Phase 3 pre-exec)
+    buf.push(u8::from(fields.auto_promote_grays));
+    // 17. auto_revoke_threshold: u8 — TA-17 (Phase 3 pre-exec)
+    buf.push(fields.auto_revoke_threshold);
 
     hashv(&[&buf]).to_bytes()
 }
@@ -161,6 +178,8 @@ mod tests {
             has_post_assertions: 0,
             created_at_slot: 0,
             operating_hours: 0,
+            auto_promote_grays: false,
+            auto_revoke_threshold: 0,
         };
         let d1 = compute_policy_preview_digest(&f);
         let d2 = compute_policy_preview_digest(&f);
@@ -187,6 +206,8 @@ mod tests {
             has_post_assertions: 0,
             created_at_slot: 0,
             operating_hours: 0,
+            auto_promote_grays: false,
+            auto_revoke_threshold: 0,
         };
         let mut flipped = base.daily_spending_cap_usd;
         let _ = &mut flipped; // suppress unused
@@ -222,6 +243,8 @@ mod tests {
             has_post_assertions: 0,
             created_at_slot: 0,
             operating_hours: 0,
+            auto_promote_grays: false,
+            auto_revoke_threshold: 0,
         };
         let f2 = PolicyPreviewFields {
             protocols: &b,
@@ -256,6 +279,8 @@ mod tests {
             has_post_assertions: 0,
             created_at_slot: 12345,
             operating_hours: 0x00FFFFFF,
+            auto_promote_grays: false,
+            auto_revoke_threshold: 0,
         };
         let narrow = PolicyPreviewFields {
             // 13:00-17:00 UTC = bits 13..17 = 0x1E000
@@ -267,6 +292,81 @@ mod tests {
         assert_ne!(
             d_base, d_narrow,
             "operating_hours flip MUST change digest"
+        );
+    }
+
+    /// TA-07 (Phase 3): flipping auto_promote_grays MUST change the digest.
+    /// The owner's CHOICE to bypass graylist friction is bound by TA-19 —
+    /// silent flips can't change the friction model.
+    #[test]
+    fn digest_changes_on_auto_promote_grays_flip() {
+        let protocols = [pk(1)];
+        let dests = [pk(10)];
+        let base = PolicyPreviewFields {
+            daily_spending_cap_usd: 500_000_000,
+            max_transaction_size_usd: 100_000_000,
+            max_slippage_bps: 100,
+            developer_fee_rate: 0,
+            protocol_mode: 1,
+            protocols: &protocols,
+            destination_mode: 0,
+            allowed_destinations: &dests,
+            timelock_duration: 1800,
+            session_expiry_seconds: 30,
+            observe_only: false,
+            has_constraints: false,
+            has_post_assertions: 0,
+            created_at_slot: 12345,
+            operating_hours: 0x00FFFFFF,
+            auto_promote_grays: false,
+            auto_revoke_threshold: 5,
+        };
+        let flipped = PolicyPreviewFields {
+            auto_promote_grays: true,
+            ..base
+        };
+        let d_base = compute_policy_preview_digest(&base);
+        let d_flip = compute_policy_preview_digest(&flipped);
+        assert_ne!(
+            d_base, d_flip,
+            "auto_promote_grays flip MUST change digest"
+        );
+    }
+
+    /// TA-17 (Phase 3): auto_revoke_threshold is bound by the digest. A
+    /// threshold of 3 vs 20 produces distinct digests.
+    #[test]
+    fn digest_changes_on_auto_revoke_threshold_flip() {
+        let protocols = [pk(1)];
+        let dests = [pk(10)];
+        let base = PolicyPreviewFields {
+            daily_spending_cap_usd: 500_000_000,
+            max_transaction_size_usd: 100_000_000,
+            max_slippage_bps: 100,
+            developer_fee_rate: 0,
+            protocol_mode: 1,
+            protocols: &protocols,
+            destination_mode: 0,
+            allowed_destinations: &dests,
+            timelock_duration: 1800,
+            session_expiry_seconds: 30,
+            observe_only: false,
+            has_constraints: false,
+            has_post_assertions: 0,
+            created_at_slot: 12345,
+            operating_hours: 0x00FFFFFF,
+            auto_promote_grays: false,
+            auto_revoke_threshold: 5,
+        };
+        let lower = PolicyPreviewFields {
+            auto_revoke_threshold: 3,
+            ..base
+        };
+        let d_base = compute_policy_preview_digest(&base);
+        let d_lower = compute_policy_preview_digest(&lower);
+        assert_ne!(
+            d_base, d_lower,
+            "auto_revoke_threshold flip MUST change digest"
         );
     }
 
@@ -292,6 +392,9 @@ mod tests {
             // Minimal fixture uses operating_hours=0 (no hours enabled — an
             // inert configuration, but the bytes are deterministic).
             operating_hours: 0,
+            // TA-07/17 minimal pins: both zero.
+            auto_promote_grays: false,
+            auto_revoke_threshold: 0,
         };
         // Encoding: 8 zero + 8 zero + 2 zero + 2 zero (developer_fee_rate)
         //   + 0x01 + 4 zero + 0x00 + 4 zero + 8 zero + 8 zero + 0 + 0 + 0
@@ -308,12 +411,14 @@ mod tests {
         //     0ad67bf0d81b972c60abe82ebea425d4b30d0ef910bcc7b76584fae36a0f1252
         //   Post-PEN-CROSS-2 (pre-TA-05):
         //     63974a2661afc539fc8f1e55245adcef9e3b91f82a191c757ed3c795e8e59148
-        // TA-05 appends 4 bytes (operating_hours=0) at position 15 and shifts
-        // the encoding to the digest below.
+        //   Post-TA-05 (pre-TA-07/17):
+        //     f48fb07695e4b5da504654ad5281f0d39e9fcff6fa9cde64a463f1d8a8471322
+        // TA-07/17 (Phase 3) appends 2 more bytes (auto_promote_grays=0,
+        // auto_revoke_threshold=0) at positions 16-17. New digest below.
         let expected: [u8; 32] = [
-            0xf4, 0x8f, 0xb0, 0x76, 0x95, 0xe4, 0xb5, 0xda, 0x50, 0x46, 0x54, 0xad, 0x52, 0x81,
-            0xf0, 0xd3, 0x9e, 0x9f, 0xcf, 0xf6, 0xfa, 0x9c, 0xde, 0x64, 0xa4, 0x63, 0xf1, 0xd8,
-            0xa8, 0x47, 0x13, 0x22,
+            0xee, 0xc4, 0x23, 0x0c, 0xd5, 0x2f, 0x7f, 0x56, 0x7e, 0x06, 0xe9, 0xb1, 0x97, 0xa0,
+            0xda, 0xcd, 0xc3, 0x95, 0x58, 0x08, 0xd1, 0xa5, 0xa2, 0x56, 0xd5, 0x97, 0x5a, 0x4a,
+            0xc1, 0x17, 0x7b, 0xeb,
         ];
         assert_eq!(
             digest, expected,
@@ -349,6 +454,11 @@ mod tests {
             // (all 24h) so the test exercises a representative production
             // value rather than the inert 0.
             operating_hours: 0x00FFFFFF,
+            // TA-07: realistic fixture pins auto_promote_grays=false
+            // (default — owner did not opt out of friction).
+            auto_promote_grays: false,
+            // TA-17: realistic fixture pins the default threshold of 5.
+            auto_revoke_threshold: 5,
         };
         let digest = compute_policy_preview_digest(&f);
         // Prior digests:
@@ -358,12 +468,14 @@ mod tests {
         //     ed9ac12d21e0f03933bbf789eae99944c311f2ff6f1baff992058307174de316
         //   Post-PEN-CROSS-2 (pre-TA-05):
         //     ac54284579f4b8afd714b290ec22df745bddbede9a5b366f17c8db776fab53c7
-        // TA-05 appends 4 bytes (operating_hours=0x00FFFFFF) at position 15
-        // and forces the new known-good digest below.
+        //   Post-TA-05 (pre-TA-07/17):
+        //     af3990ea433e3de25baa05627f9a38ab497dffcba1e202aac99343b1de9cfc8c
+        // TA-07/17 (Phase 3) appends 2 more bytes (auto_promote_grays=0,
+        // auto_revoke_threshold=5) at positions 16-17. New digest below.
         let expected: [u8; 32] = [
-            0xaf, 0x39, 0x90, 0xea, 0x43, 0x3e, 0x3d, 0xe2, 0x5b, 0xaa, 0x05, 0x62, 0x7f, 0x9a,
-            0x38, 0xab, 0x49, 0x7d, 0xff, 0xcb, 0xa1, 0xe2, 0x02, 0xaa, 0xc9, 0x93, 0x43, 0xb1,
-            0xde, 0x9c, 0xfc, 0x8c,
+            0x35, 0xed, 0x9a, 0x9f, 0x97, 0xb0, 0xfa, 0x21, 0xca, 0x58, 0x1b, 0xd4, 0x5f, 0x11,
+            0xb2, 0x8c, 0x29, 0x32, 0x52, 0x51, 0x01, 0xe9, 0xbe, 0x06, 0x3c, 0xc0, 0xd2, 0xf6,
+            0xbe, 0xbc, 0x3c, 0x48,
         ];
         assert_eq!(
             digest, expected,
