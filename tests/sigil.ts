@@ -5798,6 +5798,12 @@ describe("sigil", () => {
     const protocolA = Keypair.generate().publicKey;
     const protocolB = Keypair.generate().publicKey;
     const protoCapVaultId = new BN(900);
+    // G3a audit fix (§RP-2 2026-05-18 HIGH-1): protocol_caps weakening
+    // (any cap → 0, or any cap raised, or has_protocol_caps → false) is
+    // now classified as an elevated mutation by queue_policy_update. The
+    // tests in this describe exercise documented "0 = unlimited" semantics
+    // and master-switch disable — both weakenings that now require cosign.
+    const protoCapCosigner = Keypair.generate();
     let pcVault: PublicKey;
     let pcPolicy: PublicKey;
     let pcTracker: PublicKey;
@@ -5998,7 +6004,10 @@ describe("sigil", () => {
         program.programId,
       );
 
-      // Update protocolA cap to 0 (unlimited)
+      // Update protocolA cap to 0 (unlimited).
+      // G3a audit fix (§RP-2 2026-05-18 HIGH-1): live cap = 100_000_000;
+      // proposing 0 disables enforcement for protocolA → ELEVATED weakening,
+      // TA-09 cosign required.
       await program.methods
         .queuePolicyUpdate(null,
           null,
@@ -6015,7 +6024,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
-          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
+          protoCapCosigner.publicKey, // cosign_session (TA-09 — ELEVATED, weakens_protocol_caps)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -6025,7 +6034,10 @@ describe("sigil", () => {
           pendingPolicy: pcPendingPda,
           systemProgram: SystemProgram.programId,
         } as any)
-        .signers([protoCapOwner])
+        .remainingAccounts([
+          { pubkey: protoCapCosigner.publicKey, isSigner: true, isWritable: false },
+        ])
+        .signers([protoCapOwner, protoCapCosigner])
         .rpc();
 
       advanceTime(svm, 1801);
@@ -6045,7 +6057,10 @@ describe("sigil", () => {
       // Now spend any amount on protocolA — should succeed (cap=0 means unlimited)
       await composeSpend(protocolA, new BN(200_000_000));
 
-      // Restore caps
+      // Restore caps.
+      // G3a (§RP-2): protocolA cap moves from 0 (unlimited live) to 100_000_000
+      // — that's a TIGHTENING (live=0 means already unlimited, no weakening
+      // possible). Non-elevated, no cosign needed.
       await program.methods
         .queuePolicyUpdate(null,
           null,
@@ -6062,7 +6077,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
-          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated, tightening)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -6104,7 +6119,9 @@ describe("sigil", () => {
         program.programId,
       );
 
-      // Disable per-protocol caps
+      // Disable per-protocol caps.
+      // G3a audit fix (§RP-2 2026-05-18 HIGH-1): has_protocol_caps: false
+      // disables the master switch → ELEVATED weakening, TA-09 cosign required.
       await program.methods
         .queuePolicyUpdate(null,
           null,
@@ -6121,7 +6138,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
-          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
+          protoCapCosigner.publicKey, // cosign_session (TA-09 — ELEVATED, weakens_protocol_caps via has_protocol_caps=false)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -6131,7 +6148,10 @@ describe("sigil", () => {
           pendingPolicy: pcPendingPda,
           systemProgram: SystemProgram.programId,
         } as any)
-        .signers([protoCapOwner])
+        .remainingAccounts([
+          { pubkey: protoCapCosigner.publicKey, isSigner: true, isWritable: false },
+        ])
+        .signers([protoCapOwner, protoCapCosigner])
         .rpc();
 
       advanceTime(svm, 1801);
@@ -6151,7 +6171,11 @@ describe("sigil", () => {
       // Even though we spent near cap on protocolA, with caps disabled it should succeed
       await composeSpend(protocolA, new BN(200_000_000));
 
-      // Re-enable caps for next test
+      // Re-enable caps for next test.
+      // G3a (§RP-2): has_protocol_caps: true (live=false) is NOT a weakening
+      // (the predicate triggers only on `has_protocol_caps: false`). The new
+      // protocol_caps [100M, 200M] vs live [] (cleared) — live_cap=0 at every
+      // index → unlimited → no weakening. Non-elevated, no cosign needed.
       await program.methods
         .queuePolicyUpdate(null,
           null,
@@ -6168,7 +6192,7 @@ describe("sigil", () => {
           null, // operating_hours (TA-05 Phase 3)
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
-          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated, tightening)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -6334,6 +6358,10 @@ describe("sigil", () => {
     const jupiterProtocol = Keypair.generate().publicKey;
     const driftProtocol = Keypair.generate().publicKey;
     const ta13VaultId = new BN(913);
+    // G3a audit fix (§RP-2 2026-05-18 HIGH-1): see protoCapCosigner above.
+    // S3 disables has_protocol_caps; S5 sets a per-protocol cap to 0 —
+    // both weakenings that require cosign under TA-09.
+    const ta13Cosigner = Keypair.generate();
     let ta13Vault: PublicKey;
     let ta13Policy: PublicKey;
     let ta13Tracker: PublicKey;
@@ -6512,14 +6540,16 @@ describe("sigil", () => {
     // global headroom remaining ($1000 - $500 - $499 = $1).
     it("scenario 3: has_protocol_caps=false (legacy mode) — only global cap enforced", async () => {
       // Disable per-protocol caps via queue+apply.
+      // G3a audit fix (§RP-2 2026-05-18 HIGH-1): has_protocol_caps: false
+      // disables the master switch → ELEVATED weakening, TA-09 cosign required.
       await program.methods
         .queuePolicyUpdate(
           null, null, null, null, null, null, null, null, null,
-          false, // has_protocol_caps = false
+          false, // has_protocol_caps = false (master-switch disable → elevated)
           null, null, null,
           null, // stable_balance_floor (TA-12 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 — pass-through)
-          PublicKey.default,
+          ta13Cosigner.publicKey, // cosign_session (TA-09 — ELEVATED, weakens_protocol_caps)
           await fetchAndComputeQueueDigest(program, ta13Policy, ta13Vault, {}),
         )
         .accounts({
@@ -6529,7 +6559,10 @@ describe("sigil", () => {
           pendingPolicy: ta13PendingPda,
           systemProgram: SystemProgram.programId,
         } as any)
-        .signers([ta13Owner])
+        .remainingAccounts([
+          { pubkey: ta13Cosigner.publicKey, isSigner: true, isWritable: false },
+        ])
+        .signers([ta13Owner, ta13Cosigner])
         .rpc();
       advanceTime(svm, 1801);
       await program.methods
@@ -6607,6 +6640,9 @@ describe("sigil", () => {
     // from the allowlist (which `is_protocol_allowed` rejects at validate).
     it("scenario 5: cap=$0 for a specific protocol → unlimited (documented behavior)", async () => {
       // Update Jupiter cap to $0 (unlimited per documented semantics).
+      // G3a audit fix (§RP-2 2026-05-18 HIGH-1): live Jupiter cap = 500_000_000;
+      // proposing 0 disables enforcement for Jupiter → ELEVATED weakening,
+      // TA-09 cosign required.
       await program.methods
         .queuePolicyUpdate(
           null, null, null, null, null, null, null, null, null,
@@ -6614,7 +6650,7 @@ describe("sigil", () => {
           [new BN(0), new BN(500_000_000)], // Jupiter cap = $0 (unlimited)
           null, null,
           null, null,
-          PublicKey.default,
+          ta13Cosigner.publicKey, // cosign_session (TA-09 — ELEVATED, weakens_protocol_caps)
           await fetchAndComputeQueueDigest(program, ta13Policy, ta13Vault, {}),
         )
         .accounts({
@@ -6624,7 +6660,10 @@ describe("sigil", () => {
           pendingPolicy: ta13PendingPda,
           systemProgram: SystemProgram.programId,
         } as any)
-        .signers([ta13Owner])
+        .remainingAccounts([
+          { pubkey: ta13Cosigner.publicKey, isSigner: true, isWritable: false },
+        ])
+        .signers([ta13Owner, ta13Cosigner])
         .rpc();
       advanceTime(svm, 1801);
       await program.methods
