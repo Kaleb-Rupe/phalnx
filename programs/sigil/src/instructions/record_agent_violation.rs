@@ -81,8 +81,8 @@ pub fn handler(
     // Filter the reported code by NUMERIC RANGE — string match would be
     // brittle. 6083-6100 = on-chain policy-violation codes (TA-03/05/06/
     // 07/08/09/17 + reserved for Phase 4+5 post-exec). External codes
-    // (CU exhaustion 6047, async-fulfillment 6048, auth 6000-6082) do
-    // NOT count.
+    // (sysvar-scan 6068 SysvarScanBoundExceeded, async-fulfillment 6069
+    // AsyncFulfillmentNotPermitted, auth 6000-6082) do NOT count.
     require!(
         is_policy_violation_code(error_code),
         SigilError::InvalidPermissions

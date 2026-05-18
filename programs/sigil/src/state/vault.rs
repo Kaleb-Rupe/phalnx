@@ -28,7 +28,8 @@ pub struct AgentEntry {
     /// set to CAPABILITY_DISABLED and an `AgentAutoRevoked` event is
     /// emitted. Owner re-enables via `queue_agent_permissions_update`.
     ///
-    /// External codes (CU exhaustion 6047, nonce desync 6048, auth
+    /// External codes (sysvar-scan 6068 SysvarScanBoundExceeded,
+    /// async-fulfillment 6069 AsyncFulfillmentNotPermitted, auth
     /// errors 6000-6082) do NOT increment — they're not the agent's
     /// fault and auto-revoking on them would let an attacker brick
     /// a working agent.

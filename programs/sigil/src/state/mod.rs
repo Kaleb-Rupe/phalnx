@@ -139,8 +139,8 @@ pub const AUTO_REVOKE_THRESHOLD_DEFAULT: u8 = 5;
 ///   - 6091-6100 reserved for Phase 4 + Phase 5 post-exec assertions
 ///
 /// EXCLUDED:
-///   - 6047 SysvarScanBoundExceeded (CU exhaustion / external pad attack)
-///   - 6048 AsyncFulfillmentNotPermitted (external program-id quirk)
+///   - 6068 SysvarScanBoundExceeded (CU exhaustion / external pad attack)
+///   - 6069 AsyncFulfillmentNotPermitted (external program-id quirk)
 ///   - 6000-6082 auth / init / wrapping errors (not policy violations;
 ///     auto-revoking on UnauthorizedOwner 6002 would let an attacker
 ///     brick a working agent by spamming wrong-key seal attempts)
@@ -369,17 +369,18 @@ mod ta17_policy_violation_filter_tests {
         }
     }
 
-    /// TA-17: CU exhaustion (6047) is NOT a policy violation — external.
+    /// TA-17: SysvarScanBoundExceeded (6068) is NOT a policy violation —
+    /// CU-exhaustion / external pad attack.
     #[test]
     fn policy_violation_rejects_cu_exhaustion() {
-        assert!(!is_policy_violation_code(6047));
+        assert!(!is_policy_violation_code(6068));
     }
 
-    /// TA-17: AsyncFulfillment (6048) is NOT a policy violation — external
-    /// program-id quirk.
+    /// TA-17: AsyncFulfillmentNotPermitted (6069) is NOT a policy violation
+    /// — external program-id quirk.
     #[test]
     fn policy_violation_rejects_async_fulfillment() {
-        assert!(!is_policy_violation_code(6048));
+        assert!(!is_policy_violation_code(6069));
     }
 
     /// TA-17: UnauthorizedOwner (6002) is NOT a policy violation. Auto-
