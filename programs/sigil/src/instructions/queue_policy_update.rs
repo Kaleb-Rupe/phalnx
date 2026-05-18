@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 use crate::errors::SigilError;
 use crate::events::PolicyChangeQueued;
 use crate::state::*;
+use crate::utils::cosign_digest::{compute_cosign_digest, CosignDigestFields};
 use crate::utils::policy_digest::{compute_policy_preview_digest, PolicyPreviewFields};
 
 #[derive(Accounts)]
@@ -35,6 +36,20 @@ pub struct QueuePolicyUpdate<'info> {
     pub pending_policy: Account<'info, PendingPolicyUpdate>,
 
     pub system_program: Program<'info, System>,
+
+    // TA-09 (Phase 3): co-signing session is NOT a standalone account
+    // here — it's surfaced via the `cosign_session` IX ARG (Pubkey) +
+    // `ctx.remaining_accounts`. When elevated mutations are detected,
+    // the handler searches remaining_accounts for an entry matching
+    // the cosign_session pubkey arg AND with `is_signer == true`.
+    //
+    // Why this design instead of a typed Option<UncheckedAccount>:
+    // Anchor 0.32's optional-account marshalling (passing the program_id
+    // as a sentinel for None) interferes with downstream account ordering
+    // assumptions when the test client uses `cosignSession: null`. Using
+    // a plain remaining_accounts scan with an arg-bound pubkey gives a
+    // simpler, more deterministic interface that the LiteSVM + production
+    // SDK both produce identically.
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -53,6 +68,12 @@ pub fn handler(
     protocol_caps: Option<Vec<u64>>,
     destination_mode: Option<u8>,
     operating_hours: Option<u32>,
+    // TA-09 (Phase 3): the cosigning session pubkey. `Pubkey::default()`
+    // means "no cosign required" (non-elevated mutation). For elevated
+    // mutations the caller MUST pass a non-default pubkey AND include
+    // the corresponding signer in `remaining_accounts`. Owner cannot
+    // cosign themselves.
+    cosign_session: Pubkey,
     new_policy_preview_digest: [u8; 32],
 ) -> Result<()> {
     crate::reject_cpi!();
@@ -192,6 +213,91 @@ pub fn handler(
     let eff_has_constraints = policy.has_constraints;
     let eff_has_post_assertions = policy.has_post_assertions;
 
+    // ─── TA-09 (Phase 3): elevated mutation detection + cosign binding ─
+    //
+    // Definition of "elevated mutation" per HARDENED §6:
+    //   a) Raise daily_spending_cap_usd
+    //   b) Raise max_transaction_size_usd
+    //   c) Expand allowed_destinations (more entries OR different members)
+    //   d) Expand allowed_protocols (more entries OR different members)
+    //   e) Lower stable_balance_floor (Phase 5 — not yet implemented)
+    //   f) Toggle observe_only sequence (false→true→false) — observe_only
+    //      is mutated via dedicated `set_observe_only` ix, NOT this queue,
+    //      so the gate lives there (Phase 8 absorption — out of scope).
+    //
+    // "Raise" is detected via `Option::Some(new) > live`. "Expand" is
+    // detected via: new vec contains any pubkey NOT in live vec, OR new
+    // len > live len.
+    //
+    // If ANY elevated condition is true, the handler REQUIRES the cosign
+    // signer to be present + is_signer == true, and binds the
+    // cosign_digest to a sha256 over the canonical pending args + the
+    // cosign pubkey. Apply re-validates.
+    let raises_daily_cap = daily_spending_cap_usd
+        .is_some_and(|new| new > policy.daily_spending_cap_usd);
+    let raises_max_tx = max_transaction_amount_usd
+        .is_some_and(|new| new > policy.max_transaction_size_usd);
+    let expands_destinations = allowed_destinations.as_ref().is_some_and(|new| {
+        // Larger set, or any pubkey not in current list
+        new.len() > policy.allowed_destinations.len()
+            || new
+                .iter()
+                .any(|d| !policy.allowed_destinations.contains(d))
+    });
+    let expands_protocols = protocols.as_ref().is_some_and(|new| {
+        new.len() > policy.protocols.len()
+            || new.iter().any(|p| !policy.protocols.contains(p))
+    });
+
+    let is_elevated = raises_daily_cap
+        || raises_max_tx
+        || expands_destinations
+        || expands_protocols;
+
+    let (cosign_session_pubkey, cosign_digest_bound): (Pubkey, [u8; 32]) = if is_elevated {
+        // Elevated mutation: cosign_session MUST be a non-default pubkey.
+        require_keys_neq!(
+            cosign_session,
+            Pubkey::default(),
+            SigilError::ErrCosignRequired
+        );
+        // Cosign signer MUST be DISTINCT from the owner — otherwise the
+        // "two signers" gate collapses to a single one and cosign is
+        // ceremonial. (HARDENED D-2 — "any owner-signed session within
+        // validity window" — the owner using their own key would defeat
+        // the purpose.)
+        require_keys_neq!(
+            cosign_session,
+            ctx.accounts.owner.key(),
+            SigilError::ErrCosignRequired
+        );
+        // The corresponding signer MUST be present in remaining_accounts
+        // with `is_signer == true`. Solana enforces the signature; this
+        // handler validates presence.
+        let cosign_present = ctx.remaining_accounts.iter().any(|ai| {
+            ai.key == &cosign_session && ai.is_signer
+        });
+        require!(cosign_present, SigilError::ErrCosignRequired);
+
+        // Compute the cosign digest binding INSTRUCTION DATA HASH per
+        // HARDENED: "The session signature must cover the SAME
+        // instruction-data hash (sha256 of pending args) that the owner
+        // signed."
+        let digest = compute_cosign_digest(&CosignDigestFields {
+            cosign_session: &cosign_session,
+            daily_spending_cap_usd,
+            max_transaction_amount_usd,
+            allowed_destinations: allowed_destinations.as_deref(),
+            protocols: protocols.as_deref(),
+        });
+        (cosign_session, digest)
+    } else {
+        // Non-elevated: zero digest + default session pubkey signals
+        // "no cosign required" at apply time. The cosign_session arg
+        // is ignored (clients can pass Pubkey::default()).
+        (Pubkey::default(), [0u8; 32])
+    };
+
     let recomputed_digest = compute_policy_preview_digest(&PolicyPreviewFields {
         daily_spending_cap_usd: eff_daily,
         max_transaction_size_usd: eff_max_tx,
@@ -250,6 +356,10 @@ pub fn handler(
     pending.bump = ctx.bumps.pending_policy;
     // TA-05 (Phase 3): persist optional operating_hours update.
     pending.operating_hours = operating_hours;
+    // TA-09 (Phase 3): persist cosign binding. `[0; 32]` + default
+    // session = non-elevated; non-zero values = bound to this cosign.
+    pending.cosign_digest = cosign_digest_bound;
+    pending.cosign_session = cosign_session_pubkey;
     // Phase 2 TA-19: store the validated owner-signed digest. `apply_pending_policy`
     // re-asserts it after the timelock against the merged-effective policy.
     pending.new_policy_preview_digest = new_policy_preview_digest;

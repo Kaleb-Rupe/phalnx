@@ -678,6 +678,12 @@ export async function queuePolicyUpdate(
     // TA-05 (Phase 3): operating_hours is not mutated by this mutation
     // surface — pass null to fall through to live policy at on-chain merge.
     operatingHours: null,
+    // TA-09 (Phase 3): non-elevated path by default — pass the
+    // System Program / zero-pubkey ("11111111111111111111111111111111").
+    // Elevated mutations through this dashboard surface require a
+    // follow-on `queuePolicyElevated()` helper (not yet exposed).
+    cosignSession:
+      "11111111111111111111111111111111" as unknown as Address,
     newPolicyPreviewDigest,
   });
   return run(rpc, owner, network, [ix], opts);

@@ -48,6 +48,24 @@ pub struct PendingPolicyUpdate {
     /// APPENDED at end per F-14 APPEND-ONLY rule for Borsh stability.
     pub operating_hours: Option<u32>,
 
+    /// TA-09 (Phase 3 pre-execution guard #6): cosign requirement marker.
+    /// When `queue_policy_update` detects an elevated mutation (raising
+    /// daily cap, raising max-tx, expanding destinations/protocols, etc),
+    /// the owner MUST supply a co-signing session in the accounts. The
+    /// queue handler computes a sha256 over the canonical pending args
+    /// and stores it here; `apply_pending_policy` re-asserts the digest.
+    ///
+    /// `[0u8; 32]` = no cosign required (non-elevated mutation). Any
+    /// non-zero digest indicates this pending was bound to a specific
+    /// cosign. At apply, the handler MUST re-compute and equal-check.
+    ///
+    /// APPENDED at end per F-14 APPEND-ONLY rule for Borsh stability.
+    pub cosign_digest: [u8; 32],
+
+    /// TA-09 (Phase 3): pubkey of the session that co-signed this queue.
+    /// Recorded for audit. `Pubkey::default()` = no cosign (non-elevated).
+    pub cosign_session: Pubkey,
+
     /// TA-19 (Phase 2): SHA-256 digest of the canonical Borsh encoding of the
     /// policy fields THAT WOULD RESULT FROM APPLYING this pending update over
     /// the live policy. Owner computes off-chain over the merged result and
@@ -85,7 +103,9 @@ impl PendingPolicyUpdate {
         + (1 + 1) // destination_mode (Option<u8>)
         + 1 // bump
         + 32 // new_policy_preview_digest [TA-19, Phase 2]
-        + (1 + 4); // operating_hours [TA-05, Phase 3]
+        + (1 + 4) // operating_hours [TA-05, Phase 3]
+        + 32 // cosign_digest [TA-09, Phase 3]
+        + 32; // cosign_session [TA-09, Phase 3]
 
     /// Returns true if the timelock period has expired and the update
     /// can be applied.

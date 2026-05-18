@@ -134,6 +134,10 @@ pub mod sigil {
     }
 
     /// Queue a policy update when timelock is active.
+    /// TA-09 (Phase 3): adds `cosign_session: Pubkey` arg. Pass
+    /// `Pubkey::default()` for non-elevated mutations; for elevated
+    /// mutations pass the cosigner pubkey and include the corresponding
+    /// signer in `remaining_accounts`.
     pub fn queue_policy_update(
         ctx: Context<QueuePolicyUpdate>,
         daily_spending_cap_usd: Option<u64>,
@@ -149,6 +153,7 @@ pub mod sigil {
         protocol_caps: Option<Vec<u64>>,
         destination_mode: Option<u8>,
         operating_hours: Option<u32>,
+        cosign_session: Pubkey,
         new_policy_preview_digest: [u8; 32],
     ) -> Result<()> {
         instructions::queue_policy_update::handler(
@@ -166,6 +171,7 @@ pub mod sigil {
             protocol_caps,
             destination_mode,
             operating_hours,
+            cosign_session,
             new_policy_preview_digest,
         )
     }

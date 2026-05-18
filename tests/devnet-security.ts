@@ -120,6 +120,7 @@ describe("devnet-security", () => {
           null,
           null, // destinationMode,
           null, // operating_hours (TA-05 Phase 3)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
         )
         .accounts({
@@ -261,6 +262,7 @@ describe("devnet-security", () => {
           null,
           null, // destinationMode,
           null, // operating_hours (TA-05 Phase 3)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
         )
         .accounts({

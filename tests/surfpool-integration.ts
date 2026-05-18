@@ -1650,6 +1650,7 @@ describe("surfpool-integration", function () {
           null,
           null,
           null, // operating_hours (TA-05 Phase 3)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { dailySpendingCapUsd: new BN(200_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -1706,6 +1707,7 @@ describe("surfpool-integration", function () {
           null,
           null,
           null, // operating_hours (TA-05 Phase 3)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { dailySpendingCapUsd: new BN(300_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({

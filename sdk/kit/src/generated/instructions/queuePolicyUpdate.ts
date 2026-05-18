@@ -116,6 +116,7 @@ export type QueuePolicyUpdateInstructionData = {
   protocolCaps: Option<Array<bigint>>;
   destinationMode: Option<number>;
   operatingHours: Option<number>;
+  cosignSession: Address;
   newPolicyPreviewDigest: ReadonlyUint8Array;
 };
 
@@ -133,6 +134,7 @@ export type QueuePolicyUpdateInstructionDataArgs = {
   protocolCaps: OptionOrNullable<Array<number | bigint>>;
   destinationMode: OptionOrNullable<number>;
   operatingHours: OptionOrNullable<number>;
+  cosignSession: Address;
   newPolicyPreviewDigest: ReadonlyUint8Array;
 };
 
@@ -156,6 +158,7 @@ export function getQueuePolicyUpdateInstructionDataEncoder(): Encoder<QueuePolic
       ["protocolCaps", getOptionEncoder(getArrayEncoder(getU64Encoder()))],
       ["destinationMode", getOptionEncoder(getU8Encoder())],
       ["operatingHours", getOptionEncoder(getU32Encoder())],
+      ["cosignSession", getAddressEncoder()],
       ["newPolicyPreviewDigest", fixEncoderSize(getBytesEncoder(), 32)],
     ]),
     (value) => ({ ...value, discriminator: QUEUE_POLICY_UPDATE_DISCRIMINATOR }),
@@ -181,6 +184,7 @@ export function getQueuePolicyUpdateInstructionDataDecoder(): Decoder<QueuePolic
     ["protocolCaps", getOptionDecoder(getArrayDecoder(getU64Decoder()))],
     ["destinationMode", getOptionDecoder(getU8Decoder())],
     ["operatingHours", getOptionDecoder(getU32Decoder())],
+    ["cosignSession", getAddressDecoder()],
     ["newPolicyPreviewDigest", fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }
@@ -220,6 +224,7 @@ export type QueuePolicyUpdateAsyncInput<
   protocolCaps: QueuePolicyUpdateInstructionDataArgs["protocolCaps"];
   destinationMode: QueuePolicyUpdateInstructionDataArgs["destinationMode"];
   operatingHours: QueuePolicyUpdateInstructionDataArgs["operatingHours"];
+  cosignSession: QueuePolicyUpdateInstructionDataArgs["cosignSession"];
   newPolicyPreviewDigest: QueuePolicyUpdateInstructionDataArgs["newPolicyPreviewDigest"];
 };
 
@@ -354,6 +359,7 @@ export type QueuePolicyUpdateInput<
   protocolCaps: QueuePolicyUpdateInstructionDataArgs["protocolCaps"];
   destinationMode: QueuePolicyUpdateInstructionDataArgs["destinationMode"];
   operatingHours: QueuePolicyUpdateInstructionDataArgs["operatingHours"];
+  cosignSession: QueuePolicyUpdateInstructionDataArgs["cosignSession"];
   newPolicyPreviewDigest: QueuePolicyUpdateInstructionDataArgs["newPolicyPreviewDigest"];
 };
 

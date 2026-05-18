@@ -572,6 +572,7 @@ describe("sigil", () => {
           null,
           null,
           null, // operating_hours (TA-05 Phase 3)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { dailySpendingCapUsd: new BN(200_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -622,6 +623,7 @@ describe("sigil", () => {
           null,
           null,
           null, // operating_hours (TA-05 Phase 3)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { dailySpendingCapUsd: new BN(999) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
           .accounts({
@@ -659,6 +661,7 @@ describe("sigil", () => {
           null,
           null,
           null, // operating_hours (TA-05 Phase 3)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { protocols: tooManyProtocols })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
           .accounts({
@@ -1920,6 +1923,7 @@ describe("sigil", () => {
           null,
           null,
           null, // operating_hours (TA-05 Phase 3)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, { developerFeeRate: 0 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -1962,6 +1966,7 @@ describe("sigil", () => {
           null,
           null,
           null, // operating_hours (TA-05 Phase 3)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, { developerFeeRate: 30 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -2010,6 +2015,7 @@ describe("sigil", () => {
           null,
           null,
           null, // operating_hours (TA-05 Phase 3)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
           .accounts({
@@ -2046,6 +2052,7 @@ describe("sigil", () => {
           null,
           null,
           null, // operating_hours (TA-05 Phase 3)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, { developerFeeRate: 0 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -2189,6 +2196,7 @@ describe("sigil", () => {
           null,
           null,
           null, // operating_hours (TA-05 Phase 3)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, { developerFeeRate: 500 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -3798,6 +3806,7 @@ describe("sigil", () => {
           null,
           null,
           null, // operating_hours (TA-05 Phase 3)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(200_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -3863,9 +3872,11 @@ describe("sigil", () => {
     });
 
     it("cancel pending policy succeeds and returns rent", async () => {
-      // Queue another update
+      // Queue another update. Use a LOWER daily cap (100_000_000) so the
+      // TA-09 (Phase 3) elevated-mutation guard does not fire — this test
+      // exercises the cancel-rent-return path, not the cosign workflow.
       await program.methods
-        .queuePolicyUpdate(new BN(300_000_000),
+        .queuePolicyUpdate(new BN(100_000_000),
           null,
           null,
           null,
@@ -3878,7 +3889,8 @@ describe("sigil", () => {
           null,
           null,
           null, // operating_hours (TA-05 Phase 3)
-          (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(300_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
+          (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(100_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -3911,9 +3923,11 @@ describe("sigil", () => {
     });
 
     it("only one pending update at a time (init fails if PDA exists)", async () => {
-      // Queue an update
+      // Queue an update. LOWER the daily cap so TA-09 (Phase 3) elevated-
+      // mutation guard does not fire — this test exercises the
+      // single-pending-PDA invariant, not the cosign workflow.
       await program.methods
-        .queuePolicyUpdate(new BN(400_000_000),
+        .queuePolicyUpdate(new BN(150_000_000),
           null,
           null,
           null,
@@ -3926,7 +3940,8 @@ describe("sigil", () => {
           null,
           null,
           null, // operating_hours (TA-05 Phase 3)
-          (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(400_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
+          (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(150_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -3953,6 +3968,7 @@ describe("sigil", () => {
           null,
           null,
           null, // operating_hours (TA-05 Phase 3)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(500_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
           .accounts({
@@ -4065,6 +4081,7 @@ describe("sigil", () => {
           null,
           null,
           null, // operating_hours (TA-05 Phase 3)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { timelockDuration: new BN(3600) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -4109,6 +4126,7 @@ describe("sigil", () => {
           null,
           null,
           null, // operating_hours (TA-05 Phase 3)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { timelockDuration: new BN(1800) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -4136,9 +4154,12 @@ describe("sigil", () => {
       const policy = await program.account.policyConfig.fetch(tlPolicyPda);
       expect(policy.timelockDuration.toNumber()).to.equal(1800);
 
-      // Verify further updates still require queue/apply
+      // Verify further updates still require queue/apply. Use a LOWER
+      // cap (50_000_000) so TA-09 (Phase 3) elevated-mutation guard does
+      // not fire — this assertion exercises queue/apply round-trip on
+      // daily_spending_cap_usd, not the cosign workflow.
       await program.methods
-        .queuePolicyUpdate(new BN(999_000_000),
+        .queuePolicyUpdate(new BN(50_000_000),
           null,
           null,
           null,
@@ -4151,7 +4172,8 @@ describe("sigil", () => {
           null,
           null,
           null, // operating_hours (TA-05 Phase 3)
-          (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(999_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
+          (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(50_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -4176,7 +4198,7 @@ describe("sigil", () => {
         .rpc();
 
       const updated = await program.account.policyConfig.fetch(tlPolicyPda);
-      expect(updated.dailySpendingCapUsd.toNumber()).to.equal(999_000_000);
+      expect(updated.dailySpendingCapUsd.toNumber()).to.equal(50_000_000);
     });
 
     it("revoke_agent bypasses timelock (emergency)", async () => {
@@ -4544,6 +4566,7 @@ describe("sigil", () => {
           null,
           1,
           null, // operating_hours (TA-05 Phase 3)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, anyPolicy, anyVault, { destinationMode: 1 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
           .accounts({
@@ -4583,6 +4606,7 @@ describe("sigil", () => {
           null,
           2,
           null, // operating_hours (TA-05 Phase 3)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, anyPolicy, anyVault, { destinationMode: 2 })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
           .accounts({
@@ -5843,6 +5867,7 @@ describe("sigil", () => {
           [new BN(0), new BN(200_000_000)],
           null,
           null, // operating_hours (TA-05 Phase 3)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -5887,6 +5912,7 @@ describe("sigil", () => {
           [new BN(100_000_000), new BN(200_000_000)],
           null,
           null, // operating_hours (TA-05 Phase 3)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -5943,6 +5969,7 @@ describe("sigil", () => {
           null,
           null,
           null, // operating_hours (TA-05 Phase 3)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -5987,6 +6014,7 @@ describe("sigil", () => {
           [new BN(100_000_000), new BN(200_000_000)],
           null,
           null, // operating_hours (TA-05 Phase 3)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
@@ -6035,6 +6063,7 @@ describe("sigil", () => {
           [new BN(100_000_000)],
           null,
           null, // operating_hours (TA-05 Phase 3)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
           .accounts({

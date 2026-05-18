@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 use crate::errors::SigilError;
 use crate::events::{GraylistEntered, PolicyChangeApplied};
 use crate::state::*;
+use crate::utils::cosign_digest::{compute_cosign_digest, CosignDigestFields};
 use crate::utils::policy_digest::{compute_policy_preview_digest, PolicyPreviewFields};
 
 #[derive(Accounts)]
@@ -55,6 +56,32 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
         clock.slot.saturating_sub(pending.queued_at_slot) < MAX_APPLY_AGE_SLOTS,
         SigilError::QueuedUpdateExpired,
     );
+
+    // TA-09 (Phase 3): if pending was bound to a cosign, re-validate the
+    // cosign_digest against the persisted pending args + recorded session
+    // pubkey. Defense-in-depth — queue already validated the cosign
+    // signed, but a rogue program with the same account discriminator
+    // could have rewritten the pending args between queue and apply.
+    // The re-computed digest catches any such mutation.
+    //
+    // [0u8; 32] + Pubkey::default() == "no cosign required" (non-elevated
+    // queue). For non-elevated pending, this check is a no-op.
+    let zero_digest = [0u8; 32];
+    let no_cosign = pending.cosign_digest == zero_digest
+        && pending.cosign_session == Pubkey::default();
+    if !no_cosign {
+        let recomputed_cosign = compute_cosign_digest(&CosignDigestFields {
+            cosign_session: &pending.cosign_session,
+            daily_spending_cap_usd: pending.daily_spending_cap_usd,
+            max_transaction_amount_usd: pending.max_transaction_amount_usd,
+            allowed_destinations: pending.allowed_destinations.as_deref(),
+            protocols: pending.protocols.as_deref(),
+        });
+        require!(
+            recomputed_cosign == pending.cosign_digest,
+            SigilError::ErrCosignRequired
+        );
+    }
 
     let policy = &mut ctx.accounts.policy;
 

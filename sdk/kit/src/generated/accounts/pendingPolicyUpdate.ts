@@ -103,6 +103,26 @@ export type PendingPolicyUpdate = {
    */
   operatingHours: Option<number>;
   /**
+   * TA-09 (Phase 3 pre-execution guard #6): cosign requirement marker.
+   * When `queue_policy_update` detects an elevated mutation (raising
+   * daily cap, raising max-tx, expanding destinations/protocols, etc),
+   * the owner MUST supply a co-signing session in the accounts. The
+   * queue handler computes a sha256 over the canonical pending args
+   * and stores it here; `apply_pending_policy` re-asserts the digest.
+   *
+   * `[0u8; 32]` = no cosign required (non-elevated mutation). Any
+   * non-zero digest indicates this pending was bound to a specific
+   * cosign. At apply, the handler MUST re-compute and equal-check.
+   *
+   * APPENDED at end per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  cosignDigest: ReadonlyUint8Array;
+  /**
+   * TA-09 (Phase 3): pubkey of the session that co-signed this queue.
+   * Recorded for audit. `Pubkey::default()` = no cosign (non-elevated).
+   */
+  cosignSession: Address;
+  /**
    * TA-19 (Phase 2): SHA-256 digest of the canonical Borsh encoding of the
    * policy fields THAT WOULD RESULT FROM APPLYING this pending update over
    * the live policy. Owner computes off-chain over the merged result and
@@ -159,6 +179,26 @@ export type PendingPolicyUpdateArgs = {
    */
   operatingHours: OptionOrNullable<number>;
   /**
+   * TA-09 (Phase 3 pre-execution guard #6): cosign requirement marker.
+   * When `queue_policy_update` detects an elevated mutation (raising
+   * daily cap, raising max-tx, expanding destinations/protocols, etc),
+   * the owner MUST supply a co-signing session in the accounts. The
+   * queue handler computes a sha256 over the canonical pending args
+   * and stores it here; `apply_pending_policy` re-asserts the digest.
+   *
+   * `[0u8; 32]` = no cosign required (non-elevated mutation). Any
+   * non-zero digest indicates this pending was bound to a specific
+   * cosign. At apply, the handler MUST re-compute and equal-check.
+   *
+   * APPENDED at end per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  cosignDigest: ReadonlyUint8Array;
+  /**
+   * TA-09 (Phase 3): pubkey of the session that co-signed this queue.
+   * Recorded for audit. `Pubkey::default()` = no cosign (non-elevated).
+   */
+  cosignSession: Address;
+  /**
    * TA-19 (Phase 2): SHA-256 digest of the canonical Borsh encoding of the
    * policy fields THAT WOULD RESULT FROM APPLYING this pending update over
    * the live policy. Owner computes off-chain over the merged result and
@@ -202,6 +242,8 @@ export function getPendingPolicyUpdateEncoder(): Encoder<PendingPolicyUpdateArgs
       ["destinationMode", getOptionEncoder(getU8Encoder())],
       ["bump", getU8Encoder()],
       ["operatingHours", getOptionEncoder(getU32Encoder())],
+      ["cosignDigest", fixEncoderSize(getBytesEncoder(), 32)],
+      ["cosignSession", getAddressEncoder()],
       ["newPolicyPreviewDigest", fixEncoderSize(getBytesEncoder(), 32)],
     ]),
     (value) => ({
@@ -236,6 +278,8 @@ export function getPendingPolicyUpdateDecoder(): Decoder<PendingPolicyUpdate> {
     ["destinationMode", getOptionDecoder(getU8Decoder())],
     ["bump", getU8Decoder()],
     ["operatingHours", getOptionDecoder(getU32Decoder())],
+    ["cosignDigest", fixDecoderSize(getBytesDecoder(), 32)],
+    ["cosignSession", getAddressDecoder()],
     ["newPolicyPreviewDigest", fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }

@@ -3372,7 +3372,11 @@ export type Sigil = {
     {
       "name": "queuePolicyUpdate",
       "docs": [
-        "Queue a policy update when timelock is active."
+        "Queue a policy update when timelock is active.",
+        "TA-09 (Phase 3): adds `cosign_session: Pubkey` arg. Pass",
+        "`Pubkey::default()` for non-elevated mutations; for elevated",
+        "mutations pass the cosigner pubkey and include the corresponding",
+        "signer in `remaining_accounts`."
       ],
       "discriminator": [
         149,
@@ -3565,6 +3569,10 @@ export type Sigil = {
           "type": {
             "option": "u32"
           }
+        },
+        {
+          "name": "cosignSession",
+          "type": "pubkey"
         },
         {
           "name": "newPolicyPreviewDigest",
@@ -7399,6 +7407,37 @@ export type Sigil = {
             "type": {
               "option": "u32"
             }
+          },
+          {
+            "name": "cosignDigest",
+            "docs": [
+              "TA-09 (Phase 3 pre-execution guard #6): cosign requirement marker.",
+              "When `queue_policy_update` detects an elevated mutation (raising",
+              "daily cap, raising max-tx, expanding destinations/protocols, etc),",
+              "the owner MUST supply a co-signing session in the accounts. The",
+              "queue handler computes a sha256 over the canonical pending args",
+              "and stores it here; `apply_pending_policy` re-asserts the digest.",
+              "",
+              "`[0u8; 32]` = no cosign required (non-elevated mutation). Any",
+              "non-zero digest indicates this pending was bound to a specific",
+              "cosign. At apply, the handler MUST re-compute and equal-check.",
+              "",
+              "APPENDED at end per F-14 APPEND-ONLY rule for Borsh stability."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "cosignSession",
+            "docs": [
+              "TA-09 (Phase 3): pubkey of the session that co-signed this queue.",
+              "Recorded for audit. `Pubkey::default()` = no cosign (non-elevated)."
+            ],
+            "type": "pubkey"
           },
           {
             "name": "newPolicyPreviewDigest",

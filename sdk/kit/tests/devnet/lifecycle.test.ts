@@ -175,6 +175,9 @@ describe("Kit SDK Devnet — Vault Lifecycle", function () {
       protocolCaps: null,
       destinationMode: null,
       operatingHours: null,
+      // TA-09 (Phase 3): zero pubkey for non-elevated path.
+      cosignSession:
+        "11111111111111111111111111111111" as unknown as Address,
       newPolicyPreviewDigest,
     });
 
