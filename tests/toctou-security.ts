@@ -248,6 +248,8 @@ describe("TOCTOU Security Fix", () => {
           null,
           null,
           null, // destinationMode,
+          null, // operating_hours (TA-05 Phase 3 — null pass-through)
+          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           newDigest,
         )
       .accounts({
