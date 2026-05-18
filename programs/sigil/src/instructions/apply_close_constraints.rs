@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 use crate::errors::SigilError;
 use crate::events::CloseConstraintsApplied;
 use crate::state::*;
+use crate::utils::policy_digest::{compute_policy_preview_digest, PolicyPreviewFields};
 
 #[derive(Accounts)]
 pub struct ApplyCloseConstraints<'info> {
@@ -73,6 +74,25 @@ pub fn handler(ctx: Context<ApplyCloseConstraints>) -> Result<()> {
     // Clear the has_constraints flag so validate_and_authorize skips constraint checks
     let policy = &mut ctx.accounts.policy;
     policy.has_constraints = false;
+
+    // TA-19 fix: has_constraints is part of the canonical policy_preview_digest
+    // encoding. Recompute the stored digest from the post-mutation policy state
+    // so external consumers see byte-perfect parity vs. their own recompute.
+    let recomputed_digest = compute_policy_preview_digest(&PolicyPreviewFields {
+        daily_spending_cap_usd: policy.daily_spending_cap_usd,
+        max_transaction_size_usd: policy.max_transaction_size_usd,
+        max_slippage_bps: policy.max_slippage_bps,
+        protocol_mode: policy.protocol_mode,
+        protocols: &policy.protocols,
+        destination_mode: policy.destination_mode,
+        allowed_destinations: &policy.allowed_destinations,
+        timelock_duration: policy.timelock_duration,
+        session_expiry_seconds: policy.session_expiry_seconds,
+        observe_only: ctx.accounts.vault.observe_only,
+        has_constraints: policy.has_constraints,
+        has_post_assertions: policy.has_post_assertions,
+    });
+    policy.policy_preview_digest = recomputed_digest;
 
     // Bump policy version — removing constraints affects security posture
     policy.policy_version = policy

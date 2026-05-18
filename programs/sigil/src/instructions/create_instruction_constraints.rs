@@ -5,6 +5,7 @@ use crate::errors::SigilError;
 use crate::events::InstructionConstraintsCreated;
 use crate::state::constraints::{pack_entries, InstructionConstraints};
 use crate::state::*;
+use crate::utils::policy_digest::{compute_policy_preview_digest, PolicyPreviewFields};
 
 /// Populate a pre-allocated InstructionConstraints PDA with entries.
 ///
@@ -96,8 +97,35 @@ pub fn handler(
         constraints.entry_count = count;
     }
 
-    // Set has_constraints flag on policy
-    ctx.accounts.policy.has_constraints = true;
+    // Set has_constraints flag on policy.
+    // TA-19 fix: this flag is part of the canonical policy_preview_digest
+    // encoding. After mutation we MUST recompute the stored digest so that
+    // external consumers comparing PolicyConfig.policy_preview_digest against
+    // their own canonical recompute see byte-perfect parity. We also bump
+    // policy_version as an OCC counter (consistent with apply_pending_policy).
+    let policy = &mut ctx.accounts.policy;
+    policy.has_constraints = true;
+
+    let recomputed_digest = compute_policy_preview_digest(&PolicyPreviewFields {
+        daily_spending_cap_usd: policy.daily_spending_cap_usd,
+        max_transaction_size_usd: policy.max_transaction_size_usd,
+        max_slippage_bps: policy.max_slippage_bps,
+        protocol_mode: policy.protocol_mode,
+        protocols: &policy.protocols,
+        destination_mode: policy.destination_mode,
+        allowed_destinations: &policy.allowed_destinations,
+        timelock_duration: policy.timelock_duration,
+        session_expiry_seconds: policy.session_expiry_seconds,
+        observe_only: ctx.accounts.vault.observe_only,
+        has_constraints: policy.has_constraints,
+        has_post_assertions: policy.has_post_assertions,
+    });
+    policy.policy_preview_digest = recomputed_digest;
+
+    policy.policy_version = policy
+        .policy_version
+        .checked_add(1)
+        .ok_or(error!(SigilError::Overflow))?;
 
     emit!(InstructionConstraintsCreated {
         vault: vault_key,
