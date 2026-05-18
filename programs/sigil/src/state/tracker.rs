@@ -34,16 +34,23 @@ pub struct SpendTracker {
     pub buckets: [EpochBucket; NUM_EPOCHS], // 2,304 bytes (144 × 16)
 
     /// Per-protocol rolling 24h counters. Enforcement wired in
-    /// `finalize_session.rs:313-322` (stablecoin input) and lines 401-411
-    /// (non-stablecoin input). See `policy.protocol_caps` for the cap
-    /// values and `PolicyConfig::get_protocol_cap` for the lookup logic.
-    /// Per-protocol entries are populated by `record_protocol_spend()`
-    /// when `policy.has_protocol_caps == true`.
+    /// `finalize_session.rs` — search for "TA-13 (Phase 5 ratification)"
+    /// (two sites: the stablecoin-input branch around line 314 and the
+    /// non-stablecoin-input branch around line 408). See
+    /// `policy.protocol_caps` for the cap values and
+    /// `PolicyConfig::get_protocol_cap` for the lookup logic. Per-protocol
+    /// entries are populated by `record_protocol_spend()` when
+    /// `policy.has_protocol_caps == true`.
     ///
     /// TA-13 ratification (Phase 5): the prior doc-comment claimed
     /// "zeroed, no enforcement yet" — this was stale. The enforcement
     /// has lived in `finalize_session` since Phase 2; this comment was
-    /// the only artifact suggesting otherwise.
+    /// the only artifact suggesting otherwise. Phase 5 ratifies the
+    /// existing require! with the dedicated `ErrDailyCapExceeded` (6095)
+    /// error code so off-chain monitors can disambiguate the "rolling
+    /// 24h cap hit" semantic from the legacy "slot allocation exhausted"
+    /// path (which still returns `ProtocolCapExceeded` from inside
+    /// `record_protocol_spend`).
     pub protocol_counters: [ProtocolSpendCounter; MAX_ALLOWED_PROTOCOLS], // 480 bytes (10 × 48)
 
     /// Epoch of most recent record_spend() call. Enables early exit in get_rolling_24h_usd().

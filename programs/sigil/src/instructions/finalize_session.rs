@@ -311,7 +311,12 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
                 }
                 drop(overlay);
 
-                // Per-protocol cap
+                // TA-13 (Phase 5 ratification): per-protocol rolling 24h cap.
+                // This enforcement existed since Phase 2 (per F-15 audit) —
+                // ratified here with a distinct error code so off-chain
+                // monitors can disambiguate "rolling cap hit" from the legacy
+                // "slot allocation exhausted" path (which still returns
+                // ProtocolCapExceeded from inside `record_protocol_spend`).
                 if let Some(proto_cap) = policy.get_protocol_cap(&session_authorized_protocol) {
                     if proto_cap > 0 {
                         let proto_spend =
@@ -319,7 +324,7 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
                         let new_proto = proto_spend
                             .checked_add(actual_spend)
                             .ok_or(SigilError::Overflow)?;
-                        require!(new_proto <= proto_cap, SigilError::ProtocolCapExceeded);
+                        require!(new_proto <= proto_cap, SigilError::ErrDailyCapExceeded);
                     }
                 }
 
@@ -400,7 +405,9 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
             }
             drop(overlay);
 
-            // Per-protocol cap
+            // TA-13 (Phase 5 ratification): per-protocol rolling 24h cap.
+            // Same enforcement as the stablecoin-input branch above — uses
+            // ErrDailyCapExceeded for the "rolling cap hit" semantic.
             if let Some(proto_cap) = policy.get_protocol_cap(&session_authorized_protocol) {
                 if proto_cap > 0 {
                     let proto_spend =
@@ -408,7 +415,7 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
                     let new_proto = proto_spend
                         .checked_add(stablecoin_delta)
                         .ok_or(SigilError::Overflow)?;
-                    require!(new_proto <= proto_cap, SigilError::ProtocolCapExceeded);
+                    require!(new_proto <= proto_cap, SigilError::ErrDailyCapExceeded);
                 }
             }
 
