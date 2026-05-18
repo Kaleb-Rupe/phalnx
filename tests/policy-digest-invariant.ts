@@ -123,6 +123,12 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
         [],
         [],
         true, // observeOnly — required for F-11 (no protocols/destinations)
+        // Phase 3 (TA-05/TA-07/TA-17): operating_hours, auto_promote_grays,
+        // auto_revoke_threshold are now positional args BEFORE preview_digest.
+        // Values MUST match the helper below.
+        0x00FFFFFF, // operatingHours — all 24h
+        false, // autoPromoteGrays
+        5, // autoRevokeThreshold — must be in [3, 20]
         initVaultPreviewDigest({
           dailySpendingCapUsd: new BN(500_000_000),
           maxTransactionSizeUsd: new BN(100_000_000),
@@ -542,7 +548,10 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
     const { vaultPda, policyPda } = await freshVault(904);
 
     // Queue: change daily_spending_cap_usd to a known value.
-    const newCap = new BN(750_000_000);
+    // Phase 3 (TA-09): LOWERED (not raised) so the mutation is non-elevated
+    // and does not require a cosigner. This is a digest-invariant test —
+    // direction of the change is irrelevant; we only assert digest equality.
+    const newCap = new BN(250_000_000);
     const livePolicy: any = await program.account.policyConfig.fetch(policyPda);
     const newPolicyPreviewDigest = queuePolicyMergedDigest(
       {
@@ -559,6 +568,11 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
         hasConstraints: !!livePolicy.hasConstraints,
         hasPostAssertions: livePolicy.hasPostAssertions as number,
         createdAtSlot: livePolicy.createdAtSlot ?? 0,
+        // Phase 3 (TA-05/TA-07/TA-17): pass live values through so the
+        // merged digest matches the on-chain recompute.
+        operatingHours: livePolicy.operatingHours ?? 0,
+        autoPromoteGrays: !!livePolicy.autoPromoteGrays,
+        autoRevokeThreshold: livePolicy.autoRevokeThreshold ?? 0,
       },
       { dailySpendingCapUsd: newCap },
       true, // observeOnly — freshVault uses observe_only=true
@@ -583,6 +597,11 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
         null,
         null,
         null,
+        // Phase 3 (TA-05): operating_hours — null pass-through from live.
+        null,
+        // Phase 3 (TA-09): cosign_session — PublicKey.default = non-elevated
+        // (single-sig owner mutation; daily_cap is non-elevated).
+        PublicKey.default,
         newPolicyPreviewDigest,
       )
       .accounts({
@@ -707,6 +726,11 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
         [],
         [],
         observeOnly,
+        // Phase 3 (TA-05/TA-07/TA-17): operating_hours, auto_promote_grays,
+        // auto_revoke_threshold are now positional args BEFORE preview_digest.
+        0x00FFFFFF, // operatingHours — all 24h
+        false, // autoPromoteGrays
+        5, // autoRevokeThreshold — must be in [3, 20]
         initVaultPreviewDigest({
           dailySpendingCapUsd: new BN(500_000_000),
           maxTransactionSizeUsd: new BN(100_000_000),
@@ -887,8 +911,16 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
         hasConstraints: !!livePolicy.hasConstraints,
         hasPostAssertions: livePolicy.hasPostAssertions as number,
         createdAtSlot: livePolicy.createdAtSlot ?? 0,
+        // Phase 3 (TA-05/TA-07/TA-17): pass live values through so the
+        // merged digest matches the on-chain recompute.
+        operatingHours: livePolicy.operatingHours ?? 0,
+        autoPromoteGrays: !!livePolicy.autoPromoteGrays,
+        autoRevokeThreshold: livePolicy.autoRevokeThreshold ?? 0,
       },
-      { dailySpendingCapUsd: new BN(750_000_000) },
+      // Phase 3 (TA-09): LOWERED (not raised) so the mutation is non-elevated
+      // and does not require a cosigner. initVault sets cap=500M; here we
+      // queue cap=250M.
+      { dailySpendingCapUsd: new BN(250_000_000) },
       false, // observeOnly
     );
 
@@ -899,7 +931,7 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
 
     await program.methods
       .queuePolicyUpdate(
-        new BN(750_000_000), // dailySpendingCapUsd
+        new BN(250_000_000), // dailySpendingCapUsd (lowered — non-elevated)
         null,
         null,
         null,
@@ -911,6 +943,11 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
         null,
         null,
         null,
+        // Phase 3 (TA-05): operating_hours — null pass-through from live.
+        null,
+        // Phase 3 (TA-09): cosign_session — PublicKey.default = non-elevated
+        // (single-sig owner mutation; daily_cap is non-elevated).
+        PublicKey.default,
         validDigest,
       )
       .accounts({
@@ -1152,6 +1189,13 @@ describe("PEN-CROSS-2 — close+reinit replay protection", () => {
           [],
           [],
           false,
+          // Phase 3 (TA-05/TA-07/TA-17): positional args MUST match staleDigest
+          // helper above (operatingHours=0x00FFFFFF, autoPromoteGrays=false,
+          // autoRevokeThreshold=5). The mismatch here is intentional on
+          // `createdAtSlot`, not on the Phase 3 fields.
+          0x00FFFFFF,
+          false,
+          5,
           staleDigest,
         )
         .accounts({
@@ -1238,6 +1282,12 @@ describe("PEN-CROSS-2 — close+reinit replay protection", () => {
         [],
         [],
         false,
+        // Phase 3 (TA-05/TA-07/TA-17): positional args match goodInit helper
+        // (operatingHours=0x00FFFFFF, autoPromoteGrays=false,
+        // autoRevokeThreshold=5).
+        0x00FFFFFF,
+        false,
+        5,
         goodInit,
       )
       .accounts({
@@ -1347,6 +1397,12 @@ describe("PEN-CROSS-2 — close+reinit replay protection", () => {
         [],
         [],
         false,
+        // Phase 3 (TA-05/TA-07/TA-17): positional args match goodDigest helper
+        // (operatingHours=0x00FFFFFF, autoPromoteGrays=false,
+        // autoRevokeThreshold=5).
+        0x00FFFFFF,
+        false,
+        5,
         goodDigest,
       )
       .accounts({
