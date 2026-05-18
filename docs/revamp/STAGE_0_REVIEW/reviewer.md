@@ -812,7 +812,7 @@ Per §RP §12.3: every CRITICAL or HIGH finding requires fix-commit SHA + `RESOL
 ### CRITICAL fixes
 
 - **R-CRIT-1 + R-CRIT-2** (workflow path + scope-guard regex): RESOLVED — verified via `git remote -v` that `agent-middleware/` IS the Sigil repo root (`origin: Sigil-Trade/sigil.git`). Workflow path `agent-middleware/.github/workflows/revamp-ci.yml` is correct (false positive on path). Scope-guard regex CORRECTED to within-repo paths: `^(docs/revamp/|\.github/workflows/revamp-ci\.yml)`.
-- **R-CRIT-3** (error code count 88 → 81): RESOLVED — INTERFACES_V2 §Error-Code-Allocation updated to 81 variants (6000-6080). V2 reserved 6081-6103. Removed `ErrAutoRevoked`.
+- **R-CRIT-3** (error code count 88 → 81): RESOLVED — INTERFACES_V2 §Error-Code-Allocation updated to 81 variants (6000-6080). V2 reserved 6081-6103. ~~Removed `ErrAutoRevoked`~~. **STALE — superseded by L-10 lock (2026-05-17 Phase 0.5 hygiene pass): `ErrAutoRevoked` re-allocated at code 6088 under TA-17 LOCKED. See [ERROR_CODE_ALLOCATION_V2.md](../ERROR_CODE_ALLOCATION_V2.md) for canonical numerics.**
 - **R-CRIT-4** (TA-15 buffer 4,096 vs 12,288): RESOLVED — INTERFACES_V2 §TA-15 updated to 12,288 bytes total (128 success × 64 + 64 rejected × 64). REVAMP_PLAN §11 C24 augmented to cite canonical sizing.
 - **R-CRIT-5** (AC §1.1 taxonomy inverted): RESOLVED — THREAT_MODEL §1.1 rewritten to group by attack vector (active: AC-1/2/3/4/5/9/10; environmental: AC-6/7/8; out-of-scope: AC-11).
 - **R-CRIT-6** (TA-17 / TA-18 phantom): RESOLVED — TA-17 references replaced with "auto-revoke deferred to v1.1 per Def-6" in THREAT_MODEL §2 AC-3 + AC-8. TA-18 references replaced with D-05+D-06 cross-link.

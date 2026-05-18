@@ -673,7 +673,7 @@ Per §RP §12.3: every CRITICAL or HIGH finding requires fix-commit SHA + `RESOL
 ### CRITICAL fixes
 
 - **H-CRIT-1** (TA-15 buffer size contradiction): RESOLVED — INTERFACES_V2 §TA-15 updated to canonical 12,288 bytes (128 success + 64 rejected). REVAMP_PLAN §11 C24 augmented. Same fix as R-CRIT-4.
-- **H-CRIT-2** (TA-17 referenced + ErrAutoRevoked reserved): RESOLVED — TA-17 references removed from THREAT_MODEL §2 (replaced with "auto-revoke deferred to v1.1 per Def-6"). `ErrAutoRevoked` removed from INTERFACES_V2 error-code allocation. Same fix as R-CRIT-6.
+- **H-CRIT-2** (TA-17 referenced + ErrAutoRevoked reserved): RESOLVED — TA-17 references removed from THREAT_MODEL §2 (replaced with "auto-revoke deferred to v1.1 per Def-6"). `ErrAutoRevoked` removed from INTERFACES_V2 error-code allocation. Same fix as R-CRIT-6. **STALE — superseded by L-10 lock (2026-05-17 Phase 0.5 hygiene pass): TA-17 LOCKED as `AgentEntry.consecutive_failures` auto-revoke with configurable threshold (floor 3, ceiling 20, default 5) + `SigilError::*` policy-violation filter. `ErrAutoRevoked` re-allocated at code 6088. THREAT_MODEL §T-DoS-1 mitigation updated 2026-05-17 (commit `6866163`).**
 - **H-CRIT-3** (TA-18 phantom in INTERFACES_V2 AC-2): RESOLVED — AC-2 description updated to point at D-05 + D-06 (off-chain SDK helper), removing the TA-18 reference. Same fix as R-CRIT-6.
 - **H-CRIT-4** ("Stage 6 D2" nonexistent): RESOLVED — REVAMP_PLAN §11 D-06 + C25 updated to "Stage 6D" (matches §14 sub-deliverable taxonomy).
 - **H-CRIT-5** (TA-01/02 empty-Vec default-deny semantics unspecified): RESOLVED — INTERFACES_V2 §TA-01 and §TA-02 explicitly state "Default-deny" with empty `Vec` (no implicit-allow). Risk of DEEP-1 regression eliminated.

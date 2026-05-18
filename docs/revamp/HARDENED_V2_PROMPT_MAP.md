@@ -28,6 +28,7 @@ Three independent audits + Maestro re-verification + Solana-runtime verification
 | **L-13** | NM-E mode-1/mode-2 dropped. Mode-0 generic offset-on-any-account stays. | This plan |
 | **L-14** | TA-19 = policy_preview_digest (NEW from Audit #3). Lands in Phase 2 alongside default-tightening. | D-6 decision + Audit #3 |
 | **L-15** | Templates + Intent Compiler DEFERRED to v1.1 (MCP-server territory, not SDK). | User 2026-05-17 |
+| **L-16** | **Narrow L-6 widening:** one-line schema-math corrections to repo-root `CLAUDE.md` when the doc cites V1 sizes that contradict current code, narrowly bounded to `AgentVault`, `PolicyConfig`, `SpendTracker`, and `InstructionConstraints` size constants. Scope strictly to numeric correction of those four; no other changes to repo-root `CLAUDE.md` permitted under this exception. | User 2026-05-17 (Phase 0.5 audit F-3 resolution) |
 
 ---
 
@@ -263,16 +264,24 @@ TASKS:
 
 BUILD+TEST: anchor build --no-idl (sanity); no test changes expected (docs only).
 
-§RP REVIEW:
-- silent-failure-hunter prompt: "Verify NO doc still references the tier model
-  (T1/T2/T3), parser_version, audit-gate, funding-gate, or '21 TA constraints'.
-  Find any cross-doc link from revamp/ to a deleted root-level draft. Find any
-  reference to TA-16 / TA-17 / TA-18 / TA-19 that doesn't match the final
-  allocation in this commit."
-- code-reviewer prompt: "Verify ERROR_CODE_ALLOCATION_V2.md numerics match errors.rs
-  line-by-line. Find any orphaned doc reference to a deleted V1 path that would
-  break a build/CI link-check. Verify memory file refresh actually strips the
-  stale claims listed in task 7."
+§RP REVIEW (scope: INTERFACES_V2.md naming hygiene ONLY — body-level tier-model
+strip across REVAMP_PLAN / THREAT_MODEL / ACCEPTANCE bodies is explicitly Phase 1
+task 3 per §6 Phase 1 of this document; do NOT verify those here):
+- silent-failure-hunter prompt: "Verify INTERFACES_V2.md TA-16 is properly marked
+  DELETED with no active claims. Verify TA-17 / TA-18 / TA-19 entries in
+  INTERFACES_V2.md match the final allocation in this commit (TA-17 AgentEntry
+  placement + threshold + filter; TA-18 OFF-CHAIN ONLY; TA-19 policy_preview_digest
+  on PolicyConfig + PendingPolicyUpdate). Find any cross-doc link from revamp/
+  to a deleted root-level draft (the 5 V1 docs). Verify memory file refresh
+  actually strips the stale claims listed in task 7 (tombstones acceptable;
+  active claims contradicting Option A are findings). Body-level tier-model
+  cleanup in REVAMP_PLAN/THREAT_MODEL/ACCEPTANCE is OUT OF SCOPE — verified by
+  Phase 1 §RP, not Phase 0.5 §RP."
+- code-reviewer prompt: "Verify ERROR_CODE_ALLOCATION_V2.md numerics match
+  errors.rs line-by-line. Find any orphaned doc reference to a deleted V1 path
+  that would break a build/CI link-check. Verify the strategy (compaction vs
+  deprecation-placeholder) is consistently stated across canonical doc +
+  INTERFACES_V2.md §Error-Code-Allocation preamble."
 
 COMMITS (3 expected):
 - docs(stage-0.5): canonical error code allocation + TA-17/18/19 naming hygiene

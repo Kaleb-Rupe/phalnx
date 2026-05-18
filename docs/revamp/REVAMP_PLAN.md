@@ -6,7 +6,9 @@
 **Companion docs:** [THREAT_MODEL_V2.md](./THREAT_MODEL_V2.md), [ACCEPTANCE_V2.md](./ACCEPTANCE_V2.md), [INTERFACES_V2.md](./INTERFACES_V2.md), [ERROR_CODE_ALLOCATION_V2.md](./ERROR_CODE_ALLOCATION_V2.md), [HARDENED_V2_PROMPT_MAP.md](./HARDENED_V2_PROMPT_MAP.md)
 **Architecture diagram:** DELETED in Phase 1 (was `tier-model.mmd` — tier model itself dropped under L-1).
 
-> **L-6 exception (operational scope):** writes to `~/.claude/projects/-Users-kalebrupe/memory/project_sigil_*.md` are allowed and required under L-9 (docs + memory refresh phase-by-phase). No other paths outside `agent-middleware/` may be touched. The exception is narrow: it covers memory files at the listed path only; the repo-root `CLAUDE.md` and any other path outside `agent-middleware/` remain out of scope.
+> **L-6 exception (operational scope):** writes to `~/.claude/projects/-Users-kalebrupe/memory/project_sigil_*.md` are allowed and required under L-9 (docs + memory refresh phase-by-phase). No other paths outside `agent-middleware/` may be touched. The exception is narrow: it covers memory files at the listed path only.
+>
+> **L-16 narrow widening (Phase 0.5 audit F-3 resolution, 2026-05-17):** one-line schema-math corrections to repo-root `CLAUDE.md` are permitted when the doc cites V1 sizes that contradict current code, narrowly bounded to `AgentVault`, `PolicyConfig`, `SpendTracker`, and `InstructionConstraints` size constants. No other modifications to repo-root `CLAUDE.md` are permitted under L-16.
 
 This document is the answer to the question: *"What is Sigil v2, and why is it different from v1?"*
 
