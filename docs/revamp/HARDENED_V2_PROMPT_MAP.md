@@ -942,7 +942,7 @@ TASKS:
      face value). Default 0.
    - finalize_session.rs: AFTER existing CPI balance audit (lines 231-242), add:
      assert (vault_usdc_balance + vault_usdt_balance) >= policy.stable_balance_floor.
-     Reject with 6092 ErrStableFloorViolation.
+     Reject with 6094 ErrStableFloorViolation.
    - This is the HARD reserve — no combination of attacks drains below this.
 
 2. TA-14 per-recipient daily cap (FIXED-SIZE ARRAY per F-14 + Audit #1 AUD2-F5):
@@ -967,10 +967,10 @@ TASKS:
      a) Resolve recipient pubkey (token-account owner).
      b) Compute outflow_to_this_recipient.
      c) If recipient not in per_recipient: add entry (or evict oldest finished
-        window — reject with 6094 if no slot can be evicted via age).
+        window — reject with 6096 if no slot can be evicted via age).
      d) Increment rolling 24h amount via same epoch-bucket math.
      e) Assert rolling_24h_to_recipient <= policy.per_recipient_daily_cap_usd.
-   - Reject with 6094 ErrRecipientCapExceeded.
+   - Reject with 6096 ErrRecipientCapExceeded.
 
 3. TA-13 ratification (per F-15):
    - state/tracker.rs:29: DELETE the "Reserved per-protocol spend counters
@@ -978,7 +978,7 @@ TASKS:
      24h counters. Enforcement wired in finalize_session.rs:313-322 (stablecoin
      input) and lines 401-411 (non-stablecoin input). See policy.protocol_caps
      for the cap values."
-   - Add 6093 ErrDailyCapExceeded error variant (or reuse existing if found —
+   - Add 6095 ErrDailyCapExceeded error variant (or reuse existing if found —
      run grep first).
    - VERIFY finalize_session.rs:313-322 + 401-411 actually compare against
      policy.protocol_caps when has_protocol_caps=true. If incomplete, finish
