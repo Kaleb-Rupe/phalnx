@@ -5,6 +5,7 @@ use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 use crate::errors::SigilError;
 use crate::events::FundsDeposited;
 use crate::state::*;
+use crate::utils::token2022_extension::enforce_token2022_extension_allowlist;
 
 #[derive(Accounts)]
 pub struct DepositFunds<'info> {
@@ -63,6 +64,17 @@ pub fn handler(ctx: Context<DepositFunds>, amount: u64) -> Result<()> {
         is_pinned_deposit_mint(&ctx.accounts.mint.key()),
         SigilError::ErrMintNotPinned
     );
+
+    // TA-08 (Phase 3 pre-execution guard #5): if the pinned mint is a
+    // Token-2022 mint, walk its TLV blob and reject any extension that is
+    // not on the V1 allowlist (MemoTransfer / NonTransferable /
+    // MetadataPointer — exactly 3 IDs). Forward-secure: unknown extension
+    // type IDs reject. This is layered with the runtime opcode blocklist
+    // in `validate_and_authorize.rs` (per F-5); both layers are required.
+    //
+    // For SPL-classic mints (USDC + USDT mainnet today), the function is
+    // a no-op — there is no extension surface to validate.
+    enforce_token2022_extension_allowlist(&ctx.accounts.mint.to_account_info())?;
 
     // Transfer tokens from owner to vault PDA token account
     let cpi_accounts = Transfer {
