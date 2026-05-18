@@ -14,7 +14,7 @@
  */
 
 // ────────────────────────────────────────────────────────────────
-// Sigil program errors (6000-6081)
+// Sigil program errors (6000-6096)
 // ────────────────────────────────────────────────────────────────
 
 export const SIGIL_ERRORS = {
@@ -100,6 +100,21 @@ export const SIGIL_ERRORS = {
   InvalidCapability: 6079,
   PolicyPreviewMismatch: 6080,
   ObserveOnlyModeBlocksExecute: 6081,
+  ActiveVaultRequiresAllowlist: 6082,
+  ErrMintNotPinned: 6083,
+  ErrOutsideOperatingHours: 6084,
+  ErrCooldownActive: 6085,
+  ErrGraylistFriction: 6086,
+  ErrGraylistFull: 6087,
+  ErrToken2022ExtensionForbidden: 6088,
+  ErrCosignRequired: 6089,
+  ErrAutoRevoked: 6090,
+  ErrSandwichIntegrity: 6091,
+  ErrProtectedWritable: 6092,
+  ErrSessionNonceMismatch: 6093,
+  ErrStableFloorViolation: 6094,
+  ErrDailyCapExceeded: 6095,
+  ErrRecipientCapExceeded: 6096,
 } as const;
 
 /**

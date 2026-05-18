@@ -137,6 +137,10 @@ export const SIGIL_ERRORS = {
   ErrSandwichIntegrity: 6091,
   ErrProtectedWritable: 6092,
   ErrSessionNonceMismatch: 6093,
+  // Phase 5 post-execution invariants TA-12 + TA-13 + TA-14
+  ErrStableFloorViolation: 6094,
+  ErrDailyCapExceeded: 6095,
+  ErrRecipientCapExceeded: 6096,
 } as const;
 
 export type SigilErrorName = keyof typeof SIGIL_ERRORS;

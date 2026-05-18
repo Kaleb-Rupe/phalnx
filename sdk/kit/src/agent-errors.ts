@@ -761,26 +761,28 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
   },
 
   // --- Per-protocol spend cap errors ---
+  // Phase 5 §RP-1 V5: 6047 semantics flipped. The "rolling 24h per-protocol
+  // cap exceeded" semantic moved to 6095 (ErrDailyCapExceeded). 6047 now
+  // only emits from `state/tracker.rs:313` when the fixed-size per-protocol
+  // counter slot allocation (max 10 protocols tracked) is exhausted —
+  // i.e. an 11th distinct protocol attempted within the rolling window.
   6047: {
     name: "ProtocolCapExceeded",
-    message: "Per-protocol rolling 24h spending cap would be exceeded",
+    message:
+      "Per-protocol counter slot allocation exhausted (max 10 protocols tracked)",
     category: "SPENDING_CAP",
     retryable: true,
     retry_after_ms: 3_600_000,
     recovery_actions: [
       {
-        action: "reduce_amount",
-        description:
-          "Reduce the amount to fit within the protocol's remaining cap",
-      },
-      {
-        action: "use_different_protocol",
-        description: "Use a different protocol that has remaining capacity",
-      },
-      {
         action: "wait",
         description:
-          "Wait for the 24h rolling window to release spent capacity",
+          "Wait for an existing protocol slot's 24h rolling window to elapse before invoking a new protocol",
+      },
+      {
+        action: "use_existing_protocol",
+        description:
+          "Reuse one of the protocols already tracked in the rolling window rather than invoking an 11th distinct protocol",
       },
     ],
   },
@@ -1452,6 +1454,106 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
         action: "fresh_session_nonce",
         description:
           "Pass expected_nonce = 0 for a fresh validate_and_authorize. A non-zero value is only valid in Phase 8 ownership-transfer flow (M-5).",
+      },
+    ],
+  },
+
+  // ─── Phase 5: post-execution invariants (TA-12 + TA-13 + TA-14) ───
+  // §RP-1 V5: added Phase 5 mappings missing from the SDK error table.
+  // Source of truth: programs/sigil/src/errors.rs:407-451 + IDL.
+
+  /** 6094 — TA-12: combined USDC+USDT vault balance dropped below the
+   * owner-configured `policy.stable_balance_floor`. The HARD reserve —
+   * no combination of attacks (CPI drain, per-protocol cap bypass, fee
+   * inflation) may drain the vault below this line. Asserted in both
+   * `finalize_session` and `agent_transfer` after the CPI completes.
+   */
+  6094: {
+    name: "ErrStableFloorViolation",
+    message:
+      "Stable balance floor violated — combined USDC+USDT balance dropped below policy.stable_balance_floor",
+    category: "POLICY_VIOLATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "reduce_amount",
+        description:
+          "Reduce the transfer amount so the post-execution combined USDC+USDT vault balance stays at or above policy.stable_balance_floor",
+      },
+      {
+        action: "deposit_more",
+        description:
+          "Owner can deposit additional USDC or USDT to raise the combined balance above the floor before the agent retries",
+      },
+      {
+        action: "lower_floor",
+        description:
+          "Owner can queue a policy update to lower stable_balance_floor (timelock-gated, owner-only)",
+      },
+    ],
+  },
+
+  /** 6095 — TA-13: per-protocol daily cap exceeded. The owner-configured
+   * `policy.protocol_caps[i]` rolling-24h cap for the protocol the agent
+   * is invoking would be exceeded by this transaction. Distinct from
+   * 6047 (ProtocolCapExceeded), which now signals slot-allocation
+   * exhaustion only — see §RP-1 V5 disposition.
+   */
+  6095: {
+    name: "ErrDailyCapExceeded",
+    message:
+      "Per-protocol daily spending cap would be exceeded (rolling 24h)",
+    category: "SPENDING_CAP",
+    retryable: true,
+    retry_after_ms: 3_600_000,
+    recovery_actions: [
+      {
+        action: "reduce_amount",
+        description:
+          "Reduce the amount to fit within this protocol's remaining 24h rolling-window cap",
+      },
+      {
+        action: "use_different_protocol",
+        description:
+          "Route through a different allowlisted protocol that has remaining 24h capacity",
+      },
+      {
+        action: "wait",
+        description:
+          "Wait for the 24h rolling window to release spent capacity for this protocol",
+      },
+    ],
+  },
+
+  /** 6096 — TA-14: per-recipient daily cap exceeded. The recipient's
+   * rolling-24h outflow would breach `policy.per_recipient_daily_cap_usd`.
+   * Resolved via SPL TokenAccount.owner (the WALLET that holds the
+   * destination ATA), NOT the meta pubkey. Eviction is age-based, never
+   * LRU — array-full with no expired slot returns this code too,
+   * preventing churn-eviction bypass.
+   */
+  6096: {
+    name: "ErrRecipientCapExceeded",
+    message:
+      "Per-recipient daily cap exceeded — recipient outflow would breach policy.per_recipient_daily_cap_usd within rolling 24h window",
+    category: "SPENDING_CAP",
+    retryable: true,
+    retry_after_ms: 3_600_000,
+    recovery_actions: [
+      {
+        action: "reduce_amount",
+        description:
+          "Reduce the transfer amount so the recipient's 24h rolling outflow stays under policy.per_recipient_daily_cap_usd",
+      },
+      {
+        action: "use_different_recipient",
+        description:
+          "Route the transfer to a different allowed destination that has remaining 24h cap headroom",
+      },
+      {
+        action: "wait",
+        description:
+          "Wait for the recipient's rolling 24h window to release spent capacity",
       },
     ],
   },

@@ -108,7 +108,7 @@ export const SIGIL_ERROR__UNAUTHORIZED_TOKEN_APPROVAL = 0x179c; // 6044
 export const SIGIL_ERROR__INVALID_SESSION_EXPIRY = 0x179d; // 6045
 /** UnconstrainedProgramBlocked: Program has no matching constraint entry — every instruction must match one */
 export const SIGIL_ERROR__UNCONSTRAINED_PROGRAM_BLOCKED = 0x179e; // 6046
-/** ProtocolCapExceeded: Per-protocol rolling 24h spending cap would be exceeded */
+/** ProtocolCapExceeded: Per-protocol counter slot allocation exhausted (max 10 protocols tracked) */
 export const SIGIL_ERROR__PROTOCOL_CAP_EXCEEDED = 0x179f; // 6047
 /** ProtocolCapsMismatch: protocol_caps length must match protocols length when has_protocol_caps is true */
 export const SIGIL_ERROR__PROTOCOL_CAPS_MISMATCH = 0x17a0; // 6048
@@ -202,6 +202,12 @@ export const SIGIL_ERROR__ERR_SANDWICH_INTEGRITY = 0x17cb; // 6091
 export const SIGIL_ERROR__ERR_PROTECTED_WRITABLE = 0x17cc; // 6092
 /** ErrSessionNonceMismatch: Session nonce mismatch — caller's expected_nonce does not match the session's stored nonce (durable-nonce replay defense) */
 export const SIGIL_ERROR__ERR_SESSION_NONCE_MISMATCH = 0x17cd; // 6093
+/** ErrStableFloorViolation: Stable balance floor violated — combined USDC+USDT balance dropped below policy.stable_balance_floor */
+export const SIGIL_ERROR__ERR_STABLE_FLOOR_VIOLATION = 0x17ce; // 6094
+/** ErrDailyCapExceeded: Per-protocol daily spending cap would be exceeded (rolling 24h) */
+export const SIGIL_ERROR__ERR_DAILY_CAP_EXCEEDED = 0x17cf; // 6095
+/** ErrRecipientCapExceeded: Per-recipient daily cap exceeded — recipient outflow would breach policy.per_recipient_daily_cap_usd within the rolling 24h window, or per_recipient array full with no expired slot to evict */
+export const SIGIL_ERROR__ERR_RECIPIENT_CAP_EXCEEDED = 0x17d0; // 6096
 
 export type SigilError =
   | typeof SIGIL_ERROR__ACCOUNT_WRITABILITY_MISMATCH
@@ -228,13 +234,16 @@ export type SigilError =
   | typeof SIGIL_ERROR__ERR_AUTO_REVOKED
   | typeof SIGIL_ERROR__ERR_COOLDOWN_ACTIVE
   | typeof SIGIL_ERROR__ERR_COSIGN_REQUIRED
+  | typeof SIGIL_ERROR__ERR_DAILY_CAP_EXCEEDED
   | typeof SIGIL_ERROR__ERR_GRAYLIST_FRICTION
   | typeof SIGIL_ERROR__ERR_GRAYLIST_FULL
   | typeof SIGIL_ERROR__ERR_MINT_NOT_PINNED
   | typeof SIGIL_ERROR__ERR_OUTSIDE_OPERATING_HOURS
   | typeof SIGIL_ERROR__ERR_PROTECTED_WRITABLE
+  | typeof SIGIL_ERROR__ERR_RECIPIENT_CAP_EXCEEDED
   | typeof SIGIL_ERROR__ERR_SANDWICH_INTEGRITY
   | typeof SIGIL_ERROR__ERR_SESSION_NONCE_MISMATCH
+  | typeof SIGIL_ERROR__ERR_STABLE_FLOOR_VIOLATION
   | typeof SIGIL_ERROR__ERR_TOKEN2022_EXTENSION_FORBIDDEN
   | typeof SIGIL_ERROR__INSUFFICIENT_BALANCE
   | typeof SIGIL_ERROR__INSUFFICIENT_PERMISSIONS
@@ -326,13 +335,16 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__ERR_AUTO_REVOKED]: `Agent capability auto-revoked after consecutive policy-violation failures; owner must re-enable`,
     [SIGIL_ERROR__ERR_COOLDOWN_ACTIVE]: `Agent cooldown period has not elapsed since the last action`,
     [SIGIL_ERROR__ERR_COSIGN_REQUIRED]: `Elevated policy mutation requires an owner-signed cosigning session`,
+    [SIGIL_ERROR__ERR_DAILY_CAP_EXCEEDED]: `Per-protocol daily spending cap would be exceeded (rolling 24h)`,
     [SIGIL_ERROR__ERR_GRAYLIST_FRICTION]: `Destination is graylisted (24h friction window — awaiting promote_graylist_destination or unlock)`,
     [SIGIL_ERROR__ERR_GRAYLIST_FULL]: `Destination graylist is full (max 10 entries) — wait for an existing entry to unlock or promote`,
     [SIGIL_ERROR__ERR_MINT_NOT_PINNED]: `Deposit mint is not a build-time-pinned stablecoin (USDC or USDT)`,
     [SIGIL_ERROR__ERR_OUTSIDE_OPERATING_HOURS]: `Current UTC hour is outside the policy's operating_hours bitmask`,
     [SIGIL_ERROR__ERR_PROTECTED_WRITABLE]: `Protected Sigil PDA passed as writable to a foreign instruction between validate and finalize`,
+    [SIGIL_ERROR__ERR_RECIPIENT_CAP_EXCEEDED]: `Per-recipient daily cap exceeded — recipient outflow would breach policy.per_recipient_daily_cap_usd within the rolling 24h window, or per_recipient array full with no expired slot to evict`,
     [SIGIL_ERROR__ERR_SANDWICH_INTEGRITY]: `Bundle integrity violation: multiple validate_and_authorize instructions for the same (vault, agent, mint) tuple in one transaction`,
     [SIGIL_ERROR__ERR_SESSION_NONCE_MISMATCH]: `Session nonce mismatch — caller's expected_nonce does not match the session's stored nonce (durable-nonce replay defense)`,
+    [SIGIL_ERROR__ERR_STABLE_FLOOR_VIOLATION]: `Stable balance floor violated — combined USDC+USDT balance dropped below policy.stable_balance_floor`,
     [SIGIL_ERROR__ERR_TOKEN2022_EXTENSION_FORBIDDEN]: `Token-2022 mint has a forbidden extension (only MemoTransfer + MetadataPointer + NonTransferable allowed)`,
     [SIGIL_ERROR__INSUFFICIENT_BALANCE]: `Insufficient vault balance for withdrawal`,
     [SIGIL_ERROR__INSUFFICIENT_PERMISSIONS]: `Agent lacks permission for this action type`,
@@ -367,7 +379,7 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__POLICY_PREVIEW_MISMATCH]: `Policy preview digest mismatch — caller's signed digest differs from recomputed canonical digest`,
     [SIGIL_ERROR__POLICY_VERSION_MISMATCH]: `Policy version mismatch — policy changed since agent's last RPC read`,
     [SIGIL_ERROR__POST_ASSERTION_FAILED]: `Post-execution assertion failed: account state did not satisfy constraint`,
-    [SIGIL_ERROR__PROTOCOL_CAP_EXCEEDED]: `Per-protocol rolling 24h spending cap would be exceeded`,
+    [SIGIL_ERROR__PROTOCOL_CAP_EXCEEDED]: `Per-protocol counter slot allocation exhausted (max 10 protocols tracked)`,
     [SIGIL_ERROR__PROTOCOL_CAPS_MISMATCH]: `protocol_caps length must match protocols length when has_protocol_caps is true`,
     [SIGIL_ERROR__PROTOCOL_MISMATCH]: `DeFi instruction program does not match declared target_protocol`,
     [SIGIL_ERROR__PROTOCOL_NOT_ALLOWED]: `Protocol not allowed by policy`,

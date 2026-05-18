@@ -286,7 +286,11 @@ const ANCHOR_ERROR_MAP: Record<number, { name: string; suggestion: string }> = {
   },
   6047: {
     name: "ProtocolCapExceeded",
-    suggestion: "Per-protocol rolling 24h spending cap exceeded.",
+    // §RP-1 V5: 6047 semantics flipped. Rolling 24h per-protocol cap
+    // moved to 6095 (ErrDailyCapExceeded). 6047 now signals only the
+    // slot-allocation exhausted case from state/tracker.rs:313.
+    suggestion:
+      "Per-protocol counter slot allocation exhausted (max 10 protocols tracked). Wait for an existing slot's 24h window to elapse, or reuse one of the protocols already tracked.",
   },
   6048: {
     name: "ProtocolCapsMismatch",
@@ -430,6 +434,30 @@ const ANCHOR_ERROR_MAP: Record<number, { name: string; suggestion: string }> = {
     name: "InvalidDestinationMode",
     suggestion:
       "Invalid destination mode — must be 0 (Restricted) or 1 (OpenWithCap).",
+  },
+
+  // ─── Phase 5 §RP-1 V5: post-execution invariants ───
+  // Map mirrors the Rust SigilError codes 6094-6096 added in Phase 5.
+  // Older 6079-6093 entries are intentionally not mapped here (this
+  // suggestion table is partial — only the codes actually emitted in
+  // pre-flight simulation are required). 6094-6096 emit from
+  // `finalize_session` / `agent_transfer` so they CAN surface in a
+  // simulation result and benefit from a friendly suggestion.
+
+  6094: {
+    name: "ErrStableFloorViolation",
+    suggestion:
+      "Stable balance floor violated — the combined USDC+USDT vault balance after this transaction would drop below policy.stable_balance_floor. Reduce the transfer amount or deposit more stablecoin before retrying.",
+  },
+  6095: {
+    name: "ErrDailyCapExceeded",
+    suggestion:
+      "Per-protocol daily cap exceeded — this protocol's rolling 24h spending cap would be exceeded. Reduce the amount, route through a different allowlisted protocol, or wait for the rolling window to release capacity.",
+  },
+  6096: {
+    name: "ErrRecipientCapExceeded",
+    suggestion:
+      "Per-recipient daily cap exceeded — the recipient's rolling 24h outflow would breach policy.per_recipient_daily_cap_usd. Reduce the amount, route to a different allowed destination, or wait for the rolling window to release capacity.",
   },
 };
 
