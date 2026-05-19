@@ -1064,7 +1064,7 @@ TASKS:
      (cap at MAX_ATAS_PER_MINT=5 to bound CU). Sum balances. Store pre-snap
      sum in session.assertion_snapshots[i] as u64 LE.
    - finalize_session.rs verify phase: recompute post sum; assert
-     (pre_sum - post_sum) <= max_net_decrease. Reject with 6095
+     (pre_sum - post_sum) <= max_net_decrease. Reject with 6097
      ErrMintDeltaCapExceeded.
 
 2. R-2 AtaAuthorityPin (Maestro spending.rs:115-128 — CITATIONS VERIFIED):
@@ -1075,7 +1075,7 @@ TASKS:
      ATA gets closed (data length=0) or re-initialized (bytes 32..64 != vault),
      reject. The pairing means: AtaAuthorityPin detects authority change,
      MintDeltaCap detects balance change — together cover close+drain+recreate.
-   - Reject with 6096 ErrAtaAuthorityChanged.
+   - Reject with 6098 ErrAtaAuthorityChanged.
 
 3. R-3 OutputBalanceFloor (Maestro spending.rs:131-141 — CITATIONS VERIFIED;
    Maestro defined but DOESN'T USE this — Sigil first to wire):
@@ -1084,7 +1084,7 @@ TASKS:
    - validate_and_authorize.rs snapshot phase: read token_account balance,
      store pre-snap.
    - finalize_session.rs verify phase: read post; assert
-     (post - pre) >= min_increase. Reject with 6097 ErrOutputBelowFloor.
+     (post - pre) >= min_increase. Reject with 6099 ErrOutputBelowFloor.
 
 4. R-4 DeclarationConsistency (NEW — Maestro verify_cpi_token_accounts at
    spending.rs:151-204; surfaced by Maestro re-verification, missed by both
@@ -1099,7 +1099,7 @@ TASKS:
      token account whose mint==declared_mint AND owner==declared_recipient.
    - Closes "declaration dishonesty" attack: agent declares "recipient: alice"
      to satisfy allowlist check, but provides attacker_ata in CPI metas.
-   - Reject with 6098 ErrDeclarationInconsistent.
+   - Reject with 6100 ErrDeclarationInconsistent.
 
 5. Grow MAX_POST_ASSERTION_ENTRIES from 4 to 8 (decision locked):
    - state/post_assertions.rs: const MAX_POST_ASSERTION_ENTRIES=8 (was 4).
@@ -1130,7 +1130,7 @@ BUILD+TEST: full pipeline. Adversarial tests:
 - code-reviewer prompt: "Verify each new mode has explicit numeric assignment
   (4, 5, 6, 7 — no overlap with 0-3). Verify the assertion enumeration in
   finalize_session.rs matches the assignment. Verify all four new error codes
-  (6095-6098) are in the post-Phase-1 reservation range."
+  (6097-6100) are in the post-Phase-1 reservation range."
 
 COMMITS (4 expected, one per variant + capacity grow combined with R-1):
 - feat(post-assertions): R-1 MintDeltaCap + grow capacity 4→8
