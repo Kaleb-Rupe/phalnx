@@ -59,7 +59,18 @@ export interface AgentError {
 }
 
 // ---------------------------------------------------------------------------
-// On-chain error code mapping (6000-6087)
+// On-chain error code mapping (6000-6102)
+//
+// MAINTENANCE NOTE — when adding a new program error in
+// programs/sigil/src/errors.rs, also:
+//   1. Add a SDK mapping entry in `ON_CHAIN_ERRORS` below (or a TODO if
+//      the mapping is intentionally deferred).
+//   2. Bump the `<= 6102` upper bound in `extractErrorCode()` below
+//      AND the `(code 6000-6102)` JSDoc tag on `toAgentError()`.
+//   3. Bump the matching `match[1] hex` range guard inside the
+//      SendTransactionError-log-parsing branch of `extractErrorCode()`.
+// The predicate bound is the load-bearing signal — leaving it stale
+// silently swallows future error codes (they extract as `null`).
 // ---------------------------------------------------------------------------
 
 interface ErrorMapping {
@@ -2078,7 +2089,7 @@ const SDK_ERRORS: Record<string, ErrorMapping> = {
  * Convert any error into a structured AgentError.
  *
  * Handles:
- * - On-chain Anchor errors (code 6000-6087)
+ * - On-chain Anchor errors (code 6000-6102)
  * - SDK errors (code 7000-7033)
  * - Network/RPC errors (from message patterns)
  * - Unknown errors (wrapped as FATAL)
@@ -2430,8 +2441,9 @@ function extractErrorCode(error: unknown): number | null {
   if (!error || typeof error !== "object") return null;
   const e = error as Record<string, unknown>;
 
-  // Direct code property
-  if (typeof e.code === "number" && e.code >= 6000 && e.code <= 6087)
+  // Direct code property — predicate bound updated 2026-05-19 (audit P1.2);
+  // see top-of-file maintenance note.
+  if (typeof e.code === "number" && e.code >= 6000 && e.code <= 6102)
     return e.code;
 
   // Anchor error structure
@@ -2448,7 +2460,8 @@ function extractErrorCode(error: unknown): number | null {
     const match = e.message.match(/custom program error: 0x([0-9a-fA-F]+)/);
     if (match) {
       const code = parseInt(match[1], 16);
-      if (code >= 6000 && code <= 6087) return code;
+      // Predicate bound updated 2026-05-19 (audit P1.2); see top-of-file.
+      if (code >= 6000 && code <= 6102) return code;
     }
   }
 
@@ -2677,7 +2690,7 @@ export class SigilSdkError extends Error implements AgentError {
  * Returns a SigilSdkError (extends Error) so instanceof Error checks still work.
  *
  * Processing order:
- * 1. Try on-chain error extraction via toAgentError() (numeric codes 6000-6087)
+ * 1. Try on-chain error extraction via toAgentError() (numeric codes 6000-6102)
  * 2. Pattern-match SDK error messages (11 patterns from seal.ts throw sites)
  * 3. Fallback to UNKNOWN/FATAL
  */
