@@ -7,6 +7,12 @@
       "claudePattern": "tests/sigil.ts` (ts-mocha + LiteSVM, no validator needed, %d tests)"
     },
     {
+      "name": "Missing-coverage gap-fill (DC audit 2026-05-19)",
+      "count": 5,
+      "onChain": true,
+      "claudePattern": "tests/missing-coverage.ts` (ts-mocha + LiteSVM, %d tests — happy-paths for cancel_close_constraints, record_agent_violation, promote_graylist_destination, set_observe_only, cancel_agent_permissions_update)"
+    },
+    {
       "name": "Jupiter integration (composed swaps)",
       "count": 8,
       "onChain": true,

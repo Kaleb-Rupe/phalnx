@@ -74,6 +74,9 @@ V2 ships under a **NEW program ID** at Stage 6 (per REVAMP_PLAN.md). The devnet 
 
 **Account schema removed from `state/vault.rs`:**
 - `AgentVault.active_escrow_count: u8` (1 byte) — `AgentVault` SIZE: 634 → 633 bytes
+  (Phase 2 later re-added 1 byte for `observe_only: bool` per TA-19, bringing
+  `AgentVault::SIZE` back to **634**; see `vault.rs:135-151`. STAGE_1_REMOVED
+  describes the demolition delta, not the current absolute size.)
 
 **Error variants removed from `errors.rs` (7 variants total, downstream codes shifted):**
 - Escrow-specific errors (6039-6044 era)
@@ -109,7 +112,7 @@ V2 ships under a **NEW program ID** at Stage 6 (per REVAMP_PLAN.md). The devnet 
 - `sdk/kit/src/event-analytics.ts`, `security-analytics.ts`, `advanced-analytics.ts`, `vault-analytics.ts` — removed escrow analytics paths
 - `sdk/kit/src/agent-errors.ts` — 88 error codes renumbered after 7-variant deletion; 7 escrow-specific blocks dropped
 - `sdk/kit/src/simulation.ts` — same renumbering treatment
-- `sdk/kit/src/preview-create-vault.ts` — `AGENT_VAULT_SIZE: 634 → 633`
+- `sdk/kit/src/preview-create-vault.ts` — `AGENT_VAULT_SIZE: 634 → 633` (later bumped back to 634 at DC1-DC14 audit closure after Phase 2 added `observe_only`)
 - `sdk/kit/src/resolve-accounts.ts`, `state-resolver.ts` — removed escrow PDA derivation helpers
 - `sdk/kit/src/dashboard/{index,reads,types}.ts` — removed escrow dashboard views
 - `sdk/kit/src/testing/mock-state.ts` — removed escrow mock

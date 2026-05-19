@@ -78,13 +78,9 @@
   "peerDependencies": {
     "@solana/kit": "^6.2.0",
     "@solana/errors": "^6.2.0",
-    "react": ">=18.0.0",
     "@tanstack/react-query": ">=5.0.0"
   },
   "peerDependenciesMeta": {
-    "react": {
-      "optional": true
-    },
     "@tanstack/react-query": {
       "optional": true
     }
@@ -102,7 +98,6 @@
     "codama": "1.5.1",
     "fast-check": "^3.23.2",
     "mocha": "^11.7.5",
-    "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
     "typescript": "^5.3.3",
     "@solana/web3.js": "^1.95.0",

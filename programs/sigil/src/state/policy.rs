@@ -446,12 +446,8 @@ impl PolicyConfig {
     }
 }
 
-/// TA-05 (Phase 3): default operating_hours value when the owner does not
-/// narrow — all 24 UTC hours enabled. The full 24-bit allowed range; upper
-/// 8 bits remain zero.
-pub const OPERATING_HOURS_DEFAULT_ALL: u32 = 0x00FFFFFF;
-
 /// TA-05 (Phase 3): mask covering bits 0..=23 only. Any `operating_hours`
 /// value whose bits 24..=31 are non-zero is invalid and MUST be rejected at
-/// policy-write time.
+/// policy-write time. The all-hours-enabled value is `OPERATING_HOURS_VALID_MASK`
+/// itself (`0x00FFFFFF`); callers that want "all hours" use this same constant.
 pub const OPERATING_HOURS_VALID_MASK: u32 = 0x00FFFFFF;
