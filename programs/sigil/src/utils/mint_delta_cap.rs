@@ -141,32 +141,70 @@ pub fn sum_vault_mint_balance(
             let derived = derive_vault_atas(vault, mint);
             let mut sum: u64 = 0;
             for pda in derived.iter().take(MAX_ATAS_PER_MINT) {
-                // The caller passes any subset of derived ATAs in
-                // remaining_accounts. If a derived ATA isn't present, treat
-                // its balance as 0 (the vault doesn't hold that variant).
-                let Some(info) = remaining.iter().find(|a| a.key() == *pda) else {
+                // §RP CRIT-2 (Phase 6 review): the caller MUST include every
+                // derived ATA pubkey in remaining_accounts. Previously this
+                // loop silently skipped missing derived PDAs (`None => continue`),
+                // which allowed an agent to drain an existing ATA mid-sandwich
+                // simply by omitting it at validate (pre_sum = 0) and re-
+                // including it at finalize (post_sum = 500K, saturating_sub
+                // = 0 — R-1 passes). The fix mirrors scope=1's pattern: the
+                // derived ATA must be present.
+                //
+                // Accounts that have NEVER been initialized on chain (no
+                // SystemProgram-allocated data buffer) ARE legitimately missing
+                // a balance. The caller still has to pass the derived pubkey
+                // in remaining_accounts; the helper detects an uninitialized
+                // account via `data.is_empty()` (zero-length buffer) OR a
+                // wrong owner program, and treats either as balance = 0.
+                // The agent cannot use this to evade the check because an
+                // uninitialized ATA cannot hold value mid-sandwich; the moment
+                // the agent funds it, the account becomes initialized and
+                // subsequent reads see the real balance.
+                let info = remaining
+                    .iter()
+                    .find(|a| a.key() == *pda)
+                    .ok_or(error!(SigilError::MintDeltaCapMisconfigured))?;
+
+                // Uninitialized account at this derived PDA — treated as
+                // balance 0. This is the legitimate case where the vault has
+                // never created the variant (e.g., vault holds SPL classic but
+                // never opened a Token-2022 ATA for the same mint).
+                if info.data_is_empty() {
                     continue;
-                };
-                // Defensive: must be token-program-owned AND match the
-                // (vault, mint) pair. If a caller injects a same-pubkey
-                // attacker-owned account at this slot, the owner check
-                // rejects.
+                }
+                // Account exists but owned by a non-token program — also
+                // treated as 0 balance. The pubkey at the derived PDA could
+                // be an unrelated account in the wild (very rare given ATA
+                // derivation, but defensible).
+                if info.owner != &spl_token_id() && info.owner != &TOKEN_2022_PROGRAM_ID {
+                    continue;
+                }
+                // Token-program-owned but data buffer too short to hold the
+                // canonical (mint, owner, amount) prefix — malformed; skip.
+                let data = info.try_borrow_data()?;
+                if data.len() < 72 {
+                    continue;
+                }
+                drop(data);
+
+                // Defensive: the account at this derived PDA must hold the
+                // configured mint AND be owned by the vault. A divergence
+                // here means the PDA was hijacked (close+recreate with
+                // attacker authority OR funded with wrong mint). R-2
+                // (AtaAuthorityPin) catches the attacker-authority case at
+                // finalize when paired; here in the validate snapshot we
+                // skip a malformed account so the sum reflects only
+                // legitimately-vault-owned balances.
                 let Some(acct_mint) = read_token_mint(info) else {
                     continue;
                 };
                 if acct_mint != *mint {
-                    // Account exists at the derived PDA but mint diverges —
-                    // either uninitialized or attacker-funded. Skip.
                     continue;
                 }
                 let Some(acct_owner) = read_token_owner(info) else {
                     continue;
                 };
                 if acct_owner != *vault {
-                    // Same PDA pubkey, different owner field — close+recreate
-                    // attempt. AtaAuthorityPin (R-2) catches this at finalize
-                    // time; here in the validate snapshot phase we simply
-                    // skip the malformed account.
                     continue;
                 }
                 let Some(amount) = read_token_amount(info) else {
@@ -246,5 +284,34 @@ mod tests {
         let vault = Pubkey::new_unique();
         let mint = Pubkey::new_unique();
         assert!(derive_vault_atas(&vault, &mint).len() <= MAX_ATAS_PER_MINT);
+    }
+
+    /// §RP CRIT-2 boundary: scope=0 with an empty `remaining_accounts` slice
+    /// MUST return `MintDeltaCapMisconfigured` for every derived ATA, not
+    /// silently sum to 0. Previously the loop's `None => continue` silently
+    /// skipped missing PDAs, enabling the omission-bypass attack where the
+    /// agent drains an existing ATA at the DeFi step while pre_sum/post_sum
+    /// both measure 0 for it.
+    ///
+    /// We can't construct real `AccountInfo` lifetimes in this unit-test
+    /// context (RefCell + lifetimes), but the function behavior is pinned
+    /// at the type level: with `remaining = &[]` and `scope = 0`, the very
+    /// first `.find()` returns None → `ok_or(MintDeltaCapMisconfigured)?`
+    /// fires immediately. Integration coverage of the full omission scenario
+    /// lives in `tests/post-assertions-sandwich.ts`.
+    #[test]
+    fn scope_0_rejects_empty_remaining_accounts() {
+        let vault = Pubkey::new_unique();
+        let mint = Pubkey::new_unique();
+        let result = sum_vault_mint_balance(&vault, &mint, 0, &Pubkey::default(), &[]);
+        assert!(
+            result.is_err(),
+            "scope=0 with empty remaining_accounts must reject (was previously silent 0)",
+        );
+        // Sanity: scope=1 with empty remaining_accounts ALSO rejects (the
+        // existing required-presence path). The fix harmonizes scope=0 to
+        // the same posture.
+        let result1 = sum_vault_mint_balance(&vault, &mint, 1, &Pubkey::new_unique(), &[]);
+        assert!(result1.is_err(), "scope=1 must also reject");
     }
 }
