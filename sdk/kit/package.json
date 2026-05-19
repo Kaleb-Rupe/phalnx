@@ -62,6 +62,7 @@
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",
+    "prepublishOnly": "pnpm run clean && pnpm run build",
     "codama": "node codama.mjs",
     "codama:flash": "node codama.mjs --protocol=flash-trade",
     "codama:kamino": "node codama.mjs --protocol=kamino",

@@ -238,8 +238,13 @@ pub enum SigilError {
     #[msg("Constraint operator value is not a valid ConstraintOperator discriminant")]
     InvalidConstraintOperator,
 
-    #[msg("Zero-copy constraints account has wrong vault")]
-    ConstraintsVaultMismatch,
+    /// Used by both the InstructionConstraints/PendingConstraintsUpdate paths
+    /// AND the AuditLogSuccess/AuditLogRejected paths (post §RP-2 HIGH-3 fix
+    /// 2026-05-19). The PDA seeds derivation makes the wrong-vault case
+    /// unreachable in practice; this variant exists as defense-in-depth.
+    /// Code reuse — error code 6068 unchanged.
+    #[msg("Zero-copy account vault key mismatch (defense-in-depth)")]
+    ZeroCopyVaultMismatch,
 
     #[msg("SPL opcode is blocked at runtime and cannot be used in constraints")]
     BlockedSplOpcode,

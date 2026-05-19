@@ -109,7 +109,7 @@ pub fn handler(ctx: Context<RevokeAgent>, agent_to_remove: Pubkey) -> Result<()>
         require_keys_eq!(
             log.vault,
             ctx.accounts.vault.key(),
-            SigilError::ConstraintsVaultMismatch
+            SigilError::ZeroCopyVaultMismatch
         );
         log.append(entry);
     }

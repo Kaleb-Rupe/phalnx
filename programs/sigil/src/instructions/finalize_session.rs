@@ -1113,7 +1113,7 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
             require_keys_eq!(
                 log.vault,
                 ctx.accounts.vault.key(),
-                SigilError::ConstraintsVaultMismatch
+                SigilError::ZeroCopyVaultMismatch
             );
             log.append(entry);
         } else {
@@ -1130,7 +1130,7 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
             require_keys_eq!(
                 log.vault,
                 ctx.accounts.vault.key(),
-                SigilError::ConstraintsVaultMismatch
+                SigilError::ZeroCopyVaultMismatch
             );
             log.append(entry);
         }

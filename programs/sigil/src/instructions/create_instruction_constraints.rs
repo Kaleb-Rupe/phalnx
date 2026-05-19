@@ -77,7 +77,7 @@ pub fn handler(
         // Verify vault key was written by allocate step
         require!(
             data[8..40] == vault_key.to_bytes(),
-            SigilError::ConstraintsVaultMismatch
+            SigilError::ZeroCopyVaultMismatch
         );
 
         // Write Anchor discriminator

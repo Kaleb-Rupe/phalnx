@@ -127,7 +127,7 @@ pub fn handler(ctx: Context<DepositFunds>, amount: u64) -> Result<()> {
         require_keys_eq!(
             log.vault,
             ctx.accounts.vault.key(),
-            SigilError::ConstraintsVaultMismatch
+            SigilError::ZeroCopyVaultMismatch
         );
         log.append(entry);
     }

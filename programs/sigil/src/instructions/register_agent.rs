@@ -172,7 +172,7 @@ pub fn handler(
         require_keys_eq!(
             log.vault,
             ctx.accounts.vault.key(),
-            SigilError::ConstraintsVaultMismatch
+            SigilError::ZeroCopyVaultMismatch
         );
         log.append(entry);
     }

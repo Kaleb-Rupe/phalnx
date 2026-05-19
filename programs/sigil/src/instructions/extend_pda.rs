@@ -54,7 +54,7 @@ pub fn handler(ctx: Context<ExtendPda>, target_size: u32) -> Result<()> {
         require!(data[..8] == [0u8; 8], SigilError::InvalidConstraintConfig);
         require!(
             data[8..40] == vault_key.to_bytes(),
-            SigilError::ConstraintsVaultMismatch
+            SigilError::ZeroCopyVaultMismatch
         );
     }
 

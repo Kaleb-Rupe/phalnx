@@ -1038,7 +1038,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
     ],
   },
   6064: {
-    name: "ConstraintsVaultMismatch",
+    name: "ZeroCopyVaultMismatch",
     message: "Zero-copy constraints account has wrong vault.",
     category: "INPUT_VALIDATION",
     retryable: false,

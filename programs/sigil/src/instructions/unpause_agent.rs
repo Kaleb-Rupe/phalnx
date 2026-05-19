@@ -117,7 +117,7 @@ pub fn handler(ctx: Context<UnpauseAgent>, agent_to_unpause: Pubkey) -> Result<(
         require_keys_eq!(
             log.vault,
             ctx.accounts.vault.key(),
-            SigilError::ConstraintsVaultMismatch
+            SigilError::ZeroCopyVaultMismatch
         );
         log.append(entry);
     }

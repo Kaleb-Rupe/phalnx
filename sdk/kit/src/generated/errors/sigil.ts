@@ -142,8 +142,8 @@ export const SIGIL_ERROR__UNAUTHORIZED_PRE_VALIDATE_INSTRUCTION = 0x17ad; // 606
 export const SIGIL_ERROR__SNAPSHOT_NOT_CAPTURED = 0x17ae; // 6062
 /** InvalidConstraintOperator: Constraint operator value is not a valid ConstraintOperator discriminant */
 export const SIGIL_ERROR__INVALID_CONSTRAINT_OPERATOR = 0x17af; // 6063
-/** ConstraintsVaultMismatch: Zero-copy constraints account has wrong vault */
-export const SIGIL_ERROR__CONSTRAINTS_VAULT_MISMATCH = 0x17b0; // 6064
+/** ZeroCopyVaultMismatch: Zero-copy account vault key mismatch (defense-in-depth) */
+export const SIGIL_ERROR__ZERO_COPY_VAULT_MISMATCH = 0x17b0; // 6064
 /** BlockedSplOpcode: SPL opcode is blocked at runtime and cannot be used in constraints */
 export const SIGIL_ERROR__BLOCKED_SPL_OPCODE = 0x17b1; // 6065
 /** QueuedUpdateExpired: Queued update is too old (>MAX_APPLY_AGE_SLOTS) — re-queue to apply. Defends against durable-nonce pre-signing. */
@@ -238,7 +238,6 @@ export type SigilError =
   | typeof SIGIL_ERROR__CONFIDENTIAL_TRANSFER_BLOCKED
   | typeof SIGIL_ERROR__CONSTRAINTS_ALREADY_POPULATED
   | typeof SIGIL_ERROR__CONSTRAINTS_NOT_CLOSED
-  | typeof SIGIL_ERROR__CONSTRAINTS_VAULT_MISMATCH
   | typeof SIGIL_ERROR__CONSTRAINT_VIOLATED
   | typeof SIGIL_ERROR__CPI_CALL_NOT_ALLOWED
   | typeof SIGIL_ERROR__DESTINATION_NOT_ALLOWED
@@ -324,7 +323,8 @@ export type SigilError =
   | typeof SIGIL_ERROR__UNSUPPORTED_TOKEN
   | typeof SIGIL_ERROR__VAULT_ALREADY_CLOSED
   | typeof SIGIL_ERROR__VAULT_NOT_ACTIVE
-  | typeof SIGIL_ERROR__VAULT_NOT_FROZEN;
+  | typeof SIGIL_ERROR__VAULT_NOT_FROZEN
+  | typeof SIGIL_ERROR__ZERO_COPY_VAULT_MISMATCH;
 
 let sigilErrorMessages: Record<SigilError, string> | undefined;
 if (process.env.NODE_ENV !== "production") {
@@ -345,7 +345,6 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__CONFIDENTIAL_TRANSFER_BLOCKED]: `Token-2022 ConfidentialTransfer not permitted between validate and finalize`,
     [SIGIL_ERROR__CONSTRAINTS_ALREADY_POPULATED]: `Cannot clean an active constraints PDA; use queue+apply_close_constraints`,
     [SIGIL_ERROR__CONSTRAINTS_NOT_CLOSED]: `Instruction constraints must be closed before closing vault`,
-    [SIGIL_ERROR__CONSTRAINTS_VAULT_MISMATCH]: `Zero-copy constraints account has wrong vault`,
     [SIGIL_ERROR__CONSTRAINT_VIOLATED]: `Instruction constraint violated`,
     [SIGIL_ERROR__CPI_CALL_NOT_ALLOWED]: `Instruction must be top-level (CPI calls not allowed)`,
     [SIGIL_ERROR__DESTINATION_NOT_ALLOWED]: `Destination not in allowed list`,
@@ -432,6 +431,7 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__VAULT_ALREADY_CLOSED]: `Vault is already closed`,
     [SIGIL_ERROR__VAULT_NOT_ACTIVE]: `Vault is not active`,
     [SIGIL_ERROR__VAULT_NOT_FROZEN]: `Vault is not frozen (expected frozen for reactivation)`,
+    [SIGIL_ERROR__ZERO_COPY_VAULT_MISMATCH]: `Zero-copy account vault key mismatch (defense-in-depth)`,
   };
 }
 

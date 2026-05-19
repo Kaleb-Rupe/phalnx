@@ -538,7 +538,7 @@ const SIGIL_ERROR_NAMES: Record<number, string> = {
   6061: "UnauthorizedPreValidateInstruction",
   6062: "SnapshotNotCaptured",
   6063: "InvalidConstraintOperator",
-  6064: "ConstraintsVaultMismatch",
+  6064: "ZeroCopyVaultMismatch",
   6065: "BlockedSplOpcode",
   6066: "QueuedUpdateExpired",
   6067: "AccountWritabilityMismatch",

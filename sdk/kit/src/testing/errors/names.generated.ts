@@ -82,7 +82,7 @@ export const SIGIL_ERRORS = {
   UnauthorizedPreValidateInstruction: 6061,
   SnapshotNotCaptured: 6062,
   InvalidConstraintOperator: 6063,
-  ConstraintsVaultMismatch: 6064,
+  ZeroCopyVaultMismatch: 6064,
   BlockedSplOpcode: 6065,
   QueuedUpdateExpired: 6066,
   AccountWritabilityMismatch: 6067,

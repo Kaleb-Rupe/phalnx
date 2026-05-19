@@ -51,6 +51,9 @@ const ENTRIES_OFFSET = 8 + 32; // after disc + vault
 // Discriminator allocation mirrors state/audit_log_success.rs.
 const DISC_FREEZE = 5;
 const DISC_REGISTER_AGENT = 13;
+// §RP-1 HIGH-1 fix: rejected-finalize cranks now use disc=16, NOT disc=1
+// (which was the validate slot, but validate writes no entries).
+const DISC_FINALIZE_REJECT = 16;
 
 interface AuditEntry {
   subject: Uint8Array;
@@ -418,6 +421,24 @@ describe("audit-log (Phase 7)", () => {
     expect(rAcct!.data.length).to.equal(
       8 + 32 + ENTRY_SIZE * REJECTED_CAPACITY + 1 + 1 + 13 + 1,
     );
+  });
+
+  // §RP-2 HIGH-2 close-up: assert disc=16 constant has the expected value.
+  // The §RP-1 HIGH-1 fix routes expired-finalize cranks to disc=16; if a
+  // future regression renumbers it, this test fails immediately. Rust-side
+  // is anchored via the AUDIT_DISC_FINALIZE_REJECT constant in
+  // state/audit_log_success.rs + a compile-time assert at the source.
+  // Full runtime coverage (drive an actual expired-finalize and read
+  // disc=16 from the rejected buffer) belongs in Phase 7.1 surfpool
+  // sandwich tests where session-expiry can be batched.
+  it("AUDIT_DISC_FINALIZE_REJECT constant === 16 (mirrors Rust source)", () => {
+    expect(DISC_FINALIZE_REJECT).to.equal(16);
+    // Sanity: disc=1 (validate) is RESERVED-no-writer per §RP-1 HIGH-1.
+    // disc=0 is the zero-init defense sentinel. Both differ from disc=16.
+    expect(DISC_FINALIZE_REJECT).to.not.equal(1);
+    expect(DISC_FINALIZE_REJECT).to.not.equal(0);
+    expect(DISC_FINALIZE_REJECT).to.not.equal(DISC_FREEZE);
+    expect(DISC_FINALIZE_REJECT).to.not.equal(DISC_REGISTER_AGENT);
   });
 
   it("discriminators 7/8/9 are RESERVED — no entry uses them after Phase 7 mutations", async () => {

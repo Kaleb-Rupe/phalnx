@@ -113,10 +113,12 @@ export {
 export {
   fetchAuditLogSuccess,
   fetchAuditLogRejected,
+  subjectBytes,
   targetProtocolBytes,
   AUDIT_DISC_RESERVED_ZERO,
   AUDIT_DISC_VALIDATE,
   AUDIT_DISC_FINALIZE_SUCCESS,
+  AUDIT_DISC_FINALIZE_REJECT,
   AUDIT_DISC_DEPOSIT,
   AUDIT_DISC_WITHDRAW,
   AUDIT_DISC_FREEZE,

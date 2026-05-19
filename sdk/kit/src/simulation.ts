@@ -362,9 +362,9 @@ const ANCHOR_ERROR_MAP: Record<number, { name: string; suggestion: string }> = {
       "InvalidConstraintOperator — see Sigil error-code documentation.",
   },
   6064: {
-    name: "ConstraintsVaultMismatch",
+    name: "ZeroCopyVaultMismatch",
     suggestion:
-      "ConstraintsVaultMismatch — see Sigil error-code documentation.",
+      "ZeroCopyVaultMismatch — see Sigil error-code documentation.",
   },
   6065: {
     name: "BlockedSplOpcode",
