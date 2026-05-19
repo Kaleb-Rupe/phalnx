@@ -1050,10 +1050,10 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
     // H-1: Decrement active session counter (unconditional — both success and expired)
     vault.active_sessions = vault.active_sessions.saturating_sub(1);
 
-    // AC-10 (Phase 4): increment session nonce. This write is dead-on-close
-    // under current V2 semantics (session is `close = session_rent_recipient`),
-    // but lives here for Phase 8 M-5 reuse (non-close ownership-transfer flow
-    // and/or future `init_if_needed` session reuse).
+    // AC-10 (Phase 4): nonce bump — dead-on-close under V2 (`close =
+    // session_rent_recipient`); forward-compat for Phase 8 M-5 reuse.
+    // See `docs/revamp/AUDIT_2026_05_18/G2_DEFERRAL_RATIONALE.md`. M-6
+    // audit 2026-05-19 compressed prior 4-line comment to this 3-line cite.
     {
         let session = &mut ctx.accounts.session;
         session.nonce = session

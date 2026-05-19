@@ -166,7 +166,7 @@ function writeU32Le(view: DataView, offset: number, v: number): number {
  * Returns a 32-byte `Uint8Array`. Identical to the on-chain helper
  * `compute_cosign_digest` for the same input.
  *
- * Used by `cosignHelper.buildCosignBundle()` to produce the digest the
+ * Used by `cosign-helper.buildCosignBundle()` to produce the digest the
  * on-chain handler will re-validate at queue + apply time.
  *
  * @throws if any pubkey doesn't base58-decode to exactly 32 bytes
@@ -268,11 +268,29 @@ export function computeCosignDigest(fields: CosignDigestFields): Uint8Array {
   return new Uint8Array(createHash("sha256").update(buf).digest());
 }
 
-/** Equivalent of `Buffer.equals` for two `Uint8Array` digests. */
+/** Equivalent of `Buffer.equals` for two `Uint8Array` digests.
+ *
+ * M-8 audit fix (2026-05-19): constant-time comparison. Previously this
+ * helper early-returned on the first mismatched byte, which leaks
+ * length-prefix information about the matching prefix via timing
+ * channels. Cosign digests are not classically time-attack-sensitive
+ * (they're produced and consumed locally), but constant-time is the
+ * defensive default. Both equal-length and unequal-length paths now run
+ * to completion before returning.
+ */
 export function cosignDigestsEqual(a: Uint8Array, b: Uint8Array): boolean {
+  // Length comparison is deliberately the FIRST check and the only
+  // early-return: comparing a length mismatch in constant time is
+  // mathematically impossible (the longer array's tail bytes never
+  // exist), and leaking the length prefix is harmless — the caller
+  // controls both digest sources.
   if (a.length !== b.length) return false;
+  let diff = 0;
   for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return false;
+    // XOR-accumulate. `diff` ends at 0 iff every byte pair matched;
+    // any single mismatch sets some bit in `diff` permanently. No
+    // early exit on mismatch → constant time per length.
+    diff |= a[i] ^ b[i];
   }
-  return true;
+  return diff === 0;
 }

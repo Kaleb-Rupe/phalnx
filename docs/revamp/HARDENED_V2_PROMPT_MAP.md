@@ -167,7 +167,7 @@ Phase 0.5 docs commit makes ERROR_CODE_ALLOCATION_V2.md the canonical source.
 | AgentVault | 633 bytes (post-escrow removal) | state/vault.rs |
 | PolicyConfig | **823 bytes** (NOT 817 as stale CLAUDE.md says) | state/policy.rs |
 | SpendTracker | **2,840 bytes** (8 + 32 + 16·144 + 48·10 + 8 + 1 + 7) | state/tracker.rs |
-| PostExecutionAssertions | 352 bytes (8 + 32 + 76·4 + 1 + 1 + 6) | state/post_assertions.rs |
+| PostExecutionAssertions (pre-Phase 6) | 352 bytes (8 + 32 + 76·4 + 1 + 1 + 6) — superseded post-Phase-6, see growth table below | state/post_assertions.rs |
 | InstructionConstraints | 35,888 bytes | state/constraints.rs |
 | SessionAuthority | 375 bytes (post is_spending removal) | state/session.rs |
 
@@ -183,12 +183,31 @@ Phase 0.5 docs commit makes ERROR_CODE_ALLOCATION_V2.md the canonical source.
 | 3 | AgentSpendOverlay | +(per-agent cooldown_seconds u32 + last_action_unix i64) × MAX_AGENTS slots | TBD-phase-3 |
 | 3 | AgentEntry | +1 (consecutive_failures) → fits in `_reserved` | unchanged |
 | 4 | SessionAuthority | +8 (nonce u64) | 383 |
-| 5 | PolicyConfig | +8 (stable_balance_floor) + 8 (per_recipient_daily_cap_usd) | 1,280 |
-| 5 | SpendTracker | +(4 + 48·10) = +484 ([PerRecipientCounter; 10] + count u8) | 3,324 |
+| 5 | PolicyConfig | +8 (stable_balance_floor) + 8 (per_recipient_daily_cap_usd) + 1 (auto_revoke_threshold realised in Phase 3 — counted here for table-completeness) | 1,281 |
+| 5 | SpendTracker | +(4 + 48·10 = +484) materializes as **+488** with explicit `per_recipient_count: u8` + `_padding_recipient: [u8; 7]` per the code layout at state/tracker.rs:212-214 | 3,328 |
+| 6 | PostExecutionAssertions | Phase 6 rebuilt for R-1..R-4: entries grew to 78 bytes × 8 entries (= 624) + disc 8 + vault 32 + len 1 + version 1 + padding 6 → **672 bytes total** (NOT 352 — that was pre-Phase-6) | 672 |
+| 6 | PolicyConfig | +1 (G6 cosign_required `bool`) — audit 2026-05-18 cosign opt-in | **1,290** |
 | 7 | AuditLogSuccess PDA (NEW) | 8 + 32 + (64·128) + 1 + 1 + 6 = 8,240 | — |
 | 7 | AuditLogRejected PDA (NEW) | 8 + 32 + (64·64) + 1 + 1 + 6 = 4,144 | — |
 | 8 | AgentVault | +9 (frozen_at_timestamp i64 + freeze_reason u8) | 643 |
 | 8 | PendingOwnershipTransfer (NEW) | ~120 bytes | — |
+
+**M-2 schema-math sweep (audit 2026-05-19):**
+- PolicyConfig: prior table cell said 1,280 — actual `pub const SIZE` at
+  `state/policy.rs:323-350` evaluates to **1,290** post-G6 (the prior
+  1,280 number itself was off-by-10 vs the realized layout: Phase 3
+  added `auto_revoke_threshold: u8` and Phase 5 + G6 each added 1 +
+  8 + 8 + 1 bytes respectively). Table updated.
+- SpendTracker: prior table cell said 3,324 — actual `pub const SIZE`
+  at `state/tracker.rs:205-214` evaluates to **3,328** including the
+  explicit `per_recipient_count: u8` byte and `_padding_recipient:
+  [u8; 7]`. The discrepancy was a 4-byte miscount of the recipient
+  trailer fields. Table updated.
+- PostExecutionAssertions: prior table cell said 352 (the pre-Phase-6
+  shape) — Phase 6 rebuilt entries from 76 bytes to 78 bytes (R-1
+  added `scope` + `aux_value` fields) and shifted to fixed-size array
+  layout. Actual is **672 bytes** per `state/post_assertions.rs:185-199`.
+  Table updated.
 
 **Net AgentVault end-state: ~643 bytes.** Massive growth avoided by separate-PDA audit-log design (L-12).
 
@@ -713,14 +732,25 @@ TASKS:
      runtime blocks. Both layers required.
 
 6. TA-09 cosign workflow for elevated mutations:
-   - Identify elevated ops:
-     a) Raise daily_spending_cap_usd
-     b) Raise max_transaction_size_usd
-     c) Expand allowed_destinations beyond graylist (i.e., bypass graylist
-        for a fresh entry)
-     d) Expand allowed_protocols
-     e) Lower stable_balance_floor (after Phase 5)
-     f) Toggle observe_only false→true→false sequence (bypass via toggle)
+   - Identify elevated ops (7 triggers, post-G3a/G6 audit 2026-05-18 — see
+     INTERFACES_V2.md §TA-09 for the canonical authoritative list and the
+     "0 = unlimited"/"0 = no floor" semantics):
+     a) Raise daily_spending_cap_usd (`Some(new) > live`)
+     b) Raise max_transaction_amount_usd (`Some(new) > live`)
+     c) Expand allowed_destinations (more entries OR any pubkey not in live)
+     d) Expand allowed_protocols (more entries OR any pubkey not in live)
+     e) Lower stable_balance_floor (`Some(new) < live`; "0 = no floor"
+        convention handled — `0 < live_non_zero` = weakening; raising = strengthen)
+     f) Weaken per_recipient_daily_cap_usd (G3a §RP-2 CRIT-1: `Some(0)`
+        when live > 0 OR `Some(new) > live` when both bounded)
+     g) Weaken protocol_caps (G3a §RP-2 HIGH-1: `has_protocol_caps:
+        Some(false)` master-switch disable OR per-protocol cap shrinking to 0
+        from non-zero OR per-protocol cap growing larger)
+   - **observe_only toggle removed** as a trigger (audit M-1 2026-05-19):
+     the toggle was absorbed into G3a — observe_only flipping is now
+     gated by `set_observe_only` (F-12 audit fix) which recomputes the
+     TA-19 digest + bumps policy_version on every flip. The standalone
+     trigger entry above was stale.
    - instructions/queue_policy_update.rs: if any elevated op detected, require
      owner+session co-signature. Add cosign_session: Option<Pubkey> param;
      verify the session signed the same instruction-data hash.
@@ -728,6 +758,10 @@ TASKS:
      vault validity window" (not "same session" — operationally lethal at
      session expiry).
    - Reject with 6089 ErrCosignRequired.
+   - **G6 opt-in (audit 2026-05-18):** the entire 7-trigger check
+     short-circuits when `policy.cosign_required == false` (default). When
+     true, the gate fires as above. See `PolicyConfig.cosign_required`
+     doc-comment for one-way-ratchet semantics on the field's own mutation.
 
 7. TA-17 auto-revoke on N consecutive failures (per L-10 + D-2):
    - state/vault.rs: AgentEntry adds consecutive_failures: u8. Fit in existing

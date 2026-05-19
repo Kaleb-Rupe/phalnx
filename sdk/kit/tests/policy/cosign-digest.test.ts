@@ -25,7 +25,7 @@
 import { expect } from "chai";
 import * as fc from "fast-check";
 import { createHash } from "node:crypto";
-import { buildCosignBundle } from "../../src/cosignHelper.js";
+import { buildCosignBundle } from "../../src/cosign-helper.js";
 import { computeCosignDigest } from "../../src/policy/compute-cosign-digest.js";
 import type { Address, TransactionSigner } from "../../src/kit-adapter.js";
 

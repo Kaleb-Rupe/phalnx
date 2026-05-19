@@ -537,8 +537,8 @@ export type {
 // queue_policy_update.rs:286-328 rejects elevated mutations without cosign;
 // this helper produces the matching digest mirroring the canonical Rust
 // `compute_cosign_digest` byte-for-byte.
-export { buildCosignBundle } from "./cosignHelper.js";
-export type { CosignArgs, CosignBundle } from "./cosignHelper.js";
+export { buildCosignBundle } from "./cosign-helper.js";
+export type { CosignArgs, CosignBundle } from "./cosign-helper.js";
 export {
   computeCosignDigest,
   cosignDigestsEqual,
@@ -551,12 +551,12 @@ export type { CosignDigestFields } from "./policy/compute-cosign-digest.js";
 // whether to suppress the "single-signer protection" warning banner when
 // `policy.cosign_required = false`. NOT an on-chain enforcement primitive —
 // Sigil makes no assumption about the multisig's threshold or configuration.
-// See sdk/kit/src/squadsDetection.ts for the full AC-2 mode framing.
+// See sdk/kit/src/squads-detection.ts for the full AC-2 mode framing.
 export {
   SQUADS_V4_PROGRAM_ID,
   detectSquadsV4Owner,
-} from "./squadsDetection.js";
-export type { SquadsDetectionResult } from "./squadsDetection.js";
+} from "./squads-detection.js";
+export type { SquadsDetectionResult } from "./squads-detection.js";
 
 // ─── Error Classification (typed predicates + transport classifier) ─────────
 //

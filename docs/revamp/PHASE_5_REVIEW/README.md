@@ -78,3 +78,23 @@ SDK descriptions flipped to match the split. Off-chain monitors can now disambig
 |---|---|---|---|
 | 1 | 2026-05-18 (post `0698ed2`) | 3 Phase 5 commits | FIX-AND-RETEST |
 | Close-up | 2026-05-18 (post `98a9a13`) | 5 Phase 5 commits + 2 fix-up | CLEAR-TO-PROCEED |
+
+## §RP transcript disposition (audit M-3 + M-4, 2026-05-19)
+
+**§RP discipline used:** silent-failure-hunter as primary reviewer (the
+load-bearing transcript per phase, when written); code-reviewer was
+supplementary, used phase-by-phase based on attack-vector overlap, not a
+doctrine requirement.
+
+**Phase 5 specific:** the silent-failure-hunter transcript for §RP-1 was
+ephemeral (consumed inline during the §RP-1 → fix-up cycle that landed
+the post-execution invariant fixes). It was not persisted to
+`PHASE_5_REVIEW/silent-failure-hunter.md`. The finding disposition
+table above (with explicit RESOLVED-in-SHA annotations) is the
+source-of-truth for Phase 5. code-reviewer was not invoked for
+Phase 5 (attack-vector focus was post-execution invariants TA-12/13/14,
+fully covered by silent-failure-hunter's ephemeral pass).
+
+Future phases (Phase 7+) MUST persist the silent-failure-hunter
+transcript to maintain consistency with Phase 1/2/3/6 — Phase 4 + 5
+remain the documented exception.

@@ -111,3 +111,50 @@ Balance: 8.09217624 SOL
 ```
 
 **Bus-factor-1 structural risk MITIGATED.** Future re-deploys of Sigil to this program ID require 3 of the 5 Squads members to approve. Audit's #1-flagged structural risk (5 of 10 roundtable characters independently named it) is closed.
+
+## Residual trust assumption — Squads V4 itself (M-10 audit 2026-05-19)
+
+Documented for transparency. Squads V4 (program ID
+`SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf`) itself has an upgrade
+authority held by Squads Labs. If Squads Labs is compromised — for
+example, a malicious upgrade is pushed to the Squads program — every
+Squads V4 multisig deployed on Solana mainnet is at risk, **including
+Sigil's**.
+
+This is an irreducible trust in the Solana ecosystem, equivalent to:
+- the SPL Token program (`TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
+  which holds custody of every SPL token balance
+- the BPF Loader Upgradeable program
+  (`BPFLoaderUpgradeab1e11111111111111111111111`) which controls all
+  upgradeable program deploys
+- the System program which controls all SOL transfers
+- the Compute Budget program — recently sysvar-related changes affected
+  every program on Solana
+
+We accept this trust because:
+1. Squads is the most-deployed and most-audited multisig program on
+   Solana (~85+ programs use it as their upgrade authority as of
+   2026-05). The blast radius if compromised is catastrophic across the
+   entire ecosystem — Squads Labs has the strongest incentive in
+   Solana to defend it.
+2. Alternative custody patterns (Realms, custom multisig, hardware
+   security modules + on-chain attest) all carry their own trust
+   assumptions; none are dramatically better in 2026-05 timeframe.
+3. The defensive layering is: Squads V4 itself is upgrade-authority-
+   gated by **its own** multisig (the Squads Labs operational
+   multisig). A single-key compromise at Squads Labs does NOT trigger
+   immediate exposure.
+
+**Operational mitigations Sigil holders should be aware of:**
+- Monitor Squads Labs security advisories (their security@squads.so
+  contact).
+- The Squads program upgrade authority is itself visible on-chain:
+  `solana program show SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf`.
+  Verifying it's still a multisig (not single-key) is a one-line
+  health check.
+- If Squads Labs is publicly compromised, Sigil's response is to
+  freeze all vaults via the existing K3 freeze ix (single-signer,
+  fast), then plan a migration to a different multisig program.
+
+This is a documented-as-accepted residual risk. No additional
+on-chain mitigation is feasible.

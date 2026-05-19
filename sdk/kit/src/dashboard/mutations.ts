@@ -730,7 +730,7 @@ export async function queuePolicyUpdate(
     // TA-09 (Phase 3): non-elevated path by default — pass the
     // System Program / zero-pubkey ("11111111111111111111111111111111").
     // Elevated mutations through this dashboard surface require a
-    // follow-on `queuePolicyElevated()` helper (cosignHelper.ts, G4).
+    // follow-on `queuePolicyElevated()` helper (cosign-helper.ts, G4).
     cosignSession:
       "11111111111111111111111111111111" as unknown as Address,
     newPolicyPreviewDigest,

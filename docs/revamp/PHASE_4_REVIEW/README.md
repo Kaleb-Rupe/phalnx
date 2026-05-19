@@ -81,3 +81,26 @@ Inline clarification at `state/session.rs:65-103` documents the semantics. HARDE
 |---|---|---|---|
 | 1 | 2026-05-18 (post `735b200`) | 5 Phase 4 commits | FIX-AND-RETEST |
 | (close-up) | 2026-05-18 (post `cdb20f8`) | 7 Phase 4 commits + 2 close-up | CLEAR-TO-PROCEED |
+
+## §RP transcript disposition (audit M-3 + M-4, 2026-05-19)
+
+**§RP discipline used:** silent-failure-hunter as primary reviewer (the
+load-bearing transcript per phase, when written); code-reviewer was
+supplementary on phases with overlapping attack-vector surfaces — its
+use varied phase-by-phase based on review focus, not a doctrine
+requirement.
+
+**Phase 4 specific:** the silent-failure-hunter transcript for §RP-1 was
+ephemeral (consumed inline during the §RP-1 → fix-up cycle that
+landed `478bdb0` + `cdb20f8`). It was not persisted to
+`PHASE_4_REVIEW/silent-failure-hunter.md`. The Vec-1 / Vec-3 / Vec-6 /
+Vec-8 finding table above (with explicit RESOLVED-in-SHA annotations)
++ "Fix-up engineer verified all gates green end-to-end" line in §RP-2
+NOT dispatched is the source-of-truth disposition for Phase 4.
+code-reviewer was not invoked for Phase 4 (the attack-vector focus
+was bundle integrity, fully covered by silent-failure-hunter's
+ephemeral pass).
+
+Future phases (Phase 7+) MUST persist the silent-failure-hunter
+transcript to maintain consistency with Phase 1/2/3/6 — Phase 4 + 5
+remain the documented exception.

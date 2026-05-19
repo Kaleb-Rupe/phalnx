@@ -111,3 +111,16 @@ Phase 7 (Audit log SEPARATE PDAs — TA-15 + N1 temporal binding per C22) can di
 ## Phase 6.1 status: TRACKED as separate task
 
 Sandwich integration tests deferral is structural (InstructionConstraints precondition + needs inline SPL Token sandwich pattern). Tracked as task #55.
+
+## §RP discipline (audit M-4, 2026-05-19)
+
+silent-failure-hunter as primary (`PHASE_6_REVIEW/silent-failure-hunter.md`);
+pentester invoked as supplementary (`PHASE_6_REVIEW/pentester.md`) for the
+post-execution invariant work — pentester's attack-flow framing
+complemented silent-failure-hunter's static-vector framing for the
+R-1/R-2/R-3/R-4 declaration-consistency surface. code-reviewer was not
+invoked: pentester covered the bytes-level offset arithmetic that
+code-reviewer would have flagged, and silent-failure-hunter covered the
+policy-attestation gaps. Future phases follow the same silent-failure-
+hunter-primary doctrine; the supplementary tool (code-reviewer vs
+pentester vs other) is chosen by attack-vector overlap.

@@ -438,6 +438,20 @@ impl SpendTracker {
         let now = clock.unix_timestamp;
         let recipient_bytes = recipient.to_bytes();
         let active = (self.per_recipient_count as usize).min(self.per_recipient.len());
+        // M-9 audit fix (2026-05-19): per-recipient cursor invariant.
+        // `per_recipient_count` is the number of populated slots — it MUST
+        // be ≤ `MAX_PER_RECIPIENT_ENTRIES`. The `.min()` clamp above is a
+        // belt-and-suspenders saturating cast for the case where on-chain
+        // state somehow grew past the bound (account data corruption); the
+        // debug_assert documents the design invariant explicitly for any
+        // future refactor. The clamp is what's load-bearing under release
+        // builds; the assert fires in tests if the invariant breaks.
+        debug_assert!(
+            (self.per_recipient_count as usize) <= MAX_PER_RECIPIENT_ENTRIES,
+            "TA-14 per-recipient cursor invariant violated: count={} > MAX={}",
+            self.per_recipient_count,
+            MAX_PER_RECIPIENT_ENTRIES,
+        );
 
         // 1) Existing slot path
         for i in 0..active {

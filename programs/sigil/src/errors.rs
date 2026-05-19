@@ -163,7 +163,25 @@ pub enum SigilError {
     UnconstrainedProgramBlocked,
 
     // --- Per-protocol spend cap errors ---
-    #[msg("Per-protocol rolling 24h spending cap would be exceeded")]
+    //
+    // M-5 semantic distinction (audit 2026-05-19): two related-but-distinct
+    // protocol-cap error codes exist. Both are protocol-spending failures,
+    // but the surface is different:
+    //
+    // - 6058 `ProtocolCapExceeded` (THIS) — LEGACY counter exhaustion path.
+    //   Fires when the per-protocol counter slot bookkeeping itself runs
+    //   out of capacity (the `protocol_counters` array slot for the protocol
+    //   is exhausted). Pre-Phase-5 this was the ONLY per-protocol error;
+    //   off-chain monitors + SDK telemetry pin to this code for that path.
+    //   Kept for backward compatibility — do NOT migrate away from this
+    //   code at the existing call sites.
+    //
+    // - 6095 `ErrDailyCapExceeded` (below, in Phase 5 block) — the modern
+    //   per-protocol rolling-24h SPEND-CAP path. Fires when the rolling 24h
+    //   accumulated USD spend for the protocol PLUS the current transaction
+    //   would exceed `policy.protocol_caps[i]`. This is the new amount-
+    //   based bound; 6058 is the legacy capacity-based bound.
+    #[msg("Per-protocol rolling 24h spending cap would be exceeded — LEGACY counter exhaustion path. New rolling-24h amount-based cap rejections use 6095 ErrDailyCapExceeded")]
     ProtocolCapExceeded,
 
     #[msg("protocol_caps length must match protocols length when has_protocol_caps is true")]
@@ -429,6 +447,16 @@ pub enum SigilError {
     /// `ProtocolCapExceeded` because off-chain monitors + SDK telemetry
     /// already pin to that older code for the legacy slot-exhaustion
     /// path. The two semantics are intentionally separate.
+    ///
+    /// M-5 semantic clarification (audit 2026-05-19): see also doc comment
+    /// on 6058 `ProtocolCapExceeded`. The TL;DR distinction:
+    ///   - 6058 = LEGACY counter capacity exhaustion (per-protocol slot
+    ///     in the `protocol_counters` array is full).
+    ///   - 6095 = modern rolling-24h amount-based spending bound exceeded
+    ///     (`policy.protocol_caps[i]` would be breached).
+    /// Off-chain monitors that gauge user-facing "you spent too much on
+    /// protocol X" should pin to 6095; monitors that detect bookkeeping
+    /// pressure / migration needs should pin to 6058.
     #[msg("Per-protocol daily spending cap would be exceeded (rolling 24h)")]
     ErrDailyCapExceeded,
 

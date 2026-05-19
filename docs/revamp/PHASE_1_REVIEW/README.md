@@ -60,3 +60,15 @@ This finding is why the orchestrator-thread §RP dispatch pattern is now mandato
 | LiteSVM aggregate | 283 passing / 92 failing | 355 / 17 | +72 passing, -75 failing | 165 `expectSigilError` literal drops + 3 orphan `it()` deletions |
 
 All 144 deleted tests were orphans tied to deleted primitives; no test of surviving code was dropped.
+
+## §RP discipline (audit M-4, 2026-05-19)
+
+silent-failure-hunter was the primary reviewer for Phase 1; code-reviewer
+was not invoked. Phase 1's primary attack-vector surface was Option A
+demolition (deletion of T1 deep-parsing modules + tier registry +
+strict_mode dual-mode) — silent-failure-hunter's "what got missed" framing
+fits demolition phases better than code-reviewer's "what's broken" framing
+(nothing was broken; everything was being removed). The convention going
+forward is silent-failure-hunter primary, code-reviewer supplementary when
+attack-vector overlap is partial. Phase 2 + 3 README sections explicitly
+document the same rationale.
