@@ -625,6 +625,16 @@ pub const TOKEN_2022_PROGRAM_ID: Pubkey = Pubkey::new_from_array([
     131, 185, 13, 39, 254, 189, 249, 40, 216, 161, 139, 252,
 ]);
 
+/// ComputeBudget program ID — used by `validate_and_authorize` + `finalize_session`
+/// to identify (and skip) ComputeBudget instructions during the sysvar instruction
+/// scan. P3.1 audit fix (2026-05-19): single source of truth, eliminates the
+/// 32-byte literal duplication previously inlined at both call sites.
+/// Base58: ComputeBudget111111111111111111111111111111
+pub const COMPUTE_BUDGET_PROGRAM_ID: Pubkey = Pubkey::new_from_array([
+    3, 6, 70, 111, 229, 33, 23, 50, 255, 236, 173, 186, 114, 195, 155, 231, 188, 140, 229, 187,
+    197, 247, 18, 107, 44, 67, 155, 58, 64, 0, 0, 0,
+]);
+
 /// USD amounts use 6 decimal places (matching USDC/USDT precision).
 /// $1.00 = 1_000_000, $500.00 = 500_000_000
 pub const USD_DECIMALS: u8 = 6;

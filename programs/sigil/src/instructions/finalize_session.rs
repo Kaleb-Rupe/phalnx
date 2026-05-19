@@ -1081,11 +1081,11 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
         .map_err(|_| error!(SigilError::UnauthorizedPostFinalizeInstruction))?
         as usize;
 
-    // Hardcoded ComputeBudget program ID — matches validate_and_authorize.rs:248-251
-    let compute_budget_id = Pubkey::new_from_array([
-        3, 6, 70, 111, 229, 33, 23, 50, 255, 236, 173, 186, 114, 195, 155, 231, 188, 140, 229, 187,
-        197, 247, 18, 107, 44, 67, 155, 58, 64, 0, 0, 0,
-    ]);
+    // P3.1 + P3.2 audit fix (2026-05-19): single source of truth at
+    // `state/mod.rs::COMPUTE_BUDGET_PROGRAM_ID`. Replaces both the inlined
+    // 32-byte literal AND the stale cross-file line reference (prior comment
+    // pointed at validate_and_authorize.rs:248-251 which had drifted to :385-388).
+    let compute_budget_id = crate::state::COMPUTE_BUDGET_PROGRAM_ID;
     let system_id = anchor_lang::solana_program::system_program::ID;
 
     // Bounded scan: check up to MAX_SYSVAR_SCAN_ITERATIONS instructions after

@@ -382,10 +382,10 @@ pub fn handler(
     let current_idx_usize = current_idx as usize;
 
     let spl_token_id = ctx.accounts.token_program.key();
-    let compute_budget_id = Pubkey::new_from_array([
-        3, 6, 70, 111, 229, 33, 23, 50, 255, 236, 173, 186, 114, 195, 155, 231, 188, 140, 229, 187,
-        197, 247, 18, 107, 44, 67, 155, 58, 64, 0, 0, 0,
-    ]);
+    // P3.1 audit fix (2026-05-19): use the shared COMPUTE_BUDGET_PROGRAM_ID
+    // const from state/mod.rs (eliminates the 32-byte literal duplication
+    // with finalize_session.rs that used to drift independently).
+    let compute_budget_id = crate::state::COMPUTE_BUDGET_PROGRAM_ID;
 
     // 5a. Backward instruction scan (Phase B2 security fix):
     // Reject any non-infrastructure instructions BEFORE validate_and_authorize.
