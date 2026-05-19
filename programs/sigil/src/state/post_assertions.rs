@@ -60,6 +60,19 @@ pub enum AssertionMode {
     /// `expected_value[0..32]` = mint (cross-check the target_account
     /// actually holds the declared mint).
     OutputBalanceFloor = 6,
+    /// Phase 6 R-4: declaration vs. CPI account-meta consistency. The owner
+    /// pins a declared (recipient, mint) pair to a specific CPI account
+    /// meta index in the DeFi instruction. At finalize:
+    ///   1. Look up the DeFi instruction at `current_ix_index - 1` via
+    ///      sysvar instructions.
+    ///   2. Fetch `defi_ix.accounts[aux_byte].pubkey`.
+    ///   3. Resolve the account in `remaining_accounts` and require its
+    ///      token-account `mint == expected_value[0..32]` AND
+    ///      `owner == target_account` (the declared recipient).
+    /// Closes "declaration dishonesty": agent declares "recipient: alice"
+    /// to satisfy a destination-allowlist check, but inserts attacker_ata
+    /// into the CPI metas. Maestro verify_cpi_token_accounts equivalent.
+    DeclarationConsistency = 7,
 }
 
 impl TryFrom<u8> for AssertionMode {
@@ -73,6 +86,7 @@ impl TryFrom<u8> for AssertionMode {
             4 => Ok(AssertionMode::MintDeltaCap),
             5 => Ok(AssertionMode::AtaAuthorityPin),
             6 => Ok(AssertionMode::OutputBalanceFloor),
+            7 => Ok(AssertionMode::DeclarationConsistency),
             _ => Err(()),
         }
     }
@@ -302,8 +316,46 @@ impl PostExecutionAssertions {
                             crate::errors::SigilError::InvalidConstraintConfig
                         );
                     }
-                    // Other Phase 6 modes (7) are added in subsequent commits.
-                    _ => {
+                    AssertionMode::DeclarationConsistency => {
+                        // target_account = declared recipient (the wallet
+                        // address whose token-account-owner field we'll
+                        // check matches at finalize). Must not be default.
+                        require!(
+                            entry.target_account != Pubkey::default(),
+                            crate::errors::SigilError::InvalidConstraintConfig
+                        );
+                        // expected_value[0..32] = declared mint. Must not
+                        // be the zero pubkey.
+                        require!(
+                            entry.expected_value.len() >= 32,
+                            crate::errors::SigilError::InvalidConstraintConfig
+                        );
+                        let mut mint_bytes = [0u8; 32];
+                        mint_bytes.copy_from_slice(&entry.expected_value[0..32]);
+                        require!(
+                            Pubkey::new_from_array(mint_bytes) != Pubkey::default(),
+                            crate::errors::SigilError::InvalidConstraintConfig
+                        );
+                        // aux_byte = account_meta_index (capped at 64 since
+                        // Solana v0 tx instructions can address at most ~64
+                        // metas). aux_value unused.
+                        require!(
+                            entry.aux_byte < 64,
+                            crate::errors::SigilError::InvalidConstraintConfig
+                        );
+                        require!(
+                            entry.aux_value == [0u8; 8],
+                            crate::errors::SigilError::InvalidConstraintConfig
+                        );
+                    }
+                    // Modes 0..3 are pre-Phase-6 — handled in the `if` arm
+                    // above. The outer `if entry.assertion_mode < 4` guard
+                    // means execution never reaches here for those modes;
+                    // pattern match exhaustiveness demands they be listed.
+                    AssertionMode::Absolute
+                    | AssertionMode::MaxDecrease
+                    | AssertionMode::MaxIncrease
+                    | AssertionMode::NoChange => {
                         return Err(crate::errors::SigilError::InvalidConstraintConfig.into());
                     }
                 }
@@ -400,6 +452,22 @@ mod tests {
         }
     }
 
+    /// Phase 6 R-4 helper — DeclarationConsistency entry constructor.
+    fn mk_declaration(recipient: Pubkey, mint: Pubkey, meta_index: u8) -> PostAssertionEntry {
+        let mut expected = vec![0u8; 32];
+        expected.copy_from_slice(mint.as_ref());
+        PostAssertionEntry {
+            target_account: recipient,
+            offset: 0,
+            value_len: 0,
+            operator: 0,
+            expected_value: expected,
+            assertion_mode: 7, // DeclarationConsistency
+            aux_value: [0u8; 8],
+            aux_byte: meta_index,
+        }
+    }
+
     // mk_crossfield_entry DELETED in Phase 1 Option A demolition along with
     // the seven CrossFieldLte tests below it.
 
@@ -423,14 +491,18 @@ mod tests {
             AssertionMode::try_from(6),
             Ok(AssertionMode::OutputBalanceFloor)
         );
+        // Phase 6 R-4
+        assert_eq!(
+            AssertionMode::try_from(7),
+            Ok(AssertionMode::DeclarationConsistency)
+        );
     }
 
     #[test]
-    fn assertion_mode_try_from_rejects_7_until_r4_lands() {
-        // R-4 DeclarationConsistency (mode=7) is added in a subsequent
-        // commit; until then, mode=7 must fail TryFrom so a malformed
-        // entry is rejected.
-        assert!(AssertionMode::try_from(7).is_err());
+    fn assertion_mode_try_from_rejects_8_and_above() {
+        // mode 8 is the next free slot after Phase 6 — must be rejected
+        // until a future phase lands a successor variant.
+        assert!(AssertionMode::try_from(8).is_err());
     }
 
     #[test]
@@ -447,6 +519,7 @@ mod tests {
         assert_eq!(AssertionMode::MintDeltaCap as u8, 4);
         assert_eq!(AssertionMode::AtaAuthorityPin as u8, 5);
         assert_eq!(AssertionMode::OutputBalanceFloor as u8, 6);
+        assert_eq!(AssertionMode::DeclarationConsistency as u8, 7);
     }
 
     // ─── B2: delta modes in validate_entries ────────────────────────────
@@ -612,6 +685,47 @@ mod tests {
     fn validate_rejects_output_floor_with_aux_byte_set() {
         let mut entry = mk_output_floor(Pubkey::new_unique(), Pubkey::new_unique(), 1);
         entry.aux_byte = 1;
+        let entries = vec![entry];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
+    }
+
+    // ─── Phase 6 R-4 DeclarationConsistency validate_entries ───────────
+
+    #[test]
+    fn validate_accepts_declaration_consistency() {
+        let recipient = Pubkey::new_unique();
+        let mint = Pubkey::new_unique();
+        let entries = vec![mk_declaration(recipient, mint, 3)];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_ok());
+    }
+
+    #[test]
+    fn validate_rejects_declaration_default_recipient() {
+        let mint = Pubkey::new_unique();
+        let entries = vec![mk_declaration(Pubkey::default(), mint, 0)];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
+    }
+
+    #[test]
+    fn validate_rejects_declaration_zero_mint() {
+        let recipient = Pubkey::new_unique();
+        let entries = vec![mk_declaration(recipient, Pubkey::default(), 0)];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
+    }
+
+    #[test]
+    fn validate_rejects_declaration_meta_index_too_large() {
+        let recipient = Pubkey::new_unique();
+        let mint = Pubkey::new_unique();
+        let entries = vec![mk_declaration(recipient, mint, 64)];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
+    }
+
+    #[test]
+    fn validate_rejects_declaration_with_aux_value_set() {
+        let mut entry =
+            mk_declaration(Pubkey::new_unique(), Pubkey::new_unique(), 0);
+        entry.aux_value = [1u8; 8];
         let entries = vec![entry];
         assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
     }

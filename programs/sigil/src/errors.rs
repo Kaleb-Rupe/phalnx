@@ -513,4 +513,27 @@ pub enum SigilError {
     /// assignment moved.
     #[msg("R-3 OutputBalanceFloor: post-execution balance increase fell below the configured min_increase floor")]
     ErrOutputBelowFloor,
+
+    /// 6101 — R-4 DeclarationConsistency: the (recipient, mint) pair
+    /// declared on a post-assertion entry doesn't match the SPL token
+    /// account at the configured CPI account-meta index of the DeFi
+    /// instruction.
+    ///
+    /// Fires when ANY of the following hold at finalize:
+    ///   - The DeFi instruction at `current_ix_index - 1` cannot be loaded.
+    ///   - `account_meta_index` is out of bounds for the DeFi metas.
+    ///   - The meta's pubkey isn't present in remaining_accounts.
+    ///   - The resolved account isn't owned by SPL Token or Token-2022.
+    ///   - The account's mint (bytes 0..32) ≠ entry.expected_value[0..32].
+    ///   - The account's owner (bytes 32..64) ≠ entry.target_account.
+    ///
+    /// Closes the "declaration dishonesty" attack: agent declares
+    /// "recipient: alice" to satisfy a destination-allowlist check, then
+    /// inserts attacker_ata into the CPI metas. The recipient who would
+    /// receive funds (attacker_ata.owner) ≠ alice, so R-4 rejects.
+    ///
+    /// Prompt drift (continued from R-3): brief mapped R-4 → 6100. With
+    /// MintDeltaCapMisconfigured at 6098, the actual assignment is 6101.
+    #[msg("R-4 DeclarationConsistency: declared recipient/mint does not match CPI account-meta")]
+    ErrDeclarationInconsistent,
 }

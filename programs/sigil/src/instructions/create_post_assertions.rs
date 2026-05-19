@@ -74,6 +74,15 @@ pub fn handler(
             .len()
             .min(crate::state::constraints::MAX_CONSTRAINT_VALUE_LEN);
         zc.expected_value[..len].copy_from_slice(&entry.expected_value[..len]);
+
+        // Phase 6: copy the new aux fields. Without these copies, the
+        // Phase 6 variants R-1/R-3 silently store aux_value = 0, which the
+        // validate_entries check `max_dec > 0` would catch — BUT only if
+        // the handler propagated the Borsh-decoded value. The omission
+        // landed during the initial Task 1 commit and was caught by the
+        // R-variants adversarial test pin.
+        zc.aux_value = entry.aux_value;
+        zc.aux_byte = entry.aux_byte;
     }
 
     // Set the feature flag on PolicyConfig.

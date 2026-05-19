@@ -129,12 +129,12 @@ fn read_token_mint(info: &AccountInfo) -> Option<Pubkey> {
 /// **CU bound:** `MAX_ATAS_PER_MINT` (5) PDA derivations + per-derivation
 /// linear scan over `remaining_accounts`. Phase 6 sets the cap so worst-case
 /// CU stays inside the existing finalize budget.
-pub fn sum_vault_mint_balance<'info>(
+pub fn sum_vault_mint_balance(
     vault: &Pubkey,
     mint: &Pubkey,
     scope: u8,
     target_account: &Pubkey,
-    remaining: &[AccountInfo<'info>],
+    remaining: &[AccountInfo],
 ) -> Result<u64> {
     match scope {
         0 => {

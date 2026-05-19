@@ -5811,6 +5811,11 @@ export type Sigil = {
       "code": 6100,
       "name": "errOutputBelowFloor",
       "msg": "R-3 OutputBalanceFloor: post-execution balance increase fell below the configured min_increase floor"
+    },
+    {
+      "code": 6101,
+      "name": "errDeclarationInconsistent",
+      "msg": "R-4 DeclarationConsistency: declared recipient/mint does not match CPI account-meta"
     }
   ],
   "types": [
@@ -8500,7 +8505,8 @@ export type Sigil = {
               "3 = NoChange: check current == snapshot — byte-for-byte equality (Phase B2)",
               "4 = MintDeltaCap (Phase 6 R-1): vault-wide or per-account drain ceiling",
               "5 = AtaAuthorityPin (Phase 6 R-2): post-CPI token-account authority pin",
-              "6 = OutputBalanceFloor (Phase 6 R-3): minimum balance increase floor"
+              "6 = OutputBalanceFloor (Phase 6 R-3): minimum balance increase floor",
+              "7 = DeclarationConsistency (Phase 6 R-4): declared (recipient, mint) vs CPI meta"
             ],
             "type": "u8"
           },

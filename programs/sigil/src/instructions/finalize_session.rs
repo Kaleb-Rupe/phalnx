@@ -816,149 +816,74 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
             let mode = crate::state::post_assertions::AssertionMode::try_from(entry.assertion_mode)
                 .map_err(|_| error!(SigilError::InvalidConstraintConfig))?;
 
-            // Phase 6 R-1: handled BEFORE legacy target_data load because
-            // scope=0 enumerates ATAs by derivation, not by entry's
-            // target_account field. Loading target_data unconditionally
-            // would force the caller to pass a dummy pubkey at the slot.
-            if let crate::state::post_assertions::AssertionMode::MintDeltaCap = mode {
-                require!(
-                    session_snapshot_lens[i] == 8,
-                    SigilError::SnapshotNotCaptured
-                );
-
-                let mut mint_bytes = [0u8; 32];
-                mint_bytes.copy_from_slice(&entry.expected_value[0..32]);
-                let mint = Pubkey::new_from_array(mint_bytes);
-                let scope = entry.aux_byte;
-                let max_dec = u64::from_le_bytes(entry.aux_value);
-
-                let post_sum = crate::utils::mint_delta_cap::sum_vault_mint_balance(
-                    &vault_key,
-                    &mint,
-                    scope,
-                    &Pubkey::new_from_array(entry.target_account),
-                    remaining,
-                )?;
-
-                let mut snap_bytes = [0u8; 8];
-                snap_bytes.copy_from_slice(&session_snapshots[i][0..8]);
-                let pre_sum = u64::from_le_bytes(snap_bytes);
-
-                // saturating_sub: if balance went UP (legit deposit mid-tx),
-                // check trivially passes — R-1 measures decrease only.
-                let net_decrease = pre_sum.saturating_sub(post_sum);
-                require!(
-                    net_decrease <= max_dec,
-                    SigilError::ErrMintDeltaCapExceeded
-                );
-
-                emit!(crate::events::PostAssertionChecked {
-                    vault: vault_key,
-                    entry_index: i as u8,
-                    passed: true,
-                    timestamp: clock_ts,
-                });
-                continue;
-            }
-
-            // Phase 6 R-3 OutputBalanceFloor: re-read the target_account
-            // balance and assert (post - pre) >= min_increase.
-            if let crate::state::post_assertions::AssertionMode::OutputBalanceFloor = mode {
-                require!(
-                    session_snapshot_lens[i] == 8,
-                    SigilError::SnapshotNotCaptured
-                );
-
-                let target_pubkey = Pubkey::new_from_array(entry.target_account);
-                let target = remaining
-                    .iter()
-                    .find(|a| a.key() == target_pubkey)
-                    .ok_or(error!(SigilError::PostAssertionFailed))?;
-                require!(
-                    target.owner == &anchor_spl::token::ID
-                        || target.owner == &crate::state::TOKEN_2022_PROGRAM_ID,
-                    SigilError::PostAssertionFailed
-                );
-                let target_data = target.try_borrow_data()?;
-                require!(
-                    target_data.len() >= 72,
-                    SigilError::PostAssertionFailed
-                );
-                let mut amount_bytes = [0u8; 8];
-                amount_bytes.copy_from_slice(&target_data[64..72]);
-                let post_balance = u64::from_le_bytes(amount_bytes);
-
-                let mut snap_bytes = [0u8; 8];
-                snap_bytes.copy_from_slice(&session_snapshots[i][0..8]);
-                let pre_balance = u64::from_le_bytes(snap_bytes);
-
-                let min_increase = u64::from_le_bytes(entry.aux_value);
-                // saturating_sub: if balance went DOWN (impossible for an
-                // honest output flow), delta saturates to 0 which is < any
-                // non-zero min_increase. The check correctly rejects.
-                let delta = post_balance.saturating_sub(pre_balance);
-                require!(
-                    delta >= min_increase,
-                    SigilError::ErrOutputBelowFloor
-                );
-
-                emit!(crate::events::PostAssertionChecked {
-                    vault: vault_key,
-                    entry_index: i as u8,
-                    passed: true,
-                    timestamp: clock_ts,
-                });
-                continue;
-            }
-
-            // Phase 6 R-2 AtaAuthorityPin: post-CPI verification that the
-            // entry's `target_account` is STILL a vault-owned SPL/Token-2022
-            // account. Catches:
-            //   - mid-tx SetAuthority CPI flipping owner → attacker
-            //   - close+recreate where attacker's account is supplied at
-            //     finalize (owner field != vault → reject)
-            //   - close-only (data length 0 → reject)
-            //   - cross-program reinit (account.owner != known token program → reject)
-            if let crate::state::post_assertions::AssertionMode::AtaAuthorityPin = mode {
-                let target_pubkey = Pubkey::new_from_array(entry.target_account);
-                let target = remaining
-                    .iter()
-                    .find(|a| a.key() == target_pubkey)
-                    .ok_or(error!(SigilError::ErrAtaAuthorityChanged))?;
-
-                // The account's PROGRAM owner must still be a known token
-                // program. A closed account ends up owned by system_program
-                // (or zero-program); a re-init under a different program
-                // would also fail this check.
-                require!(
-                    target.owner == &anchor_spl::token::ID
-                        || target.owner == &crate::state::TOKEN_2022_PROGRAM_ID,
-                    SigilError::ErrAtaAuthorityChanged
-                );
-
-                let target_data = target.try_borrow_data()?;
-                // The TOKEN authority lives at bytes 32..64 (owner field of
-                // SPL TokenAccount). Both SPL classic and Token-2022 share
-                // this fixed prefix layout, so the byte range is stable.
-                require!(
-                    target_data.len() >= 64,
-                    SigilError::ErrAtaAuthorityChanged
-                );
-                let mut authority_bytes = [0u8; 32];
-                authority_bytes.copy_from_slice(&target_data[32..64]);
-                let authority = Pubkey::new_from_array(authority_bytes);
-                require!(
-                    authority == vault_key,
-                    SigilError::ErrAtaAuthorityChanged
-                );
-
-                emit!(crate::events::PostAssertionChecked {
-                    vault: vault_key,
-                    entry_index: i as u8,
-                    passed: true,
-                    timestamp: clock_ts,
-                });
-                continue;
+            // Phase 6 R-1..R-4 — dispatch each via #[inline(never)] helpers
+            // to keep the handler's stack frame under the 4096-byte BPF cap.
+            // Each helper allocates its own per-mode locals in a fresh frame
+            // so the snapshot arrays / per-variant 32-byte locals don't
+            // accumulate into the outer handler frame.
+            match mode {
+                crate::state::post_assertions::AssertionMode::MintDeltaCap => {
+                    crate::utils::post_assertion_helpers::verify_mint_delta_cap(
+                        entry,
+                        &session_snapshots[i],
+                        session_snapshot_lens[i],
+                        &vault_key,
+                        remaining,
+                    )?;
+                    emit!(crate::events::PostAssertionChecked {
+                        vault: vault_key,
+                        entry_index: i as u8,
+                        passed: true,
+                        timestamp: clock_ts,
+                    });
+                    continue;
+                }
+                crate::state::post_assertions::AssertionMode::AtaAuthorityPin => {
+                    crate::utils::post_assertion_helpers::verify_ata_authority_pin(
+                        entry,
+                        &vault_key,
+                        remaining,
+                    )?;
+                    emit!(crate::events::PostAssertionChecked {
+                        vault: vault_key,
+                        entry_index: i as u8,
+                        passed: true,
+                        timestamp: clock_ts,
+                    });
+                    continue;
+                }
+                crate::state::post_assertions::AssertionMode::OutputBalanceFloor => {
+                    crate::utils::post_assertion_helpers::verify_output_balance_floor(
+                        entry,
+                        &session_snapshots[i],
+                        session_snapshot_lens[i],
+                        remaining,
+                    )?;
+                    emit!(crate::events::PostAssertionChecked {
+                        vault: vault_key,
+                        entry_index: i as u8,
+                        passed: true,
+                        timestamp: clock_ts,
+                    });
+                    continue;
+                }
+                crate::state::post_assertions::AssertionMode::DeclarationConsistency => {
+                    let ix_sysvar_info = ctx.accounts.instructions_sysvar.to_account_info();
+                    crate::utils::post_assertion_helpers::verify_declaration_consistency(
+                        entry,
+                        &ix_sysvar_info,
+                        remaining,
+                    )?;
+                    emit!(crate::events::PostAssertionChecked {
+                        vault: vault_key,
+                        entry_index: i as u8,
+                        passed: true,
+                        timestamp: clock_ts,
+                    });
+                    continue;
+                }
+                // Legacy modes (0..3) fall through to the in-loop logic below.
+                _ => {}
             }
 
             // Legacy modes (0..3) require the target_account to be loadable.
@@ -1050,7 +975,8 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
                 }
                 crate::state::post_assertions::AssertionMode::MintDeltaCap
                 | crate::state::post_assertions::AssertionMode::AtaAuthorityPin
-                | crate::state::post_assertions::AssertionMode::OutputBalanceFloor => {
+                | crate::state::post_assertions::AssertionMode::OutputBalanceFloor
+                | crate::state::post_assertions::AssertionMode::DeclarationConsistency => {
                     // Handled above before the legacy target_data load.
                     // These arms are unreachable but the exhaustive match
                     // requires them. Force an error if execution reaches
