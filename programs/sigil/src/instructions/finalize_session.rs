@@ -811,6 +811,57 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
         let count = assertions.entry_count as usize;
         for i in 0..count {
             let entry = &assertions.entries[i];
+
+            // Exhaustive match on assertion_mode — unknown modes hard-fail (security audit H3)
+            let mode = crate::state::post_assertions::AssertionMode::try_from(entry.assertion_mode)
+                .map_err(|_| error!(SigilError::InvalidConstraintConfig))?;
+
+            // Phase 6 R-1: handled BEFORE legacy target_data load because
+            // scope=0 enumerates ATAs by derivation, not by entry's
+            // target_account field. Loading target_data unconditionally
+            // would force the caller to pass a dummy pubkey at the slot.
+            if let crate::state::post_assertions::AssertionMode::MintDeltaCap = mode {
+                require!(
+                    session_snapshot_lens[i] == 8,
+                    SigilError::SnapshotNotCaptured
+                );
+
+                let mut mint_bytes = [0u8; 32];
+                mint_bytes.copy_from_slice(&entry.expected_value[0..32]);
+                let mint = Pubkey::new_from_array(mint_bytes);
+                let scope = entry.aux_byte;
+                let max_dec = u64::from_le_bytes(entry.aux_value);
+
+                let post_sum = crate::utils::mint_delta_cap::sum_vault_mint_balance(
+                    &vault_key,
+                    &mint,
+                    scope,
+                    &Pubkey::new_from_array(entry.target_account),
+                    remaining,
+                )?;
+
+                let mut snap_bytes = [0u8; 8];
+                snap_bytes.copy_from_slice(&session_snapshots[i][0..8]);
+                let pre_sum = u64::from_le_bytes(snap_bytes);
+
+                // saturating_sub: if balance went UP (legit deposit mid-tx),
+                // check trivially passes — R-1 measures decrease only.
+                let net_decrease = pre_sum.saturating_sub(post_sum);
+                require!(
+                    net_decrease <= max_dec,
+                    SigilError::ErrMintDeltaCapExceeded
+                );
+
+                emit!(crate::events::PostAssertionChecked {
+                    vault: vault_key,
+                    entry_index: i as u8,
+                    passed: true,
+                    timestamp: clock_ts,
+                });
+                continue;
+            }
+
+            // Legacy modes (0..3) require the target_account to be loadable.
             let target_pubkey = Pubkey::new_from_array(entry.target_account);
 
             // Find the target account in remaining_accounts
@@ -826,10 +877,6 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
                 .ok_or(error!(SigilError::PostAssertionFailed))?;
             require!(end <= target_data.len(), SigilError::PostAssertionFailed);
             let actual = &target_data[offset..end];
-
-            // Exhaustive match on assertion_mode — unknown modes hard-fail (security audit H3)
-            let mode = crate::state::post_assertions::AssertionMode::try_from(entry.assertion_mode)
-                .map_err(|_| error!(SigilError::InvalidConstraintConfig))?;
 
             match mode {
                 crate::state::post_assertions::AssertionMode::Absolute => {
@@ -900,6 +947,13 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
                     );
                     let snapshot = &session_snapshots[i][..len];
                     require!(actual == snapshot, SigilError::PostAssertionFailed);
+                }
+                crate::state::post_assertions::AssertionMode::MintDeltaCap => {
+                    // Handled above before the legacy target_data load.
+                    // This arm is unreachable but the exhaustive match
+                    // requires it. Force a panic if execution reaches here
+                    // (would indicate a refactor bug in the early-return).
+                    return Err(error!(SigilError::PostAssertionFailed));
                 }
             }
 

@@ -5791,6 +5791,16 @@ export type Sigil = {
       "code": 6096,
       "name": "errRecipientCapExceeded",
       "msg": "Per-recipient daily cap exceeded — recipient outflow would breach policy.per_recipient_daily_cap_usd within the rolling 24h window, or per_recipient array full with no expired slot to evict"
+    },
+    {
+      "code": 6097,
+      "name": "errMintDeltaCapExceeded",
+      "msg": "R-1 MintDeltaCap: vault-mint balance decreased by more than max_net_decrease"
+    },
+    {
+      "code": 6098,
+      "name": "mintDeltaCapMisconfigured",
+      "msg": "R-1 MintDeltaCap misconfigured — target account missing, mint mismatch, or owner not vault"
     }
   ],
   "types": [
@@ -8341,7 +8351,11 @@ export type Sigil = {
         "Borsh-serializable assertion entry (instruction parameter form).",
         "",
         "Phase B3 fields (cross_field_offset_b, cross_field_multiplier_bps,",
-        "cross_field_flags) DELETED in Phase 1 Option A demolition."
+        "cross_field_flags) DELETED in Phase 1 Option A demolition.",
+        "",
+        "Phase 6 appended `aux_value: [u8; 8]` + `aux_byte: u8` for the four new",
+        "variants (R-1/R-2/R-3/R-4). Modes 0..3 must set both to zero; the",
+        "validator enforces it."
       ],
       "type": {
         "kind": "struct",
@@ -8368,6 +8382,25 @@ export type Sigil = {
           },
           {
             "name": "assertionMode",
+            "type": "u8"
+          },
+          {
+            "name": "auxValue",
+            "docs": [
+              "Phase 6: u64 LE auxiliary value. Per-mode meaning — see ZC struct."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                8
+              ]
+            }
+          },
+          {
+            "name": "auxByte",
+            "docs": [
+              "Phase 6: u8 auxiliary byte. Per-mode meaning — see ZC struct."
+            ],
             "type": "u8"
           }
         ]
@@ -8454,18 +8487,29 @@ export type Sigil = {
               "For bidirectional protection, pair with MaxIncrease or use NoChange.",
               "2 = MaxIncrease: check (current - snapshot) ≤ expected_value (Phase B2)",
               "NOTE: If value decreases, check ALWAYS PASSES.",
-              "3 = NoChange: check current == snapshot — byte-for-byte equality (Phase B2)"
+              "3 = NoChange: check current == snapshot — byte-for-byte equality (Phase B2)",
+              "4 = MintDeltaCap (Phase 6 R-1): vault-wide or per-account drain ceiling"
             ],
             "type": "u8"
           },
           {
-            "name": "padding",
+            "name": "auxValue",
             "docs": [
-              "Explicit padding to make total entry size even (Pod requires no implicit",
-              "padding; struct alignment is 2 because of `offset: u16`). Without this",
-              "byte, derive(Pod) panics with \"type with padding\" since 69 is odd.",
-              "Added in Phase 1 Option A demolition after Phase B3 CrossFieldLte",
-              "fields (7 bytes) were deleted."
+              "Phase 6: u64 LE auxiliary value (stored as 8 raw bytes to keep",
+              "struct alignment at 2). Per-mode interpretation in PostAssertionEntryZC docs."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                8
+              ]
+            }
+          },
+          {
+            "name": "auxByte",
+            "docs": [
+              "Phase 6: u8 auxiliary byte. Per-mode interpretation in PostAssertionEntryZC docs.",
+              "Absorbed the prior _padding slot from Phase 1; same byte position."
             ],
             "type": "u8"
           }
@@ -8536,7 +8580,8 @@ export type Sigil = {
           {
             "name": "entries",
             "docs": [
-              "Assertion entries (fixed-size array, up to MAX_POST_ASSERTION_ENTRIES)."
+              "Assertion entries (fixed-size array, up to MAX_POST_ASSERTION_ENTRIES).",
+              "Phase 6: grown from 4 to 8 to accommodate Maestro borrows + existing modes."
             ],
             "type": {
               "array": [
@@ -8545,14 +8590,14 @@ export type Sigil = {
                     "name": "postAssertionEntryZc"
                   }
                 },
-                4
+                8
               ]
             }
           },
           {
             "name": "entryCount",
             "docs": [
-              "Number of active entries (0..=4)."
+              "Number of active entries (0..=MAX_POST_ASSERTION_ENTRIES)."
             ],
             "type": "u8"
           },
@@ -8735,7 +8780,8 @@ export type Sigil = {
             "docs": [
               "Phase B2: Snapshots of target account bytes captured in validate_and_authorize",
               "before DeFi instruction executes. Index i corresponds to PostAssertionEntry i.",
-              "Used by delta assertion modes (1=MaxDecrease, 2=MaxIncrease, 3=NoChange)."
+              "Used by delta assertion modes (1=MaxDecrease, 2=MaxIncrease, 3=NoChange).",
+              "Phase 6 grow: 4 → 8 to match MAX_POST_ASSERTION_ENTRIES. Mode-4 (R-1 MintDeltaCap) stores pre_sum u64 LE in [0..8]."
             ],
             "type": {
               "array": [
@@ -8745,7 +8791,7 @@ export type Sigil = {
                     32
                   ]
                 },
-                4
+                8
               ]
             }
           },
@@ -8754,12 +8800,13 @@ export type Sigil = {
             "docs": [
               "Phase B2: Actual value_len captured for each snapshot.",
               "0 = no snapshot captured (mode 0 entries). Non-zero = snapshot was captured.",
-              "finalize_session cross-checks snapshot_lens[i] == entry.value_len."
+              "finalize_session cross-checks snapshot_lens[i] == entry.value_len for modes 1..3.",
+              "Phase 6: mode-4 (MintDeltaCap) sets snapshot_lens[i] = 8 (u64 sum width)."
             ],
             "type": {
               "array": [
                 "u8",
-                4
+                8
               ]
             }
           },

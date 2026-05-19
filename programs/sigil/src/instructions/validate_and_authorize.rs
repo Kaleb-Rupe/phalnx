@@ -1127,9 +1127,10 @@ pub fn handler(
     session.output_mint = output_mint;
     session.stablecoin_balance_before = stablecoin_balance_before;
     session.bump = ctx.bumps.session;
-    // Initialize snapshot fields to zero (default for non-delta sessions)
-    session.assertion_snapshots = [[0u8; 32]; 4];
-    session.snapshot_lens = [0u8; 4];
+    // Initialize snapshot fields to zero (default for non-delta sessions).
+    // Phase 6 grow: capacity 4 → 8 to match MAX_POST_ASSERTION_ENTRIES.
+    session.assertion_snapshots = [[0u8; 32]; 8];
+    session.snapshot_lens = [0u8; 8];
     // AC-10 (Phase 4): session nonce starts at 0 on every fresh `init`.
     // finalize_session increments the field on success; because validate
     // uses `init` (not `init_if_needed`), the account is closed at finalize
@@ -1180,6 +1181,26 @@ pub fn handler(
             let count = assertions.entry_count as usize;
             for i in 0..count {
                 let entry = &assertions.entries[i];
+                // Phase 6 R-1 MintDeltaCap: snapshot the sum of vault-owned
+                // ATA balances (scope=0) or a single token-account balance
+                // (scope=1). Stored as u64 LE in snapshot[0..8]; lens[i]=8.
+                if entry.assertion_mode == 4 {
+                    let mut mint_bytes = [0u8; 32];
+                    mint_bytes.copy_from_slice(&entry.expected_value[0..32]);
+                    let mint = Pubkey::new_from_array(mint_bytes);
+                    let scope = entry.aux_byte;
+                    let pre_sum = crate::utils::mint_delta_cap::sum_vault_mint_balance(
+                        &vault_key,
+                        &mint,
+                        scope,
+                        &Pubkey::new_from_array(entry.target_account),
+                        ctx.remaining_accounts,
+                    )?;
+                    session.assertion_snapshots[i][0..8]
+                        .copy_from_slice(&pre_sum.to_le_bytes());
+                    session.snapshot_lens[i] = 8;
+                    continue;
+                }
                 // Only snapshot for delta modes (1=MaxDecrease, 2=MaxIncrease, 3=NoChange)
                 if entry.assertion_mode == 0 {
                     continue;

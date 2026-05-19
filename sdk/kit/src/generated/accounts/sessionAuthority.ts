@@ -281,9 +281,11 @@ export function getSessionAuthorityEncoder(): FixedSizeEncoder<SessionAuthorityA
       ["bump", getU8Encoder()],
       [
         "assertionSnapshots",
-        getArrayEncoder(fixEncoderSize(getBytesEncoder(), 32), { size: 4 }),
+        // Phase 6: grew 4 → 8 to match MAX_POST_ASSERTION_ENTRIES.
+        getArrayEncoder(fixEncoderSize(getBytesEncoder(), 32), { size: 8 }),
       ],
-      ["snapshotLens", fixEncoderSize(getBytesEncoder(), 4)],
+      // Phase 6: grew 4 → 8.
+      ["snapshotLens", fixEncoderSize(getBytesEncoder(), 8)],
       ["nonce", getU64Encoder()],
     ]),
     (value) => ({ ...value, discriminator: SESSION_AUTHORITY_DISCRIMINATOR }),
@@ -310,9 +312,11 @@ export function getSessionAuthorityDecoder(): FixedSizeDecoder<SessionAuthority>
     ["bump", getU8Decoder()],
     [
       "assertionSnapshots",
-      getArrayDecoder(fixDecoderSize(getBytesDecoder(), 32), { size: 4 }),
+      // Phase 6: grew 4 → 8 to match MAX_POST_ASSERTION_ENTRIES.
+      getArrayDecoder(fixDecoderSize(getBytesDecoder(), 32), { size: 8 }),
     ],
-    ["snapshotLens", fixDecoderSize(getBytesDecoder(), 4)],
+    // Phase 6: grew 4 → 8.
+    ["snapshotLens", fixDecoderSize(getBytesDecoder(), 8)],
     ["nonce", getU64Decoder()],
   ]);
 }
@@ -392,5 +396,6 @@ export async function fetchAllMaybeSessionAuthority(
 }
 
 export function getSessionAuthoritySize(): number {
-  return 383;
+  // Phase 6: SessionAuthority SIZE = 515 (was 383; +128 for snapshots 4→8, +4 for snapshot_lens 4→8).
+  return 515;
 }

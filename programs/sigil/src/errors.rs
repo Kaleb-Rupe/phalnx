@@ -449,4 +449,36 @@ pub enum SigilError {
     /// Bound by TA-19 at canonical digest position 19 (owner-signed).
     #[msg("Per-recipient daily cap exceeded — recipient outflow would breach policy.per_recipient_daily_cap_usd within the rolling 24h window, or per_recipient array full with no expired slot to evict")]
     ErrRecipientCapExceeded,
+
+    // --- Phase 6 (Maestro borrows R-1/R-2/R-3/R-4) ---
+    // Appended at END to preserve existing error codes 6000-6096.
+
+    /// 6097 — R-1 MintDeltaCap: combined balance of vault-owned ATAs for the
+    /// configured mint dropped by more than `max_net_decrease` between
+    /// `validate_and_authorize` (pre-snap sum) and `finalize_session` (post sum).
+    ///
+    /// Two enforcement shapes:
+    ///   - `scope=0`: vault-wide. Snapshot sums all derived ATAs (SPL classic
+    ///     + Token-2022) for `(vault, mint)`. Catches multi-ATA drains that
+    ///     a per-account constraint would miss.
+    ///   - `scope=1`: single account in entry's `target_account`. Cheaper
+    ///     when the caller knows the exact account to bound.
+    ///
+    /// Pairs with R-2 (AtaAuthorityPin) per F-18 to close the
+    /// close+drain+recreate evasion — R-1 catches the balance change, R-2
+    /// catches the authority change.
+    #[msg("R-1 MintDeltaCap: vault-mint balance decreased by more than max_net_decrease")]
+    ErrMintDeltaCapExceeded,
+
+    /// 6098 — R-1 MintDeltaCap: entry's accounts couldn't be resolved at
+    /// validate time. Common shapes:
+    ///   - `scope=1` and target_account not present in remaining_accounts
+    ///   - target_account's mint field doesn't match the configured mint
+    ///   - target_account isn't owned by the vault
+    ///
+    /// Distinct from ErrMintDeltaCapExceeded because this is a configuration
+    /// or caller-side bug (recoverable by fixing the caller), not an attack
+    /// signal (which fires ErrMintDeltaCapExceeded at finalize).
+    #[msg("R-1 MintDeltaCap misconfigured — target account missing, mint mismatch, or owner not vault")]
+    MintDeltaCapMisconfigured,
 }

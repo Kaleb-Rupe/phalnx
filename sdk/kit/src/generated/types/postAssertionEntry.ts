@@ -10,6 +10,8 @@ import {
   addDecoderSizePrefix,
   addEncoderSizePrefix,
   combineCodec,
+  fixDecoderSize,
+  fixEncoderSize,
   getAddressDecoder,
   getAddressEncoder,
   getBytesDecoder,
@@ -34,6 +36,10 @@ import {
  *
  * Phase B3 fields (cross_field_offset_b, cross_field_multiplier_bps,
  * cross_field_flags) DELETED in Phase 1 Option A demolition.
+ *
+ * Phase 6 appended `auxValue: [u8; 8]` + `auxByte: u8` for the four new
+ * variants (R-1/R-2/R-3/R-4). Modes 0..3 must set both to zero; the
+ * on-chain validator enforces it.
  */
 export type PostAssertionEntry = {
   targetAccount: Address;
@@ -42,6 +48,10 @@ export type PostAssertionEntry = {
   operator: number;
   expectedValue: ReadonlyUint8Array;
   assertionMode: number;
+  /** Phase 6: u64 LE auxiliary value. Per-mode meaning — see ZC struct. */
+  auxValue: ReadonlyUint8Array;
+  /** Phase 6: u8 auxiliary byte. Per-mode meaning — see ZC struct. */
+  auxByte: number;
 };
 
 export type PostAssertionEntryArgs = PostAssertionEntry;
@@ -54,6 +64,8 @@ export function getPostAssertionEntryEncoder(): Encoder<PostAssertionEntryArgs> 
     ["operator", getU8Encoder()],
     ["expectedValue", addEncoderSizePrefix(getBytesEncoder(), getU32Encoder())],
     ["assertionMode", getU8Encoder()],
+    ["auxValue", fixEncoderSize(getBytesEncoder(), 8)],
+    ["auxByte", getU8Encoder()],
   ]);
 }
 
@@ -65,6 +77,8 @@ export function getPostAssertionEntryDecoder(): Decoder<PostAssertionEntry> {
     ["operator", getU8Decoder()],
     ["expectedValue", addDecoderSizePrefix(getBytesDecoder(), getU32Decoder())],
     ["assertionMode", getU8Decoder()],
+    ["auxValue", fixDecoderSize(getBytesDecoder(), 8)],
+    ["auxByte", getU8Decoder()],
   ]);
 }
 

@@ -4,7 +4,26 @@ use crate::state::constraints::{ConstraintOperator, MAX_CONSTRAINT_VALUE_LEN};
 
 /// Maximum number of post-execution assertion entries per vault.
 /// Kept small to limit compute cost in finalize_session.
-pub const MAX_POST_ASSERTION_ENTRIES: usize = 4;
+///
+/// Phase 6 (Maestro borrows R-1/R-2/R-3/R-4): grown from 4 → 8 to accommodate
+/// the new variants AND existing absolute/delta modes on the same PDA without
+/// crowding owners off the cap. Each entry costs 78 bytes; 8 entries = 624
+/// bytes of `entries[]`. Combined with the snapshot growth on SessionAuthority
+/// (+132 bytes), 8 is the negotiated capacity ceiling.
+pub const MAX_POST_ASSERTION_ENTRIES: usize = 8;
+
+/// Phase 6 R-1: maximum ATAs scanned per (vault, mint) pair when
+/// `MintDeltaCap` runs in `scope=0` (vault-wide).
+///
+/// **Why 5:** in practice each (vault, mint) pair has ONE canonical ATA via
+/// the standard `get_associated_token_address` derivation. Token-2022 mints
+/// use a different program ID, so a single vault can have BOTH an SPL Token
+/// ATA AND a Token-2022 ATA for the same mint — that's the realistic ceiling
+/// today. Reserving three additional slots is defensive headroom for any
+/// future ATA program (SIMD-style alternates) without re-deploying. The cap
+/// bounds compute cost in `validate_and_authorize` and `finalize_session`
+/// against a malicious caller stuffing remaining_accounts.
+pub const MAX_ATAS_PER_MINT: usize = 5;
 
 /// Assertion mode enum — used at validation and evaluation boundaries.
 /// On-chain field is u8 for Pod compatibility; this enum provides type safety.
@@ -19,6 +38,12 @@ pub enum AssertionMode {
     MaxIncrease = 2,
     /// Check current == snapshot — byte-for-byte equality (Phase B2)
     NoChange = 3,
+    /// Phase 6 R-1: vault-wide or per-account drain ceiling on a specific
+    /// mint. Snapshot = sum of vault-owned ATA balances at validate time;
+    /// finalize asserts (pre_sum - post_sum) ≤ aux_value (max_net_decrease).
+    /// `scope=0` (aux_byte) enumerates ATAs via on-chain derivation;
+    /// `scope=1` measures only the entry's `target_account`.
+    MintDeltaCap = 4,
 }
 
 impl TryFrom<u8> for AssertionMode {
@@ -29,6 +54,7 @@ impl TryFrom<u8> for AssertionMode {
             1 => Ok(AssertionMode::MaxDecrease),
             2 => Ok(AssertionMode::MaxIncrease),
             3 => Ok(AssertionMode::NoChange),
+            4 => Ok(AssertionMode::MintDeltaCap),
             _ => Err(()),
         }
     }
@@ -51,19 +77,32 @@ impl TryFrom<u8> for AssertionMode {
 #[zero_copy]
 pub struct PostAssertionEntryZC {
     /// The account to read after execution (passed via remaining_accounts).
-    /// Typically a Position PDA, User account, or similar protocol state.
+    ///
+    /// Per-mode interpretation:
+    /// - modes 0..3 (Absolute / MaxDecrease / MaxIncrease / NoChange):
+    ///   protocol state account (Position PDA, User account, etc).
+    /// - mode 4 MintDeltaCap with `aux_byte=1` (scope=1): the single token
+    ///   account whose balance we measure. With `aux_byte=0` (scope=0):
+    ///   UNUSED — ATAs are derived on-chain from `(vault, expected_value)`.
     pub target_account: [u8; 32], // 32
 
-    /// Byte offset in the target account's data to read.
+    /// Byte offset in the target account's data to read (modes 0..3).
+    /// Phase 6 modes (4) ignore this field — balances are read at the
+    /// canonical SPL/Token-2022 layout offset (64..72).
     pub offset: u16, // 2
 
-    /// Length of the value to compare (1-32 bytes).
+    /// Length of the value to compare (1-32 bytes) for modes 0..3.
+    /// Phase 6 mode 4 ignores this field.
     pub value_len: u8, // 1
 
     /// Comparison operator (reuses ConstraintOperator: Eq, Ne, Gte, Lte, etc.)
+    /// Modes 1..4 ignore this field.
     pub operator: u8, // 1
 
-    /// Expected value for comparison (same max as DataConstraint).
+    /// Per-mode payload:
+    /// - modes 0..3: expected value for comparison (same max as DataConstraint).
+    /// - mode 4 MintDeltaCap: bytes 0..32 = mint pubkey identifying the
+    ///   target token. Remaining bytes are unused.
     pub expected_value: [u8; MAX_CONSTRAINT_VALUE_LEN], // 32
 
     /// Assertion mode:
@@ -74,28 +113,46 @@ pub struct PostAssertionEntryZC {
     /// 2 = MaxIncrease: check (current - snapshot) ≤ expected_value (Phase B2)
     ///     NOTE: If value decreases, check ALWAYS PASSES.
     /// 3 = NoChange: check current == snapshot — byte-for-byte equality (Phase B2)
+    /// 4 = MintDeltaCap (Phase 6 R-1): vault-wide or per-account drain ceiling
     pub assertion_mode: u8, // 1
 
-    /// Explicit padding to make total entry size even (Pod requires no implicit
-    /// padding; struct alignment is 2 because of `offset: u16`). Without this
-    /// byte, derive(Pod) panics with "type with padding" since 69 is odd.
-    /// Added in Phase 1 Option A demolition after Phase B3 CrossFieldLte
-    /// fields (7 bytes) were deleted.
-    pub _padding: u8, // 1
+    /// Phase 6 generic auxiliary value — per-mode interpretation:
+    /// - mode 4 MintDeltaCap: u64 LE = max_net_decrease (units of the mint's
+    ///   smallest denomination).
+    /// - modes 0..3: UNUSED, must be zero (validate_entries enforces).
+    /// Stored as raw bytes to keep the struct alignment at 2 (avoids a u64
+    /// alignment bump that would force the entry to a multiple of 8 and
+    /// regress capacity math).
+    pub aux_value: [u8; 8], // 8
+
+    /// Phase 6 generic auxiliary byte — per-mode interpretation:
+    /// - mode 4 MintDeltaCap: scope (0 = vault-wide ATA enumeration,
+    ///   1 = single account in `target_account`).
+    /// - modes 0..3: UNUSED, must be zero (validate_entries enforces).
+    ///
+    /// The trailing `aux_byte` brings the entry to an even size (78) which
+    /// satisfies the struct's u16 alignment without a separate `_padding`
+    /// field — the previous `_padding: u8` from Phase 1 demolition was
+    /// absorbed here. Off-chain decoders that previously read `_padding`
+    /// now read `aux_byte`; the byte position is the same so wire
+    /// compatibility holds with the previous version's zero value.
+    pub aux_byte: u8, // 1
 }
-// = 70 bytes per entry (32 + 2 + 1 + 1 + 32 + 1 + 1 = 70)
+// = 78 bytes per entry (32 + 2 + 1 + 1 + 32 + 1 + 8 + 1 = 78)
 
 /// On-chain account storing post-execution assertions for a vault.
 /// Seeds: [b"post_assertions", vault.key()]
+///
+/// Phase 6 grow: entries 4 → 8, per-entry size 70 → 78 bytes. New SIZE 672.
 #[account(zero_copy)]
 pub struct PostExecutionAssertions {
     /// The vault this assertion set belongs to.
     pub vault: [u8; 32], // 32
 
     /// Assertion entries (fixed-size array, up to MAX_POST_ASSERTION_ENTRIES).
-    pub entries: [PostAssertionEntryZC; MAX_POST_ASSERTION_ENTRIES], // 4 * 70 = 280
+    pub entries: [PostAssertionEntryZC; MAX_POST_ASSERTION_ENTRIES], // 8 * 78 = 624
 
-    /// Number of active entries (0..=4).
+    /// Number of active entries (0..=MAX_POST_ASSERTION_ENTRIES).
     pub entry_count: u8, // 1
 
     /// PDA bump seed.
@@ -104,10 +161,10 @@ pub struct PostExecutionAssertions {
     /// Reserved for future use.
     pub _padding: [u8; 6], // 6
 }
-// Total: 8 (discriminator) + 32 + 280 + 1 + 1 + 6 = 328 bytes
+// Total: 8 (discriminator) + 32 + 624 + 1 + 1 + 6 = 672 bytes
 
 impl PostExecutionAssertions {
-    pub const SIZE: usize = 8 + 32 + (70 * MAX_POST_ASSERTION_ENTRIES) + 1 + 1 + 6;
+    pub const SIZE: usize = 8 + 32 + (78 * MAX_POST_ASSERTION_ENTRIES) + 1 + 1 + 6;
 
     /// Validate a set of assertion entries before storing.
     pub fn validate_entries(entries: &[PostAssertionEntry]) -> Result<()> {
@@ -117,36 +174,79 @@ impl PostExecutionAssertions {
             crate::errors::SigilError::InvalidConstraintConfig
         );
         for entry in entries {
-            // Value length must be 1-32
-            require!(
-                entry.value_len > 0 && entry.value_len as usize <= MAX_CONSTRAINT_VALUE_LEN,
-                crate::errors::SigilError::InvalidConstraintConfig
-            );
-            // Expected value must be at least value_len bytes
-            require!(
-                entry.expected_value.len() >= entry.value_len as usize,
-                crate::errors::SigilError::InvalidConstraintConfig
-            );
-            // Operator must be valid (0-6)
-            require!(
-                ConstraintOperator::try_from(entry.operator).is_ok(),
-                crate::errors::SigilError::InvalidConstraintOperator
-            );
-            // Assertion mode must be valid (0-3)
-            require!(
-                AssertionMode::try_from(entry.assertion_mode).is_ok(),
-                crate::errors::SigilError::InvalidConstraintConfig
-            );
+            // Assertion mode must be valid first — gates per-mode validation
+            // (some modes legitimately ignore value_len / operator).
+            let mode = AssertionMode::try_from(entry.assertion_mode)
+                .map_err(|_| crate::errors::SigilError::InvalidConstraintConfig)?;
 
-            // Phase B2: delta modes (1-3) require value_len <= 8 for numeric comparison
-            if entry.assertion_mode >= 1 && entry.assertion_mode <= 3 {
+            // Modes 0..3 require non-zero value_len + valid operator.
+            // Phase 6 mode 4 (MintDeltaCap) ignores value_len/operator/offset.
+            if (entry.assertion_mode as usize) < 4 {
+                // Value length must be 1-32
                 require!(
-                    entry.value_len <= 8,
+                    entry.value_len > 0 && entry.value_len as usize <= MAX_CONSTRAINT_VALUE_LEN,
                     crate::errors::SigilError::InvalidConstraintConfig
                 );
-            }
+                // Expected value must be at least value_len bytes
+                require!(
+                    entry.expected_value.len() >= entry.value_len as usize,
+                    crate::errors::SigilError::InvalidConstraintConfig
+                );
+                // Operator must be valid (0-6)
+                require!(
+                    ConstraintOperator::try_from(entry.operator).is_ok(),
+                    crate::errors::SigilError::InvalidConstraintOperator
+                );
 
-            // Phase B3 CrossFieldLte validation block DELETED in Phase 1 Option A demolition.
+                // Phase B2: delta modes (1-3) require value_len <= 8 for numeric comparison
+                if entry.assertion_mode >= 1 && entry.assertion_mode <= 3 {
+                    require!(
+                        entry.value_len <= 8,
+                        crate::errors::SigilError::InvalidConstraintConfig
+                    );
+                }
+
+                // Modes 0..3 must NOT use aux fields — invariant for off-chain
+                // decoders so a legacy mode-0 entry can never silently carry a
+                // R-1 payload.
+                require!(
+                    entry.aux_value == [0u8; 8],
+                    crate::errors::SigilError::InvalidConstraintConfig
+                );
+                require!(
+                    entry.aux_byte == 0,
+                    crate::errors::SigilError::InvalidConstraintConfig
+                );
+            } else {
+                // Phase 6 modes (4..) — per-mode field requirements.
+                match mode {
+                    AssertionMode::MintDeltaCap => {
+                        // expected_value carries the mint pubkey at bytes 0..32.
+                        require!(
+                            entry.expected_value.len() >= 32,
+                            crate::errors::SigilError::InvalidConstraintConfig
+                        );
+                        // scope ∈ {0, 1}
+                        require!(
+                            entry.aux_byte <= 1,
+                            crate::errors::SigilError::InvalidConstraintConfig
+                        );
+                        // max_net_decrease must be non-zero — a cap of 0 would
+                        // mean "any drain rejects", which is achievable via
+                        // NoChange. Force the owner to express that case
+                        // through the existing primitive rather than overloading.
+                        let max_dec = u64::from_le_bytes(entry.aux_value);
+                        require!(
+                            max_dec > 0,
+                            crate::errors::SigilError::InvalidConstraintConfig
+                        );
+                    }
+                    // Other Phase 6 modes (5/6/7) are added in subsequent commits.
+                    _ => {
+                        return Err(crate::errors::SigilError::InvalidConstraintConfig.into());
+                    }
+                }
+            }
         }
         Ok(())
     }
@@ -156,6 +256,10 @@ impl PostExecutionAssertions {
 ///
 /// Phase B3 fields (cross_field_offset_b, cross_field_multiplier_bps,
 /// cross_field_flags) DELETED in Phase 1 Option A demolition.
+///
+/// Phase 6 appended `aux_value: [u8; 8]` + `aux_byte: u8` for the four new
+/// variants (R-1/R-2/R-3/R-4). Modes 0..3 must set both to zero; the
+/// validator enforces it.
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
 pub struct PostAssertionEntry {
     pub target_account: Pubkey,
@@ -164,6 +268,10 @@ pub struct PostAssertionEntry {
     pub operator: u8,
     pub expected_value: Vec<u8>,
     pub assertion_mode: u8,
+    /// Phase 6: u64 LE auxiliary value. Per-mode meaning — see ZC struct.
+    pub aux_value: [u8; 8],
+    /// Phase 6: u8 auxiliary byte. Per-mode meaning — see ZC struct.
+    pub aux_byte: u8,
 }
 
 #[cfg(test)]
@@ -180,6 +288,24 @@ mod tests {
             operator: 0, // Eq
             expected_value: vec![0u8; value_len as usize],
             assertion_mode: mode,
+            aux_value: [0u8; 8],
+            aux_byte: 0,
+        }
+    }
+
+    /// Phase 6 R-1 helper — MintDeltaCap entry constructor.
+    fn mk_mintdeltacap(mint: Pubkey, max_dec: u64, scope: u8) -> PostAssertionEntry {
+        let mut expected = vec![0u8; 32];
+        expected.copy_from_slice(mint.as_ref());
+        PostAssertionEntry {
+            target_account: Pubkey::default(),
+            offset: 0,
+            value_len: 0,
+            operator: 0,
+            expected_value: expected,
+            assertion_mode: 4, // MintDeltaCap
+            aux_value: max_dec.to_le_bytes(),
+            aux_byte: scope,
         }
     }
 
@@ -194,11 +320,15 @@ mod tests {
         assert_eq!(AssertionMode::try_from(1), Ok(AssertionMode::MaxDecrease));
         assert_eq!(AssertionMode::try_from(2), Ok(AssertionMode::MaxIncrease));
         assert_eq!(AssertionMode::try_from(3), Ok(AssertionMode::NoChange));
+        // Phase 6 R-1
+        assert_eq!(AssertionMode::try_from(4), Ok(AssertionMode::MintDeltaCap));
     }
 
     #[test]
-    fn assertion_mode_try_from_rejects_4() {
-        assert!(AssertionMode::try_from(4).is_err());
+    fn assertion_mode_try_from_rejects_5_until_r2_lands() {
+        // R-2 AtaAuthorityPin (mode=5) is added in a subsequent commit; until
+        // then, mode=5 must fail TryFrom so a malformed entry is rejected.
+        assert!(AssertionMode::try_from(5).is_err());
     }
 
     #[test]
@@ -212,6 +342,7 @@ mod tests {
         assert_eq!(AssertionMode::MaxDecrease as u8, 1);
         assert_eq!(AssertionMode::MaxIncrease as u8, 2);
         assert_eq!(AssertionMode::NoChange as u8, 3);
+        assert_eq!(AssertionMode::MintDeltaCap as u8, 4);
     }
 
     // ─── B2: delta modes in validate_entries ────────────────────────────
@@ -247,7 +378,11 @@ mod tests {
     }
 
     #[test]
-    fn validate_rejects_unknown_mode_4() {
+    fn validate_rejects_mode_4_as_legacy_b1_entry() {
+        // mk_assertion_entry sets aux_value/aux_byte to 0 — but for mode 4
+        // (MintDeltaCap) max_net_decrease MUST be non-zero. This test pins
+        // that the validator catches a legacy-shaped entry attempting to
+        // claim the new mode.
         let entries = vec![mk_assertion_entry(4, 4)];
         assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
     }
@@ -255,6 +390,77 @@ mod tests {
     #[test]
     fn validate_rejects_unknown_mode_255() {
         let entries = vec![mk_assertion_entry(255, 4)];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
+    }
+
+    // ─── Phase 6 R-1 MintDeltaCap validate_entries ─────────────────────
+
+    #[test]
+    fn validate_accepts_mintdeltacap_scope_0_vault_wide() {
+        let mint = Pubkey::new_unique();
+        let entries = vec![mk_mintdeltacap(mint, 1_000_000, 0)];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_ok());
+    }
+
+    #[test]
+    fn validate_accepts_mintdeltacap_scope_1_single_account() {
+        let mint = Pubkey::new_unique();
+        let mut entry = mk_mintdeltacap(mint, 500_000, 1);
+        entry.target_account = Pubkey::new_unique();
+        let entries = vec![entry];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_ok());
+    }
+
+    #[test]
+    fn validate_rejects_mintdeltacap_scope_above_1() {
+        let mint = Pubkey::new_unique();
+        let entries = vec![mk_mintdeltacap(mint, 100, 2)];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
+    }
+
+    #[test]
+    fn validate_rejects_mintdeltacap_zero_max_decrease() {
+        // A zero cap is achievable via NoChange (mode 3); we force the owner
+        // to express that case via the existing primitive rather than overload
+        // R-1's aux_value semantic.
+        let mint = Pubkey::new_unique();
+        let entries = vec![mk_mintdeltacap(mint, 0, 0)];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
+    }
+
+    #[test]
+    fn validate_rejects_legacy_mode_with_nonzero_aux_value() {
+        // A mode-0 entry with aux fields set is a malformed encoding — the
+        // validator must reject so off-chain decoders can rely on the
+        // invariant "modes 0..3 have zeroed aux fields".
+        let mut entry = mk_assertion_entry(0, 4);
+        entry.aux_value = [1u8; 8];
+        let entries = vec![entry];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
+    }
+
+    #[test]
+    fn validate_rejects_legacy_mode_with_nonzero_aux_byte() {
+        let mut entry = mk_assertion_entry(2, 8); // MaxIncrease
+        entry.aux_byte = 1;
+        let entries = vec![entry];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
+    }
+
+    #[test]
+    fn validate_accepts_max_entries_8() {
+        // Capacity ceiling — exactly MAX_POST_ASSERTION_ENTRIES (8) entries.
+        let entries: Vec<_> = (0..MAX_POST_ASSERTION_ENTRIES)
+            .map(|_| mk_assertion_entry(0, 4))
+            .collect();
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_ok());
+    }
+
+    #[test]
+    fn validate_rejects_more_than_max_entries() {
+        let entries: Vec<_> = (0..(MAX_POST_ASSERTION_ENTRIES + 1))
+            .map(|_| mk_assertion_entry(0, 4))
+            .collect();
         assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
     }
 

@@ -44,15 +44,21 @@ export type PostAssertionEntryZC = {
   /**
    * The account to read after execution (passed via remaining_accounts).
    * Typically a Position PDA, User account, or similar protocol state.
+   * Phase 6 R-1 MintDeltaCap with scope=1: token_account to measure.
+   * Phase 6 R-1 with scope=0: UNUSED — ATAs derived on-chain.
    */
   targetAccount: ReadonlyUint8Array;
-  /** Byte offset in the target account's data to read. */
+  /** Byte offset in the target account's data to read (modes 0..3). */
   offset: number;
-  /** Length of the value to compare (1-32 bytes). */
+  /** Length of the value to compare (1-32 bytes) for modes 0..3. */
   valueLen: number;
-  /** Comparison operator (reuses ConstraintOperator: Eq, Ne, Gte, Lte, etc.) */
+  /** Comparison operator (reuses ConstraintOperator: Eq, Ne, Gte, Lte, etc.). Modes 1..4 ignore. */
   operator: number;
-  /** Expected value for comparison (same max as DataConstraint). */
+  /**
+   * Per-mode payload:
+   * - modes 0..3: expected value for comparison
+   * - mode 4 MintDeltaCap: bytes 0..32 = mint pubkey
+   */
   expectedValue: ReadonlyUint8Array;
   /**
    * Assertion mode:
@@ -63,16 +69,21 @@ export type PostAssertionEntryZC = {
    * 2 = MaxIncrease: check (current - snapshot) ≤ expected_value (Phase B2)
    * NOTE: If value decreases, check ALWAYS PASSES.
    * 3 = NoChange: check current == snapshot — byte-for-byte equality (Phase B2)
+   * 4 = MintDeltaCap (Phase 6 R-1): vault-wide or per-account drain ceiling.
    */
   assertionMode: number;
   /**
-   * Explicit padding to make total entry size even (Pod requires no implicit
-   * padding; struct alignment is 2 because of `offset: u16`). Without this
-   * byte, derive(Pod) panics with "type with padding" since 69 is odd.
-   * Added in Phase 1 Option A demolition after Phase B3 CrossFieldLte
-   * fields (7 bytes) were deleted.
+   * Phase 6: u64 LE auxiliary value.
+   * - mode 4 MintDeltaCap: max_net_decrease.
+   * - modes 0..3: UNUSED, must be zero.
    */
-  padding: number;
+  auxValue: ReadonlyUint8Array;
+  /**
+   * Phase 6: u8 auxiliary byte (absorbed prior _padding slot — same byte position).
+   * - mode 4 MintDeltaCap: scope (0=vault-wide, 1=single account).
+   * - modes 0..3: UNUSED, must be zero.
+   */
+  auxByte: number;
 };
 
 export type PostAssertionEntryZCArgs = PostAssertionEntryZC;
@@ -85,7 +96,8 @@ export function getPostAssertionEntryZCEncoder(): FixedSizeEncoder<PostAssertion
     ["operator", getU8Encoder()],
     ["expectedValue", fixEncoderSize(getBytesEncoder(), 32)],
     ["assertionMode", getU8Encoder()],
-    ["padding", getU8Encoder()],
+    ["auxValue", fixEncoderSize(getBytesEncoder(), 8)],
+    ["auxByte", getU8Encoder()],
   ]);
 }
 
@@ -97,7 +109,8 @@ export function getPostAssertionEntryZCDecoder(): FixedSizeDecoder<PostAssertion
     ["operator", getU8Decoder()],
     ["expectedValue", fixDecoderSize(getBytesDecoder(), 32)],
     ["assertionMode", getU8Decoder()],
-    ["padding", getU8Decoder()],
+    ["auxValue", fixDecoderSize(getBytesDecoder(), 8)],
+    ["auxByte", getU8Decoder()],
   ]);
 }
 

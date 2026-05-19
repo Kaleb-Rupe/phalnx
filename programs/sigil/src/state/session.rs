@@ -55,12 +55,25 @@ pub struct SessionAuthority {
     /// Phase B2: Snapshots of target account bytes captured in validate_and_authorize
     /// before DeFi instruction executes. Index i corresponds to PostAssertionEntry i.
     /// Used by delta assertion modes (1=MaxDecrease, 2=MaxIncrease, 3=NoChange).
-    pub assertion_snapshots: [[u8; 32]; 4],
+    ///
+    /// Phase 6 grow: array length 4 → 8 to match MAX_POST_ASSERTION_ENTRIES.
+    /// Adds 128 bytes (4 × 32) to SessionAuthority.
+    ///
+    /// **Phase 6 R-1 MintDeltaCap reuse:** for mode-4 entries, the snapshot
+    /// stores `pre_sum: u64 LE` in bytes [0..8] of the 32-byte slot. Remaining
+    /// 24 bytes are zero-padded. `snapshot_lens[i]` is set to 8 (the u64
+    /// width) so finalize can distinguish a captured R-1 snapshot from an
+    /// uncaptured slot.
+    pub assertion_snapshots: [[u8; 32]; 8],
 
     /// Phase B2: Actual value_len captured for each snapshot.
     /// 0 = no snapshot captured (mode 0 entries). Non-zero = snapshot was captured.
-    /// finalize_session cross-checks snapshot_lens[i] == entry.value_len.
-    pub snapshot_lens: [u8; 4],
+    /// finalize_session cross-checks snapshot_lens[i] == entry.value_len for
+    /// modes 1..3. For mode 4 (R-1 MintDeltaCap) the field is set to 8 and
+    /// finalize asserts snapshot_lens[i] == 8 before re-summing.
+    ///
+    /// Phase 6 grow: array length 4 → 8. Adds 4 bytes.
+    pub snapshot_lens: [u8; 8],
 
     /// AC-10 (Phase 4) — monotonic session nonce closing durable-nonce replay
     /// (per Audit #1 C-1).
@@ -109,7 +122,7 @@ impl SessionAuthority {
     /// expires_at_timestamp i64 (8) + delegated (1) + delegation_token_account (32) +
     /// protocol_fee (8) + developer_fee (8) +
     /// output_mint (32) + stablecoin_balance_before (8) + bump (1) +
-    /// assertion_snapshots (128) + snapshot_lens (4) +
+    /// assertion_snapshots (256) + snapshot_lens (8) +
     /// nonce u64 (8)  ← AC-10 (Phase 4)
     ///
     /// is_spending byte removed in V2 Option A — always derived from
@@ -119,8 +132,17 @@ impl SessionAuthority {
     /// AC-10 (Phase 4) appends `nonce: u64` for durable-nonce replay defense.
     /// SIZE grows by 8 bytes (375 → 383). Phase 8 reuses the same field for
     /// ownership-transfer replay protection (M-5) without a layout migration.
+    ///
+    /// Phase 6 (Maestro borrows): assertion_snapshots grew from
+    /// [[u8;32]; 4] → [[u8;32]; 8] (+128 bytes) and snapshot_lens from
+    /// [u8;4] → [u8;8] (+4 bytes). Total SIZE grows 383 → 515 (+132). The
+    /// extension is purely append-shape (existing fields kept in place at
+    /// the same offsets), so on-chain decoders that already read the prior
+    /// fields by name continue to work; only the per-account rent grows.
+    /// Sessions are init/close per validate-finalize cycle, so no migration
+    /// is required.
     pub const SIZE: usize =
-        8 + 32 + 32 + 1 + 8 + 32 + 32 + 8 + 1 + 32 + 8 + 8 + 32 + 8 + 1 + 128 + 4 + 8;
+        8 + 32 + 32 + 1 + 8 + 32 + 32 + 8 + 1 + 32 + 8 + 8 + 32 + 8 + 1 + 256 + 8 + 8;
 
     /// Returns true when wall-clock has passed the session's expiry timestamp.
     pub fn is_expired(&self, current_unix_ts: i64) -> bool {
@@ -176,8 +198,8 @@ mod f5h1_tests {
             output_mint: Pubkey::default(),
             stablecoin_balance_before: 0,
             bump: 0,
-            assertion_snapshots: [[0u8; 32]; 4],
-            snapshot_lens: [0u8; 4],
+            assertion_snapshots: [[0u8; 32]; 8],
+            snapshot_lens: [0u8; 8],
             nonce: 0,
         }
     }

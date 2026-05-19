@@ -11,5 +11,6 @@
 
 pub mod cosign_digest;
 pub mod destination_check;
+pub mod mint_delta_cap;
 pub mod policy_digest;
 pub mod token2022_extension;
