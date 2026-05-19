@@ -105,7 +105,35 @@ export {
   getAgentOverlayPDA,
   getConstraintsPDA,
   getPendingConstraintsPDA,
+  getAuditLogSuccessPDA,
+  getAuditLogRejectedPDA,
 } from "./resolve-accounts.js";
+
+// ─── Phase 7 — Audit Log ─────────────────────────────────────────────────────
+export {
+  fetchAuditLogSuccess,
+  fetchAuditLogRejected,
+  targetProtocolBytes,
+  AUDIT_DISC_RESERVED_ZERO,
+  AUDIT_DISC_VALIDATE,
+  AUDIT_DISC_FINALIZE_SUCCESS,
+  AUDIT_DISC_DEPOSIT,
+  AUDIT_DISC_WITHDRAW,
+  AUDIT_DISC_FREEZE,
+  AUDIT_DISC_REACTIVATE,
+  AUDIT_DISC_OWNERSHIP_INITIATE,
+  AUDIT_DISC_OWNERSHIP_ACCEPT,
+  AUDIT_DISC_OWNERSHIP_CANCEL,
+  AUDIT_DISC_PAUSE_AGENT,
+  AUDIT_DISC_UNPAUSE_AGENT,
+  AUDIT_DISC_REVOKE_AGENT,
+  AUDIT_DISC_REGISTER_AGENT,
+  AUDIT_DISC_POLICY_APPLY,
+  AUDIT_DISC_CONSTRAINTS_APPLY,
+  AUDIT_LOG_SUCCESS_CAPACITY,
+  AUDIT_LOG_REJECTED_CAPACITY,
+} from "./audit-log.js";
+export type { AuditLogView } from "./audit-log.js";
 
 // ─── Event Parser ─────────────────────────────────────────────────────────────
 export {

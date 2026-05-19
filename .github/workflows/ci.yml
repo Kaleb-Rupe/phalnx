@@ -420,7 +420,8 @@ jobs:
             tests/post-assertions-r-variants.ts \
             tests/post-assertions-sandwich.ts \
             tests/sysvar-scan-bound.ts \
-            tests/toctou-security.ts
+            tests/toctou-security.ts \
+            tests/audit-log.ts
 
       - name: Check for IDL drift
         run: |

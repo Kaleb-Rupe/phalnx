@@ -61,6 +61,12 @@
       "claudePattern": "tests/analytics-counters.ts` (ts-mocha + LiteSVM, %d tests)"
     },
     {
+      "name": "Audit log (Phase 7 — TA-15 + N1 temporal binding)",
+      "count": 9,
+      "onChain": true,
+      "claudePattern": "tests/audit-log.ts` (ts-mocha + LiteSVM, %d tests — discriminator allocation + buffer wrap + F-19 separation + close_vault rent reclamation)"
+    },
+    {
       "name": "Post-execution assertions E2E (DELETED in Phase 1 Option A demolition — CrossFieldLte primitive removed)",
       "count": 0,
       "onChain": true,

@@ -135,6 +135,38 @@ export async function getPendingConstraintsPDA(
 }
 
 /**
+ * Phase 7 — derive PDA for `AuditLogSuccess` at `[b"audit_success", vault]`.
+ * Allocated at vault creation, written by every mutating instruction that
+ * lands on the success path. Closed at `close_vault`.
+ */
+export async function getAuditLogSuccessPDA(
+  vault: Address,
+  programAddress: Address = SIGIL_PROGRAM_ADDRESS,
+): Promise<[Address, number]> {
+  const [pda, bump] = await getProgramDerivedAddress({
+    programAddress,
+    seeds: [seedString("audit_success"), seedAddress(vault)],
+  });
+  return [pda, bump];
+}
+
+/**
+ * Phase 7 — derive PDA for `AuditLogRejected` at `[b"audit_rejected", vault]`.
+ * Audit #2 F-19 split: keeps rejected-finalize bursts out of the success
+ * buffer's blast radius.
+ */
+export async function getAuditLogRejectedPDA(
+  vault: Address,
+  programAddress: Address = SIGIL_PROGRAM_ADDRESS,
+): Promise<[Address, number]> {
+  const [pda, bump] = await getProgramDerivedAddress({
+    programAddress,
+    seeds: [seedString("audit_rejected"), seedAddress(vault)],
+  });
+  return [pda, bump];
+}
+
+/**
  * Derive PDA for pending CLOSE constraints (queue_close_constraints).
  * Seed: "pending_close_constraints" — NOT the same as "pending_constraints" (which is for updates).
  * See close_vault.rs:127.
