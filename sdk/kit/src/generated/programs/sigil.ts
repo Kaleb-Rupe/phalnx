@@ -93,7 +93,7 @@ import {
   getDepositFundsInstructionAsync,
   getExtendPdaInstruction,
   getFinalizeSessionInstructionAsync,
-  getFreezeVaultInstruction,
+  getFreezeVaultInstructionAsync,
   getInitializeVaultInstructionAsync,
   getPauseAgentInstructionAsync,
   getPromoteGraylistDestinationInstructionAsync,
@@ -101,7 +101,7 @@ import {
   getQueueCloseConstraintsInstructionAsync,
   getQueueConstraintsUpdateInstructionAsync,
   getQueuePolicyUpdateInstructionAsync,
-  getReactivateVaultInstruction,
+  getReactivateVaultInstructionAsync,
   getRecordAgentViolationInstructionAsync,
   getRegisterAgentInstructionAsync,
   getRevokeAgentInstructionAsync,
@@ -163,7 +163,7 @@ import {
   type DepositFundsAsyncInput,
   type ExtendPdaInput,
   type FinalizeSessionAsyncInput,
-  type FreezeVaultInput,
+  type FreezeVaultAsyncInput,
   type InitializeVaultAsyncInput,
   type ParsedAgentTransferInstruction,
   type ParsedAllocateConstraintsPdaInstruction,
@@ -206,7 +206,7 @@ import {
   type QueueCloseConstraintsAsyncInput,
   type QueueConstraintsUpdateAsyncInput,
   type QueuePolicyUpdateAsyncInput,
-  type ReactivateVaultInput,
+  type ReactivateVaultAsyncInput,
   type RecordAgentViolationAsyncInput,
   type RegisterAgentAsyncInput,
   type RevokeAgentAsyncInput,
@@ -1306,8 +1306,9 @@ export type SigilPluginInstructions = {
   ) => ReturnType<typeof getFinalizeSessionInstructionAsync> &
     SelfPlanAndSendFunctions;
   freezeVault: (
-    input: FreezeVaultInput,
-  ) => ReturnType<typeof getFreezeVaultInstruction> & SelfPlanAndSendFunctions;
+    input: FreezeVaultAsyncInput,
+  ) => ReturnType<typeof getFreezeVaultInstructionAsync> &
+    SelfPlanAndSendFunctions;
   initializeVault: (
     input: InitializeVaultAsyncInput,
   ) => ReturnType<typeof getInitializeVaultInstructionAsync> &
@@ -1337,8 +1338,8 @@ export type SigilPluginInstructions = {
   ) => ReturnType<typeof getQueuePolicyUpdateInstructionAsync> &
     SelfPlanAndSendFunctions;
   reactivateVault: (
-    input: ReactivateVaultInput,
-  ) => ReturnType<typeof getReactivateVaultInstruction> &
+    input: ReactivateVaultAsyncInput,
+  ) => ReturnType<typeof getReactivateVaultInstructionAsync> &
     SelfPlanAndSendFunctions;
   recordAgentViolation: (
     input: RecordAgentViolationAsyncInput,
@@ -1526,7 +1527,7 @@ export function sigilProgram() {
           freezeVault: (input) =>
             addSelfPlanAndSendFunctions(
               client,
-              getFreezeVaultInstruction(input),
+              getFreezeVaultInstructionAsync(input),
             ),
           initializeVault: (input) =>
             addSelfPlanAndSendFunctions(
@@ -1566,7 +1567,7 @@ export function sigilProgram() {
           reactivateVault: (input) =>
             addSelfPlanAndSendFunctions(
               client,
-              getReactivateVaultInstruction(input),
+              getReactivateVaultInstructionAsync(input),
             ),
           recordAgentViolation: (input) =>
             addSelfPlanAndSendFunctions(

@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 use crate::errors::SigilError;
 use crate::events::ConstraintsChangeApplied;
 use crate::state::*;
+use crate::utils::audit_log::build_audit_entry;
 
 #[derive(Accounts)]
 pub struct ApplyConstraintsUpdate<'info> {
@@ -39,6 +40,18 @@ pub struct ApplyConstraintsUpdate<'info> {
         close = owner,
     )]
     pub pending_constraints: AccountLoader<'info, PendingConstraintsUpdate>,
+
+    /// Phase 7 — success audit log; entry appended after constraints applied.
+    #[account(
+        mut,
+        seeds = [b"audit_success", vault.key().as_ref()],
+        bump = audit_log_success.load()?.bump,
+    )]
+    pub audit_log_success: AccountLoader<'info, AuditLogSuccess>,
+
+    /// CHECK: Phase 7 — slot_hashes sysvar; address-pinned.
+    #[account(address = anchor_lang::solana_program::sysvar::slot_hashes::id())]
+    pub slot_hashes_sysvar: UncheckedAccount<'info>,
 }
 
 pub fn handler(ctx: Context<ApplyConstraintsUpdate>) -> Result<()> {
@@ -118,6 +131,21 @@ pub fn handler(ctx: Context<ApplyConstraintsUpdate>) -> Result<()> {
             .map(|i| constraints.entries[i].discriminator_format)
             .collect::<Vec<u8>>()
     };
+
+    // Phase 7 — write success audit-log entry AFTER constraints + policy
+    // version mutated.
+    {
+        let entry = build_audit_entry(
+            AUDIT_DISC_CONSTRAINTS_APPLY,
+            vault_key,
+            0,
+            0,
+            clock.unix_timestamp,
+            &ctx.accounts.slot_hashes_sysvar.to_account_info(),
+        )?;
+        let mut log = ctx.accounts.audit_log_success.load_mut()?;
+        log.append(entry);
+    }
 
     emit!(ConstraintsChangeApplied {
         vault: vault_key,

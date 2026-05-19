@@ -14,7 +14,7 @@ import type {
 import type { Instruction } from "./kit-adapter.js";
 
 import { getInitializeVaultInstructionAsync } from "./generated/instructions/initializeVault.js";
-import { getRegisterAgentInstruction } from "./generated/instructions/registerAgent.js";
+import { getRegisterAgentInstructionAsync } from "./generated/instructions/registerAgent.js";
 import {
   getVaultPDA,
   getPolicyPDA,
@@ -428,7 +428,7 @@ export async function createVault(
   // Step 5: Build registerAgent instruction.
   //   PEN-CROSS-5 (Phase 4 absorption): policy now required for
   //   policy_version bump.
-  const registerAgentIx = getRegisterAgentInstruction({
+  const registerAgentIx = await getRegisterAgentInstructionAsync({
     owner: options.owner,
     vault: vaultAddress,
     policy: policyAddress,

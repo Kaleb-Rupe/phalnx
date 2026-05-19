@@ -51,13 +51,13 @@ import { fetchPolicyConfig } from "../generated/accounts/policyConfig.js";
 import { computePolicyPreviewDigest } from "../policy/compute-policy-preview-digest.js";
 
 // Phase 3: Simple mutations
-import { getFreezeVaultInstruction } from "../generated/instructions/freezeVault.js";
-import { getReactivateVaultInstruction } from "../generated/instructions/reactivateVault.js";
+import { getFreezeVaultInstructionAsync } from "../generated/instructions/freezeVault.js";
+import { getReactivateVaultInstructionAsync } from "../generated/instructions/reactivateVault.js";
 import { getCloseVaultInstructionAsync } from "../generated/instructions/closeVault.js";
-import { getPauseAgentInstruction } from "../generated/instructions/pauseAgent.js";
-import { getUnpauseAgentInstruction } from "../generated/instructions/unpauseAgent.js";
-import { getRevokeAgentInstruction } from "../generated/instructions/revokeAgent.js";
-import { getRegisterAgentInstruction } from "../generated/instructions/registerAgent.js";
+import { getPauseAgentInstructionAsync } from "../generated/instructions/pauseAgent.js";
+import { getUnpauseAgentInstructionAsync } from "../generated/instructions/unpauseAgent.js";
+import { getRevokeAgentInstructionAsync } from "../generated/instructions/revokeAgent.js";
+import { getRegisterAgentInstructionAsync } from "../generated/instructions/registerAgent.js";
 
 // Phase 4: Complex mutations
 import { getDepositFundsInstructionAsync } from "../generated/instructions/depositFunds.js";
@@ -295,7 +295,7 @@ export async function freezeVault(
   network: "devnet" | "mainnet",
   opts?: TxOpts,
 ): Promise<TxResult> {
-  const ix = getFreezeVaultInstruction({ owner, vault });
+  const ix = await getFreezeVaultInstructionAsync({ owner, vault });
   return run(rpc, owner, network, [ix], opts);
 }
 
@@ -307,7 +307,7 @@ export async function resumeVault(
   newAgent?: { address: Address; permissions: CapabilityTier },
   opts?: TxOpts,
 ): Promise<TxResult> {
-  const ix = getReactivateVaultInstruction({
+  const ix = await getReactivateVaultInstructionAsync({
     owner,
     vault,
     newAgent: newAgent?.address ?? null,
@@ -448,7 +448,7 @@ export async function pauseAgent(
   requireValidAddress(agent, "Agent address");
   // PEN-CROSS-5 (Phase 4 absorption): policy now required for policy_version bump.
   const [policyPda] = await getPolicyPDA(vault);
-  const ix = getPauseAgentInstruction({
+  const ix = await getPauseAgentInstructionAsync({
     owner,
     vault,
     policy: policyPda,
@@ -468,7 +468,7 @@ export async function unpauseAgent(
   requireValidAddress(agent, "Agent address");
   // PEN-CROSS-5 (Phase 4 absorption): policy now required for policy_version bump.
   const [policyPda] = await getPolicyPDA(vault);
-  const ix = getUnpauseAgentInstruction({
+  const ix = await getUnpauseAgentInstructionAsync({
     owner,
     vault,
     policy: policyPda,
@@ -489,7 +489,7 @@ export async function revokeAgent(
   const [overlayPda] = await getAgentOverlayPDA(vault, 0);
   // PEN-CROSS-5 (Phase 4 absorption): policy now required for policy_version bump.
   const [policyPda] = await getPolicyPDA(vault);
-  const ix = getRevokeAgentInstruction({
+  const ix = await getRevokeAgentInstructionAsync({
     owner,
     vault,
     policy: policyPda,
@@ -514,7 +514,7 @@ export async function addAgent(
   const [overlayPda] = await getAgentOverlayPDA(vault, 0);
   // PEN-CROSS-5 (Phase 4 absorption): policy now required for policy_version bump.
   const [policyPda] = await getPolicyPDA(vault);
-  const ix = getRegisterAgentInstruction({
+  const ix = await getRegisterAgentInstructionAsync({
     owner,
     vault,
     policy: policyPda,

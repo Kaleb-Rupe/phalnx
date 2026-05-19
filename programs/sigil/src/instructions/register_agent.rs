@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 use crate::errors::SigilError;
 use crate::events::AgentRegistered;
 use crate::state::*;
+use crate::utils::audit_log::build_audit_entry;
 
 #[derive(Accounts)]
 pub struct RegisterAgent<'info> {
@@ -45,6 +46,18 @@ pub struct RegisterAgent<'info> {
         bump = agent_spend_overlay.load()?.bump,
     )]
     pub agent_spend_overlay: AccountLoader<'info, AgentSpendOverlay>,
+
+    /// Phase 7 — success audit log; entry appended after register completes.
+    #[account(
+        mut,
+        seeds = [b"audit_success", vault.key().as_ref()],
+        bump = audit_log_success.load()?.bump,
+    )]
+    pub audit_log_success: AccountLoader<'info, AuditLogSuccess>,
+
+    /// CHECK: Phase 7 — slot_hashes sysvar; address-pinned.
+    #[account(address = anchor_lang::solana_program::sysvar::slot_hashes::id())]
+    pub slot_hashes_sysvar: UncheckedAccount<'info>,
 }
 
 pub fn handler(
@@ -141,8 +154,25 @@ pub fn handler(
         .ok_or(error!(SigilError::Overflow))?;
 
     let clock = Clock::get()?;
+    let vault_key = vault.key();
+
+    // Phase 7 — write success audit-log entry. Registered agent pubkey is
+    // stored in the `target_protocol` slot for traceability.
+    {
+        let entry = build_audit_entry(
+            AUDIT_DISC_REGISTER_AGENT,
+            agent,
+            0,
+            0,
+            clock.unix_timestamp,
+            &ctx.accounts.slot_hashes_sysvar.to_account_info(),
+        )?;
+        let mut log = ctx.accounts.audit_log_success.load_mut()?;
+        log.append(entry);
+    }
+
     emit!(AgentRegistered {
-        vault: vault.key(),
+        vault: vault_key,
         agent,
         capability,
         spending_limit_usd,

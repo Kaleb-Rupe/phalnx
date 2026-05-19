@@ -58,6 +58,9 @@ export type ApplyConstraintsUpdateInstruction<
   TAccountPolicy extends string | AccountMeta<string> = string,
   TAccountConstraints extends string | AccountMeta<string> = string,
   TAccountPendingConstraints extends string | AccountMeta<string> = string,
+  TAccountAuditLogSuccess extends string | AccountMeta<string> = string,
+  TAccountSlotHashesSysvar extends string | AccountMeta<string> =
+    "SysvarS1otHashes111111111111111111111111111",
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
@@ -79,6 +82,12 @@ export type ApplyConstraintsUpdateInstruction<
       TAccountPendingConstraints extends string
         ? WritableAccount<TAccountPendingConstraints>
         : TAccountPendingConstraints,
+      TAccountAuditLogSuccess extends string
+        ? WritableAccount<TAccountAuditLogSuccess>
+        : TAccountAuditLogSuccess,
+      TAccountSlotHashesSysvar extends string
+        ? ReadonlyAccount<TAccountSlotHashesSysvar>
+        : TAccountSlotHashesSysvar,
       ...TRemainingAccounts,
     ]
   >;
@@ -121,6 +130,8 @@ export type ApplyConstraintsUpdateAsyncInput<
   TAccountPolicy extends string = string,
   TAccountConstraints extends string = string,
   TAccountPendingConstraints extends string = string,
+  TAccountAuditLogSuccess extends string = string,
+  TAccountSlotHashesSysvar extends string = string,
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
@@ -128,6 +139,10 @@ export type ApplyConstraintsUpdateAsyncInput<
   policy?: Address<TAccountPolicy>;
   constraints?: Address<TAccountConstraints>;
   pendingConstraints?: Address<TAccountPendingConstraints>;
+  /** Phase 7 — success audit log. */
+  auditLogSuccess?: Address<TAccountAuditLogSuccess>;
+  /** Phase 7 — slot_hashes sysvar; address-pinned. */
+  slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
 };
 
 export async function getApplyConstraintsUpdateInstructionAsync<
@@ -136,6 +151,8 @@ export async function getApplyConstraintsUpdateInstructionAsync<
   TAccountPolicy extends string,
   TAccountConstraints extends string,
   TAccountPendingConstraints extends string,
+  TAccountAuditLogSuccess extends string,
+  TAccountSlotHashesSysvar extends string,
   TProgramAddress extends Address = typeof SIGIL_PROGRAM_ADDRESS,
 >(
   input: ApplyConstraintsUpdateAsyncInput<
@@ -143,7 +160,9 @@ export async function getApplyConstraintsUpdateInstructionAsync<
     TAccountVault,
     TAccountPolicy,
     TAccountConstraints,
-    TAccountPendingConstraints
+    TAccountPendingConstraints,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar
   >,
   config?: { programAddress?: TProgramAddress },
 ): Promise<
@@ -153,7 +172,9 @@ export async function getApplyConstraintsUpdateInstructionAsync<
     TAccountVault,
     TAccountPolicy,
     TAccountConstraints,
-    TAccountPendingConstraints
+    TAccountPendingConstraints,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar
   >
 > {
   // Program address.
@@ -168,6 +189,11 @@ export async function getApplyConstraintsUpdateInstructionAsync<
     pendingConstraints: {
       value: input.pendingConstraints ?? null,
       isWritable: true,
+    },
+    auditLogSuccess: { value: input.auditLogSuccess ?? null, isWritable: true },
+    slotHashesSysvar: {
+      value: input.slotHashesSysvar ?? null,
+      isWritable: false,
     },
   };
   const accounts = originalAccounts as Record<
@@ -225,6 +251,28 @@ export async function getApplyConstraintsUpdateInstructionAsync<
       ],
     });
   }
+  if (!accounts.auditLogSuccess.value) {
+    accounts.auditLogSuccess.value = await getProgramDerivedAddress({
+      programAddress,
+      seeds: [
+        getBytesEncoder().encode(
+          new Uint8Array([
+            97, 117, 100, 105, 116, 95, 115, 117, 99, 99, 101, 115, 115,
+          ]),
+        ),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            "vault",
+            accounts.vault.value,
+          ),
+        ),
+      ],
+    });
+  }
+  if (!accounts.slotHashesSysvar.value) {
+    accounts.slotHashesSysvar.value =
+      "SysvarS1otHashes111111111111111111111111111" as Address<"SysvarS1otHashes111111111111111111111111111">;
+  }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, "programId");
   return Object.freeze({
@@ -234,6 +282,8 @@ export async function getApplyConstraintsUpdateInstructionAsync<
       getAccountMeta("policy", accounts.policy),
       getAccountMeta("constraints", accounts.constraints),
       getAccountMeta("pendingConstraints", accounts.pendingConstraints),
+      getAccountMeta("auditLogSuccess", accounts.auditLogSuccess),
+      getAccountMeta("slotHashesSysvar", accounts.slotHashesSysvar),
     ],
     data: getApplyConstraintsUpdateInstructionDataEncoder().encode({}),
     programAddress,
@@ -243,7 +293,9 @@ export async function getApplyConstraintsUpdateInstructionAsync<
     TAccountVault,
     TAccountPolicy,
     TAccountConstraints,
-    TAccountPendingConstraints
+    TAccountPendingConstraints,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar
   >);
 }
 
@@ -253,6 +305,8 @@ export type ApplyConstraintsUpdateInput<
   TAccountPolicy extends string = string,
   TAccountConstraints extends string = string,
   TAccountPendingConstraints extends string = string,
+  TAccountAuditLogSuccess extends string = string,
+  TAccountSlotHashesSysvar extends string = string,
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
@@ -260,6 +314,10 @@ export type ApplyConstraintsUpdateInput<
   policy: Address<TAccountPolicy>;
   constraints: Address<TAccountConstraints>;
   pendingConstraints: Address<TAccountPendingConstraints>;
+  /** Phase 7 — success audit log. */
+  auditLogSuccess: Address<TAccountAuditLogSuccess>;
+  /** Phase 7 — slot_hashes sysvar; address-pinned. */
+  slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
 };
 
 export function getApplyConstraintsUpdateInstruction<
@@ -268,6 +326,8 @@ export function getApplyConstraintsUpdateInstruction<
   TAccountPolicy extends string,
   TAccountConstraints extends string,
   TAccountPendingConstraints extends string,
+  TAccountAuditLogSuccess extends string,
+  TAccountSlotHashesSysvar extends string,
   TProgramAddress extends Address = typeof SIGIL_PROGRAM_ADDRESS,
 >(
   input: ApplyConstraintsUpdateInput<
@@ -275,7 +335,9 @@ export function getApplyConstraintsUpdateInstruction<
     TAccountVault,
     TAccountPolicy,
     TAccountConstraints,
-    TAccountPendingConstraints
+    TAccountPendingConstraints,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar
   >,
   config?: { programAddress?: TProgramAddress },
 ): ApplyConstraintsUpdateInstruction<
@@ -284,7 +346,9 @@ export function getApplyConstraintsUpdateInstruction<
   TAccountVault,
   TAccountPolicy,
   TAccountConstraints,
-  TAccountPendingConstraints
+  TAccountPendingConstraints,
+  TAccountAuditLogSuccess,
+  TAccountSlotHashesSysvar
 > {
   // Program address.
   const programAddress = config?.programAddress ?? SIGIL_PROGRAM_ADDRESS;
@@ -299,11 +363,22 @@ export function getApplyConstraintsUpdateInstruction<
       value: input.pendingConstraints ?? null,
       isWritable: true,
     },
+    auditLogSuccess: { value: input.auditLogSuccess ?? null, isWritable: true },
+    slotHashesSysvar: {
+      value: input.slotHashesSysvar ?? null,
+      isWritable: false,
+    },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
     ResolvedInstructionAccount
   >;
+
+  // Resolve default values.
+  if (!accounts.slotHashesSysvar.value) {
+    accounts.slotHashesSysvar.value =
+      "SysvarS1otHashes111111111111111111111111111" as Address<"SysvarS1otHashes111111111111111111111111111">;
+  }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, "programId");
   return Object.freeze({
@@ -313,6 +388,8 @@ export function getApplyConstraintsUpdateInstruction<
       getAccountMeta("policy", accounts.policy),
       getAccountMeta("constraints", accounts.constraints),
       getAccountMeta("pendingConstraints", accounts.pendingConstraints),
+      getAccountMeta("auditLogSuccess", accounts.auditLogSuccess),
+      getAccountMeta("slotHashesSysvar", accounts.slotHashesSysvar),
     ],
     data: getApplyConstraintsUpdateInstructionDataEncoder().encode({}),
     programAddress,
@@ -322,7 +399,9 @@ export function getApplyConstraintsUpdateInstruction<
     TAccountVault,
     TAccountPolicy,
     TAccountConstraints,
-    TAccountPendingConstraints
+    TAccountPendingConstraints,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar
   >);
 }
 
@@ -338,6 +417,10 @@ export type ParsedApplyConstraintsUpdateInstruction<
     policy: TAccountMetas[2];
     constraints: TAccountMetas[3];
     pendingConstraints: TAccountMetas[4];
+    /** Phase 7 — success audit log. */
+    auditLogSuccess: TAccountMetas[5];
+    /** Phase 7 — slot_hashes sysvar; address-pinned. */
+    slotHashesSysvar: TAccountMetas[6];
   };
   data: ApplyConstraintsUpdateInstructionData;
 };
@@ -350,12 +433,12 @@ export function parseApplyConstraintsUpdateInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedApplyConstraintsUpdateInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 5) {
+  if (instruction.accounts.length < 7) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 5,
+        expectedAccountMetas: 7,
       },
     );
   }
@@ -373,6 +456,8 @@ export function parseApplyConstraintsUpdateInstruction<
       policy: getNextAccount(),
       constraints: getNextAccount(),
       pendingConstraints: getNextAccount(),
+      auditLogSuccess: getNextAccount(),
+      slotHashesSysvar: getNextAccount(),
     },
     data: getApplyConstraintsUpdateInstructionDataDecoder().decode(
       instruction.data,

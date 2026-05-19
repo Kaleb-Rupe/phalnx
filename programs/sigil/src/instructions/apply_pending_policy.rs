@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 use crate::errors::SigilError;
 use crate::events::{GraylistEntered, PolicyChangeApplied};
 use crate::state::*;
+use crate::utils::audit_log::build_audit_entry;
 use crate::utils::cosign_digest::{compute_cosign_digest, CosignDigestFields};
 use crate::utils::policy_digest::{compute_policy_preview_digest, PolicyPreviewFields};
 
@@ -69,6 +70,18 @@ pub struct ApplyPendingPolicy<'info> {
         close = owner,
     )]
     pub pending_policy: Account<'info, PendingPolicyUpdate>,
+
+    /// Phase 7 — success audit log; entry appended after policy applied.
+    #[account(
+        mut,
+        seeds = [b"audit_success", vault.key().as_ref()],
+        bump = audit_log_success.load()?.bump,
+    )]
+    pub audit_log_success: AccountLoader<'info, AuditLogSuccess>,
+
+    /// CHECK: Phase 7 — slot_hashes sysvar; address-pinned.
+    #[account(address = anchor_lang::solana_program::sysvar::slot_hashes::id())]
+    pub slot_hashes_sysvar: UncheckedAccount<'info>,
 }
 
 pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
@@ -328,8 +341,25 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
         .checked_add(1)
         .ok_or(error!(SigilError::Overflow))?;
 
+    let vault_key = ctx.accounts.vault.key();
+
+    // Phase 7 — write success audit-log entry AFTER policy state mutated +
+    // version bumped.
+    {
+        let entry = build_audit_entry(
+            AUDIT_DISC_POLICY_APPLY,
+            vault_key,
+            0,
+            0,
+            clock.unix_timestamp,
+            &ctx.accounts.slot_hashes_sysvar.to_account_info(),
+        )?;
+        let mut log = ctx.accounts.audit_log_success.load_mut()?;
+        log.append(entry);
+    }
+
     emit!(PolicyChangeApplied {
-        vault: ctx.accounts.vault.key(),
+        vault: vault_key,
         applied_at: clock.unix_timestamp,
     });
 

@@ -10,6 +10,7 @@ use anchor_lang::accounts::account_loader::AccountLoader;
 use crate::errors::SigilError;
 use crate::events::{AgentSpendLimitChecked, DelegationRevoked, SessionFinalized};
 use crate::state::*;
+use crate::utils::audit_log::build_audit_entry;
 
 #[derive(Accounts)]
 pub struct FinalizeSession<'info> {
@@ -84,6 +85,30 @@ pub struct FinalizeSession<'info> {
         address = anchor_lang::solana_program::sysvar::instructions::ID
     )]
     pub instructions_sysvar: UncheckedAccount<'info>,
+
+    /// Phase 7 — SUCCESS-path audit log. Written when the finalize completes
+    /// the non-expired branch.
+    #[account(
+        mut,
+        seeds = [b"audit_success", vault.key().as_ref()],
+        bump = audit_log_success.load()?.bump,
+    )]
+    pub audit_log_success: AccountLoader<'info, AuditLogSuccess>,
+
+    /// Phase 7 — REJECTED-path audit log. Written when the finalize takes
+    /// the expired branch (permissionless-crank cleanup). Audit #2 F-19
+    /// keeps this separate from the success buffer so a crank-attacker
+    /// cannot displace legitimate success history.
+    #[account(
+        mut,
+        seeds = [b"audit_rejected", vault.key().as_ref()],
+        bump = audit_log_rejected.load()?.bump,
+    )]
+    pub audit_log_rejected: AccountLoader<'info, AuditLogRejected>,
+
+    /// CHECK: Phase 7 — slot_hashes sysvar; address-pinned.
+    #[account(address = anchor_lang::solana_program::sysvar::slot_hashes::id())]
+    pub slot_hashes_sysvar: UncheckedAccount<'info>,
 }
 
 pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
@@ -1060,6 +1085,38 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
             .nonce
             .checked_add(1)
             .ok_or(SigilError::Overflow)?;
+    }
+
+    // Phase 7 — write audit-log entry. SUCCESS path goes to audit_log_success
+    // (discriminator 2); REJECT/expired path goes to audit_log_rejected
+    // (discriminator 1 — pairs with validate, kept here for symmetry). The
+    // two buffers are physically separate so an expired-finalize burst
+    // (permissionless crank) cannot displace legitimate success history.
+    {
+        let delta_out: i64 = actual_spend_tracked.min(i64::MAX as u64) as i64;
+        if is_expired {
+            let entry = build_audit_entry(
+                AUDIT_DISC_VALIDATE,
+                session_authorized_protocol,
+                0,
+                delta_out,
+                clock.unix_timestamp,
+                &ctx.accounts.slot_hashes_sysvar.to_account_info(),
+            )?;
+            let mut log = ctx.accounts.audit_log_rejected.load_mut()?;
+            log.append(entry);
+        } else {
+            let entry = build_audit_entry(
+                AUDIT_DISC_FINALIZE_SUCCESS,
+                session_authorized_protocol,
+                0,
+                delta_out,
+                clock.unix_timestamp,
+                &ctx.accounts.slot_hashes_sysvar.to_account_info(),
+            )?;
+            let mut log = ctx.accounts.audit_log_success.load_mut()?;
+            log.append(entry);
+        }
     }
 
     emit!(SessionFinalized {

@@ -33,6 +33,7 @@ import {
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
+  type ReadonlyAccount,
   type ReadonlySignerAccount,
   type ReadonlyUint8Array,
   type TransactionSigner,
@@ -61,6 +62,9 @@ export type RegisterAgentInstruction<
   TAccountVault extends string | AccountMeta<string> = string,
   TAccountPolicy extends string | AccountMeta<string> = string,
   TAccountAgentSpendOverlay extends string | AccountMeta<string> = string,
+  TAccountAuditLogSuccess extends string | AccountMeta<string> = string,
+  TAccountSlotHashesSysvar extends string | AccountMeta<string> =
+    "SysvarS1otHashes111111111111111111111111111",
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
@@ -79,6 +83,12 @@ export type RegisterAgentInstruction<
       TAccountAgentSpendOverlay extends string
         ? WritableAccount<TAccountAgentSpendOverlay>
         : TAccountAgentSpendOverlay,
+      TAccountAuditLogSuccess extends string
+        ? WritableAccount<TAccountAuditLogSuccess>
+        : TAccountAuditLogSuccess,
+      TAccountSlotHashesSysvar extends string
+        ? ReadonlyAccount<TAccountSlotHashesSysvar>
+        : TAccountSlotHashesSysvar,
       ...TRemainingAccounts,
     ]
   >;
@@ -132,6 +142,8 @@ export type RegisterAgentAsyncInput<
   TAccountVault extends string = string,
   TAccountPolicy extends string = string,
   TAccountAgentSpendOverlay extends string = string,
+  TAccountAuditLogSuccess extends string = string,
+  TAccountSlotHashesSysvar extends string = string,
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
@@ -155,6 +167,10 @@ export type RegisterAgentAsyncInput<
   policy?: Address<TAccountPolicy>;
   /** Agent spend overlay — per-agent tracking slot. */
   agentSpendOverlay: Address<TAccountAgentSpendOverlay>;
+  /** Phase 7 — success audit log. */
+  auditLogSuccess?: Address<TAccountAuditLogSuccess>;
+  /** Phase 7 — slot_hashes sysvar; address-pinned. */
+  slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
   agent: RegisterAgentInstructionDataArgs["agent"];
   capability: RegisterAgentInstructionDataArgs["capability"];
   spendingLimitUsd: RegisterAgentInstructionDataArgs["spendingLimitUsd"];
@@ -165,13 +181,17 @@ export async function getRegisterAgentInstructionAsync<
   TAccountVault extends string,
   TAccountPolicy extends string,
   TAccountAgentSpendOverlay extends string,
+  TAccountAuditLogSuccess extends string,
+  TAccountSlotHashesSysvar extends string,
   TProgramAddress extends Address = typeof SIGIL_PROGRAM_ADDRESS,
 >(
   input: RegisterAgentAsyncInput<
     TAccountOwner,
     TAccountVault,
     TAccountPolicy,
-    TAccountAgentSpendOverlay
+    TAccountAgentSpendOverlay,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar
   >,
   config?: { programAddress?: TProgramAddress },
 ): Promise<
@@ -180,7 +200,9 @@ export async function getRegisterAgentInstructionAsync<
     TAccountOwner,
     TAccountVault,
     TAccountPolicy,
-    TAccountAgentSpendOverlay
+    TAccountAgentSpendOverlay,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar
   >
 > {
   // Program address.
@@ -194,6 +216,11 @@ export async function getRegisterAgentInstructionAsync<
     agentSpendOverlay: {
       value: input.agentSpendOverlay ?? null,
       isWritable: true,
+    },
+    auditLogSuccess: { value: input.auditLogSuccess ?? null, isWritable: true },
+    slotHashesSysvar: {
+      value: input.slotHashesSysvar ?? null,
+      isWritable: false,
     },
   };
   const accounts = originalAccounts as Record<
@@ -219,6 +246,28 @@ export async function getRegisterAgentInstructionAsync<
       ],
     });
   }
+  if (!accounts.auditLogSuccess.value) {
+    accounts.auditLogSuccess.value = await getProgramDerivedAddress({
+      programAddress,
+      seeds: [
+        getBytesEncoder().encode(
+          new Uint8Array([
+            97, 117, 100, 105, 116, 95, 115, 117, 99, 99, 101, 115, 115,
+          ]),
+        ),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            "vault",
+            accounts.vault.value,
+          ),
+        ),
+      ],
+    });
+  }
+  if (!accounts.slotHashesSysvar.value) {
+    accounts.slotHashesSysvar.value =
+      "SysvarS1otHashes111111111111111111111111111" as Address<"SysvarS1otHashes111111111111111111111111111">;
+  }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, "programId");
   return Object.freeze({
@@ -227,6 +276,8 @@ export async function getRegisterAgentInstructionAsync<
       getAccountMeta("vault", accounts.vault),
       getAccountMeta("policy", accounts.policy),
       getAccountMeta("agentSpendOverlay", accounts.agentSpendOverlay),
+      getAccountMeta("auditLogSuccess", accounts.auditLogSuccess),
+      getAccountMeta("slotHashesSysvar", accounts.slotHashesSysvar),
     ],
     data: getRegisterAgentInstructionDataEncoder().encode(
       args as RegisterAgentInstructionDataArgs,
@@ -237,7 +288,9 @@ export async function getRegisterAgentInstructionAsync<
     TAccountOwner,
     TAccountVault,
     TAccountPolicy,
-    TAccountAgentSpendOverlay
+    TAccountAgentSpendOverlay,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar
   >);
 }
 
@@ -246,6 +299,8 @@ export type RegisterAgentInput<
   TAccountVault extends string = string,
   TAccountPolicy extends string = string,
   TAccountAgentSpendOverlay extends string = string,
+  TAccountAuditLogSuccess extends string = string,
+  TAccountSlotHashesSysvar extends string = string,
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
@@ -269,6 +324,10 @@ export type RegisterAgentInput<
   policy: Address<TAccountPolicy>;
   /** Agent spend overlay — per-agent tracking slot. */
   agentSpendOverlay: Address<TAccountAgentSpendOverlay>;
+  /** Phase 7 — success audit log. */
+  auditLogSuccess: Address<TAccountAuditLogSuccess>;
+  /** Phase 7 — slot_hashes sysvar; address-pinned. */
+  slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
   agent: RegisterAgentInstructionDataArgs["agent"];
   capability: RegisterAgentInstructionDataArgs["capability"];
   spendingLimitUsd: RegisterAgentInstructionDataArgs["spendingLimitUsd"];
@@ -279,13 +338,17 @@ export function getRegisterAgentInstruction<
   TAccountVault extends string,
   TAccountPolicy extends string,
   TAccountAgentSpendOverlay extends string,
+  TAccountAuditLogSuccess extends string,
+  TAccountSlotHashesSysvar extends string,
   TProgramAddress extends Address = typeof SIGIL_PROGRAM_ADDRESS,
 >(
   input: RegisterAgentInput<
     TAccountOwner,
     TAccountVault,
     TAccountPolicy,
-    TAccountAgentSpendOverlay
+    TAccountAgentSpendOverlay,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar
   >,
   config?: { programAddress?: TProgramAddress },
 ): RegisterAgentInstruction<
@@ -293,7 +356,9 @@ export function getRegisterAgentInstruction<
   TAccountOwner,
   TAccountVault,
   TAccountPolicy,
-  TAccountAgentSpendOverlay
+  TAccountAgentSpendOverlay,
+  TAccountAuditLogSuccess,
+  TAccountSlotHashesSysvar
 > {
   // Program address.
   const programAddress = config?.programAddress ?? SIGIL_PROGRAM_ADDRESS;
@@ -307,6 +372,11 @@ export function getRegisterAgentInstruction<
       value: input.agentSpendOverlay ?? null,
       isWritable: true,
     },
+    auditLogSuccess: { value: input.auditLogSuccess ?? null, isWritable: true },
+    slotHashesSysvar: {
+      value: input.slotHashesSysvar ?? null,
+      isWritable: false,
+    },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -316,6 +386,12 @@ export function getRegisterAgentInstruction<
   // Original args.
   const args = { ...input };
 
+  // Resolve default values.
+  if (!accounts.slotHashesSysvar.value) {
+    accounts.slotHashesSysvar.value =
+      "SysvarS1otHashes111111111111111111111111111" as Address<"SysvarS1otHashes111111111111111111111111111">;
+  }
+
   const getAccountMeta = getAccountMetaFactory(programAddress, "programId");
   return Object.freeze({
     accounts: [
@@ -323,6 +399,8 @@ export function getRegisterAgentInstruction<
       getAccountMeta("vault", accounts.vault),
       getAccountMeta("policy", accounts.policy),
       getAccountMeta("agentSpendOverlay", accounts.agentSpendOverlay),
+      getAccountMeta("auditLogSuccess", accounts.auditLogSuccess),
+      getAccountMeta("slotHashesSysvar", accounts.slotHashesSysvar),
     ],
     data: getRegisterAgentInstructionDataEncoder().encode(
       args as RegisterAgentInstructionDataArgs,
@@ -333,7 +411,9 @@ export function getRegisterAgentInstruction<
     TAccountOwner,
     TAccountVault,
     TAccountPolicy,
-    TAccountAgentSpendOverlay
+    TAccountAgentSpendOverlay,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar
   >);
 }
 
@@ -365,6 +445,10 @@ export type ParsedRegisterAgentInstruction<
     policy: TAccountMetas[2];
     /** Agent spend overlay — per-agent tracking slot. */
     agentSpendOverlay: TAccountMetas[3];
+    /** Phase 7 — success audit log. */
+    auditLogSuccess: TAccountMetas[4];
+    /** Phase 7 — slot_hashes sysvar; address-pinned. */
+    slotHashesSysvar: TAccountMetas[5];
   };
   data: RegisterAgentInstructionData;
 };
@@ -377,12 +461,12 @@ export function parseRegisterAgentInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedRegisterAgentInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 4) {
+  if (instruction.accounts.length < 6) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 4,
+        expectedAccountMetas: 6,
       },
     );
   }
@@ -399,6 +483,8 @@ export function parseRegisterAgentInstruction<
       vault: getNextAccount(),
       policy: getNextAccount(),
       agentSpendOverlay: getNextAccount(),
+      auditLogSuccess: getNextAccount(),
+      slotHashesSysvar: getNextAccount(),
     },
     data: getRegisterAgentInstructionDataDecoder().decode(instruction.data),
   };

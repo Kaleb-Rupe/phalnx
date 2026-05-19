@@ -60,6 +60,9 @@ export type WithdrawFundsInstruction<
   TAccountMint extends string | AccountMeta<string> = string,
   TAccountVaultTokenAccount extends string | AccountMeta<string> = string,
   TAccountOwnerTokenAccount extends string | AccountMeta<string> = string,
+  TAccountAuditLogSuccess extends string | AccountMeta<string> = string,
+  TAccountSlotHashesSysvar extends string | AccountMeta<string> =
+    "SysvarS1otHashes111111111111111111111111111",
   TAccountTokenProgram extends string | AccountMeta<string> =
     "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
@@ -83,6 +86,12 @@ export type WithdrawFundsInstruction<
       TAccountOwnerTokenAccount extends string
         ? WritableAccount<TAccountOwnerTokenAccount>
         : TAccountOwnerTokenAccount,
+      TAccountAuditLogSuccess extends string
+        ? WritableAccount<TAccountAuditLogSuccess>
+        : TAccountAuditLogSuccess,
+      TAccountSlotHashesSysvar extends string
+        ? ReadonlyAccount<TAccountSlotHashesSysvar>
+        : TAccountSlotHashesSysvar,
       TAccountTokenProgram extends string
         ? ReadonlyAccount<TAccountTokenProgram>
         : TAccountTokenProgram,
@@ -130,6 +139,8 @@ export type WithdrawFundsAsyncInput<
   TAccountMint extends string = string,
   TAccountVaultTokenAccount extends string = string,
   TAccountOwnerTokenAccount extends string = string,
+  TAccountAuditLogSuccess extends string = string,
+  TAccountSlotHashesSysvar extends string = string,
   TAccountTokenProgram extends string = string,
 > = {
   owner: TransactionSigner<TAccountOwner>;
@@ -139,6 +150,10 @@ export type WithdrawFundsAsyncInput<
   vaultTokenAccount?: Address<TAccountVaultTokenAccount>;
   /** Owner's token account to receive funds */
   ownerTokenAccount?: Address<TAccountOwnerTokenAccount>;
+  /** Phase 7 — success audit log. */
+  auditLogSuccess?: Address<TAccountAuditLogSuccess>;
+  /** Phase 7 — slot_hashes sysvar; address-pinned. */
+  slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
   tokenProgram?: Address<TAccountTokenProgram>;
   amount: WithdrawFundsInstructionDataArgs["amount"];
 };
@@ -149,6 +164,8 @@ export async function getWithdrawFundsInstructionAsync<
   TAccountMint extends string,
   TAccountVaultTokenAccount extends string,
   TAccountOwnerTokenAccount extends string,
+  TAccountAuditLogSuccess extends string,
+  TAccountSlotHashesSysvar extends string,
   TAccountTokenProgram extends string,
   TProgramAddress extends Address = typeof SIGIL_PROGRAM_ADDRESS,
 >(
@@ -158,6 +175,8 @@ export async function getWithdrawFundsInstructionAsync<
     TAccountMint,
     TAccountVaultTokenAccount,
     TAccountOwnerTokenAccount,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar,
     TAccountTokenProgram
   >,
   config?: { programAddress?: TProgramAddress },
@@ -169,6 +188,8 @@ export async function getWithdrawFundsInstructionAsync<
     TAccountMint,
     TAccountVaultTokenAccount,
     TAccountOwnerTokenAccount,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar,
     TAccountTokenProgram
   >
 > {
@@ -187,6 +208,11 @@ export async function getWithdrawFundsInstructionAsync<
     ownerTokenAccount: {
       value: input.ownerTokenAccount ?? null,
       isWritable: true,
+    },
+    auditLogSuccess: { value: input.auditLogSuccess ?? null, isWritable: true },
+    slotHashesSysvar: {
+      value: input.slotHashesSysvar ?? null,
+      isWritable: false,
     },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
   };
@@ -247,6 +273,28 @@ export async function getWithdrawFundsInstructionAsync<
       ],
     });
   }
+  if (!accounts.auditLogSuccess.value) {
+    accounts.auditLogSuccess.value = await getProgramDerivedAddress({
+      programAddress,
+      seeds: [
+        getBytesEncoder().encode(
+          new Uint8Array([
+            97, 117, 100, 105, 116, 95, 115, 117, 99, 99, 101, 115, 115,
+          ]),
+        ),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            "vault",
+            accounts.vault.value,
+          ),
+        ),
+      ],
+    });
+  }
+  if (!accounts.slotHashesSysvar.value) {
+    accounts.slotHashesSysvar.value =
+      "SysvarS1otHashes111111111111111111111111111" as Address<"SysvarS1otHashes111111111111111111111111111">;
+  }
   if (!accounts.tokenProgram.value) {
     accounts.tokenProgram.value =
       "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address<"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA">;
@@ -260,6 +308,8 @@ export async function getWithdrawFundsInstructionAsync<
       getAccountMeta("mint", accounts.mint),
       getAccountMeta("vaultTokenAccount", accounts.vaultTokenAccount),
       getAccountMeta("ownerTokenAccount", accounts.ownerTokenAccount),
+      getAccountMeta("auditLogSuccess", accounts.auditLogSuccess),
+      getAccountMeta("slotHashesSysvar", accounts.slotHashesSysvar),
       getAccountMeta("tokenProgram", accounts.tokenProgram),
     ],
     data: getWithdrawFundsInstructionDataEncoder().encode(
@@ -273,6 +323,8 @@ export async function getWithdrawFundsInstructionAsync<
     TAccountMint,
     TAccountVaultTokenAccount,
     TAccountOwnerTokenAccount,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar,
     TAccountTokenProgram
   >);
 }
@@ -283,6 +335,8 @@ export type WithdrawFundsInput<
   TAccountMint extends string = string,
   TAccountVaultTokenAccount extends string = string,
   TAccountOwnerTokenAccount extends string = string,
+  TAccountAuditLogSuccess extends string = string,
+  TAccountSlotHashesSysvar extends string = string,
   TAccountTokenProgram extends string = string,
 > = {
   owner: TransactionSigner<TAccountOwner>;
@@ -292,6 +346,10 @@ export type WithdrawFundsInput<
   vaultTokenAccount: Address<TAccountVaultTokenAccount>;
   /** Owner's token account to receive funds */
   ownerTokenAccount: Address<TAccountOwnerTokenAccount>;
+  /** Phase 7 — success audit log. */
+  auditLogSuccess: Address<TAccountAuditLogSuccess>;
+  /** Phase 7 — slot_hashes sysvar; address-pinned. */
+  slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
   tokenProgram?: Address<TAccountTokenProgram>;
   amount: WithdrawFundsInstructionDataArgs["amount"];
 };
@@ -302,6 +360,8 @@ export function getWithdrawFundsInstruction<
   TAccountMint extends string,
   TAccountVaultTokenAccount extends string,
   TAccountOwnerTokenAccount extends string,
+  TAccountAuditLogSuccess extends string,
+  TAccountSlotHashesSysvar extends string,
   TAccountTokenProgram extends string,
   TProgramAddress extends Address = typeof SIGIL_PROGRAM_ADDRESS,
 >(
@@ -311,6 +371,8 @@ export function getWithdrawFundsInstruction<
     TAccountMint,
     TAccountVaultTokenAccount,
     TAccountOwnerTokenAccount,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar,
     TAccountTokenProgram
   >,
   config?: { programAddress?: TProgramAddress },
@@ -321,6 +383,8 @@ export function getWithdrawFundsInstruction<
   TAccountMint,
   TAccountVaultTokenAccount,
   TAccountOwnerTokenAccount,
+  TAccountAuditLogSuccess,
+  TAccountSlotHashesSysvar,
   TAccountTokenProgram
 > {
   // Program address.
@@ -339,6 +403,11 @@ export function getWithdrawFundsInstruction<
       value: input.ownerTokenAccount ?? null,
       isWritable: true,
     },
+    auditLogSuccess: { value: input.auditLogSuccess ?? null, isWritable: true },
+    slotHashesSysvar: {
+      value: input.slotHashesSysvar ?? null,
+      isWritable: false,
+    },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -350,6 +419,10 @@ export function getWithdrawFundsInstruction<
   const args = { ...input };
 
   // Resolve default values.
+  if (!accounts.slotHashesSysvar.value) {
+    accounts.slotHashesSysvar.value =
+      "SysvarS1otHashes111111111111111111111111111" as Address<"SysvarS1otHashes111111111111111111111111111">;
+  }
   if (!accounts.tokenProgram.value) {
     accounts.tokenProgram.value =
       "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address<"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA">;
@@ -363,6 +436,8 @@ export function getWithdrawFundsInstruction<
       getAccountMeta("mint", accounts.mint),
       getAccountMeta("vaultTokenAccount", accounts.vaultTokenAccount),
       getAccountMeta("ownerTokenAccount", accounts.ownerTokenAccount),
+      getAccountMeta("auditLogSuccess", accounts.auditLogSuccess),
+      getAccountMeta("slotHashesSysvar", accounts.slotHashesSysvar),
       getAccountMeta("tokenProgram", accounts.tokenProgram),
     ],
     data: getWithdrawFundsInstructionDataEncoder().encode(
@@ -376,6 +451,8 @@ export function getWithdrawFundsInstruction<
     TAccountMint,
     TAccountVaultTokenAccount,
     TAccountOwnerTokenAccount,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar,
     TAccountTokenProgram
   >);
 }
@@ -393,7 +470,11 @@ export type ParsedWithdrawFundsInstruction<
     vaultTokenAccount: TAccountMetas[3];
     /** Owner's token account to receive funds */
     ownerTokenAccount: TAccountMetas[4];
-    tokenProgram: TAccountMetas[5];
+    /** Phase 7 — success audit log. */
+    auditLogSuccess: TAccountMetas[5];
+    /** Phase 7 — slot_hashes sysvar; address-pinned. */
+    slotHashesSysvar: TAccountMetas[6];
+    tokenProgram: TAccountMetas[7];
   };
   data: WithdrawFundsInstructionData;
 };
@@ -406,12 +487,12 @@ export function parseWithdrawFundsInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedWithdrawFundsInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 6) {
+  if (instruction.accounts.length < 8) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 6,
+        expectedAccountMetas: 8,
       },
     );
   }
@@ -429,6 +510,8 @@ export function parseWithdrawFundsInstruction<
       mint: getNextAccount(),
       vaultTokenAccount: getNextAccount(),
       ownerTokenAccount: getNextAccount(),
+      auditLogSuccess: getNextAccount(),
+      slotHashesSysvar: getNextAccount(),
       tokenProgram: getNextAccount(),
     },
     data: getWithdrawFundsInstructionDataDecoder().decode(instruction.data),

@@ -5,6 +5,7 @@ use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 use crate::errors::SigilError;
 use crate::events::FundsDeposited;
 use crate::state::*;
+use crate::utils::audit_log::build_audit_entry;
 use crate::utils::token2022_extension::enforce_token2022_extension_allowlist;
 
 #[derive(Accounts)]
@@ -38,6 +39,18 @@ pub struct DepositFunds<'info> {
         associated_token::authority = vault,
     )]
     pub vault_token_account: Account<'info, TokenAccount>,
+
+    /// Phase 7 — success audit log; entry appended after token transfer.
+    #[account(
+        mut,
+        seeds = [b"audit_success", vault.key().as_ref()],
+        bump = audit_log_success.load()?.bump,
+    )]
+    pub audit_log_success: AccountLoader<'info, AuditLogSuccess>,
+
+    /// CHECK: Phase 7 — slot_hashes sysvar; address-pinned.
+    #[account(address = anchor_lang::solana_program::sysvar::slot_hashes::id())]
+    pub slot_hashes_sysvar: UncheckedAccount<'info>,
 
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -94,9 +107,28 @@ pub fn handler(ctx: Context<DepositFunds>, amount: u64) -> Result<()> {
     }
 
     let clock = Clock::get()?;
+    let vault_key = vault.key();
+    let mint_key = ctx.accounts.mint.key();
+
+    // Phase 7 — write success audit-log entry. Mint pubkey is stored in
+    // `target_protocol` for filtering by token; `balance_delta_in` is set
+    // to the deposited amount (positive direction = funds IN).
+    {
+        let entry = build_audit_entry(
+            AUDIT_DISC_DEPOSIT,
+            mint_key,
+            amount.min(i64::MAX as u64) as i64,
+            0,
+            clock.unix_timestamp,
+            &ctx.accounts.slot_hashes_sysvar.to_account_info(),
+        )?;
+        let mut log = ctx.accounts.audit_log_success.load_mut()?;
+        log.append(entry);
+    }
+
     emit!(FundsDeposited {
-        vault: vault.key(),
-        token_mint: ctx.accounts.mint.key(),
+        vault: vault_key,
+        token_mint: mint_key,
         amount,
         timestamp: clock.unix_timestamp,
     });

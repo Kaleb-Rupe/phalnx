@@ -4,6 +4,7 @@ use anchor_spl::token::{self, Revoke, Token};
 use crate::errors::SigilError;
 use crate::events::{DelegationRevoked, VaultFrozen};
 use crate::state::*;
+use crate::utils::audit_log::build_audit_entry;
 
 #[derive(Accounts)]
 pub struct FreezeVault<'info> {
@@ -16,6 +17,20 @@ pub struct FreezeVault<'info> {
         bump = vault.bump,
     )]
     pub vault: Account<'info, AgentVault>,
+
+    /// Phase 7 — success audit log; entry appended after status flip.
+    #[account(
+        mut,
+        seeds = [b"audit_success", vault.key().as_ref()],
+        bump = audit_log_success.load()?.bump,
+    )]
+    pub audit_log_success: AccountLoader<'info, AuditLogSuccess>,
+
+    /// CHECK: Phase 7 — slot_hashes sysvar, read for fresh temporal binding.
+    /// Address constrained to the canonical sysvar pubkey so a tampered caller
+    /// cannot substitute a stale or attacker-controlled account.
+    #[account(address = anchor_lang::solana_program::sysvar::slot_hashes::id())]
+    pub slot_hashes_sysvar: UncheckedAccount<'info>,
 
     pub token_program: Program<'info, Token>,
 }
@@ -170,6 +185,22 @@ pub fn handler<'a, 'b, 'c, 'info>(
     // `validate_and_authorize` (it requires `vault.is_active()`).
     let vault = &mut ctx.accounts.vault;
     vault.status = VaultStatus::Frozen;
+
+    // Phase 7 — write success audit-log entry AFTER state mutation completes.
+    // M-3 ordering: persist on-chain before emit!() so event log and on-chain
+    // state stay aligned even if a downstream regression breaks the emit.
+    {
+        let entry = build_audit_entry(
+            AUDIT_DISC_FREEZE,
+            vault_key,
+            0,
+            0,
+            clock.unix_timestamp,
+            &ctx.accounts.slot_hashes_sysvar.to_account_info(),
+        )?;
+        let mut log = ctx.accounts.audit_log_success.load_mut()?;
+        log.append(entry);
+    }
 
     emit!(VaultFrozen {
         vault: vault_key,

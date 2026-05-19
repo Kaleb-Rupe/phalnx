@@ -16,6 +16,7 @@ import {
   getBytesEncoder,
   getOptionDecoder,
   getOptionEncoder,
+  getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
   getU8Decoder,
@@ -34,6 +35,7 @@ import {
   type InstructionWithData,
   type Option,
   type OptionOrNullable,
+  type ReadonlyAccount,
   type ReadonlySignerAccount,
   type ReadonlyUint8Array,
   type TransactionSigner,
@@ -41,6 +43,7 @@ import {
 } from "@solana/kit";
 import {
   getAccountMetaFactory,
+  getAddressFromResolvedInstructionAccount,
   type ResolvedInstructionAccount,
 } from "@solana/program-client-core";
 import { SIGIL_PROGRAM_ADDRESS } from "../programs/index.js";
@@ -59,6 +62,9 @@ export type ReactivateVaultInstruction<
   TProgram extends string = typeof SIGIL_PROGRAM_ADDRESS,
   TAccountOwner extends string | AccountMeta<string> = string,
   TAccountVault extends string | AccountMeta<string> = string,
+  TAccountAuditLogSuccess extends string | AccountMeta<string> = string,
+  TAccountSlotHashesSysvar extends string | AccountMeta<string> =
+    "SysvarS1otHashes111111111111111111111111111",
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
@@ -71,6 +77,12 @@ export type ReactivateVaultInstruction<
       TAccountVault extends string
         ? WritableAccount<TAccountVault>
         : TAccountVault,
+      TAccountAuditLogSuccess extends string
+        ? WritableAccount<TAccountAuditLogSuccess>
+        : TAccountAuditLogSuccess,
+      TAccountSlotHashesSysvar extends string
+        ? ReadonlyAccount<TAccountSlotHashesSysvar>
+        : TAccountSlotHashesSysvar,
       ...TRemainingAccounts,
     ]
   >;
@@ -115,24 +127,45 @@ export function getReactivateVaultInstructionDataCodec(): Codec<
   );
 }
 
-export type ReactivateVaultInput<
+export type ReactivateVaultAsyncInput<
   TAccountOwner extends string = string,
   TAccountVault extends string = string,
+  TAccountAuditLogSuccess extends string = string,
+  TAccountSlotHashesSysvar extends string = string,
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
+  /** Phase 7 — success audit log. */
+  auditLogSuccess?: Address<TAccountAuditLogSuccess>;
+  /** Phase 7 — slot_hashes sysvar; address-pinned. */
+  slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
   newAgent: ReactivateVaultInstructionDataArgs["newAgent"];
   newAgentCapability: ReactivateVaultInstructionDataArgs["newAgentCapability"];
 };
 
-export function getReactivateVaultInstruction<
+export async function getReactivateVaultInstructionAsync<
   TAccountOwner extends string,
   TAccountVault extends string,
+  TAccountAuditLogSuccess extends string,
+  TAccountSlotHashesSysvar extends string,
   TProgramAddress extends Address = typeof SIGIL_PROGRAM_ADDRESS,
 >(
-  input: ReactivateVaultInput<TAccountOwner, TAccountVault>,
+  input: ReactivateVaultAsyncInput<
+    TAccountOwner,
+    TAccountVault,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar
+  >,
   config?: { programAddress?: TProgramAddress },
-): ReactivateVaultInstruction<TProgramAddress, TAccountOwner, TAccountVault> {
+): Promise<
+  ReactivateVaultInstruction<
+    TProgramAddress,
+    TAccountOwner,
+    TAccountVault,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar
+  >
+> {
   // Program address.
   const programAddress = config?.programAddress ?? SIGIL_PROGRAM_ADDRESS;
 
@@ -140,6 +173,11 @@ export function getReactivateVaultInstruction<
   const originalAccounts = {
     owner: { value: input.owner ?? null, isWritable: false },
     vault: { value: input.vault ?? null, isWritable: true },
+    auditLogSuccess: { value: input.auditLogSuccess ?? null, isWritable: true },
+    slotHashesSysvar: {
+      value: input.slotHashesSysvar ?? null,
+      isWritable: false,
+    },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -149,11 +187,37 @@ export function getReactivateVaultInstruction<
   // Original args.
   const args = { ...input };
 
+  // Resolve default values.
+  if (!accounts.auditLogSuccess.value) {
+    accounts.auditLogSuccess.value = await getProgramDerivedAddress({
+      programAddress,
+      seeds: [
+        getBytesEncoder().encode(
+          new Uint8Array([
+            97, 117, 100, 105, 116, 95, 115, 117, 99, 99, 101, 115, 115,
+          ]),
+        ),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            "vault",
+            accounts.vault.value,
+          ),
+        ),
+      ],
+    });
+  }
+  if (!accounts.slotHashesSysvar.value) {
+    accounts.slotHashesSysvar.value =
+      "SysvarS1otHashes111111111111111111111111111" as Address<"SysvarS1otHashes111111111111111111111111111">;
+  }
+
   const getAccountMeta = getAccountMetaFactory(programAddress, "programId");
   return Object.freeze({
     accounts: [
       getAccountMeta("owner", accounts.owner),
       getAccountMeta("vault", accounts.vault),
+      getAccountMeta("auditLogSuccess", accounts.auditLogSuccess),
+      getAccountMeta("slotHashesSysvar", accounts.slotHashesSysvar),
     ],
     data: getReactivateVaultInstructionDataEncoder().encode(
       args as ReactivateVaultInstructionDataArgs,
@@ -162,7 +226,94 @@ export function getReactivateVaultInstruction<
   } as ReactivateVaultInstruction<
     TProgramAddress,
     TAccountOwner,
-    TAccountVault
+    TAccountVault,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar
+  >);
+}
+
+export type ReactivateVaultInput<
+  TAccountOwner extends string = string,
+  TAccountVault extends string = string,
+  TAccountAuditLogSuccess extends string = string,
+  TAccountSlotHashesSysvar extends string = string,
+> = {
+  owner: TransactionSigner<TAccountOwner>;
+  vault: Address<TAccountVault>;
+  /** Phase 7 — success audit log. */
+  auditLogSuccess: Address<TAccountAuditLogSuccess>;
+  /** Phase 7 — slot_hashes sysvar; address-pinned. */
+  slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
+  newAgent: ReactivateVaultInstructionDataArgs["newAgent"];
+  newAgentCapability: ReactivateVaultInstructionDataArgs["newAgentCapability"];
+};
+
+export function getReactivateVaultInstruction<
+  TAccountOwner extends string,
+  TAccountVault extends string,
+  TAccountAuditLogSuccess extends string,
+  TAccountSlotHashesSysvar extends string,
+  TProgramAddress extends Address = typeof SIGIL_PROGRAM_ADDRESS,
+>(
+  input: ReactivateVaultInput<
+    TAccountOwner,
+    TAccountVault,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar
+  >,
+  config?: { programAddress?: TProgramAddress },
+): ReactivateVaultInstruction<
+  TProgramAddress,
+  TAccountOwner,
+  TAccountVault,
+  TAccountAuditLogSuccess,
+  TAccountSlotHashesSysvar
+> {
+  // Program address.
+  const programAddress = config?.programAddress ?? SIGIL_PROGRAM_ADDRESS;
+
+  // Original accounts.
+  const originalAccounts = {
+    owner: { value: input.owner ?? null, isWritable: false },
+    vault: { value: input.vault ?? null, isWritable: true },
+    auditLogSuccess: { value: input.auditLogSuccess ?? null, isWritable: true },
+    slotHashesSysvar: {
+      value: input.slotHashesSysvar ?? null,
+      isWritable: false,
+    },
+  };
+  const accounts = originalAccounts as Record<
+    keyof typeof originalAccounts,
+    ResolvedInstructionAccount
+  >;
+
+  // Original args.
+  const args = { ...input };
+
+  // Resolve default values.
+  if (!accounts.slotHashesSysvar.value) {
+    accounts.slotHashesSysvar.value =
+      "SysvarS1otHashes111111111111111111111111111" as Address<"SysvarS1otHashes111111111111111111111111111">;
+  }
+
+  const getAccountMeta = getAccountMetaFactory(programAddress, "programId");
+  return Object.freeze({
+    accounts: [
+      getAccountMeta("owner", accounts.owner),
+      getAccountMeta("vault", accounts.vault),
+      getAccountMeta("auditLogSuccess", accounts.auditLogSuccess),
+      getAccountMeta("slotHashesSysvar", accounts.slotHashesSysvar),
+    ],
+    data: getReactivateVaultInstructionDataEncoder().encode(
+      args as ReactivateVaultInstructionDataArgs,
+    ),
+    programAddress,
+  } as ReactivateVaultInstruction<
+    TProgramAddress,
+    TAccountOwner,
+    TAccountVault,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar
   >);
 }
 
@@ -174,6 +325,10 @@ export type ParsedReactivateVaultInstruction<
   accounts: {
     owner: TAccountMetas[0];
     vault: TAccountMetas[1];
+    /** Phase 7 — success audit log. */
+    auditLogSuccess: TAccountMetas[2];
+    /** Phase 7 — slot_hashes sysvar; address-pinned. */
+    slotHashesSysvar: TAccountMetas[3];
   };
   data: ReactivateVaultInstructionData;
 };
@@ -186,12 +341,12 @@ export function parseReactivateVaultInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedReactivateVaultInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 2) {
+  if (instruction.accounts.length < 4) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 2,
+        expectedAccountMetas: 4,
       },
     );
   }
@@ -203,7 +358,12 @@ export function parseReactivateVaultInstruction<
   };
   return {
     programAddress: instruction.programAddress,
-    accounts: { owner: getNextAccount(), vault: getNextAccount() },
+    accounts: {
+      owner: getNextAccount(),
+      vault: getNextAccount(),
+      auditLogSuccess: getNextAccount(),
+      slotHashesSysvar: getNextAccount(),
+    },
     data: getReactivateVaultInstructionDataDecoder().decode(instruction.data),
   };
 }

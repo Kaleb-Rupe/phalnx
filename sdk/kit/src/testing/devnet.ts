@@ -32,7 +32,7 @@ import { getSetComputeUnitLimitInstruction } from "@solana-program/compute-budge
 import { readFileSync } from "node:fs";
 
 import { getInitializeVaultInstructionAsync } from "../generated/instructions/initializeVault.js";
-import { getRegisterAgentInstruction } from "../generated/instructions/registerAgent.js";
+import { getRegisterAgentInstructionAsync } from "../generated/instructions/registerAgent.js";
 import { getDepositFundsInstructionAsync } from "../generated/instructions/depositFunds.js";
 import { inscribe } from "../inscribe.js";
 import { getAgentOverlayPDA, getTrackerPDA } from "../resolve-accounts.js";
@@ -334,7 +334,7 @@ export async function provisionVault(
   // 3. Build and send registerAgent
   //    PEN-CROSS-5 (Phase 4 absorption): policy account now required for
   //    policy_version bump.
-  const registerIx = getRegisterAgentInstruction({
+  const registerIx = await getRegisterAgentInstructionAsync({
     owner,
     vault: vaultAddress,
     policy: policyAddress,
