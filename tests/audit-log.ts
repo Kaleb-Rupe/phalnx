@@ -353,10 +353,6 @@ describe("audit-log (Phase 7)", () => {
     // finalizes (one more than the rejected capacity = 64, to force a wrap).
     const { vault, policy, overlay, auditSuccess, auditRejected } =
       await initVault(new BN(8020));
-    const [tracker] = PublicKey.findProgramAddressSync(
-      [Buffer.from("tracker"), vault.toBuffer()],
-      program.programId,
-    );
 
     const agent = Keypair.generate();
     airdropSol(svm, agent.publicKey, 10 * LAMPORTS_PER_SOL);
