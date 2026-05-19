@@ -20,7 +20,12 @@ import {
   type SolanaError,
 } from "@solana/errors";
 
-import { SDK_ERROR_CODES, toAgentError } from "../agent-errors.js";
+import {
+  SDK_ERROR_CODES,
+  SIGIL_ON_CHAIN_ERROR_MAX,
+  SIGIL_ON_CHAIN_ERROR_MIN,
+  toAgentError,
+} from "../agent-errors.js";
 import type { DxError } from "./types.js";
 
 /**
@@ -217,25 +222,18 @@ export function isAccountNotFoundError(
 // ─── DxError range constants (FE↔BE contract §6.3) ──────────────────────────
 
 /**
- * Lower bound of the Anchor on-chain error range. Any code in
+ * Bounds of the Anchor on-chain error range. Any code in
  * [ANCHOR_ERROR_MIN, ANCHOR_ERROR_MAX] means the transaction reached the
  * on-chain program and was rejected by program logic — FE renders a
  * specific "the vault's rules prevented this" message.
+ *
+ * Aliased from `agent-errors.ts` (single source of truth) so both the
+ * dashboard categorize-path and the SDK error-extraction predicate stay
+ * in lockstep without manual sync. Bump only at the constant declaration
+ * in `agent-errors.ts`.
  */
-const ANCHOR_ERROR_MIN = 6000;
-/** Upper bound of the Anchor on-chain error range. Post-Phase-6 (Maestro
- *  borrows + Phase 5 post-execution invariants + audit remediation):
- *  V2 ships 103 codes (6000-6102); the highest variant is
- *  `IxMetaCountExceeded = 6102`. See `sdk/kit/src/generated/errors/sigil.ts`
- *  for the canonical list. When new on-chain errors are added, bump this
- *  upper bound AND the matching range predicate at `agent-errors.ts`
- *  (currently inline at the `code <= 6102` checks at L2604 and L2622 —
- *  not a named helper). The categorize test at
- *  `tests/dashboard/errors-categorize.test.ts:47-72` iterates ALL
- *  generated SIGIL_ERROR__* constants and asserts they classify as
- *  on-chain, so this bound and the agent-errors.ts predicate must agree
- *  or the test fails. */
-const ANCHOR_ERROR_MAX = 6102;
+const ANCHOR_ERROR_MIN = SIGIL_ON_CHAIN_ERROR_MIN;
+const ANCHOR_ERROR_MAX = SIGIL_ON_CHAIN_ERROR_MAX;
 
 /**
  * Lower bound of the SDK / dashboard logic error range (FE↔BE §6.3).

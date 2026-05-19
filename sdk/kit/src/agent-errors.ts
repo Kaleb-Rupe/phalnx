@@ -59,19 +59,25 @@ export interface AgentError {
 }
 
 // ---------------------------------------------------------------------------
-// On-chain error code mapping (6000-6102)
+// On-chain error code range constants — single source of truth.
 //
-// MAINTENANCE NOTE — when adding a new program error in
-// programs/sigil/src/errors.rs, also:
-//   1. Add a SDK mapping entry in `ON_CHAIN_ERRORS` below (or a TODO if
-//      the mapping is intentionally deferred).
-//   2. Bump the `<= 6102` upper bound in `extractErrorCode()` below
-//      AND the `(code 6000-6102)` JSDoc tag on `toAgentError()`.
-//   3. Bump the matching `match[1] hex` range guard inside the
-//      SendTransactionError-log-parsing branch of `extractErrorCode()`.
-// The predicate bound is the load-bearing signal — leaving it stale
-// silently swallows future error codes (they extract as `null`).
+// `dashboard/errors.ts` re-imports these for the FE→BE category mapping.
+// `tests/dashboard/errors-categorize.test.ts` iterates every generated
+// `SIGIL_ERROR__*` constant and asserts it falls within this range, so
+// drift between MAX and the highest variant breaks CI immediately.
+//
+// MAINTENANCE — when `programs/sigil/src/errors.rs` adds a new variant:
+//   1. Bump SIGIL_ON_CHAIN_ERROR_MAX below to the new highest code.
+//   2. Add an entry to ON_CHAIN_ERRORS for that code (or a TODO with
+//      explicit deferral rationale).
+//   3. Regenerate the IDL + SDK with `pnpm codama` so generated/errors
+//      stays in lockstep.
 // ---------------------------------------------------------------------------
+
+/** Lowest Anchor-error code Sigil emits. */
+export const SIGIL_ON_CHAIN_ERROR_MIN = 6000;
+/** Highest Anchor-error code currently in use. Bump when errors.rs grows. */
+export const SIGIL_ON_CHAIN_ERROR_MAX = 6102;
 
 interface ErrorMapping {
   name: string;
@@ -2599,9 +2605,13 @@ function extractErrorCode(error: unknown): number | null {
   if (!error || typeof error !== "object") return null;
   const e = error as Record<string, unknown>;
 
-  // Direct code property — predicate bound updated 2026-05-19 (audit P1.2);
-  // see top-of-file maintenance note.
-  if (typeof e.code === "number" && e.code >= 6000 && e.code <= 6102)
+  // Direct code property — uses SIGIL_ON_CHAIN_ERROR_{MIN,MAX} constants
+  // defined at top of file as single source of truth.
+  if (
+    typeof e.code === "number" &&
+    e.code >= SIGIL_ON_CHAIN_ERROR_MIN &&
+    e.code <= SIGIL_ON_CHAIN_ERROR_MAX
+  )
     return e.code;
 
   // Anchor error structure
@@ -2618,8 +2628,11 @@ function extractErrorCode(error: unknown): number | null {
     const match = e.message.match(/custom program error: 0x([0-9a-fA-F]+)/);
     if (match) {
       const code = parseInt(match[1], 16);
-      // Predicate bound updated 2026-05-19 (audit P1.2); see top-of-file.
-      if (code >= 6000 && code <= 6102) return code;
+      if (
+        code >= SIGIL_ON_CHAIN_ERROR_MIN &&
+        code <= SIGIL_ON_CHAIN_ERROR_MAX
+      )
+        return code;
     }
   }
 
