@@ -681,12 +681,25 @@ pub fn handler(
                 // owner-check will still prevent foreign mutation, so we
                 // fail-closed: reject if the meta is in our protected set,
                 // owner-check is best-effort to suppress false positives.
-                let on_chain_owner_is_sigil = ctx
+                //
+                // H-4 audit fix (2026-05-19): refactored from `unwrap_or(true)`
+                // (with an inverted boolean) to an explicit `match` that names
+                // the FAIL_CLOSED_SIGIL_OWNED posture out loud. A future
+                // refactor that flips an operand or removes the unwrap would
+                // be obvious instead of silently disabling TA-11 defense.
+                const FAIL_CLOSED_SIGIL_OWNED: bool = true;
+                let on_chain_owner_is_sigil: bool = match ctx
                     .remaining_accounts
                     .iter()
                     .find(|ai| ai.key == &meta.pubkey)
-                    .map(|ai| ai.owner == &crate::ID)
-                    .unwrap_or(true); // unavailable → assume Sigil-owned (fail-closed)
+                {
+                    Some(ai) => ai.owner == &crate::ID,
+                    // Account not present in remaining_accounts → owner
+                    // unreadable → assume Sigil-owned and REJECT. The
+                    // Solana runtime's own owner-check is the fallback
+                    // layer; this is defense-in-depth.
+                    None => FAIL_CLOSED_SIGIL_OWNED,
+                };
                 require!(
                     !on_chain_owner_is_sigil,
                     SigilError::ErrProtectedWritable
