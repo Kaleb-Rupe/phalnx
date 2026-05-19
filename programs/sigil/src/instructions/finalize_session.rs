@@ -626,28 +626,71 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
     if stable_floor_policy.stable_balance_floor > 0 {
         let mut combined_stable_balance: u64 = 0;
 
-        // Source 1: vault_token_account
+        // CRITICAL H-2 fix (audit 2026-05-19): Anchor 0.32.1 does NOT
+        // auto-reload `Account<TokenAccount>` after CPI. Reading
+        // `acct.amount` returns the PRE-CPI cached value. For the
+        // finalize-time floor check (which runs AFTER the spending CPI
+        // sandwiched between validate and finalize), we MUST re-read raw
+        // post-CPI bytes — same pattern as agent_transfer.rs:316-424
+        // (commit 48c6239). Failing to do so defeats the TA-12 invariant
+        // on the canonical spending path: cached `.amount` = $1000,
+        // actual post-CPI balance = $500, floor = $700 → check passes
+        // ($1000 >= $700) → vault drains below floor unchallenged.
+        //
+        // SPL TokenAccount layout (identical first 72 bytes for SPL +
+        // Token-2022): 0..32 mint, 32..64 owner, 64..72 amount u64 LE.
+        // Token-2022 ConfidentialTransfer extensions blocked at validate
+        // time (Phase 1) so amount field is always ground-truth.
+
+        // Source 1: vault_token_account (raw post-CPI re-read).
         if let Some(acct) = ctx.accounts.vault_token_account.as_ref() {
-            if acct.owner == vault_key && is_stablecoin_mint(&acct.mint) {
-                combined_stable_balance = combined_stable_balance
-                    .checked_add(acct.amount)
-                    .ok_or(SigilError::Overflow)?;
+            let info = acct.to_account_info();
+            let data = info.try_borrow_data()?;
+            if data.len() >= 72 {
+                let mut owner_bytes = [0u8; 32];
+                owner_bytes.copy_from_slice(&data[32..64]);
+                let owner = Pubkey::new_from_array(owner_bytes);
+                let mut mint_bytes = [0u8; 32];
+                mint_bytes.copy_from_slice(&data[0..32]);
+                let mint = Pubkey::new_from_array(mint_bytes);
+                if owner == vault_key && is_stablecoin_mint(&mint) {
+                    let mut amount_bytes = [0u8; 8];
+                    amount_bytes.copy_from_slice(&data[64..72]);
+                    let amount = u64::from_le_bytes(amount_bytes);
+                    combined_stable_balance = combined_stable_balance
+                        .checked_add(amount)
+                        .ok_or(SigilError::Overflow)?;
+                }
             }
         }
 
-        // Source 2: output_stablecoin_account (skip if it's the SAME
-        // pubkey as vault_token_account — defends against double-count
-        // when the same ATA is passed in both slots).
+        // Source 2: output_stablecoin_account (raw post-CPI re-read).
+        // Skip if same pubkey as vault_token_account (double-count guard).
         if let Some(acct) = ctx.accounts.output_stablecoin_account.as_ref() {
             let same_as_input = ctx
                 .accounts
                 .vault_token_account
                 .as_ref()
                 .is_some_and(|t| t.key() == acct.key());
-            if !same_as_input && acct.owner == vault_key && is_stablecoin_mint(&acct.mint) {
-                combined_stable_balance = combined_stable_balance
-                    .checked_add(acct.amount)
-                    .ok_or(SigilError::Overflow)?;
+            if !same_as_input {
+                let info = acct.to_account_info();
+                let data = info.try_borrow_data()?;
+                if data.len() >= 72 {
+                    let mut owner_bytes = [0u8; 32];
+                    owner_bytes.copy_from_slice(&data[32..64]);
+                    let owner = Pubkey::new_from_array(owner_bytes);
+                    let mut mint_bytes = [0u8; 32];
+                    mint_bytes.copy_from_slice(&data[0..32]);
+                    let mint = Pubkey::new_from_array(mint_bytes);
+                    if owner == vault_key && is_stablecoin_mint(&mint) {
+                        let mut amount_bytes = [0u8; 8];
+                        amount_bytes.copy_from_slice(&data[64..72]);
+                        let amount = u64::from_le_bytes(amount_bytes);
+                        combined_stable_balance = combined_stable_balance
+                            .checked_add(amount)
+                            .ok_or(SigilError::Overflow)?;
+                    }
+                }
             }
         }
 
