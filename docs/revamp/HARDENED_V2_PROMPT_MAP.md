@@ -145,12 +145,15 @@ New variants append starting at 6079:
 | 6099 | `ErrAtaAuthorityChanged` (R-2) | Phase 6 — LANDED (shifted +1 from prior 6098 plan) |
 | 6100 | `ErrOutputBelowFloor` (R-3) | Phase 6 — LANDED (shifted +1 from prior 6099 plan) |
 | 6101 | `ErrDeclarationInconsistent` (R-4) | Phase 6 — LANDED (shifted +1 from prior 6100 plan) |
-| 6102 | `ErrPendingOwnershipExists` (C26) | Phase 8 — shifted +1 |
-| 6103 | `ErrPendingOwnershipNotReady` (C26) | Phase 8 — shifted +1 |
-| 6104 | `ErrInvalidFreezeReason` (C27) | Phase 8 — shifted +1 |
-| 6105 | `ErrReactivateCooldownActive` (C28) | Phase 8 — shifted +1 |
+| 6102 | `IxMetaCountExceeded` (H-1 audit P1.1; foreign-ix meta budget overflow) | Audit closure 2026-05-19 — LANDED |
+| 6103 | `ErrPendingOwnershipExists` (C26) | Phase 8 — shifted +2 from original 6101 plan |
+| 6104 | `ErrPendingOwnershipNotReady` (C26) | Phase 8 — shifted +2 |
+| 6105 | `ErrInvalidFreezeReason` (C27) | Phase 8 — shifted +2 |
+| 6106 | `ErrReactivateCooldownActive` (C28) | Phase 8 — shifted +2 |
 
 **Phase 6 deviation (2026-05-19):** Engineer added `MintDeltaCapMisconfigured` at 6098 to distinguish caller-supplied schema bug from attack signal (`ErrMintDeltaCapExceeded`). Useful for off-chain monitor triage. Code allocation shifted Phase 7/8 codes +1. Forward-only — no previously assigned code (6097, 6098) ever moved.
+
+**Audit closure deviation (2026-05-19, post DC1-DC14):** H-1 audit fix added `IxMetaCountExceeded` at 6102 (destination_check hard-reject on >16 metas). Phase 8 codes shifted an additional +1 to 6103-6106. Forward-only — Phase 6 codes (6097-6101) remained stable. Phase 7 (this phase) allocates NO new error codes — see §6 Phase 7 body for full scope.
 
 **G6 audit fix 2026-05-18 (cosign opt-in):** uses NO new error code. The existing `ErrCosignRequired` (6089) handles all rejection cases: missing cosign on an elevated mutation, default cosign pubkey on an elevated mutation, owner-same cosigner, AND the new "disabling cosign on a live policy where `cosign_required: true`" elevation case. The `cosign_required: bool` field on `PolicyConfig` + `Option<bool>` on `PendingPolicyUpdate` are pure schema growth — they extend TA-19 canonical digest encoding to position 20 but do not require a new failure mode (the field's mutation is gated by the existing 6089). See [§6 Phase 6 post-audit absorption](#post-phase-5-deliverable-summary) below for the full G6 deliverable list.
 
@@ -235,7 +238,7 @@ TASKS:
 
 1. Build canonical docs/revamp/ERROR_CODE_ALLOCATION_V2.md by reading errors.rs
    top-to-bottom. Map every variant to numeric code (6000+line_offset). Document
-   the post-Phase-1 reservation table (6079-6103 enumerated in §4 of the prompt map).
+   the post-Phase-1 reservation table (6079-6106 enumerated in §4 of the prompt map).
 
 2. Resolve naming hygiene in INTERFACES_V2.md:
    - TA-16: mark as DELETED (was T1 parser_version, incompatible with L-1).
@@ -1345,8 +1348,9 @@ TASKS:
 
    - instructions/initiate_ownership_transfer.rs (new): owner-only signer.
      Creates PDA. Reject if PendingOwnershipTransfer already exists with
-     6099 ErrPendingOwnershipExists. Reject AC-10 replay via session.nonce
-     (per M-5).
+     6103 ErrPendingOwnershipExists. (Was 6099 in original plan; shifted to
+     6103 by Phase 6 deviation +1 and audit closure +1 — see §4 reservation
+     table.) Reject AC-10 replay via session.nonce (per M-5).
 
    - instructions/accept_ownership_transfer.rs (new): standard variant.
      new_owner: Signer. Asserts timelock expired (now - queued_at >=
@@ -1362,7 +1366,8 @@ TASKS:
 
    - instructions/cancel_ownership_transfer.rs (new): current owner-only.
      Closes PendingOwnershipTransfer without transfer.
-     Reject with 6100 ErrPendingOwnershipNotReady if attempted by non-owner.
+     Reject with 6104 ErrPendingOwnershipNotReady if attempted by non-owner.
+     (Was 6100; shifted to 6104 — see §4 reservation table.)
 
 2. Shared freeze helper (per F-7):
    - utils/freeze_helper.rs (new):
@@ -1391,13 +1396,15 @@ TASKS:
      - EmergencyBoard = 2 (reserved for future emergency-board pattern; if
        unused in V1, document as dead code with v1.1 activation path —
        addresses Audit #2 F-1's dead-code concern)
-   - Validate reason ∈ {0, 1, 2} at write time. Reject with 6101
-     ErrInvalidFreezeReason for any other value.
+   - Validate reason ∈ {0, 1, 2} at write time. Reject with 6105
+     ErrInvalidFreezeReason for any other value. (Was 6101; shifted to 6105 by
+     Phase 6 deviation +1 and audit closure +1 — see §4 reservation table.)
 
 4. C28 5-min observation cooldown on reactivate (per F-8 DOCUMENT the close+reinit
    bypass):
    - instructions/reactivate_vault.rs: reject if (now - frozen_at_timestamp) <
-     300 seconds. Reject with 6102 ErrReactivateCooldownActive.
+     300 seconds. Reject with 6106 ErrReactivateCooldownActive. (Was 6102;
+     shifted to 6106 — see §4 reservation table.)
    - DOCUMENT in THREAT_MODEL_V2 T-19 (drop-in paragraph below):
 
    T-19 paragraph (per F-8 disposition):

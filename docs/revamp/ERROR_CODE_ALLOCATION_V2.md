@@ -124,7 +124,7 @@ Under compaction (post-Phase-1):
 
 ---
 
-## 3. Post-Phase-1 reservation table (V2 additions, codes 6079-6103)
+## 3. Post-Phase-1 reservation table (V2 additions, codes 6079-6106)
 
 These codes are reserved for V2 primitives introduced in Phases 2 through 8. They are listed here in the order they are scheduled to land in the enum. Starts at **6079** (not 6078 as the prompt assumed) because Phase 1 retained `SlippageBpsTooHigh` — see §2.
 
@@ -134,30 +134,34 @@ These codes are reserved for V2 primitives introduced in Phases 2 through 8. The
 | 6080 | `PolicyPreviewMismatch` | Phase 2 ✅ | TA-19 | SHA-256 digest mismatch on PolicyConfig/PendingPolicyUpdate — LANDED |
 | 6081 | `ObserveOnlyModeBlocksExecute` | Phase 2 ✅ | TA-19 | observe_only vault rejects validate_and_authorize — LANDED |
 | 6082 | `ActiveVaultRequiresAllowlist` | Phase 2 close-up ✅ | F-11 | Active (non-observe_only) vault must have ≥1 protocol or destination — LANDED |
-| 6083 | `ErrMintNotPinned` | Phase 3 | TA-03 | USDC/USDT cluster-pinned mint enforcement |
-| 6084 | `ErrOutsideOperatingHours` | Phase 3 | TA-05 | UTC operating-hours bitmask violation |
-| 6085 | `ErrCooldownActive` | Phase 3 | TA-06 | Per-agent cooldown (on AgentSpendOverlay) |
-| 6086 | `ErrGraylistFriction` | Phase 3 | TA-07 | First-time destination delay window |
-| 6087 | `ErrGraylistFull` | Phase 3 | TA-07 | Destination graylist bound (10 entries) |
-| 6088 | `ErrToken2022ExtensionForbidden` | Phase 3 | TA-08 | TLV check at deposit (3-item allowlist per D-4) |
-| 6089 | `ErrCosignRequired` | Phase 3 | TA-09 | Owner+session co-signature required |
-| 6090 | `ErrAutoRevoked` | Phase 3 | TA-17 | AgentEntry.consecutive_failures threshold tripped |
-| 6091 | `ErrSandwichIntegrity` | Phase 4 | TA-10 | Sandwich pair/bundle integrity violation |
-| 6092 | `ErrProtectedWritable` | Phase 4 | TA-11 | Protected PDA listed as writable in foreign ix |
-| 6093 | `ErrSessionNonceMismatch` | Phase 4 | AC-10 | Durable-nonce replay defense |
-| 6094 | `ErrStableFloorViolation` | Phase 5 | TA-12 | usdc+usdt balance below configured floor |
-| 6095 | `ErrDailyCapExceeded` | Phase 5 | TA-13 | Per-protocol rolling 24h cap (doc-fix) |
-| 6096 | `ErrRecipientCapExceeded` | Phase 5 | TA-14 | `[PerRecipientCounter; 10]` array overflow |
-| 6097 | `ErrMintDeltaCapExceeded` | Phase 6 | R-1 | Mint-level delta cap violation |
-| 6098 | `ErrAtaAuthorityChanged` | Phase 6 | R-2 | ATA owner/delegate changed mid-bundle |
-| 6099 | `ErrOutputBelowFloor` | Phase 6 | R-3 | Output amount below declared floor |
-| 6100 | `ErrDeclarationInconsistent` | Phase 6 | R-4 | Bundle declarations don't match observed state |
-| 6101 | `ErrPendingOwnershipExists` | Phase 8 | C26 | Pending ownership transfer collision |
-| 6102 | `ErrPendingOwnershipNotReady` | Phase 8 | C26 | Pending transfer not past timelock |
-| 6103 | `ErrInvalidFreezeReason` | Phase 8 | C27 | Reserved freeze_reason enum value |
-| 6104 | `ErrReactivateCooldownActive` | Phase 8 | C28 | Post-unfreeze observation window active |
+| 6083 | `ErrMintNotPinned` | Phase 3 ✅ | TA-03 | USDC/USDT cluster-pinned mint enforcement — LANDED |
+| 6084 | `ErrOutsideOperatingHours` | Phase 3 ✅ | TA-05 | UTC operating-hours bitmask violation — LANDED |
+| 6085 | `ErrCooldownActive` | Phase 3 ✅ | TA-06 | Per-agent cooldown (on AgentSpendOverlay) — LANDED |
+| 6086 | `ErrGraylistFriction` | Phase 3 ✅ | TA-07 | First-time destination delay window — LANDED |
+| 6087 | `ErrGraylistFull` | Phase 3 ✅ | TA-07 | Destination graylist bound (10 entries) — LANDED |
+| 6088 | `ErrToken2022ExtensionForbidden` | Phase 3 ✅ | TA-08 | TLV check at deposit (3-item allowlist per D-4) — LANDED |
+| 6089 | `ErrCosignRequired` | Phase 3 ✅ | TA-09 | Owner+session co-signature required — LANDED |
+| 6090 | `ErrAutoRevoked` | Phase 3 ✅ | TA-17 | AgentEntry.consecutive_failures threshold tripped — LANDED |
+| 6091 | `ErrSandwichIntegrity` | Phase 4 ✅ | TA-10 | Sandwich pair/bundle integrity violation — LANDED |
+| 6092 | `ErrProtectedWritable` | Phase 4 ✅ | TA-11 | Protected PDA listed as writable in foreign ix — LANDED |
+| 6093 | `ErrSessionNonceMismatch` | Phase 4 ✅ | AC-10 | Durable-nonce replay defense — LANDED |
+| 6094 | `ErrStableFloorViolation` | Phase 5 ✅ | TA-12 | usdc+usdt balance below configured floor — LANDED |
+| 6095 | `ErrDailyCapExceeded` | Phase 5 ✅ | TA-13 | Per-protocol rolling 24h cap (doc-fix) — LANDED |
+| 6096 | `ErrRecipientCapExceeded` | Phase 5 ✅ | TA-14 | `[PerRecipientCounter; 10]` array overflow — LANDED |
+| 6097 | `ErrMintDeltaCapExceeded` | Phase 6 ✅ | R-1 | Mint-level delta cap violation — LANDED |
+| 6098 | `MintDeltaCapMisconfigured` | Phase 6 ✅ | R-1 caller-bug | NEW Phase 6 deviation: distinguishes caller schema bug from attack signal — LANDED |
+| 6099 | `ErrAtaAuthorityChanged` | Phase 6 ✅ | R-2 | ATA owner/delegate changed mid-bundle (shifted +1) — LANDED |
+| 6100 | `ErrOutputBelowFloor` | Phase 6 ✅ | R-3 | Output amount below declared floor (shifted +1) — LANDED |
+| 6101 | `ErrDeclarationInconsistent` | Phase 6 ✅ | R-4 | Bundle declarations don't match observed state (shifted +1) — LANDED |
+| 6102 | `IxMetaCountExceeded` | Audit closure ✅ | H-1 (destination_check) | NEW DC audit closure 2026-05-19: foreign DeFi ix > 16 metas → hard-reject — LANDED |
+| 6103 | `ErrPendingOwnershipExists` | Phase 8 | C26 | Pending ownership transfer collision (shifted +2) |
+| 6104 | `ErrPendingOwnershipNotReady` | Phase 8 | C26 | Pending transfer not past timelock (shifted +2) |
+| 6105 | `ErrInvalidFreezeReason` | Phase 8 | C27 | Reserved freeze_reason enum value (shifted +2) |
+| 6106 | `ErrReactivateCooldownActive` | Phase 8 | C28 | Post-unfreeze observation window active (shifted +2) |
 
-**Total reserved:** 26 codes (6079-6104 inclusive — Phase 2 close-up shifted Phase 3+ reservations down by 1 to accommodate 6082 `ActiveVaultRequiresAllowlist`).
+**Total reserved:** 28 codes (6079-6106 inclusive). Phase 6 introduced 1 new code (`MintDeltaCapMisconfigured` at 6098). DC1-DC14 audit closure introduced 1 new code (`IxMetaCountExceeded` at 6102). Phase 7 (audit log + temporal binding) introduces **ZERO** new error codes.
+
+**Drift discipline:** Forward-only. No previously-assigned code (6097-6102) ever moved. Phase 8 codes have been re-reserved twice (+1 in Phase 6 deviation, +1 in audit closure) — both shifts were forward-only.
 
 ---
 
