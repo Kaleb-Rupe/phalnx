@@ -711,7 +711,7 @@ Per K6 event emission substrate, every Sigil instruction emits a structured even
 
 ### 15.3 Cohort signals (M-T21 detection)
 - Policy diff vs cohort baseline. Owners whose policy is 90%+ default flagged for outreach (M-T21-3).
-- Tier-mix per vault. Vaults with high T3 protocol usage flagged for attestation re-check (M-T21-2).
+- (Prior "Tier-mix per vault. Vaults with high T3 protocol usage flagged" signal removed per L-1 audit 2026-05-19 — no T1/T2/T3 tier classification under Option A. M-T21-2 attestation re-check now triggers on protocol-allowlist-add events instead of tier-mix.)
 
 ### 15.4 Drift / staleness signals
 - 7-day USDC/USDT depeg deviation widget on dashboard (AC-6 display-only, V1).
@@ -782,9 +782,18 @@ Per [ACCEPTANCE_V2.md §3.4](./ACCEPTANCE_V2.md#34--incident-response-runbook--d
 
 ## 17. V1 Mainnet-Ready Summary (Stage 5 → V1 ship)
 
+> **L-2 tombstone reinforced (audit 2026-05-19):** The "Stage 5 → V1
+> ship" framing predates L-2 (no paid audit budget) + L-8 (Option A no
+> tier registry). Under V1 as of 2026-05-19, **V1 ships to devnet only;
+> mainnet is v1.1 scope.** The §RP review pipeline at
+> `docs/revamp/PHASE_N_REVIEW/` substitutes for the auditor letter; the
+> conditions below are retained as the v1.1-mainnet-ready exit criteria
+> but are NOT V1 acceptance gates. Original G5 audit fix 2026-05-18
+> note retained below.
+
 *G5 audit fix 2026-05-18: "Stage 6 audit firm" framing struck per L-2 budget constraint (no paid audit in V1). Replacement gate: persisted §RP transcripts at `PHASE_N_REVIEW/` substitute for the audit firm letter. Reads as if the §RP-transcript-archive IS the deliverable.*
 
-When this document is ready for V1 mainnet ship, the following must be true:
+When this document is ready for v1.1 mainnet ship, the following must be true:
 
 1. **All §RP CRIT+HIGH from Stages 1-5 RESOLVED.** Cross-reference §11 Stage 0 Fix Log + STAGE_N_REVIEW/ for each stage.
 2. **All Open Questions in §10 closed.** Specifically Q1 (3 formal verification invariants), Q5 (Inv-K6 provable).

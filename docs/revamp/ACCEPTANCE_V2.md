@@ -327,6 +327,16 @@ When (in v1.1) the Stage 6 audit firm is engaged, the following package is deliv
 - Multisig verification script at `agent-middleware/scripts/verify-multisig.ts`.
 
 ### 14.5 Auditor's scope-of-work expectations
+
+> **L-2 tombstone (audit 2026-05-19):** §14.5 + §14.6 describe a paid
+> external audit firm engagement. Under L-2 no paid audit ships in V1.
+> The §RP review pipeline at `docs/revamp/PHASE_N_REVIEW/` substitutes
+> for the auditor's scope letter; persisted silent-failure-hunter +
+> code-reviewer transcripts substitute for the deliverables.
+> Content retained verbatim for v1.1 reference.
+
+<del>
+
 - Verify TA-01..TA-15 + TA-17 + TA-19 enforce per [INTERFACES_V2.md](./INTERFACES_V2.md) semantics (TA-16 dropped per L-1; TA-18 is off-chain SDK helper).
 - Verify K1-K7 foundational substrate per [REVAMP_PLAN.md §3](./REVAMP_PLAN.md#3-kept-k1-k7-foundational-unchanged-from-prior-architecture).
 - Verify load-bearing 5 (K1, K6, K7, TA-10, TA-19) per Architect 2026-05-17 dependency audit (revised under L-1: TA-16 dropped, TA-19 replaces) + [THREAT_MODEL §4.1](./THREAT_MODEL_V2.md#41-k1-k7-foundational-coverage).
@@ -340,6 +350,8 @@ When (in v1.1) the Stage 6 audit firm is engaged, the following package is deliv
 - Public response document at `agent-middleware/docs/audits/<vendor>_RESPONSE_<YYYY-MM-DD>.md` (Sigil's response to findings).
 - Re-review confirmation that all CRITICAL + HIGH remediated.
 - Sign-off from auditor on Sigil's MEDIUM-finding rationale (where applicable).
+
+</del>
 
 ---
 
@@ -546,7 +558,7 @@ Risks explicitly accepted by Sigil v2 mainnet, even with all §3.1-§3.8 gates g
 ### 19.5 Accepted: Owner Policy Underspecification (T-21)
 - **Rationale:** Per GrokResearcher contrarian Argument 5, this is the load-bearing trust assumption. Workflow mitigations (M-T21-1..4) reduce but do not eliminate it.
 - **Risk to user:** If policy is wrong, Sigil's enforcement matches the wrong policy. Loss is not Sigil's fault but the user's responsibility.
-- **Mitigation user must adopt:** Use M-T21-1 learning mode + take onboarding wizard seriously + read tier-visibility tags.
+- **Mitigation user must adopt:** Use M-T21-1 learning mode + take onboarding wizard seriously. (Prior "tier-visibility tags" reference removed per L-1 audit 2026-05-19 — no tier model under Option A.)
 
 ---
 

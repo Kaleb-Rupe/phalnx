@@ -515,6 +515,21 @@ The Sigil v2 revamp is structured as 7 stages, each producing a tagged git basel
 - pnpm changeset for `@usesigil/kit` v0.16.0.
 **Acceptance gate:** git tag `stage-4-baseline`. SDK pretest tsc clean.
 
+> **L-2 + L-8 tombstone (audit 2026-05-19):** Stages 5-7 originally
+> described formal-verification gating, paid external-audit engagement
+> ($50K-$150K Ottersec/Neodyme), Stage 6 TierRegistry deployment, and
+> mainnet GA. All of these were superseded by L-2 (no paid audit budget;
+> mainnet is v1.1 scope) and L-8 (Option A demolition removed
+> TierRegistry under the no-tier-registry decision in
+> INTERFACES_V2:236). Sigil V1 ships to devnet only. The §RP review
+> pipeline at `docs/revamp/PHASE_N_REVIEW/` substitutes for the audit
+> firm letter; Squads V4 as program upgrade authority
+> (`docs/revamp/AUDIT_2026_05_18/G0_MULTISIG_HARDENING.md`) handles the
+> operational gates. Original Stage 5-7 content retained below as
+> tombstones for audit trail.
+
+<del>
+
 ### Stage 5 — Formal verification + Bug bounty prep
 **Inputs:** Stage 4 baseline.
 **Deliverables:**
@@ -538,6 +553,8 @@ The Sigil v2 revamp is structured as 7 stages, each producing a tagged git basel
 **Inputs:** Stage 6 baseline + signed funding.
 **Deliverables:** Mainnet deploy under new program ID + Squads V4 upgrade authority. Public announcement + bug bounty live.
 **Acceptance gate:** git tag `stage-7-mainnet-ga`. CI green on production branch.
+
+</del>
 
 ---
 
@@ -587,6 +604,15 @@ Per [ACCEPTANCE_V2.md §3.6](./ACCEPTANCE_V2.md#36--test-coverage), the V2 test 
 
 ## 17. Implementation Status Table (Stage 0 → Stage 7)
 
+> **L-2 + L-8 tombstone (audit 2026-05-19):** Columns "Stage 5", "Stage 6",
+> "Stage 7 (Mainnet GA)" and table values "audit" / "audit-fixed" / "live"
+> reflect the pre-L-2 plan that included a paid external audit gate and
+> mainnet GA pathway. Under L-2 V1 ships to devnet only; mainnet is v1.1
+> scope. Stage 5-7 column values + "TierRegistry" row are retained
+> verbatim for audit trail but are NOT active V1 procedure. The
+> source-of-truth for V1 phase status is `PHASE_N_REVIEW/` under
+> `docs/revamp/` + the v2-2026-05 branch HEAD.
+
 Per-primitive implementation status as of Stage 0 baseline. Updated at every stage tag.
 
 | ID | Primitive | Stage 0 (baseline) | Stage 1 | Stage 2 | Stage 3 | Stage 4 | Stage 5 | Stage 6 | Stage 7 (Mainnet GA) |
@@ -622,6 +648,18 @@ Per-primitive implementation status as of Stage 0 baseline. Updated at every sta
 ---
 
 ## 18. Audit Prep Checklist (Stage 5 → Stage 6 handoff)
+
+> **L-2 + L-8 tombstone (audit 2026-05-19):** This entire section was
+> written when a paid external audit was the load-bearing Stage 6 gate.
+> Under L-2 there is no paid audit budget; the §RP review pipeline
+> (`docs/revamp/PHASE_N_REVIEW/` + the silent-failure-hunter primary +
+> code-reviewer supplementary discipline) substitutes for the auditor's
+> engagement letter. The TierRegistry deployment readiness checklist
+> (§18.5) is permanently superseded by L-8 (no TierRegistry under
+> Option A — INTERFACES_V2:236). Section retained verbatim as a
+> tombstone for audit trail.
+
+<del>
 
 When Stage 5 concludes, the following must be true to make Stage 6 audit-engageable.
 
@@ -665,6 +703,8 @@ When Stage 5 concludes, the following must be true to make Stage 6 audit-engagea
 - [ ] CRUD instruction signatures: `initialize_tier_registry`, `upsert_tier_entry`, `freeze_tier_registry`, `bump_registry_version`.
 - [ ] All CRUD entry points verify `require_keys_eq!(authority, SIGIL_SQUADS_VAULT)`.
 
+</del>
+
 ---
 
 ## 19. Glossary
@@ -672,7 +712,7 @@ When Stage 5 concludes, the following must be true to make Stage 6 audit-engagea
 This glossary is the canonical reference for terms used across all three Stage 0 docs. Drift = §RP CRIT.
 
 - **K1-K7** — Foundational features (pre-V2 primitives carried forward). NOT Tier A.
-- **TA-01..TA-16** — Tier A primitives (NEW V2 constraint surface).
+- **TA-01..TA-15, TA-17..TA-19** — Tier A primitives (NEW V2 constraint surface). TA-16 was DROPPED in Phase 0.5 (L-1, 2026-05-17) — `policy_preview_digest` at TA-19 replaces its parser-drift protection role. Glossary range updated 2026-05-19 (audit P3.3).
 - **T1/T2/T3** — Tier classification of target protocols. T1 = hand-written parser; T2 = Anchor IDL; T3 = no IDL.
 - **AC-1..AC-10** — Attacker classes (defined in [THREAT_MODEL_V2.md §2](./THREAT_MODEL_V2.md#2-attacker-classes--environmental-hazards)).
 - **D-01..D-09** — Decision register entries (defined in [INTERFACES_V2.md](./INTERFACES_V2.md#decisions-d-01d-09)).
@@ -745,7 +785,7 @@ Per project root `CLAUDE.md`: Conventional Commits. Stage 0 commit uses:
 ```
 docs(stage-0): baseline source-of-truth docs + funding + CI
 ```
-followed by body listing K1-K7, TA-01..TA-16, AC-1..AC-10, D-01..D-09 IDs.
+followed by body listing K1-K7, TA-01..TA-15 + TA-17..TA-19, AC-1..AC-10, D-01..D-09 IDs (TA-16 DROPPED per L-1 — audit P3.3 2026-05-19).
 
 ### 22.2 Branch strategy
 - `main` — stable baseline.
