@@ -41,22 +41,30 @@
  *     `ErrCosignRequired`, and ALSO requires the corresponding signer in
  *     `remaining_accounts` with `is_signer == true`.
  *
- * G3 elevation triggers (2026-05-18) — what counts as "elevated":
+ * G3 + G6 elevation triggers — what counts as "elevated" (all bound by this
+ * digest as of Round 2 B4 F-1, 2026-05-19):
  *   - raises_daily_cap = daily_spending_cap_usd: Some(new) > live
  *   - raises_max_tx = max_transaction_amount_usd: Some(new) > live
  *   - expands_destinations = allowed_destinations: any new pubkey not in live
  *     OR new.len() > live.len()
  *   - expands_protocols = protocols: any new pubkey not in live OR
  *     new.len() > live.len()
- *   - lowers_floor = stable_balance_floor: Some(new) < live  (G3 audit fix)
+ *   - lowers_floor = stable_balance_floor: Some(new) < live           (G3)
  *   - raises_per_recipient_cap = per_recipient_daily_cap_usd:
- *     Some(new) > live  (G3 audit fix)
+ *     Some(new) > live                                                (G3)
+ *   - disables_protocol_caps = has_protocol_caps: Some(false) while live=true (G3)
+ *   - shrinks_or_raises_caps = protocol_caps: any entry mutated       (G3)
+ *   - disables_cosign = cosign_required: Some(false) while live=true  (G6)
  *
- * IMPORTANT: `lowers_floor` and `raises_per_recipient_cap` ELEVATE the queue
- * call (so cosign IS required), but those two fields are NOT bound by THIS
- * digest. They're bound by the separate TA-19 `policy_preview_digest`
- * (canonical positions 18 + 19). See `compute-cosign-digest.ts` for the
- * full rationale on the narrow scope of this digest vs TA-19.
+ * Round 2 B4 F-1 fix (2026-05-19): the cosign digest binding now extends to
+ * ALL G3 + G6 triggers. Previously the digest only bound positions 1-5
+ * (cosign_session, daily/max-tx caps, destinations, protocols) — the G3/G6
+ * elevation triggers ELEVATED the queue but were NOT bound by this digest
+ * (they were bound only by TA-19 policy_preview_digest). That left a gap:
+ * a tampered SDK or discriminator-collision attack on the pending PDA
+ * could mutate those triggers between queue and apply without producing a
+ * cosign-digest mismatch. With the extension, every elevation trigger is
+ * now bound by BOTH the cosign digest (intent) and TA-19 (byte safety).
  *
  * Phase 4 PEN-CROSS-3 pattern reference:
  *   PEN-CROSS-3 introduced sibling-handler digest binding (constraints/post-
@@ -146,32 +154,53 @@ export interface CosignArgs {
    */
   protocols?: readonly Address[] | null;
 
-  // ── G3 audit fix (2026-05-18): elevated triggers NOT bound by THIS digest ──
+  // ── Round 2 B4 F-1 (2026-05-19): G3 + G6 elevated triggers bound here ──
   //
-  // These two fields ELEVATE the queue (cosign IS required) but they are
-  // bound by the separate TA-19 `policy_preview_digest`, not by THIS cosign
-  // digest. We accept them as args to surface the elevation requirement at
-  // the type level — even though they don't change the cosign digest, the
-  // caller MUST present a cosigner signer when these fields are mutated
-  // hostily.
+  // These fields are BOTH elevation triggers AND now bound by this cosign
+  // digest. Mutating them between queue and apply produces a cosign-digest
+  // mismatch (ErrCosignRequired, 6089) — closing the gap where the digest
+  // previously only bound positions 1-5 of the canonical encoding.
 
   /**
    * Pending `stable_balance_floor` (6-decimal USDC face value). LOWERING
    * this below the live policy value ELEVATES the queue (G3 audit fix
-   * 2026-05-18). NOT bound by this cosign digest — bound by TA-19
-   * `policy_preview_digest` at canonical position 18. Accepted here for
-   * type-level surface visibility only.
+   * 2026-05-18). Round 2 B4 F-1: now BOUND by this cosign digest at
+   * canonical position 6.
    */
   stableBalanceFloor?: bigint | null;
 
   /**
    * Pending `per_recipient_daily_cap_usd` (6-decimal USDC face value).
    * RAISING this above the live policy value ELEVATES the queue (G3 audit
-   * fix 2026-05-18). NOT bound by this cosign digest — bound by TA-19
-   * `policy_preview_digest` at canonical position 19. Accepted here for
-   * type-level surface visibility only.
+   * fix 2026-05-18). Round 2 B4 F-1: now BOUND by this cosign digest at
+   * canonical position 7.
    */
   perRecipientDailyCapUsd?: bigint | null;
+
+  /**
+   * Pending `has_protocol_caps` flag. Setting this to `false` while the
+   * live policy is `true` ELEVATES the queue (disabling protocol caps
+   * entirely). Round 2 B4 F-1: BOUND by this cosign digest at canonical
+   * position 8.
+   */
+  hasProtocolCaps?: boolean | null;
+
+  /**
+   * Pending `protocol_caps` Vec<u64> arg (6-decimal USDC face values,
+   * parallel to `protocols`). Mutating individual caps (shrink-to-zero or
+   * raise) ELEVATES the queue. Round 2 B4 F-1: BOUND by this cosign digest
+   * at canonical position 9. Same ordering caveat as `protocols` (parallel
+   * arrays — order is load-bearing).
+   */
+  protocolCaps?: readonly bigint[] | null;
+
+  /**
+   * Pending `cosign_required` flag. Setting this to `false` while the live
+   * policy is `true` ELEVATES the queue (G6 one-way ratchet — disabling
+   * cosign requires cosign). Round 2 B4 F-1: BOUND by this cosign digest
+   * at canonical position 10.
+   */
+  cosignRequired?: boolean | null;
 }
 
 /**
@@ -256,9 +285,15 @@ export function buildCosignBundle(args: CosignArgs): CosignBundle {
     maxTransactionAmountUsd: args.maxTransactionAmountUsd ?? null,
     allowedDestinations: args.allowedDestinations ?? null,
     protocols: args.protocols ?? null,
-    // NOTE: stableBalanceFloor + perRecipientDailyCapUsd are NOT in this
-    // digest's input. They elevate the queue but are bound by TA-19
-    // policy_preview_digest, not by the cosign digest. See docblock above.
+    // Round 2 B4 F-1 (2026-05-19): the 5 new G3 + G6 elevation triggers are
+    // now BOUND by this cosign digest. Flow them through to mirror the
+    // on-chain handler's CosignDigestFields construction in
+    // `queue_policy_update.rs` (handler passes all 10 fields).
+    stableBalanceFloor: args.stableBalanceFloor ?? null,
+    perRecipientDailyCapUsd: args.perRecipientDailyCapUsd ?? null,
+    hasProtocolCaps: args.hasProtocolCaps ?? null,
+    protocolCaps: args.protocolCaps ?? null,
+    cosignRequired: args.cosignRequired ?? null,
   });
 
   return {

@@ -19,6 +19,19 @@ pub struct WithdrawFunds<'info> {
     )]
     pub vault: Account<'info, AgentVault>,
 
+    /// Round 2 fix (audit 2026-05-19): policy is now read by
+    /// `withdraw_funds` to enforce the interim cosign gate when
+    /// `policy.cosign_required == true`. `withdraw_funds` is the REAL
+    /// drain primitive on cosign-opted-in vaults — a phished owner can
+    /// withdraw 100% custody in a single tx without the gate. PDA
+    /// seeds binding mirrors the pattern at
+    /// `register_agent.rs:35-40`.
+    #[account(
+        seeds = [b"policy", vault.key().as_ref()],
+        bump = policy.bump,
+    )]
+    pub policy: Account<'info, PolicyConfig>,
+
     pub mint: Account<'info, Mint>,
 
     /// Vault's PDA-controlled token account
@@ -55,12 +68,33 @@ pub struct WithdrawFunds<'info> {
 pub fn handler(ctx: Context<WithdrawFunds>, amount: u64) -> Result<()> {
     crate::reject_cpi!();
 
-    let vault = &mut ctx.accounts.vault;
-
+    // Round 2 fix (audit 2026-05-19): interim cosign gate for
+    // `withdraw_funds`. This is the REAL drain primitive on
+    // cosign-opted-in vaults — a phished/leaked owner key can withdraw
+    // 100% of custody in a single tx without this gate (interim cosign
+    // gates on register_agent / set_observe_only / reactivate_vault are
+    // moot if withdraw_funds is unguarded). Mirrors the pattern at
+    // `register_agent.rs:91-95`. Vaults with the default
+    // `cosign_required: false` are unaffected.
+    //
+    // Placed AFTER the vault.status check (so a frozen vault still
+    // returns VaultAlreadyClosed not ErrCosignRequired) and BEFORE the
+    // token::transfer CPI.
     require!(
-        vault.status != VaultStatus::Closed,
+        ctx.accounts.vault.status != VaultStatus::Closed,
         SigilError::VaultAlreadyClosed
     );
+    if ctx.accounts.policy.cosign_required {
+        let owner_key = ctx.accounts.owner.key();
+        let has_cosigner = crate::instructions::register_agent::has_non_owner_signer(
+            ctx.remaining_accounts,
+            &owner_key,
+        );
+        require!(has_cosigner, SigilError::ErrCosignRequired);
+    }
+
+    let vault = &mut ctx.accounts.vault;
+
     require!(
         ctx.accounts.vault_token_account.amount >= amount,
         SigilError::InsufficientBalance

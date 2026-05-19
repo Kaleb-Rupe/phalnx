@@ -783,6 +783,16 @@ export async function queueAgentPermissions(
     newCapability: Number(permissions),
     spendingLimitUsd: spendingLimit,
     cooldownSeconds,
+    // Round 2 F-RP3-2 fix (audit 2026-05-19): non-elevated path default —
+    // System Program / zero-pubkey. The on-chain handler's elevated gate
+    // requires a non-default `cosign_session` only when the mutation
+    // raises capability, raises spending_limit, OR sets a non-zero
+    // cooldown AND `policy.cosign_required == true`. Callers who need
+    // the elevated path should use a dedicated wrapper that injects a
+    // real cosign-session pubkey + remaining_accounts signer (analogous
+    // to `queuePolicyElevated()` for queue_policy_update).
+    cosignSession:
+      "11111111111111111111111111111111" as unknown as Address,
   });
   return run(rpc, owner, network, [ix], opts);
 }

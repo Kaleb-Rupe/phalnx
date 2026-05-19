@@ -16,22 +16,24 @@
  * only the FIELDS that participate in "elevated mutation" detection are in
  * scope. Non-elevated fields (developer_fee_rate, max_slippage_bps,
  * session_expiry_seconds, timelock_duration narrowing, protocol_mode,
- * destination_mode, has_protocol_caps, protocol_caps, operating_hours,
- * stable_balance_floor, per_recipient_daily_cap_usd, etc.) do NOT require
- * cosign and are NOT bound by THIS digest — they are still bound by
- * TA-19 `policy_preview_digest` at queue time.
+ * destination_mode, operating_hours, etc.) do NOT require cosign and are NOT
+ * bound by THIS digest — they are still bound by TA-19
+ * `policy_preview_digest` at queue time.
  *
- * G3 audit fix (2026-05-18) NOTE: G3 added TWO new elevated-mutation TRIGGERS
- * (lowering `stable_balance_floor` and raising `per_recipient_daily_cap_usd`)
- * but did NOT extend the cosign-digest BINDING to include those two fields.
- * That is INTENTIONAL: the cosign signer is committing to the
- * elevated-mutation INTENT; the actual TA-12/TA-14 byte safety comes from
- * TA-19 `policy_preview_digest` which DOES bind both fields at canonical
- * positions 18 + 19. Mutating either field between queue and apply still
- * produces a TA-19 mismatch (PolicyPreviewMismatch, 6080) — the cosign gate
- * is the entry gate, TA-19 is the byte-equality gate.
+ * Round 2 B4 F-1 fix (audit 2026-05-19): the cosign-digest binding now
+ * extends to all G3 + G6 elevation triggers that were previously NOT bound:
+ *   - `stable_balance_floor` (G3)            — LOWERING weakens custody
+ *   - `per_recipient_daily_cap_usd` (G3)     — RAISING widens spend
+ *   - `has_protocol_caps` (G3)               — disabling protocol caps
+ *   - `protocol_caps` (G3)                   — shrinking individual caps
+ *   - `cosign_required` (G6)                 — disabling cosign one-way
+ * Without this binding, a tampered SDK or discriminator-collision attack
+ * could mutate the pending PDA between queue and apply on those triggers
+ * without producing a cosign-digest mismatch (TA-19's policy_preview_digest
+ * binds them at the *policy* level but the cosign-binding promise is "the
+ * session signature covers the SAME pending args the owner signed").
  *
- * CANONICAL ENCODING (FIXED — DO NOT REORDER):
+ * CANONICAL ENCODING (FIXED — DO NOT REORDER, APPEND-ONLY):
  *   1. cosign_session: Pubkey (32 bytes raw)
  *   2. daily_spending_cap_usd: Option<u64>
  *        - tag: 1 byte (0=None, 1=Some)
@@ -43,9 +45,22 @@
  *        - payload (if Some): u32 LE length (4 bytes) ++ each Pubkey 32 bytes
  *   5. protocols: Option<Vec<Pubkey>>
  *        - same shape as #4
+ *   6. stable_balance_floor: Option<u64>        (B4 F-1)
+ *        - same shape as #2
+ *   7. per_recipient_daily_cap_usd: Option<u64> (B4 F-1)
+ *        - same shape as #2
+ *   8. has_protocol_caps: Option<bool>          (B4 F-1)
+ *        - tag: 1 byte (0=None, 1=Some)
+ *        - payload (if Some): 1 byte (0/1)
+ *   9. protocol_caps: Option<Vec<u64>>          (B4 F-1)
+ *        - tag: 1 byte (0=None, 1=Some)
+ *        - payload (if Some): u32 LE length (4 bytes) ++ each u64 8 bytes LE
+ *  10. cosign_required: Option<bool>            (B4 F-1)
+ *        - same shape as #8
  *
  * Total bounded by MAX_ALLOWED_PROTOCOLS=10 + MAX_ALLOWED_DESTINATIONS=10 at
- * 32 bytes each + fixed scalars ≈ 720 bytes worst case.
+ * 32 bytes each + MAX_PROTOCOL_CAPS=10 * 8 + fixed scalars ≈ 805 bytes worst
+ * case.
  *
  * Forward-compat note: per the on-chain comment, the canonical encoding here
  * is APPEND-ONLY — new fields land at the END to preserve replayable digests
@@ -92,6 +107,43 @@ export interface CosignDigestFields {
    * Pending `protocols` arg. Same shape as #4. Bound at position 5.
    */
   protocols?: readonly (Address | string)[] | null;
+  /**
+   * Round 2 B4 F-1 (2026-05-19): pending `stable_balance_floor` arg
+   * (6-decimal USDC face value). G3 elevation trigger — LOWERING the
+   * floor weakens custody safety. Bound at position 6. Same Option<u64>
+   * shape as #2.
+   */
+  stableBalanceFloor?: bigint | null;
+  /**
+   * Round 2 B4 F-1: pending `per_recipient_daily_cap_usd` arg (6-decimal
+   * USDC face value). G3 elevation trigger — RAISING / DISABLING widens
+   * spend per recipient. Bound at position 7. Same Option<u64> shape as
+   * #2.
+   */
+  perRecipientDailyCapUsd?: bigint | null;
+  /**
+   * Round 2 B4 F-1: pending `has_protocol_caps` flag. G3 elevation
+   * trigger — disabling protocol caps entirely. Bound at position 8.
+   * Option<bool>: `null`/`undefined` = Option::None (tag 0), boolean =
+   * Option::Some (tag 1 + 1 byte payload, 0/1).
+   */
+  hasProtocolCaps?: boolean | null;
+  /**
+   * Round 2 B4 F-1: pending `protocol_caps` Vec<u64> arg (6-decimal USDC
+   * face values, parallel to `protocols`). G3 elevation trigger —
+   * shrinking individual caps to zero or raising them. Bound at position
+   * 9. Option<Vec<u64>>: `null`/`undefined` = Option::None (tag 0); empty
+   * array = Some([]) (NOT the same as None — load-bearing discriminator).
+   * Order matters (parallel-array semantics).
+   */
+  protocolCaps?: readonly bigint[] | null;
+  /**
+   * Round 2 B4 F-1: pending `cosign_required` flag. G6 elevation trigger
+   * — disabling cosign on a cosign-opted-in vault is a one-way ratchet
+   * (disabling cosign requires cosign). Bound at position 10. Same
+   * Option<bool> shape as #8.
+   */
+  cosignRequired?: boolean | null;
 }
 
 // ── Base58 decode (inlined to avoid circular SDK imports) ────────────────────
@@ -189,6 +241,24 @@ export function computeCosignDigest(fields: CosignDigestFields): Uint8Array {
       ? null
       : fields.allowedDestinations;
   const protos = fields.protocols === undefined ? null : fields.protocols;
+  // Round 2 B4 F-1: same undefined-vs-null normalisation for the 5 new
+  // fields. The discriminator byte is load-bearing — `undefined` /
+  // `null` BOTH map to Option::None (tag 0). `false`, `true`, or `0n`
+  // map to Option::Some.
+  const stableFloor =
+    fields.stableBalanceFloor === undefined
+      ? null
+      : fields.stableBalanceFloor;
+  const perRecipCap =
+    fields.perRecipientDailyCapUsd === undefined
+      ? null
+      : fields.perRecipientDailyCapUsd;
+  const hasProtoCaps =
+    fields.hasProtocolCaps === undefined ? null : fields.hasProtocolCaps;
+  const protoCaps =
+    fields.protocolCaps === undefined ? null : fields.protocolCaps;
+  const cosignReq =
+    fields.cosignRequired === undefined ? null : fields.cosignRequired;
 
   // Pre-decode pubkeys so any error surfaces with a useful message BEFORE we
   // start the hash walk.
@@ -197,8 +267,11 @@ export function computeCosignDigest(fields: CosignDigestFields): Uint8Array {
   const protoBytes =
     protos === null ? null : protos.map((p) => base58Decode(p as string));
 
-  // Pre-size: 32 (session) + 1 + 8 + 1 + 8 + (1 + 4 + 32*N) + (1 + 4 + 32*N)
-  // worst case ~720 bytes.
+  // Pre-size: 32 (session) + (1+8) for each Option<u64> (positions 2, 3, 6, 7)
+  // + (1 + 4 + 32*N) for each Option<Vec<Pubkey>> (positions 4, 5)
+  // + (1 + 1) for each Option<bool> (positions 8, 10)
+  // + (1 + 4 + 8*N) for Option<Vec<u64>> (position 9)
+  // Worst case ~805 bytes.
   const fixedSize =
     32 + // cosign_session
     1 + // daily tag
@@ -208,7 +281,17 @@ export function computeCosignDigest(fields: CosignDigestFields): Uint8Array {
     1 + // destinations tag
     (destBytes !== null ? 4 + destBytes.length * 32 : 0) +
     1 + // protocols tag
-    (protoBytes !== null ? 4 + protoBytes.length * 32 : 0);
+    (protoBytes !== null ? 4 + protoBytes.length * 32 : 0) +
+    1 + // stable_balance_floor tag (B4 F-1)
+    (stableFloor !== null ? 8 : 0) +
+    1 + // per_recipient_daily_cap_usd tag (B4 F-1)
+    (perRecipCap !== null ? 8 : 0) +
+    1 + // has_protocol_caps tag (B4 F-1)
+    (hasProtoCaps !== null ? 1 : 0) +
+    1 + // protocol_caps tag (B4 F-1)
+    (protoCaps !== null ? 4 + protoCaps.length * 8 : 0) +
+    1 + // cosign_required tag (B4 F-1)
+    (cosignReq !== null ? 1 : 0);
   const buf = new Uint8Array(fixedSize);
   const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
 
@@ -256,6 +339,55 @@ export function computeCosignDigest(fields: CosignDigestFields): Uint8Array {
       buf.set(pk, off);
       off += 32;
     }
+  }
+
+  // Round 2 B4 F-1 (2026-05-19): APPEND-ONLY extension binding 5 new
+  // elevation triggers. Mirrors `compute_cosign_digest` in
+  // `programs/sigil/src/utils/cosign_digest.rs` lines 195-241. All
+  // encoded as Option<…> with the load-bearing tag byte (None vs
+  // Some(0) MUST produce distinct digests).
+
+  // 6. stable_balance_floor Option<u64>
+  if (stableFloor === null) {
+    buf[off++] = 0;
+  } else {
+    buf[off++] = 1;
+    off = writeU64Le(view, off, stableFloor);
+  }
+
+  // 7. per_recipient_daily_cap_usd Option<u64>
+  if (perRecipCap === null) {
+    buf[off++] = 0;
+  } else {
+    buf[off++] = 1;
+    off = writeU64Le(view, off, perRecipCap);
+  }
+
+  // 8. has_protocol_caps Option<bool>. Bool encoded as 1 byte (0/1).
+  if (hasProtoCaps === null) {
+    buf[off++] = 0;
+  } else {
+    buf[off++] = 1;
+    buf[off++] = hasProtoCaps ? 1 : 0;
+  }
+
+  // 9. protocol_caps Option<Vec<u64>>. Each cap is 8 bytes LE.
+  if (protoCaps === null) {
+    buf[off++] = 0;
+  } else {
+    buf[off++] = 1;
+    off = writeU32Le(view, off, protoCaps.length);
+    for (const c of protoCaps) {
+      off = writeU64Le(view, off, c);
+    }
+  }
+
+  // 10. cosign_required Option<bool>. Bool encoded as 1 byte (0/1).
+  if (cosignReq === null) {
+    buf[off++] = 0;
+  } else {
+    buf[off++] = 1;
+    buf[off++] = cosignReq ? 1 : 0;
   }
 
   // Defensive: assert we wrote exactly what we sized.

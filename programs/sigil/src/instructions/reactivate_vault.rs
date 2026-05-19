@@ -17,6 +17,25 @@ pub struct ReactivateVault<'info> {
     )]
     pub vault: Account<'info, AgentVault>,
 
+    /// Round 2 F-RP3-1 fix (audit 2026-05-19): policy is now mutated by
+    /// `reactivate_vault` to:
+    ///   1. Read `cosign_required` for the interim cosign gate (the previous
+    ///      handler granted FULL_CAPABILITY to a fresh agent with NO cosign
+    ///      gate on a cosign-opted-in vault — phished-owner instant operator
+    ///      grant via freeze→reactivate(attacker, FULL_CAPABILITY)).
+    ///   2. Bump `policy_version` after the agent push so any in-flight
+    ///      validate_and_authorize fails fast with PolicyVersionMismatch
+    ///      rather than relying on the slower vault.is_agent constraint.
+    ///
+    /// Policy-to-vault binding via PDA seeds — same pattern as
+    /// `register_agent.rs:35-40`.
+    #[account(
+        mut,
+        seeds = [b"policy", vault.key().as_ref()],
+        bump = policy.bump,
+    )]
+    pub policy: Account<'info, PolicyConfig>,
+
     /// Phase 7 — success audit log; entry appended after status flip.
     #[account(
         mut,
@@ -36,6 +55,26 @@ pub fn handler(
     new_agent_capability: Option<u8>,
 ) -> Result<()> {
     crate::reject_cpi!();
+
+    // Round 2 F-RP3-1 fix (audit 2026-05-19): interim cosign gate for
+    // `reactivate_vault`. The previous handler granted FULL_CAPABILITY to
+    // a fresh agent on a frozen vault with NO cosign gate — a phished
+    // owner could chain `freeze_vault` → `reactivate_vault(attacker,
+    // FULL_CAPABILITY)` in one tx and silently install operator
+    // capability on a vault that has opted into cosign.
+    //
+    // Mirrors the gate already on `register_agent.rs:91-95` and
+    // `set_observe_only.rs`. Vaults with the default
+    // `cosign_required: false` are unaffected — single-signer flow
+    // continues as before.
+    if ctx.accounts.policy.cosign_required {
+        let owner_key = ctx.accounts.owner.key();
+        let has_cosigner = crate::instructions::register_agent::has_non_owner_signer(
+            ctx.remaining_accounts,
+            &owner_key,
+        );
+        require!(has_cosigner, SigilError::ErrCosignRequired);
+    }
 
     let vault = &mut ctx.accounts.vault;
 
@@ -86,6 +125,20 @@ pub fn handler(
 
     let clock = Clock::get()?;
     let vault_key = vault.key();
+
+    // Round 2 F-RP3-1 fix (audit 2026-05-19): bump policy_version.
+    // Permission posture changes when a new agent is grafted onto the
+    // vault during reactivate — bumping the version ensures any in-flight
+    // validate_and_authorize fails fast with PolicyVersionMismatch
+    // (defense in depth) rather than relying on the slower
+    // vault.is_agent constraint.
+    {
+        let policy = &mut ctx.accounts.policy;
+        policy.policy_version = policy
+            .policy_version
+            .checked_add(1)
+            .ok_or(error!(SigilError::Overflow))?;
+    }
 
     // Phase 7 — write success audit-log entry AFTER state mutation.
     {

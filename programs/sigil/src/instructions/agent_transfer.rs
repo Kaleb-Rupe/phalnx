@@ -133,6 +133,18 @@ pub fn handler(
         SigilError::DestinationNotAllowed
     );
 
+    // Round 2 VH-2 fix (audit 2026-05-19): graylist friction check.
+    // `agent_transfer` previously called only `is_destination_allowed`
+    // but NOT `is_destination_graylisted`, which let an agent transfer
+    // to a destination during its 24h friction window even though the
+    // destination was queued as "newly added, must wait". Mirror of the
+    // check in `utils/destination_check.rs:186-193`.
+    let (graylisted, _unlock) = policy.is_destination_graylisted(
+        &ctx.accounts.destination_token_account.owner,
+        clock.unix_timestamp,
+    );
+    require!(!graylisted, SigilError::ErrGraylistFriction);
+
     // 5. Mint consistency
     require!(
         ctx.accounts.destination_token_account.mint == token_mint,
@@ -378,10 +390,22 @@ pub fn handler(
         // Source 2: remaining_accounts walk for the OTHER stablecoin
         // ATA(s). Caller passes vault's other stablecoin ATA here when
         // the floor invariant requires summing across both mints.
-        // De-duplicate against the source ATA pubkey to defend against
-        // double-counting (caller passing same ATA in remaining_accounts).
+        //
+        // Round 2 F-AT-1 fix (audit 2026-05-19): pubkey-level dedup.
+        // The previous walker dedup'd by (src_ata_key + mint), which
+        // let an attacker inflate the combined balance by passing the
+        // SAME other-stablecoin ATA pubkey N times in remaining_accounts
+        // — each iteration cleared src_ata_key + cleared src_mint but
+        // re-counted the same balance. Floor check then passed despite
+        // real balance below. Mirrors the `seen: Vec<Pubkey>` pattern
+        // already used in `finalize_session.rs:734-786`.
+        //
+        // Pre-seed `seen` with src_ata_key so source-1 (already counted
+        // above) is never re-counted via remaining_accounts.
+        let mut seen: Vec<Pubkey> = Vec::with_capacity(2);
+        seen.push(src_ata_key);
         for info in ctx.remaining_accounts.iter() {
-            if info.key() == src_ata_key {
+            if seen.contains(&info.key()) {
                 continue;
             }
             // Must be a token-program-owned account. Accept SPL Token
@@ -405,7 +429,11 @@ pub fn handler(
             }
             // Defend against caller passing the OTHER stablecoin ATA twice
             // with the same mint — skip if mint equals src_mint (already
-            // counted via source 1).
+            // counted via source 1). The pubkey-level dedup above is the
+            // primary defence; this mint check stays as belt-and-suspenders
+            // for the case where a caller passes a DIFFERENT pubkey with
+            // the same mint as src_mint (e.g. a stale closed ATA — should
+            // not happen but is harmless to keep).
             if mint == src_mint {
                 continue;
             }
@@ -415,6 +443,8 @@ pub fn handler(
             combined_stable_balance = combined_stable_balance
                 .checked_add(bal)
                 .ok_or(SigilError::Overflow)?;
+            seen.push(info.key());
+            drop(data);
         }
 
         require!(
@@ -504,7 +534,10 @@ mod tests {
     //!
     //! What Phase 9 LiteSVM tests will additionally pin:
     //!   - The 72-byte SPL TokenAccount parse on the source ATA.
-    //!   - The remaining_accounts walk + dedup on src_ata_key + mint.
+    //!   - The remaining_accounts walk + pubkey-level dedup (Round 2 F-AT-1
+    //!     fix 2026-05-19 — previously dedup'd by src_ata_key + mint only,
+    //!     letting an attacker re-pass the same other-stablecoin ATA pubkey
+    //!     N times to inflate the combined balance past the floor).
     //!   - The Anchor 0.32.1 cached `.amount` vs raw-bytes post-CPI gap.
     //!   - Cross-mint summing (USDC src + USDT in remaining_accounts).
 

@@ -29,30 +29,42 @@ import { buildCosignBundle } from "../../src/cosign-helper.js";
 import { computeCosignDigest } from "../../src/policy/compute-cosign-digest.js";
 import type { Address, TransactionSigner } from "../../src/kit-adapter.js";
 
-// G4 fixtures (no prior — first version of this digest in the codebase).
-// MINIMAL: cosign_session = pk(1), all Options = None.
+// G4 fixtures, rebound by Round 2 B4 F-1 (2026-05-19): the canonical
+// encoding extended from 5 to 10 Option<…> fields. Passing `undefined` for
+// the 5 new optionals → Option::None branch (1 None byte each) → both
+// fixtures grew by 5 trailing zero bytes vs the pre-B4-F-1 values.
+//
+// MINIMAL: cosign_session = pk(1), all 9 Options = None.
 //   Encoding length:
 //     32 (session)
 //     + 1 (daily None tag)
 //     + 1 (max_tx None tag)
 //     + 1 (destinations None tag)
 //     + 1 (protocols None tag)
-//   = 36 bytes deterministic input.
+//     + 1 (stable_balance_floor None tag)         (B4 F-1)
+//     + 1 (per_recipient_daily_cap_usd None tag)  (B4 F-1)
+//     + 1 (has_protocol_caps None tag)            (B4 F-1)
+//     + 1 (protocol_caps None tag)                (B4 F-1)
+//     + 1 (cosign_required None tag)              (B4 F-1)
+//   = 41 bytes deterministic input.
+// Pre-B4-F-1 value was 3f6c2724a21a3b29ef886a52aa414bec96c46f7af137c636065209ff892cee6c.
 const HEX_MINIMAL =
-  "3f6c2724a21a3b29ef886a52aa414bec96c46f7af137c636065209ff892cee6c";
+  "36744bc16c6c142eab59716b80de14e1ec548b29dff1bb699773b91791197df1";
 
 // REALISTIC: cosign_session = pk(1), daily = Some(500_000_000),
 //   max_tx = Some(100_000_000), destinations = Some([pk(10)]),
-//   protocols = Some([pk(1), pk(2)]).
+//   protocols = Some([pk(1), pk(2)]), the 5 new B4 F-1 fields = None.
 //   Encoding length:
 //     32 (session)
 //     + 1 + 8 (daily Some(u64))
 //     + 1 + 8 (max_tx Some(u64))
 //     + 1 + 4 + 32 (destinations Some(Vec len=1))
 //     + 1 + 4 + 32*2 (protocols Some(Vec len=2))
-//   = 156 bytes deterministic input.
+//     + 5 (five trailing B4 F-1 None discriminator bytes)
+//   = 161 bytes deterministic input.
+// Pre-B4-F-1 value was 5a881caee096c1c8d60348f3cca70bc966d5ca92b32ddaf014ebc0dbc8edf1af.
 const HEX_REALISTIC =
-  "5a881caee096c1c8d60348f3cca70bc966d5ca92b32ddaf014ebc0dbc8edf1af";
+  "d2cb150b71e205fc076159adc6bf3b5aef9c04f059743f74b1c0c5fb376f4b8c";
 
 // Base58 encodings of fixed test pubkeys [1u8;32], [2u8;32], [10u8;32].
 // Same constants as preview-digest.test.ts.
@@ -304,11 +316,12 @@ describe("TA-09 — buildCosignBundle (G4) surface invariants", () => {
     expect(bundle.cosignSession).to.equal(PK_1);
   });
 
-  it("ignores stableBalanceFloor + perRecipientDailyCapUsd (NOT in digest scope)", () => {
-    // G3 audit fix (2026-05-18): these two fields ELEVATE the queue but are
-    // NOT bound by THIS cosign digest. They're bound by TA-19
-    // policy_preview_digest. Two bundles that differ ONLY in these fields
-    // MUST produce identical cosign digests.
+  it("binds stableBalanceFloor + perRecipientDailyCapUsd into the digest (B4 F-1)", () => {
+    // Round 2 B4 F-1 (2026-05-19): these two G3 elevation triggers are now
+    // BOUND by the cosign digest at canonical positions 6 + 7. Two bundles
+    // that differ ONLY in these fields MUST produce DIFFERENT cosign
+    // digests — closing the gap where the digest previously only bound
+    // positions 1-5. Inverted from the pre-B4-F-1 test expectation.
     const baseArgs = {
       cosignSessionPubkey: PK_1 as unknown as Address,
       ownerSigner: fakeOwnerSigner(PK_3),
@@ -324,7 +337,35 @@ describe("TA-09 — buildCosignBundle (G4) surface invariants", () => {
       stableBalanceFloor: 0n,
       perRecipientDailyCapUsd: 999_999_999n,
     });
-    expect(toHex(bundleA.cosignDigest)).to.equal(toHex(bundleB.cosignDigest));
+    expect(toHex(bundleA.cosignDigest)).to.not.equal(
+      toHex(bundleB.cosignDigest),
+    );
+  });
+
+  it("binds hasProtocolCaps + protocolCaps + cosignRequired into the digest (B4 F-1)", () => {
+    // Round 2 B4 F-1 (2026-05-19): the remaining G3 + G6 elevation triggers
+    // bound at canonical positions 8, 9, 10. Two bundles that differ ONLY
+    // in these flags MUST produce DIFFERENT cosign digests.
+    const baseArgs = {
+      cosignSessionPubkey: PK_1 as unknown as Address,
+      ownerSigner: fakeOwnerSigner(PK_3),
+      dailySpendingCapUsd: 500_000_000n,
+    };
+    const bundleA = buildCosignBundle({
+      ...baseArgs,
+      hasProtocolCaps: true,
+      protocolCaps: [100_000_000n, 200_000_000n],
+      cosignRequired: true,
+    });
+    const bundleB = buildCosignBundle({
+      ...baseArgs,
+      hasProtocolCaps: false,
+      protocolCaps: [100_000_000n, 200_000_000n],
+      cosignRequired: true,
+    });
+    expect(toHex(bundleA.cosignDigest)).to.not.equal(
+      toHex(bundleB.cosignDigest),
+    );
   });
 });
 
@@ -370,6 +411,11 @@ function base58Encode(bytes: Uint8Array): string {
  * `programs/sigil/src/utils/cosign_digest.rs` and the
  * `compute-cosign-digest.ts` docblock. Intentionally re-derived (not
  * imported) so it catches silent encoder drift in the SDK.
+ *
+ * Round 2 B4 F-1 (2026-05-19): extended to cover the 5 new APPEND-ONLY
+ * fields at canonical positions 6-10 (stable_balance_floor,
+ * per_recipient_daily_cap_usd, has_protocol_caps, protocol_caps,
+ * cosign_required).
  */
 function referenceCosignDigest(fields: {
   sessionBytes: Uint8Array;
@@ -377,6 +423,11 @@ function referenceCosignDigest(fields: {
   maxTransactionAmountUsd: bigint | null;
   allowedDestinationsBytes: readonly Uint8Array[] | null;
   protocolsBytes: readonly Uint8Array[] | null;
+  stableBalanceFloor: bigint | null;
+  perRecipientDailyCapUsd: bigint | null;
+  hasProtocolCaps: boolean | null;
+  protocolCaps: readonly bigint[] | null;
+  cosignRequired: boolean | null;
 }): string {
   const parts: number[] = [];
   const pushU64 = (v: bigint) => {
@@ -422,6 +473,40 @@ function referenceCosignDigest(fields: {
       for (const x of b) parts.push(x);
     }
   }
+  // Round 2 B4 F-1 — APPEND-ONLY extension (positions 6-10).
+  if (fields.stableBalanceFloor === null) {
+    pushU8(0);
+  } else {
+    pushU8(1);
+    pushU64(fields.stableBalanceFloor);
+  }
+  if (fields.perRecipientDailyCapUsd === null) {
+    pushU8(0);
+  } else {
+    pushU8(1);
+    pushU64(fields.perRecipientDailyCapUsd);
+  }
+  if (fields.hasProtocolCaps === null) {
+    pushU8(0);
+  } else {
+    pushU8(1);
+    pushU8(fields.hasProtocolCaps ? 1 : 0);
+  }
+  if (fields.protocolCaps === null) {
+    pushU8(0);
+  } else {
+    pushU8(1);
+    pushU32(fields.protocolCaps.length);
+    for (const c of fields.protocolCaps) {
+      pushU64(c);
+    }
+  }
+  if (fields.cosignRequired === null) {
+    pushU8(0);
+  } else {
+    pushU8(1);
+    pushU8(fields.cosignRequired ? 1 : 0);
+  }
 
   const buf = Buffer.from(parts);
   return createHash("sha256").update(buf).digest("hex");
@@ -432,24 +517,38 @@ describe("TA-09 — property test: SDK encoder == reference encoder (G4)", () =>
     const pubkeyArb = fc
       .uint8Array({ minLength: 32, maxLength: 32 })
       .map((u8: Uint8Array) => u8 as Uint8Array);
+    const u64Arb = fc.bigUint({ max: (1n << 64n) - 1n });
 
     fc.assert(
       fc.property(
         pubkeyArb, // session
-        fc.option(fc.bigUint({ max: (1n << 64n) - 1n }), { nil: null }), // daily Option
-        fc.option(fc.bigUint({ max: (1n << 64n) - 1n }), { nil: null }), // max_tx Option
+        fc.option(u64Arb, { nil: null }), // daily Option
+        fc.option(u64Arb, { nil: null }), // max_tx Option
         fc.option(fc.array(pubkeyArb, { minLength: 0, maxLength: 10 }), {
           nil: null,
         }), // destinations Option<Vec>
         fc.option(fc.array(pubkeyArb, { minLength: 0, maxLength: 10 }), {
           nil: null,
         }), // protocols Option<Vec>
+        // Round 2 B4 F-1 — new arbitraries for positions 6-10.
+        fc.option(u64Arb, { nil: null }), // stable_balance_floor Option
+        fc.option(u64Arb, { nil: null }), // per_recipient_daily_cap_usd Option
+        fc.option(fc.boolean(), { nil: null }), // has_protocol_caps Option<bool>
+        fc.option(fc.array(u64Arb, { minLength: 0, maxLength: 10 }), {
+          nil: null,
+        }), // protocol_caps Option<Vec<u64>>
+        fc.option(fc.boolean(), { nil: null }), // cosign_required Option<bool>
         (
           sessionBytes,
           dailyOpt,
           maxTxOpt,
           destOpt,
           protoOpt,
+          stableFloorOpt,
+          perRecipCapOpt,
+          hasProtoCapsOpt,
+          protoCapsOpt,
+          cosignReqOpt,
         ) => {
           const sdkDigest = computeCosignDigest({
             cosignSession: base58Encode(sessionBytes) as unknown as Address,
@@ -469,6 +568,11 @@ describe("TA-09 — property test: SDK encoder == reference encoder (G4)", () =>
                     (b: Uint8Array) =>
                       base58Encode(b) as unknown as Address,
                   ),
+            stableBalanceFloor: stableFloorOpt,
+            perRecipientDailyCapUsd: perRecipCapOpt,
+            hasProtocolCaps: hasProtoCapsOpt,
+            protocolCaps: protoCapsOpt,
+            cosignRequired: cosignReqOpt,
           });
           const refDigest = referenceCosignDigest({
             sessionBytes,
@@ -476,6 +580,11 @@ describe("TA-09 — property test: SDK encoder == reference encoder (G4)", () =>
             maxTransactionAmountUsd: maxTxOpt,
             allowedDestinationsBytes: destOpt,
             protocolsBytes: protoOpt,
+            stableBalanceFloor: stableFloorOpt,
+            perRecipientDailyCapUsd: perRecipCapOpt,
+            hasProtocolCaps: hasProtoCapsOpt,
+            protocolCaps: protoCapsOpt,
+            cosignRequired: cosignReqOpt,
           });
           const sdkHex = Array.from(sdkDigest)
             .map((x) => x.toString(16).padStart(2, "0"))

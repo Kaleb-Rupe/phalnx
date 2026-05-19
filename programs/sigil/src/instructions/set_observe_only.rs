@@ -24,7 +24,12 @@ use crate::utils::policy_digest::{compute_policy_preview_digest, PolicyPreviewFi
 /// observe_only=true) is always allowed.
 #[derive(Accounts)]
 pub struct SetObserveOnly<'info> {
-    #[account(mut, has_one = owner @ SigilError::UnauthorizedOwner)]
+    #[account(
+        mut,
+        has_one = owner @ SigilError::UnauthorizedOwner,
+        seeds = [b"vault", owner.key().as_ref(), &vault.vault_id.to_le_bytes()],
+        bump = vault.bump,
+    )]
     pub vault: Account<'info, AgentVault>,
 
     #[account(

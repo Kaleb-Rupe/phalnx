@@ -344,12 +344,18 @@ pub mod sigil {
     /// TA-06 (Phase 3): adds `cooldown_seconds` — per-agent cooldown stored
     /// on `AgentSpendOverlay.cooldown_seconds[slot]`. 0 disables. Bound at
     /// queue time and applied at apply time onto the agent's overlay slot.
+    ///
+    /// Round 2 F-RP3-2 fix (audit 2026-05-19): adds `cosign_session` —
+    /// on cosign-opted-in vaults, raising capability / spending_limit OR
+    /// setting a non-zero cooldown is an "elevated mutation" and MUST be
+    /// cosigned. Non-elevated callers pass `Pubkey::default()`.
     pub fn queue_agent_permissions_update(
         ctx: Context<QueueAgentPermissionsUpdate>,
         agent: Pubkey,
         new_capability: u8,
         spending_limit_usd: u64,
         cooldown_seconds: u64,
+        cosign_session: Pubkey,
     ) -> Result<()> {
         instructions::queue_agent_permissions_update::handler(
             ctx,
@@ -357,6 +363,7 @@ pub mod sigil {
             new_capability,
             spending_limit_usd,
             cooldown_seconds,
+            cosign_session,
         )
     }
 

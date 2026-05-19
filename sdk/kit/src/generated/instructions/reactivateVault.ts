@@ -62,6 +62,7 @@ export type ReactivateVaultInstruction<
   TProgram extends string = typeof SIGIL_PROGRAM_ADDRESS,
   TAccountOwner extends string | AccountMeta<string> = string,
   TAccountVault extends string | AccountMeta<string> = string,
+  TAccountPolicy extends string | AccountMeta<string> = string,
   TAccountAuditLogSuccess extends string | AccountMeta<string> = string,
   TAccountSlotHashesSysvar extends string | AccountMeta<string> =
     "SysvarS1otHashes111111111111111111111111111",
@@ -77,6 +78,9 @@ export type ReactivateVaultInstruction<
       TAccountVault extends string
         ? WritableAccount<TAccountVault>
         : TAccountVault,
+      TAccountPolicy extends string
+        ? WritableAccount<TAccountPolicy>
+        : TAccountPolicy,
       TAccountAuditLogSuccess extends string
         ? WritableAccount<TAccountAuditLogSuccess>
         : TAccountAuditLogSuccess,
@@ -130,11 +134,27 @@ export function getReactivateVaultInstructionDataCodec(): Codec<
 export type ReactivateVaultAsyncInput<
   TAccountOwner extends string = string,
   TAccountVault extends string = string,
+  TAccountPolicy extends string = string,
   TAccountAuditLogSuccess extends string = string,
   TAccountSlotHashesSysvar extends string = string,
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
+  /**
+   * Round 2 F-RP3-1 fix (audit 2026-05-19): policy is now mutated by
+   * `reactivate_vault` to:
+   * 1. Read `cosign_required` for the interim cosign gate (the previous
+   * handler granted FULL_CAPABILITY to a fresh agent with NO cosign
+   * gate on a cosign-opted-in vault — phished-owner instant operator
+   * grant via freeze→reactivate(attacker, FULL_CAPABILITY)).
+   * 2. Bump `policy_version` after the agent push so any in-flight
+   * validate_and_authorize fails fast with PolicyVersionMismatch
+   * rather than relying on the slower vault.is_agent constraint.
+   *
+   * Policy-to-vault binding via PDA seeds — same pattern as
+   * `register_agent.rs:35-40`.
+   */
+  policy?: Address<TAccountPolicy>;
   /** Phase 7 — success audit log; entry appended after status flip. */
   auditLogSuccess?: Address<TAccountAuditLogSuccess>;
   slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
@@ -145,6 +165,7 @@ export type ReactivateVaultAsyncInput<
 export async function getReactivateVaultInstructionAsync<
   TAccountOwner extends string,
   TAccountVault extends string,
+  TAccountPolicy extends string,
   TAccountAuditLogSuccess extends string,
   TAccountSlotHashesSysvar extends string,
   TProgramAddress extends Address = typeof SIGIL_PROGRAM_ADDRESS,
@@ -152,6 +173,7 @@ export async function getReactivateVaultInstructionAsync<
   input: ReactivateVaultAsyncInput<
     TAccountOwner,
     TAccountVault,
+    TAccountPolicy,
     TAccountAuditLogSuccess,
     TAccountSlotHashesSysvar
   >,
@@ -161,6 +183,7 @@ export async function getReactivateVaultInstructionAsync<
     TProgramAddress,
     TAccountOwner,
     TAccountVault,
+    TAccountPolicy,
     TAccountAuditLogSuccess,
     TAccountSlotHashesSysvar
   >
@@ -172,6 +195,7 @@ export async function getReactivateVaultInstructionAsync<
   const originalAccounts = {
     owner: { value: input.owner ?? null, isWritable: false },
     vault: { value: input.vault ?? null, isWritable: true },
+    policy: { value: input.policy ?? null, isWritable: true },
     auditLogSuccess: { value: input.auditLogSuccess ?? null, isWritable: true },
     slotHashesSysvar: {
       value: input.slotHashesSysvar ?? null,
@@ -187,6 +211,20 @@ export async function getReactivateVaultInstructionAsync<
   const args = { ...input };
 
   // Resolve default values.
+  if (!accounts.policy.value) {
+    accounts.policy.value = await getProgramDerivedAddress({
+      programAddress,
+      seeds: [
+        getBytesEncoder().encode(new Uint8Array([112, 111, 108, 105, 99, 121])),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            "vault",
+            accounts.vault.value,
+          ),
+        ),
+      ],
+    });
+  }
   if (!accounts.auditLogSuccess.value) {
     accounts.auditLogSuccess.value = await getProgramDerivedAddress({
       programAddress,
@@ -215,6 +253,7 @@ export async function getReactivateVaultInstructionAsync<
     accounts: [
       getAccountMeta("owner", accounts.owner),
       getAccountMeta("vault", accounts.vault),
+      getAccountMeta("policy", accounts.policy),
       getAccountMeta("auditLogSuccess", accounts.auditLogSuccess),
       getAccountMeta("slotHashesSysvar", accounts.slotHashesSysvar),
     ],
@@ -226,6 +265,7 @@ export async function getReactivateVaultInstructionAsync<
     TProgramAddress,
     TAccountOwner,
     TAccountVault,
+    TAccountPolicy,
     TAccountAuditLogSuccess,
     TAccountSlotHashesSysvar
   >);
@@ -234,11 +274,27 @@ export async function getReactivateVaultInstructionAsync<
 export type ReactivateVaultInput<
   TAccountOwner extends string = string,
   TAccountVault extends string = string,
+  TAccountPolicy extends string = string,
   TAccountAuditLogSuccess extends string = string,
   TAccountSlotHashesSysvar extends string = string,
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
+  /**
+   * Round 2 F-RP3-1 fix (audit 2026-05-19): policy is now mutated by
+   * `reactivate_vault` to:
+   * 1. Read `cosign_required` for the interim cosign gate (the previous
+   * handler granted FULL_CAPABILITY to a fresh agent with NO cosign
+   * gate on a cosign-opted-in vault — phished-owner instant operator
+   * grant via freeze→reactivate(attacker, FULL_CAPABILITY)).
+   * 2. Bump `policy_version` after the agent push so any in-flight
+   * validate_and_authorize fails fast with PolicyVersionMismatch
+   * rather than relying on the slower vault.is_agent constraint.
+   *
+   * Policy-to-vault binding via PDA seeds — same pattern as
+   * `register_agent.rs:35-40`.
+   */
+  policy: Address<TAccountPolicy>;
   /** Phase 7 — success audit log; entry appended after status flip. */
   auditLogSuccess: Address<TAccountAuditLogSuccess>;
   slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
@@ -249,6 +305,7 @@ export type ReactivateVaultInput<
 export function getReactivateVaultInstruction<
   TAccountOwner extends string,
   TAccountVault extends string,
+  TAccountPolicy extends string,
   TAccountAuditLogSuccess extends string,
   TAccountSlotHashesSysvar extends string,
   TProgramAddress extends Address = typeof SIGIL_PROGRAM_ADDRESS,
@@ -256,6 +313,7 @@ export function getReactivateVaultInstruction<
   input: ReactivateVaultInput<
     TAccountOwner,
     TAccountVault,
+    TAccountPolicy,
     TAccountAuditLogSuccess,
     TAccountSlotHashesSysvar
   >,
@@ -264,6 +322,7 @@ export function getReactivateVaultInstruction<
   TProgramAddress,
   TAccountOwner,
   TAccountVault,
+  TAccountPolicy,
   TAccountAuditLogSuccess,
   TAccountSlotHashesSysvar
 > {
@@ -274,6 +333,7 @@ export function getReactivateVaultInstruction<
   const originalAccounts = {
     owner: { value: input.owner ?? null, isWritable: false },
     vault: { value: input.vault ?? null, isWritable: true },
+    policy: { value: input.policy ?? null, isWritable: true },
     auditLogSuccess: { value: input.auditLogSuccess ?? null, isWritable: true },
     slotHashesSysvar: {
       value: input.slotHashesSysvar ?? null,
@@ -299,6 +359,7 @@ export function getReactivateVaultInstruction<
     accounts: [
       getAccountMeta("owner", accounts.owner),
       getAccountMeta("vault", accounts.vault),
+      getAccountMeta("policy", accounts.policy),
       getAccountMeta("auditLogSuccess", accounts.auditLogSuccess),
       getAccountMeta("slotHashesSysvar", accounts.slotHashesSysvar),
     ],
@@ -310,6 +371,7 @@ export function getReactivateVaultInstruction<
     TProgramAddress,
     TAccountOwner,
     TAccountVault,
+    TAccountPolicy,
     TAccountAuditLogSuccess,
     TAccountSlotHashesSysvar
   >);
@@ -323,9 +385,24 @@ export type ParsedReactivateVaultInstruction<
   accounts: {
     owner: TAccountMetas[0];
     vault: TAccountMetas[1];
+    /**
+     * Round 2 F-RP3-1 fix (audit 2026-05-19): policy is now mutated by
+     * `reactivate_vault` to:
+     * 1. Read `cosign_required` for the interim cosign gate (the previous
+     * handler granted FULL_CAPABILITY to a fresh agent with NO cosign
+     * gate on a cosign-opted-in vault — phished-owner instant operator
+     * grant via freeze→reactivate(attacker, FULL_CAPABILITY)).
+     * 2. Bump `policy_version` after the agent push so any in-flight
+     * validate_and_authorize fails fast with PolicyVersionMismatch
+     * rather than relying on the slower vault.is_agent constraint.
+     *
+     * Policy-to-vault binding via PDA seeds — same pattern as
+     * `register_agent.rs:35-40`.
+     */
+    policy: TAccountMetas[2];
     /** Phase 7 — success audit log; entry appended after status flip. */
-    auditLogSuccess: TAccountMetas[2];
-    slotHashesSysvar: TAccountMetas[3];
+    auditLogSuccess: TAccountMetas[3];
+    slotHashesSysvar: TAccountMetas[4];
   };
   data: ReactivateVaultInstructionData;
 };
@@ -338,12 +415,12 @@ export function parseReactivateVaultInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedReactivateVaultInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 4) {
+  if (instruction.accounts.length < 5) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 4,
+        expectedAccountMetas: 5,
       },
     );
   }
@@ -358,6 +435,7 @@ export function parseReactivateVaultInstruction<
     accounts: {
       owner: getNextAccount(),
       vault: getNextAccount(),
+      policy: getNextAccount(),
       auditLogSuccess: getNextAccount(),
       slotHashesSysvar: getNextAccount(),
     },

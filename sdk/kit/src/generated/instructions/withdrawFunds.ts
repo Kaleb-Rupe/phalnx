@@ -57,6 +57,7 @@ export type WithdrawFundsInstruction<
   TProgram extends string = typeof SIGIL_PROGRAM_ADDRESS,
   TAccountOwner extends string | AccountMeta<string> = string,
   TAccountVault extends string | AccountMeta<string> = string,
+  TAccountPolicy extends string | AccountMeta<string> = string,
   TAccountMint extends string | AccountMeta<string> = string,
   TAccountVaultTokenAccount extends string | AccountMeta<string> = string,
   TAccountOwnerTokenAccount extends string | AccountMeta<string> = string,
@@ -77,6 +78,9 @@ export type WithdrawFundsInstruction<
       TAccountVault extends string
         ? WritableAccount<TAccountVault>
         : TAccountVault,
+      TAccountPolicy extends string
+        ? ReadonlyAccount<TAccountPolicy>
+        : TAccountPolicy,
       TAccountMint extends string
         ? ReadonlyAccount<TAccountMint>
         : TAccountMint,
@@ -136,6 +140,7 @@ export function getWithdrawFundsInstructionDataCodec(): FixedSizeCodec<
 export type WithdrawFundsAsyncInput<
   TAccountOwner extends string = string,
   TAccountVault extends string = string,
+  TAccountPolicy extends string = string,
   TAccountMint extends string = string,
   TAccountVaultTokenAccount extends string = string,
   TAccountOwnerTokenAccount extends string = string,
@@ -145,6 +150,16 @@ export type WithdrawFundsAsyncInput<
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
+  /**
+   * Round 2 fix (audit 2026-05-19): policy is now read by
+   * `withdraw_funds` to enforce the interim cosign gate when
+   * `policy.cosign_required == true`. `withdraw_funds` is the REAL
+   * drain primitive on cosign-opted-in vaults — a phished owner can
+   * withdraw 100% custody in a single tx without the gate. PDA
+   * seeds binding mirrors the pattern at
+   * `register_agent.rs:35-40`.
+   */
+  policy?: Address<TAccountPolicy>;
   mint: Address<TAccountMint>;
   /** Vault's PDA-controlled token account */
   vaultTokenAccount?: Address<TAccountVaultTokenAccount>;
@@ -160,6 +175,7 @@ export type WithdrawFundsAsyncInput<
 export async function getWithdrawFundsInstructionAsync<
   TAccountOwner extends string,
   TAccountVault extends string,
+  TAccountPolicy extends string,
   TAccountMint extends string,
   TAccountVaultTokenAccount extends string,
   TAccountOwnerTokenAccount extends string,
@@ -171,6 +187,7 @@ export async function getWithdrawFundsInstructionAsync<
   input: WithdrawFundsAsyncInput<
     TAccountOwner,
     TAccountVault,
+    TAccountPolicy,
     TAccountMint,
     TAccountVaultTokenAccount,
     TAccountOwnerTokenAccount,
@@ -184,6 +201,7 @@ export async function getWithdrawFundsInstructionAsync<
     TProgramAddress,
     TAccountOwner,
     TAccountVault,
+    TAccountPolicy,
     TAccountMint,
     TAccountVaultTokenAccount,
     TAccountOwnerTokenAccount,
@@ -199,6 +217,7 @@ export async function getWithdrawFundsInstructionAsync<
   const originalAccounts = {
     owner: { value: input.owner ?? null, isWritable: true },
     vault: { value: input.vault ?? null, isWritable: true },
+    policy: { value: input.policy ?? null, isWritable: false },
     mint: { value: input.mint ?? null, isWritable: false },
     vaultTokenAccount: {
       value: input.vaultTokenAccount ?? null,
@@ -224,6 +243,20 @@ export async function getWithdrawFundsInstructionAsync<
   const args = { ...input };
 
   // Resolve default values.
+  if (!accounts.policy.value) {
+    accounts.policy.value = await getProgramDerivedAddress({
+      programAddress,
+      seeds: [
+        getBytesEncoder().encode(new Uint8Array([112, 111, 108, 105, 99, 121])),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            "vault",
+            accounts.vault.value,
+          ),
+        ),
+      ],
+    });
+  }
   if (!accounts.vaultTokenAccount.value) {
     accounts.vaultTokenAccount.value = await getProgramDerivedAddress({
       programAddress:
@@ -304,6 +337,7 @@ export async function getWithdrawFundsInstructionAsync<
     accounts: [
       getAccountMeta("owner", accounts.owner),
       getAccountMeta("vault", accounts.vault),
+      getAccountMeta("policy", accounts.policy),
       getAccountMeta("mint", accounts.mint),
       getAccountMeta("vaultTokenAccount", accounts.vaultTokenAccount),
       getAccountMeta("ownerTokenAccount", accounts.ownerTokenAccount),
@@ -319,6 +353,7 @@ export async function getWithdrawFundsInstructionAsync<
     TProgramAddress,
     TAccountOwner,
     TAccountVault,
+    TAccountPolicy,
     TAccountMint,
     TAccountVaultTokenAccount,
     TAccountOwnerTokenAccount,
@@ -331,6 +366,7 @@ export async function getWithdrawFundsInstructionAsync<
 export type WithdrawFundsInput<
   TAccountOwner extends string = string,
   TAccountVault extends string = string,
+  TAccountPolicy extends string = string,
   TAccountMint extends string = string,
   TAccountVaultTokenAccount extends string = string,
   TAccountOwnerTokenAccount extends string = string,
@@ -340,6 +376,16 @@ export type WithdrawFundsInput<
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
+  /**
+   * Round 2 fix (audit 2026-05-19): policy is now read by
+   * `withdraw_funds` to enforce the interim cosign gate when
+   * `policy.cosign_required == true`. `withdraw_funds` is the REAL
+   * drain primitive on cosign-opted-in vaults — a phished owner can
+   * withdraw 100% custody in a single tx without the gate. PDA
+   * seeds binding mirrors the pattern at
+   * `register_agent.rs:35-40`.
+   */
+  policy: Address<TAccountPolicy>;
   mint: Address<TAccountMint>;
   /** Vault's PDA-controlled token account */
   vaultTokenAccount: Address<TAccountVaultTokenAccount>;
@@ -355,6 +401,7 @@ export type WithdrawFundsInput<
 export function getWithdrawFundsInstruction<
   TAccountOwner extends string,
   TAccountVault extends string,
+  TAccountPolicy extends string,
   TAccountMint extends string,
   TAccountVaultTokenAccount extends string,
   TAccountOwnerTokenAccount extends string,
@@ -366,6 +413,7 @@ export function getWithdrawFundsInstruction<
   input: WithdrawFundsInput<
     TAccountOwner,
     TAccountVault,
+    TAccountPolicy,
     TAccountMint,
     TAccountVaultTokenAccount,
     TAccountOwnerTokenAccount,
@@ -378,6 +426,7 @@ export function getWithdrawFundsInstruction<
   TProgramAddress,
   TAccountOwner,
   TAccountVault,
+  TAccountPolicy,
   TAccountMint,
   TAccountVaultTokenAccount,
   TAccountOwnerTokenAccount,
@@ -392,6 +441,7 @@ export function getWithdrawFundsInstruction<
   const originalAccounts = {
     owner: { value: input.owner ?? null, isWritable: true },
     vault: { value: input.vault ?? null, isWritable: true },
+    policy: { value: input.policy ?? null, isWritable: false },
     mint: { value: input.mint ?? null, isWritable: false },
     vaultTokenAccount: {
       value: input.vaultTokenAccount ?? null,
@@ -431,6 +481,7 @@ export function getWithdrawFundsInstruction<
     accounts: [
       getAccountMeta("owner", accounts.owner),
       getAccountMeta("vault", accounts.vault),
+      getAccountMeta("policy", accounts.policy),
       getAccountMeta("mint", accounts.mint),
       getAccountMeta("vaultTokenAccount", accounts.vaultTokenAccount),
       getAccountMeta("ownerTokenAccount", accounts.ownerTokenAccount),
@@ -446,6 +497,7 @@ export function getWithdrawFundsInstruction<
     TProgramAddress,
     TAccountOwner,
     TAccountVault,
+    TAccountPolicy,
     TAccountMint,
     TAccountVaultTokenAccount,
     TAccountOwnerTokenAccount,
@@ -463,15 +515,25 @@ export type ParsedWithdrawFundsInstruction<
   accounts: {
     owner: TAccountMetas[0];
     vault: TAccountMetas[1];
-    mint: TAccountMetas[2];
+    /**
+     * Round 2 fix (audit 2026-05-19): policy is now read by
+     * `withdraw_funds` to enforce the interim cosign gate when
+     * `policy.cosign_required == true`. `withdraw_funds` is the REAL
+     * drain primitive on cosign-opted-in vaults — a phished owner can
+     * withdraw 100% custody in a single tx without the gate. PDA
+     * seeds binding mirrors the pattern at
+     * `register_agent.rs:35-40`.
+     */
+    policy: TAccountMetas[2];
+    mint: TAccountMetas[3];
     /** Vault's PDA-controlled token account */
-    vaultTokenAccount: TAccountMetas[3];
+    vaultTokenAccount: TAccountMetas[4];
     /** Owner's token account to receive funds */
-    ownerTokenAccount: TAccountMetas[4];
+    ownerTokenAccount: TAccountMetas[5];
     /** Phase 7 — success audit log; entry appended after token transfer. */
-    auditLogSuccess: TAccountMetas[5];
-    slotHashesSysvar: TAccountMetas[6];
-    tokenProgram: TAccountMetas[7];
+    auditLogSuccess: TAccountMetas[6];
+    slotHashesSysvar: TAccountMetas[7];
+    tokenProgram: TAccountMetas[8];
   };
   data: WithdrawFundsInstructionData;
 };
@@ -484,12 +546,12 @@ export function parseWithdrawFundsInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedWithdrawFundsInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 8) {
+  if (instruction.accounts.length < 9) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 8,
+        expectedAccountMetas: 9,
       },
     );
   }
@@ -504,6 +566,7 @@ export function parseWithdrawFundsInstruction<
     accounts: {
       owner: getNextAccount(),
       vault: getNextAccount(),
+      policy: getNextAccount(),
       mint: getNextAccount(),
       vaultTokenAccount: getNextAccount(),
       ownerTokenAccount: getNextAccount(),

@@ -392,18 +392,40 @@ pub fn handler(
         // HARDENED: "The session signature must cover the SAME
         // instruction-data hash (sha256 of pending args) that the owner
         // signed."
+        //
+        // Round 2 B4 F-1 fix (audit 2026-05-19): digest now also binds
+        // the 5 G3 + G6 elevation triggers (stable_balance_floor,
+        // per_recipient_daily_cap_usd, has_protocol_caps, protocol_caps,
+        // cosign_required). See `compute_cosign_digest` header for
+        // rationale.
         let digest = compute_cosign_digest(&CosignDigestFields {
             cosign_session: &cosign_session,
             daily_spending_cap_usd,
             max_transaction_amount_usd,
             allowed_destinations: allowed_destinations.as_deref(),
             protocols: protocols.as_deref(),
+            stable_balance_floor,
+            per_recipient_daily_cap_usd,
+            has_protocol_caps,
+            protocol_caps: protocol_caps.as_deref(),
+            cosign_required,
         });
         (cosign_session, digest)
     } else {
-        // Non-elevated: zero digest + default session pubkey signals
-        // "no cosign required" at apply time. The cosign_session arg
-        // is ignored (clients can pass Pubkey::default()).
+        // Round 2 B4 F-3 fix (audit 2026-05-19): Option A — REJECT
+        // silent swallow of a caller-supplied cosign_session on the
+        // non-elevated path. Previously the non-elevated branch
+        // unconditionally wrote `(Pubkey::default(), [0u8;32])` regardless
+        // of SDK input, swallowing a caller-supplied cosign_session
+        // silently and making the cosign opt-in invisible to the
+        // pending PDA. With this gate the caller MUST pass
+        // `Pubkey::default()` when the queue is non-elevated; any
+        // other value is rejected with InvalidPermissions.
+        require_keys_eq!(
+            cosign_session,
+            Pubkey::default(),
+            SigilError::InvalidPermissions
+        );
         (Pubkey::default(), [0u8; 32])
     };
 

@@ -222,34 +222,79 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
     // Measures actual stablecoin balance delta to determine real spending.
     // Caps and spend recording use the measured reality, not declared intent.
     // Expired sessions skip: crank callers don't pass optional token accounts.
+    //
+    // Round 2 F19 fix (2026-05-19): same root cause as H-2 — Anchor 0.32.1
+    // does NOT auto-reload Account<TokenAccount> after CPI, so cached
+    // `.amount` = stale pre-CPI value. The TA-12 floor check at lines
+    // 654-689 already re-reads raw post-CPI bytes; the canonical spending
+    // path (outcome-based caps) MUST do the same or all 6 spending caps
+    // silently bypass on a compromised-CPI drain (cached snapshot makes
+    // `actual_spend` look like 0 even though the real balance dropped).
+    //
+    // SPL TokenAccount layout (identical first 72 bytes for SPL +
+    // Token-2022): 0..32 mint, 32..64 owner, 64..72 amount u64 LE.
+    // Token-2022 ConfidentialTransfer extensions blocked at validate
+    // time (Phase 1) so amount field is always ground-truth.
     let run_outcome_check = !is_expired && session_output_mint != Pubkey::default();
     if run_outcome_check {
         let is_stablecoin_input = is_stablecoin_mint(&session_authorized_token);
 
         let stablecoin_current = if is_stablecoin_input {
             // Stablecoin input (e.g., swap USDC→SOL): read vault_token_account
+            // Raw post-CPI bytes parse (F19 fix — see header note above).
             let acct = ctx
                 .accounts
                 .vault_token_account
                 .as_ref()
                 .ok_or(error!(SigilError::InvalidTokenAccount))?;
-            acct.amount
+            let info = acct.to_account_info();
+            let data = info.try_borrow_data()?;
+            require!(data.len() >= 72, SigilError::InvalidTokenAccount);
+            let mut owner_bytes = [0u8; 32];
+            owner_bytes.copy_from_slice(&data[32..64]);
+            let owner_field = Pubkey::new_from_array(owner_bytes);
+            let mut mint_bytes = [0u8; 32];
+            mint_bytes.copy_from_slice(&data[0..32]);
+            let mint_field = Pubkey::new_from_array(mint_bytes);
+            require!(
+                owner_field == vault_key,
+                SigilError::InvalidTokenAccount
+            );
+            require!(
+                mint_field == session_authorized_token,
+                SigilError::InvalidTokenAccount
+            );
+            let mut amount_bytes = [0u8; 8];
+            amount_bytes.copy_from_slice(&data[64..72]);
+            u64::from_le_bytes(amount_bytes)
         } else {
             // Non-stablecoin input (e.g., swap SOL→USDC): read output_stablecoin_account
+            // Raw post-CPI bytes parse (F19 fix — see header note above).
             let stablecoin_account = ctx
                 .accounts
                 .output_stablecoin_account
                 .as_ref()
                 .ok_or(error!(SigilError::InvalidTokenAccount))?;
+            let info = stablecoin_account.to_account_info();
+            let data = info.try_borrow_data()?;
+            require!(data.len() >= 72, SigilError::InvalidTokenAccount);
+            let mut owner_bytes = [0u8; 32];
+            owner_bytes.copy_from_slice(&data[32..64]);
+            let owner_field = Pubkey::new_from_array(owner_bytes);
+            let mut mint_bytes = [0u8; 32];
+            mint_bytes.copy_from_slice(&data[0..32]);
+            let mint_field = Pubkey::new_from_array(mint_bytes);
             require!(
-                stablecoin_account.owner == vault_key,
+                owner_field == vault_key,
                 SigilError::InvalidTokenAccount
             );
             require!(
-                stablecoin_account.mint == session_output_mint,
+                mint_field == session_output_mint,
                 SigilError::InvalidTokenAccount
             );
-            stablecoin_account.amount
+            let mut amount_bytes = [0u8; 8];
+            amount_bytes.copy_from_slice(&data[64..72]);
+            u64::from_le_bytes(amount_bytes)
         };
 
         // P&L: set balance_after once — covers both branches (M-5 fix)

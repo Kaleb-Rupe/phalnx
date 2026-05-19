@@ -2587,6 +2587,7 @@ describe("surfpool-integration", function () {
           FULL_CAPABILITY,
           new BN(0),
           new BN(0), // cooldown_seconds (TA-06 Phase 3 — disabled)
+          PublicKey.default, // cosign_session (F-RP3-2: default = no cosign)
         )
         .accounts({
           owner: env.payer.publicKey,

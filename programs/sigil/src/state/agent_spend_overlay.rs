@@ -180,7 +180,11 @@ impl AgentSpendOverlay {
     /// Otherwise, only buckets from (last_write_epoch+1)..=current_epoch are zeroed (wrapping).
     fn zero_gap_buckets(&mut self, slot_idx: usize, current_epoch: i64) {
         let entry = &mut self.entries[slot_idx];
-        let gap = current_epoch - entry.last_write_epoch;
+        // saturating_sub fail-closes on clock skew (would otherwise panic
+        // under release-mode overflow-checks=true). On skew the saturated
+        // result is 0 → `gap <= 0` short-circuit below preserves the
+        // existing "no zeroing" behaviour.
+        let gap = current_epoch.saturating_sub(entry.last_write_epoch);
 
         if gap <= 0 {
             // Same epoch or clock went backward — no zeroing needed
@@ -215,8 +219,10 @@ impl AgentSpendOverlay {
         let current_epoch = clock.unix_timestamp / OVERLAY_EPOCH_DURATION;
         let entry = &self.entries[slot_idx];
 
-        // If last write was more than 24 epochs ago, all data is expired
-        if current_epoch - entry.last_write_epoch > OVERLAY_NUM_EPOCHS as i64 {
+        // If last write was more than 24 epochs ago, all data is expired.
+        // saturating_sub fail-closes on clock skew (would otherwise panic
+        // under release-mode overflow-checks=true).
+        if current_epoch.saturating_sub(entry.last_write_epoch) > OVERLAY_NUM_EPOCHS as i64 {
             return 0;
         }
 
@@ -225,9 +231,14 @@ impl AgentSpendOverlay {
             .saturating_sub(OVERLAY_ROLLING_WINDOW_SECONDS);
         let mut total: u128 = 0;
 
-        // Iterate backward from last_write_epoch (most recent data)
+        // Iterate backward from last_write_epoch (most recent data).
+        // saturating_sub fail-closes on overflow (would otherwise panic
+        // under release-mode overflow-checks=true). When k > last_write_epoch
+        // the result saturates to 0; the bucket_end<=window_start_ts break
+        // below catches the next iteration. The `epoch_for_k < 0` guard
+        // remains as defense-in-depth.
         for k in 0..(OVERLAY_NUM_EPOCHS as i64) {
-            let epoch_for_k = entry.last_write_epoch - k;
+            let epoch_for_k = entry.last_write_epoch.saturating_sub(k);
             if epoch_for_k < 0 {
                 break;
             }
@@ -255,8 +266,12 @@ impl AgentSpendOverlay {
                 // Fully within window
                 total = total.saturating_add(contribution as u128);
             } else {
-                // Boundary bucket — proportional scaling
-                let overlap = (bucket_end - window_start_ts) as u128;
+                // Boundary bucket — proportional scaling.
+                // saturating_sub fail-closes on clock skew (would otherwise
+                // panic under release-mode overflow-checks=true). The
+                // `bucket_end <= window_start_ts` guard above ensures
+                // bucket_end > window_start_ts in legitimate flows.
+                let overlap = bucket_end.saturating_sub(window_start_ts) as u128;
                 let scaled = (contribution as u128)
                     .saturating_mul(overlap)
                     .checked_div(OVERLAY_EPOCH_DURATION as u128)

@@ -118,12 +118,20 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
     let no_cosign = pending.cosign_digest == zero_digest
         && pending.cosign_session == Pubkey::default();
     if !no_cosign {
+        // Round 2 B4 F-1 fix (audit 2026-05-19): re-bind digest now
+        // includes 5 new elevation triggers. See compute_cosign_digest
+        // header for rationale.
         let recomputed_cosign = compute_cosign_digest(&CosignDigestFields {
             cosign_session: &pending.cosign_session,
             daily_spending_cap_usd: pending.daily_spending_cap_usd,
             max_transaction_amount_usd: pending.max_transaction_amount_usd,
             allowed_destinations: pending.allowed_destinations.as_deref(),
             protocols: pending.protocols.as_deref(),
+            stable_balance_floor: pending.stable_balance_floor,
+            per_recipient_daily_cap_usd: pending.per_recipient_daily_cap_usd,
+            has_protocol_caps: pending.has_protocol_caps,
+            protocol_caps: pending.protocol_caps.as_deref(),
+            cosign_required: pending.cosign_required,
         });
         require!(
             recomputed_cosign == pending.cosign_digest,

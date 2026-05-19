@@ -4,6 +4,9 @@ use anchor_lang::prelude::*;
 use crate::errors::SigilError;
 use crate::events::AgentPermissionsChangeApplied;
 use crate::state::*;
+use crate::utils::cosign_digest::{
+    compute_agent_perms_cosign_digest, AgentPermsCosignDigestFields,
+};
 
 #[derive(Accounts)]
 pub struct ApplyAgentPermissionsUpdate<'info> {
@@ -72,6 +75,10 @@ pub fn handler(ctx: Context<ApplyAgentPermissionsUpdate>) -> Result<()> {
     let spending_limit_usd = pending.spending_limit_usd;
     // TA-06 (Phase 3): pull pending cooldown_seconds for slot apply below.
     let pending_cooldown_seconds = pending.cooldown_seconds;
+    // Round 2 F-RP3-2 fix (audit 2026-05-19): pull persisted cosign
+    // binding for the apply-time digest re-validation below.
+    let pending_cosign_session = pending.cosign_session;
+    let pending_cosign_digest = pending.cosign_digest;
 
     // Phase 2 TA-04 (Audit #2 F-4): defense in depth. The pending PDA was
     // validated at queue time, but a rogue program with the same account
@@ -82,6 +89,32 @@ pub fn handler(ctx: Context<ApplyAgentPermissionsUpdate>) -> Result<()> {
         new_capability <= FULL_CAPABILITY,
         SigilError::InvalidCapability
     );
+
+    // Round 2 F-RP3-2 fix (audit 2026-05-19): re-bind digest check.
+    //
+    // When the queue persisted a cosign_session != Pubkey::default(), it
+    // was bound to a specific (cosign_session, agent, new_capability,
+    // spending_limit_usd, cooldown_seconds) tuple. Any tamper of any
+    // field between queue and apply (e.g. a future discriminator-collision
+    // attack on the pending PDA, or a stale slot replay) would produce a
+    // digest mismatch and a hard reject — identical to the apply-pending-
+    // policy TA-09 binding.
+    //
+    // `cosign_session == Pubkey::default()` = non-elevated queue (no
+    // cosign was required) — skip the re-bind check.
+    if pending_cosign_session != Pubkey::default() {
+        let recomputed = compute_agent_perms_cosign_digest(&AgentPermsCosignDigestFields {
+            cosign_session: &pending_cosign_session,
+            agent: &agent,
+            new_capability,
+            spending_limit_usd,
+            cooldown_seconds: pending_cooldown_seconds,
+        });
+        require!(
+            recomputed == pending_cosign_digest,
+            SigilError::ErrCosignRequired
+        );
+    }
 
     // Find agent entry and update capability + spending limit
     let vault = &mut ctx.accounts.vault;

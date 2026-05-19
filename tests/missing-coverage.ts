@@ -455,6 +455,7 @@ describe("missing-coverage (DC audit gap-fill 2026-05-19)", () => {
         FULL_CAPABILITY,
         new BN(100_000_000), // new spending_limit_usd
         new BN(0), // cooldown_seconds
+        PublicKey.default, // cosign_session (F-RP3-2: default = no cosign)
       )
       .accounts({
         owner: owner.publicKey,

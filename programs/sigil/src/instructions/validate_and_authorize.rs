@@ -595,11 +595,24 @@ pub fn handler(
             ],
             &crate::ID,
         );
+        // Phase 7 audit-log PDAs (post-audit-2026-05-19 SA4 H1 fix). Both
+        // are LIVE Anchor `AccountLoader` accounts on `finalize_session`
+        // (see finalize_session.rs:91-107). Foreign instructions attempting
+        // to mark either writable must be rejected by TA-11 in addition to
+        // Solana's own owner-check at runtime.
+        let (audit_success_key, _) =
+            SP::find_program_address(&[b"audit_success", vault_key.as_ref()], &crate::ID);
+        let (audit_rejected_key, _) =
+            SP::find_program_address(&[b"audit_rejected", vault_key.as_ref()], &crate::ID);
 
         // Cheap pubkey-equality membership test: linear scan of a small
-        // (13-entry) array. With 13 entries × 32-byte compare, this is
-        // <200 CU per meta lookup.
-        let protected: [Pubkey; 13] = [
+        // (14-entry) array. With 14 entries × 32-byte compare, this is
+        // <220 CU per meta lookup.
+        //
+        // Forward-looking families `cosign` / `recipient` remain unfilled
+        // (declared in `PROTECTED_SEED_PREFIXES` but not yet live as PDAs).
+        // When they ship, add their derivations here and grow the array.
+        let protected: [Pubkey; 14] = [
             vault_key,
             policy_key,
             tracker_key,
@@ -612,13 +625,8 @@ pub fn handler(
             post_assertions_key,
             pending_owner_key,
             pending_agent_perms_key,
-            // Reserved slot for forward-looking families (audit_success /
-            // audit_rejected / cosign / recipient) — Phase 7+ will populate.
-            // Using Pubkey::default() as a sentinel — guaranteed never to
-            // match any real account meta (system_program is at a
-            // structurally-special pubkey but Pubkey::default() can never
-            // be a derived PDA per Solana's ed25519-curve check).
-            Pubkey::default(),
+            audit_success_key,
+            audit_rejected_key,
         ];
 
         let mut ta11_iter: usize = 0;

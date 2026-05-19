@@ -252,8 +252,10 @@ impl SpendTracker {
         // Safe: EPOCH_DURATION is a non-zero constant (600)
         let current_epoch = clock.unix_timestamp.checked_div(EPOCH_DURATION).unwrap();
 
-        // Early exit: if no writes in 144+ epochs, all data is expired
-        if current_epoch - self.last_write_epoch > NUM_EPOCHS as i64 {
+        // Early exit: if no writes in 144+ epochs, all data is expired.
+        // saturating_sub fail-closes on clock skew (last_write_epoch > current_epoch
+        // would otherwise panic under release-mode overflow-checks=true).
+        if current_epoch.saturating_sub(self.last_write_epoch) > NUM_EPOCHS as i64 {
             return 0;
         }
 
@@ -313,8 +315,10 @@ impl SpendTracker {
 
         for counter in &self.protocol_counters {
             if counter.protocol == protocol_bytes {
-                // Check if window is still valid (< 144 epochs = 24h)
-                if current_epoch - counter.window_start < NUM_EPOCHS as i64 {
+                // Check if window is still valid (< 144 epochs = 24h).
+                // saturating_sub fail-closes on clock skew (would otherwise panic
+                // under release-mode overflow-checks=true).
+                if current_epoch.saturating_sub(counter.window_start) < NUM_EPOCHS as i64 {
                     return counter.window_spend;
                 }
                 return 0; // Window expired
@@ -344,8 +348,10 @@ impl SpendTracker {
         let mut empty_slot: Option<usize> = None;
         for i in 0..self.protocol_counters.len() {
             if self.protocol_counters[i].protocol == protocol_bytes {
-                // Found existing counter
-                if current_epoch - self.protocol_counters[i].window_start >= NUM_EPOCHS as i64 {
+                // Found existing counter.
+                // saturating_sub fail-closes on clock skew (would otherwise panic
+                // under release-mode overflow-checks=true).
+                if current_epoch.saturating_sub(self.protocol_counters[i].window_start) >= NUM_EPOCHS as i64 {
                     // Window expired — reset
                     self.protocol_counters[i].window_start = current_epoch;
                     self.protocol_counters[i].window_spend = usd_amount;

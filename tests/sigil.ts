@@ -5491,6 +5491,7 @@ describe("sigil", () => {
           FULL_CAPABILITY,
           new BN(0),
           new BN(0), // cooldown_seconds (TA-06 Phase 3 — disabled)
+          PublicKey.default, // cosign_session (F-RP3-2: default = no cosign)
         )
         .accounts({
           owner: owner.publicKey,
@@ -6631,17 +6632,24 @@ describe("sigil", () => {
     // global headroom remaining ($1000 - $500 - $499 = $1).
     it("scenario 3: has_protocol_caps=false (legacy mode) — only global cap enforced", async () => {
       // Disable per-protocol caps via queue+apply.
-      // G3a audit fix (§RP-2 2026-05-18 HIGH-1): has_protocol_caps: false
-      // disables the master switch → ELEVATED weakening, TA-09 cosign required.
+      // G3a audit fix (§RP-2 2026-05-18 HIGH-1) NOTE: weakens_protocol_caps is
+      // one of the 7 elevation triggers, BUT the gate only fires when
+      // `live_cosign_required == true`. ta13Vault is initialized with
+      // `cosignRequired: false` (the G6 default), so the 7-trigger gate
+      // short-circuits and this mutation is NON-elevated. B4 F-3 (audit
+      // 2026-05-19): non-elevated path requires `cosign_session = Pubkey::default`
+      // — silent swallow of a caller-supplied pubkey is REJECTED with
+      // InvalidPermissions. Pass `PublicKey.default` and drop the cosigner
+      // wiring.
       await program.methods
         .queuePolicyUpdate(
           null, null, null, null, null, null, null, null, null,
-          false, // has_protocol_caps = false (master-switch disable → elevated)
+          false, // has_protocol_caps = false (master-switch disable)
           null, null, null,
           null, // stable_balance_floor (TA-12 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through)
-          ta13Cosigner.publicKey, // cosign_session (TA-09 — ELEVATED, weakens_protocol_caps)
+          PublicKey.default, // cosign_session (B4 F-3: non-elevated → must be default)
           await fetchAndComputeQueueDigest(program, ta13Policy, ta13Vault, {}),
         )
         .accounts({
@@ -6651,10 +6659,7 @@ describe("sigil", () => {
           pendingPolicy: ta13PendingPda,
           systemProgram: SystemProgram.programId,
         } as any)
-        .remainingAccounts([
-          { pubkey: ta13Cosigner.publicKey, isSigner: true, isWritable: false },
-        ])
-        .signers([ta13Owner, ta13Cosigner])
+        .signers([ta13Owner])
         .rpc();
       advanceTime(svm, 1801);
       await program.methods
@@ -6733,9 +6738,12 @@ describe("sigil", () => {
     // from the allowlist (which `is_protocol_allowed` rejects at validate).
     it("scenario 5: cap=$0 for a specific protocol → unlimited (documented behavior)", async () => {
       // Update Jupiter cap to $0 (unlimited per documented semantics).
-      // G3a audit fix (§RP-2 2026-05-18 HIGH-1): live Jupiter cap = 500_000_000;
-      // proposing 0 disables enforcement for Jupiter → ELEVATED weakening,
-      // TA-09 cosign required.
+      // G3a audit fix (§RP-2 2026-05-18 HIGH-1) NOTE: weakens_protocol_caps is
+      // one of the 7 elevation triggers, BUT the gate only fires when
+      // `live_cosign_required == true`. ta13Vault has `cosignRequired: false`
+      // (G6 default), so this mutation is NON-elevated. B4 F-3 (audit
+      // 2026-05-19): non-elevated path requires `cosign_session = Pubkey::default`
+      // — pass `PublicKey.default` and drop cosigner wiring.
       await program.methods
         .queuePolicyUpdate(
           null, null, null, null, null, null, null, null, null,
@@ -6744,7 +6752,7 @@ describe("sigil", () => {
           null, null,
           null, null,
           null, // cosign_required (G6 audit 2026-05-18 — pass-through)
-          ta13Cosigner.publicKey, // cosign_session (TA-09 — ELEVATED, weakens_protocol_caps)
+          PublicKey.default, // cosign_session (B4 F-3: non-elevated → must be default)
           await fetchAndComputeQueueDigest(program, ta13Policy, ta13Vault, {}),
         )
         .accounts({
@@ -6754,10 +6762,7 @@ describe("sigil", () => {
           pendingPolicy: ta13PendingPda,
           systemProgram: SystemProgram.programId,
         } as any)
-        .remainingAccounts([
-          { pubkey: ta13Cosigner.publicKey, isSigner: true, isWritable: false },
-        ])
-        .signers([ta13Owner, ta13Cosigner])
+        .signers([ta13Owner])
         .rpc();
       advanceTime(svm, 1801);
       await program.methods

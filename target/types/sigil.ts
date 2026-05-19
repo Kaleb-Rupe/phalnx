@@ -3367,7 +3367,12 @@ export type Sigil = {
         "Per-agent PDA allows concurrent pending updates for different agents.",
         "TA-06 (Phase 3): adds `cooldown_seconds` — per-agent cooldown stored",
         "on `AgentSpendOverlay.cooldown_seconds[slot]`. 0 disables. Bound at",
-        "queue time and applied at apply time onto the agent's overlay slot."
+        "queue time and applied at apply time onto the agent's overlay slot.",
+        "",
+        "Round 2 F-RP3-2 fix (audit 2026-05-19): adds `cosign_session` —",
+        "on cosign-opted-in vaults, raising capability / spending_limit OR",
+        "setting a non-zero cooldown is an \"elevated mutation\" and MUST be",
+        "cosigned. Non-elevated callers pass `Pubkey::default()`."
       ],
       "discriminator": [
         182,
@@ -3500,6 +3505,10 @@ export type Sigil = {
         {
           "name": "cooldownSeconds",
           "type": "u64"
+        },
+        {
+          "name": "cosignSession",
+          "type": "pubkey"
         }
       ]
     },
@@ -4102,6 +4111,43 @@ export type Sigil = {
           }
         },
         {
+          "name": "policy",
+          "docs": [
+            "Round 2 F-RP3-1 fix (audit 2026-05-19): policy is now mutated by",
+            "`reactivate_vault` to:",
+            "1. Read `cosign_required` for the interim cosign gate (the previous",
+            "handler granted FULL_CAPABILITY to a fresh agent with NO cosign",
+            "gate on a cosign-opted-in vault — phished-owner instant operator",
+            "grant via freeze→reactivate(attacker, FULL_CAPABILITY)).",
+            "2. Bump `policy_version` after the agent push so any in-flight",
+            "validate_and_authorize fails fast with PolicyVersionMismatch",
+            "rather than relying on the slower vault.is_agent constraint.",
+            "",
+            "Policy-to-vault binding via PDA seeds — same pattern as",
+            "`register_agent.rs:35-40`."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
           "name": "auditLogSuccess",
           "docs": [
             "Phase 7 — success audit log; entry appended after status flip."
@@ -4561,6 +4607,29 @@ export type Sigil = {
         {
           "name": "vault",
           "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "vault.vault_id",
+                "account": "agentVault"
+              }
+            ]
+          },
           "relations": [
             "policy"
           ]
@@ -5000,6 +5069,37 @@ export type Sigil = {
                 "kind": "account",
                 "path": "vault.vault_id",
                 "account": "agentVault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "policy",
+          "docs": [
+            "Round 2 fix (audit 2026-05-19): policy is now read by",
+            "`withdraw_funds` to enforce the interim cosign gate when",
+            "`policy.cosign_required == true`. `withdraw_funds` is the REAL",
+            "drain primitive on cosign-opted-in vaults — a phished owner can",
+            "withdraw 100% custody in a single tx without the gate. PDA",
+            "seeds binding mirrors the pattern at",
+            "`register_agent.rs:35-40`."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
               }
             ]
           }
@@ -6246,8 +6346,8 @@ export type Sigil = {
     },
     {
       "code": 6064,
-      "name": "constraintsVaultMismatch",
-      "msg": "Zero-copy constraints account has wrong vault"
+      "name": "zeroCopyVaultMismatch",
+      "msg": "Zero-copy account vault key mismatch (defense-in-depth)"
     },
     {
       "code": 6065,
@@ -8412,6 +8512,43 @@ export type Sigil = {
               "APPENDED at end per F-14 APPEND-ONLY rule for Borsh stability."
             ],
             "type": "u64"
+          },
+          {
+            "name": "cosignDigest",
+            "docs": [
+              "Round 2 F-RP3-2 fix (audit 2026-05-19): cosign-binding digest for",
+              "elevated mutations. When `queue_agent_permissions_update` detects",
+              "that the request RAISES an agent's capability, RAISES the spending",
+              "limit, or SHORTENS the cooldown — AND `policy.cosign_required ==",
+              "true` — the owner MUST supply a co-signing session in the accounts.",
+              "The queue handler computes a sha256 over the canonical pending args",
+              "and stores it here; `apply_agent_permissions_update` re-asserts the",
+              "digest equality.",
+              "",
+              "`[0u8; 32]` = no cosign required (non-elevated mutation OR cosign",
+              "not opted in on this vault). Any non-zero digest indicates this",
+              "pending was bound to a specific cosign and the apply handler MUST",
+              "re-compute and equal-check.",
+              "",
+              "APPENDED at end per F-14 APPEND-ONLY rule for Borsh stability."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "cosignSession",
+            "docs": [
+              "Round 2 F-RP3-2 fix (audit 2026-05-19): pubkey of the session that",
+              "co-signed this queue. Recorded for audit. `Pubkey::default()` =",
+              "no cosign (non-elevated OR not opted in).",
+              "",
+              "APPENDED at end per F-14 APPEND-ONLY rule for Borsh stability."
+            ],
+            "type": "pubkey"
           }
         ]
       }
@@ -10176,3 +10313,4 @@ export type Sigil = {
     }
   ]
 };
+
