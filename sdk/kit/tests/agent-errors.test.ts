@@ -17,16 +17,19 @@ describe("agent-errors", () => {
   // ─── On-chain error map completeness ──────────────────────────────────────
 
   describe("ON_CHAIN_ERROR_MAP completeness", () => {
-    it("maps all 97 error codes (6000-6096) post-Phase-5", () => {
+    it("maps all 103 error codes (6000-6102) post-Phase-6", () => {
       const codes = getAllOnChainErrorCodes();
-      // 6000-6096 inclusive = 97 codes (Phase 5 adds 6094/6095/6096).
-      expect(codes).to.have.lengthOf(97);
+      // 6000-6102 inclusive = 103 codes. Phase 5 added 6094/6095/6096.
+      // Phase 6 added 6097-6101 (R-1/R-2/R-3/R-4 + MintDeltaCapMisconfigured).
+      // Audit 2026-05-19 H-1 added 6102 IxMetaCountExceeded.
+      // §RP-2 H-NEW-2 (audit) added SDK mappings for 6097-6102.
+      expect(codes).to.have.lengthOf(103);
       expect(codes[0]).to.equal(6000);
-      expect(codes[codes.length - 1]).to.equal(6096);
+      expect(codes[codes.length - 1]).to.equal(6102);
     });
 
-    it("every code from 6000-6096 is present with no gaps post-Phase-5", () => {
-      for (let code = 6000; code <= 6096; code++) {
+    it("every code from 6000-6102 is present with no gaps post-Phase-6", () => {
+      for (let code = 6000; code <= 6102; code++) {
         const entry = ON_CHAIN_ERROR_MAP[code];
         expect(entry, `Missing error code ${code}`).to.exist;
         expect(entry.name).to.be.a("string").and.not.be.empty;

@@ -37,9 +37,9 @@ import {
  * Phase B3 fields (cross_field_offset_b, cross_field_multiplier_bps,
  * cross_field_flags) DELETED in Phase 1 Option A demolition.
  *
- * Phase 6 appended `auxValue: [u8; 8]` + `auxByte: u8` for the four new
+ * Phase 6 appended `aux_value: [u8; 8]` + `aux_byte: u8` for the four new
  * variants (R-1/R-2/R-3/R-4). Modes 0..3 must set both to zero; the
- * on-chain validator enforces it.
+ * validator enforces it.
  */
 export type PostAssertionEntry = {
   targetAccount: Address;

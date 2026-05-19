@@ -43,21 +43,36 @@ import {
 export type PostAssertionEntryZC = {
   /**
    * The account to read after execution (passed via remaining_accounts).
-   * Typically a Position PDA, User account, or similar protocol state.
-   * Phase 6 R-1 MintDeltaCap with scope=1: token_account to measure.
-   * Phase 6 R-1 with scope=0: UNUSED — ATAs derived on-chain.
+   *
+   * Per-mode interpretation:
+   * - modes 0..3 (Absolute / MaxDecrease / MaxIncrease / NoChange):
+   * protocol state account (Position PDA, User account, etc).
+   * - mode 4 MintDeltaCap with `aux_byte=1` (scope=1): the single token
+   * account whose balance we measure. With `aux_byte=0` (scope=0):
+   * UNUSED — ATAs are derived on-chain from `(vault, expected_value)`.
    */
   targetAccount: ReadonlyUint8Array;
-  /** Byte offset in the target account's data to read (modes 0..3). */
+  /**
+   * Byte offset in the target account's data to read (modes 0..3).
+   * Phase 6 modes (4) ignore this field — balances are read at the
+   * canonical SPL/Token-2022 layout offset (64..72).
+   */
   offset: number;
-  /** Length of the value to compare (1-32 bytes) for modes 0..3. */
+  /**
+   * Length of the value to compare (1-32 bytes) for modes 0..3.
+   * Phase 6 mode 4 ignores this field.
+   */
   valueLen: number;
-  /** Comparison operator (reuses ConstraintOperator: Eq, Ne, Gte, Lte, etc.). Modes 1..4 ignore. */
+  /**
+   * Comparison operator (reuses ConstraintOperator: Eq, Ne, Gte, Lte, etc.)
+   * Modes 1..4 ignore this field.
+   */
   operator: number;
   /**
    * Per-mode payload:
-   * - modes 0..3: expected value for comparison
-   * - mode 4 MintDeltaCap: bytes 0..32 = mint pubkey
+   * - modes 0..3: expected value for comparison (same max as DataConstraint).
+   * - mode 4 MintDeltaCap: bytes 0..32 = mint pubkey identifying the
+   * target token. Remaining bytes are unused.
    */
   expectedValue: ReadonlyUint8Array;
   /**
@@ -69,19 +84,31 @@ export type PostAssertionEntryZC = {
    * 2 = MaxIncrease: check (current - snapshot) ≤ expected_value (Phase B2)
    * NOTE: If value decreases, check ALWAYS PASSES.
    * 3 = NoChange: check current == snapshot — byte-for-byte equality (Phase B2)
-   * 4 = MintDeltaCap (Phase 6 R-1): vault-wide or per-account drain ceiling.
+   * 4 = MintDeltaCap (Phase 6 R-1): vault-wide or per-account drain ceiling
    */
   assertionMode: number;
   /**
-   * Phase 6: u64 LE auxiliary value.
-   * - mode 4 MintDeltaCap: max_net_decrease.
-   * - modes 0..3: UNUSED, must be zero.
+   * Phase 6 generic auxiliary value — per-mode interpretation:
+   * - mode 4 MintDeltaCap: u64 LE = max_net_decrease (units of the mint's
+   * smallest denomination).
+   * - modes 0..3: UNUSED, must be zero (validate_entries enforces).
+   * Stored as raw bytes to keep the struct alignment at 2 (avoids a u64
+   * alignment bump that would force the entry to a multiple of 8 and
+   * regress capacity math).
    */
   auxValue: ReadonlyUint8Array;
   /**
-   * Phase 6: u8 auxiliary byte (absorbed prior _padding slot — same byte position).
-   * - mode 4 MintDeltaCap: scope (0=vault-wide, 1=single account).
-   * - modes 0..3: UNUSED, must be zero.
+   * Phase 6 generic auxiliary byte — per-mode interpretation:
+   * - mode 4 MintDeltaCap: scope (0 = vault-wide ATA enumeration,
+   * 1 = single account in `target_account`).
+   * - modes 0..3: UNUSED, must be zero (validate_entries enforces).
+   *
+   * The trailing `aux_byte` brings the entry to an even size (78) which
+   * satisfies the struct's u16 alignment without a separate `_padding`
+   * field — the previous `_padding: u8` from Phase 1 demolition was
+   * absorbed here. Off-chain decoders that previously read `_padding`
+   * now read `aux_byte`; the byte position is the same so wire
+   * compatibility holds with the previous version's zero value.
    */
   auxByte: number;
 };

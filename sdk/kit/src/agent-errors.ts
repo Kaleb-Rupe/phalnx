@@ -1568,6 +1568,158 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       },
     ],
   },
+
+  // ─── Phase 6: Maestro borrows R-1/R-2/R-3/R-4 (TA-13 absorption) ───
+  // §RP-2 H-NEW-2: added Phase 6 mappings — predicate already routes
+  // codes 6097-6101 as "Sigil error" via the >= 6000 && <= 6102 bound
+  // but ON_CHAIN_ERROR_MAP had no entries, so users got "Unknown
+  // on-chain error code N" with category FATAL + empty recovery.
+  // Source of truth: programs/sigil/src/errors.rs:484-566 + IDL.
+
+  /** 6097 — R-1 MintDeltaCap (attack signal): combined balance of
+   * vault-owned ATAs for the configured mint dropped by more than
+   * `max_net_decrease` between `validate_and_authorize` (pre-snap sum)
+   * and `finalize_session` (post sum). Two enforcement shapes:
+   * scope=0 (vault-wide multi-ATA sum) and scope=1 (single target_account).
+   * Pairs with R-2 (6099) per F-18 to close close-and-recreate evasion.
+   */
+  6097: {
+    name: "ErrMintDeltaCapExceeded",
+    message:
+      "Mint delta cap exceeded — net outflow of [mint] from vault exceeded policy.mint_delta_cap[mint] within the post-execution check window.",
+    category: "POLICY_VIOLATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "verify_post_assertions",
+        description:
+          "Verify the policy.post_assertions configuration for the affected mint. Reduce transaction outflow or raise the per-mint cap via queue_policy_update (timelock-gated).",
+      },
+    ],
+  },
+
+  /** 6098 — R-1 MintDeltaCap (caller-bug signal): entry's accounts
+   * couldn't be resolved at validate time. Common shapes:
+   *   - scope=1 and target_account not present in remaining_accounts
+   *   - target_account's mint field doesn't match the configured mint
+   *   - target_account isn't owned by the vault
+   *   - scope=0 with no derived ATAs supplied in remaining_accounts
+   * Distinct from ErrMintDeltaCapExceeded because this is a
+   * configuration or caller-side bug (recoverable by fixing the caller),
+   * not an attack signal (which fires 6097 at finalize).
+   */
+  6098: {
+    name: "MintDeltaCapMisconfigured",
+    message:
+      "Mint delta cap entry misconfigured — invalid scope value, zero max_net_decrease, or required derived ATA missing from remaining_accounts.",
+    category: "FATAL",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "inspect_entry_config",
+        description:
+          "Inspect the failed entry's scope value (0 or 1 only), max_net_decrease (must be non-zero for scope=0), and remaining_accounts (must include every derived ATA for scope=0).",
+      },
+    ],
+  },
+
+  /** 6099 — R-2 AtaAuthorityPin (attack signal): a vault-owned token
+   * account had its authority changed during the sandwich, or was
+   * closed and not reinstated as a vault-owned account before finalize.
+   * Detected by reading bytes 32..64 of the post-CPI token account data
+   * and comparing to `vault.key().to_bytes()`. Also fires when the
+   * account is closed (data length < 64) or its owner program is no
+   * longer SPL Token or Token-2022. Pairs with 6097 to close F-18
+   * close+drain+recreate.
+   */
+  6099: {
+    name: "ErrAtaAuthorityChanged",
+    message:
+      "Vault ATA authority changed mid-transaction — a CPI altered the SPL TokenAccount owner field, defeating the vault's custody.",
+    category: "POLICY_VIOLATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "audit_ix_for_set_authority",
+        description:
+          "Verify the DeFi instruction in the bundle does not call setAuthority on any vault-owned ATA. Refuse the bundle and audit the agent's request.",
+      },
+    ],
+  },
+
+  /** 6100 — R-3 OutputBalanceFloor (attack signal): a token account
+   * that was supposed to receive at least `min_increase` units of its
+   * mint during the sandwich did not. Snapshot at
+   * `validate_and_authorize` against `target_account.amount` (u64 LE at
+   * bytes 64..72), finalize requires (post - pre) >= aux_value.
+   * Counter to "dust-fill" attacks where the agent obtains delegation
+   * authority then runs a swap that returns 1 lamport.
+   */
+  6100: {
+    name: "ErrOutputBelowFloor",
+    message:
+      "Output balance floor violated — the vault's target ATA gained less than policy.min_increase_usd after the post-execution check.",
+    category: "POLICY_VIOLATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "audit_output_value",
+        description:
+          "Verify the DeFi instruction's output. Common causes: dust-fill swap, partial fill, wrong destination meta. Audit the agent's slippage settings.",
+      },
+    ],
+  },
+
+  /** 6101 — R-4 DeclarationConsistency (attack signal): the
+   * (recipient, mint) pair declared on a post-assertion entry doesn't
+   * match the SPL token account at the configured CPI account-meta
+   * index. Closes the "declaration dishonesty" attack: agent declares
+   * "recipient: alice" to satisfy a destination-allowlist check, then
+   * inserts attacker_ata into the CPI metas. The recipient who would
+   * receive funds (attacker_ata.owner) ≠ alice, so R-4 rejects.
+   */
+  6101: {
+    name: "ErrDeclarationInconsistent",
+    message:
+      "Declaration consistency check failed — the CPI account meta at the declared index is not a token account matching the agent's declared recipient + mint.",
+    category: "POLICY_VIOLATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "verify_declaration_matches_ix",
+        description:
+          "Verify the agent's authorized_token + output_mint declaration matches the actual SPL TokenAccount at the declared meta index in the DeFi instruction. Reject the bundle if the agent supplied inconsistent declaration.",
+      },
+    ],
+  },
+
+  // ─── Audit 2026-05-19 (P1 HIGH fixes) ───
+  // §RP-2 H-NEW-2: H-1 hard-reject mapping for the destination-check
+  // meta budget. Previously the helper silently take()-truncated at 16;
+  // 1f569eb made it a hard-reject (POLICY_VIOLATION).
+
+  /** 6102 — H-1 hard-reject (audit 2026-05-19): the foreign DeFi
+   * instruction passed more account metas than
+   * `MAX_DESTINATION_CHECK_METAS_PER_IX` (16). Previously the helper
+   * silently `take()`-truncated at the bound, leaving slots 17+
+   * uninspected; an attacker hiding a hostile destination at slot 17+
+   * would bypass the allowlist check. Hard-reject closes the
+   * silent-drop. Expansion to 32 metas is v1.1 backlog (~+4K CU).
+   */
+  6102: {
+    name: "IxMetaCountExceeded",
+    message:
+      "DeFi instruction exceeds destination check meta budget (max 16 metas). Common cause: Jupiter v6 max-step routes with 22-25 metas.",
+    category: "POLICY_VIOLATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "reshape_ix",
+        description:
+          "Split the route into multiple smaller transactions, or use a non-max-step Jupiter route. v1.1 will expand the budget to 32 metas.",
+      },
+    ],
+  },
 };
 
 // ---------------------------------------------------------------------------

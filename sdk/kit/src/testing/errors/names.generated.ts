@@ -14,7 +14,7 @@
  */
 
 // ────────────────────────────────────────────────────────────────
-// Sigil program errors (6000-6096)
+// Sigil program errors (6000-6102)
 // ────────────────────────────────────────────────────────────────
 
 export const SIGIL_ERRORS = {
@@ -115,6 +115,12 @@ export const SIGIL_ERRORS = {
   ErrStableFloorViolation: 6094,
   ErrDailyCapExceeded: 6095,
   ErrRecipientCapExceeded: 6096,
+  ErrMintDeltaCapExceeded: 6097,
+  MintDeltaCapMisconfigured: 6098,
+  ErrAtaAuthorityChanged: 6099,
+  ErrOutputBelowFloor: 6100,
+  ErrDeclarationInconsistent: 6101,
+  IxMetaCountExceeded: 6102,
 } as const;
 
 /**

@@ -141,6 +141,14 @@ export const SIGIL_ERRORS = {
   ErrStableFloorViolation: 6094,
   ErrDailyCapExceeded: 6095,
   ErrRecipientCapExceeded: 6096,
+  // Phase 6 Maestro borrows R-1/R-2/R-3/R-4
+  ErrMintDeltaCapExceeded: 6097,
+  MintDeltaCapMisconfigured: 6098,
+  ErrAtaAuthorityChanged: 6099,
+  ErrOutputBelowFloor: 6100,
+  ErrDeclarationInconsistent: 6101,
+  // Audit 2026-05-19 P1 HIGH fixes (H-1 hard-reject)
+  IxMetaCountExceeded: 6102,
 } as const;
 
 export type SigilErrorName = keyof typeof SIGIL_ERRORS;

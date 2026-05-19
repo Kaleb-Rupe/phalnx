@@ -57,10 +57,7 @@ export type PostExecutionAssertions = {
   discriminator: ReadonlyUint8Array;
   /** The vault this assertion set belongs to. */
   vault: ReadonlyUint8Array;
-  /**
-   * Assertion entries (fixed-size array, up to MAX_POST_ASSERTION_ENTRIES).
-   * Phase 6: grown from 4 to 8.
-   */
+  /** Assertion entries (fixed-size array, up to MAX_POST_ASSERTION_ENTRIES). */
   entries: Array<PostAssertionEntryZC>;
   /** Number of active entries (0..=MAX_POST_ASSERTION_ENTRIES). */
   entryCount: number;
@@ -73,10 +70,7 @@ export type PostExecutionAssertions = {
 export type PostExecutionAssertionsArgs = {
   /** The vault this assertion set belongs to. */
   vault: ReadonlyUint8Array;
-  /**
-   * Assertion entries (fixed-size array, up to MAX_POST_ASSERTION_ENTRIES).
-   * Phase 6: grown from 4 to 8.
-   */
+  /** Assertion entries (fixed-size array, up to MAX_POST_ASSERTION_ENTRIES). */
   entries: Array<PostAssertionEntryZCArgs>;
   /** Number of active entries (0..=MAX_POST_ASSERTION_ENTRIES). */
   entryCount: number;
@@ -200,6 +194,5 @@ export async function fetchAllMaybePostExecutionAssertions(
 }
 
 export function getPostExecutionAssertionsSize(): number {
-  // Phase 6: 8 (discriminator) + 32 + (78 × 8 entries) + 1 + 1 + 6 = 672.
   return 672;
 }

@@ -107,12 +107,25 @@ export type SessionAuthority = {
    * Phase B2: Snapshots of target account bytes captured in validate_and_authorize
    * before DeFi instruction executes. Index i corresponds to PostAssertionEntry i.
    * Used by delta assertion modes (1=MaxDecrease, 2=MaxIncrease, 3=NoChange).
+   *
+   * Phase 6 grow: array length 4 → 8 to match MAX_POST_ASSERTION_ENTRIES.
+   * Adds 128 bytes (4 × 32) to SessionAuthority.
+   *
+   * **Phase 6 R-1 MintDeltaCap reuse:** for mode-4 entries, the snapshot
+   * stores `pre_sum: u64 LE` in bytes [0..8] of the 32-byte slot. Remaining
+   * 24 bytes are zero-padded. `snapshot_lens[i]` is set to 8 (the u64
+   * width) so finalize can distinguish a captured R-1 snapshot from an
+   * uncaptured slot.
    */
   assertionSnapshots: Array<ReadonlyUint8Array>;
   /**
    * Phase B2: Actual value_len captured for each snapshot.
    * 0 = no snapshot captured (mode 0 entries). Non-zero = snapshot was captured.
-   * finalize_session cross-checks snapshot_lens[i] == entry.value_len.
+   * finalize_session cross-checks snapshot_lens[i] == entry.value_len for
+   * modes 1..3. For mode 4 (R-1 MintDeltaCap) the field is set to 8 and
+   * finalize asserts snapshot_lens[i] == 8 before re-summing.
+   *
+   * Phase 6 grow: array length 4 → 8. Adds 4 bytes.
    */
   snapshotLens: ReadonlyUint8Array;
   /**
@@ -209,12 +222,25 @@ export type SessionAuthorityArgs = {
    * Phase B2: Snapshots of target account bytes captured in validate_and_authorize
    * before DeFi instruction executes. Index i corresponds to PostAssertionEntry i.
    * Used by delta assertion modes (1=MaxDecrease, 2=MaxIncrease, 3=NoChange).
+   *
+   * Phase 6 grow: array length 4 → 8 to match MAX_POST_ASSERTION_ENTRIES.
+   * Adds 128 bytes (4 × 32) to SessionAuthority.
+   *
+   * **Phase 6 R-1 MintDeltaCap reuse:** for mode-4 entries, the snapshot
+   * stores `pre_sum: u64 LE` in bytes [0..8] of the 32-byte slot. Remaining
+   * 24 bytes are zero-padded. `snapshot_lens[i]` is set to 8 (the u64
+   * width) so finalize can distinguish a captured R-1 snapshot from an
+   * uncaptured slot.
    */
   assertionSnapshots: Array<ReadonlyUint8Array>;
   /**
    * Phase B2: Actual value_len captured for each snapshot.
    * 0 = no snapshot captured (mode 0 entries). Non-zero = snapshot was captured.
-   * finalize_session cross-checks snapshot_lens[i] == entry.value_len.
+   * finalize_session cross-checks snapshot_lens[i] == entry.value_len for
+   * modes 1..3. For mode 4 (R-1 MintDeltaCap) the field is set to 8 and
+   * finalize asserts snapshot_lens[i] == 8 before re-summing.
+   *
+   * Phase 6 grow: array length 4 → 8. Adds 4 bytes.
    */
   snapshotLens: ReadonlyUint8Array;
   /**
@@ -281,10 +307,8 @@ export function getSessionAuthorityEncoder(): FixedSizeEncoder<SessionAuthorityA
       ["bump", getU8Encoder()],
       [
         "assertionSnapshots",
-        // Phase 6: grew 4 → 8 to match MAX_POST_ASSERTION_ENTRIES.
         getArrayEncoder(fixEncoderSize(getBytesEncoder(), 32), { size: 8 }),
       ],
-      // Phase 6: grew 4 → 8.
       ["snapshotLens", fixEncoderSize(getBytesEncoder(), 8)],
       ["nonce", getU64Encoder()],
     ]),
@@ -312,10 +336,8 @@ export function getSessionAuthorityDecoder(): FixedSizeDecoder<SessionAuthority>
     ["bump", getU8Decoder()],
     [
       "assertionSnapshots",
-      // Phase 6: grew 4 → 8 to match MAX_POST_ASSERTION_ENTRIES.
       getArrayDecoder(fixDecoderSize(getBytesDecoder(), 32), { size: 8 }),
     ],
-    // Phase 6: grew 4 → 8.
     ["snapshotLens", fixDecoderSize(getBytesDecoder(), 8)],
     ["nonce", getU64Decoder()],
   ]);
@@ -396,6 +418,5 @@ export async function fetchAllMaybeSessionAuthority(
 }
 
 export function getSessionAuthoritySize(): number {
-  // Phase 6: SessionAuthority SIZE = 515 (was 383; +128 for snapshots 4→8, +4 for snapshot_lens 4→8).
   return 515;
 }

@@ -5539,7 +5539,7 @@
     {
       "code": 6047,
       "name": "ProtocolCapExceeded",
-      "msg": "Per-protocol rolling 24h spending cap would be exceeded"
+      "msg": "Per-protocol rolling 24h spending cap would be exceeded — LEGACY counter exhaustion path. New rolling-24h amount-based cap rejections use 6095 ErrDailyCapExceeded"
     },
     {
       "code": 6048,
@@ -5810,6 +5810,11 @@
       "code": 6101,
       "name": "ErrDeclarationInconsistent",
       "msg": "R-4 DeclarationConsistency: declared recipient/mint does not match CPI account-meta"
+    },
+    {
+      "code": 6102,
+      "name": "IxMetaCountExceeded",
+      "msg": "Foreign DeFi instruction passed more account metas than the destination-check budget (16) allows; truncate the ix or split into shorter ixs"
     }
   ],
   "types": [
@@ -8444,7 +8449,13 @@
             "name": "target_account",
             "docs": [
               "The account to read after execution (passed via remaining_accounts).",
-              "Typically a Position PDA, User account, or similar protocol state."
+              "",
+              "Per-mode interpretation:",
+              "- modes 0..3 (Absolute / MaxDecrease / MaxIncrease / NoChange):",
+              "protocol state account (Position PDA, User account, etc).",
+              "- mode 4 MintDeltaCap with `aux_byte=1` (scope=1): the single token",
+              "account whose balance we measure. With `aux_byte=0` (scope=0):",
+              "UNUSED — ATAs are derived on-chain from `(vault, expected_value)`."
             ],
             "type": {
               "array": [
@@ -8456,28 +8467,35 @@
           {
             "name": "offset",
             "docs": [
-              "Byte offset in the target account's data to read."
+              "Byte offset in the target account's data to read (modes 0..3).",
+              "Phase 6 modes (4) ignore this field — balances are read at the",
+              "canonical SPL/Token-2022 layout offset (64..72)."
             ],
             "type": "u16"
           },
           {
             "name": "value_len",
             "docs": [
-              "Length of the value to compare (1-32 bytes)."
+              "Length of the value to compare (1-32 bytes) for modes 0..3.",
+              "Phase 6 mode 4 ignores this field."
             ],
             "type": "u8"
           },
           {
             "name": "operator",
             "docs": [
-              "Comparison operator (reuses ConstraintOperator: Eq, Ne, Gte, Lte, etc.)"
+              "Comparison operator (reuses ConstraintOperator: Eq, Ne, Gte, Lte, etc.)",
+              "Modes 1..4 ignore this field."
             ],
             "type": "u8"
           },
           {
             "name": "expected_value",
             "docs": [
-              "Expected value for comparison (same max as DataConstraint)."
+              "Per-mode payload:",
+              "- modes 0..3: expected value for comparison (same max as DataConstraint).",
+              "- mode 4 MintDeltaCap: bytes 0..32 = mint pubkey identifying the",
+              "target token. Remaining bytes are unused."
             ],
             "type": {
               "array": [
@@ -8497,18 +8515,20 @@
               "2 = MaxIncrease: check (current - snapshot) ≤ expected_value (Phase B2)",
               "NOTE: If value decreases, check ALWAYS PASSES.",
               "3 = NoChange: check current == snapshot — byte-for-byte equality (Phase B2)",
-              "4 = MintDeltaCap (Phase 6 R-1): vault-wide or per-account drain ceiling",
-              "5 = AtaAuthorityPin (Phase 6 R-2): post-CPI token-account authority pin",
-              "6 = OutputBalanceFloor (Phase 6 R-3): minimum balance increase floor",
-              "7 = DeclarationConsistency (Phase 6 R-4): declared (recipient, mint) vs CPI meta"
+              "4 = MintDeltaCap (Phase 6 R-1): vault-wide or per-account drain ceiling"
             ],
             "type": "u8"
           },
           {
             "name": "aux_value",
             "docs": [
-              "Phase 6: u64 LE auxiliary value (stored as 8 raw bytes to keep",
-              "struct alignment at 2). Per-mode interpretation in PostAssertionEntryZC docs."
+              "Phase 6 generic auxiliary value — per-mode interpretation:",
+              "- mode 4 MintDeltaCap: u64 LE = max_net_decrease (units of the mint's",
+              "smallest denomination).",
+              "- modes 0..3: UNUSED, must be zero (validate_entries enforces).",
+              "Stored as raw bytes to keep the struct alignment at 2 (avoids a u64",
+              "alignment bump that would force the entry to a multiple of 8 and",
+              "regress capacity math)."
             ],
             "type": {
               "array": [
@@ -8520,8 +8540,17 @@
           {
             "name": "aux_byte",
             "docs": [
-              "Phase 6: u8 auxiliary byte. Per-mode interpretation in PostAssertionEntryZC docs.",
-              "Absorbed the prior _padding slot from Phase 1; same byte position."
+              "Phase 6 generic auxiliary byte — per-mode interpretation:",
+              "- mode 4 MintDeltaCap: scope (0 = vault-wide ATA enumeration,",
+              "1 = single account in `target_account`).",
+              "- modes 0..3: UNUSED, must be zero (validate_entries enforces).",
+              "",
+              "The trailing `aux_byte` brings the entry to an even size (78) which",
+              "satisfies the struct's u16 alignment without a separate `_padding`",
+              "field — the previous `_padding: u8` from Phase 1 demolition was",
+              "absorbed here. Off-chain decoders that previously read `_padding`",
+              "now read `aux_byte`; the byte position is the same so wire",
+              "compatibility holds with the previous version's zero value."
             ],
             "type": "u8"
           }
@@ -8568,7 +8597,9 @@
       "name": "PostExecutionAssertions",
       "docs": [
         "On-chain account storing post-execution assertions for a vault.",
-        "Seeds: [b\"post_assertions\", vault.key()]"
+        "Seeds: [b\"post_assertions\", vault.key()]",
+        "",
+        "Phase 6 grow: entries 4 → 8, per-entry size 70 → 78 bytes. New SIZE 672."
       ],
       "serialization": "bytemuck",
       "repr": {
@@ -8592,8 +8623,7 @@
           {
             "name": "entries",
             "docs": [
-              "Assertion entries (fixed-size array, up to MAX_POST_ASSERTION_ENTRIES).",
-              "Phase 6: grown from 4 to 8 to accommodate Maestro borrows + existing modes."
+              "Assertion entries (fixed-size array, up to MAX_POST_ASSERTION_ENTRIES)."
             ],
             "type": {
               "array": [
@@ -8793,7 +8823,15 @@
               "Phase B2: Snapshots of target account bytes captured in validate_and_authorize",
               "before DeFi instruction executes. Index i corresponds to PostAssertionEntry i.",
               "Used by delta assertion modes (1=MaxDecrease, 2=MaxIncrease, 3=NoChange).",
-              "Phase 6 grow: 4 → 8 to match MAX_POST_ASSERTION_ENTRIES. Mode-4 (R-1 MintDeltaCap) stores pre_sum u64 LE in [0..8]."
+              "",
+              "Phase 6 grow: array length 4 → 8 to match MAX_POST_ASSERTION_ENTRIES.",
+              "Adds 128 bytes (4 × 32) to SessionAuthority.",
+              "",
+              "**Phase 6 R-1 MintDeltaCap reuse:** for mode-4 entries, the snapshot",
+              "stores `pre_sum: u64 LE` in bytes [0..8] of the 32-byte slot. Remaining",
+              "24 bytes are zero-padded. `snapshot_lens[i]` is set to 8 (the u64",
+              "width) so finalize can distinguish a captured R-1 snapshot from an",
+              "uncaptured slot."
             ],
             "type": {
               "array": [
@@ -8812,8 +8850,11 @@
             "docs": [
               "Phase B2: Actual value_len captured for each snapshot.",
               "0 = no snapshot captured (mode 0 entries). Non-zero = snapshot was captured.",
-              "finalize_session cross-checks snapshot_lens[i] == entry.value_len for modes 1..3.",
-              "Phase 6: mode-4 (MintDeltaCap) sets snapshot_lens[i] = 8 (u64 sum width)."
+              "finalize_session cross-checks snapshot_lens[i] == entry.value_len for",
+              "modes 1..3. For mode 4 (R-1 MintDeltaCap) the field is set to 8 and",
+              "finalize asserts snapshot_lens[i] == 8 before re-summing.",
+              "",
+              "Phase 6 grow: array length 4 → 8. Adds 4 bytes."
             ],
             "type": {
               "array": [

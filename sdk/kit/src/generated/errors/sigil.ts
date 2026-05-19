@@ -108,7 +108,7 @@ export const SIGIL_ERROR__UNAUTHORIZED_TOKEN_APPROVAL = 0x179c; // 6044
 export const SIGIL_ERROR__INVALID_SESSION_EXPIRY = 0x179d; // 6045
 /** UnconstrainedProgramBlocked: Program has no matching constraint entry — every instruction must match one */
 export const SIGIL_ERROR__UNCONSTRAINED_PROGRAM_BLOCKED = 0x179e; // 6046
-/** ProtocolCapExceeded: Per-protocol rolling 24h spending cap would be exceeded */
+/** ProtocolCapExceeded: Per-protocol rolling 24h spending cap would be exceeded — LEGACY counter exhaustion path. New rolling-24h amount-based cap rejections use 6095 ErrDailyCapExceeded */
 export const SIGIL_ERROR__PROTOCOL_CAP_EXCEEDED = 0x179f; // 6047
 /** ProtocolCapsMismatch: protocol_caps length must match protocols length when has_protocol_caps is true */
 export const SIGIL_ERROR__PROTOCOL_CAPS_MISMATCH = 0x17a0; // 6048
@@ -208,6 +208,18 @@ export const SIGIL_ERROR__ERR_STABLE_FLOOR_VIOLATION = 0x17ce; // 6094
 export const SIGIL_ERROR__ERR_DAILY_CAP_EXCEEDED = 0x17cf; // 6095
 /** ErrRecipientCapExceeded: Per-recipient daily cap exceeded — recipient outflow would breach policy.per_recipient_daily_cap_usd within the rolling 24h window, or per_recipient array full with no expired slot to evict */
 export const SIGIL_ERROR__ERR_RECIPIENT_CAP_EXCEEDED = 0x17d0; // 6096
+/** ErrMintDeltaCapExceeded: R-1 MintDeltaCap: vault-mint balance decreased by more than max_net_decrease */
+export const SIGIL_ERROR__ERR_MINT_DELTA_CAP_EXCEEDED = 0x17d1; // 6097
+/** MintDeltaCapMisconfigured: R-1 MintDeltaCap misconfigured — target account missing, mint mismatch, or owner not vault */
+export const SIGIL_ERROR__MINT_DELTA_CAP_MISCONFIGURED = 0x17d2; // 6098
+/** ErrAtaAuthorityChanged: R-2 AtaAuthorityPin: vault-owned token account authority changed or account closed/reinitialized mid-sandwich */
+export const SIGIL_ERROR__ERR_ATA_AUTHORITY_CHANGED = 0x17d3; // 6099
+/** ErrOutputBelowFloor: R-3 OutputBalanceFloor: post-execution balance increase fell below the configured min_increase floor */
+export const SIGIL_ERROR__ERR_OUTPUT_BELOW_FLOOR = 0x17d4; // 6100
+/** ErrDeclarationInconsistent: R-4 DeclarationConsistency: declared recipient/mint does not match CPI account-meta */
+export const SIGIL_ERROR__ERR_DECLARATION_INCONSISTENT = 0x17d5; // 6101
+/** IxMetaCountExceeded: Foreign DeFi instruction passed more account metas than the destination-check budget (16) allows; truncate the ix or split into shorter ixs */
+export const SIGIL_ERROR__IX_META_COUNT_EXCEEDED = 0x17d6; // 6102
 
 export type SigilError =
   | typeof SIGIL_ERROR__ACCOUNT_WRITABILITY_MISMATCH
@@ -231,13 +243,17 @@ export type SigilError =
   | typeof SIGIL_ERROR__CPI_CALL_NOT_ALLOWED
   | typeof SIGIL_ERROR__DESTINATION_NOT_ALLOWED
   | typeof SIGIL_ERROR__DEVELOPER_FEE_TOO_HIGH
+  | typeof SIGIL_ERROR__ERR_ATA_AUTHORITY_CHANGED
   | typeof SIGIL_ERROR__ERR_AUTO_REVOKED
   | typeof SIGIL_ERROR__ERR_COOLDOWN_ACTIVE
   | typeof SIGIL_ERROR__ERR_COSIGN_REQUIRED
   | typeof SIGIL_ERROR__ERR_DAILY_CAP_EXCEEDED
+  | typeof SIGIL_ERROR__ERR_DECLARATION_INCONSISTENT
   | typeof SIGIL_ERROR__ERR_GRAYLIST_FRICTION
   | typeof SIGIL_ERROR__ERR_GRAYLIST_FULL
+  | typeof SIGIL_ERROR__ERR_MINT_DELTA_CAP_EXCEEDED
   | typeof SIGIL_ERROR__ERR_MINT_NOT_PINNED
+  | typeof SIGIL_ERROR__ERR_OUTPUT_BELOW_FLOOR
   | typeof SIGIL_ERROR__ERR_OUTSIDE_OPERATING_HOURS
   | typeof SIGIL_ERROR__ERR_PROTECTED_WRITABLE
   | typeof SIGIL_ERROR__ERR_RECIPIENT_CAP_EXCEEDED
@@ -262,8 +278,10 @@ export type SigilError =
   | typeof SIGIL_ERROR__INVALID_SESSION
   | typeof SIGIL_ERROR__INVALID_SESSION_EXPIRY
   | typeof SIGIL_ERROR__INVALID_TOKEN_ACCOUNT
+  | typeof SIGIL_ERROR__IX_META_COUNT_EXCEEDED
   | typeof SIGIL_ERROR__LAMPORT_DRAIN_BLOCKED
   | typeof SIGIL_ERROR__MAX_AGENTS_REACHED
+  | typeof SIGIL_ERROR__MINT_DELTA_CAP_MISCONFIGURED
   | typeof SIGIL_ERROR__MISSING_FINALIZE_INSTRUCTION
   | typeof SIGIL_ERROR__NO_AGENT_REGISTERED
   | typeof SIGIL_ERROR__NON_TRACKED_SWAP_MUST_RETURN_STABLECOIN
@@ -332,13 +350,17 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__CPI_CALL_NOT_ALLOWED]: `Instruction must be top-level (CPI calls not allowed)`,
     [SIGIL_ERROR__DESTINATION_NOT_ALLOWED]: `Destination not in allowed list`,
     [SIGIL_ERROR__DEVELOPER_FEE_TOO_HIGH]: `Developer fee rate exceeds maximum (500 / 1,000,000 = 5 BPS)`,
+    [SIGIL_ERROR__ERR_ATA_AUTHORITY_CHANGED]: `R-2 AtaAuthorityPin: vault-owned token account authority changed or account closed/reinitialized mid-sandwich`,
     [SIGIL_ERROR__ERR_AUTO_REVOKED]: `Agent capability auto-revoked after consecutive policy-violation failures; owner must re-enable`,
     [SIGIL_ERROR__ERR_COOLDOWN_ACTIVE]: `Agent cooldown period has not elapsed since the last action`,
     [SIGIL_ERROR__ERR_COSIGN_REQUIRED]: `Elevated policy mutation requires an owner-signed cosigning session`,
     [SIGIL_ERROR__ERR_DAILY_CAP_EXCEEDED]: `Per-protocol daily spending cap would be exceeded (rolling 24h)`,
+    [SIGIL_ERROR__ERR_DECLARATION_INCONSISTENT]: `R-4 DeclarationConsistency: declared recipient/mint does not match CPI account-meta`,
     [SIGIL_ERROR__ERR_GRAYLIST_FRICTION]: `Destination is graylisted (24h friction window — awaiting promote_graylist_destination or unlock)`,
     [SIGIL_ERROR__ERR_GRAYLIST_FULL]: `Destination graylist is full (max 10 entries) — wait for an existing entry to unlock or promote`,
+    [SIGIL_ERROR__ERR_MINT_DELTA_CAP_EXCEEDED]: `R-1 MintDeltaCap: vault-mint balance decreased by more than max_net_decrease`,
     [SIGIL_ERROR__ERR_MINT_NOT_PINNED]: `Deposit mint is not a build-time-pinned stablecoin (USDC or USDT)`,
+    [SIGIL_ERROR__ERR_OUTPUT_BELOW_FLOOR]: `R-3 OutputBalanceFloor: post-execution balance increase fell below the configured min_increase floor`,
     [SIGIL_ERROR__ERR_OUTSIDE_OPERATING_HOURS]: `Current UTC hour is outside the policy's operating_hours bitmask`,
     [SIGIL_ERROR__ERR_PROTECTED_WRITABLE]: `Protected Sigil PDA passed as writable to a foreign instruction between validate and finalize`,
     [SIGIL_ERROR__ERR_RECIPIENT_CAP_EXCEEDED]: `Per-recipient daily cap exceeded — recipient outflow would breach policy.per_recipient_daily_cap_usd within the rolling 24h window, or per_recipient array full with no expired slot to evict`,
@@ -363,8 +385,10 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__INVALID_SESSION]: `Invalid session: does not belong to this vault`,
     [SIGIL_ERROR__INVALID_SESSION_EXPIRY]: `Session expiry seconds out of range (5-90)`,
     [SIGIL_ERROR__INVALID_TOKEN_ACCOUNT]: `Token account does not belong to vault or has wrong mint`,
+    [SIGIL_ERROR__IX_META_COUNT_EXCEEDED]: `Foreign DeFi instruction passed more account metas than the destination-check budget (16) allows; truncate the ix or split into shorter ixs`,
     [SIGIL_ERROR__LAMPORT_DRAIN_BLOCKED]: `Token-2022 destructive-balance ix (opcodes 38/45/46) not permitted between validate and finalize`,
     [SIGIL_ERROR__MAX_AGENTS_REACHED]: `Maximum agents per vault reached (limit: 10)`,
+    [SIGIL_ERROR__MINT_DELTA_CAP_MISCONFIGURED]: `R-1 MintDeltaCap misconfigured — target account missing, mint mismatch, or owner not vault`,
     [SIGIL_ERROR__MISSING_FINALIZE_INSTRUCTION]: `Transaction must include finalize_session after validate`,
     [SIGIL_ERROR__NO_AGENT_REGISTERED]: `No agent registered for this vault`,
     [SIGIL_ERROR__NON_TRACKED_SWAP_MUST_RETURN_STABLECOIN]: `Non-stablecoin swap must return stablecoin (balance did not increase)`,
@@ -379,7 +403,7 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__POLICY_PREVIEW_MISMATCH]: `Policy preview digest mismatch — caller's signed digest differs from recomputed canonical digest`,
     [SIGIL_ERROR__POLICY_VERSION_MISMATCH]: `Policy version mismatch — policy changed since agent's last RPC read`,
     [SIGIL_ERROR__POST_ASSERTION_FAILED]: `Post-execution assertion failed: account state did not satisfy constraint`,
-    [SIGIL_ERROR__PROTOCOL_CAP_EXCEEDED]: `Per-protocol rolling 24h spending cap would be exceeded`,
+    [SIGIL_ERROR__PROTOCOL_CAP_EXCEEDED]: `Per-protocol rolling 24h spending cap would be exceeded — LEGACY counter exhaustion path. New rolling-24h amount-based cap rejections use 6095 ErrDailyCapExceeded`,
     [SIGIL_ERROR__PROTOCOL_CAPS_MISMATCH]: `protocol_caps length must match protocols length when has_protocol_caps is true`,
     [SIGIL_ERROR__PROTOCOL_MISMATCH]: `DeFi instruction program does not match declared target_protocol`,
     [SIGIL_ERROR__PROTOCOL_NOT_ALLOWED]: `Protocol not allowed by policy`,
