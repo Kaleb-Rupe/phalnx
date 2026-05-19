@@ -35,6 +35,8 @@ import {
 import {
   getAgentSpendOverlayCodec,
   getAgentVaultCodec,
+  getAuditLogRejectedCodec,
+  getAuditLogSuccessCodec,
   getInstructionConstraintsCodec,
   getPendingAgentPermissionsUpdateCodec,
   getPendingCloseConstraintsCodec,
@@ -48,6 +50,10 @@ import {
   type AgentSpendOverlayArgs,
   type AgentVault,
   type AgentVaultArgs,
+  type AuditLogRejected,
+  type AuditLogRejectedArgs,
+  type AuditLogSuccess,
+  type AuditLogSuccessArgs,
   type InstructionConstraints,
   type InstructionConstraintsArgs,
   type PendingAgentPermissionsUpdate,
@@ -215,6 +221,8 @@ export const SIGIL_PROGRAM_ADDRESS =
 
 export enum SigilAccount {
   AgentSpendOverlay,
+  AuditLogRejected,
+  AuditLogSuccess,
   AgentVault,
   InstructionConstraints,
   PendingAgentPermissionsUpdate,
@@ -241,6 +249,28 @@ export function identifySigilAccount(
     )
   ) {
     return SigilAccount.AgentSpendOverlay;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([211, 117, 26, 31, 160, 74, 242, 204]),
+      ),
+      0,
+    )
+  ) {
+    return SigilAccount.AuditLogRejected;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([225, 112, 129, 30, 0, 111, 84, 75]),
+      ),
+      0,
+    )
+  ) {
+    return SigilAccount.AuditLogSuccess;
   }
   if (
     containsBytes(
@@ -1166,6 +1196,10 @@ export type SigilPlugin = {
 export type SigilPluginAccounts = {
   agentSpendOverlay: ReturnType<typeof getAgentSpendOverlayCodec> &
     SelfFetchFunctions<AgentSpendOverlayArgs, AgentSpendOverlay>;
+  auditLogRejected: ReturnType<typeof getAuditLogRejectedCodec> &
+    SelfFetchFunctions<AuditLogRejectedArgs, AuditLogRejected>;
+  auditLogSuccess: ReturnType<typeof getAuditLogSuccessCodec> &
+    SelfFetchFunctions<AuditLogSuccessArgs, AuditLogSuccess>;
   agentVault: ReturnType<typeof getAgentVaultCodec> &
     SelfFetchFunctions<AgentVaultArgs, AgentVault>;
   instructionConstraints: ReturnType<typeof getInstructionConstraintsCodec> &
@@ -1352,6 +1386,14 @@ export function sigilProgram() {
           agentSpendOverlay: addSelfFetchFunctions(
             client,
             getAgentSpendOverlayCodec(),
+          ),
+          auditLogRejected: addSelfFetchFunctions(
+            client,
+            getAuditLogRejectedCodec(),
+          ),
+          auditLogSuccess: addSelfFetchFunctions(
+            client,
+            getAuditLogSuccessCodec(),
           ),
           agentVault: addSelfFetchFunctions(client, getAgentVaultCodec()),
           instructionConstraints: addSelfFetchFunctions(

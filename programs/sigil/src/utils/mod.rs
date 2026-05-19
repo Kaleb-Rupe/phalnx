@@ -9,6 +9,7 @@
 //! - `token2022_extension` (TA-08, Phase 3): Token-2022 mint TLV walker
 //!   that enforces the 3-item extension allowlist at deposit time.
 
+pub mod audit_log;
 pub mod cosign_digest;
 pub mod destination_check;
 pub mod mint_delta_cap;

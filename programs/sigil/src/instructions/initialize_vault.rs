@@ -49,6 +49,30 @@ pub struct InitializeVault<'info> {
     )]
     pub agent_spend_overlay: AccountLoader<'info, AgentSpendOverlay>,
 
+    /// Phase 7 — audit log of SUCCESS-path mutating instructions.
+    /// Allocated at vault creation. Owner pays rent. Failure to allocate
+    /// aborts vault creation (init failure → atomic rollback).
+    #[account(
+        init,
+        payer = owner,
+        space = AuditLogSuccess::SIZE,
+        seeds = [b"audit_success", vault.key().as_ref()],
+        bump,
+    )]
+    pub audit_log_success: AccountLoader<'info, AuditLogSuccess>,
+
+    /// Phase 7 — audit log of REJECTED finalize attempts (permissionless-
+    /// crank window). Separate from success buffer per Audit #2 F-19 so a
+    /// rejected-finalize burst cannot displace legitimate success history.
+    #[account(
+        init,
+        payer = owner,
+        space = AuditLogRejected::SIZE,
+        seeds = [b"audit_rejected", vault.key().as_ref()],
+        bump,
+    )]
+    pub audit_log_rejected: AccountLoader<'info, AuditLogRejected>,
+
     /// CHECK: This is the fee destination wallet; validated by the caller/SDK.
     pub fee_destination: UncheckedAccount<'info>,
 
@@ -299,9 +323,26 @@ pub fn handler(
     tracker.bump = ctx.bumps.tracker;
 
     // Initialize agent spend overlay
-    let mut overlay = ctx.accounts.agent_spend_overlay.load_init()?;
-    overlay.vault = vault.key();
-    overlay.bump = ctx.bumps.agent_spend_overlay;
+    {
+        let mut overlay = ctx.accounts.agent_spend_overlay.load_init()?;
+        overlay.vault = vault.key();
+        overlay.bump = ctx.bumps.agent_spend_overlay;
+    }
+
+    // Phase 7 — initialise audit-log success buffer.
+    {
+        let mut log = ctx.accounts.audit_log_success.load_init()?;
+        log.vault = vault.key();
+        log.bump = ctx.bumps.audit_log_success;
+        // head, count, _padding, entries[..] all zero-init by allocator.
+    }
+
+    // Phase 7 — initialise audit-log rejected buffer.
+    {
+        let mut log = ctx.accounts.audit_log_rejected.load_init()?;
+        log.vault = vault.key();
+        log.bump = ctx.bumps.audit_log_rejected;
+    }
 
     emit!(VaultCreated {
         vault: vault.key(),

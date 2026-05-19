@@ -1,4 +1,6 @@
 pub mod agent_spend_overlay;
+pub mod audit_log_rejected;
+pub mod audit_log_success;
 pub mod constraints;
 pub mod pending_agent_perms;
 pub mod pending_close_constraints;
@@ -11,6 +13,8 @@ pub mod tracker;
 pub mod vault;
 
 pub use agent_spend_overlay::*;
+pub use audit_log_rejected::*;
+pub use audit_log_success::*;
 pub use constraints::*;
 pub use pending_agent_perms::*;
 pub use pending_close_constraints::*;

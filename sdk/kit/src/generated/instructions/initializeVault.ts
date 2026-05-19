@@ -72,6 +72,8 @@ export type InitializeVaultInstruction<
   TAccountPolicy extends string | AccountMeta<string> = string,
   TAccountTracker extends string | AccountMeta<string> = string,
   TAccountAgentSpendOverlay extends string | AccountMeta<string> = string,
+  TAccountAuditLogSuccess extends string | AccountMeta<string> = string,
+  TAccountAuditLogRejected extends string | AccountMeta<string> = string,
   TAccountFeeDestination extends string | AccountMeta<string> = string,
   TAccountSystemProgram extends string | AccountMeta<string> =
     "11111111111111111111111111111111",
@@ -96,6 +98,12 @@ export type InitializeVaultInstruction<
       TAccountAgentSpendOverlay extends string
         ? WritableAccount<TAccountAgentSpendOverlay>
         : TAccountAgentSpendOverlay,
+      TAccountAuditLogSuccess extends string
+        ? WritableAccount<TAccountAuditLogSuccess>
+        : TAccountAuditLogSuccess,
+      TAccountAuditLogRejected extends string
+        ? WritableAccount<TAccountAuditLogRejected>
+        : TAccountAuditLogRejected,
       TAccountFeeDestination extends string
         ? ReadonlyAccount<TAccountFeeDestination>
         : TAccountFeeDestination,
@@ -216,6 +224,8 @@ export type InitializeVaultAsyncInput<
   TAccountPolicy extends string = string,
   TAccountTracker extends string = string,
   TAccountAgentSpendOverlay extends string = string,
+  TAccountAuditLogSuccess extends string = string,
+  TAccountAuditLogRejected extends string = string,
   TAccountFeeDestination extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
@@ -226,6 +236,10 @@ export type InitializeVaultAsyncInput<
   tracker?: Address<TAccountTracker>;
   /** Agent spend overlay — per-agent contribution tracking */
   agentSpendOverlay: Address<TAccountAgentSpendOverlay>;
+  /** Phase 7 — audit log of SUCCESS-path mutating instructions. */
+  auditLogSuccess?: Address<TAccountAuditLogSuccess>;
+  /** Phase 7 — audit log of REJECTED finalize attempts. */
+  auditLogRejected?: Address<TAccountAuditLogRejected>;
   feeDestination: Address<TAccountFeeDestination>;
   systemProgram?: Address<TAccountSystemProgram>;
   vaultId: InitializeVaultInstructionDataArgs["vaultId"];
@@ -254,6 +268,8 @@ export async function getInitializeVaultInstructionAsync<
   TAccountPolicy extends string,
   TAccountTracker extends string,
   TAccountAgentSpendOverlay extends string,
+  TAccountAuditLogSuccess extends string,
+  TAccountAuditLogRejected extends string,
   TAccountFeeDestination extends string,
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof SIGIL_PROGRAM_ADDRESS,
@@ -264,6 +280,8 @@ export async function getInitializeVaultInstructionAsync<
     TAccountPolicy,
     TAccountTracker,
     TAccountAgentSpendOverlay,
+    TAccountAuditLogSuccess,
+    TAccountAuditLogRejected,
     TAccountFeeDestination,
     TAccountSystemProgram
   >,
@@ -276,6 +294,8 @@ export async function getInitializeVaultInstructionAsync<
     TAccountPolicy,
     TAccountTracker,
     TAccountAgentSpendOverlay,
+    TAccountAuditLogSuccess,
+    TAccountAuditLogRejected,
     TAccountFeeDestination,
     TAccountSystemProgram
   >
@@ -291,6 +311,11 @@ export async function getInitializeVaultInstructionAsync<
     tracker: { value: input.tracker ?? null, isWritable: true },
     agentSpendOverlay: {
       value: input.agentSpendOverlay ?? null,
+      isWritable: true,
+    },
+    auditLogSuccess: { value: input.auditLogSuccess ?? null, isWritable: true },
+    auditLogRejected: {
+      value: input.auditLogRejected ?? null,
       isWritable: true,
     },
     feeDestination: { value: input.feeDestination ?? null, isWritable: false },
@@ -352,6 +377,42 @@ export async function getInitializeVaultInstructionAsync<
       ],
     });
   }
+  if (!accounts.auditLogSuccess.value) {
+    accounts.auditLogSuccess.value = await getProgramDerivedAddress({
+      programAddress,
+      seeds: [
+        getBytesEncoder().encode(
+          new Uint8Array([
+            97, 117, 100, 105, 116, 95, 115, 117, 99, 99, 101, 115, 115,
+          ]),
+        ),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            "vault",
+            accounts.vault.value,
+          ),
+        ),
+      ],
+    });
+  }
+  if (!accounts.auditLogRejected.value) {
+    accounts.auditLogRejected.value = await getProgramDerivedAddress({
+      programAddress,
+      seeds: [
+        getBytesEncoder().encode(
+          new Uint8Array([
+            97, 117, 100, 105, 116, 95, 114, 101, 106, 101, 99, 116, 101, 100,
+          ]),
+        ),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            "vault",
+            accounts.vault.value,
+          ),
+        ),
+      ],
+    });
+  }
   if (!accounts.systemProgram.value) {
     accounts.systemProgram.value =
       "11111111111111111111111111111111" as Address<"11111111111111111111111111111111">;
@@ -365,6 +426,8 @@ export async function getInitializeVaultInstructionAsync<
       getAccountMeta("policy", accounts.policy),
       getAccountMeta("tracker", accounts.tracker),
       getAccountMeta("agentSpendOverlay", accounts.agentSpendOverlay),
+      getAccountMeta("auditLogSuccess", accounts.auditLogSuccess),
+      getAccountMeta("auditLogRejected", accounts.auditLogRejected),
       getAccountMeta("feeDestination", accounts.feeDestination),
       getAccountMeta("systemProgram", accounts.systemProgram),
     ],
@@ -379,6 +442,8 @@ export async function getInitializeVaultInstructionAsync<
     TAccountPolicy,
     TAccountTracker,
     TAccountAgentSpendOverlay,
+    TAccountAuditLogSuccess,
+    TAccountAuditLogRejected,
     TAccountFeeDestination,
     TAccountSystemProgram
   >);
@@ -390,6 +455,8 @@ export type InitializeVaultInput<
   TAccountPolicy extends string = string,
   TAccountTracker extends string = string,
   TAccountAgentSpendOverlay extends string = string,
+  TAccountAuditLogSuccess extends string = string,
+  TAccountAuditLogRejected extends string = string,
   TAccountFeeDestination extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
@@ -400,6 +467,10 @@ export type InitializeVaultInput<
   tracker: Address<TAccountTracker>;
   /** Agent spend overlay — per-agent contribution tracking */
   agentSpendOverlay: Address<TAccountAgentSpendOverlay>;
+  /** Phase 7 — audit log of SUCCESS-path mutating instructions. */
+  auditLogSuccess: Address<TAccountAuditLogSuccess>;
+  /** Phase 7 — audit log of REJECTED finalize attempts. */
+  auditLogRejected: Address<TAccountAuditLogRejected>;
   feeDestination: Address<TAccountFeeDestination>;
   systemProgram?: Address<TAccountSystemProgram>;
   vaultId: InitializeVaultInstructionDataArgs["vaultId"];
@@ -428,6 +499,8 @@ export function getInitializeVaultInstruction<
   TAccountPolicy extends string,
   TAccountTracker extends string,
   TAccountAgentSpendOverlay extends string,
+  TAccountAuditLogSuccess extends string,
+  TAccountAuditLogRejected extends string,
   TAccountFeeDestination extends string,
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof SIGIL_PROGRAM_ADDRESS,
@@ -438,6 +511,8 @@ export function getInitializeVaultInstruction<
     TAccountPolicy,
     TAccountTracker,
     TAccountAgentSpendOverlay,
+    TAccountAuditLogSuccess,
+    TAccountAuditLogRejected,
     TAccountFeeDestination,
     TAccountSystemProgram
   >,
@@ -449,6 +524,8 @@ export function getInitializeVaultInstruction<
   TAccountPolicy,
   TAccountTracker,
   TAccountAgentSpendOverlay,
+  TAccountAuditLogSuccess,
+  TAccountAuditLogRejected,
   TAccountFeeDestination,
   TAccountSystemProgram
 > {
@@ -463,6 +540,11 @@ export function getInitializeVaultInstruction<
     tracker: { value: input.tracker ?? null, isWritable: true },
     agentSpendOverlay: {
       value: input.agentSpendOverlay ?? null,
+      isWritable: true,
+    },
+    auditLogSuccess: { value: input.auditLogSuccess ?? null, isWritable: true },
+    auditLogRejected: {
+      value: input.auditLogRejected ?? null,
       isWritable: true,
     },
     feeDestination: { value: input.feeDestination ?? null, isWritable: false },
@@ -490,6 +572,8 @@ export function getInitializeVaultInstruction<
       getAccountMeta("policy", accounts.policy),
       getAccountMeta("tracker", accounts.tracker),
       getAccountMeta("agentSpendOverlay", accounts.agentSpendOverlay),
+      getAccountMeta("auditLogSuccess", accounts.auditLogSuccess),
+      getAccountMeta("auditLogRejected", accounts.auditLogRejected),
       getAccountMeta("feeDestination", accounts.feeDestination),
       getAccountMeta("systemProgram", accounts.systemProgram),
     ],
@@ -504,6 +588,8 @@ export function getInitializeVaultInstruction<
     TAccountPolicy,
     TAccountTracker,
     TAccountAgentSpendOverlay,
+    TAccountAuditLogSuccess,
+    TAccountAuditLogRejected,
     TAccountFeeDestination,
     TAccountSystemProgram
   >);
@@ -522,8 +608,12 @@ export type ParsedInitializeVaultInstruction<
     tracker: TAccountMetas[3];
     /** Agent spend overlay — per-agent contribution tracking */
     agentSpendOverlay: TAccountMetas[4];
-    feeDestination: TAccountMetas[5];
-    systemProgram: TAccountMetas[6];
+    /** Phase 7 — audit log of SUCCESS-path mutating instructions. */
+    auditLogSuccess: TAccountMetas[5];
+    /** Phase 7 — audit log of REJECTED finalize attempts. */
+    auditLogRejected: TAccountMetas[6];
+    feeDestination: TAccountMetas[7];
+    systemProgram: TAccountMetas[8];
   };
   data: InitializeVaultInstructionData;
 };
@@ -536,12 +626,12 @@ export function parseInitializeVaultInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedInitializeVaultInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 7) {
+  if (instruction.accounts.length < 9) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 7,
+        expectedAccountMetas: 9,
       },
     );
   }
@@ -559,6 +649,8 @@ export function parseInitializeVaultInstruction<
       policy: getNextAccount(),
       tracker: getNextAccount(),
       agentSpendOverlay: getNextAccount(),
+      auditLogSuccess: getNextAccount(),
+      auditLogRejected: getNextAccount(),
       feeDestination: getNextAccount(),
       systemProgram: getNextAccount(),
     },

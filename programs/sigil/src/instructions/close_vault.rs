@@ -45,6 +45,28 @@ pub struct CloseVault<'info> {
     )]
     pub agent_spend_overlay: AccountLoader<'info, AgentSpendOverlay>,
 
+    /// Phase 7 — close success audit log; rent returns to owner.
+    /// Closing here closes the close+reinit replay window: a vault can be
+    /// re-initialised at the same (owner, vault_id) only after the audit
+    /// logs have been reclaimed, and PEN-CROSS-2 still protects against
+    /// stale-digest replay across the close boundary.
+    #[account(
+        mut,
+        seeds = [b"audit_success", vault.key().as_ref()],
+        bump = audit_log_success.load()?.bump,
+        close = owner,
+    )]
+    pub audit_log_success: AccountLoader<'info, AuditLogSuccess>,
+
+    /// Phase 7 — close rejected audit log; rent returns to owner.
+    #[account(
+        mut,
+        seeds = [b"audit_rejected", vault.key().as_ref()],
+        bump = audit_log_rejected.load()?.bump,
+        close = owner,
+    )]
+    pub audit_log_rejected: AccountLoader<'info, AuditLogRejected>,
+
     pub system_program: Program<'info, System>,
 }
 

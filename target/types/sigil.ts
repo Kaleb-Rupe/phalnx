@@ -1718,6 +1718,44 @@ export type Sigil = {
           "writable": true
         },
         {
+          "name": "auditLogSuccess",
+          "docs": [
+            "Phase 7 — close success audit log; rent returns to owner."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [97, 117, 100, 105, 116, 95, 115, 117, 99, 99, 101, 115, 115]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "auditLogRejected",
+          "docs": [
+            "Phase 7 — close rejected audit log; rent returns to owner."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [97, 117, 100, 105, 116, 95, 114, 101, 106, 101, 99, 116, 101, 100]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
           "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
@@ -2679,6 +2717,44 @@ export type Sigil = {
             "Agent spend overlay — per-agent contribution tracking"
           ],
           "writable": true
+        },
+        {
+          "name": "auditLogSuccess",
+          "docs": [
+            "Phase 7 — audit log of SUCCESS-path mutating instructions."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [97, 117, 100, 105, 116, 95, 115, 117, 99, 99, 101, 115, 115]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "auditLogRejected",
+          "docs": [
+            "Phase 7 — audit log of REJECTED finalize attempts."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [97, 117, 100, 105, 116, 95, 114, 101, 106, 101, 99, 116, 101, 100]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
         },
         {
           "name": "feeDestination"
@@ -4667,6 +4743,32 @@ export type Sigil = {
       ]
     },
     {
+      "name": "auditLogRejected",
+      "discriminator": [
+        211,
+        117,
+        26,
+        31,
+        160,
+        74,
+        242,
+        204
+      ]
+    },
+    {
+      "name": "auditLogSuccess",
+      "discriminator": [
+        225,
+        112,
+        129,
+        30,
+        0,
+        111,
+        84,
+        75
+      ]
+    },
+    {
       "name": "agentVault",
       "discriminator": [
         232,
@@ -6033,6 +6135,170 @@ export type Sigil = {
                 24
               ]
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "auditEntry",
+      "docs": [
+        "Phase 7 audit-log entry. Zero-copy, fixed-size 64 bytes per entry."
+      ],
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "targetProtocol",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "balanceDeltaIn",
+            "type": "i64"
+          },
+          {
+            "name": "balanceDeltaOut",
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "slotHash",
+            "type": {
+              "array": [
+                "u8",
+                4
+              ]
+            }
+          },
+          {
+            "name": "blockhash",
+            "type": {
+              "array": [
+                "u8",
+                3
+              ]
+            }
+          },
+          {
+            "name": "discriminator",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "auditLogRejected",
+      "docs": [
+        "Phase 7 on-chain circular log of REJECTED finalize attempts."
+      ],
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "entries",
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "auditEntry"
+                  }
+                },
+                64
+              ]
+            }
+          },
+          {
+            "name": "head",
+            "type": "u8"
+          },
+          {
+            "name": "count",
+            "type": "u8"
+          },
+          {
+            "name": "_padding",
+            "type": {
+              "array": [
+                "u8",
+                13
+              ]
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "auditLogSuccess",
+      "docs": [
+        "Phase 7 on-chain circular log of SUCCESSFUL mutating instructions."
+      ],
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "entries",
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "auditEntry"
+                  }
+                },
+                128
+              ]
+            }
+          },
+          {
+            "name": "head",
+            "type": "u8"
+          },
+          {
+            "name": "count",
+            "type": "u8"
+          },
+          {
+            "name": "_padding",
+            "type": {
+              "array": [
+                "u8",
+                13
+              ]
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
           }
         ]
       }

@@ -21,6 +21,7 @@ export * from "./agentRevoked.js";
 export * from "./agentSpendLimitChecked.js";
 export * from "./agentTransferExecuted.js";
 export * from "./agentUnpausedEvent.js";
+export * from "./auditEntry.js";
 export * from "./closeConstraintsApplied.js";
 export * from "./closeConstraintsCancelled.js";
 export * from "./closeConstraintsQueued.js";
