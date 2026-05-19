@@ -1234,6 +1234,26 @@ pub fn handler(
                         actual_mint == expected_mint,
                         SigilError::PostAssertionFailed
                     );
+                    // §RP HIGH (Phase 6 review): R-3 verifies the target
+                    // account's BALANCE INCREASES by ≥ min_increase. Without
+                    // a vault-ownership check, an owner misconfig (or a
+                    // dashboard-supplied target) could point R-3 at an
+                    // attacker-controlled token account; the attacker funds
+                    // their own account by ≥ min_increase between validate
+                    // and finalize and R-3 passes trivially while the vault
+                    // sees no inflow. R-3's correct semantic is "the VAULT's
+                    // output balance must rise" — so we require the token
+                    // account's authority field (bytes 32..64) to equal the
+                    // vault PDA. A "fee recipient floor" variant for non-
+                    // vault destinations would require a separate primitive
+                    // and is deferred to a future phase.
+                    let mut authority_bytes = [0u8; 32];
+                    authority_bytes.copy_from_slice(&target_data[32..64]);
+                    let authority = Pubkey::new_from_array(authority_bytes);
+                    require!(
+                        authority == vault_key,
+                        SigilError::MintDeltaCapMisconfigured
+                    );
                     let mut amount_bytes = [0u8; 8];
                     amount_bytes.copy_from_slice(&target_data[64..72]);
                     let pre_balance = u64::from_le_bytes(amount_bytes);

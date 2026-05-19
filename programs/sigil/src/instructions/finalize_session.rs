@@ -857,6 +857,7 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
                         entry,
                         &session_snapshots[i],
                         session_snapshot_lens[i],
+                        &vault_key,
                         remaining,
                     )?;
                     emit!(crate::events::PostAssertionChecked {

@@ -95,11 +95,22 @@ pub fn verify_ata_authority_pin(
 }
 
 /// Phase 6 R-3 OutputBalanceFloor finalize-time check.
+///
+/// §RP HIGH (Phase 6 review): pairs the existing balance-floor logic with
+/// a vault-ownership require. R-3's semantic is "the VAULT's output balance
+/// must rise by ≥ min_increase". Without owner-field enforcement, R-3 could
+/// be misconfigured (or attacker-supplied via a future dashboard) to point
+/// at an attacker-controlled token account; the attacker then funds their
+/// own account between validate and finalize and R-3 passes vacuously. The
+/// vault-ownership check forces R-3 to measure inflows that reach the
+/// vault. A "fee recipient floor" variant for non-vault destinations would
+/// be a separate primitive and is deferred.
 #[inline(never)]
 pub fn verify_output_balance_floor(
     entry: &PostAssertionEntryZC,
     snapshot: &[u8; 32],
     snapshot_len: u8,
+    vault_key: &Pubkey,
     remaining: &[AccountInfo],
 ) -> Result<()> {
     require!(snapshot_len == 8, SigilError::SnapshotNotCaptured);
@@ -116,6 +127,17 @@ pub fn verify_output_balance_floor(
     );
     let target_data = target.try_borrow_data()?;
     require!(target_data.len() >= 72, SigilError::PostAssertionFailed);
+
+    // §RP HIGH: vault-ownership check — must mirror the validate-time
+    // require in validate_and_authorize.rs so the snapshot vs finalize
+    // pair always measures the same vault-owned account.
+    let mut authority_bytes = [0u8; 32];
+    authority_bytes.copy_from_slice(&target_data[32..64]);
+    let authority = Pubkey::new_from_array(authority_bytes);
+    require!(
+        authority == *vault_key,
+        SigilError::MintDeltaCapMisconfigured
+    );
 
     let mut amount_bytes = [0u8; 8];
     amount_bytes.copy_from_slice(&target_data[64..72]);
