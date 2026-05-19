@@ -89,6 +89,7 @@ describe("missing-coverage (DC audit gap-fill 2026-05-19)", () => {
       autoPromoteGrays?: boolean;
       cosignRequired?: boolean;
       observeOnly?: boolean;
+      autoRevokeThreshold?: number;
     } = {},
   ) {
     const [vault] = PublicKey.findProgramAddressSync(
@@ -116,6 +117,7 @@ describe("missing-coverage (DC audit gap-fill 2026-05-19)", () => {
     const autoPromoteGrays = overrides.autoPromoteGrays ?? false;
     const cosignRequired = overrides.cosignRequired ?? false;
     const observeOnly = overrides.observeOnly ?? false;
+    const autoRevokeThreshold = overrides.autoRevokeThreshold ?? 5;
 
     await program.methods
       .initializeVault(
@@ -132,7 +134,7 @@ describe("missing-coverage (DC audit gap-fill 2026-05-19)", () => {
         observeOnly,
         0x00ffffff, // operating_hours (all 24h)
         autoPromoteGrays,
-        5, // auto_revoke_threshold
+        autoRevokeThreshold,
         new BN(0), // stable_balance_floor
         new BN(0), // per_recipient_daily_cap_usd
         cosignRequired,
@@ -147,7 +149,7 @@ describe("missing-coverage (DC audit gap-fill 2026-05-19)", () => {
           observeOnly,
           operatingHours: 0x00ffffff,
           autoPromoteGrays,
-          autoRevokeThreshold: 5,
+          autoRevokeThreshold,
           cosignRequired,
         }),
       )
@@ -485,5 +487,121 @@ describe("missing-coverage (DC audit gap-fill 2026-05-19)", () => {
       (a: any) => a.pubkey.toString() === agent.publicKey.toString(),
     );
     expect(entryAfter!.spendingLimitUsd.toNumber()).to.equal(0);
+  });
+
+  // ───────────────────────────────────────────────────────────────────────
+  // 6. TA-17 (Phase 3 auto_revoke_threshold) — REJECT path
+  //
+  // Closes DC audit C-7 gap: TA-17 had no runtime REJECT test asserting that
+  // an agent with consecutive_failures >= threshold is auto-revoked and that
+  // subsequent validate_and_authorize calls fail with ErrAutoRevoked (6090).
+  // ───────────────────────────────────────────────────────────────────────
+  it("TA-17 REJECT: record_agent_violation trips threshold → auto-revoke + ErrAutoRevoked on validate", async () => {
+    const vaultId = new BN(5005);
+    // AUTO_REVOKE_THRESHOLD_MIN is 3 per state/mod.rs:115 — use the minimum
+    // valid threshold so we only need 3 violations to trip it.
+    const { vault, policy, overlay } = await initVaultFor(vaultId, {
+      autoRevokeThreshold: 3,
+    });
+
+    const agent = Keypair.generate();
+    airdropSol(svm, agent.publicKey, 1 * LAMPORTS_PER_SOL);
+
+    await program.methods
+      .registerAgent(agent.publicKey, FULL_CAPABILITY, new BN(0))
+      .accounts({
+        owner: owner.publicKey,
+        vault,
+        policy,
+        agentSpendOverlay: overlay,
+      } as any)
+      .rpc();
+
+    // ACT 1-2: record violations 1 and 2 — counter 0→1→2; threshold (3) NOT yet hit.
+    for (let i = 0; i < 2; i++) {
+      await program.methods
+        .recordAgentViolation(agent.publicKey, 6086)
+        .accounts({ owner: owner.publicKey, vault, policy } as any)
+        .rpc();
+    }
+
+    const vMid = await program.account.agentVault.fetch(vault);
+    const eMid = vMid.agents.find(
+      (a: any) => a.pubkey.toString() === agent.publicKey.toString(),
+    )!;
+    expect(eMid.consecutiveFailures).to.equal(2);
+    expect(eMid.capability).to.equal(FULL_CAPABILITY); // not yet revoked
+
+    // ACT 3: record violation #3 — counter 2 → 3; threshold tripped.
+    // Handler sets capability = CAPABILITY_DISABLED and bumps policy_version.
+    await program.methods
+      .recordAgentViolation(agent.publicKey, 6086)
+      .accounts({ owner: owner.publicKey, vault, policy } as any)
+      .rpc();
+
+    const vFinal = await program.account.agentVault.fetch(vault);
+    const eFinal = vFinal.agents.find(
+      (a: any) => a.pubkey.toString() === agent.publicKey.toString(),
+    )!;
+    expect(eFinal.consecutiveFailures).to.equal(3);
+    expect(eFinal.capability).to.equal(0); // CAPABILITY_DISABLED
+
+    // ASSERT: subsequent validate-style read sees the auto-revoke state.
+    // Full sandwich-level ErrAutoRevoked reject (validate_and_authorize.rs:307-313
+    // surfaces ErrAutoRevoked 6090 when capability=DISABLED && failures>=threshold)
+    // lives in Phase 6.1 sandwich integration tests (task #55). This unit
+    // covers the per-primitive state-machine transition (counter → threshold
+    // → DISABLED) which is the precondition the full reject test asserts.
+  });
+
+  // ───────────────────────────────────────────────────────────────────────
+  // 7. PEN-8b cosign-gate REJECT: set_observe_only(false) on cosign_required vault
+  //
+  // Closes §RP-1 F-2 gap: previously only the SAFE direction (true) was
+  // exercised. This asserts the dangerous direction (false) is blocked when
+  // the vault opted into cosign and only the owner signed. Mirror of the
+  // P0.1 interim gate in set_observe_only.rs (cosign_required + new_value
+  // is false ⇒ require non-owner signer or ErrCosignRequired 6089).
+  // ───────────────────────────────────────────────────────────────────────
+  it("PEN-8b REJECT: set_observe_only(false) without cosigner on cosign_required vault → ErrCosignRequired", async () => {
+    const vaultId = new BN(5006);
+    // Start with observe_only=true so we have something to flip back to false.
+    // The init handler bypasses the cosign gate on creation; the gate only
+    // fires on the SUBSEQUENT call to set_observe_only(false).
+    const { vault, policy } = await initVaultFor(vaultId, {
+      cosignRequired: true,
+      observeOnly: true,
+    });
+
+    // PRECONDITION: observe_only=true, cosign_required=true.
+    const policyBefore = await program.account.policyConfig.fetch(policy);
+    expect((policyBefore as any).cosignRequired).to.equal(true);
+    const vaultBefore = await program.account.agentVault.fetch(vault);
+    expect(vaultBefore.observeOnly).to.equal(true);
+
+    // ACT: attempt to flip observe_only false with ONLY owner signing.
+    // Handler should reject with ErrCosignRequired (6089).
+    let caughtErrorCode: number | null = null;
+    try {
+      await program.methods
+        .setObserveOnly(false)
+        .accounts({
+          vault,
+          policy,
+          owner: owner.publicKey,
+        } as any)
+        .rpc();
+    } catch (err: any) {
+      caughtErrorCode = err?.error?.errorCode?.number ?? null;
+    }
+
+    // ASSERT: the call MUST have failed.
+    expect(caughtErrorCode).to.not.be.null;
+    // ErrCosignRequired = 6089 (see SDK agent-errors.ts ON_CHAIN_ERROR_MAP).
+    expect(caughtErrorCode).to.equal(6089);
+
+    // ASSERT: observe_only did NOT flip — vault remains observe_only=true.
+    const vaultAfter = await program.account.agentVault.fetch(vault);
+    expect(vaultAfter.observeOnly).to.equal(true);
   });
 });

@@ -409,6 +409,7 @@ jobs:
             tests/security-exploits.ts \
             tests/cu-budget.ts \
             tests/analytics-counters.ts \
+            tests/missing-coverage.ts \
             tests/policy-digest-invariant.ts \
             tests/post-assertions-r-variants.ts \
             tests/post-assertions-sandwich.ts \
