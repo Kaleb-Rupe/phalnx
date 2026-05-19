@@ -536,4 +536,22 @@ pub enum SigilError {
     /// MintDeltaCapMisconfigured at 6098, the actual assignment is 6101.
     #[msg("R-4 DeclarationConsistency: declared recipient/mint does not match CPI account-meta")]
     ErrDeclarationInconsistent,
+
+    // --- Audit 2026-05-19 (P1 HIGH fixes) ---
+    // Appended at END to preserve existing error codes 6000-6101.
+
+    /// 6102 — H-1 hard-reject (audit 2026-05-19): the foreign DeFi
+    /// instruction passed more account metas than
+    /// `MAX_DESTINATION_CHECK_METAS_PER_IX` (16). Previously the
+    /// destination-check helper silently `take()`-truncated at the bound,
+    /// leaving slots 17+ uninspected. An attacker hiding a hostile
+    /// destination at slot 17+ would bypass the allowlist check while the
+    /// surrounding ix metadata looked benign (Jupiter-v6-max-step shape).
+    ///
+    /// Hard-reject closes the silent-drop. Legitimate flows with >16 metas
+    /// (Jupiter v6 max-step) can be expressed as shorter ixs in the V1
+    /// envelope. Expansion to 32 metas is v1.1 backlog (measured CU cost
+    /// of ~+4K CU per validate pass).
+    #[msg("Foreign DeFi instruction passed more account metas than the destination-check budget (16) allows; truncate the ix or split into shorter ixs")]
+    IxMetaCountExceeded,
 }

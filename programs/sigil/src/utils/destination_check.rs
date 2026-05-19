@@ -82,20 +82,22 @@ use crate::state::{PolicyConfig, TOKEN_2022_PROGRAM_ID};
 /// - Flash Trade open_position: 15-20 metas
 /// - SPL transfer: 3 metas
 ///
-/// We cap at 16 to absorb the typical real-world range without unbounded
-/// scan cost. Any instruction with more than 16 metas is either (a) an
-/// extreme aggregator chain that we'd flag elsewhere via per-protocol
-/// constraints, or (b) an attacker trying to inflate scan cost. The
-/// instruction-level cap is the same defense-in-depth pattern as
-/// MAX_SYSVAR_SCAN_ITERATIONS at the tx-level scan loops.
+/// **H-1 hard-reject update (audit 2026-05-19).** Previously the helper
+/// silently `take(16)`-truncated, which a Jupiter-v6-max-step ix with 22-25
+/// metas trips — an attacker could hide a hostile destination at slot 17+
+/// because slots 17+ were never inspected. The cap is now a HARD REJECT
+/// (`require!`) at the helper entry rather than a silent slice. Real ixs
+/// up to 25 metas would now reject; the 16-meta budget is intentional for
+/// V1 because the legitimate Jupiter-v6-max-step shape can be split into
+/// shorter ixs, and shorter Jupiter routes cover the common path. Future
+/// expansion to 32 metas requires a measured CU justification (~+4 K CU per
+/// validate pass).
 ///
-/// **CU savings** (measured 2026-05-18): the previous unbounded iteration
-/// paid ~250 CU per meta (program_id read + remaining_accounts find +
-/// token-account-owner deserialize when matched). With a 16-meta cap on
-/// a 25-meta Jupiter ix the savings is ~9 × 250 = 2,250 CU. The cumulative
-/// savings across a typical DeFi sandwich (validate's two scan calls into
-/// `enforce_destination_allowlist`) is ~5K CU.
-const MAX_DESTINATION_CHECK_METAS_PER_IX: usize = 16;
+/// **CU savings.** The pre-filter on AccountInfo.owner (32-byte pubkey
+/// compare, no deserialize) covers the ~250 CU per non-token-meta case
+/// even before the bound triggers. The bound triggers only on adversarial
+/// or over-long real ixs — both of which now reject cleanly.
+pub(crate) const MAX_DESTINATION_CHECK_METAS_PER_IX: usize = 16;
 
 /// TA-07 (Phase 3) extended signature: `now` is the current Unix timestamp
 /// used by the graylist friction check. Callers pass `clock.unix_timestamp`.
@@ -114,10 +116,18 @@ pub fn enforce_destination_allowlist<'info>(
     policy: &PolicyConfig,
     now: i64,
 ) -> Result<()> {
-    // PEN-CROSS-4: bound iteration at 16 metas per call. See constant
-    // doc above for rationale. Slicing is safe because `take()` saturates
-    // at the source length when source is shorter than the bound.
-    for meta in ix_accounts.iter().take(MAX_DESTINATION_CHECK_METAS_PER_IX) {
+    // H-1 hard-reject (audit 2026-05-19): refuse to scan ixs with more
+    // metas than the destination-check budget. Previously the helper
+    // silently truncated via `take(16)`, which a Jupiter-v6-max-step
+    // 22-25 meta ix would trip — attacker hides hostile destination at
+    // slot 17+ because slots 17+ are never inspected. Hard-reject closes
+    // the silent-drop. See `MAX_DESTINATION_CHECK_METAS_PER_IX` doc for
+    // CU rationale.
+    require!(
+        ix_accounts.len() <= MAX_DESTINATION_CHECK_METAS_PER_IX,
+        SigilError::IxMetaCountExceeded
+    );
+    for meta in ix_accounts.iter() {
         if !meta.is_writable {
             // Read-only accounts cannot receive value; skip.
             continue;
@@ -184,4 +194,137 @@ pub fn enforce_destination_allowlist<'info>(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod h1_hard_reject_tests {
+    //! H-1 hard-reject (audit 2026-05-19): `enforce_destination_allowlist`
+    //! must REJECT (not silently truncate) when a foreign DeFi ix exceeds
+    //! the destination-check meta budget. These tests pin the error code
+    //! (6102 IxMetaCountExceeded) and the boundary behaviour.
+    use super::*;
+
+    fn pk(b: u8) -> Pubkey {
+        Pubkey::new_from_array([b; 32])
+    }
+
+    /// PolicyConfig has no Default impl (Anchor `#[account]` macro
+    /// doesn't derive it). The H-1 hard-reject fires BEFORE any policy
+    /// field is read, so this mock is never inspected — but a real
+    /// instance is required to satisfy the `&PolicyConfig` parameter.
+    fn mock_policy() -> PolicyConfig {
+        PolicyConfig {
+            vault: pk(0),
+            daily_spending_cap_usd: 0,
+            max_transaction_size_usd: 0,
+            protocol_mode: 0,
+            protocols: vec![],
+            developer_fee_rate: 0,
+            max_slippage_bps: 0,
+            timelock_duration: 0,
+            allowed_destinations: vec![],
+            has_constraints: false,
+            has_pending_policy: false,
+            has_protocol_caps: false,
+            protocol_caps: vec![],
+            session_expiry_seconds: 0,
+            bump: 0,
+            policy_version: 0,
+            has_post_assertions: 0,
+            destination_mode: 0,
+            policy_preview_digest: [0u8; 32],
+            created_at_slot: 0,
+            operating_hours: 0,
+            destination_graylist: vec![],
+            auto_promote_grays: false,
+            auto_revoke_threshold: 0,
+            stable_balance_floor: 0,
+            per_recipient_daily_cap_usd: 0,
+            cosign_required: false,
+        }
+    }
+
+    /// Boundary: an ix with exactly MAX_DESTINATION_CHECK_METAS_PER_IX
+    /// metas is accepted (the cap is `<=`, not `<`). All metas are
+    /// non-writable so they're trivially skipped — the test is purely
+    /// about the entry-guard semantics, not destination resolution.
+    #[test]
+    fn boundary_at_cap_accepts() {
+        let vault_pubkey = pk(0xA);
+        let metas: Vec<AccountMeta> = (0..MAX_DESTINATION_CHECK_METAS_PER_IX)
+            .map(|i| AccountMeta::new_readonly(pk(i as u8 + 16), false))
+            .collect();
+        let policy = mock_policy();
+        let remaining: Vec<AccountInfo> = vec![];
+        let res = enforce_destination_allowlist(
+            &metas,
+            &remaining,
+            &vault_pubkey,
+            &policy,
+            0,
+        );
+        assert!(
+            res.is_ok(),
+            "ix at exactly the bound must accept (non-writable metas skip cleanly)"
+        );
+    }
+
+    /// One-over-cap: an ix with 17 metas must REJECT with 6102. This is
+    /// the silent-truncate-attack closure: previously the helper would
+    /// `take(16)` and ignore slot 17.
+    #[test]
+    fn one_over_cap_rejects_with_6102() {
+        let vault_pubkey = pk(0xA);
+        let metas: Vec<AccountMeta> =
+            (0..(MAX_DESTINATION_CHECK_METAS_PER_IX + 1))
+                .map(|i| AccountMeta::new_readonly(pk(i as u8 + 16), false))
+                .collect();
+        let policy = mock_policy();
+        let remaining: Vec<AccountInfo> = vec![];
+        let err = enforce_destination_allowlist(
+            &metas,
+            &remaining,
+            &vault_pubkey,
+            &policy,
+            0,
+        )
+        .expect_err("ix exceeding bound MUST reject");
+        // Convert the AnchorError -> u32 error code via the standard
+        // Anchor error projection. We pin the 6102 numeric for forward-
+        // compat with off-chain monitors.
+        let err_str = format!("{:?}", err);
+        assert!(
+            err_str.contains("IxMetaCountExceeded") || err_str.contains("6102"),
+            "expected IxMetaCountExceeded (6102), got: {}",
+            err_str
+        );
+    }
+
+    /// Far-over-cap (25 metas — Jupiter v6 max-step shape): also rejects.
+    /// Documents the legitimate-flow case the audit called out — Jupiter
+    /// v6 max-step ixs WILL hit this rejection in V1; the route must be
+    /// shortened or split.
+    #[test]
+    fn jupiter_v6_max_step_25_metas_rejects() {
+        let vault_pubkey = pk(0xA);
+        let metas: Vec<AccountMeta> = (0..25)
+            .map(|i| AccountMeta::new_readonly(pk(i as u8 + 16), false))
+            .collect();
+        let policy = mock_policy();
+        let remaining: Vec<AccountInfo> = vec![];
+        let err = enforce_destination_allowlist(
+            &metas,
+            &remaining,
+            &vault_pubkey,
+            &policy,
+            0,
+        )
+        .expect_err("25-meta ix MUST reject");
+        let err_str = format!("{:?}", err);
+        assert!(
+            err_str.contains("IxMetaCountExceeded") || err_str.contains("6102"),
+            "expected IxMetaCountExceeded (6102), got: {}",
+            err_str
+        );
+    }
 }
