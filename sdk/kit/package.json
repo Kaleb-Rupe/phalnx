@@ -78,9 +78,13 @@
   "peerDependencies": {
     "@solana/kit": "^6.2.0",
     "@solana/errors": "^6.2.0",
+    "react": ">=18.0.0",
     "@tanstack/react-query": ">=5.0.0"
   },
   "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
     "@tanstack/react-query": {
       "optional": true
     }

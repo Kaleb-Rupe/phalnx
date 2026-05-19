@@ -15,8 +15,13 @@ name: Devnet Tests
 
 on:
   workflow_call: # Called by deploy-devnet.yml after successful deploy
-  # schedule:                          # DISABLED 2026-04-03 — see deploy-devnet.yml Job 3 comment
-  #   - cron: "0 2 * * *"             # Nightly runs hit same UnauthorizedTokenTransfer failure
+  # DISABLED 2026-04-03: nightly cron hit UnauthorizedTokenTransfer reproducibly.
+  # Root cause is stale devnet test fixtures (initializeVault arg counts) that
+  # need to be brought up to the current 18-arg signature post-Phase 5/6.
+  # Re-enable AFTER Phase 10 devnet redeploy + fixture sweep. See DC audit
+  # closure docs/revamp/AUDIT_2026_05_19_DC/CLOSURE.md.
+  # schedule:
+  #   - cron: "0 2 * * *"
   workflow_dispatch:
     inputs:
       test-filter:

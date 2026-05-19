@@ -228,7 +228,13 @@ const ANCHOR_ERROR_MIN = 6000;
  *  V2 ships 103 codes (6000-6102); the highest variant is
  *  `IxMetaCountExceeded = 6102`. See `sdk/kit/src/generated/errors/sigil.ts`
  *  for the canonical list. When new on-chain errors are added, bump this
- *  upper bound and the matching predicate at `agent-errors.ts:isSigilOnChainCode`. */
+ *  upper bound AND the matching range predicate at `agent-errors.ts`
+ *  (currently inline at the `code <= 6102` checks at L2604 and L2622 —
+ *  not a named helper). The categorize test at
+ *  `tests/dashboard/errors-categorize.test.ts:47-72` iterates ALL
+ *  generated SIGIL_ERROR__* constants and asserts they classify as
+ *  on-chain, so this bound and the agent-errors.ts predicate must agree
+ *  or the test fails. */
 const ANCHOR_ERROR_MAX = 6102;
 
 /**
