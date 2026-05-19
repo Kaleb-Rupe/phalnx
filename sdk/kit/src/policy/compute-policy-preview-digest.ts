@@ -220,6 +220,82 @@ function base58Decode(s: string): Uint8Array {
   return out;
 }
 
+// ── §RP-2 L-NEW-1 forward-looking ratchet (audit 2026-05-19) ────────────────
+//
+// Mirrors the Rust-side `POLICY_PREVIEW_FIELD_COUNT` const-assert at
+// `programs/sigil/src/utils/policy_digest.rs:143` and the destructuring
+// test in `field_count_invariant`. The Rust defenses are exhaustive
+// (compile-time struct destructuring catches "field added but encoder
+// not updated"), but the TS encoder is a plain procedural write loop —
+// adding a 21st field to `PolicyPreviewFields` here AND bumping
+// `POLICY_PREVIEW_FIELD_COUNT` to 21 still passes the build if the
+// developer forgets to write the encoding line.
+//
+// `PER_FIELD_FIXED_SIZES` is a 1:1 array of the FIXED-WIDTH byte cost
+// of each canonical field (excluding the variable per-element 32-byte
+// pubkey appendages for protocols + allowed_destinations). The
+// `EXPECTED_FIXED_SIZE` derived sum + the runtime assertion against
+// the encoded buffer's length forces the developer to update this
+// table AND the encoder in lockstep. Silent bypass is closed.
+//
+// To add a field: (1) extend `PolicyPreviewFields` (2) extend
+// `PER_FIELD_FIXED_SIZES` with the new field's fixed byte cost (3)
+// bump `POLICY_PREVIEW_FIELD_COUNT` (4) write the encoder line. The
+// `assert_field_count_in_lockstep` IIFE catches step-skips at module
+// load.
+
+/** Mirrors `policy_digest.rs::POLICY_PREVIEW_FIELD_COUNT`. */
+export const POLICY_PREVIEW_FIELD_COUNT = 20;
+
+/**
+ * Fixed-width byte cost per canonical field. Variable parts (the
+ * per-element 32-byte pubkey appendages of protocols and
+ * allowed_destinations) are NOT included — those are accounted for
+ * separately at encode time. Indices map 1:1 to the canonical fields
+ * listed in the module header.
+ */
+const PER_FIELD_FIXED_SIZES = [
+  8, // 1.  daily_spending_cap_usd       (u64 LE)
+  8, // 2.  max_transaction_size_usd     (u64 LE)
+  2, // 3.  max_slippage_bps             (u16 LE)
+  2, // 4.  developer_fee_rate           (u16 LE)  PEN-CROSS-6
+  1, // 5.  protocol_mode                (u8)
+  4, // 6.  protocols                    (u32 LE length prefix; pubkeys variable)
+  1, // 7.  destination_mode             (u8)
+  4, // 8.  allowed_destinations         (u32 LE length prefix; pubkeys variable)
+  8, // 9.  timelock_duration            (u64 LE)
+  8, // 10. session_expiry_seconds       (u64 LE)
+  1, // 11. observe_only                 (bool as u8)
+  1, // 12. has_constraints              (bool as u8)
+  1, // 13. has_post_assertions          (u8)
+  8, // 14. created_at_slot              (u64 LE) PEN-CROSS-2
+  4, // 15. operating_hours              (u32 LE) TA-05
+  1, // 16. auto_promote_grays           (bool as u8) TA-07
+  1, // 17. auto_revoke_threshold        (u8) TA-17
+  8, // 18. stable_balance_floor         (u64 LE) TA-12
+  8, // 19. per_recipient_daily_cap_usd  (u64 LE) TA-14
+  1, // 20. cosign_required              (bool as u8) G6
+] as const;
+
+/** Derived sum — must match the encoder's `fixedSize` exactly. */
+const EXPECTED_FIXED_SIZE = PER_FIELD_FIXED_SIZES.reduce((a, b) => a + b, 0);
+
+// Module-load assertion: enforce that PER_FIELD_FIXED_SIZES.length and
+// POLICY_PREVIEW_FIELD_COUNT diverge → throw at import time. Catches a
+// developer who bumps the count without updating the table (or vice
+// versa). Cheap one-time cost, runs once per process.
+(function assert_field_count_in_lockstep(): void {
+  if (PER_FIELD_FIXED_SIZES.length !== POLICY_PREVIEW_FIELD_COUNT) {
+    throw new Error(
+      `§RP-2 L-NEW-1 (TA-19 ratchet): PER_FIELD_FIXED_SIZES.length=${PER_FIELD_FIXED_SIZES.length} ` +
+        `diverges from POLICY_PREVIEW_FIELD_COUNT=${POLICY_PREVIEW_FIELD_COUNT}. ` +
+        "Either add the missing field's byte cost to PER_FIELD_FIXED_SIZES, " +
+        "or update POLICY_PREVIEW_FIELD_COUNT, in the SAME commit. " +
+        "Silent diverge would bypass TA-19 (PEN-7 class).",
+    );
+  }
+})();
+
 // ── Encoders ─────────────────────────────────────────────────────────────────
 
 function writeU16Le(view: DataView, offset: number, v: number): number {
@@ -255,27 +331,13 @@ export function computePolicyPreviewDigest(
   const protoBytes = protocols.map((p) => base58Decode(p as string));
   const destBytes = dests.map((p) => base58Decode(p as string));
 
-  const fixedSize =
-    8 + // daily_spending_cap_usd
-    8 + // max_transaction_size_usd
-    2 + // max_slippage_bps
-    2 + // developer_fee_rate (PEN-CROSS-6)
-    1 + // protocol_mode
-    4 + // protocols length prefix
-    1 + // destination_mode
-    4 + // allowed_destinations length prefix
-    8 + // timelock_duration
-    8 + // session_expiry_seconds
-    1 + // observe_only
-    1 + // has_constraints
-    1 + // has_post_assertions
-    8 + // created_at_slot (PEN-CROSS-2)
-    4 + // operating_hours (TA-05 Phase 3)
-    1 + // auto_promote_grays (TA-07 Phase 3)
-    1 + // auto_revoke_threshold (TA-17 Phase 3)
-    8 + // stable_balance_floor (TA-12 Phase 5)
-    8 + // per_recipient_daily_cap_usd (TA-14 Phase 5)
-    1; // cosign_required (G6 audit 2026-05-18)
+  // §RP-2 L-NEW-1: fixedSize is now derived from the PER_FIELD_FIXED_SIZES
+  // table above (must equal POLICY_PREVIEW_FIELD_COUNT entries). The inline
+  // "8 + 8 + ..." literal was the original hand-summed form — a 21st-field
+  // bug would silently bypass it. The table-driven form forces the
+  // developer to update both the table AND the encoder body when adding
+  // a field (the offset assertion at the bottom catches the inconsistency).
+  const fixedSize = EXPECTED_FIXED_SIZE;
   const variableSize = protoBytes.length * 32 + destBytes.length * 32;
   const buf = new Uint8Array(fixedSize + variableSize);
   const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
@@ -320,10 +382,21 @@ export function computePolicyPreviewDigest(
   // G6 (audit 2026-05-18 cosign opt-in): cosign_required at position 20.
   buf[off++] = fields.cosignRequired ? 1 : 0;
 
-  // Defensive: assert we wrote exactly what we sized
+  // §RP-2 L-NEW-1 forward-looking ratchet: the encoder MUST write
+  // exactly `fixedSize + variableSize` bytes. `fixedSize` is now
+  // derived from the PER_FIELD_FIXED_SIZES table (which is asserted
+  // at module load to be 1:1 with POLICY_PREVIEW_FIELD_COUNT). A
+  // future engineer who adds a 21st field MUST update both the table
+  // AND the encoder body — if they update only the table (bumping
+  // EXPECTED_FIXED_SIZE) but forget to write the encoder line, this
+  // assertion fires with a clear mismatch. If they update only the
+  // encoder line, the SAME assertion fires (the buffer was too small
+  // and the OOB write at line `buf[off++] = ...` already threw).
   if (off !== buf.length) {
     throw new Error(
-      `computePolicyPreviewDigest: encoded ${off} bytes, expected ${buf.length}`,
+      `computePolicyPreviewDigest: encoded ${off} bytes, expected ${buf.length}. ` +
+        `If you added a field to PolicyPreviewFields, update PER_FIELD_FIXED_SIZES + ` +
+        `POLICY_PREVIEW_FIELD_COUNT AND write the encoder line in the SAME commit.`,
     );
   }
 
