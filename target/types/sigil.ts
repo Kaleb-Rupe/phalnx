@@ -5806,6 +5806,11 @@ export type Sigil = {
       "code": 6099,
       "name": "errAtaAuthorityChanged",
       "msg": "R-2 AtaAuthorityPin: vault-owned token account authority changed or account closed/reinitialized mid-sandwich"
+    },
+    {
+      "code": 6100,
+      "name": "errOutputBelowFloor",
+      "msg": "R-3 OutputBalanceFloor: post-execution balance increase fell below the configured min_increase floor"
     }
   ],
   "types": [
@@ -8494,7 +8499,8 @@ export type Sigil = {
               "NOTE: If value decreases, check ALWAYS PASSES.",
               "3 = NoChange: check current == snapshot — byte-for-byte equality (Phase B2)",
               "4 = MintDeltaCap (Phase 6 R-1): vault-wide or per-account drain ceiling",
-              "5 = AtaAuthorityPin (Phase 6 R-2): post-CPI token-account authority pin"
+              "5 = AtaAuthorityPin (Phase 6 R-2): post-CPI token-account authority pin",
+              "6 = OutputBalanceFloor (Phase 6 R-3): minimum balance increase floor"
             ],
             "type": "u8"
           },

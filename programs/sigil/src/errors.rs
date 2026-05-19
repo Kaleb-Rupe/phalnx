@@ -494,4 +494,23 @@ pub enum SigilError {
     /// — R-1 sees the balance drop, R-2 sees the authority flip.
     #[msg("R-2 AtaAuthorityPin: vault-owned token account authority changed or account closed/reinitialized mid-sandwich")]
     ErrAtaAuthorityChanged,
+
+    /// 6100 — R-3 OutputBalanceFloor: a token account that was supposed to
+    /// receive at least `min_increase` units of its mint during the sandwich
+    /// did not. Snapshot taken at `validate_and_authorize` against
+    /// `target_account.amount` (u64 LE at bytes 64..72), finalize requires
+    /// `(post - pre) >= aux_value`.
+    ///
+    /// Counter to "dust-fill" attacks where the agent obtains delegation
+    /// authority then runs a swap that returns 1 lamport — R-3 forces the
+    /// caller to declare the floor below which the swap is "no value
+    /// returned" and rejects.
+    ///
+    /// NOTE on prompt drift: the Phase 6 brief mapped 6099 → ErrOutputBelowFloor.
+    /// During implementation we added MintDeltaCapMisconfigured at 6098
+    /// (distinguishing "caller bug" from "attack") which shifted R-2 to 6099
+    /// and R-3 to this slot. The drift is forward-only; no existing 6097-6098
+    /// assignment moved.
+    #[msg("R-3 OutputBalanceFloor: post-execution balance increase fell below the configured min_increase floor")]
+    ErrOutputBelowFloor,
 }

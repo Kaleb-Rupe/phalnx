@@ -1201,6 +1201,52 @@ pub fn handler(
                     session.snapshot_lens[i] = 8;
                     continue;
                 }
+                // Phase 6 R-3 OutputBalanceFloor: snapshot the configured
+                // token_account's balance. Stored as u64 LE in snap[0..8];
+                // lens[i]=8. Finalize checks (post - pre) >= aux_value.
+                if entry.assertion_mode == 6 {
+                    let target_pubkey = Pubkey::new_from_array(entry.target_account);
+                    let target = ctx
+                        .remaining_accounts
+                        .iter()
+                        .find(|a| a.key() == target_pubkey)
+                        .ok_or(error!(SigilError::PostAssertionFailed))?;
+                    require!(
+                        target.owner == &anchor_spl::token::ID
+                            || target.owner == &crate::state::TOKEN_2022_PROGRAM_ID,
+                        SigilError::PostAssertionFailed
+                    );
+                    let target_data = target.try_borrow_data()?;
+                    require!(
+                        target_data.len() >= 72,
+                        SigilError::PostAssertionFailed
+                    );
+                    // Sanity: the target_account.mint MUST equal the
+                    // configured mint. A mismatch means the caller passed
+                    // the wrong account; better to fail fast at validate.
+                    let mut mint_bytes = [0u8; 32];
+                    mint_bytes.copy_from_slice(&entry.expected_value[0..32]);
+                    let expected_mint = Pubkey::new_from_array(mint_bytes);
+                    let mut actual_mint_bytes = [0u8; 32];
+                    actual_mint_bytes.copy_from_slice(&target_data[0..32]);
+                    let actual_mint = Pubkey::new_from_array(actual_mint_bytes);
+                    require!(
+                        actual_mint == expected_mint,
+                        SigilError::PostAssertionFailed
+                    );
+                    let mut amount_bytes = [0u8; 8];
+                    amount_bytes.copy_from_slice(&target_data[64..72]);
+                    let pre_balance = u64::from_le_bytes(amount_bytes);
+                    session.assertion_snapshots[i][0..8]
+                        .copy_from_slice(&pre_balance.to_le_bytes());
+                    session.snapshot_lens[i] = 8;
+                    continue;
+                }
+                // R-2 AtaAuthorityPin (mode=5) is purely a finalize-time
+                // check — no snapshot needed.
+                if entry.assertion_mode == 5 {
+                    continue;
+                }
                 // Only snapshot for delta modes (1=MaxDecrease, 2=MaxIncrease, 3=NoChange)
                 if entry.assertion_mode == 0 {
                     continue;

@@ -51,6 +51,15 @@ pub enum AssertionMode {
     /// bytes 32..64. Pairs with R-1 to close the F-18 close-and-recreate
     /// evasion: R-1 catches balance change, R-2 catches authority change.
     AtaAuthorityPin = 5,
+    /// Phase 6 R-3: minimum output increase on a token account. Snapshot
+    /// the account's balance at validate time; finalize asserts
+    /// `(post - pre) >= aux_value (min_increase)`. Closes the
+    /// "dust-fill" attack where a malicious swap returns 1 lamport and
+    /// satisfies a delegation cap. `target_account` = token account
+    /// (typically the vault's stablecoin ATA for the output mint);
+    /// `expected_value[0..32]` = mint (cross-check the target_account
+    /// actually holds the declared mint).
+    OutputBalanceFloor = 6,
 }
 
 impl TryFrom<u8> for AssertionMode {
@@ -63,6 +72,7 @@ impl TryFrom<u8> for AssertionMode {
             3 => Ok(AssertionMode::NoChange),
             4 => Ok(AssertionMode::MintDeltaCap),
             5 => Ok(AssertionMode::AtaAuthorityPin),
+            6 => Ok(AssertionMode::OutputBalanceFloor),
             _ => Err(()),
         }
     }
@@ -267,7 +277,32 @@ impl PostExecutionAssertions {
                             crate::errors::SigilError::InvalidConstraintConfig
                         );
                     }
-                    // Other Phase 6 modes (6/7) are added in subsequent commits.
+                    AssertionMode::OutputBalanceFloor => {
+                        // target_account = token account to measure.
+                        require!(
+                            entry.target_account != Pubkey::default(),
+                            crate::errors::SigilError::InvalidConstraintConfig
+                        );
+                        // expected_value[0..32] = mint for sanity-check that
+                        // target_account.mint matches at validate snapshot.
+                        require!(
+                            entry.expected_value.len() >= 32,
+                            crate::errors::SigilError::InvalidConstraintConfig
+                        );
+                        // min_increase must be non-zero — a floor of 0 is
+                        // trivially satisfied by any positive delta.
+                        let min_inc = u64::from_le_bytes(entry.aux_value);
+                        require!(
+                            min_inc > 0,
+                            crate::errors::SigilError::InvalidConstraintConfig
+                        );
+                        // aux_byte unused — must be zero.
+                        require!(
+                            entry.aux_byte == 0,
+                            crate::errors::SigilError::InvalidConstraintConfig
+                        );
+                    }
+                    // Other Phase 6 modes (7) are added in subsequent commits.
                     _ => {
                         return Err(crate::errors::SigilError::InvalidConstraintConfig.into());
                     }
@@ -349,6 +384,22 @@ mod tests {
         }
     }
 
+    /// Phase 6 R-3 helper — OutputBalanceFloor entry constructor.
+    fn mk_output_floor(token_account: Pubkey, mint: Pubkey, min_inc: u64) -> PostAssertionEntry {
+        let mut expected = vec![0u8; 32];
+        expected.copy_from_slice(mint.as_ref());
+        PostAssertionEntry {
+            target_account: token_account,
+            offset: 0,
+            value_len: 0,
+            operator: 0,
+            expected_value: expected,
+            assertion_mode: 6, // OutputBalanceFloor
+            aux_value: min_inc.to_le_bytes(),
+            aux_byte: 0,
+        }
+    }
+
     // mk_crossfield_entry DELETED in Phase 1 Option A demolition along with
     // the seven CrossFieldLte tests below it.
 
@@ -367,14 +418,19 @@ mod tests {
             AssertionMode::try_from(5),
             Ok(AssertionMode::AtaAuthorityPin)
         );
+        // Phase 6 R-3
+        assert_eq!(
+            AssertionMode::try_from(6),
+            Ok(AssertionMode::OutputBalanceFloor)
+        );
     }
 
     #[test]
-    fn assertion_mode_try_from_rejects_6_until_r3_lands() {
-        // R-3 OutputBalanceFloor (mode=6) is added in a subsequent commit;
-        // until then, mode=6 must fail TryFrom so a malformed entry is
-        // rejected.
-        assert!(AssertionMode::try_from(6).is_err());
+    fn assertion_mode_try_from_rejects_7_until_r4_lands() {
+        // R-4 DeclarationConsistency (mode=7) is added in a subsequent
+        // commit; until then, mode=7 must fail TryFrom so a malformed
+        // entry is rejected.
+        assert!(AssertionMode::try_from(7).is_err());
     }
 
     #[test]
@@ -390,6 +446,7 @@ mod tests {
         assert_eq!(AssertionMode::NoChange as u8, 3);
         assert_eq!(AssertionMode::MintDeltaCap as u8, 4);
         assert_eq!(AssertionMode::AtaAuthorityPin as u8, 5);
+        assert_eq!(AssertionMode::OutputBalanceFloor as u8, 6);
     }
 
     // ─── B2: delta modes in validate_entries ────────────────────────────
@@ -520,6 +577,40 @@ mod tests {
     #[test]
     fn validate_rejects_ata_authority_pin_with_aux_byte_set() {
         let mut entry = mk_ata_authority_pin(Pubkey::new_unique());
+        entry.aux_byte = 1;
+        let entries = vec![entry];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
+    }
+
+    // ─── Phase 6 R-3 OutputBalanceFloor validate_entries ───────────────
+
+    #[test]
+    fn validate_accepts_output_balance_floor() {
+        let ta = Pubkey::new_unique();
+        let mint = Pubkey::new_unique();
+        let entries = vec![mk_output_floor(ta, mint, 500_000)];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_ok());
+    }
+
+    #[test]
+    fn validate_rejects_output_floor_default_target() {
+        let mint = Pubkey::new_unique();
+        let entries = vec![mk_output_floor(Pubkey::default(), mint, 500_000)];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
+    }
+
+    #[test]
+    fn validate_rejects_output_floor_zero_min_increase() {
+        // A floor of 0 is trivially satisfied — owner should not encode it.
+        let ta = Pubkey::new_unique();
+        let mint = Pubkey::new_unique();
+        let entries = vec![mk_output_floor(ta, mint, 0)];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
+    }
+
+    #[test]
+    fn validate_rejects_output_floor_with_aux_byte_set() {
+        let mut entry = mk_output_floor(Pubkey::new_unique(), Pubkey::new_unique(), 1);
         entry.aux_byte = 1;
         let entries = vec![entry];
         assert!(PostExecutionAssertions::validate_entries(&entries).is_err());

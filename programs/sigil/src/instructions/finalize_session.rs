@@ -861,6 +861,56 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
                 continue;
             }
 
+            // Phase 6 R-3 OutputBalanceFloor: re-read the target_account
+            // balance and assert (post - pre) >= min_increase.
+            if let crate::state::post_assertions::AssertionMode::OutputBalanceFloor = mode {
+                require!(
+                    session_snapshot_lens[i] == 8,
+                    SigilError::SnapshotNotCaptured
+                );
+
+                let target_pubkey = Pubkey::new_from_array(entry.target_account);
+                let target = remaining
+                    .iter()
+                    .find(|a| a.key() == target_pubkey)
+                    .ok_or(error!(SigilError::PostAssertionFailed))?;
+                require!(
+                    target.owner == &anchor_spl::token::ID
+                        || target.owner == &crate::state::TOKEN_2022_PROGRAM_ID,
+                    SigilError::PostAssertionFailed
+                );
+                let target_data = target.try_borrow_data()?;
+                require!(
+                    target_data.len() >= 72,
+                    SigilError::PostAssertionFailed
+                );
+                let mut amount_bytes = [0u8; 8];
+                amount_bytes.copy_from_slice(&target_data[64..72]);
+                let post_balance = u64::from_le_bytes(amount_bytes);
+
+                let mut snap_bytes = [0u8; 8];
+                snap_bytes.copy_from_slice(&session_snapshots[i][0..8]);
+                let pre_balance = u64::from_le_bytes(snap_bytes);
+
+                let min_increase = u64::from_le_bytes(entry.aux_value);
+                // saturating_sub: if balance went DOWN (impossible for an
+                // honest output flow), delta saturates to 0 which is < any
+                // non-zero min_increase. The check correctly rejects.
+                let delta = post_balance.saturating_sub(pre_balance);
+                require!(
+                    delta >= min_increase,
+                    SigilError::ErrOutputBelowFloor
+                );
+
+                emit!(crate::events::PostAssertionChecked {
+                    vault: vault_key,
+                    entry_index: i as u8,
+                    passed: true,
+                    timestamp: clock_ts,
+                });
+                continue;
+            }
+
             // Phase 6 R-2 AtaAuthorityPin: post-CPI verification that the
             // entry's `target_account` is STILL a vault-owned SPL/Token-2022
             // account. Catches:
@@ -999,7 +1049,8 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
                     require!(actual == snapshot, SigilError::PostAssertionFailed);
                 }
                 crate::state::post_assertions::AssertionMode::MintDeltaCap
-                | crate::state::post_assertions::AssertionMode::AtaAuthorityPin => {
+                | crate::state::post_assertions::AssertionMode::AtaAuthorityPin
+                | crate::state::post_assertions::AssertionMode::OutputBalanceFloor => {
                     // Handled above before the legacy target_data load.
                     // These arms are unreachable but the exhaustive match
                     // requires them. Force an error if execution reaches
