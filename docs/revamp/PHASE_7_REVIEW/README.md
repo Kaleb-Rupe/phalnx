@@ -2,7 +2,7 @@
 
 **Phase:** 7 — On-chain audit log (TA-15 + N1 temporal binding)
 **Date:** 2026-05-19
-**Verdict:** **CLEAR-TO-PROCEED** (after §RP-1 fix-up cycle; burst + sysvar-freshness behavioural tests explicitly deferred to Phase 7.1 / Phase 6.1 surfpool)
+**Verdict:** **CLEAR-TO-PROCEED** (after §RP-1 + §RP-2 fix-up cycles; burst + sysvar-freshness behavioural tests explicitly deferred to Phase 7.1 / Phase 6.1 surfpool)
 
 ## Phase 7 commits
 
@@ -12,7 +12,9 @@
 | 1 | Account | feat(audit-log): create AuditLogSuccess + AuditLogRejected PDAs | `27b91a4` |
 | 2 | Wire-up | feat(audit-log): write entries from 11 mutating instructions | `76d742a` |
 | 3 | SDK | feat(sdk): fetchAuditLogSuccess + fetchAuditLogRejected helpers | `655a29f` |
-| 4 | §RP-1 fix-up | fix(audit-log): §RP-1 close-up — FIX-1..FIX-5 (HIGH-1 + HIGH-2 + I-2 + I-3 + N-1) | _this commit_ |
+| 4 | §RP-1 fix-up | fix(audit-log): §RP-1 close-up — FIX-1..FIX-5 | `a9e74ec` |
+| 5 | §RP-1 cleanup | fix(tests): audit-log F-19 — remove unused tracker decl | `3f53a00` |
+| 6 | §RP-2 fix-up | fix(audit-log): §RP-2 close-up — CRIT-1/2 + HIGH-1/2/3 | `c7cf727` |
 
 ## §RP-1 findings + dispositions
 
@@ -41,6 +43,22 @@
 | AUDIT-DOC | INFO (caught during §RP-1) | `targetProtocolBytes()` SDK helper used a misleading name in its docstring | RESOLVED — replaced with `subjectBytes()` (canonical), `targetProtocolBytes()` kept as `@deprecated` alias for one release. Both return `entry.subject`. |
 | IDL-REGEN | INFO | IDL regenerated via `anchor idl build --out target/idl/sigil.json` (nightly toolchain) to propagate the `target_protocol` → `subject` rename; Codama then rendered the SDK types | Pure mechanical regen. Cosmetic diffs (Unicode em-dash normalisation, slot_hashes_sysvar doc removed in earlier work) accompany the substantive `subject` field rename. |
 
+## §RP-2 findings + dispositions (silent-failure-hunter on §RP-1 close-up)
+
+§RP-2 ran adversarially against the §RP-1 close-up + cleanup commits. Found **2 CRIT + 3 HIGH** follow-ons — same pattern as the prior cycle's stale dist + missing prepublishOnly for shieldWallet.
+
+| ID | Severity | Title | Disposition |
+|---|---|---|---|
+| CRIT-1 | CRIT | `subjectBytes()` defined but NOT exported from `sdk/kit/src/index.ts` — only deprecated alias was barrel-exported | RESOLVED in `c7cf727`. Added `subjectBytes` to the barrel export block. |
+| CRIT-2 | CRIT | `sdk/kit/dist/audit-log.js` returned `entry.targetProtocol` (now undefined post-rename) — silent data loss on next pnpm publish; no `prepublishOnly` hook | RESOLVED in `c7cf727`. Added `"prepublishOnly": "pnpm run clean && pnpm run build"` to sdk/kit/package.json + rebuilt dist locally; published surface now correctly returns `entry.subject`. |
+| HIGH-1 | HIGH | `AUDIT_DISC_FINALIZE_REJECT = 16` constant existed but was NOT exported from `sdk/kit/src/index.ts` barrel | RESOLVED in `c7cf727`. Added to barrel exports. |
+| HIGH-2 | HIGH | F-19 test asserted ZERO `disc=16` entries (admitted "0 rejected entries written" — disc=16 never exercised anywhere) | PARTIALLY RESOLVED in `c7cf727`. Added sanity test asserting `DISC_FINALIZE_REJECT === 16` + differs from disc=0/1/5/13. **Full runtime expired-finalize → disc=16 read deferred to Phase 7.1 surfpool sandwich tests** (LiteSVM can't drive expired-session finalizes economically). |
+| HIGH-3 | HIGH | `SigilError::ConstraintsVaultMismatch` message "Zero-copy constraints account has wrong vault" misleads ops when fired from audit-log paths (12 of 16 call sites are audit-log defense-in-depth, NOT constraints) | RESOLVED in `c7cf727`. Variant renamed → `ZeroCopyVaultMismatch` with generic message "Zero-copy account vault key mismatch (defense-in-depth)". Error code **6064** (NOT 6068 as the §RP-1 fix-up report incorrectly claimed) — code number unchanged. 14 Rust ix files updated, 5 SDK/test files updated, IDL + Codama regenerated, error-drift OK 103. |
+| MED-1 | MED | Phase 9 removal of `targetProtocolBytes()` alias is undefined (Phase 9 not enumerated in CLAUDE.md/REVAMP_PLAN) | DEFERRED — Phase 9 SDK redesign will own the alias removal; ADR-style tracker in Phase 9 dispatch will pick this up. |
+| MED-2 | MED | disc=0 (RESERVED_ZERO) vs disc=1 (VALIDATE no-writer post-fix) — two reserved-no-writer constants, names don't disambiguate | DEFERRED — cosmetic; future docstring polish in Phase 9. |
+| MED-3 | MED | F-19 test comment thinks-out-loud about disc=1 in a confusing way | DEFERRED — cosmetic; will clean up alongside MED-2 in Phase 9 doc-polish. |
+| LOW-1 | LOW | `_padding: [u8; 13]` forward-compat slot lacks Phase 9+ schema spec | DEFERRED — Phase 9 owns the future-field-append protocol. |
+
 ## Deferred to Phase 7.1
 
 | ID | Title | Reason for deferral |
@@ -53,22 +71,24 @@
 | N-4 | Edge case tests (count = CAPACITY-1, count > CAPACITY by single-step assertions, byte-offset pin in TS) | Phase 7.1 scope |
 | N-5 | User-facing rent doc drift (~0.058 SOL spec → ~0.18 SOL actual due to widened `_padding`) | Docs PR — separate from on-chain fix-up |
 
-## Final test state (post §RP-1 fix-up)
+## Final test state (post §RP-1 + §RP-2 fix-up)
 
 | Gate | Pre-fix-up | Post-fix-up | Status |
 |---|---|---|---|
 | `cargo test --lib --features devnet-testing` | 230 / 0 | **230 / 0** | unchanged |
-| `npx ts-mocha tests/audit-log.ts` | 9 / 0 | **9 / 0** | unchanged (assertions strengthened, test count stable) |
+| `npx ts-mocha tests/audit-log.ts` | 9 / 0 | **10 / 0** | +1 (disc=16 sanity test from §RP-2 HIGH-2) |
 | `sdk/kit` test suite | 1740 / 0 | **1740 / 0** | unchanged (Codama-regen propagates field rename transparently) |
-| `pnpm verify:error-drift` | OK 103 | **OK 103** | unchanged (ZERO new error codes — reused `ConstraintsVaultMismatch`) |
-| Expanded LiteSVM (sigil + audit-log + missing-coverage + jupiter + jupiter-lend + flash-trade + security-exploits + instruction-constraints + toctou-security + analytics-counters + policy-digest-invariant + post-assertions-r-variants + post-assertions-sandwich + sysvar-scan-bound + cu-budget) | 401 / 0 + (10 pre-existing in instruction-constraints) | **465 / 0** (+ 10 pre-existing in `instruction-constraints` V2 OR-logic block — `RangeError: encoding overruns Uint8Array`; PRE-EXISTING, unrelated to audit-log) | green |
+| `pnpm verify:error-drift` | OK 103 | **OK 103** | unchanged (ZERO new error codes — variant renamed in-place) |
+| Expanded LiteSVM (13 files) | 392 / 0 | **402 / 0** + 2 pending | +10 from audit-log + disc=16 sanity |
 
 ## Verdict: **CLEAR-TO-PROCEED**
 
-§RP-1 close-up complete. Phase 7 ships with:
+§RP-1 + §RP-2 close-up complete. Phase 7 ships with:
 - HIGH-1 / HIGH-2 closed in source-of-truth Rust + propagated to IDL + Codama-regen TS + SDK helpers + tests
-- I-2 / I-3 / N-1 closed
-- Zero new error codes (`pnpm verify:error-drift` OK 103)
-- Phase 7.1 deferral list above documents the residual MED-1 / MED-2 / MED-3 / N-2..N-5 with explicit rationale
+- §RP-1 I-2 / I-3 / N-1 closed
+- §RP-2 CRIT-1 / CRIT-2 / HIGH-1 / HIGH-2 / HIGH-3 closed
+- ZERO new error codes (variant renamed `ConstraintsVaultMismatch` → `ZeroCopyVaultMismatch`, code 6064 unchanged)
+- `prepublishOnly` hook on sdk/kit/package.json prevents stale dist on next publish
+- Phase 7.1 deferral list documents residual MED-1/2/3 + LOW-1 + N-2/3/4/5 with explicit rationale
 
 Phase 8 (ownership-transfer) and the burst behavioural tests can proceed in parallel using surfpool.
