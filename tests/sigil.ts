@@ -5975,6 +5975,13 @@ describe("sigil", () => {
         .rpc();
 
       // Register agent
+      //
+      // P0.1 interim cosign gate (audit 2026-05-19): this vault opted into
+      // `cosign_required: true` at init for the G6 §RP-2 P2 weakening tests.
+      // register_agent now requires a non-owner signer when cosign_required
+      // is true. Pass `protoCapCosigner` in remaining_accounts to satisfy
+      // the gate (matches the cosign session signer that the elevated
+      // queue_policy_update calls below already use).
       await program.methods
         .registerAgent(protoCapAgent.publicKey, FULL_CAPABILITY, new BN(0))
         .accounts({
@@ -5983,7 +5990,14 @@ describe("sigil", () => {
           policy: pcPolicy,
           agentSpendOverlay: pcOverlay,
         } as any)
-        .signers([protoCapOwner])
+        .remainingAccounts([
+          {
+            pubkey: protoCapCosigner.publicKey,
+            isSigner: true,
+            isWritable: false,
+          },
+        ])
+        .signers([protoCapOwner, protoCapCosigner])
         .rpc();
     });
 
