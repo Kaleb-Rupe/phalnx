@@ -861,6 +861,56 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
                 continue;
             }
 
+            // Phase 6 R-2 AtaAuthorityPin: post-CPI verification that the
+            // entry's `target_account` is STILL a vault-owned SPL/Token-2022
+            // account. Catches:
+            //   - mid-tx SetAuthority CPI flipping owner → attacker
+            //   - close+recreate where attacker's account is supplied at
+            //     finalize (owner field != vault → reject)
+            //   - close-only (data length 0 → reject)
+            //   - cross-program reinit (account.owner != known token program → reject)
+            if let crate::state::post_assertions::AssertionMode::AtaAuthorityPin = mode {
+                let target_pubkey = Pubkey::new_from_array(entry.target_account);
+                let target = remaining
+                    .iter()
+                    .find(|a| a.key() == target_pubkey)
+                    .ok_or(error!(SigilError::ErrAtaAuthorityChanged))?;
+
+                // The account's PROGRAM owner must still be a known token
+                // program. A closed account ends up owned by system_program
+                // (or zero-program); a re-init under a different program
+                // would also fail this check.
+                require!(
+                    target.owner == &anchor_spl::token::ID
+                        || target.owner == &crate::state::TOKEN_2022_PROGRAM_ID,
+                    SigilError::ErrAtaAuthorityChanged
+                );
+
+                let target_data = target.try_borrow_data()?;
+                // The TOKEN authority lives at bytes 32..64 (owner field of
+                // SPL TokenAccount). Both SPL classic and Token-2022 share
+                // this fixed prefix layout, so the byte range is stable.
+                require!(
+                    target_data.len() >= 64,
+                    SigilError::ErrAtaAuthorityChanged
+                );
+                let mut authority_bytes = [0u8; 32];
+                authority_bytes.copy_from_slice(&target_data[32..64]);
+                let authority = Pubkey::new_from_array(authority_bytes);
+                require!(
+                    authority == vault_key,
+                    SigilError::ErrAtaAuthorityChanged
+                );
+
+                emit!(crate::events::PostAssertionChecked {
+                    vault: vault_key,
+                    entry_index: i as u8,
+                    passed: true,
+                    timestamp: clock_ts,
+                });
+                continue;
+            }
+
             // Legacy modes (0..3) require the target_account to be loadable.
             let target_pubkey = Pubkey::new_from_array(entry.target_account);
 
@@ -948,11 +998,13 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
                     let snapshot = &session_snapshots[i][..len];
                     require!(actual == snapshot, SigilError::PostAssertionFailed);
                 }
-                crate::state::post_assertions::AssertionMode::MintDeltaCap => {
+                crate::state::post_assertions::AssertionMode::MintDeltaCap
+                | crate::state::post_assertions::AssertionMode::AtaAuthorityPin => {
                     // Handled above before the legacy target_data load.
-                    // This arm is unreachable but the exhaustive match
-                    // requires it. Force a panic if execution reaches here
-                    // (would indicate a refactor bug in the early-return).
+                    // These arms are unreachable but the exhaustive match
+                    // requires them. Force an error if execution reaches
+                    // here (would indicate a refactor bug in the
+                    // early-return path).
                     return Err(error!(SigilError::PostAssertionFailed));
                 }
             }

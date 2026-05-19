@@ -44,6 +44,13 @@ pub enum AssertionMode {
     /// `scope=0` (aux_byte) enumerates ATAs via on-chain derivation;
     /// `scope=1` measures only the entry's `target_account`.
     MintDeltaCap = 4,
+    /// Phase 6 R-2: pin SPL/Token-2022 account authority to the vault PDA.
+    /// At finalize, the entry's `target_account` MUST (a) be present in
+    /// `remaining_accounts`, (b) be owned by SPL Token or Token-2022, (c)
+    /// have data length ≥ 64, and (d) carry `vault.key().to_bytes()` at
+    /// bytes 32..64. Pairs with R-1 to close the F-18 close-and-recreate
+    /// evasion: R-1 catches balance change, R-2 catches authority change.
+    AtaAuthorityPin = 5,
 }
 
 impl TryFrom<u8> for AssertionMode {
@@ -55,6 +62,7 @@ impl TryFrom<u8> for AssertionMode {
             2 => Ok(AssertionMode::MaxIncrease),
             3 => Ok(AssertionMode::NoChange),
             4 => Ok(AssertionMode::MintDeltaCap),
+            5 => Ok(AssertionMode::AtaAuthorityPin),
             _ => Err(()),
         }
     }
@@ -241,7 +249,25 @@ impl PostExecutionAssertions {
                             crate::errors::SigilError::InvalidConstraintConfig
                         );
                     }
-                    // Other Phase 6 modes (5/6/7) are added in subsequent commits.
+                    AssertionMode::AtaAuthorityPin => {
+                        // target_account MUST be set to the ATA we're pinning.
+                        // The default Pubkey::default() is rejected to catch
+                        // owners who forgot to fill the field.
+                        require!(
+                            entry.target_account != Pubkey::default(),
+                            crate::errors::SigilError::InvalidConstraintConfig
+                        );
+                        // aux_value / aux_byte unused — must be zero.
+                        require!(
+                            entry.aux_value == [0u8; 8],
+                            crate::errors::SigilError::InvalidConstraintConfig
+                        );
+                        require!(
+                            entry.aux_byte == 0,
+                            crate::errors::SigilError::InvalidConstraintConfig
+                        );
+                    }
+                    // Other Phase 6 modes (6/7) are added in subsequent commits.
                     _ => {
                         return Err(crate::errors::SigilError::InvalidConstraintConfig.into());
                     }
@@ -309,6 +335,20 @@ mod tests {
         }
     }
 
+    /// Phase 6 R-2 helper — AtaAuthorityPin entry constructor.
+    fn mk_ata_authority_pin(ata: Pubkey) -> PostAssertionEntry {
+        PostAssertionEntry {
+            target_account: ata,
+            offset: 0,
+            value_len: 0,
+            operator: 0,
+            expected_value: vec![],
+            assertion_mode: 5, // AtaAuthorityPin
+            aux_value: [0u8; 8],
+            aux_byte: 0,
+        }
+    }
+
     // mk_crossfield_entry DELETED in Phase 1 Option A demolition along with
     // the seven CrossFieldLte tests below it.
 
@@ -322,13 +362,19 @@ mod tests {
         assert_eq!(AssertionMode::try_from(3), Ok(AssertionMode::NoChange));
         // Phase 6 R-1
         assert_eq!(AssertionMode::try_from(4), Ok(AssertionMode::MintDeltaCap));
+        // Phase 6 R-2
+        assert_eq!(
+            AssertionMode::try_from(5),
+            Ok(AssertionMode::AtaAuthorityPin)
+        );
     }
 
     #[test]
-    fn assertion_mode_try_from_rejects_5_until_r2_lands() {
-        // R-2 AtaAuthorityPin (mode=5) is added in a subsequent commit; until
-        // then, mode=5 must fail TryFrom so a malformed entry is rejected.
-        assert!(AssertionMode::try_from(5).is_err());
+    fn assertion_mode_try_from_rejects_6_until_r3_lands() {
+        // R-3 OutputBalanceFloor (mode=6) is added in a subsequent commit;
+        // until then, mode=6 must fail TryFrom so a malformed entry is
+        // rejected.
+        assert!(AssertionMode::try_from(6).is_err());
     }
 
     #[test]
@@ -343,6 +389,7 @@ mod tests {
         assert_eq!(AssertionMode::MaxIncrease as u8, 2);
         assert_eq!(AssertionMode::NoChange as u8, 3);
         assert_eq!(AssertionMode::MintDeltaCap as u8, 4);
+        assert_eq!(AssertionMode::AtaAuthorityPin as u8, 5);
     }
 
     // ─── B2: delta modes in validate_entries ────────────────────────────
@@ -442,6 +489,37 @@ mod tests {
     #[test]
     fn validate_rejects_legacy_mode_with_nonzero_aux_byte() {
         let mut entry = mk_assertion_entry(2, 8); // MaxIncrease
+        entry.aux_byte = 1;
+        let entries = vec![entry];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
+    }
+
+    // ─── Phase 6 R-2 AtaAuthorityPin validate_entries ──────────────────
+
+    #[test]
+    fn validate_accepts_ata_authority_pin() {
+        let ata = Pubkey::new_unique();
+        let entries = vec![mk_ata_authority_pin(ata)];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_ok());
+    }
+
+    #[test]
+    fn validate_rejects_ata_authority_pin_default_target() {
+        let entries = vec![mk_ata_authority_pin(Pubkey::default())];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
+    }
+
+    #[test]
+    fn validate_rejects_ata_authority_pin_with_aux_value_set() {
+        let mut entry = mk_ata_authority_pin(Pubkey::new_unique());
+        entry.aux_value = [1u8; 8];
+        let entries = vec![entry];
+        assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
+    }
+
+    #[test]
+    fn validate_rejects_ata_authority_pin_with_aux_byte_set() {
+        let mut entry = mk_ata_authority_pin(Pubkey::new_unique());
         entry.aux_byte = 1;
         let entries = vec![entry];
         assert!(PostExecutionAssertions::validate_entries(&entries).is_err());

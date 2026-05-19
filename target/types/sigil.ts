@@ -5801,6 +5801,11 @@ export type Sigil = {
       "code": 6098,
       "name": "mintDeltaCapMisconfigured",
       "msg": "R-1 MintDeltaCap misconfigured — target account missing, mint mismatch, or owner not vault"
+    },
+    {
+      "code": 6099,
+      "name": "errAtaAuthorityChanged",
+      "msg": "R-2 AtaAuthorityPin: vault-owned token account authority changed or account closed/reinitialized mid-sandwich"
     }
   ],
   "types": [
@@ -8488,7 +8493,8 @@ export type Sigil = {
               "2 = MaxIncrease: check (current - snapshot) ≤ expected_value (Phase B2)",
               "NOTE: If value decreases, check ALWAYS PASSES.",
               "3 = NoChange: check current == snapshot — byte-for-byte equality (Phase B2)",
-              "4 = MintDeltaCap (Phase 6 R-1): vault-wide or per-account drain ceiling"
+              "4 = MintDeltaCap (Phase 6 R-1): vault-wide or per-account drain ceiling",
+              "5 = AtaAuthorityPin (Phase 6 R-2): post-CPI token-account authority pin"
             ],
             "type": "u8"
           },

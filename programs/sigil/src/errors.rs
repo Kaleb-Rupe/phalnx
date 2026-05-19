@@ -481,4 +481,17 @@ pub enum SigilError {
     /// signal (which fires ErrMintDeltaCapExceeded at finalize).
     #[msg("R-1 MintDeltaCap misconfigured — target account missing, mint mismatch, or owner not vault")]
     MintDeltaCapMisconfigured,
+
+    /// 6099 — R-2 AtaAuthorityPin: a vault-owned token account had its
+    /// authority changed during the sandwich, or was closed and not
+    /// reinstated as a vault-owned account before finalize. Detected by
+    /// reading bytes 32..64 of the post-CPI token account data and
+    /// comparing to `vault.key().to_bytes()`. Also fires when the account
+    /// is closed (data length < 64) or its owner program is no longer
+    /// SPL Token or Token-2022.
+    ///
+    /// Pairs with `ErrMintDeltaCapExceeded` to close F-18 close-and-recreate
+    /// — R-1 sees the balance drop, R-2 sees the authority flip.
+    #[msg("R-2 AtaAuthorityPin: vault-owned token account authority changed or account closed/reinitialized mid-sandwich")]
+    ErrAtaAuthorityChanged,
 }
