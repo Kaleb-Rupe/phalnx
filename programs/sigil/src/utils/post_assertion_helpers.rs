@@ -160,6 +160,34 @@ pub fn verify_output_balance_floor(
 /// `current_index - 1`), indexes into its account-meta list at
 /// `entry.aux_byte`, then asserts the resolved token account's mint and
 /// owner match the declared values.
+///
+/// §RP MED (Phase 6 review) verification scope:
+///
+/// **R-4 verifies the account at `account_meta_index` IS a token account
+/// matching the declared `(recipient, mint)` pair. It does NOT verify the
+/// SPL Token transfer's actual destination is this meta.** Two protocol
+/// patterns to know:
+///
+/// 1. **Safe (fixed destination meta convention).** Protocols where the
+///    SPL Token CPI's destination account is at a known, fixed meta index
+///    agreed in advance — Jupiter v6 uses a fixed `dst_token_account`
+///    meta index per swap. Configure R-4 with that index; verification is
+///    sound because the protocol's own logic transfers to exactly that
+///    meta.
+///
+/// 2. **Unsafe (ix-data-routed destination).** Protocols that select the
+///    SPL Token transfer destination via an instruction-data field (e.g.,
+///    `destination_index: u8` encoded in ix-data) can route to meta[i] for
+///    any `i`. R-4 against a fixed meta index is bypassable in this
+///    pattern — the attacker can satisfy R-4 by placing a declaration-
+///    matching account at meta[N] while routing the actual transfer to
+///    meta[N±k].
+///
+/// **Best practice: pair R-4 with R-1 MintDeltaCap.** Even if an attacker
+/// routes the transfer to a non-declared meta, R-1 (vault-wide drain
+/// ceiling) catches the resulting balance decrease. R-4 + R-1 = belt-and-
+/// suspenders for protocols whose destination-routing convention isn't
+/// fully known to the configuring owner.
 #[inline(never)]
 pub fn verify_declaration_consistency(
     entry: &PostAssertionEntryZC,

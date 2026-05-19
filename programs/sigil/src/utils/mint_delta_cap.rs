@@ -2,17 +2,38 @@
 //!
 //! Two entry shapes:
 //!
-//! - `scope=0` (vault-wide): sum the SPL Token classic ATA plus the
-//!   Token-2022 ATA for `(vault, mint)`. Up to `MAX_ATAS_PER_MINT` PDAs are
-//!   enumerated; missing-on-chain accounts contribute 0. This is the
-//!   protocol-agnostic ceiling: a single (vault, mint) pair has at most one
-//!   canonical ATA per token program, so today's realistic max is 2 (SPL
-//!   classic + Token-2022). The extra slots are reserved for future SIMD
-//!   ATA programs.
+//! - `scope=0` (vault-wide canonical-ATA only): sum the SPL Token classic
+//!   ATA plus the Token-2022 ATA for `(vault, mint)`. Up to
+//!   `MAX_ATAS_PER_MINT` PDAs are enumerated. Today's realistic max is 2
+//!   ATAs per (vault, mint) pair (one per token program); slots 2-4 are
+//!   reserved for future SIMD-style ATA programs but currently unused —
+//!   adding a third would silently lower CU headroom without test coverage,
+//!   so derivation stays at 2.
+//!
+//!   §RP MED (Phase 6 review) scope=0 footgun: this branch enumerates
+//!   **ONLY canonical ATAs**. Vault-owned NON-canonical token accounts —
+//!   protocol-auto-created position-tied accounts (Drift user spot, Kamino
+//!   reserve user, Marginfi insurance fund, Jupiter Perps PositionRequest)
+//!   or manually-created token accounts where the vault PDA is the
+//!   authority — are **NOT** covered by scope=0. An agent draining such an
+//!   account leaves the sum unchanged and the cap silently passes. Use
+//!   scope=1 with `target_account` set to the non-canonical account to
+//!   close that gap. Future phases may add a scope=2 = "enumerate via
+//!   remaining_accounts" for vaults that hold many non-canonical accounts
+//!   per mint.
+//!
+//!   §RP CRIT-2 (Phase 6 review) omission posture: every derived ATA pubkey
+//!   MUST be in `remaining_accounts`. Previously a `None => continue`
+//!   silently skipped omitted PDAs; an agent could then drain a real ATA
+//!   while pre_sum/post_sum both measured 0 for it. The new posture is the
+//!   symmetric of scope=1: missing → `MintDeltaCapMisconfigured`. An ATA
+//!   that has never been initialized (zero-length data buffer) is detected
+//!   in-place and treated as balance=0; the caller must still pass its
+//!   derived pubkey.
 //!
 //! - `scope=1` (single account): read the entry's `target_account` directly.
 //!   The caller is responsible for declaring which token account they want
-//!   measured (typical pattern: a non-ATA program-owned vault account).
+//!   measured (typical pattern: a non-canonical program-owned vault account).
 //!
 //! Token-2022 accounts may carry extension data after byte 165, but the
 //! canonical fields (mint, owner, amount) live at the same offsets as SPL
