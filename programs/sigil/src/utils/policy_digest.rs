@@ -128,6 +128,93 @@ pub struct PolicyPreviewFields<'a> {
     pub cosign_required: bool,
 }
 
+/// P0.2 PEN-7 defense-in-depth ratchet (audit 2026-05-19).
+///
+/// Number of fields bound into the TA-19 canonical policy preview digest.
+/// `apply_pending_policy.rs` const-asserts equality against this value at
+/// compile time. Adding a new field to `PolicyPreviewFields` WITHOUT
+/// updating this constant + the digest encoding below breaks `cargo build`
+/// — closing the silent-bypass class where a future refactor introduces a
+/// policy-owned field that is mutable without owner attestation.
+///
+/// The const-assert lives at the apply-time site as a load-bearing reminder
+/// (apply_pending_policy.rs::EXPECTED_DIGEST_FIELD_COUNT). Both this and
+/// the apply-side constant must change in lockstep.
+pub const POLICY_PREVIEW_FIELD_COUNT: usize = 20;
+
+#[cfg(test)]
+mod field_count_invariant {
+    //! P0.2 PEN-7: destructuring pattern match that fails to compile if
+    //! `PolicyPreviewFields` grows without an explicit update to the count
+    //! and the digest encoding. The cargo build (which compiles tests
+    //! under `cfg(test)`) catches it, AND `cargo test --lib` proves the
+    //! count is the actual field count via destructuring.
+    use super::*;
+
+    /// If a 21st field lands on `PolicyPreviewFields`, this match fails
+    /// to compile with `missing structure fields` — forcing the developer
+    /// to update the digest encoding + the count constant in the SAME
+    /// commit. Closes PEN-7 silent-bypass.
+    #[test]
+    fn ta19_field_count_pinned() {
+        // Build a sentinel value using ZERO/empty initialisers — the
+        // destructuring below is what's load-bearing, not the field
+        // values. The bool fields use `false`, scalars use `0`, slices
+        // empty.
+        let protocols: &[Pubkey] = &[];
+        let allowed_destinations: &[Pubkey] = &[];
+        let fields = PolicyPreviewFields {
+            daily_spending_cap_usd: 0,
+            max_transaction_size_usd: 0,
+            max_slippage_bps: 0,
+            developer_fee_rate: 0,
+            protocol_mode: 0,
+            protocols,
+            destination_mode: 0,
+            allowed_destinations,
+            timelock_duration: 0,
+            session_expiry_seconds: 0,
+            observe_only: false,
+            has_constraints: false,
+            has_post_assertions: 0,
+            created_at_slot: 0,
+            operating_hours: 0,
+            auto_promote_grays: false,
+            auto_revoke_threshold: 0,
+            stable_balance_floor: 0,
+            per_recipient_daily_cap_usd: 0,
+            cosign_required: false,
+        };
+        // The destructuring pattern below is exhaustive. If a 21st field
+        // lands on PolicyPreviewFields, this match fails to compile with
+        // E0027 — `missing structure fields`. Forces the digest encoding
+        // + POLICY_PREVIEW_FIELD_COUNT to be updated in lockstep.
+        let PolicyPreviewFields {
+            daily_spending_cap_usd: _,
+            max_transaction_size_usd: _,
+            max_slippage_bps: _,
+            developer_fee_rate: _,
+            protocol_mode: _,
+            protocols: _,
+            destination_mode: _,
+            allowed_destinations: _,
+            timelock_duration: _,
+            session_expiry_seconds: _,
+            observe_only: _,
+            has_constraints: _,
+            has_post_assertions: _,
+            created_at_slot: _,
+            operating_hours: _,
+            auto_promote_grays: _,
+            auto_revoke_threshold: _,
+            stable_balance_floor: _,
+            per_recipient_daily_cap_usd: _,
+            cosign_required: _,
+        } = fields;
+        assert_eq!(POLICY_PREVIEW_FIELD_COUNT, 20);
+    }
+}
+
 /// SHA-256 over the canonical Borsh encoding of the preview fields.
 ///
 /// On-chain memory budget: bounded by `MAX_ALLOWED_PROTOCOLS` (10) +

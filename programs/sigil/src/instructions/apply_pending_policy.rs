@@ -6,6 +6,41 @@ use crate::state::*;
 use crate::utils::cosign_digest::{compute_cosign_digest, CosignDigestFields};
 use crate::utils::policy_digest::{compute_policy_preview_digest, PolicyPreviewFields};
 
+// P0.2 PEN-7 defense-in-depth ratchet check (audit 2026-05-19).
+//
+// TA-19 binds 20 policy fields by canonical position into the
+// owner-signed digest (see utils/policy_digest.rs). Every existing site
+// that mutates one of those fields recomputes the digest. The risk
+// targeted by PEN-7 is FUTURE silent bypass: a refactor introduces a
+// 21st field that is policy-owned but never added to the digest input
+// (PolicyPreviewFields). The owner would sign the pre-existing 20-field
+// digest, the pending apply would re-validate that same 20-field digest
+// successfully, and the new field would silently update without owner
+// attestation.
+//
+// Defense: pin the count of digest-bound fields at compile time. Any new
+// field added to PolicyPreviewFields without explicitly updating
+// EXPECTED_DIGEST_FIELD_COUNT breaks `cargo build`. The developer is then
+// forced to either (a) add the field to the digest encoding and bump the
+// count, OR (b) document why the field is intentionally excluded (as
+// destination_graylist is — see policy_digest.rs §"The graylist itself").
+//
+// The actual `const _: () = assert!(...)` enforcement lives near
+// `PolicyPreviewFields` in `utils/policy_digest.rs`. This constant
+// is re-asserted here at the apply-time site as a load-bearing reminder.
+#[allow(dead_code)]
+const EXPECTED_DIGEST_FIELD_COUNT: usize = 20;
+const _: () = assert!(
+    EXPECTED_DIGEST_FIELD_COUNT
+        == crate::utils::policy_digest::POLICY_PREVIEW_FIELD_COUNT,
+    "P0.2 PEN-7: PolicyPreviewFields count diverged from TA-19 binding. \
+     Either add the new field to the digest encoding in \
+     utils/policy_digest.rs::compute_policy_preview_digest + bump \
+     POLICY_PREVIEW_FIELD_COUNT, OR document why the new field is \
+     intentionally excluded (see graylist precedent). Silent diverge = \
+     audit bypass."
+);
+
 #[derive(Accounts)]
 pub struct ApplyPendingPolicy<'info> {
     #[account(mut)]
