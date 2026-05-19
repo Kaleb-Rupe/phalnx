@@ -75,14 +75,14 @@ describe("buildAuditTrail (S12)", () => {
     const entries = buildAuditTrail([
       fixtureActivity({
         category: "policy",
-        eventType: "PolicyUpdated",
+        eventType: "PolicyChangeApplied",
         txSignature: "sig-policy",
         description: "Policy was updated",
       }),
     ]);
     expect(entries).to.have.length(1);
     expect(entries[0].eventType).to.equal("policy_change");
-    expect(entries[0].eventName).to.equal("PolicyUpdated");
+    expect(entries[0].eventName).to.equal("PolicyChangeApplied");
     expect(entries[0].txSignature).to.equal("sig-policy");
     expect(entries[0].details).to.equal("Policy was updated");
   });
@@ -123,7 +123,7 @@ describe("buildAuditTrail (S12)", () => {
     const entries = buildAuditTrail([
       fixtureActivity({
         category: "policy",
-        eventType: "PolicyUpdated",
+        eventType: "PolicyChangeApplied",
         timestamp: 1_700_000_000,
       }),
     ]);
@@ -154,7 +154,7 @@ describe("buildAuditTrail (S12)", () => {
     const entries = buildAuditTrail([
       fixtureActivity({
         category: "policy",
-        eventType: "PolicyUpdated",
+        eventType: "PolicyChangeApplied",
       }),
     ]);
     const json = entries[0].toJSON();

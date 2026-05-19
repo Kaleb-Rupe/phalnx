@@ -432,7 +432,7 @@ export interface AuditTrailEntry {
   timestamp: number;
   eventType: AuditEventType;
   /**
-   * Originating event name (e.g. `"PolicyUpdated"`, `"AgentRegistered"`,
+   * Originating event name (e.g. `"PolicyChangeApplied"`, `"AgentRegistered"`,
    * `"VaultFrozen"`) preserved verbatim from the underlying decoded event for
    * downstream filtering and UI labels.
    */

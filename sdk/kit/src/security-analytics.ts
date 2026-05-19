@@ -71,17 +71,6 @@ export interface AuditEntry {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/** Count set bits in a bigint permission bitmask. */
-function countBits(n: bigint): number {
-  let count = 0;
-  let v = n;
-  while (v > 0n) {
-    count += Number(v & 1n);
-    v >>= 1n;
-  }
-  return count;
-}
-
 // ─── getSecurityPosture ──────────────────────────────────────────────────────
 
 /**
@@ -438,7 +427,7 @@ export function getSecurityPosture(state: ResolvedVaultState): SecurityPosture {
 export function evaluateAlertConditions(
   state: ResolvedVaultState | ResolvedVaultStateForOwner,
   vaultAddress: Address,
-  previousState?: ResolvedVaultState | ResolvedVaultStateForOwner,
+  _previousState?: ResolvedVaultState | ResolvedVaultStateForOwner,
 ): Alert[] {
   const alerts: Alert[] = [];
   const { vault, globalBudget } = state;
@@ -614,13 +603,16 @@ export function evaluateAlertConditions(
 // ─── getAuditTrail ───────────────────────────────────────────────────────────
 
 const AUDIT_EVENTS: Record<string, AuditEntry["category"]> = {
-  PolicyUpdated: "policy_change",
+  // V2: PolicyUpdated removed — replaced by queue/apply/cancel triplet
   PolicyChangeQueued: "policy_change",
   PolicyChangeApplied: "policy_change",
   PolicyChangeCancelled: "policy_change",
   AgentRegistered: "agent_change",
   AgentRevoked: "agent_change",
-  AgentPermissionsUpdated: "agent_change",
+  // V2: AgentPermissionsUpdated removed — replaced by queue/apply/cancel triplet
+  AgentPermissionsChangeQueued: "agent_change",
+  AgentPermissionsChangeApplied: "agent_change",
+  AgentPermissionsChangeCancelled: "agent_change",
   AgentPausedEvent: "emergency",
   AgentUnpausedEvent: "agent_change",
   VaultFrozen: "emergency",

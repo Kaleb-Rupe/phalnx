@@ -25,8 +25,8 @@ describe("categorizeEvent", () => {
     expect(categorizeEvent("VaultFrozen")).to.equal("security");
   });
 
-  it("categorizes PolicyUpdated as policy", () => {
-    expect(categorizeEvent("PolicyUpdated")).to.equal("policy");
+  it("categorizes PolicyChangeApplied as policy", () => {
+    expect(categorizeEvent("PolicyChangeApplied")).to.equal("policy");
   });
 
   // V2 demolition: EscrowCreated event removed (no escrow category in EventCategory union).
@@ -46,7 +46,7 @@ describe("categorizeEvent", () => {
     expect(categorizeEvent("SessionFinalized")).to.equal("trade");
     expect(categorizeEvent("FundsDeposited")).to.equal("deposit");
     expect(categorizeEvent("FundsWithdrawn")).to.equal("withdrawal");
-    expect(categorizeEvent("PolicyUpdated")).to.equal("policy");
+    expect(categorizeEvent("PolicyChangeApplied")).to.equal("policy");
     expect(categorizeEvent("VaultCreated")).to.equal("security");
     expect(categorizeEvent("VaultFrozen")).to.equal("security");
     // V2 demolition: EscrowCreated removed (no escrow category in EventCategory union).

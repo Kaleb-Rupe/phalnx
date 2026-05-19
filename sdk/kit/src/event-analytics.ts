@@ -52,7 +52,7 @@ const EVENT_CATEGORY_MAP: Record<string, EventCategory> = {
   AgentSpendLimitChecked: "trade",
   FundsDeposited: "deposit",
   FundsWithdrawn: "withdrawal",
-  PolicyUpdated: "policy",
+  // V2: PolicyUpdated removed — replaced by ChangeQueued/Applied/Cancelled
   PolicyChangeQueued: "policy",
   PolicyChangeApplied: "policy",
   PolicyChangeCancelled: "policy",
@@ -68,7 +68,10 @@ const EVENT_CATEGORY_MAP: Record<string, EventCategory> = {
   CloseConstraintsCancelled: "policy",
   AgentRegistered: "agent",
   AgentRevoked: "agent",
-  AgentPermissionsUpdated: "agent",
+  // V2: AgentPermissionsUpdated removed — replaced by ChangeQueued/Applied/Cancelled
+  AgentPermissionsChangeQueued: "agent",
+  AgentPermissionsChangeApplied: "agent",
+  AgentPermissionsChangeCancelled: "agent",
   AgentUnpausedEvent: "agent",
   VaultCreated: "security",
   VaultFrozen: "security",
@@ -138,10 +141,12 @@ export function describeEvent(
     case "AgentRevoked":
       return `Agent ${formatAddress(f.agent as string)} removed from vault (${f.remainingAgents} remaining)`;
 
-    case "AgentPermissionsUpdated": {
-      const permCount = countBits(f.newPermissions as bigint);
-      return `Agent ${formatAddress(f.agent as string)} capability updated (${permCount} bits set)`;
-    }
+    case "AgentPermissionsChangeQueued":
+      return `Agent ${formatAddress(f.agent as string)} permissions change queued (timelock pending)`;
+    case "AgentPermissionsChangeApplied":
+      return `Agent ${formatAddress(f.agent as string)} permissions change applied`;
+    case "AgentPermissionsChangeCancelled":
+      return `Agent ${formatAddress(f.agent as string)} permissions change cancelled`;
 
     case "VaultFrozen":
       return "Vault paused — all agent activity stopped";
@@ -163,8 +168,6 @@ export function describeEvent(
       return `Fees collected: ${formatUsd(protocolFee + devFee, 2)} (${formatUsd(protocolFee, 2)} protocol + ${formatUsd(devFee, 2)} developer)`;
     }
 
-    case "PolicyUpdated":
-      return "Vault policy updated — new spending rules active";
     case "PolicyChangeQueued":
       return "Policy change queued — waiting for timelock to expire";
     case "PolicyChangeApplied":
@@ -323,16 +326,6 @@ function extractBigInt(
   const val = fields[key];
   if (typeof val === "bigint") return val;
   return null;
-}
-
-function countBits(n: bigint): number {
-  let count = 0;
-  let v = n;
-  while (v > 0n) {
-    count += Number(v & 1n);
-    v >>= 1n;
-  }
-  return count;
 }
 
 function resolveTokenSafe(

@@ -40,23 +40,33 @@ describe("isOnChainReverted — exact range boundaries", () => {
     expect(isOnChainReverted(5999)).to.equal(false);
   });
 
-  it("false at 6079 (one above the post-Phase-1 V1 ceiling)", () => {
-    expect(isOnChainReverted(6079)).to.equal(false);
+  it("true at 6102 (post-Phase-6 ceiling, IxMetaCountExceeded)", () => {
+    expect(isOnChainReverted(6102)).to.equal(true);
   });
 
-  it("CRIT-3 invariant: imported SIGIL_ERROR__INVALID_DESTINATION_MODE constant matches the upper bound", async () => {
-    // Asserts that the highest generated SDK error code IS classified as
+  it("false at 6103 (one above the post-Phase-6 V2 ceiling)", () => {
+    expect(isOnChainReverted(6103)).to.equal(false);
+  });
+
+  it("CRIT-3 invariant: every code in SIGIL_ERRORS classifies as on-chain", async () => {
+    // Asserts that EVERY generated SDK error code IS classified as
     // on-chain. If the program grows a new error variant and the SDK is
     // regenerated without bumping ANCHOR_ERROR_MAX, this test fails.
-    // Post-Phase-1 Option A: was 6080, now 6078 (shifted by -2 after Jupiter
-    // variants at 6030/6031 deleted).
-    const { SIGIL_ERROR__INVALID_DESTINATION_MODE } = await import(
-      "../../src/generated/errors/sigil.js"
-    );
-    expect(SIGIL_ERROR__INVALID_DESTINATION_MODE).to.equal(6078);
-    expect(isOnChainReverted(SIGIL_ERROR__INVALID_DESTINATION_MODE)).to.equal(
-      true,
-    );
+    // Stronger than checking just the max — guards against gaps in the
+    // range that would silently mis-categorize a real on-chain error.
+    const generated = await import("../../src/generated/errors/sigil.js");
+    const codes = Object.entries(generated)
+      .filter(
+        ([k, v]) => k.startsWith("SIGIL_ERROR__") && typeof v === "number",
+      )
+      .map(([, v]) => v as number);
+    expect(codes.length).to.be.greaterThan(0);
+    for (const code of codes) {
+      expect(
+        isOnChainReverted(code),
+        `code ${code} should be on-chain`,
+      ).to.equal(true);
+    }
   });
 
   it("false for 0 (zero sentinel)", () => {
@@ -85,10 +95,12 @@ describe("categorizeDxError — exact range boundaries", () => {
     category: DxErrorCategory;
     description: string;
   }> = [
-    // Program range (Anchor 6000-6078 post-Phase-1 Option A; was 6000-6080)
+    // Program range (Anchor 6000-6102 post-Phase-6 + audit remediation)
     { code: 6000, category: "program", description: "program lower bound" },
-    { code: 6078, category: "program", description: "program upper bound" },
+    { code: 6102, category: "program", description: "program upper bound" },
     { code: 6050, category: "program", description: "mid program range" },
+    { code: 6097, category: "program", description: "Phase 6 R-1" },
+    { code: 6101, category: "program", description: "Phase 6 R-4" },
 
     // User / SDK range (7000-7099)
     { code: 7000, category: "user", description: "user lower bound" },
@@ -102,7 +114,7 @@ describe("categorizeDxError — exact range boundaries", () => {
 
     // Unknown — outside all defined ranges
     { code: 5999, category: "unknown", description: "one below program range" },
-    { code: 6079, category: "unknown", description: "one above program range" },
+    { code: 6103, category: "unknown", description: "one above program range" },
     { code: 6999, category: "unknown", description: "one below user range" },
     { code: 7200, category: "unknown", description: "one above network range" },
     { code: 7999, category: "unknown", description: "DX_ERROR_CODE_UNMAPPED" },

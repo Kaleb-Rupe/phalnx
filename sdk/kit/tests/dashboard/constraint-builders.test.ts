@@ -345,7 +345,7 @@ describe("buildQueueConstraintsUpdateIxs", () => {
     expect((caught as Error).message).to.match(/non-empty/i);
   });
 
-  it("targets PendingConstraintsUpdate::SIZE (35_904) on the final extend", async () => {
+  it("targets PendingConstraintsUpdate::SIZE (35_912) on the final extend", async () => {
     const ixs = await buildQueueConstraintsUpdateIxs({
       owner,
       vault: VAULT,
@@ -356,10 +356,10 @@ describe("buildQueueConstraintsUpdateIxs", () => {
       ixs[3]! as Parameters<typeof parseExtendPdaInstruction>[0],
     );
     expect(lastExtend.data.targetSize).to.equal(PENDING_CONSTRAINTS_SIZE);
-    expect(lastExtend.data.targetSize).to.equal(35_904);
+    expect(lastExtend.data.targetSize).to.equal(35_912);
   });
 
-  it("differentiates final extend size between create (35_888) and queue (35_904)", async () => {
+  it("differentiates final extend size between create (35_888) and queue (35_912)", async () => {
     const createIxs = await buildCreateConstraintsIxs({
       owner,
       vault: VAULT,
@@ -379,6 +379,8 @@ describe("buildQueueConstraintsUpdateIxs", () => {
     const queueFinal = parseExtendPdaInstruction(
       queueIxs[3]! as Parameters<typeof parseExtendPdaInstruction>[0],
     ).data.targetSize;
-    expect(queueFinal - createFinal).to.equal(16);
+    // queue adds queued_at_slot (8 bytes) + extends to created_at + effective_at;
+    // queue PDA = constraints PDA + 24 bytes overhead (8+8+8 ≅ TOCTOU fields).
+    expect(queueFinal - createFinal).to.equal(24);
   });
 });

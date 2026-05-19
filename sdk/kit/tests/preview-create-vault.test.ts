@@ -179,24 +179,24 @@ describe("previewCreateVault — PDA derivation", () => {
 // ─── G3 — Account size correctness ──────────────────────────────────────────
 
 describe("previewCreateVault — on-chain account sizes", () => {
-  it("AgentVault sizeBytes equals 633 (post-V2 demolition)", async () => {
+  it("AgentVault sizeBytes equals 634 (Phase 2 added observe_only byte)", async () => {
     const r = await previewCreateVault(baseConfig());
-    expect(r.pdaList[0]!.sizeBytes).to.equal(633);
+    expect(r.pdaList[0]!.sizeBytes).to.equal(634);
   });
 
-  it("PolicyConfig sizeBytes equals 822", async () => {
+  it("PolicyConfig sizeBytes equals 1,290 (Phase 2-5 + G6 additions)", async () => {
     const r = await previewCreateVault(baseConfig());
-    expect(r.pdaList[1]!.sizeBytes).to.equal(822);
+    expect(r.pdaList[1]!.sizeBytes).to.equal(1_290);
   });
 
-  it("SpendTracker sizeBytes equals 2,840", async () => {
+  it("SpendTracker sizeBytes equals 3,328 (TA-14 per_recipient added)", async () => {
     const r = await previewCreateVault(baseConfig());
-    expect(r.pdaList[2]!.sizeBytes).to.equal(2_840);
+    expect(r.pdaList[2]!.sizeBytes).to.equal(3_328);
   });
 
-  it("AgentSpendOverlay sizeBytes equals 2,528", async () => {
+  it("AgentSpendOverlay sizeBytes equals 2,688 (TA-06 cooldown fields added)", async () => {
     const r = await previewCreateVault(baseConfig());
-    expect(r.pdaList[3]!.sizeBytes).to.equal(2_528);
+    expect(r.pdaList[3]!.sizeBytes).to.equal(2_688);
   });
 });
 
@@ -244,23 +244,24 @@ describe("previewCreateVault — cost math", () => {
     expect(r.totalCostUsd).to.equal(expected);
   });
 
-  it("totalCostUsd fixture: rent ~51M + fee 0 + price $250 → known value", async () => {
+  it("totalCostUsd fixture: rent ~58.8M + fee 0 + price $250 → known value", async () => {
     // pin a single concrete value so a future drift triggers a test failure.
-    // V2 (Stage 1): AgentVault shrank 634→633 after `active_escrow_count`
-    // removal. Sum of rent for the 4 PDAs at default mock formula =
-    //   ((633+128) + (822+128) + (2840+128) + (2528+128)) × 6960
-    // = (761 + 950 + 2968 + 2656) × 6960
-    // = 7335 × 6960 = 51_051_600 lamports.
-    // totalCostUsd = 51_051_600 × 250_000_000 / 1_000_000_000 = 12_762_900
-    // (= $12.7629 in 6-decimal USD).
+    // Post-Phase-6 + audit closure: SDK SIZE constants now match on-chain:
+    //   AgentVault 634, PolicyConfig 1290, SpendTracker 3328, AgentSpendOverlay 2688.
+    // Sum of rent for the 4 PDAs at default mock formula =
+    //   ((634+128) + (1290+128) + (3328+128) + (2688+128)) × 6960
+    // = (762 + 1418 + 3456 + 2816) × 6960
+    // = 8452 × 6960 = 58_825_920 lamports.
+    // totalCostUsd = 58_825_920 × 250_000_000 / 1_000_000_000 = 14_706_480
+    // (= $14.70648 in 6-decimal USD).
     const r = await previewCreateVault(
       baseConfig({
         priorityFeeMicroLamports: 0,
         solPriceUsd: 250_000_000n,
       }),
     );
-    expect(r.rentLamports).to.equal(51_051_600n);
-    expect(r.totalCostUsd).to.equal(12_762_900n);
+    expect(r.rentLamports).to.equal(58_825_920n);
+    expect(r.totalCostUsd).to.equal(14_706_480n);
   });
 
   it("totalCostUsd is bigint (never number)", async () => {

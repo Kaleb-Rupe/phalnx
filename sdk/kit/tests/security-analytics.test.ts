@@ -444,7 +444,7 @@ describe("Step 8 security checks", () => {
 describe("getAuditTrail", () => {
   const mockEvents = [
     {
-      name: "PolicyUpdated",
+      name: "PolicyChangeApplied",
       data: new Uint8Array(),
       fields: { owner: "owner1", timestamp: 1000n },
     },
@@ -492,7 +492,7 @@ describe("getAuditTrailSummary", () => {
   it("returns per-category counts", () => {
     const trail = getAuditTrail([
       {
-        name: "PolicyUpdated",
+        name: "PolicyChangeApplied",
         data: new Uint8Array(),
         fields: { owner: "o1", timestamp: 1n },
       },
