@@ -3,8 +3,8 @@
 **Date:** 2026-05-19
 **Branch:** `revamp/v2-2026-05`
 **Audit start HEAD:** `5c67f4c` (post Phases 0-5 audit remediation closure)
-**Remediation end HEAD:** `c13c6d9` (§RP-1 close-up)
-**Span:** 3 audit-closure commits + 16-agent dispatch + 2 §RP-1 follow-on commits
+**Remediation end HEAD:** `7b9afb2` (§RP-2 close-up)
+**Span:** 3 audit-closure commits + 16-agent dispatch + 3 follow-on commits (2 §RP-1 + 1 §RP-2)
 
 ## Audit Methodology
 
@@ -26,6 +26,8 @@ re-confirmation per CLAUDE.md project rules. Result:
 ## Commits
 
 ```
+7b9afb2 fix(audit): §RP-2 close-up — F-RP2-1 + F-RP2-3 + F-RP2-5
+e3c0ac7 fix(audit): §RP-1 SilentHunter close-up — C + E + G
 c13c6d9 fix(audit): §RP-1 close-up — F-1 + F-2 + F-3 Pentester findings
 3e742e9 fix(repo): DC1-DC14 P0/P1 batch B — tests + docs + cleanup
 e0aabca fix(sdk-kit): DC1-DC14 P0 batch A — SIZE constants + event aliases + error range
@@ -102,9 +104,27 @@ e0aabca fix(sdk-kit): DC1-DC14 P0 batch A — SIZE constants + event aliases + e
 | **F-4** | solana-program ~2.3 supply-chain | MEDIUM | INFORMATIONAL — CI uses `--locked`, Cargo.lock is real pin. |
 | **F-5..F-9** | INFO findings | INFO | Confirmed clean. |
 
+## §RP-1 Follow-On Findings (silent-failure-hunter)
+
+| ID | Finding | Severity | Disposition |
+|---|---|---|---|
+| **C** | instruction-constraints.ts exclusion no inline rationale | HIGH | **RESOLVED** in `e3c0ac7` (ci.yml inline comment). |
+| **E** | dashboard/errors.ts:231 stale `isSigilOnChainCode` predicate ref | MEDIUM | **RESOLVED** in `e3c0ac7` (corrected to inline `code <= 6102` predicate references). Further hardened in `7b9afb2` (§RP-2) by extracting to named constant. |
+| **G** | react peer dep removal vs /react subpath JSDoc mismatch | LOW | **RESOLVED** in `e3c0ac7` (restored `react: ">=18.0.0"` optional peer dep). |
+
+## §RP-2 Follow-On Findings (silent-failure-hunter)
+
+| ID | Finding | Severity | Disposition |
+|---|---|---|---|
+| **F-RP2-1** | shieldWallet describe blocks still in 3 custody test files | HIGH | **RESOLVED** in `7b9afb2` (renamed in privy/turnkey/crossmint .test.ts). |
+| **F-RP2-3** | `6102` literal duplicated across 4 sites | MEDIUM | **RESOLVED** in `7b9afb2` — extracted `SIGIL_ON_CHAIN_ERROR_{MIN,MAX}` as exported constants. |
+| **F-RP2-5** | CLOSURE.md C-7 understates existing TA-12 digest coverage | LOW | **RESOLVED** in `7b9afb2` (C-7 row updated to cite preview-digest.test.ts:367). |
+| **F-RP2-2** | Hard-coded line refs in JSDoc | LOW | INFORMATIONAL — line refs valid at HEAD; will revisit on next refactor. |
+| **F-RP2-4** | CLOSURE.md path stability under future doc reorg | LOW | INFORMATIONAL — current path is stable; will move with revamp/ archive after Phase 11. |
+
 ## Final Test State
 
-| Suite | Pre-audit (5c67f4c) | Post-closure (c13c6d9) | Delta |
+| Suite | Pre-audit (5c67f4c) | Post-closure (7b9afb2) | Delta |
 |---|---|---|---|
 | `cargo test --lib --features devnet-testing` | 230/0 | **230/0** | stable |
 | `sdk/kit pnpm test` | 1737/0 | **1740/0** | +3 |
@@ -135,13 +155,20 @@ All audit findings (CRITICAL / HIGH / MEDIUM / LOW) have been:
 - (b) Explicitly deferred with documented rationale + tracker
 
 The remediation cycle additionally surfaced + fixed:
-- 3 §RP-1 follow-on HIGH findings (F-1, F-2, F-3)
+- 3 §RP-1 Pentester HIGH findings (F-1, F-2, F-3)
+- 3 §RP-1 SilentHunter follow-ons (C HIGH + E MED + G LOW)
+- 3 §RP-2 SilentHunter follow-ons (F-RP2-1 HIGH + F-RP2-3 MED + F-RP2-5 LOW)
 - 1 pre-existing latent issue (custody dist/ stale on publish surface)
 
 Pattern observation: every remediation cycle in this project produces a §RP-N
-follow-on with new findings. The discipline is working — without §RP-1 in this
-cycle, CI would have silently skipped 7 newly-authored tests, the dangerous
-cosign-gate direction would have remained untested, and stale custody dist
-JSDocs would have shipped to npm.
+follow-on with 1-3 new findings. The discipline is working — without §RP-1 in
+this cycle, CI would have silently skipped 7 newly-authored tests, the
+dangerous cosign-gate direction would have remained untested, stale custody
+dist JSDocs would have shipped to npm, the instruction-constraints exclusion
+rationale would have been ungrep'able, and the react peer dep removal would
+have silently broken /react subpath consumers. §RP-2 then surfaced the
+shieldWallet test-file follow-on that §RP-1 missed (src + dist were fixed but
+tests retained the phantom-API describe blocks) and the duplicated `6102`
+literal that next error-code addition would otherwise edit-3-fix-1.
 
 **Phase 7 (Audit log + N1 temporal binding TA-15/C22) dispatch UNBLOCKED.**
