@@ -1247,6 +1247,19 @@ pub fn handler(
                 if entry.assertion_mode == 5 {
                     continue;
                 }
+                // §RP CRIT-1 (Phase 6 review): R-4 DeclarationConsistency
+                // (mode=7) is also a finalize-only verifier. Its finalize
+                // helper at `post_assertion_helpers::verify_declaration_consistency`
+                // reads the DeFi CPI via instructions sysvar — it has NO
+                // snapshot dependency. Without this skip, mode 7 falls into
+                // the legacy delta-snapshot block below, which tries to
+                // `try_borrow_data()` on `entry.target_account` (a WALLET
+                // pubkey for R-4, not a token account). Result is either a
+                // hard PostAssertionFailed (vault-wide DoS) or forced
+                // recipient-account-info disclosure on every sandwich.
+                if entry.assertion_mode == 7 {
+                    continue;
+                }
                 // Only snapshot for delta modes (1=MaxDecrease, 2=MaxIncrease, 3=NoChange)
                 if entry.assertion_mode == 0 {
                     continue;

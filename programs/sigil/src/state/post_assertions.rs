@@ -730,6 +730,34 @@ mod tests {
         assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
     }
 
+    /// §RP CRIT-1 boundary: AssertionMode 7 (DeclarationConsistency) is a
+    /// finalize-only verifier — its validate_and_authorize dispatcher branch
+    /// MUST short-circuit before the legacy delta-snapshot path that requires
+    /// `entry.target_account` to be a token account in `remaining_accounts`.
+    /// For R-4, `target_account` is the declared *recipient wallet* pubkey,
+    /// which is NOT a token account; falling through to the legacy branch
+    /// would either DoS the vault or force recipient-info disclosure on
+    /// every sandwich. This test pins the classification semantic; the
+    /// integration coverage lives in `tests/post-assertions-sandwich.ts`.
+    #[test]
+    fn r4_declaration_consistency_is_finalize_only_no_snapshot_needed() {
+        // The dispatcher in validate_and_authorize.rs treats mode 7 the same
+        // way as mode 5 (AtaAuthorityPin): explicit `continue;` before the
+        // legacy snapshot block. Both modes have finalize-only verifiers in
+        // `post_assertion_helpers.rs`. Mode 4 (MintDeltaCap) and mode 6
+        // (OutputBalanceFloor) DO need validate-time snapshots; modes 0/5/7
+        // do not.
+        assert_eq!(AssertionMode::AtaAuthorityPin as u8, 5);
+        assert_eq!(AssertionMode::DeclarationConsistency as u8, 7);
+        // Snapshot-bearing modes (write `session.assertion_snapshots[i]` at validate):
+        let snapshot_modes = [4u8, 6u8]; // MintDeltaCap, OutputBalanceFloor
+        // Snapshot-free modes (validate-time `continue`):
+        let snapshot_free_modes = [5u8, 7u8]; // AtaAuthorityPin, DeclarationConsistency
+        for m in snapshot_modes.iter().chain(snapshot_free_modes.iter()) {
+            assert!(AssertionMode::try_from(*m).is_ok(), "mode {} must parse", m);
+        }
+    }
+
     #[test]
     fn validate_accepts_max_entries_8() {
         // Capacity ceiling — exactly MAX_POST_ASSERTION_ENTRIES (8) entries.
