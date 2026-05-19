@@ -70,7 +70,7 @@ Source of truth: `target/idl/sigil.json` (regenerate this file by running `bash 
 | 6061 | `UnauthorizedPreValidateInstruction` | Non-infrastructure instruction detected before validate_and_authorize |
 | 6062 | `SnapshotNotCaptured` | Delta assertion snapshot was not captured in validate_and_authorize |
 | 6063 | `InvalidConstraintOperator` | Constraint operator value is not a valid ConstraintOperator discriminant |
-| 6064 | `ConstraintsVaultMismatch` | Zero-copy constraints account has wrong vault |
+| 6064 | `ZeroCopyVaultMismatch` | Zero-copy account vault key mismatch (defense-in-depth) |
 | 6065 | `BlockedSplOpcode` | SPL opcode is blocked at runtime and cannot be used in constraints |
 | 6066 | `QueuedUpdateExpired` | Queued update is too old (>MAX_APPLY_AGE_SLOTS) — re-queue to apply. Defends against durable-nonce pre-signing. |
 | 6067 | `AccountWritabilityMismatch` | Account writability flag does not match constraint requirement |

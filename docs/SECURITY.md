@@ -205,7 +205,7 @@ Vault seeds include `vault_id` (a `u64`) to allow one owner to create multiple i
 - Timelock (new): TimelockTooShort, PolicyVersionMismatch
 - Pending state (new): PendingAgentPermsExists, PendingCloseConstraintsExists, ActiveSessionsExist
 - Post-assertions (new): PostAssertionFailed, InvalidPostAssertionIndex, SnapshotNotCaptured, UnauthorizedPreValidateInstruction
-- Constraints (new): ConstraintIndexOutOfBounds, InvalidConstraintOperator, ConstraintsVaultMismatch, ConstraintEntryCountExceeded, BlockedSplOpcode
+- Constraints (new): ConstraintIndexOutOfBounds, InvalidConstraintOperator, ZeroCopyVaultMismatch (also used by audit-log defense-in-depth), ConstraintEntryCountExceeded, BlockedSplOpcode
 
 ---
 

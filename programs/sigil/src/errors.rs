@@ -242,7 +242,8 @@ pub enum SigilError {
     /// AND the AuditLogSuccess/AuditLogRejected paths (post §RP-2 HIGH-3 fix
     /// 2026-05-19). The PDA seeds derivation makes the wrong-vault case
     /// unreachable in practice; this variant exists as defense-in-depth.
-    /// Code reuse — error code 6068 unchanged.
+    /// Variant renamed from `ConstraintsVaultMismatch` in §RP-2 HIGH-3;
+    /// error code **6064** unchanged.
     #[msg("Zero-copy account vault key mismatch (defense-in-depth)")]
     ZeroCopyVaultMismatch,
 

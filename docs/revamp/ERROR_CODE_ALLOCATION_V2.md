@@ -77,16 +77,14 @@ Verified against `programs/sigil/src/errors.rs` on `revamp/v2-2026-05` (commit `
 | 6059 | `PolicyVersionMismatch` | errors.rs:199 | Policy versioning |
 | 6060 | `ActiveSessionsExist` | errors.rs:202 | Vault cleanup |
 | 6061 | `PostAssertionFailed` | errors.rs:206 | Post-execution assertions |
-| 6062 | `InvalidPostAssertionIndex` | errors.rs:209 | Post-execution assertions |
-| 6063 | `UnauthorizedPreValidateInstruction` | errors.rs:212 | Sandwich integrity |
-| 6064 | `SnapshotNotCaptured` | errors.rs:215 | Delta assertions |
-| 6065 | `InvalidConstraintOperator` | errors.rs:218 | Constraints |
-| 6066 | `ConstraintsVaultMismatch` | errors.rs:221 | Constraints |
-| 6067 | `BlockedSplOpcode` | errors.rs:224 | SPL opcode block |
-| 6068 | `QueuedUpdateExpired` | errors.rs:228 | Durable-nonce defense (F-10) |
-| 6069 | `AccountWritabilityMismatch` | errors.rs:232 | Squads SAP parity (M5) |
-| 6070 | `SysvarScanBoundExceeded` | errors.rs:236 | Pad-attack DoS guard (M11) |
-| 6071 | `AsyncFulfillmentNotPermitted` | errors.rs:240 | Async-fulfillment block (C4) |
+| 6062 | `SnapshotNotCaptured` | errors.rs:236 | Delta assertions |
+| 6063 | `InvalidConstraintOperator` | errors.rs:239 | Constraints |
+| 6064 | `ZeroCopyVaultMismatch` | errors.rs:247 | Zero-copy account vault key check (constraints + audit-log; renamed from `ConstraintsVaultMismatch` 2026-05-19 §RP-2 HIGH-3) |
+| 6065 | `BlockedSplOpcode` | errors.rs:250 | SPL opcode block |
+| 6066 | `QueuedUpdateExpired` | errors.rs:254 | Durable-nonce defense (F-10) |
+| 6067 | `AccountWritabilityMismatch` | errors.rs:258 | Squads SAP parity (M5) |
+| 6068 | `SysvarScanBoundExceeded` | errors.rs:262 | Pad-attack DoS guard (M11) |
+| 6069 | `AsyncFulfillmentNotPermitted` | errors.rs:266 | Async-fulfillment block (C4) |
 | 6072 | `ConstraintsAlreadyPopulated` | errors.rs:244 | Orphan-PDA cleanup |
 | 6073 | `OrphanPdaWrongOwner` | errors.rs:247 | Orphan-PDA cleanup |
 | 6074 | `OrphanPdaPopulated` | errors.rs:250 | Orphan-PDA cleanup |
