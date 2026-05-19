@@ -104,7 +104,7 @@ pub fn handler(ctx: Context<WithdrawFunds>, amount: u64) -> Result<()> {
     let owner_key = ctx.accounts.owner.key();
 
     // Phase 7 — write success audit-log entry. Mint pubkey in
-    // `target_protocol`, withdrawn amount in `balance_delta_out`.
+    // `subject` slot, withdrawn amount in `balance_delta_out`.
     {
         let entry = build_audit_entry(
             AUDIT_DISC_WITHDRAW,
@@ -115,6 +115,12 @@ pub fn handler(ctx: Context<WithdrawFunds>, amount: u64) -> Result<()> {
             &ctx.accounts.slot_hashes_sysvar.to_account_info(),
         )?;
         let mut log = ctx.accounts.audit_log_success.load_mut()?;
+        // §RP-1 I-2: defense-in-depth guard against future seeds drift.
+        require_keys_eq!(
+            log.vault,
+            ctx.accounts.vault.key(),
+            SigilError::ConstraintsVaultMismatch
+        );
         log.append(entry);
     }
 

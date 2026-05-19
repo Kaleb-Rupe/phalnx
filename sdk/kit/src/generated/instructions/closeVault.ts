@@ -138,7 +138,13 @@ export type CloseVaultAsyncInput<
   tracker?: Address<TAccountTracker>;
   /** Zero-copy AgentSpendOverlay — close returns rent to owner */
   agentSpendOverlay: Address<TAccountAgentSpendOverlay>;
-  /** Phase 7 — close success audit log; rent returns to owner. */
+  /**
+   * Phase 7 — close success audit log; rent returns to owner.
+   * Closing here closes the close+reinit replay window: a vault can be
+   * re-initialised at the same (owner, vault_id) only after the audit
+   * logs have been reclaimed, and PEN-CROSS-2 still protects against
+   * stale-digest replay across the close boundary.
+   */
   auditLogSuccess?: Address<TAccountAuditLogSuccess>;
   /** Phase 7 — close rejected audit log; rent returns to owner. */
   auditLogRejected?: Address<TAccountAuditLogRejected>;
@@ -321,7 +327,13 @@ export type CloseVaultInput<
   tracker: Address<TAccountTracker>;
   /** Zero-copy AgentSpendOverlay — close returns rent to owner */
   agentSpendOverlay: Address<TAccountAgentSpendOverlay>;
-  /** Phase 7 — close success audit log; rent returns to owner. */
+  /**
+   * Phase 7 — close success audit log; rent returns to owner.
+   * Closing here closes the close+reinit replay window: a vault can be
+   * re-initialised at the same (owner, vault_id) only after the audit
+   * logs have been reclaimed, and PEN-CROSS-2 still protects against
+   * stale-digest replay across the close boundary.
+   */
   auditLogSuccess: Address<TAccountAuditLogSuccess>;
   /** Phase 7 — close rejected audit log; rent returns to owner. */
   auditLogRejected: Address<TAccountAuditLogRejected>;
@@ -432,7 +444,13 @@ export type ParsedCloseVaultInstruction<
     tracker: TAccountMetas[3];
     /** Zero-copy AgentSpendOverlay — close returns rent to owner */
     agentSpendOverlay: TAccountMetas[4];
-    /** Phase 7 — close success audit log; rent returns to owner. */
+    /**
+     * Phase 7 — close success audit log; rent returns to owner.
+     * Closing here closes the close+reinit replay window: a vault can be
+     * re-initialised at the same (owner, vault_id) only after the audit
+     * logs have been reclaimed, and PEN-CROSS-2 still protects against
+     * stale-digest replay across the close boundary.
+     */
     auditLogSuccess: TAccountMetas[5];
     /** Phase 7 — close rejected audit log; rent returns to owner. */
     auditLogRejected: TAccountMetas[6];

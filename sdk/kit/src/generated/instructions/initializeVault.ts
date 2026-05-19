@@ -236,9 +236,17 @@ export type InitializeVaultAsyncInput<
   tracker?: Address<TAccountTracker>;
   /** Agent spend overlay — per-agent contribution tracking */
   agentSpendOverlay: Address<TAccountAgentSpendOverlay>;
-  /** Phase 7 — audit log of SUCCESS-path mutating instructions. */
+  /**
+   * Phase 7 — audit log of SUCCESS-path mutating instructions.
+   * Allocated at vault creation. Owner pays rent. Failure to allocate
+   * aborts vault creation (init failure → atomic rollback).
+   */
   auditLogSuccess?: Address<TAccountAuditLogSuccess>;
-  /** Phase 7 — audit log of REJECTED finalize attempts. */
+  /**
+   * Phase 7 — audit log of REJECTED finalize attempts (permissionless-
+   * crank window). Separate from success buffer per Audit #2 F-19 so a
+   * rejected-finalize burst cannot displace legitimate success history.
+   */
   auditLogRejected?: Address<TAccountAuditLogRejected>;
   feeDestination: Address<TAccountFeeDestination>;
   systemProgram?: Address<TAccountSystemProgram>;
@@ -467,9 +475,17 @@ export type InitializeVaultInput<
   tracker: Address<TAccountTracker>;
   /** Agent spend overlay — per-agent contribution tracking */
   agentSpendOverlay: Address<TAccountAgentSpendOverlay>;
-  /** Phase 7 — audit log of SUCCESS-path mutating instructions. */
+  /**
+   * Phase 7 — audit log of SUCCESS-path mutating instructions.
+   * Allocated at vault creation. Owner pays rent. Failure to allocate
+   * aborts vault creation (init failure → atomic rollback).
+   */
   auditLogSuccess: Address<TAccountAuditLogSuccess>;
-  /** Phase 7 — audit log of REJECTED finalize attempts. */
+  /**
+   * Phase 7 — audit log of REJECTED finalize attempts (permissionless-
+   * crank window). Separate from success buffer per Audit #2 F-19 so a
+   * rejected-finalize burst cannot displace legitimate success history.
+   */
   auditLogRejected: Address<TAccountAuditLogRejected>;
   feeDestination: Address<TAccountFeeDestination>;
   systemProgram?: Address<TAccountSystemProgram>;
@@ -608,9 +624,17 @@ export type ParsedInitializeVaultInstruction<
     tracker: TAccountMetas[3];
     /** Agent spend overlay — per-agent contribution tracking */
     agentSpendOverlay: TAccountMetas[4];
-    /** Phase 7 — audit log of SUCCESS-path mutating instructions. */
+    /**
+     * Phase 7 — audit log of SUCCESS-path mutating instructions.
+     * Allocated at vault creation. Owner pays rent. Failure to allocate
+     * aborts vault creation (init failure → atomic rollback).
+     */
     auditLogSuccess: TAccountMetas[5];
-    /** Phase 7 — audit log of REJECTED finalize attempts. */
+    /**
+     * Phase 7 — audit log of REJECTED finalize attempts (permissionless-
+     * crank window). Separate from success buffer per Audit #2 F-19 so a
+     * rejected-finalize burst cannot displace legitimate success history.
+     */
     auditLogRejected: TAccountMetas[6];
     feeDestination: TAccountMetas[7];
     systemProgram: TAccountMetas[8];

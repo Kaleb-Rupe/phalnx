@@ -24,30 +24,107 @@ import {
   type ReadonlyUint8Array,
 } from "@solana/kit";
 
-/** Phase 7 audit-log entry. Zero-copy, fixed-size 64 bytes per entry. */
+/**
+ * Single audit-log entry. Zero-copy, fixed-size 64 bytes per entry.
+ *
+ * **Layout strategy:** `#[repr(C)]` ordered so natural alignment never
+ * introduces implicit padding (Pod derive forbids implicit padding).
+ * All fields with alignment > 1 are placed at offsets that are multiples
+ * of their alignment.
+ *
+ * Byte offsets (verified at compile time):
+ * 0..32   subject          [u8;32]  align 1
+ * 32..40  balance_delta_in i64      align 8 (32 % 8 = 0 ✓)
+ * 40..48  balance_delta_out i64     align 8 (40 % 8 = 0 ✓)
+ * 48..56  timestamp        i64      align 8 (48 % 8 = 0 ✓)
+ * 56..60  slot_hash        [u8;4]   align 1
+ * 60..63  blockhash        [u8;3]   align 1
+ * 63..64  discriminator    u8       align 1
+ * ──── total: 64 bytes, struct alignment = 8 ────
+ *
+ * **discriminator placement note:** semantically the discriminator is
+ * "type of entry," but for Pod-compatible packing we place it at the
+ * trailing byte. SDK decoders read it by offset 63, not by struct field
+ * order.
+ *
+ * Audit #1 AUD3-F5: uses `slot_hashes_sysvar`, NOT deprecated
+ * `recent_blockhashes_sysvar` (deprecated in Solana 1.18+).
+ */
 export type AuditEntry = {
-  targetProtocol: ReadonlyUint8Array;
+  /**
+   * 32-byte pubkey of the entry's subject. Stored as raw bytes because
+   * `zero_copy` cannot hold `Pubkey` directly without `Pod` impl on
+   * Pubkey itself.
+   *
+   * Per-discriminator semantic (§RP-1 HIGH-2 disambiguation, 2026-05-19):
+   * disc=2  (finalize_success) → protocol pubkey (session.authorized_protocol)
+   * disc=16 (finalize_reject)  → protocol pubkey (session.authorized_protocol)
+   * disc=3  (deposit)          → SPL Token mint pubkey
+   * disc=4  (withdraw)         → SPL Token mint pubkey
+   * disc=5  (freeze)           → vault pubkey
+   * disc=6  (reactivate)       → vault pubkey
+   * disc=10 (pause_agent)      → agent pubkey
+   * disc=11 (unpause_agent)    → agent pubkey
+   * disc=12 (revoke_agent)     → agent pubkey
+   * disc=13 (register_agent)   → agent pubkey
+   * disc=14 (policy_apply)     → vault pubkey
+   * disc=15 (constraints_apply)→ vault pubkey
+   * disc=7..=9 (ownership_*)   → Phase 8 — RESERVED, do not write
+   */
+  subject: ReadonlyUint8Array;
+  /** Stablecoin delta IN (e.g. swap output, deposit). 0 when not applicable. */
   balanceDeltaIn: bigint;
+  /** Stablecoin delta OUT (e.g. swap input, withdraw, transfer). 0 when N/A. */
   balanceDeltaOut: bigint;
+  /** Wall-clock unix timestamp (Clock::unix_timestamp). */
   timestamp: bigint;
+  /** First 4 bytes of slot_hashes_sysvar[0].slot in LE byte order. */
   slotHash: ReadonlyUint8Array;
+  /** First 3 bytes of slot_hashes_sysvar[0].hash. */
   blockhash: ReadonlyUint8Array;
+  /** See discriminator constants above (AUDIT_DISC_*). At byte offset 63. */
   discriminator: number;
 };
 
 export type AuditEntryArgs = {
-  targetProtocol: ReadonlyUint8Array;
+  /**
+   * 32-byte pubkey of the entry's subject. Stored as raw bytes because
+   * `zero_copy` cannot hold `Pubkey` directly without `Pod` impl on
+   * Pubkey itself.
+   *
+   * Per-discriminator semantic (§RP-1 HIGH-2 disambiguation, 2026-05-19):
+   * disc=2  (finalize_success) → protocol pubkey (session.authorized_protocol)
+   * disc=16 (finalize_reject)  → protocol pubkey (session.authorized_protocol)
+   * disc=3  (deposit)          → SPL Token mint pubkey
+   * disc=4  (withdraw)         → SPL Token mint pubkey
+   * disc=5  (freeze)           → vault pubkey
+   * disc=6  (reactivate)       → vault pubkey
+   * disc=10 (pause_agent)      → agent pubkey
+   * disc=11 (unpause_agent)    → agent pubkey
+   * disc=12 (revoke_agent)     → agent pubkey
+   * disc=13 (register_agent)   → agent pubkey
+   * disc=14 (policy_apply)     → vault pubkey
+   * disc=15 (constraints_apply)→ vault pubkey
+   * disc=7..=9 (ownership_*)   → Phase 8 — RESERVED, do not write
+   */
+  subject: ReadonlyUint8Array;
+  /** Stablecoin delta IN (e.g. swap output, deposit). 0 when not applicable. */
   balanceDeltaIn: number | bigint;
+  /** Stablecoin delta OUT (e.g. swap input, withdraw, transfer). 0 when N/A. */
   balanceDeltaOut: number | bigint;
+  /** Wall-clock unix timestamp (Clock::unix_timestamp). */
   timestamp: number | bigint;
+  /** First 4 bytes of slot_hashes_sysvar[0].slot in LE byte order. */
   slotHash: ReadonlyUint8Array;
+  /** First 3 bytes of slot_hashes_sysvar[0].hash. */
   blockhash: ReadonlyUint8Array;
+  /** See discriminator constants above (AUDIT_DISC_*). At byte offset 63. */
   discriminator: number;
 };
 
 export function getAuditEntryEncoder(): FixedSizeEncoder<AuditEntryArgs> {
   return getStructEncoder([
-    ["targetProtocol", fixEncoderSize(getBytesEncoder(), 32)],
+    ["subject", fixEncoderSize(getBytesEncoder(), 32)],
     ["balanceDeltaIn", getI64Encoder()],
     ["balanceDeltaOut", getI64Encoder()],
     ["timestamp", getI64Encoder()],
@@ -59,7 +136,7 @@ export function getAuditEntryEncoder(): FixedSizeEncoder<AuditEntryArgs> {
 
 export function getAuditEntryDecoder(): FixedSizeDecoder<AuditEntry> {
   return getStructDecoder([
-    ["targetProtocol", fixDecoderSize(getBytesDecoder(), 32)],
+    ["subject", fixDecoderSize(getBytesDecoder(), 32)],
     ["balanceDeltaIn", getI64Decoder()],
     ["balanceDeltaOut", getI64Decoder()],
     ["timestamp", getI64Decoder()],

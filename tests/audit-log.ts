@@ -22,7 +22,6 @@ import {
   PublicKey,
   SystemProgram,
   LAMPORTS_PER_SOL,
-  Transaction,
 } from "@solana/web3.js";
 import { expect } from "chai";
 import BN from "bn.js";
@@ -47,20 +46,14 @@ const STANDARD_INIT_TIMELOCK = new BN(1800);
 const ENTRY_SIZE = 64;
 const SUCCESS_CAPACITY = 128;
 const REJECTED_CAPACITY = 64;
-const HEAD_OFFSET = 8 + 32 + ENTRY_SIZE * SUCCESS_CAPACITY; // 8 disc + 32 vault + entries
-const COUNT_OFFSET = HEAD_OFFSET + 1;
 const ENTRIES_OFFSET = 8 + 32; // after disc + vault
 
 // Discriminator allocation mirrors state/audit_log_success.rs.
-const DISC_VALIDATE = 1;
-const DISC_FINALIZE_SUCCESS = 2;
-const DISC_DEPOSIT = 3;
 const DISC_FREEZE = 5;
 const DISC_REGISTER_AGENT = 13;
-const DISC_POLICY_APPLY = 14;
 
 interface AuditEntry {
-  targetProtocol: Uint8Array;
+  subject: Uint8Array;
   balanceDeltaIn: bigint;
   balanceDeltaOut: bigint;
   timestamp: bigint;
@@ -72,7 +65,7 @@ interface AuditEntry {
 function decodeEntry(buf: Buffer, offset: number): AuditEntry {
   const view = new DataView(buf.buffer, buf.byteOffset + offset, ENTRY_SIZE);
   return {
-    targetProtocol: new Uint8Array(buf.subarray(offset, offset + 32)),
+    subject: new Uint8Array(buf.subarray(offset, offset + 32)),
     balanceDeltaIn: view.getBigInt64(32, true),
     balanceDeltaOut: view.getBigInt64(40, true),
     timestamp: view.getBigInt64(48, true),
@@ -257,11 +250,11 @@ describe("audit-log (Phase 7)", () => {
     expect(log.head).to.equal(1);
     const entry = log.rawEntries[0];
     expect(entry.discriminator).to.equal(DISC_FREEZE);
-    expect(Buffer.from(entry.targetProtocol).equals(vault.toBuffer())).to.be
+    expect(Buffer.from(entry.subject).equals(vault.toBuffer())).to.be
       .true;
   });
 
-  it("register_agent appends an entry with disc=13 + agent in target_protocol", async () => {
+  it("register_agent appends an entry with disc=13 + agent in subject slot", async () => {
     const { vault, policy, overlay, auditSuccess } = await initVault(
       new BN(8003),
     );
@@ -281,7 +274,7 @@ describe("audit-log (Phase 7)", () => {
     expect(log.count).to.equal(1);
     const entry = log.rawEntries[0];
     expect(entry.discriminator).to.equal(DISC_REGISTER_AGENT);
-    expect(Buffer.from(entry.targetProtocol).equals(agent.publicKey.toBuffer()))
+    expect(Buffer.from(entry.subject).equals(agent.publicKey.toBuffer()))
       .to.be.true;
   });
 
@@ -342,6 +335,16 @@ describe("audit-log (Phase 7)", () => {
     expect(chronological[chronological.length - 1].discriminator).to.equal(6);
     // Second-to-last should be the most recent freeze (disc=5).
     expect(chronological[chronological.length - 2].discriminator).to.equal(5);
+    // §RP-1 FIX-4 — Off-by-one regression guard. We wrote 131 entries
+    // (1 register + 130 freeze/reactivate); with CAPACITY=128 the first
+    // three are dropped:
+    //   entry #1 = register (disc=13)  → dropped
+    //   entry #2 = freeze   (disc=5)   → dropped
+    //   entry #3 = reactivate(disc=6)  → dropped
+    //   entry #4 = freeze   (disc=5)   → OLDEST RETAINED → chronological[0]
+    // If `head+1` were used instead of `head` in the reorder function the
+    // assertion below would shift to disc=6 (reactivate) and fail.
+    expect(chronological[0].discriminator).to.equal(DISC_FREEZE);
   });
 
   it("rejected-finalize cranks fill rejected buffer; success buffer untouched (F-19)", async () => {

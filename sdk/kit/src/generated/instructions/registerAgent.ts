@@ -167,9 +167,8 @@ export type RegisterAgentAsyncInput<
   policy?: Address<TAccountPolicy>;
   /** Agent spend overlay — per-agent tracking slot. */
   agentSpendOverlay: Address<TAccountAgentSpendOverlay>;
-  /** Phase 7 — success audit log. */
+  /** Phase 7 — success audit log; entry appended after register completes. */
   auditLogSuccess?: Address<TAccountAuditLogSuccess>;
-  /** Phase 7 — slot_hashes sysvar; address-pinned. */
   slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
   agent: RegisterAgentInstructionDataArgs["agent"];
   capability: RegisterAgentInstructionDataArgs["capability"];
@@ -324,9 +323,8 @@ export type RegisterAgentInput<
   policy: Address<TAccountPolicy>;
   /** Agent spend overlay — per-agent tracking slot. */
   agentSpendOverlay: Address<TAccountAgentSpendOverlay>;
-  /** Phase 7 — success audit log. */
+  /** Phase 7 — success audit log; entry appended after register completes. */
   auditLogSuccess: Address<TAccountAuditLogSuccess>;
-  /** Phase 7 — slot_hashes sysvar; address-pinned. */
   slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
   agent: RegisterAgentInstructionDataArgs["agent"];
   capability: RegisterAgentInstructionDataArgs["capability"];
@@ -445,9 +443,8 @@ export type ParsedRegisterAgentInstruction<
     policy: TAccountMetas[2];
     /** Agent spend overlay — per-agent tracking slot. */
     agentSpendOverlay: TAccountMetas[3];
-    /** Phase 7 — success audit log. */
+    /** Phase 7 — success audit log; entry appended after register completes. */
     auditLogSuccess: TAccountMetas[4];
-    /** Phase 7 — slot_hashes sysvar; address-pinned. */
     slotHashesSysvar: TAccountMetas[5];
   };
   data: RegisterAgentInstructionData;

@@ -121,9 +121,12 @@ export type FreezeVaultAsyncInput<
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
-  /** Phase 7 — success audit log. */
+  /** Phase 7 — success audit log; entry appended after status flip. */
   auditLogSuccess?: Address<TAccountAuditLogSuccess>;
-  /** Phase 7 — slot_hashes sysvar; address-pinned. */
+  /**
+   * Address constrained to the canonical sysvar pubkey so a tampered caller
+   * cannot substitute a stale or attacker-controlled account.
+   */
   slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
   tokenProgram?: Address<TAccountTokenProgram>;
 };
@@ -231,9 +234,12 @@ export type FreezeVaultInput<
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
-  /** Phase 7 — success audit log. */
+  /** Phase 7 — success audit log; entry appended after status flip. */
   auditLogSuccess: Address<TAccountAuditLogSuccess>;
-  /** Phase 7 — slot_hashes sysvar; address-pinned. */
+  /**
+   * Address constrained to the canonical sysvar pubkey so a tampered caller
+   * cannot substitute a stale or attacker-controlled account.
+   */
   slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
   tokenProgram?: Address<TAccountTokenProgram>;
 };
@@ -320,9 +326,12 @@ export type ParsedFreezeVaultInstruction<
   accounts: {
     owner: TAccountMetas[0];
     vault: TAccountMetas[1];
-    /** Phase 7 — success audit log. */
+    /** Phase 7 — success audit log; entry appended after status flip. */
     auditLogSuccess: TAccountMetas[2];
-    /** Phase 7 — slot_hashes sysvar; address-pinned. */
+    /**
+     * Address constrained to the canonical sysvar pubkey so a tampered caller
+     * cannot substitute a stale or attacker-controlled account.
+     */
     slotHashesSysvar: TAccountMetas[3];
     tokenProgram: TAccountMetas[4];
   };

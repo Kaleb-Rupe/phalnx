@@ -71,10 +71,17 @@ pub fn read_slot_hash_head(
 /// Build an `AuditEntry` from the four "what happened" fields plus a sysvar
 /// account info. Reads slot/blockhash FRESH from the sysvar on every call —
 /// callers MUST NOT cache the returned bytes across instructions.
+///
+/// `subject` is the 32-byte pubkey stored at the entry's leading `subject`
+/// slot. Its semantic is discriminator-dependent — see
+/// `state::audit_log_success::AuditEntry::subject` for the per-discriminator
+/// table. §RP-1 HIGH-2 (2026-05-19): previously named `target_protocol`, but
+/// only finalize_session honoured that name; renamed to `subject` to remove
+/// the misleading per-discriminator overload.
 #[allow(clippy::too_many_arguments)]
 pub fn build_audit_entry(
     discriminator: u8,
-    target_protocol: Pubkey,
+    subject: Pubkey,
     balance_delta_in: i64,
     balance_delta_out: i64,
     timestamp: i64,
@@ -82,7 +89,7 @@ pub fn build_audit_entry(
 ) -> Result<AuditEntry> {
     let (slot_hash, blockhash) = read_slot_hash_head(slot_hashes_sysvar)?;
     Ok(AuditEntry {
-        target_protocol: target_protocol.to_bytes(),
+        subject: subject.to_bytes(),
         balance_delta_in,
         balance_delta_out,
         timestamp,

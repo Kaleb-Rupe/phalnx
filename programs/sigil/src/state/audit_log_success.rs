@@ -10,8 +10,10 @@ pub const AUDIT_LOG_SUCCESS_CAPACITY: usize = 128;
 
 /// Discriminator allocation for `AuditEntry.discriminator`.
 /// 0      = reserved (never written; defense-in-depth zero-default sentinel)
-/// 1      = validate_and_authorize (paired with 2)
-/// 2      = finalize_session SUCCESS
+/// 1      = validate_and_authorize (RESERVED slot — Phase 7 writes NO entries
+///          from `validate_and_authorize`; reserved for future expansion when
+///          a per-validate audit row is needed)
+/// 2      = finalize_session SUCCESS path
 /// 3      = deposit_funds
 /// 4      = withdraw_funds
 /// 5      = freeze_vault
@@ -24,7 +26,11 @@ pub const AUDIT_LOG_SUCCESS_CAPACITY: usize = 128;
 /// 13     = register_agent
 /// 14     = apply_pending_policy
 /// 15     = apply_constraints_update
-/// 16..=255 = reserved (extensible)
+/// 16     = finalize_session REJECT path (expired-session crank). Written
+///          only to the rejected buffer; closes the disc-1/disc-2 ambiguity
+///          that would otherwise let a permissionless-crank attacker create
+///          forensic confusion across the two buffers.
+/// 17..=255 = reserved (extensible)
 pub const AUDIT_DISC_RESERVED_ZERO: u8 = 0;
 pub const AUDIT_DISC_VALIDATE: u8 = 1;
 pub const AUDIT_DISC_FINALIZE_SUCCESS: u8 = 2;
@@ -42,6 +48,7 @@ pub const AUDIT_DISC_REVOKE_AGENT: u8 = 12;
 pub const AUDIT_DISC_REGISTER_AGENT: u8 = 13;
 pub const AUDIT_DISC_POLICY_APPLY: u8 = 14;
 pub const AUDIT_DISC_CONSTRAINTS_APPLY: u8 = 15;
+pub const AUDIT_DISC_FINALIZE_REJECT: u8 = 16;
 
 /// Single audit-log entry. Zero-copy, fixed-size 64 bytes per entry.
 ///
@@ -51,7 +58,7 @@ pub const AUDIT_DISC_CONSTRAINTS_APPLY: u8 = 15;
 /// of their alignment.
 ///
 /// Byte offsets (verified at compile time):
-///   0..32   target_protocol  [u8;32]  align 1
+///   0..32   subject          [u8;32]  align 1
 ///   32..40  balance_delta_in i64      align 8 (32 % 8 = 0 ✓)
 ///   40..48  balance_delta_out i64     align 8 (40 % 8 = 0 ✓)
 ///   48..56  timestamp        i64      align 8 (48 % 8 = 0 ✓)
@@ -71,10 +78,25 @@ pub const AUDIT_DISC_CONSTRAINTS_APPLY: u8 = 15;
 #[repr(C)]
 #[derive(Default)]
 pub struct AuditEntry {
-    /// Pubkey of the target protocol (or vault/agent/owner contextually).
-    /// Stored as raw bytes because `zero_copy` cannot hold `Pubkey` directly
-    /// without `Pod` impl on Pubkey itself.
-    pub target_protocol: [u8; 32],
+    /// 32-byte pubkey of the entry's subject. Stored as raw bytes because
+    /// `zero_copy` cannot hold `Pubkey` directly without `Pod` impl on
+    /// Pubkey itself.
+    ///
+    /// Per-discriminator semantic (§RP-1 HIGH-2 disambiguation, 2026-05-19):
+    ///   disc=2  (finalize_success) → protocol pubkey (session.authorized_protocol)
+    ///   disc=16 (finalize_reject)  → protocol pubkey (session.authorized_protocol)
+    ///   disc=3  (deposit)          → SPL Token mint pubkey
+    ///   disc=4  (withdraw)         → SPL Token mint pubkey
+    ///   disc=5  (freeze)           → vault pubkey
+    ///   disc=6  (reactivate)       → vault pubkey
+    ///   disc=10 (pause_agent)      → agent pubkey
+    ///   disc=11 (unpause_agent)    → agent pubkey
+    ///   disc=12 (revoke_agent)     → agent pubkey
+    ///   disc=13 (register_agent)   → agent pubkey
+    ///   disc=14 (policy_apply)     → vault pubkey
+    ///   disc=15 (constraints_apply)→ vault pubkey
+    ///   disc=7..=9 (ownership_*)   → Phase 8 — RESERVED, do not write
+    pub subject: [u8; 32],
     /// Stablecoin delta IN (e.g. swap output, deposit). 0 when not applicable.
     pub balance_delta_in: i64,
     /// Stablecoin delta OUT (e.g. swap input, withdraw, transfer). 0 when N/A.

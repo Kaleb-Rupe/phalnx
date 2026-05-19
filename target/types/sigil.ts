@@ -118,7 +118,7 @@ export type Sigil = {
         {
           "name": "agentSpendOverlay",
           "docs": [
-            "Zero-copy AgentSpendOverlay \u2014 per-agent rolling spend"
+            "Zero-copy AgentSpendOverlay — per-agent rolling spend"
           ],
           "writable": true
         },
@@ -558,7 +558,7 @@ export type Sigil = {
         {
           "name": "agentSpendOverlay",
           "docs": [
-            "Agent spend overlay \u2014 per-agent tracking slot."
+            "Agent spend overlay — per-agent tracking slot."
           ],
           "writable": true
         }
@@ -781,7 +781,7 @@ export type Sigil = {
         {
           "name": "policy",
           "docs": [
-            "PolicyConfig \u2014 needed to bump policy_version on constraint changes."
+            "PolicyConfig — needed to bump policy_version on constraint changes."
           ],
           "writable": true,
           "pda": {
@@ -871,7 +871,7 @@ export type Sigil = {
         {
           "name": "auditLogSuccess",
           "docs": [
-            "Phase 7 \u2014 success audit log."
+            "Phase 7 — success audit log; entry appended after constraints applied."
           ],
           "writable": true,
           "pda": {
@@ -903,9 +903,6 @@ export type Sigil = {
         },
         {
           "name": "slotHashesSysvar",
-          "docs": [
-            "Phase 7 \u2014 slot_hashes sysvar; address-pinned."
-          ],
           "address": "SysvarS1otHashes111111111111111111111111111"
         }
       ],
@@ -1022,7 +1019,7 @@ export type Sigil = {
         {
           "name": "auditLogSuccess",
           "docs": [
-            "Phase 7 \u2014 success audit log."
+            "Phase 7 — success audit log; entry appended after policy applied."
           ],
           "writable": true,
           "pda": {
@@ -1054,9 +1051,6 @@ export type Sigil = {
         },
         {
           "name": "slotHashesSysvar",
-          "docs": [
-            "Phase 7 \u2014 slot_hashes sysvar; address-pinned."
-          ],
           "address": "SysvarS1otHashes111111111111111111111111111"
         }
       ],
@@ -1766,7 +1760,7 @@ export type Sigil = {
         {
           "name": "tracker",
           "docs": [
-            "Zero-copy SpendTracker \u2014 close returns rent to owner"
+            "Zero-copy SpendTracker — close returns rent to owner"
           ],
           "writable": true,
           "pda": {
@@ -1793,14 +1787,18 @@ export type Sigil = {
         {
           "name": "agentSpendOverlay",
           "docs": [
-            "Zero-copy AgentSpendOverlay \u2014 close returns rent to owner"
+            "Zero-copy AgentSpendOverlay — close returns rent to owner"
           ],
           "writable": true
         },
         {
           "name": "auditLogSuccess",
           "docs": [
-            "Phase 7 \u2014 close success audit log; rent returns to owner."
+            "Phase 7 — close success audit log; rent returns to owner.",
+            "Closing here closes the close+reinit replay window: a vault can be",
+            "re-initialised at the same (owner, vault_id) only after the audit",
+            "logs have been reclaimed, and PEN-CROSS-2 still protects against",
+            "stale-digest replay across the close boundary."
           ],
           "writable": true,
           "pda": {
@@ -1833,7 +1831,7 @@ export type Sigil = {
         {
           "name": "auditLogRejected",
           "docs": [
-            "Phase 7 \u2014 close rejected audit log; rent returns to owner."
+            "Phase 7 — close rejected audit log; rent returns to owner."
           ],
           "writable": true,
           "pda": {
@@ -1878,8 +1876,8 @@ export type Sigil = {
         "Only the owner can call this. PDA must be at full SIZE.",
         "",
         "V2: strict_mode parameter removed. Every constraint entry is strictly",
-        "enforced \u2014 if no entry matches an instruction's program_id, the",
-        "instruction is rejected. (REVAMP_PLAN \u00a72.2)"
+        "enforced — if no entry matches an instruction's program_id, the",
+        "instruction is rejected. (REVAMP_PLAN §2.2)"
       ],
       "discriminator": [
         13,
@@ -2384,7 +2382,7 @@ export type Sigil = {
         {
           "name": "auditLogSuccess",
           "docs": [
-            "Phase 7 \u2014 success audit log."
+            "Phase 7 — success audit log; entry appended after token transfer."
           ],
           "writable": true,
           "pda": {
@@ -2416,9 +2414,6 @@ export type Sigil = {
         },
         {
           "name": "slotHashesSysvar",
-          "docs": [
-            "Phase 7 \u2014 slot_hashes sysvar; address-pinned."
-          ],
           "address": "SysvarS1otHashes111111111111111111111111111"
         },
         {
@@ -2661,7 +2656,7 @@ export type Sigil = {
         {
           "name": "agentSpendOverlay",
           "docs": [
-            "Zero-copy AgentSpendOverlay \u2014 per-agent rolling spend"
+            "Zero-copy AgentSpendOverlay — per-agent rolling spend"
           ],
           "writable": true
         },
@@ -2700,7 +2695,8 @@ export type Sigil = {
         {
           "name": "auditLogSuccess",
           "docs": [
-            "Phase 7 \u2014 success audit log."
+            "Phase 7 — SUCCESS-path audit log. Written when the finalize completes",
+            "the non-expired branch."
           ],
           "writable": true,
           "pda": {
@@ -2733,7 +2729,10 @@ export type Sigil = {
         {
           "name": "auditLogRejected",
           "docs": [
-            "Phase 7 \u2014 rejected audit log."
+            "Phase 7 — REJECTED-path audit log. Written when the finalize takes",
+            "the expired branch (permissionless-crank cleanup). Audit #2 F-19",
+            "keeps this separate from the success buffer so a crank-attacker",
+            "cannot displace legitimate success history."
           ],
           "writable": true,
           "pda": {
@@ -2766,9 +2765,6 @@ export type Sigil = {
         },
         {
           "name": "slotHashesSysvar",
-          "docs": [
-            "Phase 7 \u2014 slot_hashes sysvar; address-pinned."
-          ],
           "address": "SysvarS1otHashes111111111111111111111111111"
         }
       ],
@@ -2831,7 +2827,7 @@ export type Sigil = {
         {
           "name": "auditLogSuccess",
           "docs": [
-            "Phase 7 \u2014 success audit log."
+            "Phase 7 — success audit log; entry appended after status flip."
           ],
           "writable": true,
           "pda": {
@@ -2864,7 +2860,8 @@ export type Sigil = {
         {
           "name": "slotHashesSysvar",
           "docs": [
-            "Phase 7 \u2014 slot_hashes sysvar; address-pinned."
+            "Address constrained to the canonical sysvar pubkey so a tampered caller",
+            "cannot substitute a stale or attacker-controlled account."
           ],
           "address": "SysvarS1otHashes111111111111111111111111111"
         },
@@ -2977,14 +2974,16 @@ export type Sigil = {
         {
           "name": "agentSpendOverlay",
           "docs": [
-            "Agent spend overlay \u2014 per-agent contribution tracking"
+            "Agent spend overlay — per-agent contribution tracking"
           ],
           "writable": true
         },
         {
           "name": "auditLogSuccess",
           "docs": [
-            "Phase 7 \u2014 audit log of SUCCESS-path mutating instructions."
+            "Phase 7 — audit log of SUCCESS-path mutating instructions.",
+            "Allocated at vault creation. Owner pays rent. Failure to allocate",
+            "aborts vault creation (init failure → atomic rollback)."
           ],
           "writable": true,
           "pda": {
@@ -3017,7 +3016,9 @@ export type Sigil = {
         {
           "name": "auditLogRejected",
           "docs": [
-            "Phase 7 \u2014 audit log of REJECTED finalize attempts."
+            "Phase 7 — audit log of REJECTED finalize attempts (permissionless-",
+            "crank window). Separate from success buffer per Audit #2 F-19 so a",
+            "rejected-finalize burst cannot displace legitimate success history."
           ],
           "writable": true,
           "pda": {
@@ -3196,7 +3197,7 @@ export type Sigil = {
         {
           "name": "policy",
           "docs": [
-            "PEN-CROSS-5 (Phase 4 absorption) \u2014 bump policy_version on pause.",
+            "PEN-CROSS-5 (Phase 4 absorption) — bump policy_version on pause.",
             "Mirrors revoke semantics: pause is a kill-switch for an agent,",
             "and concurrent validate_and_authorize calls must reject with",
             "PolicyVersionMismatch instead of relying on the slower",
@@ -3226,7 +3227,7 @@ export type Sigil = {
         {
           "name": "auditLogSuccess",
           "docs": [
-            "Phase 7 \u2014 success audit log."
+            "Phase 7 — success audit log; entry appended after pause flip."
           ],
           "writable": true,
           "pda": {
@@ -3258,9 +3259,6 @@ export type Sigil = {
         },
         {
           "name": "slotHashesSysvar",
-          "docs": [
-            "Phase 7 \u2014 slot_hashes sysvar; address-pinned."
-          ],
           "address": "SysvarS1otHashes111111111111111111111111111"
         }
       ],
@@ -3367,7 +3365,7 @@ export type Sigil = {
       "docs": [
         "Queue an agent permissions update. Timelock-gated.",
         "Per-agent PDA allows concurrent pending updates for different agents.",
-        "TA-06 (Phase 3): adds `cooldown_seconds` \u2014 per-agent cooldown stored",
+        "TA-06 (Phase 3): adds `cooldown_seconds` — per-agent cooldown stored",
         "on `AgentSpendOverlay.cooldown_seconds[slot]`. 0 disables. Bound at",
         "queue time and applied at apply time onto the agent's overlay slot."
       ],
@@ -3664,7 +3662,7 @@ export type Sigil = {
       "docs": [
         "Queue a constraints update when timelock is active.",
         "",
-        "V2: strict_mode parameter removed (REVAMP_PLAN \u00a72.2)."
+        "V2: strict_mode parameter removed (REVAMP_PLAN §2.2)."
       ],
       "discriminator": [
         247,
@@ -3739,7 +3737,7 @@ export type Sigil = {
         {
           "name": "constraints",
           "docs": [
-            "Existing constraints \u2014 seeds verify PDA, bump verified via load()."
+            "Existing constraints — seeds verify PDA, bump verified via load()."
           ],
           "pda": {
             "seeds": [
@@ -4106,7 +4104,7 @@ export type Sigil = {
         {
           "name": "auditLogSuccess",
           "docs": [
-            "Phase 7 \u2014 success audit log."
+            "Phase 7 — success audit log; entry appended after status flip."
           ],
           "writable": true,
           "pda": {
@@ -4138,9 +4136,6 @@ export type Sigil = {
         },
         {
           "name": "slotHashesSysvar",
-          "docs": [
-            "Phase 7 \u2014 slot_hashes sysvar; address-pinned."
-          ],
           "address": "SysvarS1otHashes111111111111111111111111111"
         }
       ],
@@ -4310,7 +4305,7 @@ export type Sigil = {
         {
           "name": "policy",
           "docs": [
-            "PEN-CROSS-5 (Phase 4 absorption) \u2014 policy is now mutated by",
+            "PEN-CROSS-5 (Phase 4 absorption) — policy is now mutated by",
             "register/revoke/pause/unpause to bump `policy_version` as a",
             "defense-in-depth OCC signal. Existing `vault.is_agent` /",
             "`is_agent_paused` constraints already reject the TOCTOU window;",
@@ -4318,9 +4313,9 @@ export type Sigil = {
             "fast with PolicyVersionMismatch instead of relying on the slower",
             "constraint check.",
             "",
-            "\u00a7RP-1 V6 clarification (2026-05-18): the policy-to-vault binding is",
+            "§RP-1 V6 clarification (2026-05-18): the policy-to-vault binding is",
             "enforced by the PDA seeds derivation `[b\"policy\", vault.key().as_ref()]`",
-            "\u2014 functionally equivalent to `has_one = vault`. Any sibling-thread",
+            "— functionally equivalent to `has_one = vault`. Any sibling-thread",
             "claim of an explicit `has_one = vault` constraint on this account is",
             "cosmetic; the seeds derivation is the load-bearing check. This same",
             "pattern is mirrored on `revoke_agent.rs`, `pause_agent.rs`, and",
@@ -4350,14 +4345,14 @@ export type Sigil = {
         {
           "name": "agentSpendOverlay",
           "docs": [
-            "Agent spend overlay \u2014 per-agent tracking slot."
+            "Agent spend overlay — per-agent tracking slot."
           ],
           "writable": true
         },
         {
           "name": "auditLogSuccess",
           "docs": [
-            "Phase 7 \u2014 success audit log."
+            "Phase 7 — success audit log; entry appended after register completes."
           ],
           "writable": true,
           "pda": {
@@ -4389,9 +4384,6 @@ export type Sigil = {
         },
         {
           "name": "slotHashesSysvar",
-          "docs": [
-            "Phase 7 \u2014 slot_hashes sysvar; address-pinned."
-          ],
           "address": "SysvarS1otHashes111111111111111111111111111"
         }
       ],
@@ -4464,7 +4456,7 @@ export type Sigil = {
         {
           "name": "policy",
           "docs": [
-            "PEN-CROSS-5 (Phase 4 absorption) \u2014 bump policy_version on agent",
+            "PEN-CROSS-5 (Phase 4 absorption) — bump policy_version on agent",
             "revocation. See register_agent.rs for the OCC rationale; revoke",
             "is the more important of the four (removing an agent must",
             "invalidate concurrent validates that race the revoke)."
@@ -4493,14 +4485,14 @@ export type Sigil = {
         {
           "name": "agentSpendOverlay",
           "docs": [
-            "Agent spend overlay \u2014 release slot on revocation."
+            "Agent spend overlay — release slot on revocation."
           ],
           "writable": true
         },
         {
           "name": "auditLogSuccess",
           "docs": [
-            "Phase 7 \u2014 success audit log."
+            "Phase 7 — success audit log; entry appended after revoke completes."
           ],
           "writable": true,
           "pda": {
@@ -4532,9 +4524,6 @@ export type Sigil = {
         },
         {
           "name": "slotHashesSysvar",
-          "docs": [
-            "Phase 7 \u2014 slot_hashes sysvar; address-pinned."
-          ],
           "address": "SysvarS1otHashes111111111111111111111111111"
         }
       ],
@@ -4668,7 +4657,7 @@ export type Sigil = {
         {
           "name": "policy",
           "docs": [
-            "PEN-CROSS-5 (Phase 4 absorption) \u2014 bump policy_version on unpause.",
+            "PEN-CROSS-5 (Phase 4 absorption) — bump policy_version on unpause.",
             "Symmetric with pause_agent; the four agent-mutation ix",
             "(register / revoke / pause / unpause) all bump version so OCC",
             "signals fire uniformly regardless of which mutation lands."
@@ -4697,7 +4686,7 @@ export type Sigil = {
         {
           "name": "auditLogSuccess",
           "docs": [
-            "Phase 7 \u2014 success audit log."
+            "Phase 7 — success audit log; entry appended after unpause flip."
           ],
           "writable": true,
           "pda": {
@@ -4729,9 +4718,6 @@ export type Sigil = {
         },
         {
           "name": "slotHashesSysvar",
-          "docs": [
-            "Phase 7 \u2014 slot_hashes sysvar; address-pinned."
-          ],
           "address": "SysvarS1otHashes111111111111111111111111111"
         }
       ],
@@ -4849,14 +4835,14 @@ export type Sigil = {
         {
           "name": "agentSpendOverlay",
           "docs": [
-            "Zero-copy AgentSpendOverlay \u2014 per-agent rolling spend"
+            "Zero-copy AgentSpendOverlay — per-agent rolling spend"
           ],
           "writable": true
         },
         {
           "name": "session",
           "docs": [
-            "Ephemeral session PDA \u2014 `init` ensures no double-authorization.",
+            "Ephemeral session PDA — `init` ensures no double-authorization.",
             "Seeds include token_mint for per-token concurrent sessions."
           ],
           "writable": true,
@@ -4899,7 +4885,7 @@ export type Sigil = {
         {
           "name": "tokenMintAccount",
           "docs": [
-            "The token mint being spent \u2014 constrained to match token_mint arg"
+            "The token mint being spent — constrained to match token_mint arg"
           ]
         },
         {
@@ -5210,7 +5196,7 @@ export type Sigil = {
         {
           "name": "auditLogSuccess",
           "docs": [
-            "Phase 7 \u2014 success audit log."
+            "Phase 7 — success audit log; entry appended after token transfer."
           ],
           "writable": true,
           "pda": {
@@ -5242,9 +5228,6 @@ export type Sigil = {
         },
         {
           "name": "slotHashesSysvar",
-          "docs": [
-            "Phase 7 \u2014 slot_hashes sysvar; address-pinned."
-          ],
           "address": "SysvarS1otHashes111111111111111111111111111"
         },
         {
@@ -5275,6 +5258,19 @@ export type Sigil = {
       ]
     },
     {
+      "name": "agentVault",
+      "discriminator": [
+        232,
+        220,
+        237,
+        164,
+        157,
+        9,
+        215,
+        194
+      ]
+    },
+    {
       "name": "auditLogRejected",
       "discriminator": [
         211,
@@ -5298,19 +5294,6 @@ export type Sigil = {
         111,
         84,
         75
-      ]
-    },
-    {
-      "name": "agentVault",
-      "discriminator": [
-        232,
-        220,
-        237,
-        164,
-        157,
-        9,
-        215,
-        194
       ]
     },
     {
@@ -6174,12 +6157,12 @@ export type Sigil = {
     {
       "code": 6046,
       "name": "unconstrainedProgramBlocked",
-      "msg": "Program has no matching constraint entry \u2014 every instruction must match one"
+      "msg": "Program has no matching constraint entry — every instruction must match one"
     },
     {
       "code": 6047,
       "name": "protocolCapExceeded",
-      "msg": "Per-protocol rolling 24h spending cap would be exceeded \u2014 LEGACY counter exhaustion path. New rolling-24h amount-based cap rejections use 6095 ErrDailyCapExceeded"
+      "msg": "Per-protocol rolling 24h spending cap would be exceeded — LEGACY counter exhaustion path. New rolling-24h amount-based cap rejections use 6095 ErrDailyCapExceeded"
     },
     {
       "code": 6048,
@@ -6219,7 +6202,7 @@ export type Sigil = {
     {
       "code": 6055,
       "name": "unexpectedBalanceDecrease",
-      "msg": "Vault balance decreased more than delegated amount \u2014 potential CPI attack"
+      "msg": "Vault balance decreased more than delegated amount — potential CPI attack"
     },
     {
       "code": 6056,
@@ -6229,7 +6212,7 @@ export type Sigil = {
     {
       "code": 6057,
       "name": "policyVersionMismatch",
-      "msg": "Policy version mismatch \u2014 policy changed since agent's last RPC read"
+      "msg": "Policy version mismatch — policy changed since agent's last RPC read"
     },
     {
       "code": 6058,
@@ -6274,7 +6257,7 @@ export type Sigil = {
     {
       "code": 6066,
       "name": "queuedUpdateExpired",
-      "msg": "Queued update is too old (>MAX_APPLY_AGE_SLOTS) \u2014 re-queue to apply. Defends against durable-nonce pre-signing."
+      "msg": "Queued update is too old (>MAX_APPLY_AGE_SLOTS) — re-queue to apply. Defends against durable-nonce pre-signing."
     },
     {
       "code": 6067,
@@ -6329,7 +6312,7 @@ export type Sigil = {
     {
       "code": 6077,
       "name": "batchInstructionBlocked",
-      "msg": "Token-2022 Batch instruction (opcode 255) is blocked outright \u2014 wraps inner instructions and bypasses byte-0 blocklist"
+      "msg": "Token-2022 Batch instruction (opcode 255) is blocked outright — wraps inner instructions and bypasses byte-0 blocklist"
     },
     {
       "code": 6078,
@@ -6344,12 +6327,12 @@ export type Sigil = {
     {
       "code": 6080,
       "name": "policyPreviewMismatch",
-      "msg": "Policy preview digest mismatch \u2014 caller's signed digest differs from recomputed canonical digest"
+      "msg": "Policy preview digest mismatch — caller's signed digest differs from recomputed canonical digest"
     },
     {
       "code": 6081,
       "name": "observeOnlyModeBlocksExecute",
-      "msg": "Vault is in observe_only mode \u2014 validate_and_authorize is blocked"
+      "msg": "Vault is in observe_only mode — validate_and_authorize is blocked"
     },
     {
       "code": 6082,
@@ -6374,12 +6357,12 @@ export type Sigil = {
     {
       "code": 6086,
       "name": "errGraylistFriction",
-      "msg": "Destination is graylisted (24h friction window \u2014 awaiting promote_graylist_destination or unlock)"
+      "msg": "Destination is graylisted (24h friction window — awaiting promote_graylist_destination or unlock)"
     },
     {
       "code": 6087,
       "name": "errGraylistFull",
-      "msg": "Destination graylist is full (max 10 entries) \u2014 wait for an existing entry to unlock or promote"
+      "msg": "Destination graylist is full (max 10 entries) — wait for an existing entry to unlock or promote"
     },
     {
       "code": 6088,
@@ -6409,12 +6392,12 @@ export type Sigil = {
     {
       "code": 6093,
       "name": "errSessionNonceMismatch",
-      "msg": "Session nonce mismatch \u2014 caller's expected_nonce does not match the session's stored nonce (durable-nonce replay defense)"
+      "msg": "Session nonce mismatch — caller's expected_nonce does not match the session's stored nonce (durable-nonce replay defense)"
     },
     {
       "code": 6094,
       "name": "errStableFloorViolation",
-      "msg": "Stable balance floor violated \u2014 combined USDC+USDT balance dropped below policy.stable_balance_floor"
+      "msg": "Stable balance floor violated — combined USDC+USDT balance dropped below policy.stable_balance_floor"
     },
     {
       "code": 6095,
@@ -6424,7 +6407,7 @@ export type Sigil = {
     {
       "code": 6096,
       "name": "errRecipientCapExceeded",
-      "msg": "Per-recipient daily cap exceeded \u2014 recipient outflow would breach policy.per_recipient_daily_cap_usd within the rolling 24h window, or per_recipient array full with no expired slot to evict"
+      "msg": "Per-recipient daily cap exceeded — recipient outflow would breach policy.per_recipient_daily_cap_usd within the rolling 24h window, or per_recipient array full with no expired slot to evict"
     },
     {
       "code": 6097,
@@ -6434,7 +6417,7 @@ export type Sigil = {
     {
       "code": 6098,
       "name": "mintDeltaCapMisconfigured",
-      "msg": "R-1 MintDeltaCap misconfigured \u2014 target account missing, mint mismatch, or owner not vault"
+      "msg": "R-1 MintDeltaCap misconfigured — target account missing, mint mismatch, or owner not vault"
     },
     {
       "code": 6099,
@@ -6464,11 +6447,11 @@ export type Sigil = {
         "Account-index constraint: requires a specific pubkey at a specific account index,",
         "and optionally enforces the account-meta `is_writable` flag.",
         "",
-        "`is_writable_required` encoding (M5 \u2014 Squads SAP parity):",
-        "0 = \"any\"          \u2014 do not check the writable flag (backwards-compatible default;",
-        "existing on-chain PDAs zero-init this byte \u2192 0 \u2192 any)",
-        "1 = \"must be read-only\" \u2014 require account_meta.is_writable == false",
-        "2 = \"must be writable\"  \u2014 require account_meta.is_writable == true",
+        "`is_writable_required` encoding (M5 — Squads SAP parity):",
+        "0 = \"any\"          — do not check the writable flag (backwards-compatible default;",
+        "existing on-chain PDAs zero-init this byte → 0 → any)",
+        "1 = \"must be read-only\" — require account_meta.is_writable == false",
+        "2 = \"must be writable\"  — require account_meta.is_writable == true",
         "3+ = invalid (rejected at create/queue time by validate_entries)",
         "",
         "Closes the attack class where an owner pins a pubkey expecting read-only access",
@@ -6519,8 +6502,8 @@ export type Sigil = {
             "name": "isWritableRequired",
             "docs": [
               "0=any, 1=must-be-read-only, 2=must-be-writable. See AccountConstraint",
-              "docs for full semantics. Zero-initialized on existing V1 PDAs \u2192 0 \u2192",
-              "\"any\" (backwards-compatible \u2014 runtime ignores the writable flag for",
+              "docs for full semantics. Zero-initialized on existing V1 PDAs → 0 →",
+              "\"any\" (backwards-compatible — runtime ignores the writable flag for",
               "pre-PR-9 entries that never set this byte)."
             ],
             "type": "u8"
@@ -6625,7 +6608,7 @@ export type Sigil = {
         "Tracks each agent's individual spend contributions using a 24-bucket",
         "hourly epoch scheme with per-entry `last_write_epoch` for correct gap-zeroing.",
         "",
-        "Layout: 32 (agent) + 8 (last_write_epoch) + 8 \u00d7 24 (contributions) = 232 bytes"
+        "Layout: 32 (agent) + 8 (last_write_epoch) + 8 × 24 (contributions) = 232 bytes"
       ],
       "serialization": "bytemuck",
       "repr": {
@@ -6672,170 +6655,6 @@ export type Sigil = {
       }
     },
     {
-      "name": "auditEntry",
-      "docs": [
-        "Phase 7 audit-log entry. Zero-copy, fixed-size 64 bytes per entry."
-      ],
-      "serialization": "bytemuck",
-      "repr": {
-        "kind": "c"
-      },
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "targetProtocol",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
-          },
-          {
-            "name": "balanceDeltaIn",
-            "type": "i64"
-          },
-          {
-            "name": "balanceDeltaOut",
-            "type": "i64"
-          },
-          {
-            "name": "timestamp",
-            "type": "i64"
-          },
-          {
-            "name": "slotHash",
-            "type": {
-              "array": [
-                "u8",
-                4
-              ]
-            }
-          },
-          {
-            "name": "blockhash",
-            "type": {
-              "array": [
-                "u8",
-                3
-              ]
-            }
-          },
-          {
-            "name": "discriminator",
-            "type": "u8"
-          }
-        ]
-      }
-    },
-    {
-      "name": "auditLogRejected",
-      "docs": [
-        "Phase 7 on-chain circular log of REJECTED finalize attempts."
-      ],
-      "serialization": "bytemuck",
-      "repr": {
-        "kind": "c"
-      },
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "vault",
-            "type": "pubkey"
-          },
-          {
-            "name": "entries",
-            "type": {
-              "array": [
-                {
-                  "defined": {
-                    "name": "auditEntry"
-                  }
-                },
-                64
-              ]
-            }
-          },
-          {
-            "name": "head",
-            "type": "u8"
-          },
-          {
-            "name": "count",
-            "type": "u8"
-          },
-          {
-            "name": "_padding",
-            "type": {
-              "array": [
-                "u8",
-                13
-              ]
-            }
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          }
-        ]
-      }
-    },
-    {
-      "name": "auditLogSuccess",
-      "docs": [
-        "Phase 7 on-chain circular log of SUCCESSFUL mutating instructions."
-      ],
-      "serialization": "bytemuck",
-      "repr": {
-        "kind": "c"
-      },
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "vault",
-            "type": "pubkey"
-          },
-          {
-            "name": "entries",
-            "type": {
-              "array": [
-                {
-                  "defined": {
-                    "name": "auditEntry"
-                  }
-                },
-                128
-              ]
-            }
-          },
-          {
-            "name": "head",
-            "type": "u8"
-          },
-          {
-            "name": "count",
-            "type": "u8"
-          },
-          {
-            "name": "_padding",
-            "type": {
-              "array": [
-                "u8",
-                13
-              ]
-            }
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          }
-        ]
-      }
-    },
-    {
       "name": "agentEntry",
       "type": {
         "kind": "struct",
@@ -6870,7 +6689,7 @@ export type Sigil = {
               "it is incremented by the owner-only `record_agent_violation` ix,",
               "called by an off-chain monitor after observing a failed seal whose",
               "reject reason is an on-chain policy code (numeric range",
-              "POLICY_VIOLATION_RANGE = 6083..=6100 \u2014 see `state/mod.rs::is_policy_violation_code`).",
+              "POLICY_VIOLATION_RANGE = 6083..=6100 — see `state/mod.rs::is_policy_violation_code`).",
               "Reset to 0 inside `validate_and_authorize` on a successful seal.",
               "When `>= policy.auto_revoke_threshold`, the agent's capability is",
               "set to CAPABILITY_DISABLED and an `AgentAutoRevoked` event is",
@@ -6878,7 +6697,7 @@ export type Sigil = {
               "",
               "External codes (sysvar-scan 6068 SysvarScanBoundExceeded,",
               "async-fulfillment 6069 AsyncFulfillmentNotPermitted, auth",
-              "errors 6000-6082) do NOT increment \u2014 they're not the agent's",
+              "errors 6000-6082) do NOT increment — they're not the agent's",
               "fault and auto-revoking on them would let an attacker brick",
               "a working agent.",
               "",
@@ -7069,7 +6888,7 @@ export type Sigil = {
         "Supports up to 10 agents (matches MAX_AGENTS_PER_VAULT).",
         "",
         "Size calculation (PRE-TA-06):",
-        "8 (discriminator) + 32 (vault) + 232 \u00d7 10 (entries) + 1 (bump) + 7 (padding) + 80 (lifetime_spend) + 80 (lifetime_tx_count) = 2,528 bytes",
+        "8 (discriminator) + 32 (vault) + 232 × 10 (entries) + 1 (bump) + 7 (padding) + 80 (lifetime_spend) + 80 (lifetime_tx_count) = 2,528 bytes",
         "Size calculation (POST-TA-06): +80 cooldown_seconds + 80 last_action_unix = 2,688 bytes"
       ],
       "serialization": "bytemuck",
@@ -7160,7 +6979,7 @@ export type Sigil = {
               "TA-06 (Phase 3 pre-execution guard #3): per-agent cooldown in seconds.",
               "Index matches entries[i].",
               "",
-              "Per-AGENT, not per-vault \u2014 a per-vault cooldown was rejected per F-16",
+              "Per-AGENT, not per-vault — a per-vault cooldown was rejected per F-16",
               "because one agent's traffic would DoS all other agents on the same",
               "vault. With per-agent cooldown, each agent has its own pacing limit",
               "configured by the owner.",
@@ -7189,7 +7008,7 @@ export type Sigil = {
               "0 = no prior action recorded (first authorization for this agent",
               "after registration / overlay reset). The cooldown check uses",
               "`i64::checked_sub` and treats a 0 baseline as \"no previous action\"",
-              "\u2192 cooldown auto-passes.",
+              "→ cooldown auto-passes.",
               "",
               "Appended AFTER cooldown_seconds to preserve zero-copy byte offsets."
             ],
@@ -7282,7 +7101,7 @@ export type Sigil = {
           {
             "name": "feeDestination",
             "docs": [
-              "Developer fee destination \u2014 IMMUTABLE after initialization.",
+              "Developer fee destination — IMMUTABLE after initialization.",
               "Prevents a compromised owner from redirecting fees."
             ],
             "type": "pubkey"
@@ -7339,7 +7158,7 @@ export type Sigil = {
               "Cumulative stablecoin deposits in base units (USDC/USDT, 6 decimals).",
               "Incremented in deposit_funds for stablecoin mints only.",
               "Used for P&L: current_balance - total_deposited_usd + total_withdrawn_usd.",
-              "Cumulative gross \u2014 never decremented. Informational only, never authorization input."
+              "Cumulative gross — never decremented. Informational only, never authorization input."
             ],
             "type": "u64"
           },
@@ -7357,7 +7176,7 @@ export type Sigil = {
               "Cumulative failed + expired session count.",
               "Incremented in finalize_session when success=false OR is_expired=true.",
               "Used for success rate: total_transactions / (total_transactions + total_failed_transactions).",
-              "Informational only \u2014 never used in authorization decisions."
+              "Informational only — never used in authorization decisions."
             ],
             "type": "u64"
           },
@@ -7378,7 +7197,7 @@ export type Sigil = {
               "",
               "When true, ALL `validate_and_authorize` calls reject with",
               "`ObserveOnlyModeBlocksExecute`. Provides a hard, low-blast-radius",
-              "kill switch separate from `VaultStatus::Frozen` \u2014 owners can stand",
+              "kill switch separate from `VaultStatus::Frozen` — owners can stand",
               "up an observe-only vault to baseline agent behaviour before opening",
               "the execute path.",
               "",
@@ -7389,6 +7208,331 @@ export type Sigil = {
               "APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability."
             ],
             "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "auditEntry",
+      "docs": [
+        "Single audit-log entry. Zero-copy, fixed-size 64 bytes per entry.",
+        "",
+        "**Layout strategy:** `#[repr(C)]` ordered so natural alignment never",
+        "introduces implicit padding (Pod derive forbids implicit padding).",
+        "All fields with alignment > 1 are placed at offsets that are multiples",
+        "of their alignment.",
+        "",
+        "Byte offsets (verified at compile time):",
+        "0..32   subject          [u8;32]  align 1",
+        "32..40  balance_delta_in i64      align 8 (32 % 8 = 0 ✓)",
+        "40..48  balance_delta_out i64     align 8 (40 % 8 = 0 ✓)",
+        "48..56  timestamp        i64      align 8 (48 % 8 = 0 ✓)",
+        "56..60  slot_hash        [u8;4]   align 1",
+        "60..63  blockhash        [u8;3]   align 1",
+        "63..64  discriminator    u8       align 1",
+        "──── total: 64 bytes, struct alignment = 8 ────",
+        "",
+        "**discriminator placement note:** semantically the discriminator is",
+        "\"type of entry,\" but for Pod-compatible packing we place it at the",
+        "trailing byte. SDK decoders read it by offset 63, not by struct field",
+        "order.",
+        "",
+        "Audit #1 AUD3-F5: uses `slot_hashes_sysvar`, NOT deprecated",
+        "`recent_blockhashes_sysvar` (deprecated in Solana 1.18+)."
+      ],
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "subject",
+            "docs": [
+              "32-byte pubkey of the entry's subject. Stored as raw bytes because",
+              "`zero_copy` cannot hold `Pubkey` directly without `Pod` impl on",
+              "Pubkey itself.",
+              "",
+              "Per-discriminator semantic (§RP-1 HIGH-2 disambiguation, 2026-05-19):",
+              "disc=2  (finalize_success) → protocol pubkey (session.authorized_protocol)",
+              "disc=16 (finalize_reject)  → protocol pubkey (session.authorized_protocol)",
+              "disc=3  (deposit)          → SPL Token mint pubkey",
+              "disc=4  (withdraw)         → SPL Token mint pubkey",
+              "disc=5  (freeze)           → vault pubkey",
+              "disc=6  (reactivate)       → vault pubkey",
+              "disc=10 (pause_agent)      → agent pubkey",
+              "disc=11 (unpause_agent)    → agent pubkey",
+              "disc=12 (revoke_agent)     → agent pubkey",
+              "disc=13 (register_agent)   → agent pubkey",
+              "disc=14 (policy_apply)     → vault pubkey",
+              "disc=15 (constraints_apply)→ vault pubkey",
+              "disc=7..=9 (ownership_*)   → Phase 8 — RESERVED, do not write"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "balanceDeltaIn",
+            "docs": [
+              "Stablecoin delta IN (e.g. swap output, deposit). 0 when not applicable."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "balanceDeltaOut",
+            "docs": [
+              "Stablecoin delta OUT (e.g. swap input, withdraw, transfer). 0 when N/A."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "docs": [
+              "Wall-clock unix timestamp (Clock::unix_timestamp)."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "slotHash",
+            "docs": [
+              "First 4 bytes of slot_hashes_sysvar[0].slot in LE byte order."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                4
+              ]
+            }
+          },
+          {
+            "name": "blockhash",
+            "docs": [
+              "First 3 bytes of slot_hashes_sysvar[0].hash."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                3
+              ]
+            }
+          },
+          {
+            "name": "discriminator",
+            "docs": [
+              "See discriminator constants above (AUDIT_DISC_*). At byte offset 63."
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "auditLogRejected",
+      "docs": [
+        "On-chain circular log of REJECTED finalize attempts for a vault.",
+        "",
+        "Phase 7 writes only the `finalize_session` REJECT path (expired-finalize",
+        "permissionless cranks) into this buffer. Other instructions that error",
+        "out roll back atomically and produce no audit entry by design.",
+        "",
+        "Audit #2 F-19 (audit log spam): kept separate from `AuditLogSuccess`",
+        "so the rejected stream cannot displace the success history. The two",
+        "buffers share the same `AuditEntry` shape so SDK decoders can be",
+        "shared.",
+        "",
+        "Seeds: `[b\"audit_rejected\", vault.key().as_ref()]`",
+        "",
+        "**Layout (within 8-byte Anchor discriminator):**",
+        "0..32      vault       Pubkey",
+        "32..4128   entries     [AuditEntry; 64]   (64 * 64 = 4,096)",
+        "4128..4129 head        u8",
+        "4129..4130 count       u8",
+        "4130..4143 _padding    [u8;13]",
+        "4143..4144 bump        u8",
+        "──── total data: 4,144 bytes ────",
+        "",
+        "Including 8-byte Anchor discriminator: **4,152 bytes total.**",
+        "",
+        "**DEVIATION FROM SPEC:** The Phase 7 spec called for `_padding: [u8;6]`",
+        "with claimed SIZE = 4,145. Same Pod-alignment issue as `AuditLogSuccess`",
+        "— `[AuditEntry; 64]` is 8-byte aligned, so the struct must be a multiple",
+        "of 8. We widen padding from 6 → 13 to reach 4,144 data bytes; SIZE",
+        "becomes 4,152."
+      ],
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "docs": [
+              "Associated vault pubkey. Verified by PDA seeds + has_one constraints",
+              "at the instruction layer."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "entries",
+            "docs": [
+              "Circular-buffer entries. Same shape as success buffer."
+            ],
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "auditEntry"
+                  }
+                },
+                64
+              ]
+            }
+          },
+          {
+            "name": "head",
+            "docs": [
+              "Next write position (0..=CAPACITY-1). Wraps modulo CAPACITY."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "count",
+            "docs": [
+              "Total entries written, saturated at CAPACITY."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "padding",
+            "docs": [
+              "13-byte explicit padding (Pod no-implicit-padding rule + future",
+              "forward-compat appends)."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                13
+              ]
+            }
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump seed."
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "auditLogSuccess",
+      "docs": [
+        "On-chain circular log of SUCCESSFUL mutating instructions for a vault.",
+        "",
+        "Audit #2 F-19 (audit log spam): kept separate from `AuditLogRejected`",
+        "so a permissionless-crank attacker who triggers expired-finalize",
+        "rejects cannot displace legitimate success entries.",
+        "",
+        "Seeds: `[b\"audit_success\", vault.key().as_ref()]`",
+        "",
+        "**Layout (within 8-byte Anchor discriminator):**",
+        "0..32      vault       Pubkey",
+        "32..8224   entries     [AuditEntry; 128]   (128 * 64 = 8,192)",
+        "8224..8225 head        u8",
+        "8225..8226 count       u8",
+        "8226..8239 _padding    [u8;13]             (alignment to make struct multiple of 8)",
+        "8239..8240 bump        u8",
+        "──── total data: 8,240 bytes ────",
+        "",
+        "Including 8-byte Anchor discriminator at front: **8,248 bytes total.**",
+        "",
+        "**DEVIATION FROM SPEC:** The Phase 7 spec called for `_padding: [u8;6]`",
+        "with claimed SIZE = 8,241. That arithmetic is incompatible with the Pod",
+        "derive (which `#[zero_copy]` applies): `[AuditEntry; 128]` has 8-byte",
+        "alignment (from inner `i64` fields), so the containing struct also has",
+        "8-byte alignment and `size_of::<AuditLogSuccess>()` MUST be a multiple",
+        "of 8. 8,233 is not — the compiler would either insert 7 bytes of",
+        "implicit trailing padding (which Pod forbids) or fail.",
+        "",
+        "We resolve this by widening `_padding` from 6 → 13 bytes so the data",
+        "portion totals exactly 8,240 (multiple of 8), and SIZE becomes 8,248.",
+        "Net cost: 7 additional bytes of rent per vault (≈ 50,000 lamports at",
+        "current rent rates — negligible)."
+      ],
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "docs": [
+              "Associated vault pubkey. Verified by PDA seeds + has_one constraints",
+              "at the instruction layer."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "entries",
+            "docs": [
+              "Circular-buffer entries. Indexed by `(head - 1) mod CAPACITY` for the",
+              "most recent entry; oldest is at `head` when `count == CAPACITY`."
+            ],
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "auditEntry"
+                  }
+                },
+                128
+              ]
+            }
+          },
+          {
+            "name": "head",
+            "docs": [
+              "Next write position (0..=CAPACITY-1). Wraps modulo CAPACITY."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "count",
+            "docs": [
+              "Total entries written, saturated at CAPACITY. Used by readers to",
+              "distinguish a half-filled buffer from a wrapped one."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "padding",
+            "docs": [
+              "13-byte explicit padding to satisfy Pod's no-implicit-padding rule.",
+              "Forward-compat slot for future field appends (see Phase 9+)."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                13
+              ]
+            }
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump seed."
+            ],
+            "type": "u8"
           }
         ]
       }
@@ -7485,9 +7629,9 @@ export type Sigil = {
     {
       "name": "constraintEntryZc",
       "docs": [
-        "BYTE LAYOUT REGISTRY \u2014 Canonical assignment of padding bytes.",
+        "BYTE LAYOUT REGISTRY — Canonical assignment of padding bytes.",
         "",
-        "Layout (post is_spending removal, M2 Option A \u2014 runtime never read it):",
+        "Layout (post is_spending removal, M2 Option A — runtime never read it):",
         "",
         "byte 554: _reserved_was_is_spending  (was: is_spending; deleted M2 Option A)",
         "byte 555: discriminator_format",
@@ -7495,9 +7639,9 @@ export type Sigil = {
         "",
         "Total: 32+320+200+1+1+1+1+4 = 560 (unchanged).",
         "is_spending (formerly byte 554) was deleted because the runtime never reads",
-        "it \u2014 `validate_and_authorize.rs:134` derives spending from `amount > 0`.",
+        "it — `validate_and_authorize.rs:134` derives spending from `amount > 0`.",
         "The freed byte is held as `_reserved_was_is_spending` to preserve the",
-        "560-byte total \u2014 shrinking the struct would corrupt every existing",
+        "560-byte total — shrinking the struct would corrupt every existing",
         "on-chain InstructionConstraints PDA (35,888-byte zero-copy account)."
       ],
       "serialization": "bytemuck",
@@ -7553,20 +7697,20 @@ export type Sigil = {
           {
             "name": "reservedWasIsSpending",
             "docs": [
-              "Reserved byte \u2014 formerly `is_spending` (deleted M2 Option A: runtime",
+              "Reserved byte — formerly `is_spending` (deleted M2 Option A: runtime",
               "never read it; spending is derived from `amount > 0`). Held as",
               "padding to preserve the 560-byte ConstraintEntryZC invariant; existing",
               "on-chain PDAs zero-init this byte. Do not repurpose without a",
-              "migration plan \u2014 old PDAs will read 0/1/2 here from prior writes."
+              "migration plan — old PDAs will read 0/1/2 here from prior writes."
             ],
             "type": "u8"
           },
           {
             "name": "discriminatorFormat",
             "docs": [
-              "DiscriminatorFormat discriminant (0=Anchor8, 1=Spl1). Write-time only \u2014",
+              "DiscriminatorFormat discriminant (0=Anchor8, 1=Spl1). Write-time only —",
               "verify_data_constraints_zc() does not read this field at runtime.",
-              "Zero-initialized on existing V1 PDAs \u2192 0 \u2192 Anchor8 (backward compatible)."
+              "Zero-initialized on existing V1 PDAs → 0 → Anchor8 (backward compatible)."
             ],
             "type": "u8"
           },
@@ -7767,7 +7911,7 @@ export type Sigil = {
         "Unix timestamp at which the destination becomes spendable without",
         "the owner having to promote it.",
         "",
-        "Layout: 32 + 8 = 40 bytes per entry. Bounded \u2264MAX_ALLOWED_DESTINATIONS",
+        "Layout: 32 + 8 = 40 bytes per entry. Bounded ≤MAX_ALLOWED_DESTINATIONS",
         "(10) so the worst-case Vec contribution to PolicyConfig SIZE is",
         "`4 + 40*10 = 404` bytes."
       ],
@@ -7791,7 +7935,7 @@ export type Sigil = {
         "Discriminator format for the first DataConstraint in a ConstraintEntry.",
         "Controls the minimum byte length required for the instruction discriminator",
         "anchor (A5 invariant). Different Solana programs use different discriminator",
-        "widths \u2014 Anchor uses 8-byte SHA-256 prefixes, SPL Token uses 1-byte enum",
+        "widths — Anchor uses 8-byte SHA-256 prefixes, SPL Token uses 1-byte enum",
         "indices. The format is checked at constraint creation time only; runtime",
         "verification in verify_data_constraints_zc() uses value_len directly."
       ],
@@ -7811,7 +7955,7 @@ export type Sigil = {
       "name": "epochBucket",
       "docs": [
         "A single epoch bucket tracking aggregate USD spend.",
-        "16 bytes per bucket. USD-only \u2014 rate limiting stays client-side."
+        "16 bytes per bucket. USD-only — rate limiting stays client-side."
       ],
       "serialization": "bytemuck",
       "repr": {
@@ -7979,7 +8123,7 @@ export type Sigil = {
       "docs": [
         "TA-07 (Phase 3): owner promoted a destination out of the graylist via",
         "`promote_graylist_destination`. `promoted = false` when the destination",
-        "was already past unlock (no-op promotion \u2014 still emitted for audit)."
+        "was already past unlock (no-op promotion — still emitted for audit)."
       ],
       "type": {
         "kind": "struct",
@@ -8052,7 +8196,7 @@ export type Sigil = {
           {
             "name": "padding",
             "docs": [
-              "Alignment padding (5 bytes \u2014 keeps total fields = 35,880, an even",
+              "Alignment padding (5 bytes — keeps total fields = 35,880, an even",
               "number, so the bytemuck Pod derive accepts the struct under",
               "ConstraintEntryZC's 2-byte alignment requirement)."
             ],
@@ -8209,7 +8353,7 @@ export type Sigil = {
       "docs": [
         "Queued agent permissions update. Timelock-gated.",
         "PDA seeds: [b\"pending_agent_perms\", vault.key().as_ref(), agent.as_ref()]",
-        "Per-agent PDA \u2014 allows concurrent pending updates for different agents."
+        "Per-agent PDA — allows concurrent pending updates for different agents."
       ],
       "type": {
         "kind": "struct",
@@ -8251,7 +8395,7 @@ export type Sigil = {
             "name": "queuedAtSlot",
             "docs": [
               "Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`",
-              "to enforce a freshness ceiling \u2014 defends against durable-nonce pre-signing",
+              "to enforce a freshness ceiling — defends against durable-nonce pre-signing",
               "attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog)."
             ],
             "type": "u64"
@@ -8275,7 +8419,7 @@ export type Sigil = {
     {
       "name": "pendingCloseConstraints",
       "docs": [
-        "Queued constraint closure. Minimal \u2014 just needs the timelock gate.",
+        "Queued constraint closure. Minimal — just needs the timelock gate.",
         "PDA seeds: [b\"pending_close_constraints\", vault.key().as_ref()]"
       ],
       "type": {
@@ -8297,7 +8441,7 @@ export type Sigil = {
             "name": "queuedAtSlot",
             "docs": [
               "Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`",
-              "to enforce a freshness ceiling \u2014 defends against durable-nonce pre-signing",
+              "to enforce a freshness ceiling — defends against durable-nonce pre-signing",
               "attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog)."
             ],
             "type": "u64"
@@ -8317,7 +8461,7 @@ export type Sigil = {
         "",
         "PDA seeds: `[b\"pending_constraints\", vault.key().as_ref()]`",
         "",
-        "Zero-copy layout \u2014 same entries array as InstructionConstraints",
+        "Zero-copy layout — same entries array as InstructionConstraints",
         "plus queued_at and executes_at timestamps."
       ],
       "serialization": "bytemuck",
@@ -8400,7 +8544,7 @@ export type Sigil = {
             "name": "queuedAtSlot",
             "docs": [
               "Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`",
-              "to enforce a freshness ceiling \u2014 defends against durable-nonce pre-signing",
+              "to enforce a freshness ceiling — defends against durable-nonce pre-signing",
               "attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog).",
               "Already 8-byte aligned (follows two i64 fields)."
             ],
@@ -8446,7 +8590,7 @@ export type Sigil = {
             "name": "queuedAtSlot",
             "docs": [
               "Slot number when this update was queued. Paired with `MAX_APPLY_AGE_SLOTS`",
-              "to enforce a freshness ceiling \u2014 defends against durable-nonce pre-signing",
+              "to enforce a freshness ceiling — defends against durable-nonce pre-signing",
               "attacks (F-10 audit fix, Drift Protocol April 2026 $285M analog)."
             ],
             "type": "u64"
@@ -8595,7 +8739,7 @@ export type Sigil = {
               "tampering between queue and apply (e.g., partial overwrite via a",
               "rogue program with the same account discriminator).",
               "",
-              "Encoding identical to `PolicyConfig.policy_preview_digest` \u2014 see that",
+              "Encoding identical to `PolicyConfig.policy_preview_digest` — see that",
               "field's doc-comment for the canonical encoding ordering.",
               "",
               "APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability."
@@ -8639,8 +8783,8 @@ export type Sigil = {
               "G6 (audit 2026-05-18 cosign opt-in): optional update to",
               "`PolicyConfig.cosign_required`. None = preserve live value;",
               "Some(true) = enable cosign on elevated mutations (safety",
-              "improvement \u2014 NOT elevated); Some(false) when live is true",
-              "IS elevated (one-way ratchet \u2014 disabling cosign requires cosign).",
+              "improvement — NOT elevated); Some(false) when live is true",
+              "IS elevated (one-way ratchet — disabling cosign requires cosign).",
               "Bound by TA-19 at canonical digest position 20.",
               "",
               "APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability."
@@ -8658,8 +8802,8 @@ export type Sigil = {
         "TA-14 (Phase 5 post-exec): per-recipient rolling 24h outflow counter.",
         "48 bytes per entry (32 + 8 + 8).",
         "",
-        "`recipient` is resolved from the SPL TokenAccount.owner field \u2014 NOT",
-        "the ATA pubkey. The \u00a7RP brief explicitly flags ATA-vs-owner confusion",
+        "`recipient` is resolved from the SPL TokenAccount.owner field — NOT",
+        "the ATA pubkey. The §RP brief explicitly flags ATA-vs-owner confusion",
         "as the attack class to defend against.",
         "",
         "`window_start` is the Unix timestamp at which the current 24h window",
@@ -8679,7 +8823,7 @@ export type Sigil = {
           {
             "name": "recipient",
             "docs": [
-              "Recipient wallet pubkey (NOT the ATA pubkey \u2014 Pod-compatible",
+              "Recipient wallet pubkey (NOT the ATA pubkey — Pod-compatible",
               "`[u8; 32]` since zero-copy accounts can't hold Pubkey directly)."
             ],
             "type": {
@@ -8809,7 +8953,7 @@ export type Sigil = {
           {
             "name": "maxSlippageBps",
             "docs": [
-              "Maximum slippage tolerance (basis points) \u2014 generic config primitive",
+              "Maximum slippage tolerance (basis points) — generic config primitive",
               "preserved per D-5 across Phase 1 Option A demolition. Per L-1 there is",
               "no on-chain Jupiter slippage verifier in V1; this field is consumed by",
               "off-chain SDK simulators and (Phase 6) generic post-execution assertions",
@@ -8877,7 +9021,7 @@ export type Sigil = {
               "Configurable session duration in seconds. 0 = use default",
               "(`SESSION_DURATION_SECONDS` = 30s). Valid range when non-zero:",
               "`MIN_SESSION_DURATION_SECONDS..=MAX_OWNER_SESSION_DURATION_SECONDS`",
-              "(currently 5..=90s). Wall-clock based \u2014 see audit F5-H1."
+              "(currently 5..=90s). Wall-clock based — see audit F5-H1."
             ],
             "type": "u64"
           },
@@ -8927,11 +9071,11 @@ export type Sigil = {
               "a compromised owner-signer or pending-PDA tampering cannot mutate the",
               "applied policy without producing a digest mismatch.",
               "",
-              "CANONICAL ENCODING (FIXED \u2014 DO NOT REORDER):",
+              "CANONICAL ENCODING (FIXED — DO NOT REORDER):",
               "1. `daily_spending_cap_usd: u64`",
               "2. `max_transaction_size_usd: u64`",
               "3. `max_slippage_bps: u16`",
-              "4. `developer_fee_rate: u16` \u2014 PEN-CROSS-6 (Phase 2 close-up)",
+              "4. `developer_fee_rate: u16` — PEN-CROSS-6 (Phase 2 close-up)",
               "5. `protocol_mode: u8`",
               "6. `protocols: Vec<Pubkey>`",
               "7. `destination_mode: u8`",
@@ -8941,7 +9085,7 @@ export type Sigil = {
               "11. `observe_only: bool`",
               "12. `has_constraints: bool`",
               "13. `has_post_assertions: u8`",
-              "14. `created_at_slot: u64` \u2014 PEN-CROSS-2 (Phase 2 close-up)",
+              "14. `created_at_slot: u64` — PEN-CROSS-2 (Phase 2 close-up)",
               "",
               "All fields encoded as Borsh: u8/u16/u64 little-endian, `bool` as `[u8; 1]`",
               "(0 or 1), `Vec<Pubkey>` as `u32_le_len ++ pubkey_bytes_concatenated`.",
@@ -8978,12 +9122,12 @@ export type Sigil = {
             "name": "operatingHours",
             "docs": [
               "TA-05 (Phase 3 pre-execution guard #2): 24-bit UTC operating-hours",
-              "bitmask. Bit `n` (0 \u2264 n \u2264 23) set \u2192 spending allowed when",
+              "bitmask. Bit `n` (0 ≤ n ≤ 23) set → spending allowed when",
               "`clock.unix_timestamp / 3600 % 24 == n`. Upper 8 bits (24..=31)",
               "MUST be zero; rejected at write-time.",
               "",
               "Default for owners who don't narrow: 0xFFFFFF (all 24 hours enabled",
-              "\u2014 equivalent to \"no operating-hours constraint\"). New vaults set",
+              "— equivalent to \"no operating-hours constraint\"). New vaults set",
               "this explicitly via the digest the owner signs; back-compat",
               "consideration removed per L-3 (Phase 2 TA-19 bound the field anyway).",
               "",
@@ -9004,12 +9148,12 @@ export type Sigil = {
               "reject any tx routing value to that destination with",
               "`ErrGraylistFriction` (6086).",
               "",
-              "Tuple is `(destination_pubkey, unlock_unix)`. Bounded \u226410 entries",
+              "Tuple is `(destination_pubkey, unlock_unix)`. Bounded ≤10 entries",
               "(max_destinations). When full, additional allowlist adds reject",
               "with `ErrGraylistFull` (6087) until an existing entry unlocks or",
               "is promoted.",
               "",
-              "DESIGN: graylist entries are derived/ephemeral state \u2014 the owner's",
+              "DESIGN: graylist entries are derived/ephemeral state — the owner's",
               "signed digest already binds the allowlist (canonical position 8),",
               "and graylist friction only delays an already-authorised destination.",
               "Therefore the graylist itself is NOT in the canonical digest",
@@ -9033,7 +9177,7 @@ export type Sigil = {
               "skip the 24h graylist entirely (audit trail still recorded via",
               "emitted events). Bound by TA-19 at canonical digest position 16",
               "so the owner's choice to bypass friction is part of the signed",
-              "configuration \u2014 not silently flipped.",
+              "configuration — not silently flipped.",
               "",
               "Default false. APPENDED at end per F-14 APPEND-ONLY rule."
             ],
@@ -9047,7 +9191,7 @@ export type Sigil = {
               "Owner-configurable in range 3..=20; out-of-range values rejected",
               "at policy-write time with `InvalidPermissions`. Default 5.",
               "",
-              "Only on-chain policy-violation codes (6083-6100) count \u2014 see",
+              "Only on-chain policy-violation codes (6083-6100) count — see",
               "`POLICY_VIOLATION_RANGE` in finalize_session. External codes",
               "(CU exhaustion, nonce desync, auth) do NOT increment.",
               "",
@@ -9064,13 +9208,13 @@ export type Sigil = {
               "`finalize_session` spending path completes (CPI balance audit +",
               "rolling-cap + per-agent + per-protocol bookkeeping), the handler",
               "re-reads the vault's USDC + USDT token-account balances and",
-              "asserts their sum is \u2265 this value. If not, it rejects with",
+              "asserts their sum is ≥ this value. If not, it rejects with",
               "`ErrStableFloorViolation` (6094).",
               "",
-              "This is the LAST defensive line \u2014 no combination of attacks (CPI",
+              "This is the LAST defensive line — no combination of attacks (CPI",
               "drain, per-protocol cap bypass via async fulfillment, fee",
               "inflation, slippage manipulation) may drain the vault below this",
-              "line. Default 0 (no reserve \u2014 preserves all existing vault",
+              "line. Default 0 (no reserve — preserves all existing vault",
               "behavior). Owner-configurable via `initialize_vault` and",
               "`queue_policy_update`.",
               "",
@@ -9087,7 +9231,7 @@ export type Sigil = {
               "non-zero, every `finalize_session` spending path validates that",
               "the recipient's rolling 24h spend (tracked on",
               "`SpendTracker.per_recipient`) PLUS this transaction's outflow",
-              "to that recipient stays \u2264 this value. Otherwise rejects with",
+              "to that recipient stays ≤ this value. Otherwise rejects with",
               "`ErrRecipientCapExceeded` (6096).",
               "",
               "Default 0 (no per-recipient cap) preserves existing vault",
@@ -9107,7 +9251,7 @@ export type Sigil = {
               "",
               "When `false` (default): elevated mutations (raising caps,",
               "expanding allowlists, weakening floors / per-recipient caps /",
-              "protocol caps) require only the owner's signature \u2014 no cosign",
+              "protocol caps) require only the owner's signature — no cosign",
               "session is required. Low-friction default, suitable for solo",
               "founders, AI-agent automation, dev/test vaults, and any vault",
               "whose owner is a Squads V4 multisig PDA (multisig at the Solana",
@@ -9121,12 +9265,12 @@ export type Sigil = {
               "signer in `remaining_accounts` with `is_signer == true`.",
               "",
               "Toggle semantics:",
-              "- **Enabling (false \u2192 true)** is NON-ELEVATED. It is a safety",
-              "improvement \u2014 owner is voluntarily tightening the policy.",
+              "- **Enabling (false → true)** is NON-ELEVATED. It is a safety",
+              "improvement — owner is voluntarily tightening the policy.",
               "Cosign is not required to enable cosign.",
-              "- **Disabling (true \u2192 false)** IS ELEVATED. One-way-ratchet",
+              "- **Disabling (true → false)** IS ELEVATED. One-way-ratchet",
               "semantics: if cosign is currently ON, the owner cannot turn",
-              "it OFF without producing a valid cosign signature \u2014 exactly",
+              "it OFF without producing a valid cosign signature — exactly",
               "the protection cosign was meant to provide. A phishing-",
               "compromised owner key cannot silently disable cosign and",
               "then drain via subsequent non-elevated mutations.",
@@ -9205,7 +9349,7 @@ export type Sigil = {
           {
             "name": "auxValue",
             "docs": [
-              "Phase 6: u64 LE auxiliary value. Per-mode meaning \u2014 see ZC struct."
+              "Phase 6: u64 LE auxiliary value. Per-mode meaning — see ZC struct."
             ],
             "type": {
               "array": [
@@ -9217,7 +9361,7 @@ export type Sigil = {
           {
             "name": "auxByte",
             "docs": [
-              "Phase 6: u8 auxiliary byte. Per-mode meaning \u2014 see ZC struct."
+              "Phase 6: u8 auxiliary byte. Per-mode meaning — see ZC struct."
             ],
             "type": "u8"
           }
@@ -9231,15 +9375,15 @@ export type Sigil = {
         "instruction executes, within the same atomic transaction.",
         "",
         "Same bytes-at-offset pattern as DataConstraintZC, but applied to",
-        "account data instead of instruction data. Protocol-agnostic \u2014 the",
+        "account data instead of instruction data. Protocol-agnostic — the",
         "vault owner configures byte offsets from protocol documentation.",
         "",
-        "Phase B1: absolute value assertions (check field \u2264 max, field \u2265 min).",
+        "Phase B1: absolute value assertions (check field ≤ max, field ≥ min).",
         "Phase B2: delta-mode assertions (MaxDecrease, MaxIncrease, NoChange).",
         "",
         "Phase B3 CrossFieldLte fields (cross_field_offset_b, cross_field_multiplier_bps,",
         "cross_field_flags) DELETED in Phase 1 Option A demolition (L-1). The two-field",
-        "ratio check (field_A \u00d7 10000 \u2264 multiplier_bps \u00d7 field_B) was Jupiter-Perps-flavored",
+        "ratio check (field_A × 10000 ≤ multiplier_bps × field_B) was Jupiter-Perps-flavored",
         "leverage-cap logic that doesn't generalize to a per-vault generic primitive."
       ],
       "serialization": "bytemuck",
@@ -9259,7 +9403,7 @@ export type Sigil = {
               "protocol state account (Position PDA, User account, etc).",
               "- mode 4 MintDeltaCap with `aux_byte=1` (scope=1): the single token",
               "account whose balance we measure. With `aux_byte=0` (scope=0):",
-              "UNUSED \u2014 ATAs are derived on-chain from `(vault, expected_value)`."
+              "UNUSED — ATAs are derived on-chain from `(vault, expected_value)`."
             ],
             "type": {
               "array": [
@@ -9272,7 +9416,7 @@ export type Sigil = {
             "name": "offset",
             "docs": [
               "Byte offset in the target account's data to read (modes 0..3).",
-              "Phase 6 modes (4) ignore this field \u2014 balances are read at the",
+              "Phase 6 modes (4) ignore this field — balances are read at the",
               "canonical SPL/Token-2022 layout offset (64..72)."
             ],
             "type": "u16"
@@ -9313,12 +9457,12 @@ export type Sigil = {
             "docs": [
               "Assertion mode:",
               "0 = Absolute: check current value against expected_value",
-              "1 = MaxDecrease: check (snapshot - current) \u2264 expected_value (Phase B2)",
+              "1 = MaxDecrease: check (snapshot - current) ≤ expected_value (Phase B2)",
               "NOTE: If value increases (current > snapshot), check ALWAYS PASSES (saturating sub = 0).",
               "For bidirectional protection, pair with MaxIncrease or use NoChange.",
-              "2 = MaxIncrease: check (current - snapshot) \u2264 expected_value (Phase B2)",
+              "2 = MaxIncrease: check (current - snapshot) ≤ expected_value (Phase B2)",
               "NOTE: If value decreases, check ALWAYS PASSES.",
-              "3 = NoChange: check current == snapshot \u2014 byte-for-byte equality (Phase B2)",
+              "3 = NoChange: check current == snapshot — byte-for-byte equality (Phase B2)",
               "4 = MintDeltaCap (Phase 6 R-1): vault-wide or per-account drain ceiling"
             ],
             "type": "u8"
@@ -9326,7 +9470,7 @@ export type Sigil = {
           {
             "name": "auxValue",
             "docs": [
-              "Phase 6 generic auxiliary value \u2014 per-mode interpretation:",
+              "Phase 6 generic auxiliary value — per-mode interpretation:",
               "- mode 4 MintDeltaCap: u64 LE = max_net_decrease (units of the mint's",
               "smallest denomination).",
               "- modes 0..3: UNUSED, must be zero (validate_entries enforces).",
@@ -9344,14 +9488,14 @@ export type Sigil = {
           {
             "name": "auxByte",
             "docs": [
-              "Phase 6 generic auxiliary byte \u2014 per-mode interpretation:",
+              "Phase 6 generic auxiliary byte — per-mode interpretation:",
               "- mode 4 MintDeltaCap: scope (0 = vault-wide ATA enumeration,",
               "1 = single account in `target_account`).",
               "- modes 0..3: UNUSED, must be zero (validate_entries enforces).",
               "",
               "The trailing `aux_byte` brings the entry to an even size (78) which",
               "satisfies the struct's u16 alignment without a separate `_padding`",
-              "field \u2014 the previous `_padding: u8` from Phase 1 demolition was",
+              "field — the previous `_padding: u8` from Phase 1 demolition was",
               "absorbed here. Off-chain decoders that previously read `_padding`",
               "now read `aux_byte`; the byte position is the same so wire",
               "compatibility holds with the previous version's zero value."
@@ -9403,7 +9547,7 @@ export type Sigil = {
         "On-chain account storing post-execution assertions for a vault.",
         "Seeds: [b\"post_assertions\", vault.key()]",
         "",
-        "Phase 6 grow: entries 4 \u2192 8, per-entry size 70 \u2192 78 bytes. New SIZE 672."
+        "Phase 6 grow: entries 4 → 8, per-entry size 70 → 78 bytes. New SIZE 672."
       ],
       "serialization": "bytemuck",
       "repr": {
@@ -9560,7 +9704,7 @@ export type Sigil = {
               "",
               "**Why timestamp, not slot:** Solana slot times vary 400ms-1.5s under",
               "congestion. Slot-based expiry produced a 3.75x variance window between",
-              "the documented and worst-case session lifetime \u2014 see audit F5-H1.",
+              "the documented and worst-case session lifetime — see audit F5-H1.",
               "Wall-clock enforcement is congestion-immune."
             ],
             "type": "i64"
@@ -9628,8 +9772,8 @@ export type Sigil = {
               "before DeFi instruction executes. Index i corresponds to PostAssertionEntry i.",
               "Used by delta assertion modes (1=MaxDecrease, 2=MaxIncrease, 3=NoChange).",
               "",
-              "Phase 6 grow: array length 4 \u2192 8 to match MAX_POST_ASSERTION_ENTRIES.",
-              "Adds 128 bytes (4 \u00d7 32) to SessionAuthority.",
+              "Phase 6 grow: array length 4 → 8 to match MAX_POST_ASSERTION_ENTRIES.",
+              "Adds 128 bytes (4 × 32) to SessionAuthority.",
               "",
               "**Phase 6 R-1 MintDeltaCap reuse:** for mode-4 entries, the snapshot",
               "stores `pre_sum: u64 LE` in bytes [0..8] of the 32-byte slot. Remaining",
@@ -9658,7 +9802,7 @@ export type Sigil = {
               "modes 1..3. For mode 4 (R-1 MintDeltaCap) the field is set to 8 and",
               "finalize asserts snapshot_lens[i] == 8 before re-summing.",
               "",
-              "Phase 6 grow: array length 4 \u2192 8. Adds 4 bytes."
+              "Phase 6 grow: array length 4 → 8. Adds 4 bytes."
             ],
             "type": {
               "array": [
@@ -9670,16 +9814,16 @@ export type Sigil = {
           {
             "name": "nonce",
             "docs": [
-              "AC-10 (Phase 4) \u2014 monotonic session nonce closing durable-nonce replay",
+              "AC-10 (Phase 4) — monotonic session nonce closing durable-nonce replay",
               "(per Audit #1 C-1).",
               "",
               "**Semantics**",
               "- New session: `init` zero-initializes the account, so the field starts",
               "at 0. `validate_and_authorize` accepts `expected_nonce` and requires",
-              "it to equal `self.nonce` at entry \u2014 a fresh session therefore demands",
+              "it to equal `self.nonce` at entry — a fresh session therefore demands",
               "`expected_nonce = 0` from the caller.",
               "- `finalize_session` increments `self.nonce` by 1 on every successful",
-              "finalize (including the expired-cleanup path \u2014 see finalize_session.rs",
+              "finalize (including the expired-cleanup path — see finalize_session.rs",
               "for the atomicity argument). The increment is atomic with the",
               "account-close: if finalize errors, the close is rolled back by the",
               "runtime and the persisted nonce stays at the pre-increment value, so",
@@ -9689,7 +9833,7 @@ export type Sigil = {
               "next validate creates a fresh account starting at nonce=0. The nonce",
               "field therefore functions as an in-session counter and is checked",
               "against `expected_nonce` ONLY when the SessionAuthority account is",
-              "not closed between validates \u2014 currently a no-op in the steady-state",
+              "not closed between validates — currently a no-op in the steady-state",
               "flow, present so Phase 8 ownership-transfer replay protection (M-5)",
               "can extend the same field without a state-shape migration.",
               "",
@@ -9705,7 +9849,7 @@ export type Sigil = {
               "orthogonal to the policy_preview_digest binding.",
               "",
               "**APPEND-ONLY**: new field at the END of SessionAuthority. SIZE grows",
-              "by 8 bytes (375 \u2192 383). Pre-existing accounts at the prior layout are",
+              "by 8 bytes (375 → 383). Pre-existing accounts at the prior layout are",
               "not migrated (the program close+init cycle naturally retires them at",
               "the next finalize), so this is safe under a V2 program ID redeploy."
             ],
@@ -9800,7 +9944,7 @@ export type Sigil = {
             "name": "protocolCounters",
             "docs": [
               "Per-protocol rolling 24h counters. Enforcement wired in",
-              "`finalize_session.rs` \u2014 search for \"TA-13 (Phase 5 ratification)\"",
+              "`finalize_session.rs` — search for \"TA-13 (Phase 5 ratification)\"",
               "(two sites: the stablecoin-input branch around line 314 and the",
               "non-stablecoin-input branch around line 408). See",
               "`policy.protocol_caps` for the cap values and",
@@ -9809,7 +9953,7 @@ export type Sigil = {
               "`policy.has_protocol_caps == true`.",
               "",
               "TA-13 ratification (Phase 5): the prior doc-comment claimed",
-              "\"zeroed, no enforcement yet\" \u2014 this was stale. The enforcement",
+              "\"zeroed, no enforcement yet\" — this was stale. The enforcement",
               "has lived in `finalize_session` since Phase 2; this comment was",
               "the only artifact suggesting otherwise. Phase 5 ratifies the",
               "existing require! with the dedicated `ErrDailyCapExceeded` (6095)",
@@ -9833,7 +9977,7 @@ export type Sigil = {
             "name": "lastWriteEpoch",
             "docs": [
               "Epoch of most recent record_spend() call. Enables early exit in get_rolling_24h_usd().",
-              "Zero-initialized \u2014 value 0 correctly triggers early exit (current_epoch >> 144)."
+              "Zero-initialized — value 0 correctly triggers early exit (current_epoch >> 144)."
             ],
             "type": "i64"
           },
@@ -9861,9 +10005,9 @@ export type Sigil = {
             "docs": [
               "TA-14 (Phase 5 post-exec invariant #2): per-recipient rolling 24h",
               "outflow counters. Bounded to `MAX_PER_RECIPIENT_ENTRIES` (10)",
-              "entries \u2014 Vec NOT permitted in zero-copy account per F-14.",
-              "10 \u00d7 48 = 480 bytes. Each entry tracks one recipient pubkey",
-              "(resolved from the SPL TokenAccount.owner field \u2014 NOT the ATA",
+              "entries — Vec NOT permitted in zero-copy account per F-14.",
+              "10 × 48 = 480 bytes. Each entry tracks one recipient pubkey",
+              "(resolved from the SPL TokenAccount.owner field — NOT the ATA",
               "pubkey) and their rolling-24h outflow USD total."
             ],
             "type": {
@@ -9882,9 +10026,9 @@ export type Sigil = {
             "docs": [
               "TA-14 (Phase 5): how many `per_recipient` slots are currently",
               "active. New entries occupy `per_recipient[per_recipient_count]`",
-              "then this counter increments. Eviction is AGE-BASED only \u2014 slots",
+              "then this counter increments. Eviction is AGE-BASED only — slots",
               "whose 24h window has elapsed are eligible; LRU/churn-eviction is",
-              "EXPLICITLY REJECTED per \u00a7RP requirement (prevents an attacker",
+              "EXPLICITLY REJECTED per §RP requirement (prevents an attacker",
               "recycling slots by paying many distinct recipients to bypass",
               "the cap)."
             ],

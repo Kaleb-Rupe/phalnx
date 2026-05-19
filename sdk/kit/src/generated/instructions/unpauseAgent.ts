@@ -135,9 +135,8 @@ export type UnpauseAgentAsyncInput<
    * signals fire uniformly regardless of which mutation lands.
    */
   policy?: Address<TAccountPolicy>;
-  /** Phase 7 — success audit log. */
+  /** Phase 7 — success audit log; entry appended after unpause flip. */
   auditLogSuccess?: Address<TAccountAuditLogSuccess>;
-  /** Phase 7 — slot_hashes sysvar; address-pinned. */
   slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
   agentToUnpause: UnpauseAgentInstructionDataArgs["agentToUnpause"];
 };
@@ -267,9 +266,8 @@ export type UnpauseAgentInput<
    * signals fire uniformly regardless of which mutation lands.
    */
   policy: Address<TAccountPolicy>;
-  /** Phase 7 — success audit log. */
+  /** Phase 7 — success audit log; entry appended after unpause flip. */
   auditLogSuccess: Address<TAccountAuditLogSuccess>;
-  /** Phase 7 — slot_hashes sysvar; address-pinned. */
   slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
   agentToUnpause: UnpauseAgentInstructionDataArgs["agentToUnpause"];
 };
@@ -364,9 +362,8 @@ export type ParsedUnpauseAgentInstruction<
      * signals fire uniformly regardless of which mutation lands.
      */
     policy: TAccountMetas[2];
-    /** Phase 7 — success audit log. */
+    /** Phase 7 — success audit log; entry appended after unpause flip. */
     auditLogSuccess: TAccountMetas[3];
-    /** Phase 7 — slot_hashes sysvar; address-pinned. */
     slotHashesSysvar: TAccountMetas[4];
   };
   data: UnpauseAgentInstructionData;

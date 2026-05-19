@@ -1089,14 +1089,19 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
 
     // Phase 7 — write audit-log entry. SUCCESS path goes to audit_log_success
     // (discriminator 2); REJECT/expired path goes to audit_log_rejected
-    // (discriminator 1 — pairs with validate, kept here for symmetry). The
-    // two buffers are physically separate so an expired-finalize burst
-    // (permissionless crank) cannot displace legitimate success history.
+    // (discriminator 16 — `AUDIT_DISC_FINALIZE_REJECT`, distinct from disc=1
+    // which is reserved for future per-validate rows). The two buffers are
+    // physically separate so an expired-finalize burst (permissionless
+    // crank) cannot displace legitimate success history (Audit #2 F-19).
+    // §RP-1 HIGH-1 (2026-05-19): previously reused disc=1
+    // `AUDIT_DISC_VALIDATE` here, but `validate_and_authorize` writes NO
+    // audit entries, so disc=1 on the rejected buffer was a forensic-
+    // correctness lie. Disc=16 fixes the ambiguity.
     {
         let delta_out: i64 = actual_spend_tracked.min(i64::MAX as u64) as i64;
         if is_expired {
             let entry = build_audit_entry(
-                AUDIT_DISC_VALIDATE,
+                AUDIT_DISC_FINALIZE_REJECT,
                 session_authorized_protocol,
                 0,
                 delta_out,
@@ -1104,6 +1109,12 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
                 &ctx.accounts.slot_hashes_sysvar.to_account_info(),
             )?;
             let mut log = ctx.accounts.audit_log_rejected.load_mut()?;
+            // §RP-1 I-2: defense-in-depth guard against future seeds drift.
+            require_keys_eq!(
+                log.vault,
+                ctx.accounts.vault.key(),
+                SigilError::ConstraintsVaultMismatch
+            );
             log.append(entry);
         } else {
             let entry = build_audit_entry(
@@ -1115,6 +1126,12 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
                 &ctx.accounts.slot_hashes_sysvar.to_account_info(),
             )?;
             let mut log = ctx.accounts.audit_log_success.load_mut()?;
+            // §RP-1 I-2: defense-in-depth guard against future seeds drift.
+            require_keys_eq!(
+                log.vault,
+                ctx.accounts.vault.key(),
+                SigilError::ConstraintsVaultMismatch
+            );
             log.append(entry);
         }
     }

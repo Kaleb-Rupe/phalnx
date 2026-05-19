@@ -198,11 +198,18 @@ export type FinalizeSessionAsyncInput<
   systemProgram?: Address<TAccountSystemProgram>;
   /** Instructions sysvar for post-finalize instruction verification. */
   instructionsSysvar?: Address<TAccountInstructionsSysvar>;
-  /** Phase 7 — success audit log. */
+  /**
+   * Phase 7 — SUCCESS-path audit log. Written when the finalize completes
+   * the non-expired branch.
+   */
   auditLogSuccess?: Address<TAccountAuditLogSuccess>;
-  /** Phase 7 — rejected audit log. */
+  /**
+   * Phase 7 — REJECTED-path audit log. Written when the finalize takes
+   * the expired branch (permissionless-crank cleanup). Audit #2 F-19
+   * keeps this separate from the success buffer so a crank-attacker
+   * cannot displace legitimate success history.
+   */
   auditLogRejected?: Address<TAccountAuditLogRejected>;
-  /** Phase 7 — slot_hashes sysvar; address-pinned. */
   slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
 };
 
@@ -479,11 +486,18 @@ export type FinalizeSessionInput<
   systemProgram?: Address<TAccountSystemProgram>;
   /** Instructions sysvar for post-finalize instruction verification. */
   instructionsSysvar?: Address<TAccountInstructionsSysvar>;
-  /** Phase 7 — success audit log. */
+  /**
+   * Phase 7 — SUCCESS-path audit log. Written when the finalize completes
+   * the non-expired branch.
+   */
   auditLogSuccess: Address<TAccountAuditLogSuccess>;
-  /** Phase 7 — rejected audit log. */
+  /**
+   * Phase 7 — REJECTED-path audit log. Written when the finalize takes
+   * the expired branch (permissionless-crank cleanup). Audit #2 F-19
+   * keeps this separate from the success buffer so a crank-attacker
+   * cannot displace legitimate success history.
+   */
   auditLogRejected: Address<TAccountAuditLogRejected>;
-  /** Phase 7 — slot_hashes sysvar; address-pinned. */
   slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
 };
 
@@ -681,11 +695,18 @@ export type ParsedFinalizeSessionInstruction<
     systemProgram: TAccountMetas[10];
     /** Instructions sysvar for post-finalize instruction verification. */
     instructionsSysvar: TAccountMetas[11];
-    /** Phase 7 — success audit log. */
+    /**
+     * Phase 7 — SUCCESS-path audit log. Written when the finalize completes
+     * the non-expired branch.
+     */
     auditLogSuccess: TAccountMetas[12];
-    /** Phase 7 — rejected audit log. */
+    /**
+     * Phase 7 — REJECTED-path audit log. Written when the finalize takes
+     * the expired branch (permissionless-crank cleanup). Audit #2 F-19
+     * keeps this separate from the success buffer so a crank-attacker
+     * cannot displace legitimate success history.
+     */
     auditLogRejected: TAccountMetas[13];
-    /** Phase 7 — slot_hashes sysvar; address-pinned. */
     slotHashesSysvar: TAccountMetas[14];
   };
   data: FinalizeSessionInstructionData;

@@ -57,20 +57,56 @@ export function getAuditLogSuccessDiscriminatorBytes() {
 
 export type AuditLogSuccess = {
   discriminator: ReadonlyUint8Array;
+  /**
+   * Associated vault pubkey. Verified by PDA seeds + has_one constraints
+   * at the instruction layer.
+   */
   vault: Address;
+  /**
+   * Circular-buffer entries. Indexed by `(head - 1) mod CAPACITY` for the
+   * most recent entry; oldest is at `head` when `count == CAPACITY`.
+   */
   entries: Array<AuditEntry>;
+  /** Next write position (0..=CAPACITY-1). Wraps modulo CAPACITY. */
   head: number;
+  /**
+   * Total entries written, saturated at CAPACITY. Used by readers to
+   * distinguish a half-filled buffer from a wrapped one.
+   */
   count: number;
+  /**
+   * 13-byte explicit padding to satisfy Pod's no-implicit-padding rule.
+   * Forward-compat slot for future field appends (see Phase 9+).
+   */
   padding: ReadonlyUint8Array;
+  /** PDA bump seed. */
   bump: number;
 };
 
 export type AuditLogSuccessArgs = {
+  /**
+   * Associated vault pubkey. Verified by PDA seeds + has_one constraints
+   * at the instruction layer.
+   */
   vault: Address;
+  /**
+   * Circular-buffer entries. Indexed by `(head - 1) mod CAPACITY` for the
+   * most recent entry; oldest is at `head` when `count == CAPACITY`.
+   */
   entries: Array<AuditEntryArgs>;
+  /** Next write position (0..=CAPACITY-1). Wraps modulo CAPACITY. */
   head: number;
+  /**
+   * Total entries written, saturated at CAPACITY. Used by readers to
+   * distinguish a half-filled buffer from a wrapped one.
+   */
   count: number;
+  /**
+   * 13-byte explicit padding to satisfy Pod's no-implicit-padding rule.
+   * Forward-compat slot for future field appends (see Phase 9+).
+   */
   padding: ReadonlyUint8Array;
+  /** PDA bump seed. */
   bump: number;
 };
 

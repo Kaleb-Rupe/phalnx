@@ -57,20 +57,44 @@ export function getAuditLogRejectedDiscriminatorBytes() {
 
 export type AuditLogRejected = {
   discriminator: ReadonlyUint8Array;
+  /**
+   * Associated vault pubkey. Verified by PDA seeds + has_one constraints
+   * at the instruction layer.
+   */
   vault: Address;
+  /** Circular-buffer entries. Same shape as success buffer. */
   entries: Array<AuditEntry>;
+  /** Next write position (0..=CAPACITY-1). Wraps modulo CAPACITY. */
   head: number;
+  /** Total entries written, saturated at CAPACITY. */
   count: number;
+  /**
+   * 13-byte explicit padding (Pod no-implicit-padding rule + future
+   * forward-compat appends).
+   */
   padding: ReadonlyUint8Array;
+  /** PDA bump seed. */
   bump: number;
 };
 
 export type AuditLogRejectedArgs = {
+  /**
+   * Associated vault pubkey. Verified by PDA seeds + has_one constraints
+   * at the instruction layer.
+   */
   vault: Address;
+  /** Circular-buffer entries. Same shape as success buffer. */
   entries: Array<AuditEntryArgs>;
+  /** Next write position (0..=CAPACITY-1). Wraps modulo CAPACITY. */
   head: number;
+  /** Total entries written, saturated at CAPACITY. */
   count: number;
+  /**
+   * 13-byte explicit padding (Pod no-implicit-padding rule + future
+   * forward-compat appends).
+   */
   padding: ReadonlyUint8Array;
+  /** PDA bump seed. */
   bump: number;
 };
 

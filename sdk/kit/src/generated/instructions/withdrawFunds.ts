@@ -150,9 +150,8 @@ export type WithdrawFundsAsyncInput<
   vaultTokenAccount?: Address<TAccountVaultTokenAccount>;
   /** Owner's token account to receive funds */
   ownerTokenAccount?: Address<TAccountOwnerTokenAccount>;
-  /** Phase 7 — success audit log. */
+  /** Phase 7 — success audit log; entry appended after token transfer. */
   auditLogSuccess?: Address<TAccountAuditLogSuccess>;
-  /** Phase 7 — slot_hashes sysvar; address-pinned. */
   slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
   tokenProgram?: Address<TAccountTokenProgram>;
   amount: WithdrawFundsInstructionDataArgs["amount"];
@@ -346,9 +345,8 @@ export type WithdrawFundsInput<
   vaultTokenAccount: Address<TAccountVaultTokenAccount>;
   /** Owner's token account to receive funds */
   ownerTokenAccount: Address<TAccountOwnerTokenAccount>;
-  /** Phase 7 — success audit log. */
+  /** Phase 7 — success audit log; entry appended after token transfer. */
   auditLogSuccess: Address<TAccountAuditLogSuccess>;
-  /** Phase 7 — slot_hashes sysvar; address-pinned. */
   slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
   tokenProgram?: Address<TAccountTokenProgram>;
   amount: WithdrawFundsInstructionDataArgs["amount"];
@@ -470,9 +468,8 @@ export type ParsedWithdrawFundsInstruction<
     vaultTokenAccount: TAccountMetas[3];
     /** Owner's token account to receive funds */
     ownerTokenAccount: TAccountMetas[4];
-    /** Phase 7 — success audit log. */
+    /** Phase 7 — success audit log; entry appended after token transfer. */
     auditLogSuccess: TAccountMetas[5];
-    /** Phase 7 — slot_hashes sysvar; address-pinned. */
     slotHashesSysvar: TAccountMetas[6];
     tokenProgram: TAccountMetas[7];
   };

@@ -111,7 +111,7 @@ pub fn handler(ctx: Context<DepositFunds>, amount: u64) -> Result<()> {
     let mint_key = ctx.accounts.mint.key();
 
     // Phase 7 — write success audit-log entry. Mint pubkey is stored in
-    // `target_protocol` for filtering by token; `balance_delta_in` is set
+    // the `subject` slot for filtering by token; `balance_delta_in` is set
     // to the deposited amount (positive direction = funds IN).
     {
         let entry = build_audit_entry(
@@ -123,6 +123,12 @@ pub fn handler(ctx: Context<DepositFunds>, amount: u64) -> Result<()> {
             &ctx.accounts.slot_hashes_sysvar.to_account_info(),
         )?;
         let mut log = ctx.accounts.audit_log_success.load_mut()?;
+        // §RP-1 I-2: defense-in-depth guard against future seeds drift.
+        require_keys_eq!(
+            log.vault,
+            ctx.accounts.vault.key(),
+            SigilError::ConstraintsVaultMismatch
+        );
         log.append(entry);
     }
 

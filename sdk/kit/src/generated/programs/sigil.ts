@@ -221,9 +221,9 @@ export const SIGIL_PROGRAM_ADDRESS =
 
 export enum SigilAccount {
   AgentSpendOverlay,
+  AgentVault,
   AuditLogRejected,
   AuditLogSuccess,
-  AgentVault,
   InstructionConstraints,
   PendingAgentPermissionsUpdate,
   PendingCloseConstraints,
@@ -254,6 +254,17 @@ export function identifySigilAccount(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([232, 220, 237, 164, 157, 9, 215, 194]),
+      ),
+      0,
+    )
+  ) {
+    return SigilAccount.AgentVault;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([211, 117, 26, 31, 160, 74, 242, 204]),
       ),
       0,
@@ -271,17 +282,6 @@ export function identifySigilAccount(
     )
   ) {
     return SigilAccount.AuditLogSuccess;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([232, 220, 237, 164, 157, 9, 215, 194]),
-      ),
-      0,
-    )
-  ) {
-    return SigilAccount.AgentVault;
   }
   if (
     containsBytes(
@@ -1196,12 +1196,12 @@ export type SigilPlugin = {
 export type SigilPluginAccounts = {
   agentSpendOverlay: ReturnType<typeof getAgentSpendOverlayCodec> &
     SelfFetchFunctions<AgentSpendOverlayArgs, AgentSpendOverlay>;
+  agentVault: ReturnType<typeof getAgentVaultCodec> &
+    SelfFetchFunctions<AgentVaultArgs, AgentVault>;
   auditLogRejected: ReturnType<typeof getAuditLogRejectedCodec> &
     SelfFetchFunctions<AuditLogRejectedArgs, AuditLogRejected>;
   auditLogSuccess: ReturnType<typeof getAuditLogSuccessCodec> &
     SelfFetchFunctions<AuditLogSuccessArgs, AuditLogSuccess>;
-  agentVault: ReturnType<typeof getAgentVaultCodec> &
-    SelfFetchFunctions<AgentVaultArgs, AgentVault>;
   instructionConstraints: ReturnType<typeof getInstructionConstraintsCodec> &
     SelfFetchFunctions<InstructionConstraintsArgs, InstructionConstraints>;
   pendingAgentPermissionsUpdate: ReturnType<
@@ -1388,6 +1388,7 @@ export function sigilProgram() {
             client,
             getAgentSpendOverlayCodec(),
           ),
+          agentVault: addSelfFetchFunctions(client, getAgentVaultCodec()),
           auditLogRejected: addSelfFetchFunctions(
             client,
             getAuditLogRejectedCodec(),
@@ -1396,7 +1397,6 @@ export function sigilProgram() {
             client,
             getAuditLogSuccessCodec(),
           ),
-          agentVault: addSelfFetchFunctions(client, getAgentVaultCodec()),
           instructionConstraints: addSelfFetchFunctions(
             client,
             getInstructionConstraintsCodec(),

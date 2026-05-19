@@ -77,7 +77,7 @@ pub fn handler(ctx: Context<PauseAgent>, agent_to_pause: Pubkey) -> Result<()> {
     let vault_key = vault.key();
 
     // Phase 7 — write success audit-log entry using the paused agent's pubkey
-    // in the `target_protocol` slot for traceability.
+    // in the `subject` slot for traceability.
     {
         let entry = build_audit_entry(
             AUDIT_DISC_PAUSE_AGENT,
@@ -88,6 +88,12 @@ pub fn handler(ctx: Context<PauseAgent>, agent_to_pause: Pubkey) -> Result<()> {
             &ctx.accounts.slot_hashes_sysvar.to_account_info(),
         )?;
         let mut log = ctx.accounts.audit_log_success.load_mut()?;
+        // §RP-1 I-2: defense-in-depth guard against future seeds drift.
+        require_keys_eq!(
+            log.vault,
+            ctx.accounts.vault.key(),
+            SigilError::ConstraintsVaultMismatch
+        );
         log.append(entry);
     }
 

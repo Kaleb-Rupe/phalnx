@@ -199,6 +199,15 @@ pub fn handler<'a, 'b, 'c, 'info>(
             &ctx.accounts.slot_hashes_sysvar.to_account_info(),
         )?;
         let mut log = ctx.accounts.audit_log_success.load_mut()?;
+        // §RP-1 I-2 (2026-05-19): defense-in-depth guard against future
+        // seeds drift. Today the PDA seeds bind log.vault == vault.key()
+        // by construction, but a future re-seed migration could break
+        // that invariant silently — fail loud here.
+        require_keys_eq!(
+            log.vault,
+            ctx.accounts.vault.key(),
+            SigilError::ConstraintsVaultMismatch
+        );
         log.append(entry);
     }
 

@@ -139,9 +139,8 @@ export type ApplyConstraintsUpdateAsyncInput<
   policy?: Address<TAccountPolicy>;
   constraints?: Address<TAccountConstraints>;
   pendingConstraints?: Address<TAccountPendingConstraints>;
-  /** Phase 7 — success audit log. */
+  /** Phase 7 — success audit log; entry appended after constraints applied. */
   auditLogSuccess?: Address<TAccountAuditLogSuccess>;
-  /** Phase 7 — slot_hashes sysvar; address-pinned. */
   slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
 };
 
@@ -314,9 +313,8 @@ export type ApplyConstraintsUpdateInput<
   policy: Address<TAccountPolicy>;
   constraints: Address<TAccountConstraints>;
   pendingConstraints: Address<TAccountPendingConstraints>;
-  /** Phase 7 — success audit log. */
+  /** Phase 7 — success audit log; entry appended after constraints applied. */
   auditLogSuccess: Address<TAccountAuditLogSuccess>;
-  /** Phase 7 — slot_hashes sysvar; address-pinned. */
   slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
 };
 
@@ -417,9 +415,8 @@ export type ParsedApplyConstraintsUpdateInstruction<
     policy: TAccountMetas[2];
     constraints: TAccountMetas[3];
     pendingConstraints: TAccountMetas[4];
-    /** Phase 7 — success audit log. */
+    /** Phase 7 — success audit log; entry appended after constraints applied. */
     auditLogSuccess: TAccountMetas[5];
-    /** Phase 7 — slot_hashes sysvar; address-pinned. */
     slotHashesSysvar: TAccountMetas[6];
   };
   data: ApplyConstraintsUpdateInstructionData;

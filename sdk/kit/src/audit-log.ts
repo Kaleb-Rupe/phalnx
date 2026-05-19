@@ -29,8 +29,9 @@ import type { AuditEntry } from "./generated/types/index.js";
 
 /** Reserved sentinel — never written; defense-in-depth zero default. */
 export const AUDIT_DISC_RESERVED_ZERO = 0;
-/** validate_and_authorize (paired with FINALIZE_SUCCESS); written on the
- *  finalize_session REJECT/expired path. */
+/** RESERVED slot. Phase 7 writes NO entries from `validate_and_authorize`;
+ *  this slot is held for future per-validate audit rows. The REJECT path of
+ *  `finalize_session` uses {@link AUDIT_DISC_FINALIZE_REJECT} (=16) instead. */
 export const AUDIT_DISC_VALIDATE = 1;
 /** finalize_session SUCCESS path. */
 export const AUDIT_DISC_FINALIZE_SUCCESS = 2;
@@ -50,6 +51,11 @@ export const AUDIT_DISC_REVOKE_AGENT = 12;
 export const AUDIT_DISC_REGISTER_AGENT = 13;
 export const AUDIT_DISC_POLICY_APPLY = 14;
 export const AUDIT_DISC_CONSTRAINTS_APPLY = 15;
+/** finalize_session REJECT path — written only to the rejected buffer when
+ *  the session is expired at finalize-time (permissionless crank).
+ *  §RP-1 HIGH-1 (2026-05-19): replaces the prior reuse of disc=1
+ *  `AUDIT_DISC_VALIDATE` which was forensically ambiguous. */
+export const AUDIT_DISC_FINALIZE_REJECT = 16;
 
 /** Capacity of the SUCCESS audit-log buffer (entries before wrap). */
 export const AUDIT_LOG_SUCCESS_CAPACITY = 128;
@@ -155,12 +161,27 @@ export async function fetchAuditLogRejected(
 // ─── Encoding utilities (re-exports + helpers) ───────────────────────────────
 
 /**
- * Decode the 32-byte raw `target_protocol` field of an `AuditEntry` into a
- * base58 Address string. Useful for filtering / dashboard display.
+ * Return the raw 32-byte `subject` field of an `AuditEntry`.
+ *
+ * Per-discriminator semantic (mirrors `state/audit_log_success.rs`):
+ *   - disc=2/16 (finalize_success/reject) → protocol pubkey
+ *   - disc=3/4 (deposit/withdraw)         → SPL Token mint pubkey
+ *   - disc=5/6/14/15 (vault-scoped ix)    → vault pubkey
+ *   - disc=10..=13 (agent-scoped ix)      → agent pubkey
  *
  * The raw field is a `[u8; 32]` so callers without the SDK's Address
  * machinery can still operate on the underlying bytes.
  */
+export function subjectBytes(entry: AuditEntry): ReadonlyUint8Array {
+  return entry.subject;
+}
+
+/**
+ * @deprecated §RP-1 HIGH-2 (2026-05-19) — the `target_protocol` field was
+ * renamed to `subject` since it holds a mint / agent / vault pubkey
+ * depending on the discriminator, not just a protocol pubkey. Use
+ * {@link subjectBytes} instead. Will be removed in Phase 9.
+ */
 export function targetProtocolBytes(entry: AuditEntry): ReadonlyUint8Array {
-  return entry.targetProtocol;
+  return entry.subject;
 }

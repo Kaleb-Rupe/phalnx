@@ -157,7 +157,7 @@ pub fn handler(
     let vault_key = vault.key();
 
     // Phase 7 — write success audit-log entry. Registered agent pubkey is
-    // stored in the `target_protocol` slot for traceability.
+    // stored in the `subject` slot for traceability.
     {
         let entry = build_audit_entry(
             AUDIT_DISC_REGISTER_AGENT,
@@ -168,6 +168,12 @@ pub fn handler(
             &ctx.accounts.slot_hashes_sysvar.to_account_info(),
         )?;
         let mut log = ctx.accounts.audit_log_success.load_mut()?;
+        // §RP-1 I-2: defense-in-depth guard against future seeds drift.
+        require_keys_eq!(
+            log.vault,
+            ctx.accounts.vault.key(),
+            SigilError::ConstraintsVaultMismatch
+        );
         log.append(entry);
     }
 

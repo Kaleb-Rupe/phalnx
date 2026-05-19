@@ -132,9 +132,8 @@ export type ApplyPendingPolicyAsyncInput<
   vault: Address<TAccountVault>;
   policy?: Address<TAccountPolicy>;
   pendingPolicy?: Address<TAccountPendingPolicy>;
-  /** Phase 7 — success audit log. */
+  /** Phase 7 — success audit log; entry appended after policy applied. */
   auditLogSuccess?: Address<TAccountAuditLogSuccess>;
-  /** Phase 7 — slot_hashes sysvar; address-pinned. */
   slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
 };
 
@@ -278,9 +277,8 @@ export type ApplyPendingPolicyInput<
   vault: Address<TAccountVault>;
   policy: Address<TAccountPolicy>;
   pendingPolicy: Address<TAccountPendingPolicy>;
-  /** Phase 7 — success audit log. */
+  /** Phase 7 — success audit log; entry appended after policy applied. */
   auditLogSuccess: Address<TAccountAuditLogSuccess>;
-  /** Phase 7 — slot_hashes sysvar; address-pinned. */
   slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
 };
 
@@ -370,9 +368,8 @@ export type ParsedApplyPendingPolicyInstruction<
     vault: TAccountMetas[1];
     policy: TAccountMetas[2];
     pendingPolicy: TAccountMetas[3];
-    /** Phase 7 — success audit log. */
+    /** Phase 7 — success audit log; entry appended after policy applied. */
     auditLogSuccess: TAccountMetas[4];
-    /** Phase 7 — slot_hashes sysvar; address-pinned. */
     slotHashesSysvar: TAccountMetas[5];
   };
   data: ApplyPendingPolicyInstructionData;

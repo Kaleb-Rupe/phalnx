@@ -113,6 +113,12 @@ pub fn handler(ctx: Context<UnpauseAgent>, agent_to_unpause: Pubkey) -> Result<(
             &ctx.accounts.slot_hashes_sysvar.to_account_info(),
         )?;
         let mut log = ctx.accounts.audit_log_success.load_mut()?;
+        // §RP-1 I-2: defense-in-depth guard against future seeds drift.
+        require_keys_eq!(
+            log.vault,
+            ctx.accounts.vault.key(),
+            SigilError::ConstraintsVaultMismatch
+        );
         log.append(entry);
     }
 

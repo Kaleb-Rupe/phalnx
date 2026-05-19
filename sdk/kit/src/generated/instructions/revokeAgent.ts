@@ -142,9 +142,8 @@ export type RevokeAgentAsyncInput<
   policy?: Address<TAccountPolicy>;
   /** Agent spend overlay — release slot on revocation. */
   agentSpendOverlay: Address<TAccountAgentSpendOverlay>;
-  /** Phase 7 — success audit log. */
+  /** Phase 7 — success audit log; entry appended after revoke completes. */
   auditLogSuccess?: Address<TAccountAuditLogSuccess>;
-  /** Phase 7 — slot_hashes sysvar; address-pinned. */
   slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
   agentToRemove: RevokeAgentInstructionDataArgs["agentToRemove"];
 };
@@ -286,9 +285,8 @@ export type RevokeAgentInput<
   policy: Address<TAccountPolicy>;
   /** Agent spend overlay — release slot on revocation. */
   agentSpendOverlay: Address<TAccountAgentSpendOverlay>;
-  /** Phase 7 — success audit log. */
+  /** Phase 7 — success audit log; entry appended after revoke completes. */
   auditLogSuccess: Address<TAccountAuditLogSuccess>;
-  /** Phase 7 — slot_hashes sysvar; address-pinned. */
   slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
   agentToRemove: RevokeAgentInstructionDataArgs["agentToRemove"];
 };
@@ -394,9 +392,8 @@ export type ParsedRevokeAgentInstruction<
     policy: TAccountMetas[2];
     /** Agent spend overlay — release slot on revocation. */
     agentSpendOverlay: TAccountMetas[3];
-    /** Phase 7 — success audit log. */
+    /** Phase 7 — success audit log; entry appended after revoke completes. */
     auditLogSuccess: TAccountMetas[4];
-    /** Phase 7 — slot_hashes sysvar; address-pinned. */
     slotHashesSysvar: TAccountMetas[5];
   };
   data: RevokeAgentInstructionData;

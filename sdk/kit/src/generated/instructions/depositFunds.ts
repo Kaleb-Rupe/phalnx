@@ -162,9 +162,8 @@ export type DepositFundsAsyncInput<
   ownerTokenAccount?: Address<TAccountOwnerTokenAccount>;
   /** Vault's PDA-controlled token account */
   vaultTokenAccount?: Address<TAccountVaultTokenAccount>;
-  /** Phase 7 — success audit log. */
+  /** Phase 7 — success audit log; entry appended after token transfer. */
   auditLogSuccess?: Address<TAccountAuditLogSuccess>;
-  /** Phase 7 — slot_hashes sysvar; address-pinned. */
   slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
   tokenProgram?: Address<TAccountTokenProgram>;
   associatedTokenProgram?: Address<TAccountAssociatedTokenProgram>;
@@ -385,9 +384,8 @@ export type DepositFundsInput<
   ownerTokenAccount: Address<TAccountOwnerTokenAccount>;
   /** Vault's PDA-controlled token account */
   vaultTokenAccount: Address<TAccountVaultTokenAccount>;
-  /** Phase 7 — success audit log. */
+  /** Phase 7 — success audit log; entry appended after token transfer. */
   auditLogSuccess: Address<TAccountAuditLogSuccess>;
-  /** Phase 7 — slot_hashes sysvar; address-pinned. */
   slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
   tokenProgram?: Address<TAccountTokenProgram>;
   associatedTokenProgram?: Address<TAccountAssociatedTokenProgram>;
@@ -534,9 +532,8 @@ export type ParsedDepositFundsInstruction<
     ownerTokenAccount: TAccountMetas[3];
     /** Vault's PDA-controlled token account */
     vaultTokenAccount: TAccountMetas[4];
-    /** Phase 7 — success audit log. */
+    /** Phase 7 — success audit log; entry appended after token transfer. */
     auditLogSuccess: TAccountMetas[5];
-    /** Phase 7 — slot_hashes sysvar; address-pinned. */
     slotHashesSysvar: TAccountMetas[6];
     tokenProgram: TAccountMetas[7];
     associatedTokenProgram: TAccountMetas[8];

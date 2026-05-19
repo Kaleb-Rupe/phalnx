@@ -134,9 +134,8 @@ export type PauseAgentAsyncInput<
    * is_agent_paused constraint check.
    */
   policy?: Address<TAccountPolicy>;
-  /** Phase 7 — success audit log. */
+  /** Phase 7 — success audit log; entry appended after pause flip. */
   auditLogSuccess?: Address<TAccountAuditLogSuccess>;
-  /** Phase 7 — slot_hashes sysvar; address-pinned. */
   slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
   agentToPause: PauseAgentInstructionDataArgs["agentToPause"];
 };
@@ -267,9 +266,8 @@ export type PauseAgentInput<
    * is_agent_paused constraint check.
    */
   policy: Address<TAccountPolicy>;
-  /** Phase 7 — success audit log. */
+  /** Phase 7 — success audit log; entry appended after pause flip. */
   auditLogSuccess: Address<TAccountAuditLogSuccess>;
-  /** Phase 7 — slot_hashes sysvar; address-pinned. */
   slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
   agentToPause: PauseAgentInstructionDataArgs["agentToPause"];
 };
@@ -365,9 +363,8 @@ export type ParsedPauseAgentInstruction<
      * is_agent_paused constraint check.
      */
     policy: TAccountMetas[2];
-    /** Phase 7 — success audit log. */
+    /** Phase 7 — success audit log; entry appended after pause flip. */
     auditLogSuccess: TAccountMetas[3];
-    /** Phase 7 — slot_hashes sysvar; address-pinned. */
     slotHashesSysvar: TAccountMetas[4];
   };
   data: PauseAgentInstructionData;
