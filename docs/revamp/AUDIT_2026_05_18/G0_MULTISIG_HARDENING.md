@@ -86,3 +86,28 @@ Then commit this file as the audit-trail proof.
 5 of 10 audit roundtable characters (Architect, Johannes, Skeptic, Remy, Decomposer) independently flagged bus factor 1 as the single biggest unmitigated structural risk. Architect's prescription was specifically: "Squads multisig on the deploy keypair, two external keyholders. Zero dollars cost. Phase 6 prerequisite."
 
 This is the **cheapest, highest-impact** fix in the entire audit. Five minutes of CLI work, zero dollars, transforms the catastrophic-loss profile of the entire project.
+
+---
+
+## EXECUTED — 2026-05-18
+
+**Status:** ✅ CLOSED
+
+- **Program ID:** `4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL` (devnet)
+- **Old authority:** `6wrkKTM2pjkcCAbMfRz2j3AXspavu6pq3ePcuJUE3Azp` (Kaleb's default keypair at `~/.config/solana/id.json`)
+- **New authority:** `7tvi5yJZyjpxXnbPTcR42mKVK7qbnjRjViTXv1rckNsy` (Squads V4 multisig "Sigil", 3-of-5 threshold)
+- **Cluster:** devnet (`https://api.devnet.solana.com`)
+- **Transaction executed via:** `solana program set-upgrade-authority` from the agent-middleware session
+
+**Verification (`solana program show 4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL --url https://api.devnet.solana.com`):**
+```
+Program Id: 4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL
+Owner: BPFLoaderUpgradeab1e11111111111111111111111
+ProgramData Address: FeBb2ZC8W3CHRLgPTFgWzX3YbFPM1TwL7rCFzswxZ8Df
+Authority: 7tvi5yJZyjpxXnbPTcR42mKVK7qbnjRjViTXv1rckNsy
+Last Deployed In Slot: 461260004
+Data Length: 1162496 (0x11bd00) bytes
+Balance: 8.09217624 SOL
+```
+
+**Bus-factor-1 structural risk MITIGATED.** Future re-deploys of Sigil to this program ID require 3 of the 5 Squads members to approve. Audit's #1-flagged structural risk (5 of 10 roundtable characters independently named it) is closed.
