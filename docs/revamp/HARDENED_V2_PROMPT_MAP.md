@@ -140,14 +140,17 @@ New variants append starting at 6079:
 | 6094 | `ErrStableFloorViolation` (TA-12) | Phase 5 |
 | 6095 | `ErrDailyCapExceeded` (TA-13 doc-fix) | Phase 5 |
 | 6096 | `ErrRecipientCapExceeded` (TA-14) | Phase 5 |
-| 6097 | `ErrMintDeltaCapExceeded` (R-1) | Phase 6 |
-| 6098 | `ErrAtaAuthorityChanged` (R-2) | Phase 6 |
-| 6099 | `ErrOutputBelowFloor` (R-3) | Phase 6 |
-| 6100 | `ErrDeclarationInconsistent` (R-4) | Phase 6 |
-| 6101 | `ErrPendingOwnershipExists` (C26) | Phase 8 |
-| 6102 | `ErrPendingOwnershipNotReady` (C26) | Phase 8 |
-| 6103 | `ErrInvalidFreezeReason` (C27) | Phase 8 |
-| 6104 | `ErrReactivateCooldownActive` (C28) | Phase 8 |
+| 6097 | `ErrMintDeltaCapExceeded` (R-1) | Phase 6 — LANDED |
+| 6098 | `MintDeltaCapMisconfigured` (R-1 caller-bug variant; NEW in Phase 6) | Phase 6 — LANDED |
+| 6099 | `ErrAtaAuthorityChanged` (R-2) | Phase 6 — LANDED (shifted +1 from prior 6098 plan) |
+| 6100 | `ErrOutputBelowFloor` (R-3) | Phase 6 — LANDED (shifted +1 from prior 6099 plan) |
+| 6101 | `ErrDeclarationInconsistent` (R-4) | Phase 6 — LANDED (shifted +1 from prior 6100 plan) |
+| 6102 | `ErrPendingOwnershipExists` (C26) | Phase 8 — shifted +1 |
+| 6103 | `ErrPendingOwnershipNotReady` (C26) | Phase 8 — shifted +1 |
+| 6104 | `ErrInvalidFreezeReason` (C27) | Phase 8 — shifted +1 |
+| 6105 | `ErrReactivateCooldownActive` (C28) | Phase 8 — shifted +1 |
+
+**Phase 6 deviation (2026-05-19):** Engineer added `MintDeltaCapMisconfigured` at 6098 to distinguish caller-supplied schema bug from attack signal (`ErrMintDeltaCapExceeded`). Useful for off-chain monitor triage. Code allocation shifted Phase 7/8 codes +1. Forward-only — no previously assigned code (6097, 6098) ever moved.
 
 **G6 audit fix 2026-05-18 (cosign opt-in):** uses NO new error code. The existing `ErrCosignRequired` (6089) handles all rejection cases: missing cosign on an elevated mutation, default cosign pubkey on an elevated mutation, owner-same cosigner, AND the new "disabling cosign on a live policy where `cosign_required: true`" elevation case. The `cosign_required: bool` field on `PolicyConfig` + `Option<bool>` on `PendingPolicyUpdate` are pure schema growth — they extend TA-19 canonical digest encoding to position 20 but do not require a new failure mode (the field's mutation is gated by the existing 6089). See [§6 Phase 6 post-audit absorption](#post-phase-5-deliverable-summary) below for the full G6 deliverable list.
 
