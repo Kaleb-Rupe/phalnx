@@ -43,6 +43,29 @@ pub fn handler(ctx: Context<SetObserveOnly>, new_value: bool) -> Result<()> {
     let vault = &mut ctx.accounts.vault;
     let policy = &mut ctx.accounts.policy;
 
+    // P0.1 PEN-8b interim cosign gate (audit 2026-05-19).
+    //
+    // Only the dangerous direction is gated: flipping observe_only OFF
+    // (new_value == false) makes the vault execute on agent calls. Flipping
+    // ON is always safe — inert vault accepts no agent execution.
+    //
+    // Mechanism mirrors register_agent's gate: if the vault has opted into
+    // cosign (`policy.cosign_required == true`), require a non-owner signer
+    // in `remaining_accounts`. Vaults with the default `cosign_required:
+    // false` are unaffected.
+    //
+    // Threat: phished owner key cannot silently flip an observation vault
+    // into active execution without a co-signing session. The full
+    // digest-binding + timelock fix stays in Phase 8.
+    if !new_value && policy.cosign_required {
+        let owner_key = ctx.accounts.owner.key();
+        let has_cosigner = crate::instructions::register_agent::has_non_owner_signer(
+            ctx.remaining_accounts,
+            &owner_key,
+        );
+        require!(has_cosigner, SigilError::ErrCosignRequired);
+    }
+
     // F-11 consistency: cannot flip to active mode when both allowlists are
     // empty. observe_only=true never trips this check because inert is the
     // intended state for observation vaults.

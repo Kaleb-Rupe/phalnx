@@ -57,6 +57,30 @@ pub fn handler(
 
     let vault = &mut ctx.accounts.vault;
 
+    // P0.1 PEN-CROSS-1 interim cosign gate (audit 2026-05-19).
+    //
+    // Full digest-binding + timelock fix stays in Phase 8 (per G2 deferral).
+    // This interim gate is a defensive partial fix: for vaults that have
+    // explicitly opted into cosign (`policy.cosign_required == true`), require
+    // a second non-owner signer in `remaining_accounts` (the cosign session)
+    // alongside the owner. Vaults with the default `cosign_required: false`
+    // are unaffected — single-signer flow continues.
+    //
+    // Threat: a phished/leaked owner key cannot silently `register_agent`
+    // (instantly granting operator capability with no timelock) on a vault
+    // that opted into cosign. Without this gate, register_agent bypasses
+    // the cosign workflow entirely because it does not pass through
+    // queue_policy_update.
+    //
+    // Mechanism: scan ctx.remaining_accounts for any signer pubkey that is
+    // NOT the owner. Absence of such a signer == cosign missing on a vault
+    // that requires it → reject with 6089 ErrCosignRequired.
+    if ctx.accounts.policy.cosign_required {
+        let owner_key = ctx.accounts.owner.key();
+        let has_cosigner = has_non_owner_signer(ctx.remaining_accounts, &owner_key);
+        require!(has_cosigner, SigilError::ErrCosignRequired);
+    }
+
     require!(
         vault.status != VaultStatus::Closed,
         SigilError::VaultAlreadyClosed
@@ -126,4 +150,107 @@ pub fn handler(
     });
 
     Ok(())
+}
+
+/// P0.1 PEN-CROSS-1 / PEN-8b interim cosign gate predicate (audit 2026-05-19).
+///
+/// Returns true when AT LEAST ONE entry in `remaining_accounts` is a signer
+/// whose pubkey is not `owner_key`. Used by `register_agent` and
+/// `set_observe_only` to enforce the interim cosign-required gate for vaults
+/// that opted into `policy.cosign_required == true`. Pure function on the
+/// `(is_signer, key)` projection — easy to unit test without LiteSVM.
+pub(crate) fn has_non_owner_signer(
+    accounts: &[AccountInfo<'_>],
+    owner_key: &Pubkey,
+) -> bool {
+    accounts
+        .iter()
+        .any(|ai| ai.is_signer && ai.key() != *owner_key)
+}
+
+#[cfg(test)]
+mod cosign_gate_predicate_tests {
+    //! P0.1 PEN-CROSS-1 / PEN-8b interim cosign gate predicate (audit 2026-05-19).
+    //!
+    //! These tests pin the behaviour of `has_non_owner_signer` — the exact
+    //! predicate `register_agent` + `set_observe_only` use to enforce the
+    //! cosign gate when `policy.cosign_required == true`.
+
+    use super::*;
+    use anchor_lang::solana_program::account_info::AccountInfo;
+
+    fn key_n(n: u8) -> Pubkey {
+        Pubkey::new_from_array([n; 32])
+    }
+
+    fn make_info<'a>(
+        key: &'a Pubkey,
+        is_signer: bool,
+        lamports: &'a mut u64,
+        data: &'a mut [u8],
+        owner: &'a Pubkey,
+    ) -> AccountInfo<'a> {
+        AccountInfo::new(
+            key, is_signer, false, lamports, data, owner, false, 0,
+        )
+    }
+
+    /// Gate rejects when no signer beyond owner is present.
+    #[test]
+    fn rejects_when_only_owner_signs() {
+        let owner = key_n(1);
+        let mut lp = 0u64;
+        let mut d: [u8; 0] = [];
+        let owner_info = make_info(&owner, true, &mut lp, &mut d, &owner);
+        // `register_agent` calls `has_non_owner_signer` with
+        // `ctx.remaining_accounts`, NOT including the owner Signer account
+        // itself (which lives in the named Accounts struct). So the
+        // common attack shape is "owner signs the tx, remaining_accounts
+        // is empty or contains only non-signers".
+        let remaining: Vec<AccountInfo> = vec![];
+        assert!(
+            !has_non_owner_signer(&remaining, &owner),
+            "empty remaining_accounts must NOT satisfy the gate"
+        );
+        // Defense-in-depth: even if owner were duplicated as a signer in
+        // remaining_accounts (it shouldn't be — Anchor de-dupes — but
+        // belt-and-suspenders), the predicate ignores it.
+        let dup = vec![owner_info];
+        assert!(
+            !has_non_owner_signer(&dup, &owner),
+            "owner-as-signer in remaining_accounts must NOT satisfy gate"
+        );
+    }
+
+    /// Gate accepts when a distinct non-owner signer is present.
+    #[test]
+    fn accepts_when_cosigner_signs() {
+        let owner = key_n(1);
+        let cosigner = key_n(2);
+        let mut lp = 0u64;
+        let mut d: [u8; 0] = [];
+        let cosigner_info = make_info(&cosigner, true, &mut lp, &mut d, &cosigner);
+        let remaining = vec![cosigner_info];
+        assert!(
+            has_non_owner_signer(&remaining, &owner),
+            "non-owner signer in remaining_accounts MUST satisfy gate"
+        );
+    }
+
+    /// Non-signer accounts (read-only refs to the cosigner key) do NOT
+    /// satisfy the gate. Closes the attack where remaining_accounts
+    /// includes a non-signing reference to a known cosign session pubkey.
+    #[test]
+    fn rejects_when_non_signer_present_only() {
+        let owner = key_n(1);
+        let cosigner = key_n(2);
+        let mut lp = 0u64;
+        let mut d: [u8; 0] = [];
+        let cosigner_info = make_info(&cosigner, false, &mut lp, &mut d, &cosigner);
+        let remaining = vec![cosigner_info];
+        assert!(
+            !has_non_owner_signer(&remaining, &owner),
+            "non-signer cosigner reference must NOT satisfy gate"
+        );
+    }
 }
