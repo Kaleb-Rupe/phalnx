@@ -1399,15 +1399,21 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
   },
   6089: {
     name: "ErrCosignRequired",
+    // §RP-2 M-NEW-3 (audit 2026-05-19): after P0.1 + H-NEW-1, 6089
+    // fires from four sites — queue_policy_update (original elevated
+    // mutation path), register_agent, set_observe_only(false→true),
+    // and unpause_agent. The message + recovery now reflect that the
+    // common axis is "cosign-opted-in vault + owner action lacking a
+    // non-owner co-signer", not just queue_policy_update specifically.
     message:
-      "Elevated policy mutation requires an owner-signed cosigning session. Raising daily cap, raising max-tx, expanding destinations/protocols, etc. all need cosign.",
+      "Cosign-opted-in vault requires a non-owner signer for this owner-action. Original sites: queue_policy_update (elevated), register_agent, set_observe_only(false→true), unpause_agent.",
     category: "PERMISSION",
     retryable: false,
     recovery_actions: [
       {
         action: "supply_cosigner",
         description:
-          "Re-issue the queue_policy_update with cosign_session set to an owner-signed session pubkey within the vault's validity window.",
+          "Supply the cosign session pubkey as a signer in remaining_accounts. For queue_policy_update, also pass cosign_session as an arg. The cosign session must not be the owner's own key.",
       },
     ],
   },

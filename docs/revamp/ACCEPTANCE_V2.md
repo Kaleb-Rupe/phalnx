@@ -381,6 +381,15 @@ Step-by-step (historical) mainnet deployment procedure:
 
 ### 15.3 Stage 6D — TierRegistry deployment
 
+> **L-8 tombstone (audit 2026-05-19 §RP-2 M-NEW-2):** TierRegistry was
+> dropped under L-1 Option A demolition (no `TierRegistry` account
+> ships in V1, no per-protocol tier-gating surface needed). The
+> §15.3 body below is retained verbatim for v1.1 reference but is
+> **not** an active V1 procedure. Matches the §14.5 / §14.6 +
+> REVAMP_PLAN §16 wrap convention.
+
+<del>
+
 **Stage 6C must complete first** (multisig PDA address is needed to bake into `constants.rs`). The mechanic is:
 1. Stage 6C deploys the Squads V4 multisig and emits the vault PDA address.
 2. The address is updated in `programs/sigil/src/constants.rs` as `SIGIL_SQUADS_VAULT` constant.
@@ -397,6 +406,8 @@ Deployment steps:
 - [ ] Initialize TierRegistry with V1 T1 short-list (Jupiter, Kamino, Drift, Marginfi, Flash Trade, Sanctum, Orca, Raydium, Meteora, Lulo).
 - [ ] Pin `idl_sha256` + `bytecode_hash` for each T1 protocol.
 - [ ] Verify all CRUD entry points reject any signer != hard-coded `SIGIL_SQUADS_VAULT`.
+
+</del>
 
 ### 15.4 Stage 6F — Mainnet program deploy
 - [ ] Generate new mainnet program ID (do NOT reuse devnet `4ZeVCqnj...` — would corrupt V1 PDAs).
