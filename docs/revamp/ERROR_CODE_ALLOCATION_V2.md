@@ -155,11 +155,13 @@ These codes are reserved for V2 primitives introduced in Phases 2 through 8. The
 | 6103 | `ErrPendingOwnershipExists` | Phase 8 | C26 | Pending ownership transfer collision (shifted +2) |
 | 6104 | `ErrPendingOwnershipNotReady` | Phase 8 | C26 | Pending transfer not past timelock (shifted +2) |
 | 6105 | `ErrInvalidFreezeReason` | Phase 8 | C27 | Reserved freeze_reason enum value (shifted +2) |
-| 6106 | `ErrReactivateCooldownActive` | Phase 8 | C28 | Post-unfreeze observation window active (shifted +2) |
+| 6106 | `ErrReactivateCooldownActive` | Phase 8 ✅ | C28 | Post-unfreeze observation window active (shifted +2) — LANDED |
+| 6107 | `ErrInvalidOwnershipTarget` | Phase 8 ✅ | Council ISC-128 | new_owner is system/program/sysvar pubkey — LANDED |
+| 6108 | `ErrTooManyRevokePairs` | Phase 8 ✅ | Council ISC-136 | freeze_internal MAX_REVOKE_PAIRS=10 exceeded — LANDED |
 
-**Total reserved:** 28 codes (6079-6106 inclusive). Phase 6 introduced 1 new code (`MintDeltaCapMisconfigured` at 6098). DC1-DC14 audit closure introduced 1 new code (`IxMetaCountExceeded` at 6102). Phase 7 (audit log + temporal binding) introduces **ZERO** new error codes.
+**Total reserved:** 30 codes (6079-6108 inclusive). Phase 6 introduced 1 new code (`MintDeltaCapMisconfigured` at 6098). DC1-DC14 audit closure introduced 1 new code (`IxMetaCountExceeded` at 6102). Phase 7 (audit log + temporal binding) introduces **ZERO** new error codes. **Phase 8 introduces 6 new codes (6103-6108):** 4 from original spec (C26/C27/C28 ownership-transfer + freeze surface) plus 2 added by Council ISCReview adversarial pressure-test (ISC-128 invalid-target blocklist, ISC-136 MAX_REVOKE_PAIRS bound).
 
-**Drift discipline:** Forward-only. No previously-assigned code (6097-6102) ever moved. Phase 8 codes have been re-reserved twice (+1 in Phase 6 deviation, +1 in audit closure) — both shifts were forward-only.
+**Drift discipline:** Forward-only. No previously-assigned code (6097-6102) ever moved. Phase 8 codes (6103-6106) were re-reserved twice during planning (+1 in Phase 6 deviation, +1 in audit closure) — both shifts were forward-only. 6107-6108 are NEW Phase 8 additions, appended at end after the original 4 reserved codes. **Total error code count post-Phase-8: 109.**
 
 ---
 

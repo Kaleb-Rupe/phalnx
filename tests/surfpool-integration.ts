@@ -2040,6 +2040,15 @@ describe("surfpool-integration", function () {
     });
 
     it("reactivate_vault restores operations", async () => {
+      // Phase 8 Batch 5: prior it() froze vault; advance past 5-min reactivate
+      // cooldown (ErrReactivateCooldownActive 6106) via Surfnet time travel.
+      {
+        const clock = await getClock(env.connection);
+        await timeTravel(env.connection, {
+          absoluteTimestamp: (clock.timestamp + 301) * 1000,
+        });
+      }
+
       await program.methods
         .reactivateVault(null, null)
         .accounts({
@@ -2121,6 +2130,9 @@ describe("surfpool-integration", function () {
         .rpc();
 
       // Non-owner (agent) tries to reactivate
+      // Anchor ConstraintHasOne fires during account validation, BEFORE the
+      // cooldown handler code runs — so the failing path needs no cooldown
+      // advance. Cleanup reactivate below DOES need it.
       const reactivateIx = await program.methods
         .reactivateVault(null, null)
         .accounts({
@@ -2135,6 +2147,14 @@ describe("surfpool-integration", function () {
         setup.agent,
         "2006", // Anchor ConstraintHasOne — framework error, not in SIGIL_ERROR_NAMES
       );
+
+      // Phase 8 Batch 5: advance past 5-min reactivate cooldown before cleanup.
+      {
+        const clock = await getClock(env.connection);
+        await timeTravel(env.connection, {
+          absoluteTimestamp: (clock.timestamp + 301) * 1000,
+        });
+      }
 
       // Unfreeze for subsequent tests (must succeed or cascade fails)
       try {
@@ -2402,6 +2422,15 @@ describe("surfpool-integration", function () {
         setup.agent,
         "VaultNotActive",
       );
+
+      // Phase 8 Batch 5: advance past 5-min reactivate cooldown
+      // (ErrReactivateCooldownActive 6106) before cleanup unfreeze.
+      {
+        const clock = await getClock(env.connection);
+        await timeTravel(env.connection, {
+          absoluteTimestamp: (clock.timestamp + 301) * 1000,
+        });
+      }
 
       // Unfreeze for any subsequent tests
       await program.methods

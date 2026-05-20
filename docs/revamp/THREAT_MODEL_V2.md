@@ -295,6 +295,20 @@ Sigil DOES NOT enforce multisig on-chain. The vault owner field is just a Pubkey
 
 **Residual:** A vault with single-key owner + cosign-required + lost session key is wedged until K5 timelock expires (48h). Acceptable trade-off; users with frequent operations should use Squads multisig.
 
+### T-19 — C28 Reactivation Cooldown Bypass via close+reinit (Phase 8)
+
+**Description:** The 5-minute observation cooldown enforced by `reactivate_vault.rs` (Phase 8 C28) protects against fat-finger unfreeze and brief panic-then-reactivate workflows by rejecting reactivate when `now - vault.frozen_at_timestamp < 300`. It does NOT protect against an adversarial owner who `close_vault`'s the frozen vault and subsequently `initialize_vault`'s a fresh PDA. The fresh PDA has `frozen_at_timestamp = 0`, vacuously passing the cooldown gate.
+
+**Failure mode:** Owner (or attacker holding owner key) freezes vault → notices the 5-min observation window → closes vault to reclaim rent → re-initializes at same `(owner, vault_id)` seeds → bypass complete in roughly the time it takes to land 3 transactions (<60s).
+
+**Likelihood:** LOW (requires owner key compromise OR owner self-defeating their own UX safety net). Not a path an adversarial AGENT can take — agents lack `close_vault` authority.
+
+**Pre-mitigation blast-radius:** LOW — limited to defeating the UX safety net the cooldown was designed to provide. Does NOT compose with any drain primitive (close+reinit produces an empty fresh vault; no funds reappear).
+
+**Post-mitigation blast-radius (V1 design):** LOW. This is an accepted limitation in V1; the cooldown is a UX safety net, not an adversarial defense.
+
+**Residual:** Mitigation considered but deferred to v1.1: move cooldown to an owner-keyed PDA at `[b"freeze_cooldown", owner]` that persists across vault lifecycle. V1 accepts the bypass given solo-founder simplicity (per L-2 no-additional-rent-cost preference).
+
 ### T-21 — Owner Policy Underspecification (load-bearing trust assumption)
 
 **Description:** Sigil's entire paradigm assumes the user (or a delegate) can pre-specify policy correctly: which protocols, which wallets, which tokens, which caps, which hours, which agents. **Empirically, users cannot do this.** Maestro's data shows 60%+ of vaults are created with default policies and never edited.

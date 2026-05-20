@@ -942,6 +942,8 @@ describe("sigil", () => {
     });
 
     it("reactivates a frozen vault", async () => {
+      // Phase 8 C28: advance past 5-min reactivate cooldown
+      advanceTime(svm, 301);
       await program.methods
         .reactivateVault(agent.publicKey, FULL_CAPABILITY)
         .accounts({ owner: owner.publicKey, vault: reactVaultPda } as any)
@@ -975,6 +977,9 @@ describe("sigil", () => {
         } as any)
         .rpc();
 
+      // Phase 8 C28: advance past 5-min reactivate cooldown
+      advanceTime(svm, 301);
+
       try {
         await program.methods
           .reactivateVault(null, null)
@@ -1003,6 +1008,9 @@ describe("sigil", () => {
           agentSpendOverlay: reactOverlay,
         } as any)
         .rpc();
+
+      // Phase 8 C28: advance past 5-min reactivate cooldown
+      advanceTime(svm, 301);
 
       const newAgent = Keypair.generate();
       await program.methods
@@ -2933,6 +2941,9 @@ describe("sigil", () => {
       } catch {
         // ignore if already frozen
       }
+
+      // Phase 8 Batch 5: advance past 5-min reactivate cooldown (ErrReactivateCooldownActive 6106)
+      advanceTime(svm, 301);
 
       await program.methods
         .reactivateVault(newAgent.publicKey, FULL_CAPABILITY)
@@ -5387,6 +5398,10 @@ describe("sigil", () => {
     });
 
     it("register up to 10 agents — succeeds", async () => {
+      // Phase 8 Batch 5: prior it() froze vault via last-agent revoke;
+      // advance past 5-min reactivate cooldown (ErrReactivateCooldownActive 6106)
+      advanceTime(svm, 301);
+
       // Reactivate first
       await program.methods
         .reactivateVault(agent.publicKey, FULL_CAPABILITY)
@@ -5446,6 +5461,10 @@ describe("sigil", () => {
       }
 
       const newAgent = Keypair.generate();
+
+      // Phase 8 Batch 5: advance past 5-min reactivate cooldown (ErrReactivateCooldownActive 6106)
+      advanceTime(svm, 301);
+
       await program.methods
         .reactivateVault(newAgent.publicKey, VIEWER_CAPABILITY)
         .accounts({ owner: owner.publicKey, vault: maVault } as any)
@@ -6946,6 +6965,9 @@ describe("sigil", () => {
 
     it("reactivate unfreezes without needing to add agent (agents preserved)", async () => {
       // Vault is currently frozen from the first test
+      // Phase 8 Batch 5: advance past 5-min reactivate cooldown (ErrReactivateCooldownActive 6106)
+      advanceTime(svm, 301);
+
       await program.methods
         .reactivateVault(null, null)
         .accounts({ owner: owner.publicKey, vault: freezeVaultPda } as any)
@@ -7018,6 +7040,9 @@ describe("sigil", () => {
 
       const balance = getTokenBalance(svm, vaultUsdcAta);
       expect(balance.toString()).to.equal("0");
+
+      // Phase 8 Batch 5: advance past 5-min reactivate cooldown (ErrReactivateCooldownActive 6106)
+      advanceTime(svm, 301);
 
       // Clean up: reactivate
       await program.methods
@@ -7300,6 +7325,9 @@ describe("sigil", () => {
         (a: any) => a.pubkey.toString() === pauseAgent2.publicKey.toString(),
       );
       expect(entry2.paused).to.equal(true);
+
+      // Phase 8 Batch 5: advance past 5-min reactivate cooldown (ErrReactivateCooldownActive 6106)
+      advanceTime(svm, 301);
 
       // Clean up: unfreeze and unpause agent2
       await program.methods

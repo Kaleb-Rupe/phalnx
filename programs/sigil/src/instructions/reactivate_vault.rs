@@ -89,6 +89,28 @@ pub fn handler(
         require!(has_cosigner, SigilError::ErrCosignRequired);
     }
 
+    // 2.5 Phase 8 C28 — 5-minute observation cooldown.
+    //
+    // The cooldown protects against fat-finger unfreeze + brief panic-then-
+    // reactivate workflows. Owner freezes, observes for 5 min, then can
+    // reactivate. UX safety net — see T-19 in THREAT_MODEL_V2.md for the
+    // close+reinit adversarial bypass acknowledgement (V1.1 mitigation
+    // deferred per L-2 no-additional-rent-cost preference).
+    //
+    // Reads the new `frozen_at_timestamp` field added in Phase 8 Batch 1
+    // (AgentVault APPEND-ONLY +9 bytes). Existing post-freeze vaults that
+    // were frozen before this field landed will have 0 → fail the < 300
+    // window check trivially (clock - 0 >> 300), so the cooldown never
+    // fires retroactively.
+    const REACTIVATE_COOLDOWN_SECONDS: i64 = 300;
+    let now_pre_mut = Clock::get()?.unix_timestamp;
+    let frozen_at = ctx.accounts.vault.frozen_at_timestamp;
+    let elapsed = now_pre_mut.saturating_sub(frozen_at);
+    require!(
+        elapsed >= REACTIVATE_COOLDOWN_SECONDS,
+        SigilError::ErrReactivateCooldownActive
+    );
+
     let vault = &mut ctx.accounts.vault;
 
     // 3. Validate mutual presence of new_agent and new_agent_capability

@@ -674,6 +674,13 @@ describe("🔥 SIGIL DEVNET STRESS TEST — Real Tokens, Real Limits", function 
         console.log("    ✓ Frozen vault blocks agent");
       }
 
+      // Phase 8 Batch 5: devnet uses wall-clock — wait past 5-min reactivate
+      // cooldown (ErrReactivateCooldownActive 6106). Devnet stress test runs
+      // ad-hoc, not in CI; 5-min wall-clock wait is acceptable here. No clock
+      // mocking available on devnet validator.
+      console.log("    ⏳ Waiting 301s for reactivate cooldown (devnet wall-clock)...");
+      await new Promise((r) => setTimeout(r, 301_000));
+
       // Reactivate (unfreeze) — pass null for optional new agent params
       await program.methods
         .reactivateVault(null, null)
