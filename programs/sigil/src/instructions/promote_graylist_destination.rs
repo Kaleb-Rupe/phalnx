@@ -52,6 +52,24 @@ pub fn handler(ctx: Context<PromoteGraylistDestination>, destination: Pubkey) ->
         SigilError::VaultAlreadyClosed
     );
 
+    // Round 2 V5 MED finding (audit 2026-05-19): interim cosign gate for
+    // `promote_graylist_destination`. Without this gate a phished owner
+    // on a cosign-opted-in vault could pre-stage a hostile destination
+    // through the 24h graylist friction window in a single tx (the
+    // graylist promotion is owner-only but did NOT require cosign even
+    // when `policy.cosign_required == true`). Mirrors the gate already
+    // on `register_agent.rs:91-95`, `set_observe_only.rs`, and
+    // `reactivate_vault.rs` (F-RP3-1). Vaults with the default
+    // `cosign_required: false` are unaffected.
+    if ctx.accounts.policy.cosign_required {
+        let owner_key = ctx.accounts.owner.key();
+        let has_cosigner = crate::instructions::register_agent::has_non_owner_signer(
+            ctx.remaining_accounts,
+            &owner_key,
+        );
+        require!(has_cosigner, SigilError::ErrCosignRequired);
+    }
+
     let policy = &mut ctx.accounts.policy;
     let clock = Clock::get()?;
 

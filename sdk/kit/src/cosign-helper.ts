@@ -86,6 +86,43 @@ import type { Address, TransactionSigner } from "./kit-adapter.js";
 import { computeCosignDigest } from "./policy/compute-cosign-digest.js";
 
 /**
+ * CANONICAL `cosign_session` ARG CONTRACT — Round 2 §RP-2 B4 F-3 (2026-05-19).
+ *
+ * Every Sigil instruction that supports the cosign opt-in path accepts a
+ * `cosign_session: Pubkey` argument. This contract documents what a non-Codama
+ * SDK consumer MUST pass to avoid the silent rejection path the on-chain
+ * handler took as of Round 2 B4 F-3 Option A:
+ *
+ *   • NON-ELEVATED queue (the default for every mutation that does NOT
+ *     raise daily_cap / max_tx, expand destinations / protocols, lower
+ *     stable_balance_floor, raise per_recipient_daily_cap_usd, disable
+ *     protocol_caps, mutate protocol_caps entries, or disable cosign):
+ *       Pass `Pubkey::default()` — the SystemProgram pubkey
+ *       `11111111111111111111111111111111` (32 zero bytes).
+ *       Do NOT include any cosigner in `remaining_accounts`.
+ *
+ *   • ELEVATED queue (raising daily_cap, expanding destinations, etc. — see
+ *     the full trigger list in the `CosignArgs` JSDoc below):
+ *       Pass a REAL session pubkey (non-default AND distinct from owner),
+ *       AND include that session pubkey in `remaining_accounts` with
+ *       `is_signer == true`.
+ *       Use {@link buildCosignBundle} to mirror the on-chain digest the
+ *       handler will recompute + store on `PendingPolicyUpdate`.
+ *
+ *   • REJECT path: passing a non-default `cosign_session` on a non-elevated
+ *     queue surfaces `InvalidPermissions` (6088). This is INTENTIONAL —
+ *     the on-chain handler refuses to silently downgrade a caller's
+ *     declared intent. See Round 2 §RP-2 B4 F-3 Option A rationale in
+ *     `queue_policy_update.rs` (and the corresponding test fixtures in
+ *     `tests/policy-digest-invariant.ts`).
+ *
+ * This contract applies to: `queue_policy_update`, `queue_agent_permissions`,
+ * and any future queue handler that takes a `cosign_session` arg. The Codama
+ * generated client surfaces this as a typed `Address` field; hand-rolled
+ * builders MUST follow the contract above to avoid `InvalidPermissions`.
+ */
+
+/**
  * Arguments for {@link buildCosignBundle}. Mirrors the elevated-mutation
  * subset of `queue_policy_update` args.
  */
@@ -100,6 +137,9 @@ export interface CosignArgs {
    *
    * The caller is responsible for (3) — this helper produces the digest, the
    * tx builder includes the signer.
+   *
+   * See the "CANONICAL `cosign_session` ARG CONTRACT" block above for the
+   * non-elevated vs elevated vs reject paths. Round 2 §RP-2 B4 F-3 (2026-05-19).
    */
   cosignSessionPubkey: Address;
 

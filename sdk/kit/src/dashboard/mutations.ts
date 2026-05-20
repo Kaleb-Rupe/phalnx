@@ -731,6 +731,23 @@ export async function queuePolicyUpdate(
     // System Program / zero-pubkey ("11111111111111111111111111111111").
     // Elevated mutations through this dashboard surface require a
     // follow-on `queuePolicyElevated()` helper (cosign-helper.ts, G4).
+    //
+    // CANONICAL `cosign_session` ARG CONTRACT (Round 2 §RP-2 B4 F-3,
+    // 2026-05-19) — for non-Codama callers reading this file as a
+    // reference impl:
+    //   - Non-elevated queue (this branch): pass `Pubkey::default()`
+    //     and OMIT any cosigner from `remaining_accounts`.
+    //   - Elevated queue (raising daily_cap, expanding destinations /
+    //     protocols, lowering stable_balance_floor, raising
+    //     per_recipient_daily_cap_usd, disabling protocol_caps, mutating
+    //     protocol_caps entries, or disabling cosign): pass a REAL session
+    //     pubkey + include it in `remaining_accounts` with
+    //     `is_signer == true`. Build the bundle via
+    //     `buildCosignBundle()` in `sdk/kit/src/cosign-helper.ts`.
+    //   - Reject path: a non-default `cosign_session` on a non-elevated
+    //     queue surfaces `InvalidPermissions` (6088). INTENTIONAL — the
+    //     on-chain handler refuses to silently downgrade a caller's
+    //     declared intent (Option A behaviour).
     cosignSession:
       "11111111111111111111111111111111" as unknown as Address,
     newPolicyPreviewDigest,
@@ -791,6 +808,19 @@ export async function queueAgentPermissions(
     // the elevated path should use a dedicated wrapper that injects a
     // real cosign-session pubkey + remaining_accounts signer (analogous
     // to `queuePolicyElevated()` for queue_policy_update).
+    //
+    // CANONICAL `cosign_session` ARG CONTRACT (Round 2 §RP-2 B4 F-3,
+    // 2026-05-19) — same shape as the `queuePolicyUpdate` path above:
+    //   - Non-elevated (this branch): pass `Pubkey::default()` and
+    //     OMIT the cosigner from `remaining_accounts`.
+    //   - Elevated (raising capability, raising spending_limit, or
+    //     setting non-zero cooldown on a `cosign_required: true` vault):
+    //     pass a REAL session pubkey + include it as a signer in
+    //     `remaining_accounts`.
+    //   - Reject path: passing a non-default `cosign_session` on a
+    //     non-elevated queue surfaces `InvalidPermissions` (6088).
+    //     INTENTIONAL — the on-chain handler refuses to silently
+    //     downgrade a caller's declared intent (Option A behaviour).
     cosignSession:
       "11111111111111111111111111111111" as unknown as Address,
   });

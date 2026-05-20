@@ -526,35 +526,36 @@ pub fn handler(
     // documentation but the derivation step is skipped because no PDA of
     // that family yet exists for the current vault (Phase 7+ ship them).
     //
-    // **Prefix count (§RP-1 clarification, 2026-05-18).** PROTECTED_SEED_PREFIXES
-    // currently lists 16 entries split as **12 active + 4 forward-compat**:
-    //   ACTIVE (12): vault, policy, tracker, session, post_assertions,
+    // **Prefix count (SA4 H1 update, audit 2026-05-19).** PROTECTED_SEED_PREFIXES
+    // currently lists 16 entries split as **14 active + 2 forward-compat**:
+    //   ACTIVE (14): vault, policy, tracker, session, post_assertions,
     //     pending_policy, pending_constraints, pending_agent_perms,
-    //     pending_close_constraints, pending_owner, constraints, agent_spend.
-    //   FORWARD-COMPAT (4): audit_success, audit_rejected (Phase 7 audit log),
-    //     cosign (Phase 3 cosign session — no live PDA in V2 register yet),
-    //     recipient (post-exec per-recipient cap).
-    // The runtime `protected: [Pubkey; 13]` array below is a derived view —
-    // 12 real keys + 1 `Pubkey::default()` sentinel slot reserved for the
-    // 4 forward-compat families (all 4 collapse into the single sentinel
-    // because their derivations are unavailable in V2). Sentinel can never
-    // match a real account meta because `Pubkey::default()` is the off-curve
-    // null key and cannot be a derived PDA.
+    //     pending_close_constraints, pending_owner, constraints, agent_spend,
+    //     audit_success, audit_rejected (the last two added when Phase 7
+    //     audit-log PDAs went live — see finalize_session.rs:91-107).
+    //   FORWARD-COMPAT (2): cosign (Phase 3 cosign session — no live PDA in
+    //     V2 register yet), recipient (post-exec per-recipient cap).
+    // The runtime `protected: [Pubkey; 14]` array below is the derived view:
+    // 14 real keys, zero sentinel slots. The prior single `Pubkey::default()`
+    // sentinel that stood in for the 4 forward-compat families was dropped
+    // when audit_success / audit_rejected became live; the remaining 2
+    // forward-compat families will land as additional derivations + array
+    // entries when their PDAs ship.
     //
-    // **CU profile (measured 2026-05-18 via LiteSVM in
-    // tests/sysvar-scan-bound.ts "TA-11 protected-writable scan CU profile").**
-    //   - 30-sibling-noop bundle end-to-end: ~170K CU (validate + finalize +
-    //     30 SystemProgram noops + 3 sysvar scans).
-    //   - TA-11 scan delta for 20 extra siblings: ~20K CU (1K per extra ix).
-    //   - 7 lazy find_program_address derivations: ~35K CU (paid once per
-    //     validate).
-    //   - Per-meta protected-set lookup (13 entries × pubkey-equality
-    //     compare): < 200 CU per meta.
-    //   - Worst-case 8 sibling ixs × 16 metas/ix ≈ 8K (scan-loop) + 35K
-    //     (derivations) ≈ 43-50K total. Even doubling to absolute worst case
-    //     stays under the prompt's 90K budget; leaves 1.31M CU for the
-    //     actual sandwich (Jupiter swaps ≈ 600-700K, Flash Trade perps ≈
-    //     400K). Bounded by MAX_SYSVAR_SCAN_ITERATIONS (64).
+    // **CU profile (measured 2026-05-19 via LiteSVM in
+    // tests/sysvar-scan-bound.ts "TA-11 protected-writable scan CU profile"
+    // after SA4 H1 audit_success+audit_rejected derivations added).**
+    //   - 30-sibling-noop bundle end-to-end: ~181K CU (validate + finalize +
+    //     30 SystemProgram noops + 3 sysvar scans). Pre-SA4 baseline ~169K.
+    //   - TA-11 scan delta for 20 extra siblings: ~61K CU (3K per extra ix).
+    //   - 9 lazy find_program_address derivations: ~45K CU (paid once per
+    //     validate). Up from 7 derivations × 6K = ~42K CU pre-SA4.
+    //   - Per-meta protected-set lookup (14 entries × pubkey-equality
+    //     compare): < 220 CU per meta. Up from 13 entries × < 200 CU.
+    //   - Worst-case 8 sibling ixs × 16 metas/ix ≈ 9K (scan-loop) + 45K
+    //     (derivations) ≈ 50-55K total. Even doubling stays under the
+    //     prompt's 90K budget; leaves > 1.3M CU for the actual sandwich.
+    //     Bounded by MAX_SYSVAR_SCAN_ITERATIONS (64).
     //
     // **Token-2022/SPL token accounts NOT in set.** The vault's token ATAs
     // are NOT Sigil-owned PDAs (they're SPL Token program-owned). TA-11

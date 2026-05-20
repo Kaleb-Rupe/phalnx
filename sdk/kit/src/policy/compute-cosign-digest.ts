@@ -86,7 +86,31 @@ import type { Address } from "../kit-adapter.js";
  * choice).
  */
 export interface CosignDigestFields {
-  /** The cosigning session pubkey. 32 bytes raw at position 1. */
+  /**
+   * The cosigning session pubkey. 32 bytes raw at position 1.
+   *
+   * NON-Codama-generated SDK consumers passing the digest-encoded
+   * `cosign_session` arg to a queue handler MUST observe the canonical
+   * arg contract (Round 2 §RP-2 B4 F-3, 2026-05-19):
+   *   - Non-elevated queue: pass `Pubkey::default()`
+   *     (`11111111111111111111111111111111`) — and OMIT the cosigner from
+   *     `remaining_accounts`.
+   *   - Elevated queue (raising daily_cap, expanding destinations,
+   *     lowering stable_balance_floor, raising per_recipient_daily_cap,
+   *     disabling protocol_caps, mutating protocol_caps, or disabling
+   *     cosign): pass a REAL session pubkey AND include it in
+   *     `remaining_accounts` with `is_signer == true`. Use
+   *     `buildCosignBundle()` in `sdk/kit/src/cosign-helper.ts` to mirror
+   *     the on-chain digest the handler will store on
+   *     `PendingPolicyUpdate`.
+   *   - Reject path: passing a non-default `cosign_session` on a
+   *     non-elevated queue surfaces `InvalidPermissions` (6088).
+   *     INTENTIONAL — the on-chain handler refuses to silently downgrade
+   *     a caller's declared intent.
+   *
+   * @see sdk/kit/src/cosign-helper.ts — full contract in the "CANONICAL
+   * `cosign_session` ARG CONTRACT" block.
+   */
   cosignSession: Address | string;
   /**
    * Pending `daily_spending_cap_usd` arg. `null`/`undefined` = pass-through

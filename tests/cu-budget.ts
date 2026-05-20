@@ -117,14 +117,20 @@ const PROTOCOL_TREASURY = new PublicKey(
  * Phase 4 (Bundle integrity) measured 2026-05-18: validate body grew by
  * ~15-17K CU from the new TA-10 sandwich-integrity scan, TA-11 7-PDA
  * derivation set, and AC-10 session-nonce check. The new floor for
- * `validateOnly` is ~76K CU; threshold raised from 60K → 90K with ~14K
- * headroom for future regressions. Other thresholds left unchanged —
- * Phase 4 scans are O(N) in tx-ix-count which is bounded by Solana v0's
- * 64 cap; jupiter-N-step scenarios already factor that linear cost into
- * their thresholds.
+ * `validateOnly` was ~76K CU; threshold raised from 60K → 90K with ~14K
+ * headroom for future regressions.
+ *
+ * SA4 H1 audit fix (2026-05-19): TA-11 protected-set extended to derive
+ * `audit_success` + `audit_rejected` PDAs (Phase 7 LIVE audit-log
+ * accounts — previously dropped into a `Pubkey::default()` sentinel
+ * slot that could never match). The two extra `find_program_address`
+ * calls add ~12K CU to validate. Floor moved from ~76K → ~88K; threshold
+ * raised from 90K → 100K with ~12K headroom for future regressions.
+ * Other thresholds left unchanged — they had abundant headroom already.
+ * Production CU budget is 1.4M so the absolute cost remains negligible.
  */
 const THRESHOLDS = {
-  validateOnly: 90_000,
+  validateOnly: 100_000,
   jupiter1Step: 170_000,
   jupiter10Step: 420_000,
   or64Fallthrough: 620_000,

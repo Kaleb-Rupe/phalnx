@@ -56,17 +56,30 @@ pub fn handler(
 ) -> Result<()> {
     crate::reject_cpi!();
 
-    // Round 2 F-RP3-1 fix (audit 2026-05-19): interim cosign gate for
-    // `reactivate_vault`. The previous handler granted FULL_CAPABILITY to
-    // a fresh agent on a frozen vault with NO cosign gate — a phished
-    // owner could chain `freeze_vault` → `reactivate_vault(attacker,
-    // FULL_CAPABILITY)` in one tx and silently install operator
-    // capability on a vault that has opted into cosign.
-    //
-    // Mirrors the gate already on `register_agent.rs:91-95` and
+    // Round 2 §RP-1 F-RP3-1 fix (audit 2026-05-19): status check fires
+    // FIRST so callers operating on a non-frozen vault receive the more
+    // diagnostic `VaultNotFrozen` (6021) rather than the misleading
+    // `ErrCosignRequired` (6089) that the cosign gate would surface. The
+    // cosign gate is still load-bearing for the phished-owner scenario
+    // (freeze→reactivate(attacker, FULL_CAPABILITY)) — it just runs
+    // SECOND so the error-code priority matches operator expectations.
+
+    // 1. Status check FIRST — diagnostic priority. Read-only borrow so
+    // the subsequent cosign-gate check on `ctx.accounts.policy` does not
+    // conflict with a mutable borrow.
+    require!(
+        ctx.accounts.vault.status == VaultStatus::Frozen,
+        SigilError::VaultNotFrozen
+    );
+
+    // 2. Interim cosign gate (Round 2 F-RP3-1). The previous handler
+    // granted FULL_CAPABILITY to a fresh agent on a frozen vault with
+    // NO cosign gate — a phished owner could chain `freeze_vault` →
+    // `reactivate_vault(attacker, FULL_CAPABILITY)` in one tx and
+    // silently install operator capability on a vault that has opted
+    // into cosign. Mirrors `register_agent.rs:91-95` and
     // `set_observe_only.rs`. Vaults with the default
-    // `cosign_required: false` are unaffected — single-signer flow
-    // continues as before.
+    // `cosign_required: false` are unaffected.
     if ctx.accounts.policy.cosign_required {
         let owner_key = ctx.accounts.owner.key();
         let has_cosigner = crate::instructions::register_agent::has_non_owner_signer(
@@ -78,19 +91,13 @@ pub fn handler(
 
     let vault = &mut ctx.accounts.vault;
 
-    // 1. Check frozen
-    require!(
-        vault.status == VaultStatus::Frozen,
-        SigilError::VaultNotFrozen
-    );
-
-    // 2. Validate mutual presence of new_agent and new_agent_capability
+    // 3. Validate mutual presence of new_agent and new_agent_capability
     require!(
         new_agent.is_some() == new_agent_capability.is_some(),
         SigilError::InvalidPermissions
     );
 
-    // 3. Optionally assign new agent
+    // 4. Optionally assign new agent
     if let Some(agent_key) = new_agent {
         let capability = new_agent_capability.unwrap();
         require!(agent_key != Pubkey::default(), SigilError::InvalidAgentKey);
@@ -117,10 +124,10 @@ pub fn handler(
         });
     }
 
-    // 4. Guard against soft-lock: cannot activate with no agents
+    // 5. Guard against soft-lock: cannot activate with no agents
     require!(!vault.agents.is_empty(), SigilError::NoAgentRegistered);
 
-    // 5. Mutate status only after all checks pass
+    // 6. Mutate status only after all checks pass
     vault.status = VaultStatus::Active;
 
     let clock = Clock::get()?;
