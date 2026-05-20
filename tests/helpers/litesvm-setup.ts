@@ -921,6 +921,44 @@ export function autoSiblingHandlerDigest(
   // Sibling handlers (constraints / post-assertions flips) never mutate
   // cosign_required — pass through from live policy.
   parts.push(u8(policy.cosignRequired ? 1 : 0));
+  // Phase 8 PEN-CROSS-1 (audit 2026-05-19): agent_set_hash at position 21.
+  // Sibling handlers (constraints / post-assertions flips) never mutate
+  // the agent set — compute the hash from `vault.agents` directly so the
+  // digest matches what the on-chain handler will recompute and persist.
+  //
+  // Phase 8 §RP Fix-Up B PRE-EXISTING BUG (audit 2026-05-19): this
+  // synchronous helper was missing position 21 — only the async
+  // `siblingHandlerDigest` in `tests/helpers/policy-digest.ts` had it.
+  // That divergence produced a 78-byte vs 110-byte encoded buffer, with
+  // the missing 32 bytes of agent_set_hash invalidating every test that
+  // used `autoSiblingHandlerDigest`. Now byte-equal across all 3
+  // canonical helpers (Rust `policy_digest.rs`, SDK
+  // `compute-policy-preview-digest.ts`, test helper
+  // `policy-digest.ts::siblingHandlerDigest`, AND this synchronous
+  // helper).
+  const agentList: ReadonlyArray<{ pubkey: PublicKey; capability: number }> =
+    (vault.agents as ReadonlyArray<{ pubkey: PublicKey; capability: number }>) ?? [];
+  const sorted = [...agentList].sort((a, b) => {
+    const ab = a.pubkey.toBuffer();
+    const bb = b.pubkey.toBuffer();
+    for (let i = 0; i < 32; i++) {
+      if (ab[i] < bb[i]) return -1;
+      if (ab[i] > bb[i]) return 1;
+    }
+    return 0;
+  });
+  const agentLenBuf = Buffer.alloc(4);
+  agentLenBuf.writeUInt32LE(sorted.length);
+  const agentParts: Buffer[] = [agentLenBuf];
+  for (const e of sorted) {
+    agentParts.push(e.pubkey.toBuffer());
+    agentParts.push(Buffer.from([e.capability & 0xff]));
+  }
+  const agentSetHash = crypto
+    .createHash("sha256")
+    .update(Buffer.concat(agentParts))
+    .digest();
+  parts.push(agentSetHash);
   const buf = Buffer.concat(parts);
   return Array.from(crypto.createHash("sha256").update(buf).digest());
 }

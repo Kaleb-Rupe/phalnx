@@ -161,6 +161,65 @@ pub fn handler(ctx: Context<CloseVault>) -> Result<()> {
         }
     }
 
+    // Phase 8 §RP Fix-Up B (SFH-01 HIGH, audit 2026-05-19): drain
+    // `PendingOwnershipTransfer` PDA if present. Without this, an in-flight
+    // ownership transfer queued at the time of close would leave a stale
+    // pending PDA at [b"pending_owner", vault] — its rent is unreclaimable
+    // by the original owner (vault closed → has_one=owner fails) AND the
+    // PDA's `pending.new_owner` becomes a phantom claim against a vault
+    // that no longer exists. Even worse, if a future vault re-init at the
+    // same (owner, vault_id) seed-collision lands, the stale PDA could
+    // collide with a fresh queue.
+    //
+    // Same drain pattern as pending_policy / pending_close_constraints
+    // above: derive expected PDA, scan remaining_accounts for matching
+    // pubkey, transfer lamports, zero the data, reassign to SystemProgram.
+    let (expected_pending_owner_pda, _) = Pubkey::find_program_address(
+        &[b"pending_owner", vault.key().as_ref()],
+        ctx.program_id,
+    );
+    for pending_info in ctx.remaining_accounts.iter().skip(start_idx) {
+        if pending_info.key() == expected_pending_owner_pda && pending_info.lamports() > 0 {
+            let owner_info = ctx.accounts.owner.to_account_info();
+            let dest_lamports = owner_info.lamports();
+            **owner_info.try_borrow_mut_lamports()? = dest_lamports
+                .checked_add(pending_info.lamports())
+                .ok_or(error!(SigilError::Overflow))?;
+            **pending_info.try_borrow_mut_lamports()? = 0;
+            pending_info.assign(&anchor_lang::system_program::ID);
+            pending_info.resize(0)?;
+            break;
+        }
+    }
+
+    // Phase 8 §RP Fix-Up B (SFH-01 HIGH, audit 2026-05-19): drain
+    // `PendingAgentGrant` PDA if present. Same rationale as
+    // pending_owner above — a queued OPERATOR-class grant left dangling
+    // post-close is a phantom claim. The PDA close is best-effort: if the
+    // caller doesn't pass it in remaining_accounts the close still
+    // succeeds (no rejection), but the orphan PDA's rent stays locked.
+    // Off-chain SDK MUST include this PDA in the close call when
+    // `has_pending_agent_grant` would have been true (we don't track a
+    // bool flag for it on PolicyConfig — the SDK enumerates known pending
+    // PDAs and passes any that exist).
+    let (expected_pending_agent_grant_pda, _) = Pubkey::find_program_address(
+        &[b"pending_agent_grant", vault.key().as_ref()],
+        ctx.program_id,
+    );
+    for pending_info in ctx.remaining_accounts.iter().skip(start_idx) {
+        if pending_info.key() == expected_pending_agent_grant_pda && pending_info.lamports() > 0 {
+            let owner_info = ctx.accounts.owner.to_account_info();
+            let dest_lamports = owner_info.lamports();
+            **owner_info.try_borrow_mut_lamports()? = dest_lamports
+                .checked_add(pending_info.lamports())
+                .ok_or(error!(SigilError::Overflow))?;
+            **pending_info.try_borrow_mut_lamports()? = 0;
+            pending_info.assign(&anchor_lang::system_program::ID);
+            pending_info.resize(0)?;
+            break;
+        }
+    }
+
     let clock = Clock::get()?;
     emit!(VaultClosed {
         vault: vault.key(),

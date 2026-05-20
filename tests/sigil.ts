@@ -6040,8 +6040,11 @@ describe("sigil", () => {
         .signers([protoCapOwner, protoCapCosigner])
         .rpc();
 
-      // advance past MIN_TIMELOCK_DURATION (1800s).
-      advanceTime(svm, 1801);
+      // Phase 8 §RP Fix-Up B (PEN-02a CRITICAL): PendingAgentGrant default
+      // timelock raised from MIN_TIMELOCK_DURATION (1800s) to
+      // PendingAgentGrant::DEFAULT_MIN_DELAY (172_800s / 48h) to match
+      // ownership transfer's observation window.
+      advanceTime(svm, 172_801);
 
       await program.methods
         .applyAgentGrant()

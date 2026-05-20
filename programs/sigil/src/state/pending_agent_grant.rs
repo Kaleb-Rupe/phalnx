@@ -40,8 +40,18 @@ pub struct PendingAgentGrant {
     /// `clock.unix_timestamp - queued_at >= min_delay_seconds`.
     pub queued_at: i64, // 8
     /// Owner-configurable timelock window (seconds). Defaults to
-    /// `MIN_TIMELOCK_DURATION = 1800s = 30min` — owner has the full window
-    /// to `cancel` if the queue was initiated by a phished key.
+    /// `Self::DEFAULT_MIN_DELAY = 172_800s = 48h` — matches the
+    /// `PendingOwnershipTransfer` 48h window so an OPERATOR-class grant
+    /// (which is at least as elevated as ownership transfer in capability
+    /// terms) gets the full observation window for the owner to detect a
+    /// phished-key queue and cancel via `cancel_agent_grant`.
+    ///
+    /// Phase 8 §RP Fix-Up B (PEN-02a CRITICAL, audit 2026-05-19): raised
+    /// from 30min → 48h. The previous default gave a phished owner only
+    /// 30 minutes to react. 48h matches the ownership-transfer floor; a
+    /// future SDK call may permit owner-configurable shortening if
+    /// `policy.timelock_duration` permits, but the V1 default is the
+    /// 48h floor for safety.
     pub min_delay_seconds: u64, // 8
     /// PDA bump.
     pub bump: u8, // 1
@@ -54,6 +64,17 @@ impl PendingAgentGrant {
     /// Account discriminator (8) + Pubkey×2 (64) + u8 (1) + u64 (8) +
     /// i64 (8) + u64 (8) + u8 (1) + padding[6] (6) = 104 bytes.
     pub const SIZE: usize = 8 + 32 + 32 + 1 + 8 + 8 + 8 + 1 + 6;
+
+    /// Default timelock: 48 hours (matches
+    /// `PendingOwnershipTransfer::DEFAULT_MIN_DELAY`). OPERATOR-class agent
+    /// grants are at least as elevated as ownership transfer in capability
+    /// terms — the owner gets the full 48h observation window to detect a
+    /// phished-key queue and call `cancel_agent_grant` before
+    /// `apply_agent_grant` can land.
+    ///
+    /// Phase 8 §RP Fix-Up B (PEN-02a CRITICAL, audit 2026-05-19): raised
+    /// from `MIN_TIMELOCK_DURATION = 1800s` (30 min) to 172_800s (48h).
+    pub const DEFAULT_MIN_DELAY: u64 = 172_800;
 }
 
 // Compile-time pin — drift in the documented byte layout breaks the build.

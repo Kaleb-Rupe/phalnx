@@ -436,3 +436,18 @@ pub struct AgentGrantApplied {
     pub applied_at: i64,
     pub new_policy_version: u64,
 }
+
+/// Phase 8 §RP Fix-Up B (PEN-02b CRITICAL, audit 2026-05-19) — owner
+/// cancelled a queued OPERATOR-class agent grant during the timelock window.
+/// `cancelled_agent` echoes the agent pubkey from the closed PDA so off-chain
+/// monitors can correlate the queue ↔ cancel pair without re-fetching the
+/// now-closed PDA. Off-chain monitors should ALERT on this event for any
+/// vault they protect — if the owner did not initiate the cancel, this is
+/// a phished-key attempt to abort a legitimate grant.
+#[event]
+pub struct AgentGrantCancelled {
+    pub vault: Pubkey,
+    pub owner: Pubkey,
+    pub cancelled_agent: Pubkey,
+    pub timestamp: i64,
+}

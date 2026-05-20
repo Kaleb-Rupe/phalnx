@@ -4,6 +4,9 @@ use crate::errors::SigilError;
 use crate::events::VaultReactivated;
 use crate::state::*;
 use crate::utils::audit_log::build_audit_entry;
+use crate::utils::policy_digest::{
+    compute_agent_set_hash, compute_policy_preview_digest, PolicyPreviewFields,
+};
 
 #[derive(Accounts)]
 pub struct ReactivateVault<'info> {
@@ -102,6 +105,22 @@ pub fn handler(
     // were frozen before this field landed will have 0 → fail the < 300
     // window check trivially (clock - 0 >> 300), so the cooldown never
     // fires retroactively.
+    //
+    // Phase 8 §RP Fix-Up B (SFH-04 MED, audit 2026-05-19): defense-in-depth
+    // assert that `frozen_at_timestamp > 0` BEFORE the cooldown check. The
+    // current handler ordering (status check FIRST → cooldown SECOND) makes
+    // this redundant — a vault in Frozen state always has
+    // `frozen_at_timestamp > 0` because `freeze_internal` writes both atomically.
+    // But a future refactor that re-orders the cooldown check above the
+    // status check would let a pre-freeze vault (frozen_at = 0) pass the
+    // cooldown trivially (clock - 0 = clock >> 300 for any non-genesis
+    // clock). The explicit assert pins the invariant at compile-time of
+    // reviewer attention. `VaultNotFrozen` (6021) is the canonical signal
+    // for "this vault was never frozen / frozen_at unset".
+    require!(
+        ctx.accounts.vault.frozen_at_timestamp > 0,
+        SigilError::VaultNotFrozen
+    );
     const REACTIVATE_COOLDOWN_SECONDS: i64 = 300;
     let now_pre_mut = Clock::get()?.unix_timestamp;
     let frozen_at = ctx.accounts.vault.frozen_at_timestamp;
@@ -155,6 +174,13 @@ pub fn handler(
     let clock = Clock::get()?;
     let vault_key = vault.key();
 
+    // Phase 8 §RP Fix-Up B (LBL-03 HIGH, audit 2026-05-19): recompute
+    // policy_preview_digest with the new agent_set_hash. `vault.agents`
+    // may have been mutated above (when `new_agent.is_some()`); even when
+    // no agent was added, recompute unconditionally so the digest is
+    // re-bound to the post-reactivate live state. Mirrors
+    // `apply_agent_grant.rs:172-196` canonical pattern.
+    //
     // Round 2 F-RP3-1 fix (audit 2026-05-19): bump policy_version.
     // Permission posture changes when a new agent is grafted onto the
     // vault during reactivate — bumping the version ensures any in-flight
@@ -163,6 +189,31 @@ pub fn handler(
     // vault.is_agent constraint.
     {
         let policy = &mut ctx.accounts.policy;
+        let new_agent_set_hash = compute_agent_set_hash(&vault.agents);
+        let new_digest = compute_policy_preview_digest(&PolicyPreviewFields {
+            daily_spending_cap_usd: policy.daily_spending_cap_usd,
+            max_transaction_size_usd: policy.max_transaction_size_usd,
+            max_slippage_bps: policy.max_slippage_bps,
+            developer_fee_rate: policy.developer_fee_rate,
+            protocol_mode: policy.protocol_mode,
+            protocols: &policy.protocols,
+            destination_mode: policy.destination_mode,
+            allowed_destinations: &policy.allowed_destinations,
+            timelock_duration: policy.timelock_duration,
+            session_expiry_seconds: policy.session_expiry_seconds,
+            observe_only: vault.observe_only,
+            has_constraints: policy.has_constraints,
+            has_post_assertions: policy.has_post_assertions,
+            created_at_slot: policy.created_at_slot,
+            operating_hours: policy.operating_hours,
+            auto_promote_grays: policy.auto_promote_grays,
+            auto_revoke_threshold: policy.auto_revoke_threshold,
+            stable_balance_floor: policy.stable_balance_floor,
+            per_recipient_daily_cap_usd: policy.per_recipient_daily_cap_usd,
+            cosign_required: policy.cosign_required,
+            agent_set_hash: new_agent_set_hash,
+        });
+        policy.policy_preview_digest = new_digest;
         policy.policy_version = policy
             .policy_version
             .checked_add(1)

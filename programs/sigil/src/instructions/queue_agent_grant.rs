@@ -84,10 +84,19 @@ pub fn handler(
     let vault = &ctx.accounts.vault;
     let policy = &ctx.accounts.policy;
 
-    // 1. Vault status — reject closed vaults early.
+    // 1. Vault status — reject anything other than Active (Phase 8 §RP
+    //    Fix-Up B / LBL-06 HIGH, audit 2026-05-19). The prior `!= Closed`
+    //    check admitted a Frozen vault here, letting a phished owner key
+    //    queue an OPERATOR-class grant on a frozen vault that would land
+    //    once the vault is reactivated (timelock independent of the
+    //    freeze→reactivate cooldown). Tightening to `== Active` closes
+    //    the bypass while still allowing the legitimate flow:
+    //    Active → queue → apply. Owners who want to grant agents on a
+    //    frozen vault must reactivate first; the 5-min reactivate
+    //    cooldown (C28 / F-RP3-1) gives them an observation window.
     require!(
-        vault.status != VaultStatus::Closed,
-        SigilError::VaultAlreadyClosed
+        vault.status == VaultStatus::Active,
+        SigilError::VaultNotActive
     );
 
     // 2. Capability validation — this handler is the QUEUE path for
@@ -129,6 +138,13 @@ pub fn handler(
     }
 
     // 5. Populate pending PDA.
+    //
+    // Phase 8 §RP Fix-Up B (PEN-02a CRITICAL, audit 2026-05-19):
+    // `min_delay_seconds` now defaults to `PendingAgentGrant::DEFAULT_MIN_DELAY`
+    // (172_800s / 48h) — matching `PendingOwnershipTransfer`. The prior 30-min
+    // default gave a phished owner only 30 minutes to react before the apply
+    // window opened. 48h gives the same observation window as ownership
+    // transfer, which OPERATOR-class agent grants are at least as elevated as.
     let clock = Clock::get()?;
     let vault_key = vault.key();
     {
@@ -138,7 +154,7 @@ pub fn handler(
         pending.capability = capability;
         pending.spending_limit_usd = spending_limit_usd;
         pending.queued_at = clock.unix_timestamp;
-        pending.min_delay_seconds = MIN_TIMELOCK_DURATION;
+        pending.min_delay_seconds = PendingAgentGrant::DEFAULT_MIN_DELAY;
         pending.bump = ctx.bumps.pending;
     }
 
@@ -164,9 +180,12 @@ pub fn handler(
         log.append(entry);
     }
 
+    // Phase 8 §RP Fix-Up B (PEN-02a CRITICAL): emit the EFFECTIVE timelock
+    // window (48h default) in the event payload so off-chain monitors who
+    // surface "executes at" countdowns to the owner show the correct value.
     let executes_at = clock
         .unix_timestamp
-        .checked_add(MIN_TIMELOCK_DURATION as i64)
+        .checked_add(PendingAgentGrant::DEFAULT_MIN_DELAY as i64)
         .ok_or(error!(SigilError::Overflow))?;
 
     emit!(AgentGrantQueued {

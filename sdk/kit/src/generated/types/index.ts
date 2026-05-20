@@ -13,6 +13,7 @@ export * from "./agentAutoRevoked.js";
 export * from "./agentContributionEntry.js";
 export * from "./agentEntry.js";
 export * from "./agentGrantApplied.js";
+export * from "./agentGrantCancelled.js";
 export * from "./agentGrantQueued.js";
 export * from "./agentPausedEvent.js";
 export * from "./agentPermissionsChangeApplied.js";

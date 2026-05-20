@@ -4,6 +4,9 @@ use crate::errors::SigilError;
 use crate::events::AgentRegistered;
 use crate::state::*;
 use crate::utils::audit_log::build_audit_entry;
+use crate::utils::policy_digest::{
+    compute_agent_set_hash, compute_policy_preview_digest, PolicyPreviewFields,
+};
 
 #[derive(Accounts)]
 pub struct RegisterAgent<'info> {
@@ -163,13 +166,49 @@ pub fn handler(
         }
     }
 
+    // Phase 8 §RP Fix-Up B (LBL-03 HIGH, audit 2026-05-19): recompute
+    // policy_preview_digest with the new agent_set_hash. `vault.agents` was
+    // just mutated (push above), so the digest the owner last signed no
+    // longer matches the live policy's bound agent set. Without this
+    // recompute, subsequent `apply_pending_policy` / sibling-handler digest
+    // checks would reject — UNLESS the digest is updated here.
+    //
+    // Mirrors `apply_agent_grant.rs:172-196` (the canonical pattern).
+    // Empty-vault hash deterministic via `EMPTY_AGENT_SET_HASH`; non-empty
+    // sets sorted-by-pubkey-ascending then Borsh-encoded then SHA-256.
+    let policy = &mut ctx.accounts.policy;
+    let new_agent_set_hash = compute_agent_set_hash(&vault.agents);
+    let new_digest = compute_policy_preview_digest(&PolicyPreviewFields {
+        daily_spending_cap_usd: policy.daily_spending_cap_usd,
+        max_transaction_size_usd: policy.max_transaction_size_usd,
+        max_slippage_bps: policy.max_slippage_bps,
+        developer_fee_rate: policy.developer_fee_rate,
+        protocol_mode: policy.protocol_mode,
+        protocols: &policy.protocols,
+        destination_mode: policy.destination_mode,
+        allowed_destinations: &policy.allowed_destinations,
+        timelock_duration: policy.timelock_duration,
+        session_expiry_seconds: policy.session_expiry_seconds,
+        observe_only: vault.observe_only,
+        has_constraints: policy.has_constraints,
+        has_post_assertions: policy.has_post_assertions,
+        created_at_slot: policy.created_at_slot,
+        operating_hours: policy.operating_hours,
+        auto_promote_grays: policy.auto_promote_grays,
+        auto_revoke_threshold: policy.auto_revoke_threshold,
+        stable_balance_floor: policy.stable_balance_floor,
+        per_recipient_daily_cap_usd: policy.per_recipient_daily_cap_usd,
+        cosign_required: policy.cosign_required,
+        agent_set_hash: new_agent_set_hash,
+    });
+    policy.policy_preview_digest = new_digest;
+
     // PEN-CROSS-5 (Phase 4 absorption): bump policy_version. Closes the
     // OCC window where an in-flight validate_and_authorize could be
     // sandwiched between an agent's registration and its first action.
     // `vault.is_agent` constraint already rejects mid-flight, but the
     // bump means concurrent validates fail fast with PolicyVersionMismatch
     // instead of pushing into the agent-existence check.
-    let policy = &mut ctx.accounts.policy;
     policy.policy_version = policy
         .policy_version
         .checked_add(1)

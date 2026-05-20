@@ -140,13 +140,15 @@ describe("events", () => {
   });
 
   describe("getEventNames", () => {
-    it("returns 44 names", () => {
+    it("returns 45 names", () => {
       // 39 events post Phase 3 (added GraylistEntered, GraylistPromoted,
       // AgentAutoRevoked for TA-07/17 pre-execution guards).
       // Phase 8 added 5 events: OwnershipTransferInitiated /Accepted /
       // Cancelled (Batches 3/4 C26) + AgentGrantQueued / Applied
       // (Batch 6 PEN-CROSS-1).
-      expect(getEventNames()).to.have.length(44);
+      // Phase 8 §RP Fix-Up B added 1 event: AgentGrantCancelled (PEN-02b
+      // CRITICAL cancel_agent_grant ix).
+      expect(getEventNames()).to.have.length(45);
     });
 
     it("includes known names", () => {
@@ -406,7 +408,9 @@ describe("events", () => {
       // Phase 3: +3 events (GraylistEntered, GraylistPromoted, AgentAutoRevoked).
       // Phase 8: +5 events (OwnershipTransferInitiated/Accepted/Cancelled +
       // AgentGrantQueued/Applied) = 39 + 5 = 44.
-      expect(discriminatorNames.size).to.equal(44);
+      // Phase 8 §RP Fix-Up B: +1 event (AgentGrantCancelled, PEN-02b CRITICAL)
+      // = 45.
+      expect(discriminatorNames.size).to.equal(45);
     });
   });
 });

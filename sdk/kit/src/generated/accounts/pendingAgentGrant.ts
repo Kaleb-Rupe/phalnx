@@ -80,8 +80,18 @@ export type PendingAgentGrant = {
   queuedAt: bigint;
   /**
    * Owner-configurable timelock window (seconds). Defaults to
-   * `MIN_TIMELOCK_DURATION = 1800s = 30min` — owner has the full window
-   * to `cancel` if the queue was initiated by a phished key.
+   * `Self::DEFAULT_MIN_DELAY = 172_800s = 48h` — matches the
+   * `PendingOwnershipTransfer` 48h window so an OPERATOR-class grant
+   * (which is at least as elevated as ownership transfer in capability
+   * terms) gets the full observation window for the owner to detect a
+   * phished-key queue and cancel via `cancel_agent_grant`.
+   *
+   * Phase 8 §RP Fix-Up B (PEN-02a CRITICAL, audit 2026-05-19): raised
+   * from 30min → 48h. The previous default gave a phished owner only
+   * 30 minutes to react. 48h matches the ownership-transfer floor; a
+   * future SDK call may permit owner-configurable shortening if
+   * `policy.timelock_duration` permits, but the V1 default is the
+   * 48h floor for safety.
    */
   minDelaySeconds: bigint;
   /** PDA bump. */
@@ -121,8 +131,18 @@ export type PendingAgentGrantArgs = {
   queuedAt: number | bigint;
   /**
    * Owner-configurable timelock window (seconds). Defaults to
-   * `MIN_TIMELOCK_DURATION = 1800s = 30min` — owner has the full window
-   * to `cancel` if the queue was initiated by a phished key.
+   * `Self::DEFAULT_MIN_DELAY = 172_800s = 48h` — matches the
+   * `PendingOwnershipTransfer` 48h window so an OPERATOR-class grant
+   * (which is at least as elevated as ownership transfer in capability
+   * terms) gets the full observation window for the owner to detect a
+   * phished-key queue and cancel via `cancel_agent_grant`.
+   *
+   * Phase 8 §RP Fix-Up B (PEN-02a CRITICAL, audit 2026-05-19): raised
+   * from 30min → 48h. The previous default gave a phished owner only
+   * 30 minutes to react. 48h matches the ownership-transfer floor; a
+   * future SDK call may permit owner-configurable shortening if
+   * `policy.timelock_duration` permits, but the V1 default is the
+   * 48h floor for safety.
    */
   minDelaySeconds: number | bigint;
   /** PDA bump. */

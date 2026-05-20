@@ -6,6 +6,9 @@ use crate::events::AgentRevoked;
 use crate::state::*;
 use crate::utils::audit_log::build_audit_entry;
 use crate::utils::freeze_helper::freeze_internal;
+use crate::utils::policy_digest::{
+    compute_agent_set_hash, compute_policy_preview_digest, PolicyPreviewFields,
+};
 
 #[derive(Accounts)]
 pub struct RevokeAgent<'info> {
@@ -92,13 +95,45 @@ pub fn handler(ctx: Context<RevokeAgent>, agent_to_remove: Pubkey) -> Result<()>
         freeze_internal(vault, FreezeReason::AutoRevoke, &clock, 0)?;
     }
 
+    // Phase 8 §RP Fix-Up B (LBL-03 HIGH, audit 2026-05-19): recompute
+    // policy_preview_digest with the new agent_set_hash. `vault.agents` was
+    // mutated (retain above), so the digest the owner last signed no longer
+    // matches the live policy's bound agent set. Without this recompute,
+    // subsequent `apply_pending_policy` / sibling-handler digest checks
+    // would reject. Mirrors `apply_agent_grant.rs:172-196` canonical pattern.
+    let policy = &mut ctx.accounts.policy;
+    let new_agent_set_hash = compute_agent_set_hash(&vault.agents);
+    let new_digest = compute_policy_preview_digest(&PolicyPreviewFields {
+        daily_spending_cap_usd: policy.daily_spending_cap_usd,
+        max_transaction_size_usd: policy.max_transaction_size_usd,
+        max_slippage_bps: policy.max_slippage_bps,
+        developer_fee_rate: policy.developer_fee_rate,
+        protocol_mode: policy.protocol_mode,
+        protocols: &policy.protocols,
+        destination_mode: policy.destination_mode,
+        allowed_destinations: &policy.allowed_destinations,
+        timelock_duration: policy.timelock_duration,
+        session_expiry_seconds: policy.session_expiry_seconds,
+        observe_only: vault.observe_only,
+        has_constraints: policy.has_constraints,
+        has_post_assertions: policy.has_post_assertions,
+        created_at_slot: policy.created_at_slot,
+        operating_hours: policy.operating_hours,
+        auto_promote_grays: policy.auto_promote_grays,
+        auto_revoke_threshold: policy.auto_revoke_threshold,
+        stable_balance_floor: policy.stable_balance_floor,
+        per_recipient_daily_cap_usd: policy.per_recipient_daily_cap_usd,
+        cosign_required: policy.cosign_required,
+        agent_set_hash: new_agent_set_hash,
+    });
+    policy.policy_preview_digest = new_digest;
+
     // PEN-CROSS-5 (Phase 4 absorption): bump policy_version. Critical for
     // revoke specifically — a concurrent validate_and_authorize on the
     // about-to-be-revoked agent could otherwise sneak through if the
     // existing is_agent constraint check loses the TOCTOU race. The OCC
     // bump means any in-flight validate built against the pre-revoke
     // version rejects with PolicyVersionMismatch.
-    let policy = &mut ctx.accounts.policy;
     policy.policy_version = policy
         .policy_version
         .checked_add(1)

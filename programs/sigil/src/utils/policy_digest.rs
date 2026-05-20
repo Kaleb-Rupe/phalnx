@@ -182,7 +182,19 @@ pub fn compute_agent_set_hash(agents: &[AgentEntry]) -> [u8; 32] {
     sorted.sort_by_key(|(pk, _)| *pk);
     // Borsh encode: u32 LE length prefix + each (Pubkey, u8). `try_to_vec`
     // produces the same byte layout as the canonical Borsh schema.
-    let encoded = sorted.try_to_vec().unwrap_or_default();
+    //
+    // Phase 8 §RP Fix-Up B (LBL-08 LOW, audit 2026-05-19): replaced
+    // `.unwrap_or_default()` with `.expect()`. Borsh encoding of a
+    // `Vec<(Pubkey, u8)>` is total — every constituent type implements
+    // BorshSerialize without fallible paths. The prior silent fallback to
+    // `Vec::default()` (empty Vec) would have produced the EMPTY_AGENT_SET_HASH
+    // for an N-entry vault, silently defeating the digest invariant. The
+    // panic is provably unreachable today, and it surfaces a programmer
+    // error loudly if a future BPF runtime/Borsh upgrade ever introduced a
+    // fallible path on this exact type.
+    let encoded = sorted
+        .try_to_vec()
+        .expect("compute_agent_set_hash: Vec<(Pubkey, u8)> Borsh encode is total");
     hash(&encoded).to_bytes()
 }
 

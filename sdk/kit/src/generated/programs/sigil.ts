@@ -90,6 +90,7 @@ import {
   getApplyCloseConstraintsInstructionAsync,
   getApplyConstraintsUpdateInstructionAsync,
   getApplyPendingPolicyInstructionAsync,
+  getCancelAgentGrantInstructionAsync,
   getCancelAgentPermissionsUpdateInstruction,
   getCancelCloseConstraintsInstructionAsync,
   getCancelConstraintsUpdateInstructionAsync,
@@ -131,6 +132,7 @@ import {
   parseApplyCloseConstraintsInstruction,
   parseApplyConstraintsUpdateInstruction,
   parseApplyPendingPolicyInstruction,
+  parseCancelAgentGrantInstruction,
   parseCancelAgentPermissionsUpdateInstruction,
   parseCancelCloseConstraintsInstruction,
   parseCancelConstraintsUpdateInstruction,
@@ -172,6 +174,7 @@ import {
   type ApplyCloseConstraintsAsyncInput,
   type ApplyConstraintsUpdateAsyncInput,
   type ApplyPendingPolicyAsyncInput,
+  type CancelAgentGrantAsyncInput,
   type CancelAgentPermissionsUpdateInput,
   type CancelCloseConstraintsAsyncInput,
   type CancelConstraintsUpdateAsyncInput,
@@ -198,6 +201,7 @@ import {
   type ParsedApplyCloseConstraintsInstruction,
   type ParsedApplyConstraintsUpdateInstruction,
   type ParsedApplyPendingPolicyInstruction,
+  type ParsedCancelAgentGrantInstruction,
   type ParsedCancelAgentPermissionsUpdateInstruction,
   type ParsedCancelCloseConstraintsInstruction,
   type ParsedCancelConstraintsUpdateInstruction,
@@ -453,6 +457,7 @@ export enum SigilInstruction {
   ApplyCloseConstraints,
   ApplyConstraintsUpdate,
   ApplyPendingPolicy,
+  CancelAgentGrant,
   CancelAgentPermissionsUpdate,
   CancelCloseConstraints,
   CancelConstraintsUpdate,
@@ -599,6 +604,17 @@ export function identifySigilInstruction(
     )
   ) {
     return SigilInstruction.ApplyPendingPolicy;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([193, 182, 191, 195, 80, 150, 140, 196]),
+      ),
+      0,
+    )
+  ) {
+    return SigilInstruction.CancelAgentGrant;
   }
   if (
     containsBytes(
@@ -981,6 +997,9 @@ export type ParsedSigilInstruction<
       instructionType: SigilInstruction.ApplyPendingPolicy;
     } & ParsedApplyPendingPolicyInstruction<TProgram>)
   | ({
+      instructionType: SigilInstruction.CancelAgentGrant;
+    } & ParsedCancelAgentGrantInstruction<TProgram>)
+  | ({
       instructionType: SigilInstruction.CancelAgentPermissionsUpdate;
     } & ParsedCancelAgentPermissionsUpdateInstruction<TProgram>)
   | ({
@@ -1147,6 +1166,13 @@ export function parseSigilInstruction<TProgram extends string>(
       return {
         instructionType: SigilInstruction.ApplyPendingPolicy,
         ...parseApplyPendingPolicyInstruction(instruction),
+      };
+    }
+    case SigilInstruction.CancelAgentGrant: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: SigilInstruction.CancelAgentGrant,
+        ...parseCancelAgentGrantInstruction(instruction),
       };
     }
     case SigilInstruction.CancelAgentPermissionsUpdate: {
@@ -1462,6 +1488,10 @@ export type SigilPluginInstructions = {
     input: ApplyPendingPolicyAsyncInput,
   ) => ReturnType<typeof getApplyPendingPolicyInstructionAsync> &
     SelfPlanAndSendFunctions;
+  cancelAgentGrant: (
+    input: CancelAgentGrantAsyncInput,
+  ) => ReturnType<typeof getCancelAgentGrantInstructionAsync> &
+    SelfPlanAndSendFunctions;
   cancelAgentPermissionsUpdate: (
     input: CancelAgentPermissionsUpdateInput,
   ) => ReturnType<typeof getCancelAgentPermissionsUpdateInstruction> &
@@ -1702,6 +1732,11 @@ export function sigilProgram() {
             addSelfPlanAndSendFunctions(
               client,
               getApplyPendingPolicyInstructionAsync(input),
+            ),
+          cancelAgentGrant: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getCancelAgentGrantInstructionAsync(input),
             ),
           cancelAgentPermissionsUpdate: (input) =>
             addSelfPlanAndSendFunctions(

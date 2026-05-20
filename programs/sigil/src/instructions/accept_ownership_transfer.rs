@@ -4,6 +4,9 @@ use crate::errors::SigilError;
 use crate::events::OwnershipTransferAccepted;
 use crate::state::*;
 use crate::utils::audit_log::build_audit_entry;
+use crate::utils::policy_digest::{
+    compute_agent_set_hash, compute_policy_preview_digest, PolicyPreviewFields,
+};
 
 /// Phase 8 — C26 ownership transfer (accept path, standard EOA).
 ///
@@ -31,13 +34,15 @@ use crate::utils::audit_log::build_audit_entry;
 /// queue-time owner remains explicit — but the PDA address itself is
 /// decoupled from owner identity, which is the point of LBL-01.
 ///
-/// TODO (Batch 6) — re-derive `policy.policy_preview_digest` using the new
-/// owner's `agent_set_hash` projection. Today the digest binds 20 fields, none
-/// of which are owner-pubkey-derived, so the apply-time digest check in
-/// `apply_pending_policy` continues to pass without recompute. Batch 6 adds
-/// `agent_set_hash` (owner-keyed) and at that point this handler must also
-/// recompute the digest before completing — flagging here so the work isn't
-/// forgotten.
+/// Phase 8 §RP Fix-Up B (LBL-10 HIGH, audit 2026-05-19): the handler now
+/// recomputes `policy.policy_preview_digest` after the owner mutation. The
+/// recompute is BYTE-EQUAL to the pre-accept value because none of the 21
+/// fields in `PolicyPreviewFields` is owner-derived (`agent_set_hash` is
+/// computed from `vault.agents`, NOT keyed on `vault.owner`). The recompute
+/// is performed so the invariant "every state-of-record mutating ix
+/// re-derives the digest" holds uniformly; any future owner-keyed field
+/// added to the digest lands here automatically. Prior Batch 6 TODO
+/// closed by this Fix-Up.
 #[derive(Accounts)]
 pub struct AcceptOwnershipTransfer<'info> {
     /// The `new_owner` queued at initiate. Pubkey identity verified in the
@@ -165,6 +170,20 @@ pub fn handler(ctx: Context<AcceptOwnershipTransfer>) -> Result<()> {
         vault.owner = new_owner_key;
     }
 
+    // Phase 8 §RP Fix-Up B (LBL-10 HIGH, audit 2026-05-19): recompute
+    // policy_preview_digest after the owner mutation. Today's TA-19 digest
+    // does NOT bind `vault.owner` (the 21 bound fields are policy-owned and
+    // agent_set_hash), so the recompute yields a digest BYTE-EQUAL to the
+    // pre-accept value. Recompute is still performed so that:
+    //   (a) any future field added to PolicyPreviewFields that IS owner-
+    //       derived (e.g., owner-keyed nonce, ratchet counter) lands here
+    //       automatically without re-discovering this site,
+    //   (b) the policy_preview_digest invariant — "always re-derived after a
+    //       mutating ix" — holds uniformly across the program surface, and
+    //   (c) the prior TODO at the top of this file (removed below) is
+    //       discharged with an explicit acknowledgement that today's digest
+    //       layout does not depend on owner identity.
+    //
     // Bump policy_version — symmetric with register/pause/unpause/revoke
     // PEN-CROSS-5 pattern: ownership change is at least as elevated as any
     // agent-set mutation. Any in-flight `validate_and_authorize` snapshotted
@@ -172,6 +191,31 @@ pub fn handler(ctx: Context<AcceptOwnershipTransfer>) -> Result<()> {
     // PolicyVersionMismatch under the new authority.
     {
         let policy = &mut ctx.accounts.policy;
+        let new_agent_set_hash = compute_agent_set_hash(&ctx.accounts.vault.agents);
+        let new_digest = compute_policy_preview_digest(&PolicyPreviewFields {
+            daily_spending_cap_usd: policy.daily_spending_cap_usd,
+            max_transaction_size_usd: policy.max_transaction_size_usd,
+            max_slippage_bps: policy.max_slippage_bps,
+            developer_fee_rate: policy.developer_fee_rate,
+            protocol_mode: policy.protocol_mode,
+            protocols: &policy.protocols,
+            destination_mode: policy.destination_mode,
+            allowed_destinations: &policy.allowed_destinations,
+            timelock_duration: policy.timelock_duration,
+            session_expiry_seconds: policy.session_expiry_seconds,
+            observe_only: ctx.accounts.vault.observe_only,
+            has_constraints: policy.has_constraints,
+            has_post_assertions: policy.has_post_assertions,
+            created_at_slot: policy.created_at_slot,
+            operating_hours: policy.operating_hours,
+            auto_promote_grays: policy.auto_promote_grays,
+            auto_revoke_threshold: policy.auto_revoke_threshold,
+            stable_balance_floor: policy.stable_balance_floor,
+            per_recipient_daily_cap_usd: policy.per_recipient_daily_cap_usd,
+            cosign_required: policy.cosign_required,
+            agent_set_hash: new_agent_set_hash,
+        });
+        policy.policy_preview_digest = new_digest;
         policy.policy_version = policy
             .policy_version
             .checked_add(1)

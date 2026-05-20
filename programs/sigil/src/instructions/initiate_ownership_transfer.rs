@@ -145,6 +145,27 @@ pub fn handler(
             &owner_key,
         );
         require!(has_cosigner, SigilError::ErrCosignRequired);
+
+        // Phase 8 §RP Fix-Up B (LBL-02 HIGH, audit 2026-05-19): cosigner cannot
+        // be the new_owner. A phished-key cosign workflow where the second
+        // signer IS the queued recipient lets the attacker bootstrap the
+        // ownership transfer by signing as both "cosigner" and "incoming
+        // owner" — defeating the threshold-of-two property the cosign gate
+        // exists to provide. Iterate remaining_accounts and reject when any
+        // non-owner signer's pubkey equals the new_owner argument.
+        //
+        // The owner-as-signer slot is filtered explicitly so a legitimate
+        // remaining_accounts that contains the owner (defensive belt-and-
+        // suspenders pattern) doesn't trigger the check.
+        for ai in ctx.remaining_accounts.iter() {
+            if ai.is_signer && ai.key() != owner_key {
+                require_keys_neq!(
+                    *ai.key,
+                    new_owner,
+                    SigilError::ErrInvalidOwnershipTarget,
+                );
+            }
+        }
     }
 
     // 4. Populate PDA. Anchor `init` already zero-initialised the buffer so

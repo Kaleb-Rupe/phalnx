@@ -4,6 +4,9 @@ use crate::errors::SigilError;
 use crate::events::OwnershipTransferAccepted;
 use crate::state::*;
 use crate::utils::audit_log::build_audit_entry;
+use crate::utils::policy_digest::{
+    compute_agent_set_hash, compute_policy_preview_digest, PolicyPreviewFields,
+};
 
 /// Phase 8 Batch 4 — C26 ownership transfer (accept path, Squads V4 multisig).
 ///
@@ -51,11 +54,14 @@ use crate::utils::audit_log::build_audit_entry;
 /// gated by the cosign requirement (Council ISC-129), so a phished owner key
 /// alone cannot queue a transfer to a malicious multisig.
 ///
-/// TODO (Batch 6) — re-derive `policy.policy_preview_digest` using the new
-/// owner's `agent_set_hash` projection. Same note as the EOA variant: today's
-/// digest binds 20 fields none of which are owner-derived, so the apply-time
-/// check continues to pass. Batch 6 ships `agent_set_hash` (owner-keyed) and
-/// at that point this handler must also recompute the digest before completing.
+/// Phase 8 §RP Fix-Up B (LBL-10 HIGH, audit 2026-05-19): the handler now
+/// recomputes `policy.policy_preview_digest` after the owner mutation,
+/// symmetric with the EOA accept handler. The recompute is BYTE-EQUAL to
+/// the pre-accept value because none of the 21 digest fields is owner-derived
+/// (`agent_set_hash` is computed from `vault.agents`). Performed
+/// unconditionally so the invariant "every state-of-record mutating ix
+/// re-derives the digest" holds uniformly across both the EOA and multisig
+/// paths. Prior Batch 6 TODO closed by this Fix-Up.
 #[derive(Accounts)]
 pub struct AcceptOwnershipTransferMultisig<'info> {
     /// CHECK: Squads V4 multisig vault PDA. NOT a `Signer` because Squads V4
@@ -195,12 +201,45 @@ pub fn handler(ctx: Context<AcceptOwnershipTransferMultisig>) -> Result<()> {
         vault.owner = multisig_key;
     }
 
-    // 6. Bump policy_version — symmetric with the EOA accept handler and the
+    // 6. Phase 8 §RP Fix-Up B (LBL-10 HIGH, audit 2026-05-19): recompute
+    //    policy_preview_digest after the owner mutation. Today's TA-19
+    //    digest does NOT bind `vault.owner` so the recompute is byte-equal
+    //    to the pre-accept value. Symmetric with the EOA accept handler —
+    //    see the rationale comment there. Performed unconditionally so the
+    //    invariant "every state-of-record mutating ix re-derives the digest"
+    //    holds uniformly; any future owner-keyed digest field lands here.
+    //
+    //    Bump policy_version — symmetric with the EOA accept handler and the
     //    PEN-CROSS-5 pattern (register/pause/unpause/revoke). Any in-flight
     //    `validate_and_authorize` snapshotted the prior version and will now
     //    fail fast under the new (multisig) authority.
     {
         let policy = &mut ctx.accounts.policy;
+        let new_agent_set_hash = compute_agent_set_hash(&ctx.accounts.vault.agents);
+        let new_digest = compute_policy_preview_digest(&PolicyPreviewFields {
+            daily_spending_cap_usd: policy.daily_spending_cap_usd,
+            max_transaction_size_usd: policy.max_transaction_size_usd,
+            max_slippage_bps: policy.max_slippage_bps,
+            developer_fee_rate: policy.developer_fee_rate,
+            protocol_mode: policy.protocol_mode,
+            protocols: &policy.protocols,
+            destination_mode: policy.destination_mode,
+            allowed_destinations: &policy.allowed_destinations,
+            timelock_duration: policy.timelock_duration,
+            session_expiry_seconds: policy.session_expiry_seconds,
+            observe_only: ctx.accounts.vault.observe_only,
+            has_constraints: policy.has_constraints,
+            has_post_assertions: policy.has_post_assertions,
+            created_at_slot: policy.created_at_slot,
+            operating_hours: policy.operating_hours,
+            auto_promote_grays: policy.auto_promote_grays,
+            auto_revoke_threshold: policy.auto_revoke_threshold,
+            stable_balance_floor: policy.stable_balance_floor,
+            per_recipient_daily_cap_usd: policy.per_recipient_daily_cap_usd,
+            cosign_required: policy.cosign_required,
+            agent_set_hash: new_agent_set_hash,
+        });
+        policy.policy_preview_digest = new_digest;
         policy.policy_version = policy
             .policy_version
             .checked_add(1)

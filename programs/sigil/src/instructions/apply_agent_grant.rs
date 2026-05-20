@@ -11,8 +11,10 @@ use crate::utils::policy_digest::{
 /// Phase 8 PEN-CROSS-1 (Council ISC-58..65) — apply a queued OPERATOR-class grant.
 ///
 /// After `queue_agent_grant` populated the `PendingAgentGrant` PDA and the
-/// timelock window (`min_delay_seconds`, default = `MIN_TIMELOCK_DURATION = 1800s`)
-/// has elapsed, the owner calls this handler to land the grant. The handler:
+/// timelock window (`min_delay_seconds`, default =
+/// `PendingAgentGrant::DEFAULT_MIN_DELAY = 172_800s = 48h`, raised from 30
+/// min in Phase 8 §RP Fix-Up B / PEN-02a CRITICAL) has elapsed, the owner
+/// calls this handler to land the grant. The handler:
 ///   1. Asserts `now - queued_at >= min_delay_seconds` (timelock check).
 ///   2. Re-validates the agent invariants (in case `vault.agents` mutated
 ///      between queue and apply — e.g. another agent registered, push the
@@ -27,9 +29,10 @@ use crate::utils::policy_digest::{
 ///
 /// Cosign is NOT re-checked at apply: the queue-time cosign gate is the
 /// authoritative attestation. The apply path is timelock-protected; if a
-/// phished key tried to apply, the owner's `cancel_agent_permissions_update`-
-/// analog (TODO: add `cancel_agent_grant` in a follow-up batch) would
-/// abort. For Batch 6, the timelock + audit-log signal is the V1 mechanism.
+/// phished key tried to apply, the owner can call `cancel_agent_grant`
+/// (Phase 8 §RP Fix-Up B / PEN-02b CRITICAL) to abort during the 48h
+/// observation window. Combined with the audit-log signal at queue time,
+/// this is the V1 mechanism for phished-key recovery on agent grants.
 #[derive(Accounts)]
 pub struct ApplyAgentGrant<'info> {
     #[account(mut)]
@@ -115,10 +118,17 @@ pub fn handler(ctx: Context<ApplyAgentGrant>) -> Result<()> {
 
     // 2. Re-validate agent invariants at apply (defense-in-depth — vault.agents
     // may have changed between queue and apply via register_agent/revoke_agent).
+    //
+    // Phase 8 §RP Fix-Up B (LBL-06 HIGH, audit 2026-05-19): tightened from
+    // `!= Closed` to `== Active`. A frozen vault must NOT be able to absorb
+    // an apply that was queued in a prior Active window — the freeze
+    // explicitly terminates agent-set mutations. Owner must reactivate
+    // first (5-min cooldown gives them observation time) before applying
+    // the grant.
     let vault = &mut ctx.accounts.vault;
     require!(
-        vault.status != VaultStatus::Closed,
-        SigilError::VaultAlreadyClosed
+        vault.status == VaultStatus::Active,
+        SigilError::VaultNotActive
     );
     require!(!vault.is_agent(&agent), SigilError::AgentAlreadyRegistered);
     require!(

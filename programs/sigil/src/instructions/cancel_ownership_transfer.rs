@@ -81,6 +81,21 @@ pub struct CancelOwnershipTransfer<'info> {
 pub fn handler(ctx: Context<CancelOwnershipTransfer>) -> Result<()> {
     crate::reject_cpi!();
 
+    // Phase 8 §RP Fix-Up B (PEN-04 HIGH, audit 2026-05-19): require the
+    // vault to be Active. A frozen vault MUST NOT permit cancel because
+    // freeze should NOT be a vehicle to abort a legitimate ownership
+    // transfer queued by the owner — `freeze_vault` (Fix-Up B SFH-02) is
+    // the canonical cancel path on freeze. Allowing cancel from Frozen
+    // would let a phished owner key freeze the vault and use the freeze
+    // window to cancel a legitimate transfer (e.g., to a hardware wallet
+    // the owner is migrating to), then re-queue to an attacker target
+    // once reactivated. Mirrors the `queue_agent_grant` / `apply_agent_grant`
+    // tightening (LBL-06).
+    require!(
+        ctx.accounts.vault.status == VaultStatus::Active,
+        SigilError::VaultNotActive,
+    );
+
     // Defense-in-depth: bind the signer to the queued owner at queue time.
     // `has_one = current_owner` (via the field naming workaround below)
     // binds to vault.owner, which MUST equal pending.current_owner unless

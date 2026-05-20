@@ -55,8 +55,12 @@ const STANDARD_INIT_DAILY_CAP = new BN(500_000_000);
 const STANDARD_INIT_MAX_TX = new BN(100_000_000);
 const STANDARD_INIT_TIMELOCK = new BN(1800);
 
-// Mirrors MIN_TIMELOCK_DURATION (1800s = 30 min).
-const MIN_TIMELOCK = 1800;
+// Phase 8 §RP Fix-Up B (PEN-02a CRITICAL, audit 2026-05-19): the PendingAgentGrant
+// default timelock was raised from MIN_TIMELOCK_DURATION (1800s / 30 min) to
+// PendingAgentGrant::DEFAULT_MIN_DELAY (172_800s / 48h) so that OPERATOR-class
+// grants have the same observation window as ownership transfer. The test
+// constant follows the on-chain default.
+const PENDING_AGENT_GRANT_DELAY = 172_800;
 
 // Capability levels (mirrors state/vault.rs constants).
 const CAPABILITY_DISABLED = 0;
@@ -312,7 +316,7 @@ describe("pen-cross-1-absorption (Phase 8 Batch 6)", () => {
     expect(pendingState.capability).to.equal(CAPABILITY_OPERATOR);
     expect(pendingState.spendingLimitUsd.toString()).to.equal("50000000");
     expect(pendingState.minDelaySeconds.toString()).to.equal(
-      MIN_TIMELOCK.toString(),
+      PENDING_AGENT_GRANT_DELAY.toString(),
     );
 
     // Agent NOT in vault.agents yet.
@@ -328,7 +332,7 @@ describe("pen-cross-1-absorption (Phase 8 Batch 6)", () => {
   // ─────────────────────────────────────────────────────────────────────────
   // 4. BOUNDARY REJECT — apply 1 second before timelock elapses
   // ─────────────────────────────────────────────────────────────────────────
-  it("apply at queued_at + MIN_TIMELOCK - 1 → reject 6022 TimelockNotExpired", async () => {
+  it("apply at queued_at + PENDING_AGENT_GRANT_DELAY - 1 → reject 6022 TimelockNotExpired", async () => {
     const { vault, policy, overlay, auditSuccess, pendingAgentGrant } =
       await initVault(new BN(11003));
     const agent = Keypair.generate();
@@ -346,7 +350,7 @@ describe("pen-cross-1-absorption (Phase 8 Batch 6)", () => {
       } as any)
       .rpc();
 
-    advanceTime(svm, MIN_TIMELOCK - 1);
+    advanceTime(svm, PENDING_AGENT_GRANT_DELAY - 1);
 
     let caughtCode: number | null = null;
     try {
@@ -370,9 +374,9 @@ describe("pen-cross-1-absorption (Phase 8 Batch 6)", () => {
   });
 
   // ─────────────────────────────────────────────────────────────────────────
-  // 5. BOUNDARY OK — apply exactly at queued_at + MIN_TIMELOCK
+  // 5. BOUNDARY OK — apply exactly at queued_at + PENDING_AGENT_GRANT_DELAY
   // ─────────────────────────────────────────────────────────────────────────
-  it("apply at queued_at + MIN_TIMELOCK → ok, agent inserted, policy_version bumped", async () => {
+  it("apply at queued_at + PENDING_AGENT_GRANT_DELAY → ok, agent inserted, policy_version bumped", async () => {
     const { vault, policy, overlay, auditSuccess, pendingAgentGrant } =
       await initVault(new BN(11004));
     const agent = Keypair.generate();
@@ -394,7 +398,7 @@ describe("pen-cross-1-absorption (Phase 8 Batch 6)", () => {
       } as any)
       .rpc();
 
-    advanceTime(svm, MIN_TIMELOCK);
+    advanceTime(svm, PENDING_AGENT_GRANT_DELAY);
 
     await program.methods
       .applyAgentGrant()
@@ -461,7 +465,7 @@ describe("pen-cross-1-absorption (Phase 8 Batch 6)", () => {
       } as any)
       .rpc();
 
-    advanceTime(svm, MIN_TIMELOCK);
+    advanceTime(svm, PENDING_AGENT_GRANT_DELAY);
 
     await program.methods
       .applyAgentGrant()

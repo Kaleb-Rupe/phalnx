@@ -41,8 +41,16 @@ pub struct FreezeVault<'info> {
 /// continue spending against an in-flight session window (8s–11min).
 ///
 /// Caller contract for `remaining_accounts`:
+/// - OPTIONAL: a `PendingOwnershipTransfer` PDA at position 0 (Phase 8 §RP
+///   Fix-Up B / SFH-02 HIGH, audit 2026-05-19). If present at the expected
+///   PDA pubkey `[b"pending_owner", vault]`, freeze closes it atomically
+///   so a phished owner cannot use the freeze window to wait out an
+///   in-flight ownership transfer's timelock and accept post-reactivate.
+///   Rent returns to the current owner. Detection is by PDA-pubkey match
+///   (defense-in-depth: account owner must be `crate::ID` AND lamports > 0).
 /// - PAIRS of `(session_pda, vault_token_account)` for every active session
-///   whose delegation should be terminated.
+///   whose delegation should be terminated. Pair iteration starts at
+///   `start_idx` (1 if pending_owner was at position 0, else 0).
 /// - The handler verifies each `session_pda` derives from `[b"session",
 ///   vault, agent, token_mint]` using fields read from the account itself,
 ///   so callers cannot smuggle arbitrary accounts.
@@ -64,8 +72,20 @@ pub fn handler<'a, 'b, 'c, 'info>(
 
     // Snapshot vault PDA seeds so we can sign Revoke CPIs without holding a
     // borrow on `ctx.accounts.vault` while iterating remaining_accounts.
+    //
+    // Phase 8 §RP Fix-Up B (signer-seeds correction, audit 2026-05-19): the
+    // Revoke CPI signer derivation MUST use `vault.vault_authority` (the
+    // immutable seed-key per LBL-01) — NOT `vault.owner`, which mutates on
+    // ownership transfer. Fix-Up A swapped the PDA `seeds = [...]` to
+    // vault_authority but missed the inline signer_seeds for the CPI, so
+    // post-ownership-transfer freezes with active sessions would derive a
+    // mismatched signer pubkey and fail the Revoke CPI silently (the per-
+    // pair loop's PDA-match check would skip the pair, leaving the rogue
+    // delegation alive). This Fix-Up B aligns signer_seeds with the new
+    // PDA seed convention. Pre-LBL-01 vaults at owner == vault_authority
+    // continue to function (the values are equal at init by construction).
     let vault_key = ctx.accounts.vault.key();
-    let owner_key = ctx.accounts.vault.owner;
+    let vault_authority = ctx.accounts.vault.vault_authority;
     let vault_id_bytes = ctx.accounts.vault.vault_id.to_le_bytes();
     let vault_bump = ctx.accounts.vault.bump;
     let agents_preserved = ctx.accounts.vault.agent_count() as u8;
@@ -73,7 +93,7 @@ pub fn handler<'a, 'b, 'c, 'info>(
     let bump_slice = [vault_bump];
     let signer_seeds: [&[u8]; 4] = [
         b"vault",
-        owner_key.as_ref(),
+        vault_authority.as_ref(),
         vault_id_bytes.as_ref(),
         bump_slice.as_ref(),
     ];
@@ -82,9 +102,49 @@ pub fn handler<'a, 'b, 'c, 'info>(
     let clock = Clock::get()?;
     let mut sessions_revoked: u32 = 0;
 
-    // Walk pairs of (session_pda, vault_token_account) from remaining_accounts.
+    // Phase 8 §RP Fix-Up B (SFH-02 HIGH, audit 2026-05-19): if the caller
+    // passed a `PendingOwnershipTransfer` PDA at position 0 of
+    // remaining_accounts, drain it. Without this, a phished owner key can:
+    //   1. Initiate ownership transfer (queued, 48h timelock).
+    //   2. Freeze the vault (panic move).
+    //   3. Wait for the timelock to elapse (vault stays frozen, but
+    //      `accept_ownership_transfer` checks `pending.queued_at +
+    //      min_delay_seconds` against `clock.unix_timestamp` — freeze
+    //      doesn't pause the timer).
+    //   4. Reactivate vault (5-min cooldown, but acceptable).
+    //   5. Have the attacker accept the transfer.
+    // The freeze→reactivate flow is supposed to be the panic recovery
+    // path; cancelling any in-flight ownership transfer atomically makes
+    // freeze the canonical "kill all in-flight elevated operations" ix.
+    //
+    // Detection contract: position 0 of remaining_accounts MAY be the
+    // pending_owner PDA. If its pubkey matches the expected derivation
+    // AND it's program-owned AND has lamports, drain to owner. Otherwise
+    // leave position 0 alone (the session-pair loop will inspect it).
+    let (expected_pending_owner_pda, _) =
+        Pubkey::find_program_address(&[b"pending_owner", vault_key.as_ref()], ctx.program_id);
+    let mut start_idx: usize = 0;
+    if let Some(pending_info) = ctx.remaining_accounts.first() {
+        if pending_info.key() == expected_pending_owner_pda
+            && pending_info.owner == &crate::ID
+            && pending_info.lamports() > 0
+        {
+            let owner_info = ctx.accounts.owner.to_account_info();
+            let dest_lamports = owner_info.lamports();
+            **owner_info.try_borrow_mut_lamports()? = dest_lamports
+                .checked_add(pending_info.lamports())
+                .ok_or(error!(SigilError::Overflow))?;
+            **pending_info.try_borrow_mut_lamports()? = 0;
+            pending_info.assign(&anchor_lang::system_program::ID);
+            pending_info.resize(0)?;
+            start_idx = 1;
+        }
+    }
+
+    // Walk pairs of (session_pda, vault_token_account) from remaining_accounts,
+    // starting at start_idx (1 if pending_owner consumed position 0).
     // Skip the trailing odd account if caller passed an unpaired entry.
-    let mut idx = 0usize;
+    let mut idx = start_idx;
     while idx + 1 < ctx.remaining_accounts.len() {
         let session_info = &ctx.remaining_accounts[idx];
         let token_info = &ctx.remaining_accounts[idx + 1];

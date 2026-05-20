@@ -34,7 +34,10 @@ pub const AUDIT_LOG_SUCCESS_CAPACITY: usize = 128;
 ///          grant queued; written before timelock window starts).
 /// 18     = apply_agent_grant (Phase 8 PEN-CROSS-1 Batch 6 — OPERATOR-class
 ///          grant applied; agent inserted into vault.agents).
-/// 19..=255 = reserved (extensible)
+/// 19     = cancel_agent_grant (Phase 8 §RP Fix-Up B / PEN-02b CRITICAL —
+///          OPERATOR-class grant cancelled during timelock window before
+///          apply could land. Symmetric with disc=9 ownership cancel.)
+/// 20..=255 = reserved (extensible)
 pub const AUDIT_DISC_RESERVED_ZERO: u8 = 0;
 pub const AUDIT_DISC_VALIDATE: u8 = 1;
 pub const AUDIT_DISC_FINALIZE_SUCCESS: u8 = 2;
@@ -59,6 +62,11 @@ pub const AUDIT_DISC_FINALIZE_REJECT: u8 = 16;
 // continuity rule.
 pub const AUDIT_DISC_AGENT_GRANT_QUEUE: u8 = 17;
 pub const AUDIT_DISC_AGENT_GRANT_APPLY: u8 = 18;
+/// Phase 8 §RP Fix-Up B (PEN-02b CRITICAL, audit 2026-05-19) — owner-side
+/// cancel of a queued OPERATOR-class agent grant. Symmetric with disc=9
+/// `AUDIT_DISC_OWNERSHIP_CANCEL`; written by `cancel_agent_grant` AFTER the
+/// pending PDA closes and rent returns to the owner.
+pub const AUDIT_DISC_AGENT_GRANT_CANCEL: u8 = 19;
 
 /// Single audit-log entry. Zero-copy, fixed-size 64 bytes per entry.
 ///
@@ -108,6 +116,7 @@ pub struct AuditEntry {
     ///   disc=7..=9 (ownership_*)   → ownership initiate/accept/cancel
     ///   disc=17 (agent_grant_queue)→ agent pubkey (Phase 8 PEN-CROSS-1 Batch 6)
     ///   disc=18 (agent_grant_apply)→ agent pubkey (Phase 8 PEN-CROSS-1 Batch 6)
+    ///   disc=19 (agent_grant_cancel)→ agent pubkey (Phase 8 §RP Fix-Up B / PEN-02b)
     pub subject: [u8; 32],
     /// Stablecoin delta IN (e.g. swap output, deposit). 0 when not applicable.
     pub balance_delta_in: i64,

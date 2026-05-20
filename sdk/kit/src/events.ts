@@ -58,6 +58,8 @@ import {
   // Phase 8 PEN-CROSS-1 (Batch 6) agent-grant events
   getAgentGrantQueuedDecoder,
   getAgentGrantAppliedDecoder,
+  // Phase 8 §RP Fix-Up B (PEN-02b CRITICAL) agent-grant cancel event
+  getAgentGrantCancelledDecoder,
 } from "./generated/types/index.js";
 
 /** All known Sigil event names */
@@ -200,6 +202,8 @@ const EVENT_DECODER_MAP: Record<
   // Phase 8 PEN-CROSS-1 (Batch 6) agent-grant events
   AgentGrantQueued: getAgentGrantQueuedDecoder(),
   AgentGrantApplied: getAgentGrantAppliedDecoder(),
+  // Phase 8 §RP Fix-Up B (PEN-02b CRITICAL) — agent-grant cancel event
+  AgentGrantCancelled: getAgentGrantCancelledDecoder(),
 };
 
 // Validate decoder map completeness at module init — catches drift when events are added/removed

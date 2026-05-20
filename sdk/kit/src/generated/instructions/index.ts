@@ -16,6 +16,7 @@ export * from "./applyAgentPermissionsUpdate.js";
 export * from "./applyCloseConstraints.js";
 export * from "./applyConstraintsUpdate.js";
 export * from "./applyPendingPolicy.js";
+export * from "./cancelAgentGrant.js";
 export * from "./cancelAgentPermissionsUpdate.js";
 export * from "./cancelCloseConstraints.js";
 export * from "./cancelConstraintsUpdate.js";

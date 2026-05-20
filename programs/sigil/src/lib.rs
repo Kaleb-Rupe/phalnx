@@ -485,6 +485,18 @@ pub mod sigil {
         instructions::apply_agent_grant::handler(ctx)
     }
 
+    /// Phase 8 §RP Fix-Up B (PEN-02b CRITICAL, audit 2026-05-19) — cancel a
+    /// queued OPERATOR-class agent grant during the timelock window. The
+    /// `PendingAgentGrant` PDA closes; rent returns to the owner. The vault's
+    /// agent set is NOT mutated (the queued agent never entered).
+    /// Symmetric with `cancel_ownership_transfer` on cosign — when
+    /// `policy.cosign_required == true`, the cancel also requires a non-
+    /// owner signer in `remaining_accounts` (D4 decision: closes the
+    /// phished-key cancel-and-re-queue bypass).
+    pub fn cancel_agent_grant(ctx: Context<CancelAgentGrant>) -> Result<()> {
+        instructions::cancel_agent_grant::handler(ctx)
+    }
+
     // --- Phase 8 Batch 3 — C26 ownership transfer (owner-side ix) ---
 
     /// Phase 8 C26 — initiate an ownership transfer with mandatory timelock.
