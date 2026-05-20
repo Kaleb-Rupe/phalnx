@@ -456,4 +456,45 @@ pub mod sigil {
     pub fn set_observe_only(ctx: Context<SetObserveOnly>, new_value: bool) -> Result<()> {
         instructions::set_observe_only::handler(ctx, new_value)
     }
+
+    // --- Phase 8 Batch 3 — C26 ownership transfer (owner-side ix) ---
+
+    /// Phase 8 C26 — initiate an ownership transfer with mandatory timelock.
+    /// Owner queues a `PendingOwnershipTransfer` PDA bound to the vault.
+    /// `is_multisig_target` selects between the standard EOA accept (Batch 3
+    /// `accept_ownership_transfer`) and the Squads V4 accept (Batch 4
+    /// `accept_ownership_transfer_multisig`). Cosign-opted-in vaults require
+    /// a non-owner signer in `remaining_accounts` (interim cosign gate).
+    pub fn initiate_ownership_transfer(
+        ctx: Context<InitiateOwnershipTransfer>,
+        new_owner: Pubkey,
+        is_multisig_target: bool,
+    ) -> Result<()> {
+        instructions::initiate_ownership_transfer::handler(
+            ctx,
+            new_owner,
+            is_multisig_target,
+        )
+    }
+
+    /// Phase 8 C26 — accept a queued ownership transfer (standard EOA path).
+    /// The `new_owner` signs after the timelock window elapses. Hard-rejects
+    /// when `pending.is_multisig_target == true` (use the Batch 4 multisig
+    /// variant instead). Pending PDA closes; rent returns to `new_owner`.
+    /// Vault.owner is overwritten; policy.policy_version bumps.
+    pub fn accept_ownership_transfer(
+        ctx: Context<AcceptOwnershipTransfer>,
+    ) -> Result<()> {
+        instructions::accept_ownership_transfer::handler(ctx)
+    }
+
+    /// Phase 8 C26 — cancel an in-flight ownership transfer. The current
+    /// owner signs. Symmetric with `initiate_ownership_transfer` on cosign
+    /// (D4 decision — closes the phished-key cancel-and-re-initiate bypass).
+    /// Pending PDA closes; rent returns to `current_owner`.
+    pub fn cancel_ownership_transfer(
+        ctx: Context<CancelOwnershipTransfer>,
+    ) -> Result<()> {
+        instructions::cancel_ownership_transfer::handler(ctx)
+    }
 }

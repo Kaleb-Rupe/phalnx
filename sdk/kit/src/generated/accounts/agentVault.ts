@@ -130,6 +130,30 @@ export type AgentVault = {
    * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
    */
   observeOnly: boolean;
+  /**
+   * Phase 8 — unix timestamp at which `vault.status` last transitioned to
+   * Frozen. Written by every freeze code path (manual `freeze_vault`,
+   * auto-freeze inside `revoke_agent`, future `freeze_internal` helper).
+   * Read by `reactivate_vault` to enforce the 5-minute observation
+   * cooldown (Phase 8 F-RP3-1 fix — closes the phished-owner
+   * freeze→reactivate→register-attacker-agent one-tx replay).
+   *
+   * Zero on freshly-initialized vaults that have never been frozen.
+   * APPENDED per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  frozenAtTimestamp: bigint;
+  /**
+   * Phase 8 — discriminant of the `FreezeReason` enum recording WHY the
+   * vault was last frozen. Single byte on-chain; validated via
+   * `FreezeReason::from_u8` at every write site so unknown values
+   * (3..=255) hard-reject with `SigilError::ErrInvalidFreezeReason`.
+   *
+   * Zero (Manual) on freshly-initialized vaults that have never been
+   * frozen — this is harmless because `status != Frozen` means readers
+   * of this byte gate on status first. APPENDED per F-14 APPEND-ONLY
+   * rule for Borsh stability.
+   */
+  freezeReason: number;
 };
 
 export type AgentVaultArgs = {
@@ -198,6 +222,30 @@ export type AgentVaultArgs = {
    * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
    */
   observeOnly: boolean;
+  /**
+   * Phase 8 — unix timestamp at which `vault.status` last transitioned to
+   * Frozen. Written by every freeze code path (manual `freeze_vault`,
+   * auto-freeze inside `revoke_agent`, future `freeze_internal` helper).
+   * Read by `reactivate_vault` to enforce the 5-minute observation
+   * cooldown (Phase 8 F-RP3-1 fix — closes the phished-owner
+   * freeze→reactivate→register-attacker-agent one-tx replay).
+   *
+   * Zero on freshly-initialized vaults that have never been frozen.
+   * APPENDED per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  frozenAtTimestamp: number | bigint;
+  /**
+   * Phase 8 — discriminant of the `FreezeReason` enum recording WHY the
+   * vault was last frozen. Single byte on-chain; validated via
+   * `FreezeReason::from_u8` at every write site so unknown values
+   * (3..=255) hard-reject with `SigilError::ErrInvalidFreezeReason`.
+   *
+   * Zero (Manual) on freshly-initialized vaults that have never been
+   * frozen — this is harmless because `status != Frozen` means readers
+   * of this byte gate on status first. APPENDED per F-14 APPEND-ONLY
+   * rule for Borsh stability.
+   */
+  freezeReason: number;
 };
 
 /** Gets the encoder for {@link AgentVaultArgs} account data. */
@@ -220,6 +268,8 @@ export function getAgentVaultEncoder(): Encoder<AgentVaultArgs> {
       ["totalFailedTransactions", getU64Encoder()],
       ["activeSessions", getU8Encoder()],
       ["observeOnly", getBooleanEncoder()],
+      ["frozenAtTimestamp", getI64Encoder()],
+      ["freezeReason", getU8Encoder()],
     ]),
     (value) => ({ ...value, discriminator: AGENT_VAULT_DISCRIMINATOR }),
   );
@@ -244,6 +294,8 @@ export function getAgentVaultDecoder(): Decoder<AgentVault> {
     ["totalFailedTransactions", getU64Decoder()],
     ["activeSessions", getU8Decoder()],
     ["observeOnly", getBooleanDecoder()],
+    ["frozenAtTimestamp", getI64Decoder()],
+    ["freezeReason", getU8Decoder()],
   ]);
 }
 

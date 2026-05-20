@@ -356,3 +356,45 @@ pub struct AgentAutoRevoked {
     pub consecutive_failures: u8,
     pub timestamp: i64,
 }
+
+// --- Phase 8 (C26 ownership transfer) events ---
+// Appended at END to preserve existing event layouts. Off-chain indexers
+// keyed by event-account ordinal will pick these up as the next slots.
+
+/// Phase 8 C26 — owner queued a `PendingOwnershipTransfer`. Off-chain
+/// monitors should ALERT on this event for any vault they protect — if the
+/// owner did not initiate the queue, this is a phished-key attack signal
+/// and the owner has `min_delay_seconds` (default 48h) to
+/// `cancel_ownership_transfer` before the timelock elapses.
+#[event]
+pub struct OwnershipTransferInitiated {
+    pub vault: Pubkey,
+    pub current_owner: Pubkey,
+    pub new_owner: Pubkey,
+    pub queued_at: i64,
+    pub is_multisig_target: bool,
+}
+
+/// Phase 8 C26 — `new_owner` (or the multisig PDA, Batch 4) accepted a queued
+/// transfer past timelock. `previous_owner` is the pubkey that signed the
+/// initiate (and matches `pending.current_owner`). `via_multisig` flags the
+/// Batch 4 path so off-chain monitors can distinguish EOA vs Squads accepts.
+#[event]
+pub struct OwnershipTransferAccepted {
+    pub vault: Pubkey,
+    pub previous_owner: Pubkey,
+    pub new_owner: Pubkey,
+    pub via_multisig: bool,
+    pub timestamp: i64,
+}
+
+/// Phase 8 C26 — `current_owner` cancelled a queued transfer. `cancelled_new_owner`
+/// echoes the target pubkey from the cancelled PDA so off-chain monitors
+/// can correlate cancel ↔ initiate without re-fetching the (now-closed) PDA.
+#[event]
+pub struct OwnershipTransferCancelled {
+    pub vault: Pubkey,
+    pub current_owner: Pubkey,
+    pub cancelled_new_owner: Pubkey,
+    pub timestamp: i64,
+}

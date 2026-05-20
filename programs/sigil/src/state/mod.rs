@@ -5,6 +5,7 @@ pub mod constraints;
 pub mod pending_agent_perms;
 pub mod pending_close_constraints;
 pub mod pending_constraints;
+pub mod pending_ownership_transfer;
 pub mod pending_policy;
 pub mod policy;
 pub mod post_assertions;
@@ -19,6 +20,7 @@ pub use constraints::*;
 pub use pending_agent_perms::*;
 pub use pending_close_constraints::*;
 pub use pending_constraints::*;
+pub use pending_ownership_transfer::*;
 pub use pending_policy::*;
 pub use policy::*;
 pub use post_assertions::*;
@@ -670,3 +672,93 @@ pub enum VaultStatus {
 // the runtime never read it. See RFC-ACTIONTYPE-ELIMINATION.md.
 // Agent permissions use the 2-bit capability field (CAPABILITY_OBSERVER / CAPABILITY_OPERATOR)
 // instead of the old 21-bit bitmask.
+
+#[cfg(test)]
+mod seed_uniqueness {
+    //! Council ISC-133 — PDA seed prefix uniqueness invariant.
+    //!
+    //! Every seed prefix declared anywhere in the program must be byte-distinct
+    //! from every other declared prefix. Two prefix families colliding would
+    //! mean two PDAs share a derivation namespace once a vault/key disambiguator
+    //! is added — an audit-class issue: an attacker who could choose the
+    //! disambiguator could trick the program into accepting account A for
+    //! family B's role.
+    //!
+    //! Source of truth: `PROTECTED_SEED_PREFIXES` already enumerates every
+    //! protected family for the TA-11 derivation scan. This test verifies
+    //! the list is internally unique, AND that the live list still matches
+    //! the prefixes actually used by `seeds = [...]` declarations elsewhere
+    //! in the codebase (the cargo test can't grep the codebase, so the
+    //! out-of-band check is documented in the doctest below and enforced
+    //! by code review).
+    //!
+    //! When a new PDA family is added (e.g. a future "audit_v2" prefix),
+    //! it MUST be appended to both `PROTECTED_SEED_PREFIXES` and to the
+    //! `expected` array below. The array length is pinned to the live
+    //! `PROTECTED_SEED_PREFIXES` length so this test fails compilation
+    //! if either list grows without the other being updated.
+
+    use super::PROTECTED_SEED_PREFIXES;
+
+    /// Live enumeration sourced from `PROTECTED_SEED_PREFIXES`. Includes the
+    /// Phase 8 `pending_owner` entry that ships with this batch (already
+    /// pre-listed in `PROTECTED_SEED_PREFIXES` for forward-compat).
+    #[test]
+    fn pda_seed_prefixes_unique() {
+        let prefixes: &[&[u8]] = PROTECTED_SEED_PREFIXES.as_slice();
+        for i in 0..prefixes.len() {
+            for j in (i + 1)..prefixes.len() {
+                assert_ne!(
+                    prefixes[i],
+                    prefixes[j],
+                    "PDA seed prefix collision: {:?} vs {:?}",
+                    std::str::from_utf8(prefixes[i])
+                        .unwrap_or("<non-utf8 prefix>"),
+                    std::str::from_utf8(prefixes[j])
+                        .unwrap_or("<non-utf8 prefix>"),
+                );
+            }
+        }
+    }
+
+    /// Council ISC-133 — pin the LIVE prefix list so a future addition that
+    /// forgets to update this test fails compilation. If you add a prefix to
+    /// `PROTECTED_SEED_PREFIXES`, mirror it in `expected` below.
+    #[test]
+    fn pda_seed_prefixes_matches_expected_canonical_list() {
+        let expected: [&[u8]; 16] = [
+            b"vault",
+            b"policy",
+            b"tracker",
+            b"session",
+            b"post_assertions",
+            b"audit_success",
+            b"audit_rejected",
+            b"cosign",
+            b"recipient",
+            b"pending_policy",
+            b"pending_constraints",
+            b"pending_agent_perms",
+            b"pending_close_constraints",
+            b"pending_owner",
+            b"constraints",
+            b"agent_spend",
+        ];
+        assert_eq!(
+            PROTECTED_SEED_PREFIXES.len(),
+            expected.len(),
+            "PROTECTED_SEED_PREFIXES len drift — update both lists",
+        );
+        for (i, want) in expected.iter().enumerate() {
+            assert_eq!(
+                PROTECTED_SEED_PREFIXES[i],
+                *want,
+                "PROTECTED_SEED_PREFIXES[{}] drift — got {:?}, expected {:?}",
+                i,
+                std::str::from_utf8(PROTECTED_SEED_PREFIXES[i])
+                    .unwrap_or("<non-utf8>"),
+                std::str::from_utf8(want).unwrap_or("<non-utf8>"),
+            );
+        }
+    }
+}

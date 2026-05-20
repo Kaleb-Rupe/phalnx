@@ -41,6 +41,7 @@ import {
   getPendingAgentPermissionsUpdateCodec,
   getPendingCloseConstraintsCodec,
   getPendingConstraintsUpdateCodec,
+  getPendingOwnershipTransferCodec,
   getPendingPolicyUpdateCodec,
   getPolicyConfigCodec,
   getPostExecutionAssertionsCodec,
@@ -62,6 +63,8 @@ import {
   type PendingCloseConstraintsArgs,
   type PendingConstraintsUpdate,
   type PendingConstraintsUpdateArgs,
+  type PendingOwnershipTransfer,
+  type PendingOwnershipTransferArgs,
   type PendingPolicyUpdate,
   type PendingPolicyUpdateArgs,
   type PolicyConfig,
@@ -74,6 +77,7 @@ import {
   type SpendTrackerArgs,
 } from "../accounts/index.js";
 import {
+  getAcceptOwnershipTransferInstructionAsync,
   getAgentTransferInstructionAsync,
   getAllocateConstraintsPdaInstructionAsync,
   getAllocatePendingConstraintsPdaInstructionAsync,
@@ -84,6 +88,7 @@ import {
   getCancelAgentPermissionsUpdateInstruction,
   getCancelCloseConstraintsInstructionAsync,
   getCancelConstraintsUpdateInstructionAsync,
+  getCancelOwnershipTransferInstructionAsync,
   getCancelPendingPolicyInstructionAsync,
   getCleanupOrphanConstraintsPdaInstructionAsync,
   getClosePostAssertionsInstructionAsync,
@@ -95,6 +100,7 @@ import {
   getFinalizeSessionInstructionAsync,
   getFreezeVaultInstructionAsync,
   getInitializeVaultInstructionAsync,
+  getInitiateOwnershipTransferInstructionAsync,
   getPauseAgentInstructionAsync,
   getPromoteGraylistDestinationInstructionAsync,
   getQueueAgentPermissionsUpdateInstructionAsync,
@@ -109,6 +115,7 @@ import {
   getUnpauseAgentInstructionAsync,
   getValidateAndAuthorizeInstructionAsync,
   getWithdrawFundsInstructionAsync,
+  parseAcceptOwnershipTransferInstruction,
   parseAgentTransferInstruction,
   parseAllocateConstraintsPdaInstruction,
   parseAllocatePendingConstraintsPdaInstruction,
@@ -119,6 +126,7 @@ import {
   parseCancelAgentPermissionsUpdateInstruction,
   parseCancelCloseConstraintsInstruction,
   parseCancelConstraintsUpdateInstruction,
+  parseCancelOwnershipTransferInstruction,
   parseCancelPendingPolicyInstruction,
   parseCleanupOrphanConstraintsPdaInstruction,
   parseClosePostAssertionsInstruction,
@@ -130,6 +138,7 @@ import {
   parseFinalizeSessionInstruction,
   parseFreezeVaultInstruction,
   parseInitializeVaultInstruction,
+  parseInitiateOwnershipTransferInstruction,
   parsePauseAgentInstruction,
   parsePromoteGraylistDestinationInstruction,
   parseQueueAgentPermissionsUpdateInstruction,
@@ -144,6 +153,7 @@ import {
   parseUnpauseAgentInstruction,
   parseValidateAndAuthorizeInstruction,
   parseWithdrawFundsInstruction,
+  type AcceptOwnershipTransferAsyncInput,
   type AgentTransferAsyncInput,
   type AllocateConstraintsPdaAsyncInput,
   type AllocatePendingConstraintsPdaAsyncInput,
@@ -154,6 +164,7 @@ import {
   type CancelAgentPermissionsUpdateInput,
   type CancelCloseConstraintsAsyncInput,
   type CancelConstraintsUpdateAsyncInput,
+  type CancelOwnershipTransferAsyncInput,
   type CancelPendingPolicyAsyncInput,
   type CleanupOrphanConstraintsPdaAsyncInput,
   type ClosePostAssertionsAsyncInput,
@@ -165,6 +176,8 @@ import {
   type FinalizeSessionAsyncInput,
   type FreezeVaultAsyncInput,
   type InitializeVaultAsyncInput,
+  type InitiateOwnershipTransferAsyncInput,
+  type ParsedAcceptOwnershipTransferInstruction,
   type ParsedAgentTransferInstruction,
   type ParsedAllocateConstraintsPdaInstruction,
   type ParsedAllocatePendingConstraintsPdaInstruction,
@@ -175,6 +188,7 @@ import {
   type ParsedCancelAgentPermissionsUpdateInstruction,
   type ParsedCancelCloseConstraintsInstruction,
   type ParsedCancelConstraintsUpdateInstruction,
+  type ParsedCancelOwnershipTransferInstruction,
   type ParsedCancelPendingPolicyInstruction,
   type ParsedCleanupOrphanConstraintsPdaInstruction,
   type ParsedClosePostAssertionsInstruction,
@@ -186,6 +200,7 @@ import {
   type ParsedFinalizeSessionInstruction,
   type ParsedFreezeVaultInstruction,
   type ParsedInitializeVaultInstruction,
+  type ParsedInitiateOwnershipTransferInstruction,
   type ParsedPauseAgentInstruction,
   type ParsedPromoteGraylistDestinationInstruction,
   type ParsedQueueAgentPermissionsUpdateInstruction,
@@ -228,6 +243,7 @@ export enum SigilAccount {
   PendingAgentPermissionsUpdate,
   PendingCloseConstraints,
   PendingConstraintsUpdate,
+  PendingOwnershipTransfer,
   PendingPolicyUpdate,
   PolicyConfig,
   PostExecutionAssertions,
@@ -331,6 +347,17 @@ export function identifySigilAccount(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([205, 223, 35, 217, 245, 217, 152, 38]),
+      ),
+      0,
+    )
+  ) {
+    return SigilAccount.PendingOwnershipTransfer;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([77, 255, 2, 51, 79, 237, 183, 239]),
       ),
       0,
@@ -389,6 +416,7 @@ export function identifySigilAccount(
 }
 
 export enum SigilInstruction {
+  AcceptOwnershipTransfer,
   AgentTransfer,
   AllocateConstraintsPda,
   AllocatePendingConstraintsPda,
@@ -399,6 +427,7 @@ export enum SigilInstruction {
   CancelAgentPermissionsUpdate,
   CancelCloseConstraints,
   CancelConstraintsUpdate,
+  CancelOwnershipTransfer,
   CancelPendingPolicy,
   CleanupOrphanConstraintsPda,
   ClosePostAssertions,
@@ -410,6 +439,7 @@ export enum SigilInstruction {
   FinalizeSession,
   FreezeVault,
   InitializeVault,
+  InitiateOwnershipTransfer,
   PauseAgent,
   PromoteGraylistDestination,
   QueueAgentPermissionsUpdate,
@@ -430,6 +460,17 @@ export function identifySigilInstruction(
   instruction: { data: ReadonlyUint8Array } | ReadonlyUint8Array,
 ): SigilInstruction {
   const data = "data" in instruction ? instruction.data : instruction;
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([30, 187, 65, 5, 93, 131, 38, 208]),
+      ),
+      0,
+    )
+  ) {
+    return SigilInstruction.AcceptOwnershipTransfer;
+  }
   if (
     containsBytes(
       data,
@@ -539,6 +580,17 @@ export function identifySigilInstruction(
     )
   ) {
     return SigilInstruction.CancelConstraintsUpdate;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([2, 184, 195, 105, 138, 142, 154, 75]),
+      ),
+      0,
+    )
+  ) {
+    return SigilInstruction.CancelOwnershipTransfer;
   }
   if (
     containsBytes(
@@ -660,6 +712,17 @@ export function identifySigilInstruction(
     )
   ) {
     return SigilInstruction.InitializeVault;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([22, 108, 197, 103, 223, 145, 132, 65]),
+      ),
+      0,
+    )
+  ) {
+    return SigilInstruction.InitiateOwnershipTransfer;
   }
   if (
     containsBytes(
@@ -825,6 +888,9 @@ export type ParsedSigilInstruction<
   TProgram extends string = "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL",
 > =
   | ({
+      instructionType: SigilInstruction.AcceptOwnershipTransfer;
+    } & ParsedAcceptOwnershipTransferInstruction<TProgram>)
+  | ({
       instructionType: SigilInstruction.AgentTransfer;
     } & ParsedAgentTransferInstruction<TProgram>)
   | ({
@@ -854,6 +920,9 @@ export type ParsedSigilInstruction<
   | ({
       instructionType: SigilInstruction.CancelConstraintsUpdate;
     } & ParsedCancelConstraintsUpdateInstruction<TProgram>)
+  | ({
+      instructionType: SigilInstruction.CancelOwnershipTransfer;
+    } & ParsedCancelOwnershipTransferInstruction<TProgram>)
   | ({
       instructionType: SigilInstruction.CancelPendingPolicy;
     } & ParsedCancelPendingPolicyInstruction<TProgram>)
@@ -887,6 +956,9 @@ export type ParsedSigilInstruction<
   | ({
       instructionType: SigilInstruction.InitializeVault;
     } & ParsedInitializeVaultInstruction<TProgram>)
+  | ({
+      instructionType: SigilInstruction.InitiateOwnershipTransfer;
+    } & ParsedInitiateOwnershipTransferInstruction<TProgram>)
   | ({
       instructionType: SigilInstruction.PauseAgent;
     } & ParsedPauseAgentInstruction<TProgram>)
@@ -935,6 +1007,13 @@ export function parseSigilInstruction<TProgram extends string>(
 ): ParsedSigilInstruction<TProgram> {
   const instructionType = identifySigilInstruction(instruction);
   switch (instructionType) {
+    case SigilInstruction.AcceptOwnershipTransfer: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: SigilInstruction.AcceptOwnershipTransfer,
+        ...parseAcceptOwnershipTransferInstruction(instruction),
+      };
+    }
     case SigilInstruction.AgentTransfer: {
       assertIsInstructionWithAccounts(instruction);
       return {
@@ -1003,6 +1082,13 @@ export function parseSigilInstruction<TProgram extends string>(
       return {
         instructionType: SigilInstruction.CancelConstraintsUpdate,
         ...parseCancelConstraintsUpdateInstruction(instruction),
+      };
+    }
+    case SigilInstruction.CancelOwnershipTransfer: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: SigilInstruction.CancelOwnershipTransfer,
+        ...parseCancelOwnershipTransferInstruction(instruction),
       };
     }
     case SigilInstruction.CancelPendingPolicy: {
@@ -1080,6 +1166,13 @@ export function parseSigilInstruction<TProgram extends string>(
       return {
         instructionType: SigilInstruction.InitializeVault,
         ...parseInitializeVaultInstruction(instruction),
+      };
+    }
+    case SigilInstruction.InitiateOwnershipTransfer: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: SigilInstruction.InitiateOwnershipTransfer,
+        ...parseInitiateOwnershipTransferInstruction(instruction),
       };
     }
     case SigilInstruction.PauseAgent: {
@@ -1217,6 +1310,10 @@ export type SigilPluginAccounts = {
     typeof getPendingConstraintsUpdateCodec
   > &
     SelfFetchFunctions<PendingConstraintsUpdateArgs, PendingConstraintsUpdate>;
+  pendingOwnershipTransfer: ReturnType<
+    typeof getPendingOwnershipTransferCodec
+  > &
+    SelfFetchFunctions<PendingOwnershipTransferArgs, PendingOwnershipTransfer>;
   pendingPolicyUpdate: ReturnType<typeof getPendingPolicyUpdateCodec> &
     SelfFetchFunctions<PendingPolicyUpdateArgs, PendingPolicyUpdate>;
   policyConfig: ReturnType<typeof getPolicyConfigCodec> &
@@ -1230,6 +1327,10 @@ export type SigilPluginAccounts = {
 };
 
 export type SigilPluginInstructions = {
+  acceptOwnershipTransfer: (
+    input: AcceptOwnershipTransferAsyncInput,
+  ) => ReturnType<typeof getAcceptOwnershipTransferInstructionAsync> &
+    SelfPlanAndSendFunctions;
   agentTransfer: (
     input: AgentTransferAsyncInput,
   ) => ReturnType<typeof getAgentTransferInstructionAsync> &
@@ -1269,6 +1370,10 @@ export type SigilPluginInstructions = {
   cancelConstraintsUpdate: (
     input: CancelConstraintsUpdateAsyncInput,
   ) => ReturnType<typeof getCancelConstraintsUpdateInstructionAsync> &
+    SelfPlanAndSendFunctions;
+  cancelOwnershipTransfer: (
+    input: CancelOwnershipTransferAsyncInput,
+  ) => ReturnType<typeof getCancelOwnershipTransferInstructionAsync> &
     SelfPlanAndSendFunctions;
   cancelPendingPolicy: (
     input: CancelPendingPolicyAsyncInput,
@@ -1312,6 +1417,10 @@ export type SigilPluginInstructions = {
   initializeVault: (
     input: InitializeVaultAsyncInput,
   ) => ReturnType<typeof getInitializeVaultInstructionAsync> &
+    SelfPlanAndSendFunctions;
+  initiateOwnershipTransfer: (
+    input: InitiateOwnershipTransferAsyncInput,
+  ) => ReturnType<typeof getInitiateOwnershipTransferInstructionAsync> &
     SelfPlanAndSendFunctions;
   pauseAgent: (
     input: PauseAgentAsyncInput,
@@ -1413,6 +1522,10 @@ export function sigilProgram() {
             client,
             getPendingConstraintsUpdateCodec(),
           ),
+          pendingOwnershipTransfer: addSelfFetchFunctions(
+            client,
+            getPendingOwnershipTransferCodec(),
+          ),
           pendingPolicyUpdate: addSelfFetchFunctions(
             client,
             getPendingPolicyUpdateCodec(),
@@ -1429,6 +1542,11 @@ export function sigilProgram() {
           spendTracker: addSelfFetchFunctions(client, getSpendTrackerCodec()),
         },
         instructions: {
+          acceptOwnershipTransfer: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getAcceptOwnershipTransferInstructionAsync(input),
+            ),
           agentTransfer: (input) =>
             addSelfPlanAndSendFunctions(
               client,
@@ -1478,6 +1596,11 @@ export function sigilProgram() {
             addSelfPlanAndSendFunctions(
               client,
               getCancelConstraintsUpdateInstructionAsync(input),
+            ),
+          cancelOwnershipTransfer: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getCancelOwnershipTransferInstructionAsync(input),
             ),
           cancelPendingPolicy: (input) =>
             addSelfPlanAndSendFunctions(
@@ -1533,6 +1656,11 @@ export function sigilProgram() {
             addSelfPlanAndSendFunctions(
               client,
               getInitializeVaultInstructionAsync(input),
+            ),
+          initiateOwnershipTransfer: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getInitiateOwnershipTransferInstructionAsync(input),
             ),
           pauseAgent: (input) =>
             addSelfPlanAndSendFunctions(

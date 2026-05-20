@@ -14,6 +14,180 @@ export type Sigil = {
   },
   "instructions": [
     {
+      "name": "acceptOwnershipTransfer",
+      "docs": [
+        "Phase 8 C26 — accept a queued ownership transfer (standard EOA path).",
+        "The `new_owner` signs after the timelock window elapses. Hard-rejects",
+        "when `pending.is_multisig_target == true` (use the Batch 4 multisig",
+        "variant instead). Pending PDA closes; rent returns to `new_owner`.",
+        "Vault.owner is overwritten; policy.policy_version bumps."
+      ],
+      "discriminator": [
+        30,
+        187,
+        65,
+        5,
+        93,
+        131,
+        38,
+        208
+      ],
+      "accounts": [
+        {
+          "name": "newOwner",
+          "docs": [
+            "The `new_owner` queued at initiate. Pubkey identity verified in the",
+            "handler against `pending.new_owner` (defense-in-depth)."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "Vault is mutated (owner field overwritten). PDA derivation uses the",
+            "pending account's `current_owner` field so the seed binding is",
+            "load-bearing: the vault MUST be the one queued by the same owner that",
+            "signed `initiate_ownership_transfer`. Cross-vault accept is impossible."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pending.current_owner",
+                "account": "pendingOwnershipTransfer"
+              },
+              {
+                "kind": "account",
+                "path": "vault.vault_id",
+                "account": "agentVault"
+              }
+            ]
+          },
+          "relations": [
+            "pending"
+          ]
+        },
+        {
+          "name": "policy",
+          "docs": [
+            "Policy is mutated (policy_version bump). Batch 6 will also recompute",
+            "`policy_preview_digest` here — see handler TODO."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "pending",
+          "docs": [
+            "PendingOwnershipTransfer PDA. `close = new_owner` returns rent to the",
+            "signer. `has_one = vault` binds the PDA to this vault explicitly",
+            "(the seed derivation already enforces this via `vault.key()`, but the",
+            "constraint is defense-in-depth against future seeds drift — same",
+            "pattern as the §RP-1 I-2 audit-log guard)."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  111,
+                  119,
+                  110,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "auditLogSuccess",
+          "docs": [
+            "Phase 7 — success audit log; entry appended after state mutation."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  100,
+                  105,
+                  116,
+                  95,
+                  115,
+                  117,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "slotHashesSysvar",
+          "address": "SysvarS1otHashes111111111111111111111111111"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "agentTransfer",
       "docs": [
         "Transfer tokens from the vault to an allowed destination.",
@@ -1330,6 +1504,173 @@ export type Sigil = {
               }
             ]
           }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancelOwnershipTransfer",
+      "docs": [
+        "Phase 8 C26 — cancel an in-flight ownership transfer. The current",
+        "owner signs. Symmetric with `initiate_ownership_transfer` on cosign",
+        "(D4 decision — closes the phished-key cancel-and-re-initiate bypass).",
+        "Pending PDA closes; rent returns to `current_owner`."
+      ],
+      "discriminator": [
+        2,
+        184,
+        195,
+        105,
+        138,
+        142,
+        154,
+        75
+      ],
+      "accounts": [
+        {
+          "name": "currentOwner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "Vault binding via PDA seeds: the seeds include `current_owner.key()`",
+            "so Anchor's PDA derivation enforces that this signer matches",
+            "`vault.owner` (Anchor recomputes the address using the signer's key",
+            "and rejects if the result doesn't match the supplied vault account).",
+            "This is the same pattern `freeze_vault` uses; the explicit",
+            "`require_keys_eq!(current_owner, pending.current_owner)` below adds",
+            "defense-in-depth against pending-PDA replay across owner changes."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "currentOwner"
+              },
+              {
+                "kind": "account",
+                "path": "vault.vault_id",
+                "account": "agentVault"
+              }
+            ]
+          },
+          "relations": [
+            "pending"
+          ]
+        },
+        {
+          "name": "policy",
+          "docs": [
+            "PolicyConfig is read-only here — `cosign_required` is the only field",
+            "consulted (D4 symmetric cosign gate)."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "pending",
+          "docs": [
+            "PendingOwnershipTransfer PDA. `close = current_owner` returns rent to",
+            "the signer. `has_one = vault` defense-in-depth binds the PDA to this",
+            "vault explicitly."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  111,
+                  119,
+                  110,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "auditLogSuccess",
+          "docs": [
+            "Phase 7 — success audit log; entry appended after state mutation."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  100,
+                  105,
+                  116,
+                  95,
+                  115,
+                  117,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "slotHashesSysvar",
+          "address": "SysvarS1otHashes111111111111111111111111111"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": []
@@ -3140,6 +3481,175 @@ export type Sigil = {
               32
             ]
           }
+        }
+      ]
+    },
+    {
+      "name": "initiateOwnershipTransfer",
+      "docs": [
+        "Phase 8 C26 — initiate an ownership transfer with mandatory timelock.",
+        "Owner queues a `PendingOwnershipTransfer` PDA bound to the vault.",
+        "`is_multisig_target` selects between the standard EOA accept (Batch 3",
+        "`accept_ownership_transfer`) and the Squads V4 accept (Batch 4",
+        "`accept_ownership_transfer_multisig`). Cosign-opted-in vaults require",
+        "a non-owner signer in `remaining_accounts` (interim cosign gate)."
+      ],
+      "discriminator": [
+        22,
+        108,
+        197,
+        103,
+        223,
+        145,
+        132,
+        65
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "vault.vault_id",
+                "account": "agentVault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "policy",
+          "docs": [
+            "PolicyConfig is read-only here — `cosign_required` is the only field",
+            "consulted (ISC-129 interim cosign gate)."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "pending",
+          "docs": [
+            "PendingOwnershipTransfer PDA. `init` ⇒ ISC-30 / 6103 path: a second",
+            "initiate without an intervening `cancel_ownership_transfer` fails",
+            "hard because Anchor sees the account is already initialised."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  111,
+                  119,
+                  110,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "auditLogSuccess",
+          "docs": [
+            "Phase 7 — success audit log; entry appended after state mutation."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  100,
+                  105,
+                  116,
+                  95,
+                  115,
+                  117,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "slotHashesSysvar",
+          "address": "SysvarS1otHashes111111111111111111111111111"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "newOwner",
+          "type": "pubkey"
+        },
+        {
+          "name": "isMultisigTarget",
+          "type": "bool"
         }
       ]
     },
@@ -5449,6 +5959,19 @@ export type Sigil = {
       ]
     },
     {
+      "name": "pendingOwnershipTransfer",
+      "discriminator": [
+        205,
+        223,
+        35,
+        217,
+        245,
+        217,
+        152,
+        38
+      ]
+    },
+    {
       "name": "pendingPolicyUpdate",
       "discriminator": [
         77,
@@ -5851,6 +6374,45 @@ export type Sigil = {
         163,
         145,
         25
+      ]
+    },
+    {
+      "name": "ownershipTransferAccepted",
+      "discriminator": [
+        170,
+        218,
+        124,
+        19,
+        70,
+        121,
+        99,
+        8
+      ]
+    },
+    {
+      "name": "ownershipTransferCancelled",
+      "discriminator": [
+        120,
+        203,
+        162,
+        145,
+        180,
+        57,
+        253,
+        23
+      ]
+    },
+    {
+      "name": "ownershipTransferInitiated",
+      "discriminator": [
+        181,
+        32,
+        40,
+        60,
+        60,
+        64,
+        235,
+        29
       ]
     },
     {
@@ -6538,6 +7100,36 @@ export type Sigil = {
       "code": 6102,
       "name": "ixMetaCountExceeded",
       "msg": "Foreign DeFi instruction passed more account metas than the destination-check budget (16) allows; truncate the ix or split into shorter ixs"
+    },
+    {
+      "code": 6103,
+      "name": "errPendingOwnershipExists",
+      "msg": "An ownership transfer is already pending; cancel it first"
+    },
+    {
+      "code": 6104,
+      "name": "errPendingOwnershipNotReady",
+      "msg": "Ownership transfer timelock has not elapsed"
+    },
+    {
+      "code": 6105,
+      "name": "errInvalidFreezeReason",
+      "msg": "freeze_reason value out of {{0,1,2}}"
+    },
+    {
+      "code": 6106,
+      "name": "errReactivateCooldownActive",
+      "msg": "Reactivate requires 5-minute observation cooldown to elapse"
+    },
+    {
+      "code": 6107,
+      "name": "errInvalidOwnershipTarget",
+      "msg": "new_owner cannot be system/program/sysvar addresses (Council ISC-128)"
+    },
+    {
+      "code": 6108,
+      "name": "errTooManyRevokePairs",
+      "msg": "freeze_internal MAX_REVOKE_PAIRS = 10 exceeded (Council ISC-136)"
     }
   ],
   "types": [
@@ -7308,6 +7900,36 @@ export type Sigil = {
               "APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability."
             ],
             "type": "bool"
+          },
+          {
+            "name": "frozenAtTimestamp",
+            "docs": [
+              "Phase 8 — unix timestamp at which `vault.status` last transitioned to",
+              "Frozen. Written by every freeze code path (manual `freeze_vault`,",
+              "auto-freeze inside `revoke_agent`, future `freeze_internal` helper).",
+              "Read by `reactivate_vault` to enforce the 5-minute observation",
+              "cooldown (Phase 8 F-RP3-1 fix — closes the phished-owner",
+              "freeze→reactivate→register-attacker-agent one-tx replay).",
+              "",
+              "Zero on freshly-initialized vaults that have never been frozen.",
+              "APPENDED per F-14 APPEND-ONLY rule for Borsh stability."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "freezeReason",
+            "docs": [
+              "Phase 8 — discriminant of the `FreezeReason` enum recording WHY the",
+              "vault was last frozen. Single byte on-chain; validated via",
+              "`FreezeReason::from_u8` at every write site so unknown values",
+              "(3..=255) hard-reject with `SigilError::ErrInvalidFreezeReason`.",
+              "",
+              "Zero (Manual) on freshly-initialized vaults that have never been",
+              "frozen — this is harmless because `status != Frozen` means readers",
+              "of this byte gate on status first. APPENDED per F-14 APPEND-ONLY",
+              "rule for Borsh stability."
+            ],
+            "type": "u8"
           }
         ]
       }
@@ -8401,6 +9023,104 @@ export type Sigil = {
       }
     },
     {
+      "name": "ownershipTransferAccepted",
+      "docs": [
+        "Phase 8 C26 — `new_owner` (or the multisig PDA, Batch 4) accepted a queued",
+        "transfer past timelock. `previous_owner` is the pubkey that signed the",
+        "initiate (and matches `pending.current_owner`). `via_multisig` flags the",
+        "Batch 4 path so off-chain monitors can distinguish EOA vs Squads accepts."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "previousOwner",
+            "type": "pubkey"
+          },
+          {
+            "name": "newOwner",
+            "type": "pubkey"
+          },
+          {
+            "name": "viaMultisig",
+            "type": "bool"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ownershipTransferCancelled",
+      "docs": [
+        "Phase 8 C26 — `current_owner` cancelled a queued transfer. `cancelled_new_owner`",
+        "echoes the target pubkey from the cancelled PDA so off-chain monitors",
+        "can correlate cancel ↔ initiate without re-fetching the (now-closed) PDA."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "currentOwner",
+            "type": "pubkey"
+          },
+          {
+            "name": "cancelledNewOwner",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ownershipTransferInitiated",
+      "docs": [
+        "Phase 8 C26 — owner queued a `PendingOwnershipTransfer`. Off-chain",
+        "monitors should ALERT on this event for any vault they protect — if the",
+        "owner did not initiate the queue, this is a phished-key attack signal",
+        "and the owner has `min_delay_seconds` (default 48h) to",
+        "`cancel_ownership_transfer` before the timelock elapses."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "currentOwner",
+            "type": "pubkey"
+          },
+          {
+            "name": "newOwner",
+            "type": "pubkey"
+          },
+          {
+            "name": "queuedAt",
+            "type": "i64"
+          },
+          {
+            "name": "isMultisigTarget",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
       "name": "pdaAllocated",
       "type": {
         "kind": "struct",
@@ -8686,6 +9406,111 @@ export type Sigil = {
               "Already 8-byte aligned (follows two i64 fields)."
             ],
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "pendingOwnershipTransfer",
+      "docs": [
+        "Phase 8 — C26 ownership transfer pending state.",
+        "",
+        "Two-step ownership migration with mandatory timelock. The OWNER initiates",
+        "a transfer to a `new_owner` pubkey (any address — EOA or Squads V4 PDA),",
+        "the timelock elapses (default 172,800s = 48h), then either:",
+        "- `new_owner` (standard) calls `accept_ownership_transfer`, OR",
+        "- the multisig PDA itself (via Squads) calls",
+        "`accept_ownership_transfer_multisig` (Batch 4 — `is_multisig_target == true`).",
+        "",
+        "The PDA closes on accept (rent → `new_owner`) or cancel (rent → `current_owner`).",
+        "`freeze_vault` will be wired to cancel any in-flight transfer atomically in",
+        "a subsequent batch (today's batch only ships the three owner-side",
+        "instructions plus the PDA).",
+        "",
+        "Layout matches `Self::SIZE` exactly — the 6-byte tail padding keeps the",
+        "account's total bytes 8-aligned for downstream zero-copy compat and gives",
+        "us a safe additive cushion (any new field ≤ 6 bytes can land without",
+        "growing the PDA)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "docs": [
+              "PDA-bound vault. Defense-in-depth duplicate of the [b\"pending_owner\",",
+              "vault.key()] seed — also lets handlers reject stale accounts that were",
+              "re-created against a different vault during a close-then-reuse race."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "currentOwner",
+            "docs": [
+              "Owner pubkey at queue time. `cancel_ownership_transfer` requires the",
+              "signer match this field exactly (in addition to `has_one = owner` on",
+              "the vault), and the PDA's rent reverts here on cancel."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "newOwner",
+            "docs": [
+              "Target owner. `accept_ownership_transfer` requires the signer match",
+              "this field exactly (standard EOA path). Multisig variant in Batch 4",
+              "will also bind here when `is_multisig_target == true`."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "queuedAt",
+            "docs": [
+              "`Clock::unix_timestamp` at queue time. Timelock is enforced as",
+              "`clock.unix_timestamp - queued_at >= min_delay_seconds`."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "minDelaySeconds",
+            "docs": [
+              "Owner-configurable timelock (seconds). Defaults to",
+              "`Self::DEFAULT_MIN_DELAY` (172,800 / 48h). Owner can shorten in a",
+              "future SDK call if `policy.timelock_duration` permits, but Batch 3",
+              "pins the default — extension hook lives in Batch 4+."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "isMultisigTarget",
+            "docs": [
+              "`true` means the accept path will be `accept_ownership_transfer_multisig`",
+              "(Batch 4 — Squads V4 vault-PDA-signs flow). `false` means the standard",
+              "EOA accept path. Today's `accept_ownership_transfer` HARD-REJECTS when",
+              "this is `true` so the multisig flow cannot be silently taken by the",
+              "regular handler before Batch 4 ships."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "padding",
+            "docs": [
+              "8-byte alignment cushion + additive headroom for Batch 4+ extensions",
+              "(e.g. cooldown packing, multisig-attestation digest). Zero-init on",
+              "`init` and unread today."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                6
+              ]
+            }
           }
         ]
       }
@@ -10259,6 +11084,16 @@ export type Sigil = {
           {
             "name": "timestamp",
             "type": "i64"
+          },
+          {
+            "name": "freezeReason",
+            "docs": [
+              "Phase 8 — discriminant of `FreezeReason` enum recording WHY the vault",
+              "was frozen. 0 = Manual (`freeze_vault`), 1 = AutoRevoke (last agent",
+              "removed via `revoke_agent`), 2 = EmergencyBoard (reserved v1.1).",
+              "APPENDED at end per APPEND-ONLY event-stability rule."
+            ],
+            "type": "u8"
           }
         ]
       }
@@ -10313,4 +11148,3 @@ export type Sigil = {
     }
   ]
 };
-

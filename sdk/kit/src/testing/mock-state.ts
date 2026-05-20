@@ -87,6 +87,8 @@ export function createMockVaultState(
       totalFailedTransactions: 0n,
       activeSessions: 0,
       observeOnly: overrides?.observeOnly ?? false,
+      frozenAtTimestamp: 0n,
+      freezeReason: 0,
     },
     policy: {
       discriminator: new Uint8Array(8),

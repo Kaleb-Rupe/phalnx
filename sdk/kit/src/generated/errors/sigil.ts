@@ -220,6 +220,18 @@ export const SIGIL_ERROR__ERR_OUTPUT_BELOW_FLOOR = 0x17d4; // 6100
 export const SIGIL_ERROR__ERR_DECLARATION_INCONSISTENT = 0x17d5; // 6101
 /** IxMetaCountExceeded: Foreign DeFi instruction passed more account metas than the destination-check budget (16) allows; truncate the ix or split into shorter ixs */
 export const SIGIL_ERROR__IX_META_COUNT_EXCEEDED = 0x17d6; // 6102
+/** ErrPendingOwnershipExists: An ownership transfer is already pending; cancel it first */
+export const SIGIL_ERROR__ERR_PENDING_OWNERSHIP_EXISTS = 0x17d7; // 6103
+/** ErrPendingOwnershipNotReady: Ownership transfer timelock has not elapsed */
+export const SIGIL_ERROR__ERR_PENDING_OWNERSHIP_NOT_READY = 0x17d8; // 6104
+/** ErrInvalidFreezeReason: freeze_reason value out of {{0,1,2}} */
+export const SIGIL_ERROR__ERR_INVALID_FREEZE_REASON = 0x17d9; // 6105
+/** ErrReactivateCooldownActive: Reactivate requires 5-minute observation cooldown to elapse */
+export const SIGIL_ERROR__ERR_REACTIVATE_COOLDOWN_ACTIVE = 0x17da; // 6106
+/** ErrInvalidOwnershipTarget: new_owner cannot be system/program/sysvar addresses (Council ISC-128) */
+export const SIGIL_ERROR__ERR_INVALID_OWNERSHIP_TARGET = 0x17db; // 6107
+/** ErrTooManyRevokePairs: freeze_internal MAX_REVOKE_PAIRS = 10 exceeded (Council ISC-136) */
+export const SIGIL_ERROR__ERR_TOO_MANY_REVOKE_PAIRS = 0x17dc; // 6108
 
 export type SigilError =
   | typeof SIGIL_ERROR__ACCOUNT_WRITABILITY_MISMATCH
@@ -250,16 +262,22 @@ export type SigilError =
   | typeof SIGIL_ERROR__ERR_DECLARATION_INCONSISTENT
   | typeof SIGIL_ERROR__ERR_GRAYLIST_FRICTION
   | typeof SIGIL_ERROR__ERR_GRAYLIST_FULL
+  | typeof SIGIL_ERROR__ERR_INVALID_FREEZE_REASON
+  | typeof SIGIL_ERROR__ERR_INVALID_OWNERSHIP_TARGET
   | typeof SIGIL_ERROR__ERR_MINT_DELTA_CAP_EXCEEDED
   | typeof SIGIL_ERROR__ERR_MINT_NOT_PINNED
   | typeof SIGIL_ERROR__ERR_OUTPUT_BELOW_FLOOR
   | typeof SIGIL_ERROR__ERR_OUTSIDE_OPERATING_HOURS
+  | typeof SIGIL_ERROR__ERR_PENDING_OWNERSHIP_EXISTS
+  | typeof SIGIL_ERROR__ERR_PENDING_OWNERSHIP_NOT_READY
   | typeof SIGIL_ERROR__ERR_PROTECTED_WRITABLE
+  | typeof SIGIL_ERROR__ERR_REACTIVATE_COOLDOWN_ACTIVE
   | typeof SIGIL_ERROR__ERR_RECIPIENT_CAP_EXCEEDED
   | typeof SIGIL_ERROR__ERR_SANDWICH_INTEGRITY
   | typeof SIGIL_ERROR__ERR_SESSION_NONCE_MISMATCH
   | typeof SIGIL_ERROR__ERR_STABLE_FLOOR_VIOLATION
   | typeof SIGIL_ERROR__ERR_TOKEN2022_EXTENSION_FORBIDDEN
+  | typeof SIGIL_ERROR__ERR_TOO_MANY_REVOKE_PAIRS
   | typeof SIGIL_ERROR__INSUFFICIENT_BALANCE
   | typeof SIGIL_ERROR__INSUFFICIENT_PERMISSIONS
   | typeof SIGIL_ERROR__INVALID_AGENT_KEY
@@ -357,16 +375,22 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__ERR_DECLARATION_INCONSISTENT]: `R-4 DeclarationConsistency: declared recipient/mint does not match CPI account-meta`,
     [SIGIL_ERROR__ERR_GRAYLIST_FRICTION]: `Destination is graylisted (24h friction window — awaiting promote_graylist_destination or unlock)`,
     [SIGIL_ERROR__ERR_GRAYLIST_FULL]: `Destination graylist is full (max 10 entries) — wait for an existing entry to unlock or promote`,
+    [SIGIL_ERROR__ERR_INVALID_FREEZE_REASON]: `freeze_reason value out of {{0,1,2}}`,
+    [SIGIL_ERROR__ERR_INVALID_OWNERSHIP_TARGET]: `new_owner cannot be system/program/sysvar addresses (Council ISC-128)`,
     [SIGIL_ERROR__ERR_MINT_DELTA_CAP_EXCEEDED]: `R-1 MintDeltaCap: vault-mint balance decreased by more than max_net_decrease`,
     [SIGIL_ERROR__ERR_MINT_NOT_PINNED]: `Deposit mint is not a build-time-pinned stablecoin (USDC or USDT)`,
     [SIGIL_ERROR__ERR_OUTPUT_BELOW_FLOOR]: `R-3 OutputBalanceFloor: post-execution balance increase fell below the configured min_increase floor`,
     [SIGIL_ERROR__ERR_OUTSIDE_OPERATING_HOURS]: `Current UTC hour is outside the policy's operating_hours bitmask`,
+    [SIGIL_ERROR__ERR_PENDING_OWNERSHIP_EXISTS]: `An ownership transfer is already pending; cancel it first`,
+    [SIGIL_ERROR__ERR_PENDING_OWNERSHIP_NOT_READY]: `Ownership transfer timelock has not elapsed`,
     [SIGIL_ERROR__ERR_PROTECTED_WRITABLE]: `Protected Sigil PDA passed as writable to a foreign instruction between validate and finalize`,
+    [SIGIL_ERROR__ERR_REACTIVATE_COOLDOWN_ACTIVE]: `Reactivate requires 5-minute observation cooldown to elapse`,
     [SIGIL_ERROR__ERR_RECIPIENT_CAP_EXCEEDED]: `Per-recipient daily cap exceeded — recipient outflow would breach policy.per_recipient_daily_cap_usd within the rolling 24h window, or per_recipient array full with no expired slot to evict`,
     [SIGIL_ERROR__ERR_SANDWICH_INTEGRITY]: `Bundle integrity violation: multiple validate_and_authorize instructions for the same (vault, agent, mint) tuple in one transaction`,
     [SIGIL_ERROR__ERR_SESSION_NONCE_MISMATCH]: `Session nonce mismatch — caller's expected_nonce does not match the session's stored nonce (durable-nonce replay defense)`,
     [SIGIL_ERROR__ERR_STABLE_FLOOR_VIOLATION]: `Stable balance floor violated — combined USDC+USDT balance dropped below policy.stable_balance_floor`,
     [SIGIL_ERROR__ERR_TOKEN2022_EXTENSION_FORBIDDEN]: `Token-2022 mint has a forbidden extension (only MemoTransfer + MetadataPointer + NonTransferable allowed)`,
+    [SIGIL_ERROR__ERR_TOO_MANY_REVOKE_PAIRS]: `freeze_internal MAX_REVOKE_PAIRS = 10 exceeded (Council ISC-136)`,
     [SIGIL_ERROR__INSUFFICIENT_BALANCE]: `Insufficient vault balance for withdrawal`,
     [SIGIL_ERROR__INSUFFICIENT_PERMISSIONS]: `Agent lacks permission for this action type`,
     [SIGIL_ERROR__INVALID_AGENT_KEY]: `Invalid agent: cannot be the zero address`,

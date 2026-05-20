@@ -6,6 +6,7 @@
  * @see https://github.com/codama-idl/codama
  */
 
+export * from "./acceptOwnershipTransfer.js";
 export * from "./agentTransfer.js";
 export * from "./allocateConstraintsPda.js";
 export * from "./allocatePendingConstraintsPda.js";
@@ -16,6 +17,7 @@ export * from "./applyPendingPolicy.js";
 export * from "./cancelAgentPermissionsUpdate.js";
 export * from "./cancelCloseConstraints.js";
 export * from "./cancelConstraintsUpdate.js";
+export * from "./cancelOwnershipTransfer.js";
 export * from "./cancelPendingPolicy.js";
 export * from "./cleanupOrphanConstraintsPda.js";
 export * from "./closePostAssertions.js";
@@ -27,6 +29,7 @@ export * from "./extendPda.js";
 export * from "./finalizeSession.js";
 export * from "./freezeVault.js";
 export * from "./initializeVault.js";
+export * from "./initiateOwnershipTransfer.js";
 export * from "./pauseAgent.js";
 export * from "./promoteGraylistDestination.js";
 export * from "./queueAgentPermissionsUpdate.js";
