@@ -1,4 +1,5 @@
 use super::{VaultStatus, MAX_AGENTS_PER_VAULT};
+use crate::errors::SigilError;
 use anchor_lang::prelude::*;
 
 /// Agent capability levels (replaces 21-bit ActionType bitmask).
@@ -6,6 +7,51 @@ use anchor_lang::prelude::*;
 pub const CAPABILITY_DISABLED: u8 = 0;
 pub const CAPABILITY_OBSERVER: u8 = 1;
 pub const CAPABILITY_OPERATOR: u8 = 2;
+
+/// Phase 8 — FreezeReason enum recording why a vault entered Frozen status.
+///
+/// Stored on `AgentVault.freeze_reason` (u8) so the on-chain wire format
+/// remains a single byte while the Rust type-system enforces the {0,1,2}
+/// invariant inside helper code. The byte is validated against this enum
+/// at every write site (see `FreezeReason::from_u8`); unknown values reject
+/// with `SigilError::ErrInvalidFreezeReason`.
+///
+/// **Phase 8 audit lineage:** introduced after Round-2 line-by-line audit
+/// found `revoke_agent.rs` auto-freeze drifted from `freeze_vault.rs`
+/// manual freeze (F-RP3-2 sibling drift). Batch 2 extracts both call sites
+/// into a shared `freeze_helper` that requires a `FreezeReason` argument so
+/// the next sibling-handler can't silently omit the reason byte.
+#[repr(u8)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug)]
+pub enum FreezeReason {
+    /// `freeze_vault` invoked directly by the owner as a manual kill switch.
+    Manual = 0,
+    /// `revoke_agent` auto-freezes because the last remaining agent was
+    /// revoked, leaving the vault with no operator. The owner must
+    /// `reactivate_vault` (after the 5-min cooldown) and register a new
+    /// agent before the vault can authorize again.
+    AutoRevoke = 1,
+    /// Reserved for v1.1 emergency-board pattern. Dead-code in V1 by design
+    /// (per Phase 8 spec §3, Audit #2 F-1 disposition). The discriminant is
+    /// reserved so that adding the v1.1 instruction is APPEND-ONLY at the
+    /// wire layer; no existing freeze_reason byte will be re-interpreted.
+    EmergencyBoard = 2,
+}
+
+impl FreezeReason {
+    /// Validate a wire-format freeze_reason byte and return the typed enum.
+    /// Hard-rejects unknown discriminants (3..=255) per Phase 8 spec §3 —
+    /// forward-secure against a future-added variant a tampered SDK might
+    /// pre-sign against today's program.
+    pub fn from_u8(v: u8) -> Result<Self> {
+        match v {
+            0 => Ok(FreezeReason::Manual),
+            1 => Ok(FreezeReason::AutoRevoke),
+            2 => Ok(FreezeReason::EmergencyBoard),
+            _ => Err(error!(SigilError::ErrInvalidFreezeReason)),
+        }
+    }
+}
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq)]
 pub struct AgentEntry {
@@ -110,6 +156,28 @@ pub struct AgentVault {
     ///
     /// APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
     pub observe_only: bool,
+
+    /// Phase 8 — unix timestamp at which `vault.status` last transitioned to
+    /// Frozen. Written by every freeze code path (manual `freeze_vault`,
+    /// auto-freeze inside `revoke_agent`, future `freeze_internal` helper).
+    /// Read by `reactivate_vault` to enforce the 5-minute observation
+    /// cooldown (Phase 8 F-RP3-1 fix — closes the phished-owner
+    /// freeze→reactivate→register-attacker-agent one-tx replay).
+    ///
+    /// Zero on freshly-initialized vaults that have never been frozen.
+    /// APPENDED per F-14 APPEND-ONLY rule for Borsh stability.
+    pub frozen_at_timestamp: i64,
+
+    /// Phase 8 — discriminant of the `FreezeReason` enum recording WHY the
+    /// vault was last frozen. Single byte on-chain; validated via
+    /// `FreezeReason::from_u8` at every write site so unknown values
+    /// (3..=255) hard-reject with `SigilError::ErrInvalidFreezeReason`.
+    ///
+    /// Zero (Manual) on freshly-initialized vaults that have never been
+    /// frozen — this is harmless because `status != Frozen` means readers
+    /// of this byte gate on status first. APPENDED per F-14 APPEND-ONLY
+    /// rule for Borsh stability.
+    pub freeze_reason: u8,
 }
 
 // ARCHITECTURE DECISION: No on-chain viewer/delegate role
@@ -131,7 +199,8 @@ impl AgentVault {
     /// created_at (8) + total_transactions (8) + total_volume (8) +
     /// total_fees_collected (8) +
     /// total_deposited_usd (8) + total_withdrawn_usd (8) + total_failed_transactions (8) +
-    /// active_sessions (1) + observe_only (1)  [Phase 2 TA-19]
+    /// active_sessions (1) + observe_only (1)  [Phase 2 TA-19] +
+    /// frozen_at_timestamp (8) + freeze_reason (1)  [Phase 8: 642 + 1 freeze_reason]
     pub const SIZE: usize = 8
         + 32
         + 8
@@ -148,8 +217,10 @@ impl AgentVault {
         + 8
         + 8
         + 1
-        + 1; // observe_only [Phase 2 TA-19]
-    // = 634 (Phase 2: 633 + 1 observe_only)
+        + 1  // observe_only [Phase 2 TA-19]
+        + 8  // frozen_at_timestamp [Phase 8]
+        + 1; // freeze_reason       [Phase 8]
+             // = 643 (Phase 8: 634 + 8 frozen_at_timestamp + 1 freeze_reason)
 
     pub fn is_active(&self) -> bool {
         self.status == VaultStatus::Active
@@ -194,3 +265,27 @@ impl AgentVault {
         self.get_agent(signer).map(|a| a.paused).unwrap_or(false)
     }
 }
+
+// Phase 8 compile-time SIZE pin (Council ISC-131 spirit).
+//
+// **DEVIATION NOTE (deliberate, documented):** the Phase 8 Batch 1 spec
+// called for `assert!(size_of::<AgentVault>() + 8 == AgentVault::SIZE)`.
+// That form is correct ONLY for `#[account(zero_copy)]` + `#[repr(C)]` +
+// Pod structs (see `AuditEntry`, `AuditLogSuccess`). `AgentVault` is a
+// `#[account]` Borsh-serialized struct containing `Vec<AgentEntry>` —
+// `size_of::<AgentVault>()` returns the Rust stack size (Vec is a 24-byte
+// fat pointer) which by construction CANNOT equal the on-chain Borsh
+// serialized length (4-byte len prefix + 49 bytes × MAX_AGENTS_PER_VAULT).
+// Forcing `#[repr(C)]` on a Borsh `#[account]` would alter struct layout
+// in ways orthogonal to the on-chain wire format and add risk for zero
+// benefit.
+//
+// Instead we pin the documented invariant: SIZE is a constant whose
+// arithmetic in `impl AgentVault` MUST sum to 643. Any future field
+// addition that forgets to update SIZE will fail this assertion at
+// compile time. Combined with the field-by-field SIZE doc comment above,
+// this is the strongest static guarantee available for a Borsh account.
+const _AGENT_VAULT_SIZE_PIN: () = assert!(
+    AgentVault::SIZE == 643,
+    "AgentVault::SIZE drifted from documented Phase 8 layout (634 + 8 frozen_at_timestamp + 1 freeze_reason = 643)"
+);

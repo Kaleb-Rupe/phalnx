@@ -185,6 +185,14 @@ pub fn handler<'a, 'b, 'c, 'info>(
     // `validate_and_authorize` (it requires `vault.is_active()`).
     let vault = &mut ctx.accounts.vault;
     vault.status = VaultStatus::Frozen;
+    // Phase 8: record WHY the vault was frozen + WHEN. Manual freeze path
+    // always writes FreezeReason::Manual (= 0). The 5-minute reactivate
+    // cooldown reads `frozen_at_timestamp` so this MUST be wall-clock and
+    // not slot-derived. Batch 2 will refactor this + `revoke_agent` into a
+    // shared `freeze_helper` that REQUIRES a `FreezeReason` argument so the
+    // next sibling-handler cannot silently omit the reason byte.
+    vault.frozen_at_timestamp = clock.unix_timestamp;
+    vault.freeze_reason = FreezeReason::Manual as u8;
 
     // Phase 7 — write success audit-log entry AFTER state mutation completes.
     // M-3 ordering: persist on-chain before emit!() so event log and on-chain
@@ -217,6 +225,10 @@ pub fn handler<'a, 'b, 'c, 'info>(
         agents_preserved,
         sessions_revoked,
         timestamp: clock.unix_timestamp,
+        // Phase 8: manual freeze path always emits Manual (= 0). Patched
+        // inline for Batch 1; Batch 2 routes both call sites through a
+        // shared `freeze_helper` that takes `FreezeReason` as a parameter.
+        freeze_reason: FreezeReason::Manual as u8,
     });
 
     Ok(())

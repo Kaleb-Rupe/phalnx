@@ -259,6 +259,12 @@ pub fn handler(
     vault.active_sessions = 0;
     // Phase 2 TA-19: observer-only mode (set by owner at init).
     vault.observe_only = observe_only;
+    // Phase 8: freeze-state fields. Zero on a freshly-initialized Active
+    // vault — `vault.status != Frozen` means readers gate on status before
+    // ever inspecting these bytes. Populated on every transition to Frozen
+    // (`freeze_vault`, `revoke_agent` auto-freeze, future `freeze_internal`).
+    vault.frozen_at_timestamp = 0;
+    vault.freeze_reason = 0;
 
     // Initialize policy
     let policy = &mut ctx.accounts.policy;

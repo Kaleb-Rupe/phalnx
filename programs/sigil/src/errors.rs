@@ -588,4 +588,55 @@ pub enum SigilError {
     /// of ~+4K CU per validate pass).
     #[msg("Foreign DeFi instruction passed more account metas than the destination-check budget (16) allows; truncate the ix or split into shorter ixs")]
     IxMetaCountExceeded,
+
+    // --- Phase 8 (ownership transfer + freeze hardening) ---
+    // Appended at END to preserve existing error codes 6000-6102.
+    /// 6103 — Phase 8 ownership transfer: a queued ownership transfer for
+    /// this vault already exists. Owner must `cancel_ownership_transfer`
+    /// before queueing a new target. Prevents a phished owner from quietly
+    /// chaining multiple pending transfers and racing the timelock with
+    /// whichever target apply()s first.
+    #[msg("An ownership transfer is already pending; cancel it first")]
+    ErrPendingOwnershipExists,
+
+    /// 6104 — Phase 8 ownership transfer: `apply_ownership_transfer` was
+    /// invoked before the timelock window elapsed. Mirrors policy/agent-
+    /// permissions timelock semantics — a phished owner has the full
+    /// `policy.timelock_duration` window to cancel before the transfer
+    /// can land.
+    #[msg("Ownership transfer timelock has not elapsed")]
+    ErrPendingOwnershipNotReady,
+
+    /// 6105 — Phase 8 freeze hardening (audit lineage: F19 cached-deser +
+    /// F-RP3-2 sibling drift): caller-provided `freeze_reason` byte is
+    /// outside the {0,1,2} enum range. Rejecting unknown discriminants is
+    /// forward-secure — a future-added FreezeReason variant a tampered SDK
+    /// might pre-sign will reject hard on today's program.
+    #[msg("freeze_reason value out of {{0,1,2}}")]
+    ErrInvalidFreezeReason,
+
+    /// 6106 — Phase 8 reactivate cooldown: `reactivate_vault` requires the
+    /// 5-minute observation window after `frozen_at_timestamp` to elapse
+    /// before the vault can return to Active. Closes F-RP3-1 (phished owner
+    /// freeze→reactivate→full-capability replay in one transaction).
+    #[msg("Reactivate requires 5-minute observation cooldown to elapse")]
+    ErrReactivateCooldownActive,
+
+    /// 6107 — Phase 8 ownership transfer (Council ISC-128): `new_owner`
+    /// cannot be a system/program/sysvar address. Closes the foot-gun where
+    /// a phished owner signs a transfer to a non-signing address (e.g.
+    /// SystemProgram::ID, Pubkey::default(), known sysvar pubkeys) and
+    /// permanently bricks the vault. Forward-only; expansion to additional
+    /// banned discriminants is non-breaking.
+    #[msg("new_owner cannot be system/program/sysvar addresses (Council ISC-128)")]
+    ErrInvalidOwnershipTarget,
+
+    /// 6108 — Phase 8 freeze_internal (Council ISC-136): caller passed more
+    /// than `MAX_REVOKE_PAIRS = 10` (session_pda, vault_token_account) pairs
+    /// in `remaining_accounts`. The 10-pair cap matches `MAX_AGENTS_PER_VAULT`
+    /// (one active session per agent ceiling) and bounds CU consumption of
+    /// the auto-revoke walker. Excess pairs are rejected hard rather than
+    /// silently dropped so callers immediately see the capacity error.
+    #[msg("freeze_internal MAX_REVOKE_PAIRS = 10 exceeded (Council ISC-136)")]
+    ErrTooManyRevokePairs,
 }

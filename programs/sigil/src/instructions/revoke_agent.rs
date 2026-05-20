@@ -73,9 +73,22 @@ pub fn handler(ctx: Context<RevokeAgent>, agent_to_remove: Pubkey) -> Result<()>
 
     vault.agents.retain(|a| a.pubkey != agent_to_remove);
 
-    // Freeze if no agents remain
+    // Phase 8: obtain Clock BEFORE the auto-freeze branch so the freeze
+    // record carries the correct wall-clock timestamp. The 5-minute
+    // reactivate cooldown (F-RP3-1 fix) reads `frozen_at_timestamp`, so
+    // this MUST be unix_timestamp and not slot-derived.
+    let clock = Clock::get()?;
+
+    // Freeze if no agents remain. Phase 8: record reason + timestamp on
+    // the auto-freeze path so `reactivate_vault` enforces the 5-min
+    // cooldown identically to the manual-freeze path. Batch 2 extracts
+    // this branch into a shared `freeze_helper(vault, reason, clock)` so
+    // the next sibling-handler cannot drift on the reason byte
+    // (F-RP3-2 sibling drift lineage).
     if vault.agents.is_empty() {
         vault.status = VaultStatus::Frozen;
+        vault.frozen_at_timestamp = clock.unix_timestamp;
+        vault.freeze_reason = FreezeReason::AutoRevoke as u8;
     }
 
     // PEN-CROSS-5 (Phase 4 absorption): bump policy_version. Critical for
@@ -89,8 +102,6 @@ pub fn handler(ctx: Context<RevokeAgent>, agent_to_remove: Pubkey) -> Result<()>
         .policy_version
         .checked_add(1)
         .ok_or(error!(SigilError::Overflow))?;
-
-    let clock = Clock::get()?;
     let vault_key = vault.key();
     let remaining = vault.agent_count() as u8;
 

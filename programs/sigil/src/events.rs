@@ -213,6 +213,11 @@ pub struct VaultFrozen {
     /// each pair whose session_pda matches the expected derivation is revoked.
     pub sessions_revoked: u32,
     pub timestamp: i64,
+    /// Phase 8 — discriminant of `FreezeReason` enum recording WHY the vault
+    /// was frozen. 0 = Manual (`freeze_vault`), 1 = AutoRevoke (last agent
+    /// removed via `revoke_agent`), 2 = EmergencyBoard (reserved v1.1).
+    /// APPENDED at end per APPEND-ONLY event-stability rule.
+    pub freeze_reason: u8,
 }
 
 #[event]
