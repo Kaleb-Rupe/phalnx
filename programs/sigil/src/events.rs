@@ -398,3 +398,41 @@ pub struct OwnershipTransferCancelled {
     pub cancelled_new_owner: Pubkey,
     pub timestamp: i64,
 }
+
+// --- Phase 8 PEN-CROSS-1 (Batch 6) — queue/apply agent grant events ---
+// Appended at END preserving event-stream layout.
+
+/// Phase 8 PEN-CROSS-1 — owner queued an OPERATOR-class agent grant. The
+/// agent is NOT yet in `vault.agents`; off-chain monitors should ALERT on
+/// this event for any vault they protect. If the owner didn't initiate the
+/// queue, this is a phished-key attack signal — the owner has
+/// `min_delay_seconds` (default 1800s = 30 min) to abort before
+/// `apply_agent_grant` can land. (A `cancel_agent_grant` instruction is
+/// planned for a follow-up batch; until then, observers should freeze the
+/// vault if the queue was unauthorized.)
+#[event]
+pub struct AgentGrantQueued {
+    pub vault: Pubkey,
+    pub agent: Pubkey,
+    pub capability: u8,
+    pub spending_limit_usd: u64,
+    pub queued_at: i64,
+    pub executes_at: i64,
+}
+
+/// Phase 8 PEN-CROSS-1 — owner applied a queued OPERATOR-class agent grant
+/// past the timelock window. The agent is now in `vault.agents` and the
+/// policy_preview_digest has been re-derived to bind the new agent_set_hash.
+/// `new_policy_version` is the post-bump version; in-flight
+/// `validate_and_authorize` ix snapshotted the prior version will fail fast
+/// with PolicyVersionMismatch under the new authority surface.
+#[event]
+pub struct AgentGrantApplied {
+    pub vault: Pubkey,
+    pub agent: Pubkey,
+    pub capability: u8,
+    pub spending_limit_usd: u64,
+    pub queued_at: i64,
+    pub applied_at: i64,
+    pub new_policy_version: u64,
+}

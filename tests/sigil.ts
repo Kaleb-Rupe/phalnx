@@ -5994,21 +5994,22 @@ describe("sigil", () => {
         .signers([protoCapOwner])
         .rpc();
 
-      // Register agent
-      //
-      // P0.1 interim cosign gate (audit 2026-05-19): this vault opted into
-      // `cosign_required: true` at init for the G6 §RP-2 P2 weakening tests.
-      // register_agent now requires a non-owner signer when cosign_required
-      // is true. Pass `protoCapCosigner` in remaining_accounts to satisfy
-      // the gate (matches the cosign session signer that the elevated
-      // queue_policy_update calls below already use).
+      // Phase 8 PEN-CROSS-1 migration: register_agent now rejects
+      // CAPABILITY_OPERATOR direct grants on cosign-opted vaults. Migrate
+      // the FULL_CAPABILITY grant through queue_agent_grant + advance
+      // timelock + apply_agent_grant.
+      const [pendingAgentGrantPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("pending_agent_grant"), pcVault.toBuffer()],
+        program.programId,
+      );
+
       await program.methods
-        .registerAgent(protoCapAgent.publicKey, FULL_CAPABILITY, new BN(0))
+        .queueAgentGrant(protoCapAgent.publicKey, FULL_CAPABILITY, new BN(0))
         .accounts({
           owner: protoCapOwner.publicKey,
           vault: pcVault,
           policy: pcPolicy,
-          agentSpendOverlay: pcOverlay,
+          pending: pendingAgentGrantPda,
         } as any)
         .remainingAccounts([
           {
@@ -6018,6 +6019,21 @@ describe("sigil", () => {
           },
         ])
         .signers([protoCapOwner, protoCapCosigner])
+        .rpc();
+
+      // advance past MIN_TIMELOCK_DURATION (1800s).
+      advanceTime(svm, 1801);
+
+      await program.methods
+        .applyAgentGrant()
+        .accounts({
+          owner: protoCapOwner.publicKey,
+          vault: pcVault,
+          policy: pcPolicy,
+          pending: pendingAgentGrantPda,
+          agentSpendOverlay: pcOverlay,
+        } as any)
+        .signers([protoCapOwner])
         .rpc();
     });
 

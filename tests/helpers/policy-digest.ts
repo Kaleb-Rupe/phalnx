@@ -27,11 +27,49 @@
  *   18. stable_balance_floor: u64 LE — TA-12 (Phase 5 post-exec)
  *   19. per_recipient_daily_cap_usd: u64 LE — TA-14 (Phase 5 post-exec)
  *   20. cosign_required: bool (1 byte 0/1) — G6 (audit 2026-05-18 cosign opt-in)
+ *   21. agent_set_hash: [u8; 32] — Phase 8 PEN-CROSS-1 (audit 2026-05-19)
  */
 
 import { createHash } from "crypto";
 import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
+
+/**
+ * Phase 8 PEN-CROSS-1 (Council ISC-141): SHA-256 of the Borsh-encoded
+ * empty `Vec<(Pubkey, u8)>` — i.e. SHA-256 of [0x00,0x00,0x00,0x00].
+ * Mirrors Rust `policy_digest.rs::EMPTY_AGENT_SET_HASH` and SDK
+ * `compute-policy-preview-digest.ts::EMPTY_AGENT_SET_HASH`.
+ */
+export const EMPTY_AGENT_SET_HASH: Buffer = createHash("sha256")
+  .update(Buffer.alloc(4))
+  .digest();
+
+/**
+ * Compute the canonical `agent_set_hash` from a list of (pubkey, capability)
+ * agent entries. Sort by pubkey ascending byte-wise; Borsh-encode
+ * `Vec<(Pubkey, u8)>`; SHA-256. Mirrors `compute_agent_set_hash` byte-for-byte.
+ */
+export function computeAgentSetHash(
+  agents: ReadonlyArray<{ pubkey: PublicKey; capability: number }>,
+): Buffer {
+  const sorted = [...agents].sort((a, b) => {
+    const ab = a.pubkey.toBuffer();
+    const bb = b.pubkey.toBuffer();
+    for (let i = 0; i < 32; i++) {
+      if (ab[i] < bb[i]) return -1;
+      if (ab[i] > bb[i]) return 1;
+    }
+    return 0;
+  });
+  const lenBuf = Buffer.alloc(4);
+  lenBuf.writeUInt32LE(sorted.length);
+  const parts: Buffer[] = [lenBuf];
+  for (const e of sorted) {
+    parts.push(e.pubkey.toBuffer());
+    parts.push(Buffer.from([e.capability & 0xff]));
+  }
+  return createHash("sha256").update(Buffer.concat(parts)).digest();
+}
 
 export interface PolicyDigestFields {
   dailySpendingCapUsd: BN | bigint | number;
@@ -95,6 +133,12 @@ export interface PolicyDigestFields {
    * this is true is itself an elevated mutation per `queue_policy_update`.
    */
   cosignRequired?: boolean;
+  /**
+   * Phase 8 PEN-CROSS-1: SHA-256 over Borsh of the vault's agent set
+   * (sorted by pubkey ascending). Default `EMPTY_AGENT_SET_HASH` so legacy
+   * fixtures (no agents) continue to produce the canonical digest.
+   */
+  agentSetHash?: Buffer;
 }
 
 function u64le(v: BN | bigint | number): Buffer {
@@ -165,6 +209,15 @@ export function computePolicyPreviewDigest(
   parts.push(u64le(fields.perRecipientDailyCapUsd ?? 0));
   // G6 (audit 2026-05-18 cosign opt-in): cosign_required at position 20.
   parts.push(u8(fields.cosignRequired ? 1 : 0));
+  // Phase 8 PEN-CROSS-1: agent_set_hash at position 21. Defaults to
+  // the empty-vault deterministic value when the caller doesn't supply it.
+  const agentSetHash = fields.agentSetHash ?? EMPTY_AGENT_SET_HASH;
+  if (agentSetHash.length !== 32) {
+    throw new Error(
+      `agentSetHash must be exactly 32 bytes, got ${agentSetHash.length}`,
+    );
+  }
+  parts.push(agentSetHash);
 
   const buf = Buffer.concat(parts);
   return Array.from(createHash("sha256").update(buf).digest());
@@ -238,6 +291,11 @@ export function initVaultPreviewDigest(args: {
    * Bound at digest position 20.
    */
   cosignRequired?: boolean;
+  /**
+   * Phase 8 PEN-CROSS-1: agent_set_hash for the vault at init time. Default
+   * `EMPTY_AGENT_SET_HASH` — vault starts with zero agents.
+   */
+  agentSetHash?: Buffer;
 }): number[] {
   return computePolicyPreviewDigest({
     dailySpendingCapUsd: args.dailySpendingCapUsd,
@@ -263,6 +321,10 @@ export function initVaultPreviewDigest(args: {
     // existing fixtures continue to produce the same digest layout
     // they signed against. New tests opt in explicitly.
     cosignRequired: args.cosignRequired ?? false,
+    // Phase 8 PEN-CROSS-1: at init the vault has no agents, so default
+    // to the empty-Vec hash. Tests that exercise non-empty agent sets
+    // override explicitly.
+    agentSetHash: args.agentSetHash ?? EMPTY_AGENT_SET_HASH,
   });
 }
 
@@ -309,6 +371,8 @@ export interface LiveLikePolicy {
   perRecipientDailyCapUsd?: BN | bigint | number;
   /** G6 (audit 2026-05-18 cosign opt-in): bound at digest position 20. */
   cosignRequired?: boolean;
+  /** Phase 8 PEN-CROSS-1: bound at canonical digest position 21. */
+  agentSetHash?: Buffer;
 }
 
 export interface QueueOverride {
@@ -412,6 +476,9 @@ export function queuePolicyMergedDigest(
       override.cosignRequired,
       live.cosignRequired ?? false,
     ),
+    // Phase 8 PEN-CROSS-1: queue_policy_update does NOT mutate the agent
+    // set — pass through from live policy snapshot.
+    agentSetHash: live.agentSetHash ?? EMPTY_AGENT_SET_HASH,
   });
 }
 
@@ -466,6 +533,13 @@ export async function siblingHandlerDigest(
     // Sibling handlers (constraints / post-assertions flips) never mutate
     // cosign_required.
     cosignRequired: !!policy.cosignRequired,
+    // Phase 8 PEN-CROSS-1: sibling handlers never mutate the agent set.
+    // Compute from `vault.agents` (which Anchor decodes into the AgentEntry
+    // shape with `pubkey`/`capability` fields).
+    agentSetHash: computeAgentSetHash(
+      (vault.agents as ReadonlyArray<{ pubkey: PublicKey; capability: number }>) ??
+        [],
+    ),
   });
 }
 
@@ -505,6 +579,11 @@ export async function fetchAndComputeQueueDigest(
     stableBalanceFloor: policy.stableBalanceFloor ?? 0,
     perRecipientDailyCapUsd: policy.perRecipientDailyCapUsd ?? 0,
     cosignRequired: !!policy.cosignRequired,
+    // Phase 8 PEN-CROSS-1: snapshot agent_set_hash from live vault.
+    agentSetHash: computeAgentSetHash(
+      (vault.agents as ReadonlyArray<{ pubkey: PublicKey; capability: number }>) ??
+        [],
+    ),
   };
   return queuePolicyMergedDigest(live, override, !!vault.observeOnly);
 }

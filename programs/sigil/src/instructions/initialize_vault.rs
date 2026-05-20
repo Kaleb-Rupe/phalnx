@@ -3,7 +3,9 @@ use anchor_lang::prelude::*;
 use crate::errors::SigilError;
 use crate::events::VaultCreated;
 use crate::state::*;
-use crate::utils::policy_digest::{compute_policy_preview_digest, PolicyPreviewFields};
+use crate::utils::policy_digest::{
+    compute_agent_set_hash, compute_policy_preview_digest, PolicyPreviewFields,
+};
 
 #[derive(Accounts)]
 #[instruction(vault_id: u64)]
@@ -235,6 +237,11 @@ pub fn handler(
         // G6 (audit 2026-05-18 cosign opt-in): owner's cosign choice bound
         // at canonical digest position 20.
         cosign_required,
+        // Phase 8 PEN-CROSS-1 (Council ISC-141): at init the vault has an
+        // empty agent set, so the agent_set_hash is the deterministic
+        // empty-Vec SHA-256 (`compute_agent_set_hash(&[])`). The off-chain
+        // SDK computes the same empty value when building the init digest.
+        agent_set_hash: compute_agent_set_hash(&[]),
     });
     require!(
         recomputed_digest == preview_digest,

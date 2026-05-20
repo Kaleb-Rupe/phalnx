@@ -457,6 +457,34 @@ pub mod sigil {
         instructions::set_observe_only::handler(ctx, new_value)
     }
 
+    // --- Phase 8 PEN-CROSS-1 Batch 6 — queue/apply agent grant ---
+
+    /// Phase 8 PEN-CROSS-1 — queue an OPERATOR-class agent grant with mandatory
+    /// timelock. After `register_agent` was tightened to reject
+    /// `capability == CAPABILITY_OPERATOR`, this is the ONLY path to add a
+    /// new OPERATOR-class agent. Cosign-opted-in vaults require a non-owner
+    /// signer in `remaining_accounts`. The pending PDA at
+    /// `[b"pending_agent_grant", vault]` lives until `apply_agent_grant`
+    /// (after `MIN_TIMELOCK_DURATION = 1800s`).
+    pub fn queue_agent_grant(
+        ctx: Context<QueueAgentGrant>,
+        agent: Pubkey,
+        capability: u8,
+        spending_limit_usd: u64,
+    ) -> Result<()> {
+        instructions::queue_agent_grant::handler(ctx, agent, capability, spending_limit_usd)
+    }
+
+    /// Phase 8 PEN-CROSS-1 — apply a queued OPERATOR-class agent grant past
+    /// the timelock. Inserts the agent into `vault.agents`, claims an
+    /// AgentSpendOverlay slot (fail-closed when `spending_limit_usd > 0`),
+    /// re-derives `policy.policy_preview_digest` with the NEW
+    /// `agent_set_hash`, bumps `policy.policy_version`, closes the pending
+    /// PDA, and emits `AgentGrantApplied`.
+    pub fn apply_agent_grant(ctx: Context<ApplyAgentGrant>) -> Result<()> {
+        instructions::apply_agent_grant::handler(ctx)
+    }
+
     // --- Phase 8 Batch 3 — C26 ownership transfer (owner-side ix) ---
 
     /// Phase 8 C26 — initiate an ownership transfer with mandatory timelock.

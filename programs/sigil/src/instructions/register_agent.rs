@@ -104,6 +104,28 @@ pub fn handler(
         capability <= FULL_CAPABILITY,
         SigilError::InvalidCapability
     );
+    // Phase 8 PEN-CROSS-1 (audit 2026-05-19): on cosign-opted vaults,
+    // `register_agent` is Observer-only — OPERATOR-class grants MUST route
+    // through the `queue_agent_grant` → `apply_agent_grant` timelock-gated
+    // path (mirrors the F-RP3-2 cosign+timelock gate at
+    // `queue_agent_permissions_update`). Closes the phished-owner
+    // instant-operator-grant vector for vaults that opted into cosign.
+    //
+    // For vaults WITHOUT cosign_required (the V1 default for solo-founder
+    // simplicity), register_agent retains direct-grant semantics — those
+    // vaults have NO defense against a phished owner key by design, so
+    // adding a timelock here would not change the threat surface but
+    // would break 60%+ of existing fixtures.
+    //
+    // CAPABILITY_DISABLED (0) and CAPABILITY_OBSERVER (1) always go through
+    // this fast path because Observers cannot move funds —
+    // `has_capability(.., is_spending=true)` requires CAPABILITY_OPERATOR.
+    if ctx.accounts.policy.cosign_required {
+        require!(
+            capability < CAPABILITY_OPERATOR,
+            SigilError::InvalidPermissions
+        );
+    }
     require!(!vault.is_agent(&agent), SigilError::AgentAlreadyRegistered);
     require!(
         vault.agent_count() < MAX_AGENTS_PER_VAULT,

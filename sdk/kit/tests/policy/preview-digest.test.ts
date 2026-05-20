@@ -18,10 +18,16 @@
 import { expect } from "chai";
 import * as fc from "fast-check";
 import { createHash } from "node:crypto";
-import { computePolicyPreviewDigest } from "../../src/policy/compute-policy-preview-digest.js";
+import {
+  computeAgentSetHash,
+  computePolicyPreviewDigest,
+  EMPTY_AGENT_SET_HASH,
+} from "../../src/policy/compute-policy-preview-digest.js";
 
-// Post-G6 (audit 2026-05-18 cosign opt-in): cosign_required appended at
-// position 20 of the canonical encoding.
+// Post-Phase-8-PEN-CROSS-1 (audit 2026-05-19): agent_set_hash appended at
+// position 21 of the canonical encoding. Both fixtures use the empty-vault
+// agent_set_hash (`EMPTY_AGENT_SET_HASH` — SHA-256 of [0x00,0x00,0x00,0x00])
+// because no agents are registered in these fixture vaults.
 // Prior values:
 //   Pre-PEN-CROSS-6:
 //     HEX_MINIMAL   = 29f9a0caa6851902abe7de24ac30380ef50c220d25d541f8fe1762793152b623
@@ -44,17 +50,24 @@ import { computePolicyPreviewDigest } from "../../src/policy/compute-policy-prev
 //   Post-TA-14 (pre-G6):
 //     HEX_MINIMAL   = 45c51e8d77b5a1775ea95c760a4a554288fc246f91e10bac620cfda902936a46
 //     HEX_REALISTIC = 67c7cde90c0d8140fceb370bf94dcc15488ffd1407a84d4c248b590a8b9d810f
-//
-// G6 fixtures:
-//   - HEX_MINIMAL: cosignRequired=false (default low-friction — append 1 zero byte)
-//   - HEX_REALISTIC: cosignRequired=false (realistic default — append 1 zero byte)
+//   Post-G6 (pre-PEN-CROSS-1):
+//     HEX_MINIMAL   = 19c70cb767358d1ce2a4c736b067172e0f87ddad8ae6f98292a62bd5f9bae355
+//     HEX_REALISTIC = 15ab9e4290b8bc9229adc64e46cf785edb1adc78596eb339e7bdd4df2a2cab62
 //
 // Cross-impl byte-equality pinned against Rust unit tests in
 // `programs/sigil/src/utils/policy_digest.rs::digest_known_value_*`.
 const HEX_MINIMAL =
-  "19c70cb767358d1ce2a4c736b067172e0f87ddad8ae6f98292a62bd5f9bae355";
+  "a9d8654da866751cbec1c45dcae0b7c3b6e45ee98c2b284b8cd9f8f09d894f83";
 const HEX_REALISTIC =
-  "15ab9e4290b8bc9229adc64e46cf785edb1adc78596eb339e7bdd4df2a2cab62";
+  "503ff364c055085089576e5af684383e10b7dd65ed796bd57c53927e879cdb0e";
+/**
+ * Phase 8 PEN-CROSS-1 (audit 2026-05-19): empty-vault agent_set_hash.
+ * SHA-256 of [0x00,0x00,0x00,0x00]. Mirrors Rust
+ * `policy_digest.rs::EMPTY_AGENT_SET_HASH` and SDK helper
+ * `compute-policy-preview-digest.ts::EMPTY_AGENT_SET_HASH`.
+ */
+const HEX_EMPTY_AGENT_SET =
+  "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119";
 
 // Base58 encodings of fixed test pubkeys [1u8;32], [2u8;32], [10u8;32].
 // Computed once (see Rust unit-test fixtures `pk(1) / pk(2) / pk(10)`).
@@ -430,6 +443,60 @@ describe("TA-19 — computePolicyPreviewDigest cross-impl pin", () => {
     expect(toHex(d1)).to.not.equal(toHex(d2));
   });
 
+  // Phase 8 PEN-CROSS-1 cross-impl pin (Council ISC-141): the empty-vault
+  // agent_set_hash MUST equal the deterministic SHA-256 of [0x00,0x00,0x00,0x00].
+  // Mirrors the Rust `EMPTY_AGENT_SET_HASH` constant.
+  it("EMPTY_AGENT_SET_HASH matches Rust empty-Vec hash (PEN-CROSS-1)", () => {
+    expect(toHex(EMPTY_AGENT_SET_HASH)).to.equal(HEX_EMPTY_AGENT_SET);
+  });
+
+  // Phase 8 PEN-CROSS-1 cross-impl pin: computeAgentSetHash sorts agents
+  // by pubkey ascending so the projection is deterministic regardless of
+  // insert order.
+  it("computeAgentSetHash is order-independent (PEN-CROSS-1)", () => {
+    const a = { pubkey: PK_1, capability: 2 };
+    const b = { pubkey: PK_2, capability: 1 };
+    const h_ab = computeAgentSetHash([a, b]);
+    const h_ba = computeAgentSetHash([b, a]);
+    expect(toHex(h_ab)).to.equal(toHex(h_ba));
+  });
+
+  // Phase 8 PEN-CROSS-1 cross-impl pin: inserting an agent into the set
+  // MUST diverge the policy digest. Closes the silent-insertion vector.
+  it("agent_set_hash flip changes the digest (PEN-CROSS-1)", () => {
+    const base = {
+      dailySpendingCapUsd: 500_000_000n,
+      maxTransactionSizeUsd: 100_000_000n,
+      maxSlippageBps: 100,
+      developerFeeRate: 0,
+      protocolMode: 1,
+      protocols: [PK_1],
+      destinationMode: 0,
+      allowedDestinations: [PK_10],
+      timelockDuration: 1800n,
+      sessionExpirySeconds: 30n,
+      observeOnly: false,
+      hasConstraints: false,
+      hasPostAssertions: 0,
+      createdAtSlot: 12345n,
+      operatingHours: 0x00ffffff,
+      autoPromoteGrays: false,
+      autoRevokeThreshold: 5,
+      stableBalanceFloor: 0n,
+      perRecipientDailyCapUsd: 0n,
+      cosignRequired: false,
+      agentSetHash: EMPTY_AGENT_SET_HASH,
+    } as const;
+    const d_empty = computePolicyPreviewDigest(base);
+    const withAgent = computeAgentSetHash([{ pubkey: PK_2, capability: 2 }]);
+    expect(toHex(withAgent)).to.not.equal(toHex(EMPTY_AGENT_SET_HASH));
+    const d_with = computePolicyPreviewDigest({
+      ...base,
+      agentSetHash: withAgent,
+    });
+    expect(toHex(d_empty)).to.not.equal(toHex(d_with));
+  });
+
   // TA-14 cross-impl pin: per_recipient_daily_cap_usd is bound by the
   // digest. Flipping it MUST change the digest — defends against a
   // tampered SDK silently raising the per-recipient cap to drain to
@@ -535,6 +602,7 @@ function referenceDigest(fields: {
   stableBalanceFloor: bigint;
   perRecipientDailyCapUsd: bigint;
   cosignRequired: boolean;
+  agentSetHash: Uint8Array;
 }): string {
   const parts: number[] = [];
   const pushU64 = (v: bigint) => {
@@ -586,6 +654,13 @@ function referenceDigest(fields: {
   pushU64(fields.perRecipientDailyCapUsd);
   // G6 (audit 2026-05-18 cosign opt-in): cosign_required at position 20
   pushU8(fields.cosignRequired ? 1 : 0);
+  // Phase 8 PEN-CROSS-1 (audit 2026-05-19): agent_set_hash at position 21.
+  if (fields.agentSetHash.length !== 32) {
+    throw new Error(
+      `referenceDigest: agentSetHash must be 32 bytes, got ${fields.agentSetHash.length}`,
+    );
+  }
+  for (const x of fields.agentSetHash) parts.push(x);
 
   const buf = Buffer.from(parts);
   return createHash("sha256").update(buf).digest("hex");
@@ -619,6 +694,7 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
         fc.bigUint({ max: (1n << 64n) - 1n }), // stable_balance_floor (TA-12)
         fc.bigUint({ max: (1n << 64n) - 1n }), // per_recipient_daily_cap_usd (TA-14)
         fc.boolean(), // cosign_required (G6 audit 2026-05-18 cosign opt-in)
+        fc.uint8Array({ minLength: 32, maxLength: 32 }), // agent_set_hash (PEN-CROSS-1)
         (
           dailyCap,
           maxTx,
@@ -640,6 +716,7 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
           stableBalanceFloor,
           perRecipientDailyCapUsd,
           cosignRequired,
+          agentSetHash,
         ) => {
           const sdkDigest = computePolicyPreviewDigest({
             dailySpendingCapUsd: dailyCap,
@@ -664,6 +741,7 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
             stableBalanceFloor,
             perRecipientDailyCapUsd,
             cosignRequired,
+            agentSetHash,
           });
           const refDigest = referenceDigest({
             dailySpendingCapUsd: dailyCap,
@@ -686,6 +764,7 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
             stableBalanceFloor,
             perRecipientDailyCapUsd,
             cosignRequired,
+            agentSetHash,
           });
           const sdkHex = Array.from(sdkDigest)
             .map((x) => x.toString(16).padStart(2, "0"))

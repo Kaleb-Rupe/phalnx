@@ -4,7 +4,9 @@ use crate::errors::SigilError;
 use crate::events::PolicyChangeQueued;
 use crate::state::*;
 use crate::utils::cosign_digest::{compute_cosign_digest, CosignDigestFields};
-use crate::utils::policy_digest::{compute_policy_preview_digest, PolicyPreviewFields};
+use crate::utils::policy_digest::{
+    compute_agent_set_hash, compute_policy_preview_digest, PolicyPreviewFields,
+};
 
 #[derive(Accounts)]
 pub struct QueuePolicyUpdate<'info> {
@@ -468,6 +470,11 @@ pub fn handler(
         // The owner's choice (and any toggle) is part of the signed
         // digest so a tampered SDK cannot flip it silently.
         cosign_required: eff_cosign_required,
+        // Phase 8 PEN-CROSS-1: agent_set_hash bound at canonical position
+        // 21. queue_policy_update never mutates `vault.agents` — re-derive
+        // from live vault. The SDK off-chain computes the same projection
+        // when it builds the signed digest.
+        agent_set_hash: compute_agent_set_hash(&vault.agents),
     });
     require!(
         recomputed_digest == new_policy_preview_digest,

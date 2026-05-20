@@ -38,6 +38,7 @@ import {
   getAuditLogRejectedCodec,
   getAuditLogSuccessCodec,
   getInstructionConstraintsCodec,
+  getPendingAgentGrantCodec,
   getPendingAgentPermissionsUpdateCodec,
   getPendingCloseConstraintsCodec,
   getPendingConstraintsUpdateCodec,
@@ -57,6 +58,8 @@ import {
   type AuditLogSuccessArgs,
   type InstructionConstraints,
   type InstructionConstraintsArgs,
+  type PendingAgentGrant,
+  type PendingAgentGrantArgs,
   type PendingAgentPermissionsUpdate,
   type PendingAgentPermissionsUpdateArgs,
   type PendingCloseConstraints,
@@ -82,6 +85,7 @@ import {
   getAgentTransferInstructionAsync,
   getAllocateConstraintsPdaInstructionAsync,
   getAllocatePendingConstraintsPdaInstructionAsync,
+  getApplyAgentGrantInstructionAsync,
   getApplyAgentPermissionsUpdateInstructionAsync,
   getApplyCloseConstraintsInstructionAsync,
   getApplyConstraintsUpdateInstructionAsync,
@@ -104,6 +108,7 @@ import {
   getInitiateOwnershipTransferInstructionAsync,
   getPauseAgentInstructionAsync,
   getPromoteGraylistDestinationInstructionAsync,
+  getQueueAgentGrantInstructionAsync,
   getQueueAgentPermissionsUpdateInstructionAsync,
   getQueueCloseConstraintsInstructionAsync,
   getQueueConstraintsUpdateInstructionAsync,
@@ -121,6 +126,7 @@ import {
   parseAgentTransferInstruction,
   parseAllocateConstraintsPdaInstruction,
   parseAllocatePendingConstraintsPdaInstruction,
+  parseApplyAgentGrantInstruction,
   parseApplyAgentPermissionsUpdateInstruction,
   parseApplyCloseConstraintsInstruction,
   parseApplyConstraintsUpdateInstruction,
@@ -143,6 +149,7 @@ import {
   parseInitiateOwnershipTransferInstruction,
   parsePauseAgentInstruction,
   parsePromoteGraylistDestinationInstruction,
+  parseQueueAgentGrantInstruction,
   parseQueueAgentPermissionsUpdateInstruction,
   parseQueueCloseConstraintsInstruction,
   parseQueueConstraintsUpdateInstruction,
@@ -160,6 +167,7 @@ import {
   type AgentTransferAsyncInput,
   type AllocateConstraintsPdaAsyncInput,
   type AllocatePendingConstraintsPdaAsyncInput,
+  type ApplyAgentGrantAsyncInput,
   type ApplyAgentPermissionsUpdateAsyncInput,
   type ApplyCloseConstraintsAsyncInput,
   type ApplyConstraintsUpdateAsyncInput,
@@ -185,6 +193,7 @@ import {
   type ParsedAgentTransferInstruction,
   type ParsedAllocateConstraintsPdaInstruction,
   type ParsedAllocatePendingConstraintsPdaInstruction,
+  type ParsedApplyAgentGrantInstruction,
   type ParsedApplyAgentPermissionsUpdateInstruction,
   type ParsedApplyCloseConstraintsInstruction,
   type ParsedApplyConstraintsUpdateInstruction,
@@ -207,6 +216,7 @@ import {
   type ParsedInitiateOwnershipTransferInstruction,
   type ParsedPauseAgentInstruction,
   type ParsedPromoteGraylistDestinationInstruction,
+  type ParsedQueueAgentGrantInstruction,
   type ParsedQueueAgentPermissionsUpdateInstruction,
   type ParsedQueueCloseConstraintsInstruction,
   type ParsedQueueConstraintsUpdateInstruction,
@@ -221,6 +231,7 @@ import {
   type ParsedWithdrawFundsInstruction,
   type PauseAgentAsyncInput,
   type PromoteGraylistDestinationAsyncInput,
+  type QueueAgentGrantAsyncInput,
   type QueueAgentPermissionsUpdateAsyncInput,
   type QueueCloseConstraintsAsyncInput,
   type QueueConstraintsUpdateAsyncInput,
@@ -244,6 +255,7 @@ export enum SigilAccount {
   AuditLogRejected,
   AuditLogSuccess,
   InstructionConstraints,
+  PendingAgentGrant,
   PendingAgentPermissionsUpdate,
   PendingCloseConstraints,
   PendingConstraintsUpdate,
@@ -313,6 +325,17 @@ export function identifySigilAccount(
     )
   ) {
     return SigilAccount.InstructionConstraints;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([164, 188, 119, 39, 18, 133, 78, 66]),
+      ),
+      0,
+    )
+  ) {
+    return SigilAccount.PendingAgentGrant;
   }
   if (
     containsBytes(
@@ -425,6 +448,7 @@ export enum SigilInstruction {
   AgentTransfer,
   AllocateConstraintsPda,
   AllocatePendingConstraintsPda,
+  ApplyAgentGrant,
   ApplyAgentPermissionsUpdate,
   ApplyCloseConstraints,
   ApplyConstraintsUpdate,
@@ -447,6 +471,7 @@ export enum SigilInstruction {
   InitiateOwnershipTransfer,
   PauseAgent,
   PromoteGraylistDestination,
+  QueueAgentGrant,
   QueueAgentPermissionsUpdate,
   QueueCloseConstraints,
   QueueConstraintsUpdate,
@@ -519,6 +544,17 @@ export function identifySigilInstruction(
     )
   ) {
     return SigilInstruction.AllocatePendingConstraintsPda;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([236, 230, 108, 143, 155, 71, 185, 87]),
+      ),
+      0,
+    )
+  ) {
+    return SigilInstruction.ApplyAgentGrant;
   }
   if (
     containsBytes(
@@ -766,6 +802,17 @@ export function identifySigilInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([136, 162, 54, 49, 167, 254, 200, 26]),
+      ),
+      0,
+    )
+  ) {
+    return SigilInstruction.QueueAgentGrant;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([182, 37, 105, 181, 28, 195, 223, 167]),
       ),
       0,
@@ -919,6 +966,9 @@ export type ParsedSigilInstruction<
       instructionType: SigilInstruction.AllocatePendingConstraintsPda;
     } & ParsedAllocatePendingConstraintsPdaInstruction<TProgram>)
   | ({
+      instructionType: SigilInstruction.ApplyAgentGrant;
+    } & ParsedApplyAgentGrantInstruction<TProgram>)
+  | ({
       instructionType: SigilInstruction.ApplyAgentPermissionsUpdate;
     } & ParsedApplyAgentPermissionsUpdateInstruction<TProgram>)
   | ({
@@ -984,6 +1034,9 @@ export type ParsedSigilInstruction<
   | ({
       instructionType: SigilInstruction.PromoteGraylistDestination;
     } & ParsedPromoteGraylistDestinationInstruction<TProgram>)
+  | ({
+      instructionType: SigilInstruction.QueueAgentGrant;
+    } & ParsedQueueAgentGrantInstruction<TProgram>)
   | ({
       instructionType: SigilInstruction.QueueAgentPermissionsUpdate;
     } & ParsedQueueAgentPermissionsUpdateInstruction<TProgram>)
@@ -1059,6 +1112,13 @@ export function parseSigilInstruction<TProgram extends string>(
       return {
         instructionType: SigilInstruction.AllocatePendingConstraintsPda,
         ...parseAllocatePendingConstraintsPdaInstruction(instruction),
+      };
+    }
+    case SigilInstruction.ApplyAgentGrant: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: SigilInstruction.ApplyAgentGrant,
+        ...parseApplyAgentGrantInstruction(instruction),
       };
     }
     case SigilInstruction.ApplyAgentPermissionsUpdate: {
@@ -1215,6 +1275,13 @@ export function parseSigilInstruction<TProgram extends string>(
         ...parsePromoteGraylistDestinationInstruction(instruction),
       };
     }
+    case SigilInstruction.QueueAgentGrant: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: SigilInstruction.QueueAgentGrant,
+        ...parseQueueAgentGrantInstruction(instruction),
+      };
+    }
     case SigilInstruction.QueueAgentPermissionsUpdate: {
       assertIsInstructionWithAccounts(instruction);
       return {
@@ -1323,6 +1390,8 @@ export type SigilPluginAccounts = {
     SelfFetchFunctions<AuditLogSuccessArgs, AuditLogSuccess>;
   instructionConstraints: ReturnType<typeof getInstructionConstraintsCodec> &
     SelfFetchFunctions<InstructionConstraintsArgs, InstructionConstraints>;
+  pendingAgentGrant: ReturnType<typeof getPendingAgentGrantCodec> &
+    SelfFetchFunctions<PendingAgentGrantArgs, PendingAgentGrant>;
   pendingAgentPermissionsUpdate: ReturnType<
     typeof getPendingAgentPermissionsUpdateCodec
   > &
@@ -1372,6 +1441,10 @@ export type SigilPluginInstructions = {
   allocatePendingConstraintsPda: (
     input: AllocatePendingConstraintsPdaAsyncInput,
   ) => ReturnType<typeof getAllocatePendingConstraintsPdaInstructionAsync> &
+    SelfPlanAndSendFunctions;
+  applyAgentGrant: (
+    input: ApplyAgentGrantAsyncInput,
+  ) => ReturnType<typeof getApplyAgentGrantInstructionAsync> &
     SelfPlanAndSendFunctions;
   applyAgentPermissionsUpdate: (
     input: ApplyAgentPermissionsUpdateAsyncInput,
@@ -1460,6 +1533,10 @@ export type SigilPluginInstructions = {
     input: PromoteGraylistDestinationAsyncInput,
   ) => ReturnType<typeof getPromoteGraylistDestinationInstructionAsync> &
     SelfPlanAndSendFunctions;
+  queueAgentGrant: (
+    input: QueueAgentGrantAsyncInput,
+  ) => ReturnType<typeof getQueueAgentGrantInstructionAsync> &
+    SelfPlanAndSendFunctions;
   queueAgentPermissionsUpdate: (
     input: QueueAgentPermissionsUpdateAsyncInput,
   ) => ReturnType<typeof getQueueAgentPermissionsUpdateInstructionAsync> &
@@ -1540,6 +1617,10 @@ export function sigilProgram() {
             client,
             getInstructionConstraintsCodec(),
           ),
+          pendingAgentGrant: addSelfFetchFunctions(
+            client,
+            getPendingAgentGrantCodec(),
+          ),
           pendingAgentPermissionsUpdate: addSelfFetchFunctions(
             client,
             getPendingAgentPermissionsUpdateCodec(),
@@ -1596,6 +1677,11 @@ export function sigilProgram() {
             addSelfPlanAndSendFunctions(
               client,
               getAllocatePendingConstraintsPdaInstructionAsync(input),
+            ),
+          applyAgentGrant: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getApplyAgentGrantInstructionAsync(input),
             ),
           applyAgentPermissionsUpdate: (input) =>
             addSelfPlanAndSendFunctions(
@@ -1706,6 +1792,11 @@ export function sigilProgram() {
             addSelfPlanAndSendFunctions(
               client,
               getPromoteGraylistDestinationInstructionAsync(input),
+            ),
+          queueAgentGrant: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getQueueAgentGrantInstructionAsync(input),
             ),
           queueAgentPermissionsUpdate: (input) =>
             addSelfPlanAndSendFunctions(

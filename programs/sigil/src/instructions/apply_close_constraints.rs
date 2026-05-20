@@ -3,7 +3,9 @@ use anchor_lang::prelude::*;
 use crate::errors::SigilError;
 use crate::events::CloseConstraintsApplied;
 use crate::state::*;
-use crate::utils::policy_digest::{compute_policy_preview_digest, PolicyPreviewFields};
+use crate::utils::policy_digest::{
+    compute_agent_set_hash, compute_policy_preview_digest, PolicyPreviewFields,
+};
 
 #[derive(Accounts)]
 pub struct ApplyCloseConstraints<'info> {
@@ -119,6 +121,10 @@ pub fn handler(
         // G6 (audit 2026-05-18 cosign opt-in): bound by TA-19 at canonical
         // position 20. Sibling handler reads live policy.
         cosign_required: policy.cosign_required,
+        // Phase 8 PEN-CROSS-1: agent_set_hash bound at canonical position
+        // 21. Sibling handler never mutates the agent set — re-derive
+        // from live vault.
+        agent_set_hash: compute_agent_set_hash(&ctx.accounts.vault.agents),
     });
     // PEN-CROSS-3: owner must have signed the post-mutation digest.
     require!(

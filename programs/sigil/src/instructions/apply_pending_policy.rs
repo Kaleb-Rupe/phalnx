@@ -5,17 +5,19 @@ use crate::events::{GraylistEntered, PolicyChangeApplied};
 use crate::state::*;
 use crate::utils::audit_log::build_audit_entry;
 use crate::utils::cosign_digest::{compute_cosign_digest, CosignDigestFields};
-use crate::utils::policy_digest::{compute_policy_preview_digest, PolicyPreviewFields};
+use crate::utils::policy_digest::{
+    compute_agent_set_hash, compute_policy_preview_digest, PolicyPreviewFields,
+};
 
 // P0.2 PEN-7 defense-in-depth ratchet check (audit 2026-05-19).
 //
-// TA-19 binds 20 policy fields by canonical position into the
+// TA-19 binds 21 policy fields by canonical position into the
 // owner-signed digest (see utils/policy_digest.rs). Every existing site
 // that mutates one of those fields recomputes the digest. The risk
 // targeted by PEN-7 is FUTURE silent bypass: a refactor introduces a
-// 21st field that is policy-owned but never added to the digest input
-// (PolicyPreviewFields). The owner would sign the pre-existing 20-field
-// digest, the pending apply would re-validate that same 20-field digest
+// 22nd field that is policy-owned but never added to the digest input
+// (PolicyPreviewFields). The owner would sign the pre-existing 21-field
+// digest, the pending apply would re-validate that same 21-field digest
 // successfully, and the new field would silently update without owner
 // attestation.
 //
@@ -26,11 +28,17 @@ use crate::utils::policy_digest::{compute_policy_preview_digest, PolicyPreviewFi
 // count, OR (b) document why the field is intentionally excluded (as
 // destination_graylist is — see policy_digest.rs §"The graylist itself").
 //
+// Phase 8 PEN-CROSS-1 (audit 2026-05-19): bumped from 20 → 21 to bind
+// `agent_set_hash` into the canonical digest. Closes the silent-
+// insertion class where `register_agent(capability=OPERATOR)` could
+// silently grant an attacker operator-class on a cosign-opted-in vault
+// without diverging the digest.
+//
 // The actual `const _: () = assert!(...)` enforcement lives near
 // `PolicyPreviewFields` in `utils/policy_digest.rs`. This constant
 // is re-asserted here at the apply-time site as a load-bearing reminder.
 #[allow(dead_code)]
-const EXPECTED_DIGEST_FIELD_COUNT: usize = 20;
+const EXPECTED_DIGEST_FIELD_COUNT: usize = 21;
 const _: () = assert!(
     EXPECTED_DIGEST_FIELD_COUNT
         == crate::utils::policy_digest::POLICY_PREVIEW_FIELD_COUNT,
@@ -372,6 +380,12 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
         // (post-merge) value so the second-pass digest matches whatever
         // the queue handler signed against.
         cosign_required: policy.cosign_required,
+        // Phase 8 PEN-CROSS-1: agent_set_hash bound at canonical position
+        // 21. apply_pending_policy never mutates `vault.agents` itself —
+        // re-derive from the live vault so the second-pass digest matches
+        // the queue-time digest (which the SDK computed against the same
+        // live agent set).
+        agent_set_hash: compute_agent_set_hash(&ctx.accounts.vault.agents),
     });
     require!(
         recomputed_digest == pending.new_policy_preview_digest,

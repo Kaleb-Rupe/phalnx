@@ -29,6 +29,7 @@
 //! 18. `stable_balance_floor: u64`    (8 bytes, LE)  — TA-12 (Phase 5 post-exec)
 //! 19. `per_recipient_daily_cap_usd: u64` (8 bytes, LE) — TA-14 (Phase 5 post-exec)
 //! 20. `cosign_required: bool`        (1 byte, 0/1)  — G6 (audit 2026-05-18 cosign opt-in)
+//! 21. `agent_set_hash: [u8; 32]`     (32 bytes)     — Phase 8 PEN-CROSS-1
 //!
 //! Phase 3 append-only additions (TA-05/07/17): the three new policy-owned
 //! fields are appended at positions 15-17 to preserve the existing 14-field
@@ -48,6 +49,16 @@
 //! one-way ratchet: phishing-compromised owner key cannot disable cosign
 //! and then drain via subsequent non-elevated mutations.
 //!
+//! Phase 8 PEN-CROSS-1 append-only addition (Council ISC-66/A8/A9): the
+//! `agent_set_hash` at position 21 binds the EXISTING agent set into the
+//! signed digest. SHA-256 over Borsh of `Vec<(Pubkey, u8 capability)>`
+//! sorted by pubkey ascending so the projection is deterministic regardless
+//! of register order. Closes the silent-insertion vector: a phished owner
+//! key calling `register_agent(capability=OPERATOR, FULL_CAPABILITY)` now
+//! diverges the digest from the owner's last signed value, breaking the
+//! next apply-time digest comparison. Empty Vec produces a deterministic
+//! 32-byte hash (SHA-256 of the 4-byte LE-encoded zero length prefix).
+//!
 //! The graylist itself (`destination_graylist: Vec<(Pubkey, i64)>`) is
 //! intentionally NOT in the digest. Reasoning: graylist entries are
 //! derived/ephemeral — they auto-populate when the owner adds a new
@@ -62,10 +73,11 @@
 //! `auto_promote_grays` IS in the digest: the owner's CHOICE to bypass
 //! friction is configuration, not ephemeral state.
 
+use crate::state::AgentEntry;
 use anchor_lang::prelude::*;
 // Note: `anchor_lang::solana_program::hash` is NOT re-exported in Anchor 0.32.1.
 // Use the `solana-program` direct dep (declared in Cargo.toml).
-use solana_program::hash::hashv;
+use solana_program::hash::{hash, hashv};
 
 /// Canonical preview fields. Owner re-creates this off-chain via the SDK; the
 /// handler re-creates it on-chain from the resulting `PolicyConfig` (or the
@@ -126,6 +138,14 @@ pub struct PolicyPreviewFields<'a> {
     /// cannot silently disable cosign between owner approval and
     /// on-chain landing. Disabling (true → false) is itself elevated.
     pub cosign_required: bool,
+    /// Phase 8 PEN-CROSS-1 (Council ISC-66/A8/A9): SHA-256 over Borsh of
+    /// `Vec<(Pubkey, u8 capability)>` sorted by pubkey ascending. Binds
+    /// the EXISTING agent set to the policy digest so any silent insertion
+    /// of an agent (e.g., phished-owner `register_agent` of an
+    /// OPERATOR-class grant) breaks the digest comparison. Empty Vec
+    /// produces a deterministic 32-byte hash (SHA-256 of 4-byte LE-encoded
+    /// zero length prefix). Bound at position 21 of the canonical encoding.
+    pub agent_set_hash: [u8; 32],
 }
 
 /// P0.2 PEN-7 defense-in-depth ratchet (audit 2026-05-19).
@@ -140,7 +160,31 @@ pub struct PolicyPreviewFields<'a> {
 /// The const-assert lives at the apply-time site as a load-bearing reminder
 /// (apply_pending_policy.rs::EXPECTED_DIGEST_FIELD_COUNT). Both this and
 /// the apply-side constant must change in lockstep.
-pub const POLICY_PREVIEW_FIELD_COUNT: usize = 20;
+pub const POLICY_PREVIEW_FIELD_COUNT: usize = 21;
+
+/// Phase 8 PEN-CROSS-1 (Council ISC-66/A8/A9 / ISC-141 empty-set determinism).
+///
+/// Compute the canonical `agent_set_hash` from a vault's agent set. Hash is
+/// SHA-256 over the standard Borsh encoding of `Vec<(Pubkey, u8 capability)>`
+/// sorted by pubkey ascending. Sorting makes the projection deterministic
+/// regardless of register order, so two vaults with the same `(pubkey,
+/// capability)` set produce byte-identical hashes.
+///
+/// Empty vault (e.g. immediately after `initialize_vault` — `vault.agents` is
+/// empty) produces a deterministic 32-byte hash: SHA-256 of the 4-byte
+/// LE-encoded zero length prefix (an empty Borsh `Vec`). Tests pin this
+/// value cross-impl (Rust ↔ TypeScript byte equality).
+pub fn compute_agent_set_hash(agents: &[AgentEntry]) -> [u8; 32] {
+    let mut sorted: Vec<(Pubkey, u8)> = agents
+        .iter()
+        .map(|a| (a.pubkey, a.capability))
+        .collect();
+    sorted.sort_by_key(|(pk, _)| *pk);
+    // Borsh encode: u32 LE length prefix + each (Pubkey, u8). `try_to_vec`
+    // produces the same byte layout as the canonical Borsh schema.
+    let encoded = sorted.try_to_vec().unwrap_or_default();
+    hash(&encoded).to_bytes()
+}
 
 #[cfg(test)]
 mod field_count_invariant {
@@ -151,7 +195,7 @@ mod field_count_invariant {
     //! count is the actual field count via destructuring.
     use super::*;
 
-    /// If a 21st field lands on `PolicyPreviewFields`, this match fails
+    /// If a 22nd field lands on `PolicyPreviewFields`, this match fails
     /// to compile with `missing structure fields` — forcing the developer
     /// to update the digest encoding + the count constant in the SAME
     /// commit. Closes PEN-7 silent-bypass.
@@ -184,8 +228,12 @@ mod field_count_invariant {
             stable_balance_floor: 0,
             per_recipient_daily_cap_usd: 0,
             cosign_required: false,
+            // Phase 8 PEN-CROSS-1: agent_set_hash bound at canonical
+            // position 21. Sentinel uses [0u8;32] — the empty-agent-set
+            // hash test below pins the true deterministic value.
+            agent_set_hash: [0u8; 32],
         };
-        // The destructuring pattern below is exhaustive. If a 21st field
+        // The destructuring pattern below is exhaustive. If a 22nd field
         // lands on PolicyPreviewFields, this match fails to compile with
         // E0027 — `missing structure fields`. Forces the digest encoding
         // + POLICY_PREVIEW_FIELD_COUNT to be updated in lockstep.
@@ -210,8 +258,9 @@ mod field_count_invariant {
             stable_balance_floor: _,
             per_recipient_daily_cap_usd: _,
             cosign_required: _,
+            agent_set_hash: _,
         } = fields;
-        assert_eq!(POLICY_PREVIEW_FIELD_COUNT, 20);
+        assert_eq!(POLICY_PREVIEW_FIELD_COUNT, 21);
     }
 }
 
@@ -272,6 +321,13 @@ pub fn compute_policy_preview_digest(fields: &PolicyPreviewFields<'_>) -> [u8; 3
     buf.extend_from_slice(&fields.per_recipient_daily_cap_usd.to_le_bytes());
     // 20. cosign_required: bool as 1 byte (0/1) — G6 (audit 2026-05-18 cosign opt-in)
     buf.push(u8::from(fields.cosign_required));
+    // 21. agent_set_hash: [u8; 32] — Phase 8 PEN-CROSS-1. Pre-computed
+    // SHA-256 of Borsh-encoded `Vec<(Pubkey, u8)>` sorted by pubkey
+    // ascending (see `compute_agent_set_hash`). Bound here so any silent
+    // mutation of `vault.agents` (e.g. phished-owner `register_agent` of
+    // an OPERATOR-capability grant) diverges the policy digest from the
+    // owner's last signed value.
+    buf.extend_from_slice(&fields.agent_set_hash);
 
     hashv(&[&buf]).to_bytes()
 }
@@ -312,6 +368,9 @@ mod tests {
             // fixtures must keep this off so the byte layout below remains
             // pinned; new tests below exercise the flipped case explicitly.
             cosign_required: false,
+            // Phase 8 PEN-CROSS-1: empty-vault agent_set_hash. Tests below
+            // pin a known empty-Vec SHA-256; per-test fixtures override.
+            agent_set_hash: [0u8; 32],
         };
         let d1 = compute_policy_preview_digest(&f);
         let d2 = compute_policy_preview_digest(&f);
@@ -346,6 +405,9 @@ mod tests {
             // fixtures must keep this off so the byte layout below remains
             // pinned; new tests below exercise the flipped case explicitly.
             cosign_required: false,
+            // Phase 8 PEN-CROSS-1: empty-vault agent_set_hash. Tests below
+            // pin a known empty-Vec SHA-256; per-test fixtures override.
+            agent_set_hash: [0u8; 32],
         };
         let mut flipped = base.daily_spending_cap_usd;
         let _ = &mut flipped; // suppress unused
@@ -389,6 +451,9 @@ mod tests {
             // fixtures must keep this off so the byte layout below remains
             // pinned; new tests below exercise the flipped case explicitly.
             cosign_required: false,
+            // Phase 8 PEN-CROSS-1: empty-vault agent_set_hash. Tests below
+            // pin a known empty-Vec SHA-256; per-test fixtures override.
+            agent_set_hash: [0u8; 32],
         };
         let f2 = PolicyPreviewFields {
             protocols: &b,
@@ -431,6 +496,9 @@ mod tests {
             // fixtures must keep this off so the byte layout below remains
             // pinned; new tests below exercise the flipped case explicitly.
             cosign_required: false,
+            // Phase 8 PEN-CROSS-1: empty-vault agent_set_hash. Tests below
+            // pin a known empty-Vec SHA-256; per-test fixtures override.
+            agent_set_hash: [0u8; 32],
         };
         let narrow = PolicyPreviewFields {
             // 13:00-17:00 UTC = bits 13..17 = 0x1E000
@@ -476,6 +544,9 @@ mod tests {
             // fixtures must keep this off so the byte layout below remains
             // pinned; new tests below exercise the flipped case explicitly.
             cosign_required: false,
+            // Phase 8 PEN-CROSS-1: empty-vault agent_set_hash. Tests below
+            // pin a known empty-Vec SHA-256; per-test fixtures override.
+            agent_set_hash: [0u8; 32],
         };
         let flipped = PolicyPreviewFields {
             auto_promote_grays: true,
@@ -519,6 +590,9 @@ mod tests {
             // fixtures must keep this off so the byte layout below remains
             // pinned; new tests below exercise the flipped case explicitly.
             cosign_required: false,
+            // Phase 8 PEN-CROSS-1: empty-vault agent_set_hash. Tests below
+            // pin a known empty-Vec SHA-256; per-test fixtures override.
+            agent_set_hash: [0u8; 32],
         };
         let lower = PolicyPreviewFields {
             auto_revoke_threshold: 3,
@@ -564,6 +638,9 @@ mod tests {
             // fixtures must keep this off so the byte layout below remains
             // pinned; new tests below exercise the flipped case explicitly.
             cosign_required: false,
+            // Phase 8 PEN-CROSS-1: empty-vault agent_set_hash. Tests below
+            // pin a known empty-Vec SHA-256; per-test fixtures override.
+            agent_set_hash: [0u8; 32],
         };
         let raised = PolicyPreviewFields {
             per_recipient_daily_cap_usd: 50_000_000, // $50 cap
@@ -609,6 +686,9 @@ mod tests {
             // fixtures must keep this off so the byte layout below remains
             // pinned; new tests below exercise the flipped case explicitly.
             cosign_required: false,
+            // Phase 8 PEN-CROSS-1: empty-vault agent_set_hash. Tests below
+            // pin a known empty-Vec SHA-256; per-test fixtures override.
+            agent_set_hash: [0u8; 32],
         };
         let raised = PolicyPreviewFields {
             // $100 floor in 6-decimal USDC face value
@@ -652,6 +732,9 @@ mod tests {
             stable_balance_floor: 0,
             per_recipient_daily_cap_usd: 0,
             cosign_required: false,
+            // Phase 8 PEN-CROSS-1: empty-vault agent_set_hash. Tests below
+            // pin a known empty-Vec SHA-256; per-test fixtures override.
+            agent_set_hash: [0u8; 32],
         };
         let flipped = PolicyPreviewFields {
             cosign_required: true,
@@ -660,6 +743,107 @@ mod tests {
         let d_base = compute_policy_preview_digest(&base);
         let d_flip = compute_policy_preview_digest(&flipped);
         assert_ne!(d_base, d_flip, "cosign_required flip MUST change digest");
+    }
+
+    /// Phase 8 PEN-CROSS-1 (Council ISC-141): the empty-agent-set hash is
+    /// deterministic across two `compute_agent_set_hash(&[])` invocations,
+    /// AND matches the `EMPTY_AGENT_SET_HASH` cross-impl pin. If the Borsh
+    /// encoding of an empty `Vec<(Pubkey, u8)>` ever changes (impossible
+    /// under stock Borsh, but future-proof), this test catches it.
+    #[test]
+    fn empty_agent_set_hash_is_deterministic() {
+        let h1 = compute_agent_set_hash(&[]);
+        let h2 = compute_agent_set_hash(&[]);
+        assert_eq!(h1, h2, "empty-agent-set hash MUST be deterministic");
+        assert_eq!(
+            h1, EMPTY_AGENT_SET_HASH,
+            "empty-agent-set hash diverged from cross-impl pin",
+        );
+    }
+
+    /// Phase 8 PEN-CROSS-1: sorting invariant. Two agent sets with the same
+    /// `(pubkey, capability)` pairs in different orders MUST produce the
+    /// same hash — `compute_agent_set_hash` sorts by pubkey ascending.
+    #[test]
+    fn agent_set_hash_is_order_independent() {
+        let a = AgentEntry {
+            pubkey: pk(1),
+            capability: 2,
+            consecutive_failures: 0,
+            _reserved: [0u8; 6],
+            spending_limit_usd: 0,
+            paused: false,
+        };
+        let b = AgentEntry {
+            pubkey: pk(2),
+            capability: 1,
+            consecutive_failures: 0,
+            _reserved: [0u8; 6],
+            spending_limit_usd: 0,
+            paused: false,
+        };
+        let h_ab = compute_agent_set_hash(&[a.clone(), b.clone()]);
+        let h_ba = compute_agent_set_hash(&[b, a]);
+        assert_eq!(
+            h_ab, h_ba,
+            "agent_set_hash MUST be order-independent (sorted by pubkey asc)"
+        );
+    }
+
+    /// Phase 8 PEN-CROSS-1 (Council ISC-66): inserting an agent into a
+    /// vault MUST diverge the agent_set_hash AND therefore the policy
+    /// preview digest. Closes the silent-insertion vector.
+    #[test]
+    fn digest_changes_on_agent_set_mutation() {
+        let protocols = [pk(1)];
+        let dests = [pk(10)];
+        let base = PolicyPreviewFields {
+            daily_spending_cap_usd: 500_000_000,
+            max_transaction_size_usd: 100_000_000,
+            max_slippage_bps: 100,
+            developer_fee_rate: 0,
+            protocol_mode: 1,
+            protocols: &protocols,
+            destination_mode: 0,
+            allowed_destinations: &dests,
+            timelock_duration: 1800,
+            session_expiry_seconds: 30,
+            observe_only: false,
+            has_constraints: false,
+            has_post_assertions: 0,
+            created_at_slot: 12345,
+            operating_hours: 0x00FFFFFF,
+            auto_promote_grays: false,
+            auto_revoke_threshold: 5,
+            stable_balance_floor: 0,
+            per_recipient_daily_cap_usd: 0,
+            cosign_required: false,
+            agent_set_hash: EMPTY_AGENT_SET_HASH,
+        };
+        // Build a mutated agent set: one OPERATOR agent inserted.
+        let new_agent = AgentEntry {
+            pubkey: pk(42),
+            capability: 2, // CAPABILITY_OPERATOR
+            consecutive_failures: 0,
+            _reserved: [0u8; 6],
+            spending_limit_usd: 0,
+            paused: false,
+        };
+        let mutated_hash = compute_agent_set_hash(&[new_agent]);
+        assert_ne!(
+            mutated_hash, EMPTY_AGENT_SET_HASH,
+            "non-empty agent set hash MUST diverge from EMPTY pin"
+        );
+        let with_agent = PolicyPreviewFields {
+            agent_set_hash: mutated_hash,
+            ..base
+        };
+        let d_base = compute_policy_preview_digest(&base);
+        let d_with = compute_policy_preview_digest(&with_agent);
+        assert_ne!(
+            d_base, d_with,
+            "agent_set_hash mutation MUST diverge the policy digest"
+        );
     }
 
     #[test]
@@ -694,6 +878,9 @@ mod tests {
             // fixtures must keep this off so the byte layout below remains
             // pinned; new tests below exercise the flipped case explicitly.
             cosign_required: false,
+            // Phase 8 PEN-CROSS-1: minimal fixture uses the empty-vault
+            // agent_set_hash deterministic pin (Council ISC-141).
+            agent_set_hash: EMPTY_AGENT_SET_HASH,
         };
         // Encoding: 8 zero + 8 zero + 2 zero + 2 zero (developer_fee_rate)
         //   + 0x01 + 4 zero + 0x00 + 4 zero + 8 zero + 8 zero + 0 + 0 + 0
@@ -702,7 +889,8 @@ mod tests {
         //   + 8 zero (stable_balance_floor TA-12)
         //   + 8 zero (per_recipient_daily_cap_usd TA-14)
         //   + 0 (cosign_required G6 audit 2026-05-18)
-        // = 78 bytes deterministic input.
+        //   + 32 bytes (EMPTY_AGENT_SET_HASH at position 21 PEN-CROSS-1)
+        // = 110 bytes deterministic input.
         let digest = compute_policy_preview_digest(&f);
         // Cross-impl pin — same fixture is asserted byte-for-byte in
         // sdk/kit/tests/policy/preview-digest.test.ts. If either side
@@ -775,6 +963,11 @@ mod tests {
             // G6 realistic pin: cosign opt-in default = false (low-friction).
             // The flip-changes-digest test below exercises the true path.
             cosign_required: false,
+            // Phase 8 PEN-CROSS-1: realistic fixture uses the empty-vault
+            // agent_set_hash (Council ISC-141). Realistic vault has policy
+            // configured but no agents yet — matches the typical post-init
+            // call site of `apply_pending_policy` re-derive paths.
+            agent_set_hash: EMPTY_AGENT_SET_HASH,
         };
         let digest = compute_policy_preview_digest(&f);
         // Prior digests:
@@ -803,29 +996,45 @@ mod tests {
     }
 }
 
-/// G6 (audit 2026-05-18 cosign opt-in) minimal-policy expected digest.
+/// Phase 8 PEN-CROSS-1 (audit 2026-05-19) minimal-policy expected digest.
 ///
-/// Computed over the canonical 78-byte encoding:
-///   - all 18 prior TA-14 fields at default (zeroes), plus
-///   - cosign_required = false (1 byte, 0x00)
+/// Computed over the canonical 110-byte encoding (78 prior bytes + 32 bytes
+/// of `agent_set_hash` at position 21). The agent_set_hash here is the
+/// empty-vault deterministic value (`EMPTY_AGENT_SET_HASH` below) since the
+/// minimal fixture's vault has zero registered agents.
 ///
-/// = `19c70cb767358d1ce2a4c736b067172e0f87ddad8ae6f98292a62bd5f9bae355`
+/// Cross-impl byte-equality pin (Rust ↔ TS).
+///
+/// = `a9d8654da866751cbec1c45dcae0b7c3b6e45ee98c2b284b8cd9f8f09d894f83`
 #[cfg(test)]
 const REGENERATED_HEX_MINIMAL: [u8; 32] = [
-    0x19, 0xc7, 0x0c, 0xb7, 0x67, 0x35, 0x8d, 0x1c, 0xe2, 0xa4, 0xc7, 0x36, 0xb0, 0x67, 0x17, 0x2e,
-    0x0f, 0x87, 0xdd, 0xad, 0x8a, 0xe6, 0xf9, 0x82, 0x92, 0xa6, 0x2b, 0xd5, 0xf9, 0xba, 0xe3, 0x55,
+    0xa9, 0xd8, 0x65, 0x4d, 0xa8, 0x66, 0x75, 0x1c, 0xbe, 0xc1, 0xc4, 0x5d, 0xca, 0xe0, 0xb7, 0xc3,
+    0xb6, 0xe4, 0x5e, 0xe9, 0x8c, 0x2b, 0x28, 0x4b, 0x8c, 0xd9, 0xf8, 0xf0, 0x9d, 0x89, 0x4f, 0x83,
 ];
 
-/// G6 (audit 2026-05-18 cosign opt-in) realistic-policy expected digest.
+/// Phase 8 PEN-CROSS-1 (audit 2026-05-19) realistic-policy expected digest.
 ///
 /// Realistic fixture with 2 protocols, 1 destination, common scalars,
 /// `stable_balance_floor = 100_000_000` ($100 reserve),
 /// `per_recipient_daily_cap_usd = 50_000_000` ($50 per-recipient cap),
-/// and `cosign_required = false` (default low-friction).
+/// `cosign_required = false`, and `agent_set_hash = EMPTY_AGENT_SET_HASH`.
 ///
-/// = `15ab9e4290b8bc9229adc64e46cf785edb1adc78596eb339e7bdd4df2a2cab62`
+/// = `503ff364c055085089576e5af684383e10b7dd65ed796bd57c53927e879cdb0e`
 #[cfg(test)]
 const REGENERATED_HEX_REALISTIC: [u8; 32] = [
-    0x15, 0xab, 0x9e, 0x42, 0x90, 0xb8, 0xbc, 0x92, 0x29, 0xad, 0xc6, 0x4e, 0x46, 0xcf, 0x78, 0x5e,
-    0xdb, 0x1a, 0xdc, 0x78, 0x59, 0x6e, 0xb3, 0x39, 0xe7, 0xbd, 0xd4, 0xdf, 0x2a, 0x2c, 0xab, 0x62,
+    0x50, 0x3f, 0xf3, 0x64, 0xc0, 0x55, 0x08, 0x50, 0x89, 0x57, 0x6e, 0x5a, 0xf6, 0x84, 0x38, 0x3e,
+    0x10, 0xb7, 0xdd, 0x65, 0xed, 0x79, 0x6b, 0xd5, 0x7c, 0x53, 0x92, 0x7e, 0x87, 0x9c, 0xdb, 0x0e,
+];
+
+/// Phase 8 PEN-CROSS-1 (Council ISC-141): empty-agent-set hash. SHA-256 of
+/// the Borsh-encoded empty `Vec<(Pubkey, u8)>` — i.e. SHA-256 of the
+/// 4-byte LE-encoded zero length prefix [0x00,0x00,0x00,0x00]. Deterministic
+/// — pinned across Rust (this constant) and TypeScript (sdk/kit/src/policy/
+/// compute-policy-preview-digest.ts::EMPTY_AGENT_SET_HASH).
+///
+/// = `df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119`
+#[cfg(test)]
+pub(crate) const EMPTY_AGENT_SET_HASH: [u8; 32] = [
+    0xdf, 0x3f, 0x61, 0x98, 0x04, 0xa9, 0x2f, 0xdb, 0x40, 0x57, 0x19, 0x2d, 0xc4, 0x3d, 0xd7, 0x48,
+    0xea, 0x77, 0x8a, 0xdc, 0x52, 0xbc, 0x49, 0x8c, 0xe8, 0x05, 0x24, 0xc0, 0x14, 0xb8, 0x11, 0x19,
 ];

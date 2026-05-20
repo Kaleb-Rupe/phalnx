@@ -39,6 +39,7 @@
  *   18. stable_balance_floor: u64 LE (8 bytes) — TA-12 (Phase 5 post-exec)
  *   19. per_recipient_daily_cap_usd: u64 LE (8 bytes) — TA-14 (Phase 5 post-exec)
  *   20. cosign_required: bool (1 byte 0/1) — G6 (audit 2026-05-18 cosign opt-in)
+ *   21. agent_set_hash: [u8; 32] — Phase 8 PEN-CROSS-1 (audit 2026-05-19)
  *
  * Phase 3 append-only additions (TA-05/07/17): operating_hours,
  * auto_promote_grays, auto_revoke_threshold are appended at positions 15-17
@@ -55,6 +56,15 @@
  * silently disable cosign between owner approval and on-chain landing.
  * Disabling cosign on a live policy where this is true is itself an
  * elevated mutation per `queue_policy_update` (one-way ratchet).
+ *
+ * Phase 8 PEN-CROSS-1 append-only addition (Council ISC-66/A8/A9): the
+ * `agent_set_hash` at position 21 binds the EXISTING agent set into the
+ * signed digest. SHA-256 over Borsh of `Vec<(Pubkey, u8 capability)>`
+ * sorted by pubkey ascending. Closes the silent-insertion vector where
+ * a phished-owner `register_agent(capability=OPERATOR)` would otherwise
+ * grant operator-class without diverging the digest from the last value
+ * the owner signed. Empty Vec produces a deterministic 32-byte hash
+ * (`EMPTY_AGENT_SET_HASH` — SHA-256 of [0x00,0x00,0x00,0x00]).
  *
  * The `destination_graylist: Vec<(Pubkey, i64)>` is intentionally NOT in
  * the digest. Graylist entries are derived/ephemeral — they auto-populate
@@ -161,6 +171,16 @@ export interface PolicyPreviewFields {
    * elevated mutation (one-way ratchet). Bound at canonical position 20.
    */
   cosignRequired?: boolean;
+  /**
+   * Phase 8 PEN-CROSS-1 (Council ISC-66/A8/A9): SHA-256 over Borsh of
+   * `Vec<(pubkey, u8 capability)>` sorted by pubkey ascending. Pass the
+   * result of `computeAgentSetHash(...)` over the live vault's agent set
+   * (use empty array for a freshly-initialized vault). Empty vault produces
+   * the deterministic `EMPTY_AGENT_SET_HASH` value. Bound at canonical
+   * position 21. Optional with default `EMPTY_AGENT_SET_HASH` so legacy
+   * fixtures (no agents) continue to compute the canonical digest.
+   */
+  agentSetHash?: Uint8Array;
 }
 
 // ── Base58 decode (no external dep) ──────────────────────────────────────────
@@ -245,7 +265,62 @@ function base58Decode(s: string): Uint8Array {
 // load.
 
 /** Mirrors `policy_digest.rs::POLICY_PREVIEW_FIELD_COUNT`. */
-export const POLICY_PREVIEW_FIELD_COUNT = 20;
+export const POLICY_PREVIEW_FIELD_COUNT = 21;
+
+/**
+ * Phase 8 PEN-CROSS-1 (Council ISC-141): SHA-256 of the Borsh-encoded
+ * empty `Vec<(Pubkey, u8)>` — i.e. SHA-256 of [0x00, 0x00, 0x00, 0x00].
+ * Deterministic; pinned across Rust (`policy_digest.rs::EMPTY_AGENT_SET_HASH`)
+ * and TypeScript (this constant). Used by `computePolicyPreviewDigest`
+ * when the caller omits `agentSetHash` (legacy fixture path).
+ */
+export const EMPTY_AGENT_SET_HASH: Uint8Array = (() => {
+  const empty = Buffer.alloc(4); // u32 LE length prefix = 0
+  return new Uint8Array(createHash("sha256").update(empty).digest());
+})();
+
+/**
+ * Compute the canonical `agent_set_hash` from a list of agents. SHA-256
+ * over Borsh of `Vec<(Pubkey, u8 capability)>` sorted by pubkey ascending.
+ * Mirrors `policy_digest.rs::compute_agent_set_hash` byte-for-byte.
+ *
+ * Pass the result into `computePolicyPreviewDigest({ ...fields, agentSetHash })`.
+ *
+ * @throws if any pubkey doesn't base58-decode to 32 bytes
+ */
+export function computeAgentSetHash(
+  agents: ReadonlyArray<{ pubkey: Address | string; capability: number }>,
+): Uint8Array {
+  // Decode + project to (rawBytes, capability) tuples.
+  const decoded = agents.map((a) => ({
+    raw: base58Decode(a.pubkey as string),
+    capability: a.capability & 0xff,
+  }));
+  // Sort by pubkey ascending — byte-wise lex order matches Solana's
+  // `Pubkey::cmp` (just a [u8;32] comparison).
+  decoded.sort((a, b) => {
+    for (let i = 0; i < 32; i++) {
+      if (a.raw[i]! < b.raw[i]!) return -1;
+      if (a.raw[i]! > b.raw[i]!) return 1;
+    }
+    return 0;
+  });
+  // Borsh encode: u32 LE length prefix + each (Pubkey: 32 bytes, capability: 1 byte).
+  // Per-entry size = 33 bytes; total = 4 + decoded.length * 33.
+  const buf = new Uint8Array(4 + decoded.length * 33);
+  new DataView(buf.buffer, buf.byteOffset, 4).setUint32(
+    0,
+    decoded.length,
+    true,
+  );
+  let off = 4;
+  for (const e of decoded) {
+    buf.set(e.raw, off);
+    off += 32;
+    buf[off++] = e.capability;
+  }
+  return new Uint8Array(createHash("sha256").update(buf).digest());
+}
 
 /**
  * Fixed-width byte cost per canonical field. Variable parts (the
@@ -275,6 +350,7 @@ const PER_FIELD_FIXED_SIZES = [
   8, // 18. stable_balance_floor         (u64 LE) TA-12
   8, // 19. per_recipient_daily_cap_usd  (u64 LE) TA-14
   1, // 20. cosign_required              (bool as u8) G6
+  32, // 21. agent_set_hash              ([u8;32]) Phase 8 PEN-CROSS-1
 ] as const;
 
 /** Derived sum — must match the encoder's `fixedSize` exactly. */
@@ -381,6 +457,17 @@ export function computePolicyPreviewDigest(
   off = writeU64Le(view, off, fields.perRecipientDailyCapUsd ?? 0n);
   // G6 (audit 2026-05-18 cosign opt-in): cosign_required at position 20.
   buf[off++] = fields.cosignRequired ? 1 : 0;
+  // Phase 8 PEN-CROSS-1: agent_set_hash at position 21. Default
+  // EMPTY_AGENT_SET_HASH so legacy callers (no agents) continue to
+  // produce a canonical digest without explicit setup.
+  const agentSetHash = fields.agentSetHash ?? EMPTY_AGENT_SET_HASH;
+  if (agentSetHash.length !== 32) {
+    throw new Error(
+      `agentSetHash must be exactly 32 bytes, got ${agentSetHash.length}`,
+    );
+  }
+  buf.set(agentSetHash, off);
+  off += 32;
 
   // §RP-2 L-NEW-1 forward-looking ratchet: the encoder MUST write
   // exactly `fixedSize + variableSize` bytes. `fixedSize` is now

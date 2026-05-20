@@ -69,7 +69,9 @@ export type AuditEntry = {
    * disc=13 (register_agent)   → agent pubkey
    * disc=14 (policy_apply)     → vault pubkey
    * disc=15 (constraints_apply)→ vault pubkey
-   * disc=7..=9 (ownership_*)   → Phase 8 — RESERVED, do not write
+   * disc=7..=9 (ownership_*)   → ownership initiate/accept/cancel
+   * disc=17 (agent_grant_queue)→ agent pubkey (Phase 8 PEN-CROSS-1 Batch 6)
+   * disc=18 (agent_grant_apply)→ agent pubkey (Phase 8 PEN-CROSS-1 Batch 6)
    */
   subject: ReadonlyUint8Array;
   /** Stablecoin delta IN (e.g. swap output, deposit). 0 when not applicable. */
@@ -105,7 +107,9 @@ export type AuditEntryArgs = {
    * disc=13 (register_agent)   → agent pubkey
    * disc=14 (policy_apply)     → vault pubkey
    * disc=15 (constraints_apply)→ vault pubkey
-   * disc=7..=9 (ownership_*)   → Phase 8 — RESERVED, do not write
+   * disc=7..=9 (ownership_*)   → ownership initiate/accept/cancel
+   * disc=17 (agent_grant_queue)→ agent pubkey (Phase 8 PEN-CROSS-1 Batch 6)
+   * disc=18 (agent_grant_apply)→ agent pubkey (Phase 8 PEN-CROSS-1 Batch 6)
    */
   subject: ReadonlyUint8Array;
   /** Stablecoin delta IN (e.g. swap output, deposit). 0 when not applicable. */

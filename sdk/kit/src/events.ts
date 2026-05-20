@@ -51,6 +51,13 @@ import {
   getGraylistEnteredDecoder,
   getGraylistPromotedDecoder,
   getAgentAutoRevokedDecoder,
+  // Phase 8 C26 ownership-transfer events (Batches 3/4)
+  getOwnershipTransferInitiatedDecoder,
+  getOwnershipTransferAcceptedDecoder,
+  getOwnershipTransferCancelledDecoder,
+  // Phase 8 PEN-CROSS-1 (Batch 6) agent-grant events
+  getAgentGrantQueuedDecoder,
+  getAgentGrantAppliedDecoder,
 } from "./generated/types/index.js";
 
 /** All known Sigil event names */
@@ -186,6 +193,13 @@ const EVENT_DECODER_MAP: Record<
   GraylistEntered: getGraylistEnteredDecoder(),
   GraylistPromoted: getGraylistPromotedDecoder(),
   AgentAutoRevoked: getAgentAutoRevokedDecoder(),
+  // Phase 8 C26 ownership-transfer events (Batches 3/4)
+  OwnershipTransferInitiated: getOwnershipTransferInitiatedDecoder(),
+  OwnershipTransferAccepted: getOwnershipTransferAcceptedDecoder(),
+  OwnershipTransferCancelled: getOwnershipTransferCancelledDecoder(),
+  // Phase 8 PEN-CROSS-1 (Batch 6) agent-grant events
+  AgentGrantQueued: getAgentGrantQueuedDecoder(),
+  AgentGrantApplied: getAgentGrantAppliedDecoder(),
 };
 
 // Validate decoder map completeness at module init — catches drift when events are added/removed

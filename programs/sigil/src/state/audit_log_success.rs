@@ -30,7 +30,11 @@ pub const AUDIT_LOG_SUCCESS_CAPACITY: usize = 128;
 ///          only to the rejected buffer; closes the disc-1/disc-2 ambiguity
 ///          that would otherwise let a permissionless-crank attacker create
 ///          forensic confusion across the two buffers.
-/// 17..=255 = reserved (extensible)
+/// 17     = queue_agent_grant (Phase 8 PEN-CROSS-1 Batch 6 — OPERATOR-class
+///          grant queued; written before timelock window starts).
+/// 18     = apply_agent_grant (Phase 8 PEN-CROSS-1 Batch 6 — OPERATOR-class
+///          grant applied; agent inserted into vault.agents).
+/// 19..=255 = reserved (extensible)
 pub const AUDIT_DISC_RESERVED_ZERO: u8 = 0;
 pub const AUDIT_DISC_VALIDATE: u8 = 1;
 pub const AUDIT_DISC_FINALIZE_SUCCESS: u8 = 2;
@@ -49,6 +53,12 @@ pub const AUDIT_DISC_REGISTER_AGENT: u8 = 13;
 pub const AUDIT_DISC_POLICY_APPLY: u8 = 14;
 pub const AUDIT_DISC_CONSTRAINTS_APPLY: u8 = 15;
 pub const AUDIT_DISC_FINALIZE_REJECT: u8 = 16;
+// Phase 8 PEN-CROSS-1 (audit 2026-05-19) Batch 6 — queue/apply agent grant
+// audit discriminators. 17 / 18 are AFTER the 7..=9 ownership-transfer block
+// and the 10..=16 already-allocated entries, preserving the disc allocation
+// continuity rule.
+pub const AUDIT_DISC_AGENT_GRANT_QUEUE: u8 = 17;
+pub const AUDIT_DISC_AGENT_GRANT_APPLY: u8 = 18;
 
 /// Single audit-log entry. Zero-copy, fixed-size 64 bytes per entry.
 ///
@@ -95,7 +105,9 @@ pub struct AuditEntry {
     ///   disc=13 (register_agent)   → agent pubkey
     ///   disc=14 (policy_apply)     → vault pubkey
     ///   disc=15 (constraints_apply)→ vault pubkey
-    ///   disc=7..=9 (ownership_*)   → Phase 8 — RESERVED, do not write
+    ///   disc=7..=9 (ownership_*)   → ownership initiate/accept/cancel
+    ///   disc=17 (agent_grant_queue)→ agent pubkey (Phase 8 PEN-CROSS-1 Batch 6)
+    ///   disc=18 (agent_grant_apply)→ agent pubkey (Phase 8 PEN-CROSS-1 Batch 6)
     pub subject: [u8; 32],
     /// Stablecoin delta IN (e.g. swap output, deposit). 0 when not applicable.
     pub balance_delta_in: i64,

@@ -2,6 +2,7 @@ pub mod agent_spend_overlay;
 pub mod audit_log_rejected;
 pub mod audit_log_success;
 pub mod constraints;
+pub mod pending_agent_grant;
 pub mod pending_agent_perms;
 pub mod pending_close_constraints;
 pub mod pending_constraints;
@@ -17,6 +18,7 @@ pub use agent_spend_overlay::*;
 pub use audit_log_rejected::*;
 pub use audit_log_success::*;
 pub use constraints::*;
+pub use pending_agent_grant::*;
 pub use pending_agent_perms::*;
 pub use pending_close_constraints::*;
 pub use pending_constraints::*;
@@ -221,7 +223,7 @@ pub const VALIDATE_AND_AUTHORIZE_DISCRIMINATOR: [u8; 8] =
 /// the scan ALSO verifies `account.owner == sigil_program_id` for any
 /// candidate match before rejecting (see validate_and_authorize.rs TA-11
 /// scan site).
-pub const PROTECTED_SEED_PREFIXES: [&[u8]; 16] = [
+pub const PROTECTED_SEED_PREFIXES: [&[u8]; 17] = [
     b"vault",
     b"policy",
     b"tracker",
@@ -236,6 +238,11 @@ pub const PROTECTED_SEED_PREFIXES: [&[u8]; 16] = [
     b"pending_agent_perms",
     b"pending_close_constraints",
     b"pending_owner",
+    // Phase 8 PEN-CROSS-1 (audit 2026-05-19): queue/apply timelock-gated
+    // OPERATOR-class agent grant PDA. Listed here so the TA-11 dynamic
+    // writable-PDA check rejects any foreign instruction that tries to
+    // pass this PDA as writable between validate and finalize.
+    b"pending_agent_grant",
     b"constraints",
     b"agent_spend",
 ];
@@ -744,7 +751,7 @@ mod seed_uniqueness {
     /// `PROTECTED_SEED_PREFIXES`, mirror it in `expected` below.
     #[test]
     fn pda_seed_prefixes_matches_expected_canonical_list() {
-        let expected: [&[u8]; 16] = [
+        let expected: [&[u8]; 17] = [
             b"vault",
             b"policy",
             b"tracker",
@@ -759,6 +766,9 @@ mod seed_uniqueness {
             b"pending_agent_perms",
             b"pending_close_constraints",
             b"pending_owner",
+            // Phase 8 PEN-CROSS-1 (audit 2026-05-19): pending_agent_grant
+            // landed in Batch 6.
+            b"pending_agent_grant",
             b"constraints",
             b"agent_spend",
         ];

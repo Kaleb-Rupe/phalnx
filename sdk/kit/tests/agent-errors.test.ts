@@ -17,19 +17,21 @@ describe("agent-errors", () => {
   // ─── On-chain error map completeness ──────────────────────────────────────
 
   describe("ON_CHAIN_ERROR_MAP completeness", () => {
-    it("maps all 103 error codes (6000-6102) post-Phase-6", () => {
+    it("maps all 109 error codes (6000-6108) post-Phase-8", () => {
       const codes = getAllOnChainErrorCodes();
-      // 6000-6102 inclusive = 103 codes. Phase 5 added 6094/6095/6096.
+      // 6000-6108 inclusive = 109 codes. Phase 5 added 6094/6095/6096.
       // Phase 6 added 6097-6101 (R-1/R-2/R-3/R-4 + MintDeltaCapMisconfigured).
       // Audit 2026-05-19 H-1 added 6102 IxMetaCountExceeded.
-      // §RP-2 H-NEW-2 (audit) added SDK mappings for 6097-6102.
-      expect(codes).to.have.lengthOf(103);
+      // Phase 8 Batches 1-5 added 6103-6108 (ownership transfer + freeze
+      // hardening); SDK mappings landed in Phase 8 Batch 6 alongside the
+      // PEN-CROSS-1 agent-grant work (audit 2026-05-19).
+      expect(codes).to.have.lengthOf(109);
       expect(codes[0]).to.equal(6000);
-      expect(codes[codes.length - 1]).to.equal(6102);
+      expect(codes[codes.length - 1]).to.equal(6108);
     });
 
-    it("every code from 6000-6102 is present with no gaps post-Phase-6", () => {
-      for (let code = 6000; code <= 6102; code++) {
+    it("every code from 6000-6108 is present with no gaps post-Phase-8", () => {
+      for (let code = 6000; code <= 6108; code++) {
         const entry = ON_CHAIN_ERROR_MAP[code];
         expect(entry, `Missing error code ${code}`).to.exist;
         expect(entry.name).to.be.a("string").and.not.be.empty;

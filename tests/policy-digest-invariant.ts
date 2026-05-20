@@ -56,6 +56,15 @@ import {
 } from "./helpers/litesvm-setup";
 
 const FULL_CAPABILITY = 2;
+/**
+ * Phase 8 PEN-CROSS-1 (Batch 6 audit 2026-05-19): `register_agent` now
+ * hard-rejects `capability == CAPABILITY_OPERATOR`. OPERATOR-class grants
+ * route through `queue_agent_grant` → `apply_agent_grant` (timelock-gated).
+ * Tests that exercise non-spending paths (observe_only short-circuit,
+ * permission-update queue rejection) can switch to CAPABILITY_OBSERVER
+ * because the check they target fires BEFORE the capability gate.
+ */
+const CAPABILITY_OBSERVER = 1;
 
 /** Encode a [u8;32] returned by Anchor as a hex string for clean asserts. */
 function digestHex(d: number[] | Uint8Array): string {
@@ -795,10 +804,13 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
     // close to active-vault shape so the only differentiator is observe_only.
     const vault = await initVault(1100, true, [dummyProtocol]);
 
-    // Register an Operator-capable agent — observe_only must reject regardless
-    // of agent capability.
+    // Phase 8 Batch 6: register_agent now hard-rejects OPERATOR; the
+    // observe_only short-circuit fires at validate_and_authorize line 188
+    // (BEFORE the has_capability gate at line 318), so an Observer agent
+    // is sufficient to reproduce the reject — the test target is the
+    // observe_only check, not the capability check.
     await program.methods
-      .registerAgent(agent.publicKey, FULL_CAPABILITY, new BN(0))
+      .registerAgent(agent.publicKey, CAPABILITY_OBSERVER, new BN(0))
       .accountsPartial({
         owner: owner.publicKey,
         vault: vault.vaultPda,
@@ -1074,10 +1086,13 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
 
     const vault = await initVault(1102, false, [dummyProtocol]);
 
-    // Register agent first with valid capability so the per-agent pending PDA
-    // can be derived for the queue.
+    // Phase 8 Batch 6: register_agent now hard-rejects OPERATOR. This test
+    // targets the queue_agent_permissions_update's InvalidCapability check
+    // for capability=5 (an explicitly reserved value) — the agent's INITIAL
+    // capability doesn't matter for the queue reject. Observer (1) is
+    // sufficient to satisfy the queue's `vault.is_agent` requirement.
     await program.methods
-      .registerAgent(agent.publicKey, FULL_CAPABILITY, new BN(0))
+      .registerAgent(agent.publicKey, CAPABILITY_OBSERVER, new BN(0))
       .accountsPartial({
         owner: owner.publicKey,
         vault: vault.vaultPda,

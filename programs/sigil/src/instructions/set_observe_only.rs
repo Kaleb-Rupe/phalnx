@@ -3,7 +3,9 @@ use anchor_lang::prelude::*;
 use crate::errors::SigilError;
 use crate::events::ObserveOnlyChanged;
 use crate::state::{AgentVault, PolicyConfig};
-use crate::utils::policy_digest::{compute_policy_preview_digest, PolicyPreviewFields};
+use crate::utils::policy_digest::{
+    compute_agent_set_hash, compute_policy_preview_digest, PolicyPreviewFields,
+};
 
 /// F-12 audit fix: direct owner-only flip of `vault.observe_only`.
 ///
@@ -119,6 +121,10 @@ pub fn handler(ctx: Context<SetObserveOnly>, new_value: bool) -> Result<()> {
         // position 20. set_observe_only never mutates cosign_required —
         // read live policy.
         cosign_required: policy.cosign_required,
+        // Phase 8 PEN-CROSS-1: agent_set_hash bound at canonical position
+        // 21. set_observe_only never mutates the agent set — re-derive
+        // from live vault.
+        agent_set_hash: compute_agent_set_hash(&vault.agents),
     });
     policy.policy_preview_digest = recomputed_digest;
     policy.policy_version = policy

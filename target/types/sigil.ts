@@ -791,6 +791,180 @@ export type Sigil = {
       "args": []
     },
     {
+      "name": "applyAgentGrant",
+      "docs": [
+        "Phase 8 PEN-CROSS-1 — apply a queued OPERATOR-class agent grant past",
+        "the timelock. Inserts the agent into `vault.agents`, claims an",
+        "AgentSpendOverlay slot (fail-closed when `spending_limit_usd > 0`),",
+        "re-derives `policy.policy_preview_digest` with the NEW",
+        "`agent_set_hash`, bumps `policy.policy_version`, closes the pending",
+        "PDA, and emits `AgentGrantApplied`."
+      ],
+      "discriminator": [
+        236,
+        230,
+        108,
+        143,
+        155,
+        71,
+        185,
+        87
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "vault.vault_id",
+                "account": "agentVault"
+              }
+            ]
+          },
+          "relations": [
+            "pending"
+          ]
+        },
+        {
+          "name": "policy",
+          "docs": [
+            "Policy is mutated (policy_version bump + policy_preview_digest recompute)."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "pending",
+          "docs": [
+            "PendingAgentGrant PDA. `close = owner` returns rent to the signer",
+            "(mirrors register_agent rent payer). `has_one = vault` binds the PDA",
+            "to this vault explicitly (defense-in-depth alongside seed derivation)."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  97,
+                  103,
+                  101,
+                  110,
+                  116,
+                  95,
+                  103,
+                  114,
+                  97,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "agentSpendOverlay",
+          "docs": [
+            "Agent spend overlay — per-agent tracking slot. Same seeds as",
+            "register_agent so the apply path lands in the same overlay."
+          ],
+          "writable": true
+        },
+        {
+          "name": "auditLogSuccess",
+          "docs": [
+            "Phase 7 — success audit log; entry appended after state mutation."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  100,
+                  105,
+                  116,
+                  95,
+                  115,
+                  117,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "slotHashesSysvar",
+          "address": "SysvarS1otHashes111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "applyAgentPermissionsUpdate",
       "docs": [
         "Apply a queued agent permissions update after timelock expires."
@@ -4048,6 +4222,187 @@ export type Sigil = {
       ]
     },
     {
+      "name": "queueAgentGrant",
+      "docs": [
+        "Phase 8 PEN-CROSS-1 — queue an OPERATOR-class agent grant with mandatory",
+        "timelock. After `register_agent` was tightened to reject",
+        "`capability == CAPABILITY_OPERATOR`, this is the ONLY path to add a",
+        "new OPERATOR-class agent. Cosign-opted-in vaults require a non-owner",
+        "signer in `remaining_accounts`. The pending PDA at",
+        "`[b\"pending_agent_grant\", vault]` lives until `apply_agent_grant`",
+        "(after `MIN_TIMELOCK_DURATION = 1800s`)."
+      ],
+      "discriminator": [
+        136,
+        162,
+        54,
+        49,
+        167,
+        254,
+        200,
+        26
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "vault.vault_id",
+                "account": "agentVault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "policy",
+          "docs": [
+            "PolicyConfig is read-only here — only `cosign_required` is consulted.",
+            "PDA seeds derivation [b\"policy\", vault.key()] is the load-bearing",
+            "vault binding; cosmetic `has_one = vault` is unnecessary (§RP-1 V6)."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "pending",
+          "docs": [
+            "PendingAgentGrant PDA. `init` ⇒ duplicate-queue rejects via Anchor's",
+            "\"account already in use\" path (mirrors PendingOwnershipTransfer's",
+            "double-init guard)."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  97,
+                  103,
+                  101,
+                  110,
+                  116,
+                  95,
+                  103,
+                  114,
+                  97,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "auditLogSuccess",
+          "docs": [
+            "Phase 7 — success audit log; entry appended after state mutation."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  100,
+                  105,
+                  116,
+                  95,
+                  115,
+                  117,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "slotHashesSysvar",
+          "address": "SysvarS1otHashes111111111111111111111111111"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "agent",
+          "type": "pubkey"
+        },
+        {
+          "name": "capability",
+          "type": "u8"
+        },
+        {
+          "name": "spendingLimitUsd",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "queueAgentPermissionsUpdate",
       "docs": [
         "Queue an agent permissions update. Timelock-gated.",
@@ -6097,6 +6452,19 @@ export type Sigil = {
       ]
     },
     {
+      "name": "pendingAgentGrant",
+      "discriminator": [
+        164,
+        188,
+        119,
+        39,
+        18,
+        133,
+        78,
+        66
+      ]
+    },
+    {
       "name": "pendingAgentPermissionsUpdate",
       "discriminator": [
         137,
@@ -6239,6 +6607,32 @@ export type Sigil = {
         96,
         191,
         221
+      ]
+    },
+    {
+      "name": "agentGrantApplied",
+      "discriminator": [
+        153,
+        242,
+        206,
+        79,
+        159,
+        174,
+        239,
+        134
+      ]
+    },
+    {
+      "name": "agentGrantQueued",
+      "discriminator": [
+        216,
+        52,
+        141,
+        102,
+        184,
+        100,
+        174,
+        121
       ]
     },
     {
@@ -7588,6 +7982,92 @@ export type Sigil = {
       }
     },
     {
+      "name": "agentGrantApplied",
+      "docs": [
+        "Phase 8 PEN-CROSS-1 — owner applied a queued OPERATOR-class agent grant",
+        "past the timelock window. The agent is now in `vault.agents` and the",
+        "policy_preview_digest has been re-derived to bind the new agent_set_hash.",
+        "`new_policy_version` is the post-bump version; in-flight",
+        "`validate_and_authorize` ix snapshotted the prior version will fail fast",
+        "with PolicyVersionMismatch under the new authority surface."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "agent",
+            "type": "pubkey"
+          },
+          {
+            "name": "capability",
+            "type": "u8"
+          },
+          {
+            "name": "spendingLimitUsd",
+            "type": "u64"
+          },
+          {
+            "name": "queuedAt",
+            "type": "i64"
+          },
+          {
+            "name": "appliedAt",
+            "type": "i64"
+          },
+          {
+            "name": "newPolicyVersion",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "agentGrantQueued",
+      "docs": [
+        "Phase 8 PEN-CROSS-1 — owner queued an OPERATOR-class agent grant. The",
+        "agent is NOT yet in `vault.agents`; off-chain monitors should ALERT on",
+        "this event for any vault they protect. If the owner didn't initiate the",
+        "queue, this is a phished-key attack signal — the owner has",
+        "`min_delay_seconds` (default 1800s = 30 min) to abort before",
+        "`apply_agent_grant` can land. (A `cancel_agent_grant` instruction is",
+        "planned for a follow-up batch; until then, observers should freeze the",
+        "vault if the queue was unauthorized.)"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "agent",
+            "type": "pubkey"
+          },
+          {
+            "name": "capability",
+            "type": "u8"
+          },
+          {
+            "name": "spendingLimitUsd",
+            "type": "u64"
+          },
+          {
+            "name": "queuedAt",
+            "type": "i64"
+          },
+          {
+            "name": "executesAt",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
       "name": "agentPausedEvent",
       "type": {
         "kind": "struct",
@@ -8166,7 +8646,9 @@ export type Sigil = {
               "disc=13 (register_agent)   → agent pubkey",
               "disc=14 (policy_apply)     → vault pubkey",
               "disc=15 (constraints_apply)→ vault pubkey",
-              "disc=7..=9 (ownership_*)   → Phase 8 — RESERVED, do not write"
+              "disc=7..=9 (ownership_*)   → ownership initiate/accept/cancel",
+              "disc=17 (agent_grant_queue)→ agent pubkey (Phase 8 PEN-CROSS-1 Batch 6)",
+              "disc=18 (agent_grant_apply)→ agent pubkey (Phase 8 PEN-CROSS-1 Batch 6)"
             ],
             "type": {
               "array": [
@@ -9341,6 +9823,106 @@ export type Sigil = {
           {
             "name": "timestamp",
             "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "pendingAgentGrant",
+      "docs": [
+        "Phase 8 PEN-CROSS-1 (Council ISC-58..65) — queued OPERATOR-class agent grant.",
+        "",
+        "`register_agent` (Batch 6) now hard-rejects `capability == CAPABILITY_OPERATOR`",
+        "(closes the phished-owner instant-operator-grant vector). To grant an",
+        "OPERATOR-class agent the owner now MUST route through the two-step queue",
+        "+ apply timelock-gated path:",
+        "",
+        "1. `queue_agent_grant(agent, capability=OPERATOR, spending_limit_usd)` →",
+        "writes this PDA, captures `queued_at`, requires cosign when",
+        "`policy.cosign_required == true`.",
+        "2. `apply_agent_grant()` after `now - queued_at >= min_delay_seconds` →",
+        "pushes the agent into `vault.agents`, re-derives the policy preview",
+        "digest with the new `agent_set_hash`, bumps `policy.policy_version`,",
+        "and closes the pending PDA.",
+        "",
+        "PDA seeds: `[b\"pending_agent_grant\", vault.key().as_ref()]`. There is at",
+        "most ONE pending OPERATOR grant per vault — `init` against a duplicate",
+        "pubkey rejects via the standard Anchor \"account already in use\" path,",
+        "mirroring `PendingOwnershipTransfer` and `PendingPolicyUpdate`."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "docs": [
+              "PDA-bound vault. Defense-in-depth duplicate of the seeds vault prefix."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "agent",
+            "docs": [
+              "Agent pubkey being granted. Validated against the existing",
+              "`vault.is_agent` set at apply time (the Anchor `init` of the PDA",
+              "itself prevents double-queue per agent because the seed includes the",
+              "vault only — apply also re-checks for double-registration)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "capability",
+            "docs": [
+              "Target capability. Hard-rejected at queue time unless `>= CAPABILITY_OPERATOR`",
+              "— this is the WHOLE POINT of the queued path. Stored as u8 for wire",
+              "compatibility with `vault.agents[i].capability`."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "spendingLimitUsd",
+            "docs": [
+              "Per-agent rolling-24h spend limit (USDC face value, 6 decimals).",
+              "Mirrors `register_agent`'s arg."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "queuedAt",
+            "docs": [
+              "`Clock::unix_timestamp` at queue time. Timelock enforced as",
+              "`clock.unix_timestamp - queued_at >= min_delay_seconds`."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "minDelaySeconds",
+            "docs": [
+              "Owner-configurable timelock window (seconds). Defaults to",
+              "`MIN_TIMELOCK_DURATION = 1800s = 30min` — owner has the full window",
+              "to `cancel` if the queue was initiated by a phished key."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "padding",
+            "docs": [
+              "6-byte alignment cushion + additive headroom for future v1.1",
+              "extensions (e.g. cooldown_seconds binding). Zero-init on `init`."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                6
+              ]
+            }
           }
         ]
       }

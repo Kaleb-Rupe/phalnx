@@ -76,8 +76,23 @@ export interface AgentError {
 
 /** Lowest Anchor-error code Sigil emits. */
 export const SIGIL_ON_CHAIN_ERROR_MIN = 6000;
-/** Highest Anchor-error code currently in use. Bump when errors.rs grows. */
-export const SIGIL_ON_CHAIN_ERROR_MAX = 6102;
+/**
+ * Highest Anchor-error code currently in use. Bump when errors.rs grows.
+ *
+ * Phase 8 batches (2026-05-18 .. 2026-05-19) added 6103-6108:
+ *   6103 ErrPendingOwnershipExists       (Batch 3)
+ *   6104 ErrPendingOwnershipNotReady     (Batch 3)
+ *   6105 ErrInvalidFreezeReason          (Batch 1)
+ *   6106 ErrReactivateCooldownActive     (Batch 5)
+ *   6107 ErrInvalidOwnershipTarget       (Batch 3)
+ *   6108 ErrTooManyRevokePairs           (Batch 2)
+ *
+ * ON_CHAIN_ERROR_MAP detailed mappings for 6103-6108 land in a follow-up
+ * SDK pass; for now the constant accurately reflects the on-chain surface
+ * so `isOnChainReverted(6105)` returns true and `categorizeDxError`
+ * routes them to the `program` category.
+ */
+export const SIGIL_ON_CHAIN_ERROR_MAX = 6108;
 
 interface ErrorMapping {
   name: string;
@@ -1729,6 +1744,93 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
         action: "reshape_ix",
         description:
           "Split the route into multiple smaller transactions, or use a non-max-step Jupiter route. v1.1 will expand the budget to 32 metas.",
+      },
+    ],
+  },
+  // --- Phase 8 (ownership transfer + freeze hardening) ---
+  // Codes 6103-6108 added across Phase 8 Batches 1-5 (2026-05-18 .. 2026-05-19).
+  6103: {
+    name: "ErrPendingOwnershipExists",
+    message:
+      "An ownership transfer is already pending for this vault. Cancel the existing transfer before queueing a new target.",
+    category: "POLICY_VIOLATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "cancel_ownership_transfer",
+        description:
+          "Call cancel_ownership_transfer to release the pending PDA before queueing a new transfer.",
+      },
+    ],
+  },
+  6104: {
+    name: "ErrPendingOwnershipNotReady",
+    message:
+      "Ownership transfer timelock has not elapsed yet (default 48h). The new owner cannot accept until the window passes.",
+    category: "TRANSIENT",
+    retryable: true,
+    recovery_actions: [
+      {
+        action: "wait_timelock",
+        description:
+          "Wait for the timelock window to elapse. The owner can cancel during this window to abort the transfer.",
+      },
+    ],
+  },
+  6105: {
+    name: "ErrInvalidFreezeReason",
+    message:
+      "Invalid freeze_reason byte (must be 0=Manual, 1=AutoRevoke, or 2=EmergencyBoard).",
+    category: "INPUT_VALIDATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "fix_freeze_reason",
+        description:
+          "Re-call freeze_vault with a valid FreezeReason discriminant.",
+      },
+    ],
+  },
+  6106: {
+    name: "ErrReactivateCooldownActive",
+    message:
+      "Reactivate requires a 5-minute observation cooldown after the vault was frozen. Try again after the cooldown elapses.",
+    category: "TRANSIENT",
+    retryable: true,
+    retry_after_ms: 300_000,
+    recovery_actions: [
+      {
+        action: "wait_cooldown",
+        description:
+          "Wait for the 5-minute observation window to elapse before reactivating.",
+      },
+    ],
+  },
+  6107: {
+    name: "ErrInvalidOwnershipTarget",
+    message:
+      "new_owner cannot be a system/program/sysvar address (would permanently brick the vault).",
+    category: "INPUT_VALIDATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "use_signer_pubkey",
+        description:
+          "Pass an EOA pubkey or Squads V4 vault PDA as new_owner — not SystemProgram, the program ID, or a sysvar.",
+      },
+    ],
+  },
+  6108: {
+    name: "ErrTooManyRevokePairs",
+    message:
+      "freeze_internal received more than MAX_REVOKE_PAIRS (10) session/token pairs in remaining_accounts.",
+    category: "INPUT_VALIDATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "split_revoke_batch",
+        description:
+          "Split the (session_pda, token_account) pairs across multiple freeze_internal calls.",
       },
     ],
   },

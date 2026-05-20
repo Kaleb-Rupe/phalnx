@@ -11,6 +11,7 @@ export * from "./agentVault.js";
 export * from "./auditLogRejected.js";
 export * from "./auditLogSuccess.js";
 export * from "./instructionConstraints.js";
+export * from "./pendingAgentGrant.js";
 export * from "./pendingAgentPermissionsUpdate.js";
 export * from "./pendingCloseConstraints.js";
 export * from "./pendingConstraintsUpdate.js";
