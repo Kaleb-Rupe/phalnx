@@ -605,4 +605,322 @@ describe("missing-coverage (DC audit gap-fill 2026-05-19)", () => {
     const vaultAfter = await program.account.agentVault.fetch(vault);
     expect(vaultAfter.observeOnly).to.equal(true);
   });
+
+  // ───────────────────────────────────────────────────────────────────────
+  // 8-11. Round 2 MED-#2 fix (audit 2026-05-19): apply-time cosigner re-bind
+  //
+  // Attack chain (verified by audit):
+  //   1. Owner+cosigner properly queue cosign_required=Some(false) — passes
+  //      the queue-time `disables_cosign` elevation gate with cosign.
+  //   2. Timelock elapses.
+  //   3. Phisher obtains owner key (cosigner key NOT compromised).
+  //   4. Single tx, owner-only signed:
+  //        [apply_pending_policy, withdraw_funds(attacker, MAX)]
+  //      apply_pending_policy sets policy.cosign_required=false; the bundled
+  //      withdraw_funds then reads the freshly-disabled flag and the cosign
+  //      gate doesn't fire → drain succeeds.
+  //
+  // Fix (apply_pending_policy.rs:296-310 — see the comment block there):
+  //   When the apply DISABLES cosign on a previously-true policy, bind a
+  //   current cosigner signature in remaining_accounts. The cosigner
+  //   authorized "disable cosign" at queue but did NOT pre-authorize any
+  //   bundled atomic action that exploits the freshly-disabled state.
+  //
+  // Tests 8 (positive defense), 9 (legitimate flow), 10 (chain bypass
+  // blocked), 11 (non-cosign-disable apply unaffected).
+  // ───────────────────────────────────────────────────────────────────────
+
+  /**
+   * Build a `cosign_required=true` vault and queue a disable-cosign update
+   * (with proper queue-time cosigner). Timelock is then advanced so the
+   * tests can attempt apply. Returns the PDAs + the cosigner Keypair.
+   */
+  async function setupCosignDisableQueued(vaultId: BN) {
+    const cosigner = Keypair.generate();
+    airdropSol(svm, cosigner.publicKey, 1 * LAMPORTS_PER_SOL);
+
+    const { vault, policy } = await initVaultFor(vaultId, {
+      cosignRequired: true,
+    });
+
+    const [pendingPolicy] = PublicKey.findProgramAddressSync(
+      [Buffer.from("pending_policy"), vault.toBuffer()],
+      program.programId,
+    );
+
+    // Queue: cosign_required: Some(false) — DISABLES on live=true.
+    // This is `disables_cosign` per queue_policy_update.rs:332-333, so
+    // the elevated path requires (a) a non-default cosign_session pubkey
+    // and (b) the cosigner present as a signer in remaining_accounts.
+    const queueDigest = await fetchAndComputeQueueDigest(
+      program,
+      policy,
+      vault,
+      { cosignRequired: false },
+    );
+    await program.methods
+      .queuePolicyUpdate(
+        null, // dailySpendingCap
+        null, // maxTxAmount
+        null, // protocolMode
+        null, // protocols
+        null, // developerFeeRate
+        null, // maxSlippageBps
+        null, // timelockDuration
+        null, // allowedDestinations
+        null, // sessionExpirySeconds
+        null, // hasProtocolCaps
+        null, // protocolCaps
+        null, // destinationMode
+        null, // operatingHours
+        null, // stableBalanceFloor
+        null, // perRecipientDailyCapUsd
+        false, // cosignRequired: Some(false) — DISABLES (elevated)
+        cosigner.publicKey, // cosignSession — distinct from owner, non-default
+        queueDigest,
+      )
+      .accounts({
+        owner: owner.publicKey,
+        vault,
+        policy,
+        pendingPolicy,
+        systemProgram: SystemProgram.programId,
+      } as any)
+      .remainingAccounts([
+        { pubkey: cosigner.publicKey, isSigner: true, isWritable: false },
+      ])
+      .signers([cosigner])
+      .rpc();
+
+    // Sanity: pending PDA exists with the cosigner bound.
+    const pending = await program.account.pendingPolicyUpdate.fetch(
+      pendingPolicy,
+    );
+    expect(pending.cosignSession.toString()).to.equal(
+      cosigner.publicKey.toString(),
+    );
+
+    // Advance past timelock — apply tests run after.
+    advanceTime(svm, 1801);
+
+    return { vault, policy, pendingPolicy, cosigner };
+  }
+
+  // 8. POSITIVE (defense holds): apply with owner-only signer MUST reject.
+  it("apply-cosigner-rebind REJECT: disable-cosign apply without cosigner → ErrCosignRequired (6089)", async () => {
+    const { vault, policy, pendingPolicy } = await setupCosignDisableQueued(
+      new BN(5007),
+    );
+
+    let caughtCode: number | null = null;
+    try {
+      await program.methods
+        .applyPendingPolicy()
+        .accounts({
+          owner: owner.publicKey,
+          vault,
+          policy,
+          pendingPolicy,
+        } as any)
+        // NOTE: zero remaining_accounts — phisher only has owner key.
+        .rpc();
+    } catch (err: any) {
+      caughtCode = err?.error?.errorCode?.number ?? null;
+    }
+
+    expect(caughtCode, "apply MUST have rejected").to.not.be.null;
+    expect(caughtCode).to.equal(6089); // ErrCosignRequired
+
+    // ASSERT: policy.cosign_required UNCHANGED (still true — defense held).
+    const policyAfter = await program.account.policyConfig.fetch(policy);
+    expect((policyAfter as any).cosignRequired).to.equal(true);
+
+    // ASSERT: pending PDA still open (apply reverted atomically, so the
+    // `close = owner` directive did NOT fire).
+    expect(accountExists(svm, pendingPolicy)).to.equal(true);
+  });
+
+  // 9. NEGATIVE (legitimate flow works): apply with cosigner in
+  // remaining_accounts AND signing succeeds + flips cosign_required false.
+  it("apply-cosigner-rebind ACCEPT: disable-cosign apply WITH cosigner → cosign_required=false", async () => {
+    const { vault, policy, pendingPolicy, cosigner } =
+      await setupCosignDisableQueued(new BN(5008));
+
+    await program.methods
+      .applyPendingPolicy()
+      .accounts({
+        owner: owner.publicKey,
+        vault,
+        policy,
+        pendingPolicy,
+      } as any)
+      .remainingAccounts([
+        { pubkey: cosigner.publicKey, isSigner: true, isWritable: false },
+      ])
+      .signers([cosigner])
+      .rpc();
+
+    // ASSERT: policy.cosign_required flipped to false.
+    const policyAfter = await program.account.policyConfig.fetch(policy);
+    expect((policyAfter as any).cosignRequired).to.equal(false);
+
+    // ASSERT: pending PDA closed (close = owner refunded rent).
+    expect(accountExists(svm, pendingPolicy)).to.equal(false);
+  });
+
+  // 10. CHAIN BYPASS BLOCKED: bundling apply + withdraw_funds in a single
+  // tx — apply step must still reject without cosigner. This is the
+  // realistic attack tx shape per the audit threat model. Owner-only
+  // signing on the bundle means the apply step inside the bundle hits
+  // the new gate and the WHOLE tx atomically reverts → withdraw never
+  // executes.
+  it("apply-cosigner-rebind REJECT: [apply, withdraw_funds] bundle without cosigner → atomic revert", async () => {
+    const { vault, policy, pendingPolicy } = await setupCosignDisableQueued(
+      new BN(5009),
+    );
+
+    // Build both ixs in a single tx. We don't need actual USDC funding for
+    // this assertion — the apply step rejects FIRST and reverts the whole
+    // bundle, so withdraw_funds never reaches its own checks. If the
+    // gate were missing, apply would silently succeed, then withdraw
+    // would either fail (no funds) or succeed depending on funding. The
+    // load-bearing assertion is the apply rejection itself.
+    const applyIx = await program.methods
+      .applyPendingPolicy()
+      .accounts({
+        owner: owner.publicKey,
+        vault,
+        policy,
+        pendingPolicy,
+      } as any)
+      .instruction();
+
+    // Synthesize a minimal withdraw_funds ix shape — we don't even need
+    // real token accounts because the apply step rejects first. Use
+    // arbitrary pubkeys that pass type validation.
+    const mintPlaceholder = Keypair.generate().publicKey;
+    const vaultTokenAccountPlaceholder = Keypair.generate().publicKey;
+    const ownerTokenAccountPlaceholder = Keypair.generate().publicKey;
+
+    const withdrawIx = await program.methods
+      .withdrawFunds(new BN(1_000_000_000))
+      .accounts({
+        owner: owner.publicKey,
+        vault,
+        mint: mintPlaceholder,
+        vaultTokenAccount: vaultTokenAccountPlaceholder,
+        ownerTokenAccount: ownerTokenAccountPlaceholder,
+        tokenProgram: new PublicKey(
+          "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        ),
+      } as any)
+      .instruction();
+
+    const tx = new anchor.web3.Transaction().add(applyIx).add(withdrawIx);
+    tx.recentBlockhash = svm.latestBlockhash();
+    tx.feePayer = owner.publicKey;
+    tx.sign((owner as any).payer);
+
+    const result = svm.sendTransaction(tx);
+    // sendTransaction returns either a FailedTransactionMetadata (on
+    // failure) or TransactionMetadata (on success). The presence of an
+    // `err()` method indicates the failure variant.
+    const isFailed = typeof (result as any).err === "function";
+    expect(isFailed, "bundle tx MUST atomically revert").to.equal(true);
+
+    // ASSERT: policy.cosign_required UNCHANGED — atomic revert held.
+    const policyAfter = await program.account.policyConfig.fetch(policy);
+    expect((policyAfter as any).cosignRequired).to.equal(true);
+
+    // ASSERT: pending PDA still open — revert prevented closure.
+    expect(accountExists(svm, pendingPolicy)).to.equal(true);
+  });
+
+  // 11. NON-COSIGN-DISABLE apply unaffected: vault with cosign_required=false
+  // queues + applies cosign_required: Some(true) (the ENABLE direction).
+  // Enable is non-elevated per queue_policy_update.rs:334-335 — no cosigner
+  // was bound at queue, so apply must not require one either. The new gate
+  // predicate `pending.cosign_required == Some(false) && live_cosign_required`
+  // evaluates to (Some(true) == Some(false)) && false = false, so the gate
+  // is skipped entirely.
+  it("apply-cosigner-rebind PASS-THROUGH: enable-cosign apply with no cosigner → succeeds", async () => {
+    const vaultId = new BN(5010);
+    // Vault starts with cosign_required=false (the default).
+    const { vault, policy } = await initVaultFor(vaultId, {
+      cosignRequired: false,
+    });
+
+    const [pendingPolicy] = PublicKey.findProgramAddressSync(
+      [Buffer.from("pending_policy"), vault.toBuffer()],
+      program.programId,
+    );
+
+    // Queue: cosign_required: Some(true) — ENABLES on live=false (safety
+    // improvement, NON-elevated). No cosign session required at queue.
+    const queueDigest = await fetchAndComputeQueueDigest(
+      program,
+      policy,
+      vault,
+      { cosignRequired: true },
+    );
+    await program.methods
+      .queuePolicyUpdate(
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        true, // cosign_required: Some(true) — ENABLES (non-elevated)
+        PublicKey.default, // cosign_session: NONE required
+        queueDigest,
+      )
+      .accounts({
+        owner: owner.publicKey,
+        vault,
+        policy,
+        pendingPolicy,
+        systemProgram: SystemProgram.programId,
+      } as any)
+      .rpc();
+
+    // PRECONDITION: pending exists, no cosigner bound.
+    const pendingBefore = await program.account.pendingPolicyUpdate.fetch(
+      pendingPolicy,
+    );
+    expect(pendingBefore.cosignSession.toString()).to.equal(
+      PublicKey.default.toString(),
+    );
+
+    advanceTime(svm, 1801);
+
+    // ACT: apply with owner-only signature, no remaining_accounts.
+    // Pre-fix, would have worked; post-fix MUST still work because the
+    // gate only fires on the DISABLE direction.
+    await program.methods
+      .applyPendingPolicy()
+      .accounts({
+        owner: owner.publicKey,
+        vault,
+        policy,
+        pendingPolicy,
+      } as any)
+      .rpc();
+
+    // ASSERT: cosign_required flipped to true.
+    const policyAfter = await program.account.policyConfig.fetch(policy);
+    expect((policyAfter as any).cosignRequired).to.equal(true);
+
+    // ASSERT: pending PDA closed.
+    expect(accountExists(svm, pendingPolicy)).to.equal(false);
+  });
 });

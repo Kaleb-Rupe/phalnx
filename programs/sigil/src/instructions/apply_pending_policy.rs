@@ -266,8 +266,47 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
     // policy state and binds cosign_required at canonical position 20,
     // so a tampered pending PDA that flipped the queued value between
     // queue and apply produces a digest mismatch.
+    //
+    // Round 2 MED-#2 fix (audit 2026-05-19): apply-time cosigner re-bind
+    // for the disable transition. When this apply DISABLES cosign on a
+    // previously-cosign-required vault, require a current cosigner
+    // signature — NOT just the queue-time digest match. Defends against
+    // the owner-key-leaked-between-queue-and-apply chain: a phished
+    // owner can otherwise submit
+    //   [apply_pending_policy(cosign_required=false), <any-cosign-gated-ix>]
+    // in a single tx, neutralizing cosign mid-atomic. The cosigner
+    // authorized "disable cosign" at queue, but did NOT pre-authorize
+    // "...AND drain funds / register attacker agent / flip observe-only
+    // off" in the same atomic action. Pinning a live cosigner signature
+    // here closes the chain at its source.
+    //
+    // Cosigner identity is bound to `pending.cosign_session` (already
+    // validated against the digest above — `no_cosign` is false on this
+    // path because the disable-cosign queue is elevated). Re-confirm the
+    // signer is present in remaining_accounts at apply-time.
+    //
+    // Snapshot live cosign state BEFORE the merge so the transition
+    // predicate reads the pre-apply value. Reading `policy.cosign_required`
+    // after the write would always evaluate false on the disable path
+    // and silently bypass the gate.
+    let live_cosign_required = policy.cosign_required;
     if let Some(new_cosign) = pending.cosign_required {
         policy.cosign_required = new_cosign;
+    }
+    let disables_cosign =
+        pending.cosign_required == Some(false) && live_cosign_required;
+    if disables_cosign {
+        let cosign_session = pending.cosign_session;
+        require_keys_neq!(
+            cosign_session,
+            Pubkey::default(),
+            SigilError::ErrCosignRequired
+        );
+        let cosign_present = ctx
+            .remaining_accounts
+            .iter()
+            .any(|ai| ai.key == &cosign_session && ai.is_signer);
+        require!(cosign_present, SigilError::ErrCosignRequired);
     }
     // Phase 2 Option A: defense-in-depth — re-validate protocol_mode if pending overrode it.
     if let Some(mode) = pending.protocol_mode {
