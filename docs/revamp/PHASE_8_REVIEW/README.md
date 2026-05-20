@@ -37,8 +37,8 @@ Per CLAUDE.md mandate ("we keep having these audit issues"), Council ISCReview r
 4. **Sequential batches** — 7 batches forced strict sequential execution to avoid parallel-agent merge conflicts on 6 shared files. ISC-A multi-agent coordination explicit.
 5. **Round 2 line-by-line discipline IN-PHASE** — ISC-112 enumerates files for line-by-line audit; ISC-113 requires VERBATIM transcripts (not summaries) in PHASE_8_CLOSURE.md.
 
-## §RP-1 findings (TBD — runs after Batch 6)
+## §RP findings + final verdict
 
-## §RP-2 findings (TBD — Round 2 line-by-line at SAME files Round 1 audited)
+See `CLOSURE.md` for full disposition of all 22 findings (5 CRITICAL + 7 HIGH + 5 MEDIUM + 5 LOW). All CRITICAL/HIGH fixed; MEDIUM/LOW either fixed or explicitly documented with deferral rationale.
 
-## Final verdict (TBD)
+**Verdict: CLEAR-TO-MAINNET on the on-chain layer.** Phase 9 (SDK redesign) and Phase 10 (devnet fresh redeploy) proceed unblocked.
