@@ -316,7 +316,8 @@ describe("audit-log (Phase 7)", () => {
         .freezeVault()
         .accounts({ owner: owner.publicKey, vault } as any)
         .rpc();
-      advanceTime(svm, 1);
+      // Phase 8 C28: advance past 5-min reactivate cooldown
+      advanceTime(svm, 301);
       await program.methods
         .reactivateVault(null, null)
         .accounts({ owner: owner.publicKey, vault } as any)
@@ -460,6 +461,8 @@ describe("audit-log (Phase 7)", () => {
       .freezeVault()
       .accounts({ owner: owner.publicKey, vault } as any)
       .rpc();
+    // Phase 8 C28: advance past 5-min reactivate cooldown
+    advanceTime(svm, 301);
     await program.methods
       .reactivateVault(null, null)
       .accounts({ owner: owner.publicKey, vault } as any)
@@ -504,7 +507,9 @@ describe("audit-log (Phase 7)", () => {
       .freezeVault()
       .accounts({ owner: owner.publicKey, vault } as any)
       .rpc();
-    advanceTime(svm, 5);
+    // Phase 8 C28: advance past 5-min reactivate cooldown (was 5s for sysvar
+    // freshness test; now must exceed 300s)
+    advanceTime(svm, 301);
     await program.methods
       .reactivateVault(
         Keypair.generate().publicKey, // dummy new agent (capability needed)
