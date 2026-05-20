@@ -12,6 +12,7 @@
 pub mod audit_log;
 pub mod cosign_digest;
 pub mod destination_check;
+pub mod freeze_helper;
 pub mod mint_delta_cap;
 pub mod policy_digest;
 pub mod post_assertion_helpers;

@@ -5,6 +5,7 @@ use crate::errors::SigilError;
 use crate::events::{DelegationRevoked, VaultFrozen};
 use crate::state::*;
 use crate::utils::audit_log::build_audit_entry;
+use crate::utils::freeze_helper::freeze_internal;
 
 #[derive(Accounts)]
 pub struct FreezeVault<'info> {
@@ -183,16 +184,19 @@ pub fn handler<'a, 'b, 'c, 'info>(
     // Flip status LAST — by the time the kill switch lands, all surfaced
     // delegations are dead and any leftover sessions can no longer pass
     // `validate_and_authorize` (it requires `vault.is_active()`).
+    //
+    // Phase 8 Batch 2 (F-7): mutation is routed through the shared
+    // `freeze_internal` helper. The helper REQUIRES a `FreezeReason` arg so
+    // a future sibling-handler (e.g. EmergencyBoard, Batch 3) cannot
+    // silently omit the reason byte. `revoke_pairs_count = 0` here because
+    // the per-session delegation revocation above already happened and was
+    // not bounded by the helper's MAX_REVOKE_PAIRS cap — the existing loop
+    // walks active sessions, not a caller-supplied pair list.
+    //
+    // TODO (Batch 3): cancel PendingOwnershipTransfer if account present in
+    // `remaining_accounts`. The PDA doesn't exist until Batch 3 adds it.
     let vault = &mut ctx.accounts.vault;
-    vault.status = VaultStatus::Frozen;
-    // Phase 8: record WHY the vault was frozen + WHEN. Manual freeze path
-    // always writes FreezeReason::Manual (= 0). The 5-minute reactivate
-    // cooldown reads `frozen_at_timestamp` so this MUST be wall-clock and
-    // not slot-derived. Batch 2 will refactor this + `revoke_agent` into a
-    // shared `freeze_helper` that REQUIRES a `FreezeReason` argument so the
-    // next sibling-handler cannot silently omit the reason byte.
-    vault.frozen_at_timestamp = clock.unix_timestamp;
-    vault.freeze_reason = FreezeReason::Manual as u8;
+    freeze_internal(vault, FreezeReason::Manual, &clock, 0)?;
 
     // Phase 7 — write success audit-log entry AFTER state mutation completes.
     // M-3 ordering: persist on-chain before emit!() so event log and on-chain

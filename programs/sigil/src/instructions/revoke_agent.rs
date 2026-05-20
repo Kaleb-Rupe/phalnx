@@ -5,6 +5,7 @@ use crate::errors::SigilError;
 use crate::events::AgentRevoked;
 use crate::state::*;
 use crate::utils::audit_log::build_audit_entry;
+use crate::utils::freeze_helper::freeze_internal;
 
 #[derive(Accounts)]
 pub struct RevokeAgent<'info> {
@@ -79,16 +80,16 @@ pub fn handler(ctx: Context<RevokeAgent>, agent_to_remove: Pubkey) -> Result<()>
     // this MUST be unix_timestamp and not slot-derived.
     let clock = Clock::get()?;
 
-    // Freeze if no agents remain. Phase 8: record reason + timestamp on
-    // the auto-freeze path so `reactivate_vault` enforces the 5-min
-    // cooldown identically to the manual-freeze path. Batch 2 extracts
-    // this branch into a shared `freeze_helper(vault, reason, clock)` so
-    // the next sibling-handler cannot drift on the reason byte
-    // (F-RP3-2 sibling drift lineage).
+    // Freeze if no agents remain. Phase 8 Batch 2 (F-7): the freeze mutation
+    // is now routed through the shared `freeze_internal` helper so this
+    // sibling-handler cannot drift on reason byte / timestamp / status
+    // ordering (F-RP3-2 sibling drift lineage). `revoke_pairs_count = 0`
+    // because this path does not iterate caller-supplied `remaining_accounts`
+    // — every active session for the revoked agent will reject in
+    // `validate_and_authorize` once `is_agent()` returns false (the agents
+    // vec was already mutated above).
     if vault.agents.is_empty() {
-        vault.status = VaultStatus::Frozen;
-        vault.frozen_at_timestamp = clock.unix_timestamp;
-        vault.freeze_reason = FreezeReason::AutoRevoke as u8;
+        freeze_internal(vault, FreezeReason::AutoRevoke, &clock, 0)?;
     }
 
     // PEN-CROSS-5 (Phase 4 absorption): bump policy_version. Critical for
