@@ -19,7 +19,7 @@ pub struct FinalizeSession<'info> {
 
     #[account(
         mut,
-        seeds = [b"vault", vault.owner.as_ref(), vault.vault_id.to_le_bytes().as_ref()],
+        seeds = [b"vault", vault.vault_authority.as_ref(), vault.vault_id.to_le_bytes().as_ref()],
         bump = vault.bump,
     )]
     pub vault: Account<'info, AgentVault>,

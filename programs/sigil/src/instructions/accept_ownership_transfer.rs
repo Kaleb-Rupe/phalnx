@@ -22,9 +22,14 @@ use crate::utils::audit_log::build_audit_entry;
 /// Note: we do NOT use `has_one = owner` on the vault constraint because the
 /// signer here is the NEW owner, not the current. Authority is bound via
 /// `require_keys_eq!(new_owner.key(), pending.new_owner, ...)` plus the
-/// `seeds = [b"vault", pending.current_owner, ...]` derivation (which proves
-/// the pending PDA's `current_owner` field matches the vault's stored owner
-/// at queue time).
+/// `seeds = [b"vault", vault.vault_authority, ...]` derivation (LBL-01).
+///
+/// Phase 8 LBL-01: the seed-key is now `vault.vault_authority` (the immutable
+/// PDA seed-key set at init), NOT `pending.current_owner`. The handler still
+/// performs a defense-in-depth check that `pending.current_owner ==
+/// vault.owner` (snapshot below) so the queue→accept binding to the
+/// queue-time owner remains explicit — but the PDA address itself is
+/// decoupled from owner identity, which is the point of LBL-01.
 ///
 /// TODO (Batch 6) — re-derive `policy.policy_preview_digest` using the new
 /// owner's `agent_set_hash` projection. Today the digest binds 20 fields, none
@@ -41,12 +46,15 @@ pub struct AcceptOwnershipTransfer<'info> {
     pub new_owner: Signer<'info>,
 
     /// Vault is mutated (owner field overwritten). PDA derivation uses the
-    /// pending account's `current_owner` field so the seed binding is
-    /// load-bearing: the vault MUST be the one queued by the same owner that
-    /// signed `initiate_ownership_transfer`. Cross-vault accept is impossible.
+    /// immutable `vault.vault_authority` field (LBL-01) — the seed binding
+    /// survives the owner mutation that this handler performs, so subsequent
+    /// owner-side ix from `new_owner` continue to resolve the same vault
+    /// account. Handler-level `require_keys_eq!(pending.current_owner,
+    /// vault.owner)` replaces the implicit seed-derivation binding that
+    /// previously enforced the queue→accept owner match.
     #[account(
         mut,
-        seeds = [b"vault", pending.current_owner.as_ref(), vault.vault_id.to_le_bytes().as_ref()],
+        seeds = [b"vault", vault.vault_authority.as_ref(), vault.vault_id.to_le_bytes().as_ref()],
         bump = vault.bump,
     )]
     pub vault: Account<'info, AgentVault>,
@@ -99,6 +107,21 @@ pub fn handler(ctx: Context<AcceptOwnershipTransfer>) -> Result<()> {
     require_keys_eq!(
         ctx.accounts.new_owner.key(),
         ctx.accounts.pending.new_owner,
+        SigilError::ErrPendingOwnershipNotReady,
+    );
+
+    // Phase 8 LBL-01 defense-in-depth — the pre-LBL-01 vault PDA seed
+    // `seeds = [b"vault", pending.current_owner, ...]` implicitly bound
+    // `pending.current_owner == vault.owner` at the seed-derivation layer
+    // (a stale pending from before a hypothetical earlier ownership change
+    // would have derived a different vault PDA and failed). LBL-01 moves
+    // the seed-key to `vault.vault_authority` (immutable), so this implicit
+    // binding is lost. Reinstate it as an explicit handler check so a
+    // stale pending (e.g. accidentally re-initialized via a not-yet-
+    // discovered queue-bypass path) cannot mismatch the live owner.
+    require_keys_eq!(
+        ctx.accounts.pending.current_owner,
+        ctx.accounts.vault.owner,
         SigilError::ErrPendingOwnershipNotReady,
     );
 

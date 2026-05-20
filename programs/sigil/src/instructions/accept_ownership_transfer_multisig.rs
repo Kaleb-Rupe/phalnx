@@ -68,12 +68,13 @@ pub struct AcceptOwnershipTransferMultisig<'info> {
     pub multisig_pda: UncheckedAccount<'info>,
 
     /// Vault is mutated (owner field overwritten). PDA derivation uses the
-    /// pending account's `current_owner` field — identical pattern to the EOA
-    /// accept handler: the vault MUST be the one queued by the same owner that
-    /// signed `initiate_ownership_transfer`.
+    /// immutable `vault.vault_authority` field (LBL-01) so the seed binding
+    /// survives ownership transfer. Handler-level `require_keys_eq!(
+    /// pending.current_owner, vault.owner)` replaces the implicit seed
+    /// binding that previously enforced the queue→accept owner match.
     #[account(
         mut,
-        seeds = [b"vault", pending.current_owner.as_ref(), vault.vault_id.to_le_bytes().as_ref()],
+        seeds = [b"vault", vault.vault_authority.as_ref(), vault.vault_id.to_le_bytes().as_ref()],
         bump = vault.bump,
     )]
     pub vault: Account<'info, AgentVault>,
@@ -152,6 +153,18 @@ pub fn handler(ctx: Context<AcceptOwnershipTransferMultisig>) -> Result<()> {
     //    practically-impossible address collision but defensible).
     require!(
         ctx.accounts.pending.is_multisig_target,
+        SigilError::ErrPendingOwnershipNotReady,
+    );
+
+    // 3.5. Phase 8 LBL-01 defense-in-depth — see the EOA accept handler for
+    //      the full rationale. The pre-LBL-01 seed pattern
+    //      `seeds = [b"vault", pending.current_owner, ...]` implicitly bound
+    //      `pending.current_owner == vault.owner`. LBL-01 moves the seed-key
+    //      to `vault.vault_authority` (immutable), so this implicit binding
+    //      is lost. Reinstate it as an explicit handler check.
+    require_keys_eq!(
+        ctx.accounts.pending.current_owner,
+        ctx.accounts.vault.owner,
         SigilError::ErrPendingOwnershipNotReady,
     );
 

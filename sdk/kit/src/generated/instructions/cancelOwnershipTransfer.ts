@@ -136,13 +136,12 @@ export type CancelOwnershipTransferAsyncInput<
 > = {
   currentOwner: TransactionSigner<TAccountCurrentOwner>;
   /**
-   * Vault binding via PDA seeds: the seeds include `current_owner.key()`
-   * so Anchor's PDA derivation enforces that this signer matches
-   * `vault.owner` (Anchor recomputes the address using the signer's key
-   * and rejects if the result doesn't match the supplied vault account).
-   * This is the same pattern `freeze_vault` uses; the explicit
-   * `require_keys_eq!(current_owner, pending.current_owner)` below adds
-   * defense-in-depth against pending-PDA replay across owner changes.
+   * Vault binding via PDA seeds (Phase 8 LBL-01): the seeds use
+   * `vault.vault_authority` (immutable, set at init), NOT the signer key.
+   * The handler-level `require_keys_eq!(current_owner.key(),
+   * pending.current_owner)` below is now the LOAD-BEARING signer-binding
+   * check (pre-LBL-01 the seed derivation incidentally enforced this when
+   * the seed-key was `current_owner.key()`).
    */
   vault: Address<TAccountVault>;
   /**
@@ -311,13 +310,12 @@ export type CancelOwnershipTransferInput<
 > = {
   currentOwner: TransactionSigner<TAccountCurrentOwner>;
   /**
-   * Vault binding via PDA seeds: the seeds include `current_owner.key()`
-   * so Anchor's PDA derivation enforces that this signer matches
-   * `vault.owner` (Anchor recomputes the address using the signer's key
-   * and rejects if the result doesn't match the supplied vault account).
-   * This is the same pattern `freeze_vault` uses; the explicit
-   * `require_keys_eq!(current_owner, pending.current_owner)` below adds
-   * defense-in-depth against pending-PDA replay across owner changes.
+   * Vault binding via PDA seeds (Phase 8 LBL-01): the seeds use
+   * `vault.vault_authority` (immutable, set at init), NOT the signer key.
+   * The handler-level `require_keys_eq!(current_owner.key(),
+   * pending.current_owner)` below is now the LOAD-BEARING signer-binding
+   * check (pre-LBL-01 the seed derivation incidentally enforced this when
+   * the seed-key was `current_owner.key()`).
    */
   vault: Address<TAccountVault>;
   /**
@@ -431,13 +429,12 @@ export type ParsedCancelOwnershipTransferInstruction<
   accounts: {
     currentOwner: TAccountMetas[0];
     /**
-     * Vault binding via PDA seeds: the seeds include `current_owner.key()`
-     * so Anchor's PDA derivation enforces that this signer matches
-     * `vault.owner` (Anchor recomputes the address using the signer's key
-     * and rejects if the result doesn't match the supplied vault account).
-     * This is the same pattern `freeze_vault` uses; the explicit
-     * `require_keys_eq!(current_owner, pending.current_owner)` below adds
-     * defense-in-depth against pending-PDA replay across owner changes.
+     * Vault binding via PDA seeds (Phase 8 LBL-01): the seeds use
+     * `vault.vault_authority` (immutable, set at init), NOT the signer key.
+     * The handler-level `require_keys_eq!(current_owner.key(),
+     * pending.current_owner)` below is now the LOAD-BEARING signer-binding
+     * check (pre-LBL-01 the seed derivation incidentally enforced this when
+     * the seed-key was `current_owner.key()`).
      */
     vault: TAccountMetas[1];
     /**

@@ -31,15 +31,14 @@ pub struct CancelOwnershipTransfer<'info> {
     #[account(mut)]
     pub current_owner: Signer<'info>,
 
-    /// Vault binding via PDA seeds: the seeds include `current_owner.key()`
-    /// so Anchor's PDA derivation enforces that this signer matches
-    /// `vault.owner` (Anchor recomputes the address using the signer's key
-    /// and rejects if the result doesn't match the supplied vault account).
-    /// This is the same pattern `freeze_vault` uses; the explicit
-    /// `require_keys_eq!(current_owner, pending.current_owner)` below adds
-    /// defense-in-depth against pending-PDA replay across owner changes.
+    /// Vault binding via PDA seeds (Phase 8 LBL-01): the seeds use
+    /// `vault.vault_authority` (immutable, set at init), NOT the signer key.
+    /// The handler-level `require_keys_eq!(current_owner.key(),
+    /// pending.current_owner)` below is now the LOAD-BEARING signer-binding
+    /// check (pre-LBL-01 the seed derivation incidentally enforced this when
+    /// the seed-key was `current_owner.key()`).
     #[account(
-        seeds = [b"vault", current_owner.key().as_ref(), vault.vault_id.to_le_bytes().as_ref()],
+        seeds = [b"vault", vault.vault_authority.as_ref(), vault.vault_id.to_le_bytes().as_ref()],
         bump = vault.bump,
     )]
     pub vault: Account<'info, AgentVault>,

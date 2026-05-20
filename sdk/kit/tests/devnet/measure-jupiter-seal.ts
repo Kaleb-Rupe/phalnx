@@ -92,6 +92,8 @@ function mockState(): ResolvedVaultState {
       observeOnly: false,
       frozenAtTimestamp: 0n,
       freezeReason: 0,
+      // Phase 8 LBL-01: immutable PDA seed-key (equals initial owner).
+      vaultAuthority: OWNER,
     },
     policy: {
       discriminator: new Uint8Array(8),

@@ -154,6 +154,35 @@ export type AgentVault = {
    * rule for Borsh stability.
    */
   freezeReason: number;
+  /**
+   * Phase 8 LBL-01 — immutable PDA seed-key set at `initialize_vault` time;
+   * decouples vault PDA address from owner identity to enable ownership
+   * transfer without bricking the account.
+   *
+   * Before LBL-01: vault PDA derivation used `owner.key()` (or
+   * `vault.owner`). After `accept_ownership_transfer` mutated `vault.owner`,
+   * every subsequent owner-side instruction derived a DIFFERENT PDA →
+   * Anchor `ConstraintSeeds` rejection → vault permanently bricked.
+   *
+   * After LBL-01: all 40 non-init owner-side instructions derive vault
+   * PDA from `vault.vault_authority` instead. At init, the SDK still
+   * derives the PDA from `owner.key() + vault_id` (the canonical pattern),
+   * and the handler writes `vault.vault_authority = owner.key()` so the
+   * stored seed-key equals the initial owner — the on-chain PDA address
+   * is identical to the pre-LBL-01 layout. After ownership transfer the
+   * `vault.owner` byte field changes but `vault.vault_authority` does NOT,
+   * so the PDA address stays put and downstream ix continue to resolve.
+   *
+   * **Invariant:** `vault.vault_authority` is written exactly ONCE inside
+   * `initialize_vault`. No other instruction writes this field. The SDK
+   * helper `vaultPda(owner, vaultId)` continues to use `owner` as the
+   * seed-key at init time; thereafter the SDK reads `vault.vault_authority`
+   * from the resolved state to rebuild the same PDA.
+   *
+   * APPENDED per F-14 APPEND-ONLY rule for Borsh stability — +32 bytes
+   * at the tail keeps every prior byte at its original offset.
+   */
+  vaultAuthority: Address;
 };
 
 export type AgentVaultArgs = {
@@ -246,6 +275,35 @@ export type AgentVaultArgs = {
    * rule for Borsh stability.
    */
   freezeReason: number;
+  /**
+   * Phase 8 LBL-01 — immutable PDA seed-key set at `initialize_vault` time;
+   * decouples vault PDA address from owner identity to enable ownership
+   * transfer without bricking the account.
+   *
+   * Before LBL-01: vault PDA derivation used `owner.key()` (or
+   * `vault.owner`). After `accept_ownership_transfer` mutated `vault.owner`,
+   * every subsequent owner-side instruction derived a DIFFERENT PDA →
+   * Anchor `ConstraintSeeds` rejection → vault permanently bricked.
+   *
+   * After LBL-01: all 40 non-init owner-side instructions derive vault
+   * PDA from `vault.vault_authority` instead. At init, the SDK still
+   * derives the PDA from `owner.key() + vault_id` (the canonical pattern),
+   * and the handler writes `vault.vault_authority = owner.key()` so the
+   * stored seed-key equals the initial owner — the on-chain PDA address
+   * is identical to the pre-LBL-01 layout. After ownership transfer the
+   * `vault.owner` byte field changes but `vault.vault_authority` does NOT,
+   * so the PDA address stays put and downstream ix continue to resolve.
+   *
+   * **Invariant:** `vault.vault_authority` is written exactly ONCE inside
+   * `initialize_vault`. No other instruction writes this field. The SDK
+   * helper `vaultPda(owner, vaultId)` continues to use `owner` as the
+   * seed-key at init time; thereafter the SDK reads `vault.vault_authority`
+   * from the resolved state to rebuild the same PDA.
+   *
+   * APPENDED per F-14 APPEND-ONLY rule for Borsh stability — +32 bytes
+   * at the tail keeps every prior byte at its original offset.
+   */
+  vaultAuthority: Address;
 };
 
 /** Gets the encoder for {@link AgentVaultArgs} account data. */
@@ -270,6 +328,7 @@ export function getAgentVaultEncoder(): Encoder<AgentVaultArgs> {
       ["observeOnly", getBooleanEncoder()],
       ["frozenAtTimestamp", getI64Encoder()],
       ["freezeReason", getU8Encoder()],
+      ["vaultAuthority", getAddressEncoder()],
     ]),
     (value) => ({ ...value, discriminator: AGENT_VAULT_DISCRIMINATOR }),
   );
@@ -296,6 +355,7 @@ export function getAgentVaultDecoder(): Decoder<AgentVault> {
     ["observeOnly", getBooleanDecoder()],
     ["frozenAtTimestamp", getI64Decoder()],
     ["freezeReason", getU8Decoder()],
+    ["vaultAuthority", getAddressDecoder()],
   ]);
 }
 

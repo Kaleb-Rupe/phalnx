@@ -141,9 +141,12 @@ export type AcceptOwnershipTransferAsyncInput<
   newOwner: TransactionSigner<TAccountNewOwner>;
   /**
    * Vault is mutated (owner field overwritten). PDA derivation uses the
-   * pending account's `current_owner` field so the seed binding is
-   * load-bearing: the vault MUST be the one queued by the same owner that
-   * signed `initiate_ownership_transfer`. Cross-vault accept is impossible.
+   * immutable `vault.vault_authority` field (LBL-01) — the seed binding
+   * survives the owner mutation that this handler performs, so subsequent
+   * owner-side ix from `new_owner` continue to resolve the same vault
+   * account. Handler-level `require_keys_eq!(pending.current_owner,
+   * vault.owner)` replaces the implicit seed-derivation binding that
+   * previously enforced the queue→accept owner match.
    */
   vault: Address<TAccountVault>;
   /**
@@ -319,9 +322,12 @@ export type AcceptOwnershipTransferInput<
   newOwner: TransactionSigner<TAccountNewOwner>;
   /**
    * Vault is mutated (owner field overwritten). PDA derivation uses the
-   * pending account's `current_owner` field so the seed binding is
-   * load-bearing: the vault MUST be the one queued by the same owner that
-   * signed `initiate_ownership_transfer`. Cross-vault accept is impossible.
+   * immutable `vault.vault_authority` field (LBL-01) — the seed binding
+   * survives the owner mutation that this handler performs, so subsequent
+   * owner-side ix from `new_owner` continue to resolve the same vault
+   * account. Handler-level `require_keys_eq!(pending.current_owner,
+   * vault.owner)` replaces the implicit seed-derivation binding that
+   * previously enforced the queue→accept owner match.
    */
   vault: Address<TAccountVault>;
   /**
@@ -442,9 +448,12 @@ export type ParsedAcceptOwnershipTransferInstruction<
     newOwner: TAccountMetas[0];
     /**
      * Vault is mutated (owner field overwritten). PDA derivation uses the
-     * pending account's `current_owner` field so the seed binding is
-     * load-bearing: the vault MUST be the one queued by the same owner that
-     * signed `initiate_ownership_transfer`. Cross-vault accept is impossible.
+     * immutable `vault.vault_authority` field (LBL-01) — the seed binding
+     * survives the owner mutation that this handler performs, so subsequent
+     * owner-side ix from `new_owner` continue to resolve the same vault
+     * account. Handler-level `require_keys_eq!(pending.current_owner,
+     * vault.owner)` replaces the implicit seed-derivation binding that
+     * previously enforced the queue→accept owner match.
      */
     vault: TAccountMetas[1];
     /**

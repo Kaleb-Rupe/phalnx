@@ -12,7 +12,7 @@ pub struct UnpauseAgent<'info> {
     #[account(
         mut,
         has_one = owner @ SigilError::UnauthorizedOwner,
-        seeds = [b"vault", owner.key().as_ref(), vault.vault_id.to_le_bytes().as_ref()],
+        seeds = [b"vault", vault.vault_authority.as_ref(), vault.vault_id.to_le_bytes().as_ref()],
         bump = vault.bump,
     )]
     pub vault: Account<'info, AgentVault>,

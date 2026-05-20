@@ -140,9 +140,10 @@ export type AcceptOwnershipTransferMultisigAsyncInput<
   multisigPda: Address<TAccountMultisigPda>;
   /**
    * Vault is mutated (owner field overwritten). PDA derivation uses the
-   * pending account's `current_owner` field — identical pattern to the EOA
-   * accept handler: the vault MUST be the one queued by the same owner that
-   * signed `initiate_ownership_transfer`.
+   * immutable `vault.vault_authority` field (LBL-01) so the seed binding
+   * survives ownership transfer. Handler-level `require_keys_eq!(
+   * pending.current_owner, vault.owner)` replaces the implicit seed
+   * binding that previously enforced the queue→accept owner match.
    */
   vault: Address<TAccountVault>;
   /**
@@ -319,9 +320,10 @@ export type AcceptOwnershipTransferMultisigInput<
   multisigPda: Address<TAccountMultisigPda>;
   /**
    * Vault is mutated (owner field overwritten). PDA derivation uses the
-   * pending account's `current_owner` field — identical pattern to the EOA
-   * accept handler: the vault MUST be the one queued by the same owner that
-   * signed `initiate_ownership_transfer`.
+   * immutable `vault.vault_authority` field (LBL-01) so the seed binding
+   * survives ownership transfer. Handler-level `require_keys_eq!(
+   * pending.current_owner, vault.owner)` replaces the implicit seed
+   * binding that previously enforced the queue→accept owner match.
    */
   vault: Address<TAccountVault>;
   /**
@@ -443,9 +445,10 @@ export type ParsedAcceptOwnershipTransferMultisigInstruction<
     multisigPda: TAccountMetas[0];
     /**
      * Vault is mutated (owner field overwritten). PDA derivation uses the
-     * pending account's `current_owner` field — identical pattern to the EOA
-     * accept handler: the vault MUST be the one queued by the same owner that
-     * signed `initiate_ownership_transfer`.
+     * immutable `vault.vault_authority` field (LBL-01) so the seed binding
+     * survives ownership transfer. Handler-level `require_keys_eq!(
+     * pending.current_owner, vault.owner)` replaces the implicit seed
+     * binding that previously enforced the queue→accept owner match.
      */
     vault: TAccountMetas[1];
     /**

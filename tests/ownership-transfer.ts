@@ -259,6 +259,127 @@ describe("ownership-transfer (Phase 8 Batch 3 — C26)", () => {
     expect(vaultState.owner.toString()).to.equal(newOwner.publicKey.toString());
     expect(accountExists(svm, pendingOwner)).to.equal(false);
     expect(lastSuccessDisc(svm, auditSuccess)).to.equal(DISC_OWNERSHIP_ACCEPT);
+
+    // Phase 8 LBL-01 INVARIANT: vault_authority is IMMUTABLE across owner
+    // transfer. The vault account itself stays at the original PDA address
+    // (derived from the initial owner's pubkey + vault_id). If LBL-01
+    // regresses, vault_authority would either be missing, mutated, or the
+    // post-transfer downstream ix would fail with ConstraintSeeds.
+    expect((vaultState as any).vaultAuthority.toString()).to.equal(
+      owner.publicKey.toString(),
+      "vault_authority MUST equal the original (init-time) owner — it is the immutable PDA seed-key",
+    );
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 1B. LBL-01 REGRESSION GUARD — after ownership transfer, the new owner
+  //     MUST be able to call owner-side instructions. Pre-LBL-01 the vault
+  //     PDA seeds derived from `owner.key()` (or `vault.owner`), so once
+  //     `vault.owner` mutated to `new_owner`, every subsequent owner-side
+  //     ix derived a DIFFERENT PDA → Anchor ConstraintSeeds → vault bricked.
+  //
+  //     Post-LBL-01 the seeds derive from `vault.vault_authority` (immutable
+  //     at init), so the new owner can sign owner-side ix successfully.
+  // ─────────────────────────────────────────────────────────────────────────
+  it("LBL-01: post-transfer new_owner can call owner-side ix (register_agent, pause_agent, freeze_vault) — vault NOT bricked", async () => {
+    const { vault, policy, overlay, auditSuccess, pendingOwner } =
+      await initVault(new BN(9050));
+    const newOwner = Keypair.generate();
+    airdropSol(svm, newOwner.publicKey, 5 * LAMPORTS_PER_SOL);
+
+    // Phase 1: queue + accept ownership transfer.
+    await program.methods
+      .initiateOwnershipTransfer(newOwner.publicKey, false)
+      .accounts({
+        owner: owner.publicKey,
+        vault,
+        policy,
+        pending: pendingOwner,
+        auditLogSuccess: auditSuccess,
+        systemProgram: SystemProgram.programId,
+      } as any)
+      .rpc();
+
+    advanceTime(svm, DEFAULT_MIN_DELAY);
+
+    await program.methods
+      .acceptOwnershipTransfer()
+      .accounts({
+        newOwner: newOwner.publicKey,
+        vault,
+        policy,
+        pending: pendingOwner,
+        auditLogSuccess: auditSuccess,
+        systemProgram: SystemProgram.programId,
+      } as any)
+      .signers([newOwner])
+      .rpc();
+
+    // Sanity: vault.owner is the new owner; vault_authority is unchanged.
+    const postTransferVault = await program.account.agentVault.fetch(vault);
+    expect(postTransferVault.owner.toString()).to.equal(
+      newOwner.publicKey.toString(),
+    );
+    expect((postTransferVault as any).vaultAuthority.toString()).to.equal(
+      owner.publicKey.toString(),
+      "vault_authority MUST NOT change across ownership transfer",
+    );
+
+    // Phase 2: from new_owner, register an agent. Pre-LBL-01 this would
+    // fail with ConstraintSeeds because the seed-key was new_owner.key()
+    // which doesn't match the vault PDA (originally derived from old
+    // owner's key).
+    const newAgent = Keypair.generate();
+    await program.methods
+      .registerAgent(newAgent.publicKey, 2, new BN(0)) // CAPABILITY_OPERATOR = 2
+      .accounts({
+        owner: newOwner.publicKey,
+        vault,
+        policy,
+        agentSpendOverlay: overlay,
+      } as any)
+      .signers([newOwner])
+      .rpc();
+
+    const afterRegister = await program.account.agentVault.fetch(vault);
+    expect(afterRegister.agents.length).to.equal(1);
+    expect(afterRegister.agents[0]!.pubkey.toString()).to.equal(
+      newAgent.publicKey.toString(),
+    );
+
+    // Phase 3: from new_owner, pause the just-registered agent. Same
+    // LBL-01 invariant — owner-side ix from new_owner MUST succeed.
+    await program.methods
+      .pauseAgent(newAgent.publicKey)
+      .accounts({
+        owner: newOwner.publicKey,
+        vault,
+        policy,
+      } as any)
+      .signers([newOwner])
+      .rpc();
+
+    const afterPause = await program.account.agentVault.fetch(vault);
+    expect(afterPause.agents[0]!.paused).to.equal(true);
+
+    // Phase 4: from new_owner, freeze the vault. Spec-required spot-check
+    // that the freeze code path also resolves the vault PDA via
+    // vault_authority post-transfer.
+    await program.methods
+      .freezeVault()
+      .accounts({
+        owner: newOwner.publicKey,
+        vault,
+      } as any)
+      .signers([newOwner])
+      .rpc();
+
+    const afterFreeze = await program.account.agentVault.fetch(vault);
+    expect(afterFreeze.status).to.have.property("frozen");
+    expect((afterFreeze as any).vaultAuthority.toString()).to.equal(
+      owner.publicKey.toString(),
+      "vault_authority remains immutable across freeze",
+    );
   });
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -402,10 +523,13 @@ describe("ownership-transfer (Phase 8 Batch 3 — C26)", () => {
 
   // ─────────────────────────────────────────────────────────────────────────
   // 5. CANCEL BY NON-CURRENT-OWNER REJECT
-  //    Anchor's PDA derivation includes `current_owner.key()` in the seed, so
-  //    a different signer derives a different vault PDA → ConstraintSeeds (2006).
+  //    Phase 8 LBL-01: vault PDA seed-key is `vault.vault_authority`
+  //    (immutable, set at init). PDA derivation succeeds regardless of
+  //    signer identity, but the handler-level `require_keys_eq!(
+  //    pending.current_owner, current_owner.key())` check inside
+  //    `cancel_ownership_transfer` rejects the imposter signer.
   // ─────────────────────────────────────────────────────────────────────────
-  it("cancel by non-current-owner → reject (ConstraintSeeds or similar)", async () => {
+  it("cancel by non-current-owner → reject", async () => {
     const { vault, policy, auditSuccess, pendingOwner } = await initVault(
       new BN(9004),
     );

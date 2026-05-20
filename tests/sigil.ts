@@ -426,8 +426,12 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        // Anchor's PDA re-derivation fails before the handler runs
-        expectAnchorError(err, { name: "ConstraintSeeds", code: 2006 });
+        // Phase 8 LBL-01: vault PDA seed-key is now `vault.vault_authority`
+        // (immutable, set at init). PDA derivation succeeds regardless of
+        // signer identity, so the `has_one = owner` constraint fires
+        // instead → UnauthorizedOwner (6002). Pre-LBL-01 this was
+        // ConstraintSeeds (2006) because the seed-key was `signer.key()`.
+        expectSigilError(err, { name: "UnauthorizedOwner", code: 6002 });
       }
     });
   });
@@ -554,7 +558,10 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectAnchorError(err, { name: "ConstraintSeeds", code: 2006 });
+        // Phase 8 LBL-01: seed-key is `vault.vault_authority` (immutable),
+        // not `signer.key()`. PDA derivation passes regardless of signer
+        // identity → `has_one = owner` fires → UnauthorizedOwner (6002).
+        expectSigilError(err, { name: "UnauthorizedOwner", code: 6002 });
       }
     });
   });
@@ -658,7 +665,10 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectAnchorError(err, { name: "ConstraintSeeds", code: 2006 });
+        // Phase 8 LBL-01: seed-key is `vault.vault_authority` (immutable),
+        // not `signer.key()`. PDA derivation passes regardless of signer
+        // identity → `has_one = owner` fires → UnauthorizedOwner (6002).
+        expectSigilError(err, { name: "UnauthorizedOwner", code: 6002 });
       }
     });
 
@@ -838,7 +848,10 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectAnchorError(err, { name: "ConstraintSeeds", code: 2006 });
+        // Phase 8 LBL-01: seed-key is `vault.vault_authority` (immutable),
+        // not `signer.key()`. PDA derivation passes regardless of signer
+        // identity → `has_one = owner` fires → UnauthorizedOwner (6002).
+        expectSigilError(err, { name: "UnauthorizedOwner", code: 6002 });
       }
     });
   });
@@ -1089,7 +1102,10 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectAnchorError(err, { name: "ConstraintSeeds", code: 2006 });
+        // Phase 8 LBL-01: seed-key is `vault.vault_authority` (immutable),
+        // not `signer.key()`. PDA derivation passes regardless of signer
+        // identity → `has_one = owner` fires → UnauthorizedOwner (6002).
+        expectSigilError(err, { name: "UnauthorizedOwner", code: 6002 });
       }
     });
   });
@@ -1811,7 +1827,10 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectAnchorError(err, { name: "ConstraintSeeds", code: 2006 });
+        // Phase 8 LBL-01: seed-key is `vault.vault_authority` (immutable),
+        // not `signer.key()`. PDA derivation passes regardless of signer
+        // identity → `has_one = owner` fires → UnauthorizedOwner (6002).
+        expectSigilError(err, { name: "UnauthorizedOwner", code: 6002 });
       }
     });
   });
@@ -6975,7 +6994,10 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectAnchorError(err, { name: "ConstraintSeeds", code: 2006 });
+        // Phase 8 LBL-01: seed-key is `vault.vault_authority` (immutable),
+        // not `signer.key()`. PDA derivation passes regardless of signer
+        // identity → `has_one = owner` fires → UnauthorizedOwner (6002).
+        expectSigilError(err, { name: "UnauthorizedOwner", code: 6002 });
       }
     });
 
@@ -7235,7 +7257,10 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectAnchorError(err, { name: "ConstraintSeeds", code: 2006 });
+        // Phase 8 LBL-01: seed-key is `vault.vault_authority` (immutable),
+        // not `signer.key()`. PDA derivation passes regardless of signer
+        // identity → `has_one = owner` fires → UnauthorizedOwner (6002).
+        expectSigilError(err, { name: "UnauthorizedOwner", code: 6002 });
       }
     });
 
@@ -7416,7 +7441,10 @@ describe("sigil", () => {
           .rpc();
         expect.fail("Should have thrown");
       } catch (err: any) {
-        expectAnchorError(err, { name: "ConstraintSeeds", code: 2006 });
+        // Phase 8 LBL-01: seed-key is `vault.vault_authority` (immutable),
+        // not `signer.key()`. PDA derivation passes regardless of signer
+        // identity → `has_one = owner` fires → UnauthorizedOwner (6002).
+        expectSigilError(err, { name: "UnauthorizedOwner", code: 6002 });
       }
 
       // Clean up: unpause

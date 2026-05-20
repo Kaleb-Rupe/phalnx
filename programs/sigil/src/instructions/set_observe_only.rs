@@ -29,7 +29,7 @@ pub struct SetObserveOnly<'info> {
     #[account(
         mut,
         has_one = owner @ SigilError::UnauthorizedOwner,
-        seeds = [b"vault", owner.key().as_ref(), &vault.vault_id.to_le_bytes()],
+        seeds = [b"vault", vault.vault_authority.as_ref(), &vault.vault_id.to_le_bytes()],
         bump = vault.bump,
     )]
     pub vault: Account<'info, AgentVault>,

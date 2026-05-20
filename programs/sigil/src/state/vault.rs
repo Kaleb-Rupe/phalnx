@@ -178,6 +178,34 @@ pub struct AgentVault {
     /// of this byte gate on status first. APPENDED per F-14 APPEND-ONLY
     /// rule for Borsh stability.
     pub freeze_reason: u8,
+
+    /// Phase 8 LBL-01 — immutable PDA seed-key set at `initialize_vault` time;
+    /// decouples vault PDA address from owner identity to enable ownership
+    /// transfer without bricking the account.
+    ///
+    /// Before LBL-01: vault PDA derivation used `owner.key()` (or
+    /// `vault.owner`). After `accept_ownership_transfer` mutated `vault.owner`,
+    /// every subsequent owner-side instruction derived a DIFFERENT PDA →
+    /// Anchor `ConstraintSeeds` rejection → vault permanently bricked.
+    ///
+    /// After LBL-01: all 40 non-init owner-side instructions derive vault
+    /// PDA from `vault.vault_authority` instead. At init, the SDK still
+    /// derives the PDA from `owner.key() + vault_id` (the canonical pattern),
+    /// and the handler writes `vault.vault_authority = owner.key()` so the
+    /// stored seed-key equals the initial owner — the on-chain PDA address
+    /// is identical to the pre-LBL-01 layout. After ownership transfer the
+    /// `vault.owner` byte field changes but `vault.vault_authority` does NOT,
+    /// so the PDA address stays put and downstream ix continue to resolve.
+    ///
+    /// **Invariant:** `vault.vault_authority` is written exactly ONCE inside
+    /// `initialize_vault`. No other instruction writes this field. The SDK
+    /// helper `vaultPda(owner, vaultId)` continues to use `owner` as the
+    /// seed-key at init time; thereafter the SDK reads `vault.vault_authority`
+    /// from the resolved state to rebuild the same PDA.
+    ///
+    /// APPENDED per F-14 APPEND-ONLY rule for Borsh stability — +32 bytes
+    /// at the tail keeps every prior byte at its original offset.
+    pub vault_authority: Pubkey,
 }
 
 // ARCHITECTURE DECISION: No on-chain viewer/delegate role
@@ -200,7 +228,8 @@ impl AgentVault {
     /// total_fees_collected (8) +
     /// total_deposited_usd (8) + total_withdrawn_usd (8) + total_failed_transactions (8) +
     /// active_sessions (1) + observe_only (1)  [Phase 2 TA-19] +
-    /// frozen_at_timestamp (8) + freeze_reason (1)  [Phase 8: 642 + 1 freeze_reason]
+    /// frozen_at_timestamp (8) + freeze_reason (1)  [Phase 8] +
+    /// vault_authority (32)  [Phase 8 LBL-01: 643 + 32 vault_authority]
     pub const SIZE: usize = 8
         + 32
         + 8
@@ -217,10 +246,11 @@ impl AgentVault {
         + 8
         + 8
         + 1
-        + 1  // observe_only [Phase 2 TA-19]
-        + 8  // frozen_at_timestamp [Phase 8]
-        + 1; // freeze_reason       [Phase 8]
-             // = 643 (Phase 8: 634 + 8 frozen_at_timestamp + 1 freeze_reason)
+        + 1  // observe_only        [Phase 2 TA-19]
+        + 8  // frozen_at_timestamp  [Phase 8]
+        + 1  // freeze_reason        [Phase 8]
+        + 32; // vault_authority     [Phase 8 LBL-01]
+              // = 675 (Phase 8 LBL-01: 643 + 32 vault_authority)
 
     pub fn is_active(&self) -> bool {
         self.status == VaultStatus::Active
@@ -281,11 +311,112 @@ impl AgentVault {
 // benefit.
 //
 // Instead we pin the documented invariant: SIZE is a constant whose
-// arithmetic in `impl AgentVault` MUST sum to 643. Any future field
+// arithmetic in `impl AgentVault` MUST sum to 675. Any future field
 // addition that forgets to update SIZE will fail this assertion at
 // compile time. Combined with the field-by-field SIZE doc comment above,
 // this is the strongest static guarantee available for a Borsh account.
 const _AGENT_VAULT_SIZE_PIN: () = assert!(
-    AgentVault::SIZE == 643,
-    "AgentVault::SIZE drifted from documented Phase 8 layout (634 + 8 frozen_at_timestamp + 1 freeze_reason = 643)"
+    AgentVault::SIZE == 675,
+    "AgentVault::SIZE drifted from documented Phase 8 LBL-01 layout (643 + 32 vault_authority = 675)"
 );
+
+#[cfg(test)]
+mod lbl01_vault_authority_tests {
+    use super::*;
+    use anchor_lang::AnchorSerialize;
+
+    /// LBL-01 invariant: Borsh-serialized `AgentVault` MUST contain
+    /// `vault_authority` as the FINAL 32 bytes. This is the on-chain wire
+    /// guarantee that the SDK's resolver can read the field at a stable
+    /// position relative to the end of the buffer.
+    ///
+    /// Why this test exists: the const-assert above pins the total SIZE
+    /// constant (675 bytes), but does not guarantee the field is at the
+    /// tail. A future field added BEFORE `vault_authority` would slip past
+    /// the const-assert (if SIZE was also bumped) but silently relocate
+    /// `vault_authority` and break every owner-side ix that derives the
+    /// vault PDA from it. This runtime test catches that drift.
+    #[test]
+    fn vault_authority_serialized_at_tail_offset() {
+        // Construct a minimal vault with a sentinel pubkey in vault_authority
+        // so we can binary-search the serialized buffer for it.
+        let sentinel = Pubkey::new_unique();
+        let mut other_owner = [0u8; 32];
+        other_owner[0] = 0xAB; // unmistakable bytes ≠ sentinel
+        let vault = AgentVault {
+            owner: Pubkey::new_from_array(other_owner),
+            vault_id: 0,
+            agents: Vec::new(),
+            fee_destination: Pubkey::default(),
+            status: VaultStatus::Active,
+            bump: 255,
+            created_at: 0,
+            total_transactions: 0,
+            total_volume: 0,
+            total_fees_collected: 0,
+            total_deposited_usd: 0,
+            total_withdrawn_usd: 0,
+            total_failed_transactions: 0,
+            active_sessions: 0,
+            observe_only: false,
+            frozen_at_timestamp: 0,
+            freeze_reason: 0,
+            vault_authority: sentinel,
+        };
+        let mut buf: Vec<u8> = Vec::with_capacity(AgentVault::SIZE);
+        vault
+            .serialize(&mut buf)
+            .expect("AgentVault must serialize");
+        // Borsh serializes `Vec<AgentEntry>` as `len: u32 (LE) || elements…`.
+        // With an empty agents vector, the body length is the sum of all
+        // fixed-size fields plus the 4-byte len prefix = 177 bytes:
+        //   owner(32) + vault_id(8) + agents_len(4) + fee_destination(32) +
+        //   status(1) + bump(1) + created_at(8) + total_transactions(8) +
+        //   total_volume(8) + total_fees_collected(8) + total_deposited_usd(8) +
+        //   total_withdrawn_usd(8) + total_failed_transactions(8) +
+        //   active_sessions(1) + observe_only(1) + frozen_at_timestamp(8) +
+        //   freeze_reason(1) + vault_authority(32) = 177.
+        // The SIZE constant (675) includes the 8-byte discriminator added at
+        // deserialize time AND reserves space for MAX_AGENTS_PER_VAULT (10)
+        // entries × 49 bytes = 490 bytes. So 177 + 8 (disc) + 490 (agents
+        // reserve) = 675 ✓.
+        assert_eq!(
+            buf.len(),
+            177,
+            "Borsh body of empty-agent-set vault must be 177 bytes (32+8+4+32+1+1+7*8+1+1+8+1+32)"
+        );
+        // vault_authority is the LAST 32 bytes of the serialized body —
+        // assert the tail equals the sentinel pubkey. This is the
+        // APPEND-ONLY tail invariant: any future field added BEFORE
+        // vault_authority would shift the sentinel out of the tail.
+        let tail = &buf[buf.len() - 32..];
+        assert_eq!(
+            tail,
+            sentinel.as_ref(),
+            "vault_authority must serialize as the final 32 bytes (APPEND-ONLY tail invariant)"
+        );
+        // Defense-in-depth: ensure the sentinel does NOT appear ANYWHERE
+        // else in the buffer (i.e. it really is at position [len-32..len]
+        // and not duplicated). This catches a future bug where two fields
+        // were both Pubkey-typed at the tail.
+        let first_match = buf
+            .windows(32)
+            .position(|w| w == sentinel.as_ref())
+            .expect("sentinel must appear in serialized buffer");
+        assert_eq!(
+            first_match,
+            buf.len() - 32,
+            "vault_authority sentinel must appear ONLY at the tail position"
+        );
+    }
+
+    /// LBL-01 size invariant: the documented +32 bytes APPEND must hold.
+    #[test]
+    fn vault_size_is_675_post_lbl01() {
+        assert_eq!(
+            AgentVault::SIZE,
+            675,
+            "Phase 8 LBL-01 documented layout: 643 (pre-LBL-01) + 32 (vault_authority) = 675"
+        );
+    }
+}

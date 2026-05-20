@@ -46,9 +46,12 @@ export type Sigil = {
           "name": "vault",
           "docs": [
             "Vault is mutated (owner field overwritten). PDA derivation uses the",
-            "pending account's `current_owner` field so the seed binding is",
-            "load-bearing: the vault MUST be the one queued by the same owner that",
-            "signed `initiate_ownership_transfer`. Cross-vault accept is impossible."
+            "immutable `vault.vault_authority` field (LBL-01) — the seed binding",
+            "survives the owner mutation that this handler performs, so subsequent",
+            "owner-side ix from `new_owner` continue to resolve the same vault",
+            "account. Handler-level `require_keys_eq!(pending.current_owner,",
+            "vault.owner)` replaces the implicit seed-derivation binding that",
+            "previously enforced the queue→accept owner match."
           ],
           "writable": true,
           "pda": {
@@ -65,8 +68,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "pending.current_owner",
-                "account": "pendingOwnershipTransfer"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -225,9 +228,10 @@ export type Sigil = {
           "name": "vault",
           "docs": [
             "Vault is mutated (owner field overwritten). PDA derivation uses the",
-            "pending account's `current_owner` field — identical pattern to the EOA",
-            "accept handler: the vault MUST be the one queued by the same owner that",
-            "signed `initiate_ownership_transfer`."
+            "immutable `vault.vault_authority` field (LBL-01) so the seed binding",
+            "survives ownership transfer. Handler-level `require_keys_eq!(",
+            "pending.current_owner, vault.owner)` replaces the implicit seed",
+            "binding that previously enforced the queue→accept owner match."
           ],
           "writable": true,
           "pda": {
@@ -244,8 +248,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "pending.current_owner",
-                "account": "pendingOwnershipTransfer"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -403,7 +407,7 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "vault.owner",
+                "path": "vault.vault_authority",
                 "account": "agentVault"
               },
               {
@@ -567,7 +571,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -682,7 +687,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -836,7 +842,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -1002,7 +1009,7 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "vault.owner",
+                "path": "vault.vault_authority",
                 "account": "agentVault"
               },
               {
@@ -1131,7 +1138,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -1290,7 +1298,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -1473,7 +1482,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -1621,7 +1631,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -1715,7 +1726,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -1810,7 +1822,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -1886,13 +1899,12 @@ export type Sigil = {
         {
           "name": "vault",
           "docs": [
-            "Vault binding via PDA seeds: the seeds include `current_owner.key()`",
-            "so Anchor's PDA derivation enforces that this signer matches",
-            "`vault.owner` (Anchor recomputes the address using the signer's key",
-            "and rejects if the result doesn't match the supplied vault account).",
-            "This is the same pattern `freeze_vault` uses; the explicit",
-            "`require_keys_eq!(current_owner, pending.current_owner)` below adds",
-            "defense-in-depth against pending-PDA replay across owner changes."
+            "Vault binding via PDA seeds (Phase 8 LBL-01): the seeds use",
+            "`vault.vault_authority` (immutable, set at init), NOT the signer key.",
+            "The handler-level `require_keys_eq!(current_owner.key(),",
+            "pending.current_owner)` below is now the LOAD-BEARING signer-binding",
+            "check (pre-LBL-01 the seed derivation incidentally enforced this when",
+            "the seed-key was `current_owner.key()`)."
           ],
           "pda": {
             "seeds": [
@@ -1908,7 +1920,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "currentOwner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -2066,7 +2079,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -2179,7 +2193,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -2290,7 +2305,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -2413,7 +2429,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -2606,7 +2623,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -2738,7 +2756,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -2872,7 +2891,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -3169,7 +3189,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -3237,7 +3258,7 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "vault.owner",
+                "path": "vault.vault_authority",
                 "account": "agentVault"
               },
               {
@@ -3506,7 +3527,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -3880,7 +3902,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -4045,7 +4068,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -4177,7 +4201,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -4267,7 +4292,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -4451,7 +4477,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -4594,7 +4621,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -4750,7 +4778,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -4912,7 +4941,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -5142,7 +5172,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -5291,7 +5322,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -5380,7 +5412,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -5531,7 +5564,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -5663,7 +5697,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -5755,7 +5790,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -5880,7 +5916,7 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "vault.owner",
+                "path": "vault.vault_authority",
                 "account": "agentVault"
               },
               {
@@ -6105,7 +6141,8 @@ export type Sigil = {
               },
               {
                 "kind": "account",
-                "path": "owner"
+                "path": "vault.vault_authority",
+                "account": "agentVault"
               },
               {
                 "kind": "account",
@@ -8587,6 +8624,38 @@ export type Sigil = {
               "rule for Borsh stability."
             ],
             "type": "u8"
+          },
+          {
+            "name": "vaultAuthority",
+            "docs": [
+              "Phase 8 LBL-01 — immutable PDA seed-key set at `initialize_vault` time;",
+              "decouples vault PDA address from owner identity to enable ownership",
+              "transfer without bricking the account.",
+              "",
+              "Before LBL-01: vault PDA derivation used `owner.key()` (or",
+              "`vault.owner`). After `accept_ownership_transfer` mutated `vault.owner`,",
+              "every subsequent owner-side instruction derived a DIFFERENT PDA →",
+              "Anchor `ConstraintSeeds` rejection → vault permanently bricked.",
+              "",
+              "After LBL-01: all 40 non-init owner-side instructions derive vault",
+              "PDA from `vault.vault_authority` instead. At init, the SDK still",
+              "derives the PDA from `owner.key() + vault_id` (the canonical pattern),",
+              "and the handler writes `vault.vault_authority = owner.key()` so the",
+              "stored seed-key equals the initial owner — the on-chain PDA address",
+              "is identical to the pre-LBL-01 layout. After ownership transfer the",
+              "`vault.owner` byte field changes but `vault.vault_authority` does NOT,",
+              "so the PDA address stays put and downstream ix continue to resolve.",
+              "",
+              "**Invariant:** `vault.vault_authority` is written exactly ONCE inside",
+              "`initialize_vault`. No other instruction writes this field. The SDK",
+              "helper `vaultPda(owner, vaultId)` continues to use `owner` as the",
+              "seed-key at init time; thereafter the SDK reads `vault.vault_authority`",
+              "from the resolved state to rebuild the same PDA.",
+              "",
+              "APPENDED per F-14 APPEND-ONLY rule for Borsh stability — +32 bytes",
+              "at the tail keeps every prior byte at its original offset."
+            ],
+            "type": "pubkey"
           }
         ]
       }

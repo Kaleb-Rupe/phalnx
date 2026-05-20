@@ -89,6 +89,12 @@ export function createMockVaultState(
       observeOnly: overrides?.observeOnly ?? false,
       frozenAtTimestamp: 0n,
       freezeReason: 0,
+      // Phase 8 LBL-01: immutable PDA seed-key. At init, this equals the
+      // owner — so the mock factory mirrors that invariant. Tests that
+      // exercise post-ownership-transfer state should NOT update this
+      // field; only `owner` mutates on transfer, `vaultAuthority` stays
+      // at the original initial-owner pubkey.
+      vaultAuthority: owner,
     },
     policy: {
       discriminator: new Uint8Array(8),

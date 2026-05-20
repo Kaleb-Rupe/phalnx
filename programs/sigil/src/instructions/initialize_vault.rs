@@ -272,6 +272,15 @@ pub fn handler(
     // (`freeze_vault`, `revoke_agent` auto-freeze, future `freeze_internal`).
     vault.frozen_at_timestamp = 0;
     vault.freeze_reason = 0;
+    // Phase 8 LBL-01: immutable PDA seed-key. Set once here, never written
+    // again. Equals `owner.key()` at init so the on-chain PDA address is
+    // identical to the pre-LBL-01 layout (the init constraint at line 20
+    // derives the PDA from `owner.key()`). After `accept_ownership_transfer`
+    // mutates `vault.owner`, this field stays put — every downstream
+    // owner-side ix derives its vault PDA from `vault.vault_authority`
+    // instead of `owner.key()`, so the account remains addressable under
+    // the new owner.
+    vault.vault_authority = ctx.accounts.owner.key();
 
     // Initialize policy
     let policy = &mut ctx.accounts.policy;
