@@ -130,6 +130,24 @@ pub const AUTO_REVOKE_THRESHOLD_MAX: u8 = 20;
 /// TA-17 (Phase 3): default auto_revoke_threshold for new vaults.
 pub const AUTO_REVOKE_THRESHOLD_DEFAULT: u8 = 5;
 
+/// Squads V4 multisig program ID on Solana mainnet (deployed Q4 2025).
+/// Base58: SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf
+///
+/// Council ISC-A7 + ISC-135: bound as a named constant so a future Squads
+/// migration (V5+) is a one-line change with full grep visibility. Inline
+/// usage (`Pubkey::new_from_array(...)` outside this definition) is forbidden
+/// for Squads — all program-ID equality checks MUST reference this constant.
+///
+/// V1 verification depth: program-ID match only (the
+/// `accept_ownership_transfer_multisig` handler checks
+/// `multisig_pda.owner == &SQUADS_V4_PROGRAM_ID`). Stronger structural
+/// checks (multisig threshold > 0, vault discriminator parse,
+/// anti-1-of-1-self-multisig) are deferred to V1.1.
+pub const SQUADS_V4_PROGRAM_ID: Pubkey = Pubkey::new_from_array([
+    6, 129, 196, 206, 71, 226, 35, 104, 184, 177, 85, 94, 200, 135, 175, 9, 46, 252, 126, 251, 182,
+    108, 163, 245, 47, 191, 104, 212, 172, 156, 183, 168,
+]);
+
 /// TA-17 (Phase 3): numeric range of on-chain "policy-violation" error
 /// codes that count toward the consecutive-failures counter.
 ///

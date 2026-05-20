@@ -1,4 +1,5 @@
 pub mod accept_ownership_transfer;
+pub mod accept_ownership_transfer_multisig;
 pub mod agent_transfer;
 pub mod allocate_constraints_pda;
 pub mod allocate_pending_constraints_pda;
@@ -41,6 +42,7 @@ pub mod withdraw_funds;
 
 #[allow(ambiguous_glob_reexports)]
 pub use accept_ownership_transfer::*;
+pub use accept_ownership_transfer_multisig::*;
 pub use agent_transfer::*;
 pub use allocate_constraints_pda::*;
 pub use allocate_pending_constraints_pda::*;

@@ -7,6 +7,7 @@
  */
 
 export * from "./acceptOwnershipTransfer.js";
+export * from "./acceptOwnershipTransferMultisig.js";
 export * from "./agentTransfer.js";
 export * from "./allocateConstraintsPda.js";
 export * from "./allocatePendingConstraintsPda.js";

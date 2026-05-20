@@ -488,6 +488,20 @@ pub mod sigil {
         instructions::accept_ownership_transfer::handler(ctx)
     }
 
+    /// Phase 8 Batch 4 — accept a queued ownership transfer via Squads V4
+    /// multisig. The `multisig_pda` is an UncheckedAccount (NOT a Signer) —
+    /// Squads V4 vault PDAs have no private key. Authority is enforced by
+    /// (a) `multisig_pda.owner == SQUADS_V4_PROGRAM_ID`, (b) pubkey identity
+    /// match against `pending.new_owner`, and (c) `pending.is_multisig_target
+    /// == true`. Pending PDA closes with rent → multisig_pda. Vault.owner
+    /// is overwritten; policy.policy_version bumps. `OwnershipTransferAccepted`
+    /// is emitted with `via_multisig: true`.
+    pub fn accept_ownership_transfer_multisig(
+        ctx: Context<AcceptOwnershipTransferMultisig>,
+    ) -> Result<()> {
+        instructions::accept_ownership_transfer_multisig::handler(ctx)
+    }
+
     /// Phase 8 C26 — cancel an in-flight ownership transfer. The current
     /// owner signs. Symmetric with `initiate_ownership_transfer` on cosign
     /// (D4 decision — closes the phished-key cancel-and-re-initiate bypass).

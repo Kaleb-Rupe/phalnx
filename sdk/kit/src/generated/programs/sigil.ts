@@ -78,6 +78,7 @@ import {
 } from "../accounts/index.js";
 import {
   getAcceptOwnershipTransferInstructionAsync,
+  getAcceptOwnershipTransferMultisigInstructionAsync,
   getAgentTransferInstructionAsync,
   getAllocateConstraintsPdaInstructionAsync,
   getAllocatePendingConstraintsPdaInstructionAsync,
@@ -116,6 +117,7 @@ import {
   getValidateAndAuthorizeInstructionAsync,
   getWithdrawFundsInstructionAsync,
   parseAcceptOwnershipTransferInstruction,
+  parseAcceptOwnershipTransferMultisigInstruction,
   parseAgentTransferInstruction,
   parseAllocateConstraintsPdaInstruction,
   parseAllocatePendingConstraintsPdaInstruction,
@@ -154,6 +156,7 @@ import {
   parseValidateAndAuthorizeInstruction,
   parseWithdrawFundsInstruction,
   type AcceptOwnershipTransferAsyncInput,
+  type AcceptOwnershipTransferMultisigAsyncInput,
   type AgentTransferAsyncInput,
   type AllocateConstraintsPdaAsyncInput,
   type AllocatePendingConstraintsPdaAsyncInput,
@@ -178,6 +181,7 @@ import {
   type InitializeVaultAsyncInput,
   type InitiateOwnershipTransferAsyncInput,
   type ParsedAcceptOwnershipTransferInstruction,
+  type ParsedAcceptOwnershipTransferMultisigInstruction,
   type ParsedAgentTransferInstruction,
   type ParsedAllocateConstraintsPdaInstruction,
   type ParsedAllocatePendingConstraintsPdaInstruction,
@@ -417,6 +421,7 @@ export function identifySigilAccount(
 
 export enum SigilInstruction {
   AcceptOwnershipTransfer,
+  AcceptOwnershipTransferMultisig,
   AgentTransfer,
   AllocateConstraintsPda,
   AllocatePendingConstraintsPda,
@@ -470,6 +475,17 @@ export function identifySigilInstruction(
     )
   ) {
     return SigilInstruction.AcceptOwnershipTransfer;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([112, 147, 61, 110, 221, 182, 203, 99]),
+      ),
+      0,
+    )
+  ) {
+    return SigilInstruction.AcceptOwnershipTransferMultisig;
   }
   if (
     containsBytes(
@@ -891,6 +907,9 @@ export type ParsedSigilInstruction<
       instructionType: SigilInstruction.AcceptOwnershipTransfer;
     } & ParsedAcceptOwnershipTransferInstruction<TProgram>)
   | ({
+      instructionType: SigilInstruction.AcceptOwnershipTransferMultisig;
+    } & ParsedAcceptOwnershipTransferMultisigInstruction<TProgram>)
+  | ({
       instructionType: SigilInstruction.AgentTransfer;
     } & ParsedAgentTransferInstruction<TProgram>)
   | ({
@@ -1012,6 +1031,13 @@ export function parseSigilInstruction<TProgram extends string>(
       return {
         instructionType: SigilInstruction.AcceptOwnershipTransfer,
         ...parseAcceptOwnershipTransferInstruction(instruction),
+      };
+    }
+    case SigilInstruction.AcceptOwnershipTransferMultisig: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: SigilInstruction.AcceptOwnershipTransferMultisig,
+        ...parseAcceptOwnershipTransferMultisigInstruction(instruction),
       };
     }
     case SigilInstruction.AgentTransfer: {
@@ -1331,6 +1357,10 @@ export type SigilPluginInstructions = {
     input: AcceptOwnershipTransferAsyncInput,
   ) => ReturnType<typeof getAcceptOwnershipTransferInstructionAsync> &
     SelfPlanAndSendFunctions;
+  acceptOwnershipTransferMultisig: (
+    input: AcceptOwnershipTransferMultisigAsyncInput,
+  ) => ReturnType<typeof getAcceptOwnershipTransferMultisigInstructionAsync> &
+    SelfPlanAndSendFunctions;
   agentTransfer: (
     input: AgentTransferAsyncInput,
   ) => ReturnType<typeof getAgentTransferInstructionAsync> &
@@ -1546,6 +1576,11 @@ export function sigilProgram() {
             addSelfPlanAndSendFunctions(
               client,
               getAcceptOwnershipTransferInstructionAsync(input),
+            ),
+          acceptOwnershipTransferMultisig: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getAcceptOwnershipTransferMultisigInstructionAsync(input),
             ),
           agentTransfer: (input) =>
             addSelfPlanAndSendFunctions(
