@@ -222,6 +222,23 @@ export interface SealParams {
   plugins?: readonly SigilPolicyPlugin[];
 }
 
+/**
+ * Result of building (but NOT sending) a Sigil-sealed transaction.
+ *
+ * `SealResult` is a BUILD-time artifact — it carries the compiled transaction
+ * and pre-flight diagnostics. It does NOT include emitted events: events come
+ * from on-chain `emit!()` calls during execution, parseable from the resulting
+ * transaction's log messages.
+ *
+ * To consume events, call `executeAndConfirm()` (returns `ExecuteResult` with
+ * the signature) and then fetch + parse the transaction logs using the
+ * discriminator map in `generated/event-discriminators.ts` (which covers all
+ * Phase 3-8 events including AutoRevoked, SandwichIntegrityViolation,
+ * ProtectedWritableRejected, StableFloorViolation, RecipientCapExceeded,
+ * MintDeltaCapExceeded, AtaAuthorityChanged, OutputBelowFloor,
+ * DeclarationInconsistent, OwnershipTransferInitiated/Accepted/Cancelled,
+ * and FreezeVaultEvent with `freeze_reason`).
+ */
 export interface SealResult {
   ok: true;
   transaction: ReturnType<typeof compileTransaction>;
@@ -1015,6 +1032,16 @@ export interface ClientSealOpts {
   correlationId?: string;
 }
 
+/**
+ * Result of `executeAndConfirm()` — a Sigil-sealed transaction that has been
+ * signed, sent, and confirmed on-chain.
+ *
+ * To consume on-chain events emitted by the sealed transaction (e.g.
+ * `OwnershipTransferAccepted`, `FreezeVaultEvent`, `SandwichIntegrityViolation`),
+ * fetch the transaction with `rpc.getTransaction(signature)` and parse the log
+ * messages against `generated/event-discriminators.ts`. Phase 7 + Phase 8 added
+ * 12 new event types; all are present in the discriminator map.
+ */
 export interface ExecuteResult {
   signature: string;
   sealResult: SealResult;
