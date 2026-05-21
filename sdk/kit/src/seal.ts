@@ -39,6 +39,7 @@ import {
 import { VaultStatus } from "./generated/types/vaultStatus.js";
 import { getValidateAndAuthorizeInstructionAsync } from "./generated/instructions/validateAndAuthorize.js";
 import { getFinalizeSessionInstructionAsync } from "./generated/instructions/finalizeSession.js";
+import { computeSealInputDigest } from "./seal/intent-digest.js";
 
 import {
   resolveVaultState,
@@ -238,6 +239,13 @@ export interface SealParams {
  * MintDeltaCapExceeded, AtaAuthorityChanged, OutputBelowFloor,
  * DeclarationInconsistent, OwnershipTransferInitiated/Accepted/Cancelled,
  * and FreezeVaultEvent with `freeze_reason`).
+ *
+ * `intentDigest` is the AL3 per-call SealInput digest — SHA-256 over the
+ * canonical encoding of (vault, agent, mint, amount, target_protocol,
+ * network, instructions[]). See `sdk/kit/src/seal/intent-digest.ts` for the
+ * canonical-encoding spec. Callers that want intent-binding (Phase 9 Batch I)
+ * can surface this digest in their preview UI and re-verify it at
+ * execute-time via `computeSealInputDigest(...)`.
  */
 export interface SealResult {
   ok: true;
@@ -253,6 +261,13 @@ export interface SealResult {
     tokenBalance: bigint;
     knownRecipients: Set<string>;
   };
+  /**
+   * AL3 per-call intent digest (Phase 9 Batch I). 32-byte SHA-256 over the
+   * canonical SealInput encoding. Surfaces the exact intent the SDK sealed,
+   * so consumers (preview UIs, executeSeal re-verification) can bind owner
+   * approval to this specific bundle.
+   */
+  intentDigest: Uint8Array;
 }
 
 // ─── Internal helpers ───────────────────────────────────────────────────────
@@ -927,6 +942,21 @@ export async function seal(params: SealParams): Promise<SealResult> {
   // bare seal()) with exactly one invocation per seal.
   await invokeHook(params.hooks, "onBeforeSign", _hookCtx, compiledTx);
 
+  // AL3 — Phase 9 Batch I per-call intent digest. Computed over the
+  // user-approved (vault, agent, mint, amount, target_protocol, network,
+  // instructions[]) projection. Excludes wallet-side mutations (Compute
+  // Budget ixs prepended later by signers) so the digest reflects exactly
+  // what the user approved, not what the wallet wrapped around it.
+  const intentDigest = computeSealInputDigest({
+    vault: params.vault,
+    agent: params.agent.address,
+    tokenMint: params.tokenMint,
+    amount: params.amount,
+    targetProtocol: params.targetProtocol,
+    network: params.network,
+    instructions: defiInstructions,
+  });
+
   return {
     ok: true,
     transaction: compiledTx,
@@ -939,6 +969,7 @@ export async function seal(params: SealParams): Promise<SealResult> {
       tokenBalance,
       knownRecipients,
     },
+    intentDigest,
   };
 }
 

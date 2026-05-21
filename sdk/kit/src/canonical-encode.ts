@@ -22,7 +22,7 @@
  * they can be unit-tested in isolation and reused without surprises.
  */
 
-import { createHash } from "node:crypto";
+import { sha256 as nobleSha256 } from "@noble/hashes/sha2";
 
 // ── Base58 decode (no external dep) ─────────────────────────────────────────
 //
@@ -136,13 +136,16 @@ export function writeBool(
 // ── SHA-256 hasher ──────────────────────────────────────────────────────────
 
 /**
- * SHA-256 over the input bytes. Currently backed by Node's `node:crypto`.
- * The hash output is byte-identical to what `@noble/hashes/sha256` produces
- * for the same input — Phase 9 Batch I can swap the backend for AL3 without
- * disturbing TA-19's existing fixtures.
+ * SHA-256 over the input bytes. Backed by `@noble/hashes/sha256` — pure
+ * JS, browser- and Bun-compatible, byte-identical to Node's `node:crypto`
+ * for the same input (TA-19 cross-impl fixture suite verifies this).
+ *
+ * Phase 9 Batch I switched the backend from `node:crypto` to noble so AL3
+ * intent-digest can ship the same primitive across Node, Bun, and the
+ * browser without runtime-conditional imports.
  */
 export function sha256(input: Uint8Array): Uint8Array {
-  return new Uint8Array(createHash("sha256").update(input).digest());
+  return nobleSha256(input);
 }
 
 /**

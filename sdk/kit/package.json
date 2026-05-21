@@ -76,6 +76,7 @@
     "check:examples": "tsc -p tsconfig.examples.json"
   },
   "dependencies": {
+    "@noble/hashes": "^1.8.0",
     "@solana-program/compute-budget": "^0.15.0"
   },
   "peerDependencies": {

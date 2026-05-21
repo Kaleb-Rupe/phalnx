@@ -377,6 +377,14 @@ export type {
   SigilErrorCategory,
 } from "./agent-errors.js";
 
+// ─── Phase 9 Batch I — AL3 SealInput intent digest ──────────────────────────
+export {
+  computeSealInputDigest,
+  NETWORK_ID_DEVNET,
+  NETWORK_ID_MAINNET,
+} from "./seal/intent-digest.js";
+export type { SealIntentInput } from "./seal/intent-digest.js";
+
 // ─── Phase 9 Batch E — multisig / session / attestation / ownership helpers ─
 // `SQUADS_V4_PROGRAM_ID`, `detectSquadsV4Owner`, and `SquadsDetectionResult`
 // are exported from the existing `./squads-detection.js` block lower in this
