@@ -385,6 +385,12 @@ export {
 } from "./seal/intent-digest.js";
 export type { SealIntentInput } from "./seal/intent-digest.js";
 
+// ─── Phase 9 Batch K — AL2 mainnet confirmation gate error codes ────────────
+export {
+  SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED,
+  SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REJECTED,
+} from "./errors/codes.js";
+
 // ─── Phase 9 Batch J — AL4 isMainnet + CAIP-2 network identity ──────────────
 export {
   CAIP2_NAMESPACE_SOLANA,

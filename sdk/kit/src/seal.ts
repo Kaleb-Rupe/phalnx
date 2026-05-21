@@ -119,6 +119,7 @@ import {
   SIGIL_ERROR__SDK__ATA_NON_CANONICAL,
   SIGIL_ERROR__SDK__SEAL_FAILED,
   SIGIL_ERROR__SDK__HOOK_ABORTED,
+  SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED,
   SIGIL_ERROR__RPC__TX_FAILED,
   SIGIL_ERROR__RPC__TX_TOO_LARGE,
 } from "./errors/codes.js";
@@ -1059,6 +1060,26 @@ export interface SigilClientConfig {
    * throws `SigilSdkDomainError(SIGIL_ERROR__SDK__PLUGIN_REJECTED)`.
    */
   plugins?: readonly import("./plugin.js").SigilPolicyPlugin[];
+  /**
+   * AL2 mainnet confirmation gate (Phase 9 Batch K). Per Council
+   * D-3 this defaults to **`false`** in 0.16.x for back-compat;
+   * the default flips to `true` in v1.0.
+   *
+   * When `true` AND `network === "mainnet"`, every `executeAndConfirm`
+   * call requires the per-call opts to carry `mainnetConfirmed: true`
+   * or it throws `SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED`
+   * (legacy numeric code 7020) with full context (vault, network,
+   * docs URL, opt-in snippet).
+   *
+   * When unset on a mainnet client, the SDK emits `console.warn` on
+   * every mainnet `executeAndConfirm` to telegraph the v1.0 flip.
+   * Set explicitly to `false` to silence the warning during your
+   * migration window.
+   *
+   * Devnet clients ignore this flag entirely — the gate never fires
+   * off-mainnet.
+   */
+  requireMainnetConfirmation?: boolean;
 }
 
 /**
@@ -1090,6 +1111,19 @@ export interface ClientSealOpts {
    * Defaults to a fresh `newCorrelationId()` if omitted.
    */
   correlationId?: string;
+  /**
+   * AL2 explicit mainnet confirmation (Phase 9 Batch K). Pair with
+   * `SigilClientConfig.requireMainnetConfirmation: true` to opt into
+   * the mainnet gate. When `true`, `executeAndConfirm` on a mainnet
+   * client proceeds; when `false` or undefined (with the gate enabled),
+   * throws `SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED` (legacy
+   * numeric code 7020).
+   *
+   * Devnet clients ignore this flag entirely. Mainnet clients with the
+   * gate DISABLED (default in 0.16.x) only `console.warn` if this is
+   * undefined — they do not throw.
+   */
+  mainnetConfirmed?: boolean;
 }
 
 /**
@@ -1222,6 +1256,20 @@ export function createSigilClient(config: SigilClientConfig): SigilClientApi {
   const vault = config.vault;
   const agent = config.agent;
   const network = config.network;
+  // §RP Batch K HIGH-2: snapshot AL2 flag at factory entry. Subsequent
+  // config.requireMainnetConfirmation mutations cannot disable the
+  // gate without recreating the client.
+  const requireMainnetConfirmation = config.requireMainnetConfirmation;
+  if (network !== "devnet" && network !== "mainnet") {
+    // §RP Batch K MEDIUM-1: runtime guard for JS / any-cast consumers
+    // that pass `cluster: "mainnet-beta"` etc. Type system catches it in
+    // pure TS but `.d.ts` doesn't help JS callers.
+    throw new SigilSdkDomainError(
+      SIGIL_ERROR__SDK__INVALID_CONFIG,
+      `SigilClientConfig.network must be 'devnet' or 'mainnet'; got ${String(network)}.`,
+      { context: { field: "network", expected: "'devnet' | 'mainnet'" } },
+    );
+  }
   const blockhashCache = new BlockhashCache(config.blockhashTtlMs);
   const localAltCache = new AltCache();
   const onErrorCallback = config.onError;
@@ -1298,6 +1346,61 @@ export function createSigilClient(config: SigilClientConfig): SigilClientApi {
     seal: clientSeal,
 
     async executeAndConfirm(instructions, opts) {
+      // AL2 mainnet confirmation gate (Phase 9 Batch K). Three states:
+      //   1. Devnet client: ignore the gate entirely — no throw, no warn.
+      //   2. Mainnet client + requireMainnetConfirmation: true:
+      //      - opts.mainnetConfirmed === true → proceed
+      //      - else → throw 7020 with full context
+      //   3. Mainnet client + requireMainnetConfirmation undefined (0.16.x
+      //      default per D-3):
+      //      - opts.mainnetConfirmed === undefined → console.warn (telegraphs
+      //        the v1.0 flip) and proceed
+      //      - opts.mainnetConfirmed set either way → proceed silently
+      //   4. Mainnet client + requireMainnetConfirmation: false → proceed
+      //      silently (explicit opt-out; no warn).
+      if (network === "mainnet") {
+        const gateEnabled = requireMainnetConfirmation === true;
+        const explicitOptOut = requireMainnetConfirmation === false;
+        const confirmed = opts.mainnetConfirmed === true;
+        if (gateEnabled && !confirmed) {
+          throw new SigilSdkDomainError(
+            SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED,
+            "Mainnet confirmation required — pass `mainnetConfirmed: true` " +
+              "in the executeAndConfirm options or set " +
+              "`requireMainnetConfirmation: false` on the SigilClientConfig. " +
+              "Opt-in: executeAndConfirm(ixs, { ..., mainnetConfirmed: true }). " +
+              "Opt-out: createSigilClient({ ..., requireMainnetConfirmation: false }). " +
+              "Docs: https://github.com/Sigil-Trade/sigil/blob/main/sdk/kit/MIGRATION.md",
+            {
+              context: {
+                vault: vault.toString(),
+                network: "mainnet",
+              },
+            },
+          );
+        }
+        if (
+          !gateEnabled &&
+          !explicitOptOut &&
+          opts.mainnetConfirmed === undefined
+        ) {
+          // §RP Batch K LOW-2 fix: use the structured logger (respects
+          // config.logger) instead of raw console.warn so consumers who
+          // installed a custom logger (pino, OpenTelemetry, etc.) capture
+          // the warning in their pipeline.
+          getSigilModuleLogger().warn(
+            "[Sigil] @usesigil/kit 0.16.x defaults `requireMainnetConfirmation` to false. " +
+              "v1.0 will flip the default to true; mainnet `executeAndConfirm` calls without " +
+              "`mainnetConfirmed: true` will throw SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED " +
+              "(legacy numeric code 7020). Adopt the v1.0 default early by setting " +
+              "`requireMainnetConfirmation: true` on SigilClientConfig and passing " +
+              "`mainnetConfirmed: true` per call, OR silence this warning by explicitly setting " +
+              "`requireMainnetConfirmation: false`. " +
+              "See: https://github.com/Sigil-Trade/sigil/blob/main/sdk/kit/MIGRATION.md",
+          );
+        }
+      }
+
       // Sprint 2 B3: compose client-level and per-call hooks. Client hooks
       // run first at every stage (onBeforeBuild → ... → onFinalize), then
       // per-call hooks. composeHooks handles the conditional-merge when
@@ -1579,6 +1682,13 @@ export class SigilClient {
   private readonly blockhashCacheInstance: BlockhashCache;
   private readonly altCacheInstance: AltCache;
   private readonly onErrorCallback?: SigilClientConfig["onError"];
+  /**
+   * AL2 mainnet confirmation flag, snapshotted at construction (Phase 9
+   * Batch K §RP HIGH-2 fix). Captured by value so subsequent
+   * `config.requireMainnetConfirmation = ...` mutations cannot silently
+   * disable the gate post-construction.
+   */
+  private readonly requireMainnetConfirmation?: boolean;
   readonly rpc: Rpc<SolanaRpcApi>;
   readonly vault: Address;
   readonly agent: TransactionSigner;
@@ -1644,10 +1754,22 @@ export class SigilClient {
         { context: { field: "network", expected: "'devnet' | 'mainnet'" } },
       );
 
+    if (config.network !== "devnet" && config.network !== "mainnet") {
+      throw new SigilSdkDomainError(
+        SIGIL_ERROR__SDK__INVALID_CONFIG,
+        `SigilClientConfig.network must be 'devnet' or 'mainnet'; got ${String(config.network)}. Phase 9 Batch K §RP MEDIUM-1 hardens this against JS / any-cast bypass.`,
+        { context: { field: "network", expected: "'devnet' | 'mainnet'" } },
+      );
+    }
+
     this.rpc = config.rpc;
     this.vault = config.vault;
     this.agent = config.agent;
     this.network = config.network;
+    // §RP HIGH-2: snapshot AL2 flag at construction. Post-construction
+    // mutation of config.requireMainnetConfirmation cannot disable the
+    // gate without recreating the client.
+    this.requireMainnetConfirmation = config.requireMainnetConfirmation;
     this.blockhashCacheInstance = new BlockhashCache(config.blockhashTtlMs);
     this.altCacheInstance = new AltCache();
     this.onErrorCallback = config.onError;
@@ -1784,6 +1906,46 @@ export class SigilClient {
     instructions: Instruction[],
     opts: ClientSealOpts & { confirmOptions?: SendAndConfirmOptions },
   ): Promise<ExecuteResult> {
+    // §RP CRITICAL fix (Batch K): the legacy class path MUST mirror
+    // the AL2 gate from `createSigilClient.executeAndConfirm` — otherwise
+    // any consumer still on `SigilClient.create()` bypasses the gate on
+    // mainnet. Reuses the snapshotted requireMainnetConfirmation field
+    // captured at construction (§RP HIGH-2 fix).
+    if (this.network === "mainnet") {
+      const gateEnabled = this.requireMainnetConfirmation === true;
+      const explicitOptOut = this.requireMainnetConfirmation === false;
+      const confirmed = opts.mainnetConfirmed === true;
+      if (gateEnabled && !confirmed) {
+        throw new SigilSdkDomainError(
+          SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED,
+          "Mainnet confirmation required — pass `mainnetConfirmed: true` " +
+            "in the executeAndConfirm options or set " +
+            "`requireMainnetConfirmation: false` on the SigilClientConfig. " +
+            "Opt-in: executeAndConfirm(ixs, { ..., mainnetConfirmed: true }). " +
+            "Opt-out: SigilClient.create({ ..., requireMainnetConfirmation: false }). " +
+            "Docs: https://github.com/Sigil-Trade/sigil/blob/main/sdk/kit/MIGRATION.md",
+          {
+            context: {
+              vault: this.vault.toString(),
+              network: "mainnet",
+            },
+          },
+        );
+      }
+      if (
+        !gateEnabled &&
+        !explicitOptOut &&
+        opts.mainnetConfirmed === undefined
+      ) {
+        getSigilModuleLogger().warn(
+          "[Sigil] @usesigil/kit 0.16.x defaults `requireMainnetConfirmation` to false. " +
+            "v1.0 will flip the default to true; mainnet `executeAndConfirm` calls without " +
+            "`mainnetConfirmed: true` will throw SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED. " +
+            "See: https://github.com/Sigil-Trade/sigil/blob/main/sdk/kit/MIGRATION.md",
+        );
+      }
+    }
+
     try {
       const result = await this.seal(instructions, opts);
       const encoded = await signAndEncode(this.agent, result.transaction);
