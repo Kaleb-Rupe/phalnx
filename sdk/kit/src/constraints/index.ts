@@ -10,7 +10,7 @@
  * (5-instruction allocation chain). This module flattens them into one
  * stable import path so consumers don't need to know the internal layout.
  *
- * **Firewall invariant (protocol-tier.ts:32):** kit must NEVER import from
+ * **Firewall invariant:** kit must NEVER import from
  * `@sigil-trade/constraints` (a private GitHub Packages parser package).
  * Everything exported here is sourced from kit's own modules. The
  * `tests/firewall-invariant.test.ts` test enforces this at CI time.

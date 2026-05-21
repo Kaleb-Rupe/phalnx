@@ -2,33 +2,16 @@
 "@usesigil/kit": minor
 ---
 
-Lane A — FE↔BE contract v2.2 commitments C6 + C2 + C5.
+Lane A — FE↔BE contract v2.2 commitments C2 + C5.
 
-### C6 — Protocol registry + tier resolver primitives
-
-New public surface on `@usesigil/kit`:
-
-- `PROTOCOL_ANNOTATIONS: readonly ProtocolAnnotation[]` — 7 hand-curated
-  Verified-tier protocol annotations (Jupiter, Flash Trade, Jupiter
-  Lend/Earn/Borrow, Drift, Kamino). Migrated byte-identical from the
-  dashboard's local registry so the dashboard can swap its import in a
-  one-line change.
-- `VERIFIED_PROGRAMS: ReadonlySet<string>` — O(1) membership helper
-  derived from the annotations at module load.
-- `lookupProtocolAnnotation(programId): ProtocolAnnotation | null` —
-  sync registry lookup.
-- `resolveProtocolTier(programId, checkConstrainability): Promise<ProtocolTrustTier>` —
-  composed three-tier resolver. Verified programs short-circuit
-  synchronously; unknown programs fall through to a caller-injected
-  async probe (returns `"unverified"` when constrainable, otherwise
-  `"non-constrainable"`).
-- `ProtocolAnnotation`, `ProtocolTrustTier`, `ConstrainabilityResult`
-  (discriminated union), `CheckConstrainabilityFn`,
-  `NonConstrainableReason`, `IdlSource` types.
-
-Kit does NOT depend on `@sigil-trade/constraints` — the constrainability
-check is caller-injected. Dashboard / MCP / mobile / CLI each wire
-their own IDL-fetch backend; kit ships the classification logic.
+> NOTE 2026-05-20 (Phase 9 Batch A): The C6 (Protocol registry + tier
+> resolver primitives) portion of this changeset has been removed.
+> `PROTOCOL_ANNOTATIONS`, `VERIFIED_PROGRAMS`, `lookupProtocolAnnotation`,
+> `resolveProtocolTier`, and the associated trust-tier types
+> (`ProtocolAnnotation`, `ProtocolTrustTier`, `ConstrainabilityResult`,
+> `CheckConstrainabilityFn`, `NonConstrainableReason`, `IdlSource`) were
+> deleted per the L-1 generic constitution as part of the Phase 9 SDK
+> redesign. A separate Phase 9 changeset will narrate the removal.
 
 ### C2 — DxError.onChainReverted + categorizeDxError
 
@@ -68,10 +51,9 @@ nested-value attacks. Validated with adversarial tests.
 
 ### Breaking
 
-- **`engines.node`** bumped from `>=18.0.0` to `>=20.10.0`. Required
-  because `with { type: "json" }` import attributes (used by the
-  protocol-registry) are a SyntaxError on Node < 20.10. Node 18 is
-  EOL upstream (April 2025) so this matches the runtime floor anyway.
+- **`engines.node`** bumped from `>=18.0.0` to `>=20.10.0`. Node 18 is
+  EOL upstream (April 2025) and several modern Solana ecosystem deps
+  (codama, @solana/kit consumers) require Node 20+.
 - **`DxError.onChainReverted`** is a new required field. All internal
   kit callers route through `toDxError()` which sets it; external
   consumers constructing `DxError` literals (none found in audit) must
@@ -85,13 +67,12 @@ nested-value attacks. Validated with adversarial tests.
 
 ### Test coverage
 
-79 new tests in `sdk/kit/tests/`:
-- `protocol-registry.test.ts` (15) — registry structural integrity
-- `protocol-tier.test.ts` (7) — tier resolver behavior + error propagation
+57 new tests in `sdk/kit/tests/`:
 - `dashboard/errors-categorize.test.ts` (32) — DxError range boundaries
 - `agent-bootstrap.test.ts` (25) — template determinism + substitution +
   injection resistance + input validation
 
-Baseline 1590 → 1613 → 1613 (after union narrowing) → 1675 passing.
+(Originally the C6 protocol-registry + protocol-tier suites added another
+22 tests; those were removed in Phase 9 Batch A along with the modules.)
 
 Counts manifest + CI updated.
