@@ -1,5 +1,75 @@
 # @usesigil/kit
 
+## 0.16.0 (unreleased — Phase 9 SDK redesign)
+
+Phase 9 of the Sigil V2 program brings the SDK fully in sync with the
+on-chain layer (Phases 1-8) and stages the AL3/AL4/AL2 envelope
+intent-binding pattern. This is a deprecation-staging release for the
+`requireMainnetConfirmation` default flip planned for v1.0; nothing
+breaks for existing mainnet integrations in 0.16.x.
+
+### Breaking changes
+
+- **Tier-classifier deletion** — `protocol-tier.ts`, `protocol-registry/`
+  and their 6 named exports (`resolveProtocolTier`,
+  `PROTOCOL_ANNOTATIONS`, `VERIFIED_PROGRAMS`, `lookupProtocolAnnotation`,
+  `ProtocolAnnotation`, `ProtocolTrustTier`) are removed per the L-1
+  universal-`seal()` constitution. See `MIGRATION.md` for the
+  recipe. The `ProtocolTier` enum on `protocol-resolver.ts` (vault
+  allowlist tier — KNOWN / DEFAULT / NOT_ALLOWED) is a different concept
+  and stays.
+
+### New surface
+
+- `canonical-encode.ts` — shared Borsh-style encoder primitives
+  (`base58Decode32`, `writeU8/16Le/32Le/64Le/Bool`, `sha256`,
+  `digestsEqual`). TA-19 policy preview digest refactored to consume
+  this module; AL3 SealInput intent digest will reuse it in 0.16.1.
+- `multisig-detection.ts` — `isSquadsV4Owned(rpc, owner)` strict
+  detection that verifies BOTH the Squads V4 program ID match AND the
+  Anchor account discriminator.
+- `session-mint.ts` — `mintSessionForAgent(...)` thin wrapper around
+  the generated `register_agent` instruction.
+- `policy-attestation.ts` — `getLatestPolicyAttestation(rpc, pda)`
+  reads the current PolicyConfig PDA + hoists the `policyVersion`.
+- `ownership-transfer.ts` — `buildInitiateOwnershipTransferIx`,
+  `buildAcceptOwnershipTransferIx`,
+  `buildAcceptOwnershipTransferMultisigIx`,
+  `buildCancelOwnershipTransferIx` for Phase 8 owner-rotation
+  instructions.
+- `OwnerClient` methods: `reactivateVault` (alias for `resumeVault`),
+  `setObserveOnly`, `queueAgentGrant`, `applyAgentGrant`,
+  `cancelAgentGrant`. Existing `freezeVault` and `resumeVault` retained.
+
+### Errors
+
+- Phase 8 codes 6103-6108 now have full
+  `{ category, retryable, recovery_actions[] }` entries in
+  `ON_CHAIN_ERROR_MAP`.
+- New auto-generated `src/errors/agent-errors.generated.ts` projection
+  of the IDL error surface (109 codes).
+- New drift gate `tests/error-map-drift.test.ts` ensures IDL ↔
+  generated ↔ hand-maintained stay in sync.
+
+### Tooling
+
+- `pnpm codegen:errors` — regenerates `agent-errors.generated.ts` from
+  `target/idl/sigil.json`. Wired into `pretest`.
+- `pnpm check-surface` — emits a `etc/kit.api.txt` snapshot of every
+  named export from every published subpath. `--check` mode for CI
+  drift detection. Lightweight alternative to `@microsoft/api-extractor`.
+- `tests/pending-constraints-size.invariant.test.ts` — SIZE ratchet
+  for PENDING_CONSTRAINTS_SIZE (35_912 bytes) against the on-chain
+  handler assertion.
+
+### Deferred to 0.16.1 / v0.17 prep
+
+- `dashboard/reads.ts` V2 schema sync (14 new fields).
+- `@deprecated` tagging pass on the 54 root-barrel exports
+  enumerated in `docs/review/PHASE_9_REVIEW/dead-export-audit.md`.
+- AL3 `computeSealInputDigest()` + AL4 `isMainnet` + AL2
+  `requireMainnetConfirmation` gate (target 0.16.1).
+
 ## 0.15.0
 
 ### Minor Changes
