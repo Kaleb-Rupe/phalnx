@@ -87,10 +87,10 @@ export const SIGIL_ON_CHAIN_ERROR_MIN = 6000;
  *   6107 ErrInvalidOwnershipTarget       (Batch 3)
  *   6108 ErrTooManyRevokePairs           (Batch 2)
  *
- * ON_CHAIN_ERROR_MAP detailed mappings for 6103-6108 land in a follow-up
- * SDK pass; for now the constant accurately reflects the on-chain surface
- * so `isOnChainReverted(6105)` returns true and `categorizeDxError`
- * routes them to the `program` category.
+ * Detailed ON_CHAIN_ERROR_MAP entries for 6103-6108 landed in Phase 9
+ * Batch D (2026-05-20). The drift gate at `tests/error-map-drift.test.ts`
+ * derives the expected count from `target/idl/sigil.json` so adding a
+ * new error code on-chain without updating this map fails at test time.
  */
 export const SIGIL_ON_CHAIN_ERROR_MAX = 6108;
 
