@@ -78,8 +78,15 @@
  * 32 bytes each + fixed scalars ≈ 700 bytes worst case.
  */
 
-import { createHash } from "node:crypto";
 import type { Address } from "../kit-adapter.js";
+import {
+  base58Decode32 as base58Decode,
+  sha256,
+  writeU16Le,
+  writeU32Le,
+  writeU64Le,
+  digestsEqual as canonicalDigestsEqual,
+} from "../canonical-encode.js";
 
 /**
  * Canonical preview-fields shape. Matches the on-chain `PolicyPreviewFields`
@@ -183,62 +190,11 @@ export interface PolicyPreviewFields {
   agentSetHash?: Uint8Array;
 }
 
-// ── Base58 decode (no external dep) ──────────────────────────────────────────
-//
-// Solana pubkeys are base58 strings; we need the raw 32 bytes. The SDK already
-// has many base58 helpers downstream, but to avoid the circular import we
-// inline a small decoder. It's the standard Bitcoin alphabet.
-
-const BASE58_ALPHABET =
-  "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-const BASE58_INDEX: Record<string, number> = (() => {
-  const r: Record<string, number> = Object.create(null);
-  for (let i = 0; i < BASE58_ALPHABET.length; i++) {
-    r[BASE58_ALPHABET[i]!] = i;
-  }
-  return r;
-})();
-
-function base58Decode(s: string): Uint8Array {
-  if (s.length === 0) {
-    throw new Error("base58Decode: empty input");
-  }
-  let leadingZeros = 0;
-  while (leadingZeros < s.length && s[leadingZeros] === "1") {
-    leadingZeros++;
-  }
-  // Big integer mode: walk digits, base-256 carry
-  const bytes: number[] = [];
-  for (let i = 0; i < s.length; i++) {
-    const c = s[i]!;
-    const v = BASE58_INDEX[c];
-    if (v === undefined) {
-      throw new Error(`base58Decode: invalid char '${c}'`);
-    }
-    let carry = v;
-    for (let j = 0; j < bytes.length; j++) {
-      carry += bytes[j]! * 58;
-      bytes[j] = carry & 0xff;
-      carry >>>= 8;
-    }
-    while (carry > 0) {
-      bytes.push(carry & 0xff);
-      carry >>>= 8;
-    }
-  }
-  // bytes is little-endian; reverse and prepend leading zeros
-  const out = new Uint8Array(leadingZeros + bytes.length);
-  for (let i = 0; i < bytes.length; i++) {
-    out[leadingZeros + (bytes.length - 1 - i)] = bytes[i]!;
-  }
-  // Solana addresses MUST decode to exactly 32 bytes
-  if (out.length !== 32) {
-    throw new Error(
-      `base58Decode: expected 32-byte pubkey, got ${out.length} bytes`,
-    );
-  }
-  return out;
-}
+// Base58 decode + sha256 + cursor writers now live in `../canonical-encode.ts`
+// so the AL3 SealInput intent digest (`seal/intent-digest.ts`, Phase 9
+// Batch I) can reuse them. The shared module guarantees byte-identical
+// output for both TA-19 and AL3 — silent encoder drift between the two
+// would defeat the cross-impl Rust↔TS hash invariant.
 
 // ── §RP-2 L-NEW-1 forward-looking ratchet (audit 2026-05-19) ────────────────
 //
@@ -275,8 +231,8 @@ export const POLICY_PREVIEW_FIELD_COUNT = 21;
  * when the caller omits `agentSetHash` (legacy fixture path).
  */
 export const EMPTY_AGENT_SET_HASH: Uint8Array = (() => {
-  const empty = Buffer.alloc(4); // u32 LE length prefix = 0
-  return new Uint8Array(createHash("sha256").update(empty).digest());
+  const empty = new Uint8Array(4); // u32 LE length prefix = 0
+  return sha256(empty);
 })();
 
 /**
@@ -319,7 +275,7 @@ export function computeAgentSetHash(
     off += 32;
     buf[off++] = e.capability;
   }
-  return new Uint8Array(createHash("sha256").update(buf).digest());
+  return sha256(buf);
 }
 
 /**
@@ -373,19 +329,10 @@ const EXPECTED_FIXED_SIZE = PER_FIELD_FIXED_SIZES.reduce((a, b) => a + b, 0);
 })();
 
 // ── Encoders ─────────────────────────────────────────────────────────────────
-
-function writeU16Le(view: DataView, offset: number, v: number): number {
-  view.setUint16(offset, v, true);
-  return offset + 2;
-}
-function writeU64Le(view: DataView, offset: number, v: bigint): number {
-  view.setBigUint64(offset, v, true);
-  return offset + 8;
-}
-function writeU32Le(view: DataView, offset: number, v: number): number {
-  view.setUint32(offset, v, true);
-  return offset + 4;
-}
+//
+// Cursor writers (writeU8 / writeU16Le / writeU32Le / writeU64Le / writeBool)
+// now live in `../canonical-encode.ts` and are imported at the top of this
+// file. The hand-rolled versions previously here were byte-identical.
 
 /**
  * Compute the canonical SHA-256 of the policy preview fields.
@@ -487,14 +434,13 @@ export function computePolicyPreviewDigest(
     );
   }
 
-  return new Uint8Array(createHash("sha256").update(buf).digest());
+  return sha256(buf);
 }
 
-/** Equivalent of `Buffer.equals` for two `Uint8Array` digests. */
-export function digestsEqual(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
-}
+/**
+ * Equivalent of `Buffer.equals` for two `Uint8Array` digests. Re-exported
+ * from `../canonical-encode.ts` (constant-time XOR-accumulate; no early
+ * exit) so callers that previously imported it from this module continue
+ * to work after Batch C.
+ */
+export const digestsEqual = canonicalDigestsEqual;
