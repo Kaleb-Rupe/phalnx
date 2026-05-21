@@ -377,6 +377,40 @@ export type {
   SigilErrorCategory,
 } from "./agent-errors.js";
 
+// ─── Phase 9 Batch E — multisig / session / attestation / ownership helpers ─
+// `SQUADS_V4_PROGRAM_ID`, `detectSquadsV4Owner`, and `SquadsDetectionResult`
+// are exported from the existing `./squads-detection.js` block lower in this
+// file; multisig-detection.ts wraps them with the discriminator check
+// (`isSquadsV4Owned`) without re-exporting the underlying primitives.
+export {
+  SQUADS_V4_MULTISIG_DISCRIMINATOR,
+  isSquadsV4Owned,
+} from "./multisig-detection.js";
+export type { MultisigDetectionResult } from "./multisig-detection.js";
+
+export { mintSessionForAgent } from "./session-mint.js";
+export type { MintSessionForAgentInputs } from "./session-mint.js";
+
+export { getLatestPolicyAttestation } from "./policy-attestation.js";
+export type { PolicyAttestation } from "./policy-attestation.js";
+
+export {
+  buildInitiateOwnershipTransferIx,
+  buildAcceptOwnershipTransferIx,
+  buildAcceptOwnershipTransferMultisigIx,
+  buildCancelOwnershipTransferIx,
+} from "./ownership-transfer.js";
+export type {
+  BuildInitiateOwnershipTransferInputs,
+  BuildAcceptOwnershipTransferInputs,
+  BuildAcceptOwnershipTransferMultisigInputs,
+  BuildCancelOwnershipTransferInputs,
+  InitiateOwnershipTransferInstruction,
+  AcceptOwnershipTransferInstruction,
+  AcceptOwnershipTransferMultisigInstruction,
+  CancelOwnershipTransferInstruction,
+} from "./ownership-transfer.js";
+
 // ─── Protocol Resolver ───────────────────────────────────────────────────────
 export {
   ProtocolTier,
