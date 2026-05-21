@@ -24,7 +24,7 @@ breaks for existing mainnet integrations in 0.16.x.
 - `canonical-encode.ts` — shared Borsh-style encoder primitives
   (`base58Decode32`, `writeU8/16Le/32Le/64Le/Bool`, `sha256`,
   `digestsEqual`). TA-19 policy preview digest refactored to consume
-  this module; AL3 SealInput intent digest will reuse it in 0.16.1.
+  this module; AL3 SealInput intent digest also consumes it.
 - `multisig-detection.ts` — `isSquadsV4Owned(rpc, owner)` strict
   detection that verifies BOTH the Squads V4 program ID match AND the
   Anchor account discriminator.
@@ -62,13 +62,38 @@ breaks for existing mainnet integrations in 0.16.x.
   for PENDING_CONSTRAINTS_SIZE (35_912 bytes) against the on-chain
   handler assertion.
 
+### AL3 + AL4 + AL2 envelope intent-binding (this release)
+
+- **AL3** `computeSealInputDigest()` — per-call SHA-256 over a canonical
+  Borsh encoding of (vault, agent, mint, amount, target_protocol,
+  network, instructions[]). Surfaced on every `SealResult.intentDigest`.
+  Reserves `intent_version: u8 = 1` at canonical position 1 for future
+  format evolution. **Client-integrity digest only in 0.16.x** — no
+  on-chain verifier yet; the value is for preview-UI binding and
+  client-side telemetry/audit logging.
+- **AL4** `SealResult.network: SigilCaip2Chain` (CAIP-2 mainnet/devnet
+  literal) + `SealResult.isMainnet: boolean` (derived; strict ===
+  match on the canonical mainnet-beta chain id).
+- **AL2** `SigilClientConfig.requireMainnetConfirmation?: boolean` +
+  `ClientSealOpts.mainnetConfirmed?: boolean`. Default `false` in
+  0.16.x (back-compat); SDK emits a structured-logger warning on
+  mainnet `executeAndConfirm` calls without explicit confirmation.
+  **v1.0 will flip the default to `true`** — mainnet calls without
+  `mainnetConfirmed: true` will throw
+  `SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED` (legacy 7020).
+
 ### Deferred to 0.16.1 / v0.17 prep
 
 - `dashboard/reads.ts` V2 schema sync (14 new fields).
 - `@deprecated` tagging pass on the 54 root-barrel exports
   enumerated in `docs/review/PHASE_9_REVIEW/dead-export-audit.md`.
-- AL3 `computeSealInputDigest()` + AL4 `isMainnet` + AL2
-  `requireMainnetConfirmation` gate (target 0.16.1).
+- On-chain AL3 verifier (post_assertions extension carrying the
+  digest input) — until this lands, AL3 is a client-integrity
+  primitive, not a chain-enforced one.
+- Symmetric AL2 gating on owner-side mutations (`OwnerClient.*`
+  methods currently bypass the mainnet confirmation gate — agent-call
+  paths only). Decide before v1.0 whether owner paths need separate
+  confirmation semantics or should adopt the agent gate.
 
 ## 0.15.0
 

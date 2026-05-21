@@ -108,17 +108,23 @@ export const SIGIL_ERROR__SDK__PLUGIN_REJECTED =
 export const SIGIL_ERROR__SDK__OWNER_REQUIRED =
   "SIGIL_ERROR__SDK__OWNER_REQUIRED" as const;
 /**
- * AL2 mainnet confirmation gate (Phase 9 Batch K, error 7020). Raised when
- * the SDK is wired to mainnet, `requireMainnetConfirmation: true` is set on
- * `SigilClientConfig`, and the caller invokes `executeAndConfirm` without
- * `mainnetConfirmed: true`. Legacy numeric code: 7020.
+ * AL2 mainnet confirmation gate. Raised when the SDK is wired to mainnet,
+ * `requireMainnetConfirmation: true` is set on `SigilClientConfig`, and
+ * the caller invokes `executeAndConfirm` without `mainnetConfirmed: true`.
+ *
+ * Canonical discriminant is the string `code`; consumers should narrow on
+ * `err.code === SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED`. There
+ * is NO numeric alias — `SDK_ERROR_CODES[7020]` is `COMPAT_BRIDGE_FAILED`
+ * (unrelated, pre-existing) and was incorrectly documented as "legacy
+ * 7020" in earlier drafts; that doc claim was dropped per §RP Batch M
+ * CRIT-1.
  */
 export const SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED =
   "SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED" as const;
 /**
- * AL2 reserved companion code (Phase 9 Batch K, error 7021). Currently
- * unused; reserved for future explicit-reject paths (e.g. a caller
- * passing `mainnetConfirmed: false` rather than omitting it).
+ * AL2 reserved companion code. Currently unused; reserved for future
+ * explicit-reject paths (e.g. a caller passing `mainnetConfirmed: false`
+ * rather than omitting it). String discriminant only — no numeric alias.
  */
 export const SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REJECTED =
   "SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REJECTED" as const;

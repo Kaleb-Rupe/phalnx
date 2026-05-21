@@ -458,12 +458,19 @@ operating hours, agent set hash, cosign requirement, etc.
 (e.g. a rogue program tampers with the PendingPolicyUpdate PDA, or a
 phished-owner `register_agent` silently changes the live agent set).
 
-### AL3 — `computeSealInputDigest` (per-call intent)  *coming in 0.16.1*
+### AL3 — `computeSealInputDigest` (per-call intent)
 
 SHA-256 over the canonical Borsh encoding of a SealInput envelope: the
-specific (vault, agent, mint, amount, recipient, instruction shape) the
-owner approved for a SINGLE seal() call. Reserved
+specific (vault, agent, mint, amount, target_protocol, network,
+instructions[]) bound for a SINGLE seal() call. Reserved
 `intent_version: u8 = 1` at canonical position 1 for future expansion.
+
+**Today, AL3 is a client-integrity digest** — it surfaces on every
+`SealResult.intentDigest` so preview UIs and audit logs can bind to the
+exact bytes the SDK sealed. **An on-chain verifier is planned for a
+later release**; until it lands, AL3 does not by itself prevent a
+forked SDK from submitting different bytes than it hashed. Pair AL3
+with TA-19 + the policy allowlists for on-chain enforcement.
 
 **Scope:** the per-call EXECUTION INTENT — exactly what is being
 authorised for this one transaction.

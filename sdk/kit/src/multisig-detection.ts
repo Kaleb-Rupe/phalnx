@@ -120,7 +120,15 @@ export async function isSquadsV4Owned(
         isSquadsV4Multisig: false,
       };
     }
-    const bytes = Buffer.from(data[0], "base64");
+    // §RP Batch M H-1 fix: use browser-safe base64 decode instead of
+    // Node-only Buffer.from. canonical-encode.ts is the SDK's
+    // cross-runtime contract; this helper must honor it.
+    const base64 = data[0];
+    const binStr = atob(base64);
+    const bytes = new Uint8Array(binStr.length);
+    for (let i = 0; i < binStr.length; i++) {
+      bytes[i] = binStr.charCodeAt(i);
+    }
     if (bytes.length < 8) {
       return {
         ...base,

@@ -72,22 +72,30 @@
  *   `intent_version: 2` and the on-chain verifier could route to the
  *   correct decoder by reading the first byte.
  *
- * **Canonical input contract (load-bearing — §RP Batch I M-1, M-2)**
+ * **Canonical input contract (load-bearing)**
  *
  * `seal()` hashes the **pre-rewrite, post-filter** DeFi instructions:
  *
  *   1. ComputeBudget program ixs are NOT in the input (wallet adapters
  *      may prepend their own; the user-approved intent shouldn't pin
- *      a specific budget). seal.ts:493 filters these out before
- *      computing the digest.
+ *      a specific budget). `seal()` filters these out via
+ *      `params.instructions.filter(ix => ix.programAddress !== COMPUTE_BUDGET_PROGRAM)`
+ *      before computing the digest.
  *   2. Top-level System program ixs are NOT in the input (`isProtocolAllowed`
- *      would reject them anyway; seal.ts:493 strips them).
+ *      would reject them anyway; `seal()` strips them in the same filter).
  *   3. Agent-ATA → vault-ATA rewrites happen AFTER the digest is
- *      computed (seal.ts:858 vs :957). The digest reflects what the
- *      USER APPROVED (agent ATAs), not what the SDK SUBMITTED (vault
- *      ATAs). Any future on-chain verifier MUST receive the
- *      pre-rewrite projection as an explicit argument; re-deriving
- *      from the submitted tx bytes is impossible.
+ *      computed. The digest reflects what the USER APPROVED (agent
+ *      ATAs), not what the SDK SUBMITTED (vault ATAs). Any future
+ *      on-chain verifier MUST receive the pre-rewrite projection as
+ *      an explicit argument; re-deriving from the submitted tx bytes
+ *      is impossible.
+ *   4. `outputStablecoinAccount` and `additionalAtaReplacements` from
+ *      `SealParams` are NOT bound by the digest in 0.16.x — they are
+ *      caller-supplied overrides that materially change downstream
+ *      ATA flow. Phase 9 Batch M §RP flagged this as a HIGH gap. A
+ *      preview UI that wants tight intent binding MUST refuse any
+ *      `SealParams` carrying these overrides until 0.16.1 hashes them
+ *      into the canonical encoding.
  *
  * Any re-implementation that wants to verify a digest produced by
  * `seal()` MUST apply the same filter + use the pre-rewrite ix list.

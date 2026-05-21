@@ -1068,8 +1068,8 @@ export interface SigilClientConfig {
    * When `true` AND `network === "mainnet"`, every `executeAndConfirm`
    * call requires the per-call opts to carry `mainnetConfirmed: true`
    * or it throws `SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED`
-   * (legacy numeric code 7020) with full context (vault, network,
-   * docs URL, opt-in snippet).
+   * with full context (vault, network, docs URL, opt-in snippet).
+   * Narrow on the string code; there is no numeric alias.
    *
    * When unset on a mainnet client, the SDK emits `console.warn` on
    * every mainnet `executeAndConfirm` to telegraph the v1.0 flip.
@@ -1121,7 +1121,8 @@ export interface ClientSealOpts {
    *
    * Devnet clients ignore this flag entirely. Mainnet clients with the
    * gate DISABLED (default in 0.16.x) only `console.warn` if this is
-   * undefined — they do not throw.
+   * undefined — they do not throw. Narrow rejections on the string
+   * code `SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED`.
    */
   mainnetConfirmed?: boolean;
 }
@@ -1391,8 +1392,8 @@ export function createSigilClient(config: SigilClientConfig): SigilClientApi {
           getSigilModuleLogger().warn(
             "[Sigil] @usesigil/kit 0.16.x defaults `requireMainnetConfirmation` to false. " +
               "v1.0 will flip the default to true; mainnet `executeAndConfirm` calls without " +
-              "`mainnetConfirmed: true` will throw SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED " +
-              "(legacy numeric code 7020). Adopt the v1.0 default early by setting " +
+              "`mainnetConfirmed: true` will throw SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED. " +
+              "Adopt the v1.0 default early by setting " +
               "`requireMainnetConfirmation: true` on SigilClientConfig and passing " +
               "`mainnetConfirmed: true` per call, OR silence this warning by explicitly setting " +
               "`requireMainnetConfirmation: false`. " +

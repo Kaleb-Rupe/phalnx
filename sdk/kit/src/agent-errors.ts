@@ -2968,6 +2968,40 @@ export class SigilSdkError extends Error implements AgentError {
  * 3. Fallback to UNKNOWN/FATAL
  */
 export function toSigilAgentError(err: unknown): SigilSdkError {
+  // Phase 9 Batch M §RP CRIT-1 fix: preserve SigilSdkDomainError and
+  // SigilRpcError instances unmodified. These are the canonical
+  // SDK-domain-typed errors carrying their own `.code`, structured
+  // `.context`, and rich `.message`. Funneling them through the
+  // pattern-matcher + UNKNOWN/FATAL fallback below silently strips
+  // the context the throw site built (vault address, docs URL,
+  // opt-in/opt-out snippets, network identifier, etc.).
+  //
+  // Wrap the domain error in a SigilSdkError that mirrors its code
+  // + context so downstream consumers narrowing on either
+  // `err instanceof SigilSdkDomainError` (the original throw) OR
+  // `err.code === SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED`
+  // (the SigilSdkError surface) both work.
+  if (
+    err instanceof Error &&
+    typeof (err as unknown as { code?: unknown }).code === "string" &&
+    (
+      (err as unknown as { code: string }).code as string
+    ).startsWith("SIGIL_ERROR__")
+  ) {
+    const sigilErr = err as unknown as Error & {
+      code: string;
+      context?: Record<string, unknown>;
+    };
+    return new SigilSdkError({
+      code: sigilErr.code,
+      message: sigilErr.message,
+      category: "FATAL",
+      retryable: false,
+      recovery_actions: [],
+      context: sigilErr.context ?? {},
+    });
+  }
+
   // Try on-chain error extraction first
   const onChain = toAgentError(err);
   if (onChain.code !== "UNKNOWN") return new SigilSdkError(onChain);
