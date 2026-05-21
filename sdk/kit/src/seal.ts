@@ -40,6 +40,10 @@ import { VaultStatus } from "./generated/types/vaultStatus.js";
 import { getValidateAndAuthorizeInstructionAsync } from "./generated/instructions/validateAndAuthorize.js";
 import { getFinalizeSessionInstructionAsync } from "./generated/instructions/finalizeSession.js";
 import { computeSealInputDigest } from "./seal/intent-digest.js";
+import {
+  deriveNetworkIdentity,
+  type SigilCaip2Chain,
+} from "./caip2-network.js";
 
 import {
   resolveVaultState,
@@ -268,6 +272,22 @@ export interface SealResult {
    * approval to this specific bundle.
    */
   intentDigest: Uint8Array;
+  /**
+   * AL4 network identity (Phase 9 Batch J). CAIP-2 chain id of the network
+   * the bundle targets. Carries enough information to differentiate
+   * mainnet from devnet (and, in future, testnet / localnet) for UI
+   * confirmation prompts. The chain id is bound into AL3's `intentDigest`
+   * via `network_id` at canonical position 2 (intent-digest.ts), so a
+   * bundle approved on devnet cannot be replayed on mainnet without
+   * detection.
+   */
+  network: SigilCaip2Chain;
+  /**
+   * AL4 isMainnet boolean (Phase 9 Batch J). `true` only when `network`
+   * matches the canonical mainnet-beta CAIP-2 chain id. Wire to UI
+   * confirmation chrome (mainnet warning banner, etc).
+   */
+  isMainnet: boolean;
 }
 
 // ─── Internal helpers ───────────────────────────────────────────────────────
@@ -957,6 +977,13 @@ export async function seal(params: SealParams): Promise<SealResult> {
     instructions: defiInstructions,
   });
 
+  // AL4 — Phase 9 Batch J network identity. CAIP-2 chain id + derived
+  // isMainnet boolean. The chain id is also bound into the AL3 digest
+  // above via the network_id byte, so a mainnet bundle cannot be
+  // replayed on devnet (and vice versa) without producing a different
+  // intentDigest.
+  const networkIdentity = deriveNetworkIdentity(params.network);
+
   return {
     ok: true,
     transaction: compiledTx,
@@ -970,6 +997,8 @@ export async function seal(params: SealParams): Promise<SealResult> {
       knownRecipients,
     },
     intentDigest,
+    network: networkIdentity.network,
+    isMainnet: networkIdentity.isMainnet,
   };
 }
 

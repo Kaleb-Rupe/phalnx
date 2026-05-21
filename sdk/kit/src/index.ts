@@ -385,6 +385,18 @@ export {
 } from "./seal/intent-digest.js";
 export type { SealIntentInput } from "./seal/intent-digest.js";
 
+// ─── Phase 9 Batch J — AL4 isMainnet + CAIP-2 network identity ──────────────
+export {
+  CAIP2_NAMESPACE_SOLANA,
+  CAIP2_SOLANA_MAINNET,
+  CAIP2_SOLANA_DEVNET,
+  CAIP2_SOLANA_TESTNET,
+  toCaip2,
+  isMainnetCaip2,
+  deriveNetworkIdentity,
+} from "./caip2-network.js";
+export type { SigilCaip2Chain } from "./caip2-network.js";
+
 // ─── Phase 9 Batch E — multisig / session / attestation / ownership helpers ─
 // `SQUADS_V4_PROGRAM_ID`, `detectSquadsV4Owner`, and `SquadsDetectionResult`
 // are exported from the existing `./squads-detection.js` block lower in this
