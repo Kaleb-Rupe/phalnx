@@ -355,6 +355,96 @@ export class OwnerClient {
   }
 
   /**
+   * Phase 8 alias for {@link resumeVault} matching the on-chain
+   * `reactivate_vault` instruction name. Prefer this in new code.
+   */
+  async reactivateVault(
+    newAgent?: { address: Address; permissions: CapabilityTier },
+    opts?: TxOpts,
+  ): Promise<TxResult> {
+    return mutations.reactivateVault(
+      this.rpc,
+      this.vault,
+      this.owner,
+      this.network,
+      newAgent,
+      opts,
+    );
+  }
+
+  /**
+   * Phase 8 owner-side observe-only toggle. `newValue: true` puts the
+   * vault into read-only mode (all `validate_and_authorize` calls reject);
+   * `newValue: false` resumes spending.
+   */
+  async setObserveOnly(
+    newValue: boolean,
+    opts?: TxOpts,
+  ): Promise<TxResult> {
+    return mutations.setObserveOnly(
+      this.rpc,
+      this.vault,
+      this.owner,
+      this.network,
+      newValue,
+      opts,
+    );
+  }
+
+  /**
+   * Phase 8 owner-side queue of a new agent capability grant. The grant
+   * becomes effective only after {@link applyAgentGrant} (subject to the
+   * cosign_required gate if enabled). `capability` is the on-chain
+   * `AgentCapability` discriminant (0=READ_ONLY, 1=OPERATOR, 2=FULL).
+   * `spendingLimitUsd` is in 6-decimal USDC units.
+   */
+  async queueAgentGrant(
+    agent: Address,
+    capability: number,
+    spendingLimitUsd: bigint,
+    opts?: TxOpts,
+  ): Promise<TxResult> {
+    return mutations.queueAgentGrant(
+      this.rpc,
+      this.vault,
+      this.owner,
+      this.network,
+      agent,
+      capability,
+      spendingLimitUsd,
+      opts,
+    );
+  }
+
+  /**
+   * Phase 8 owner-side apply of a previously-queued agent capability
+   * grant. Closes the PendingAgentGrant PDA and mutates the agent set.
+   */
+  async applyAgentGrant(opts?: TxOpts): Promise<TxResult> {
+    return mutations.applyAgentGrant(
+      this.rpc,
+      this.vault,
+      this.owner,
+      this.network,
+      opts,
+    );
+  }
+
+  /**
+   * Phase 8 owner-side cancel of a previously-queued agent grant. Closes
+   * the PendingAgentGrant PDA and returns rent to the owner.
+   */
+  async cancelAgentGrant(opts?: TxOpts): Promise<TxResult> {
+    return mutations.cancelAgentGrant(
+      this.rpc,
+      this.vault,
+      this.owner,
+      this.network,
+      opts,
+    );
+  }
+
+  /**
    * Permanently closes vault and reclaims rent.
    * Requires: all agents revoked, zero active sessions,
    * constraints closed, no pending policy update.

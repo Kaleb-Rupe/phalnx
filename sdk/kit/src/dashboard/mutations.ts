@@ -53,6 +53,10 @@ import { computePolicyPreviewDigest } from "../policy/compute-policy-preview-dig
 // Phase 3: Simple mutations
 import { getFreezeVaultInstructionAsync } from "../generated/instructions/freezeVault.js";
 import { getReactivateVaultInstructionAsync } from "../generated/instructions/reactivateVault.js";
+import { getSetObserveOnlyInstructionAsync } from "../generated/instructions/setObserveOnly.js";
+import { getQueueAgentGrantInstructionAsync } from "../generated/instructions/queueAgentGrant.js";
+import { getApplyAgentGrantInstructionAsync } from "../generated/instructions/applyAgentGrant.js";
+import { getCancelAgentGrantInstructionAsync } from "../generated/instructions/cancelAgentGrant.js";
 import { getCloseVaultInstructionAsync } from "../generated/instructions/closeVault.js";
 import { getPauseAgentInstructionAsync } from "../generated/instructions/pauseAgent.js";
 import { getUnpauseAgentInstructionAsync } from "../generated/instructions/unpauseAgent.js";
@@ -312,6 +316,117 @@ export async function resumeVault(
     vault,
     newAgent: newAgent?.address ?? null,
     newAgentCapability: newAgent ? Number(newAgent.permissions) : null,
+  });
+  return run(rpc, owner, network, [ix], opts);
+}
+
+/**
+ * Phase 8 alias for {@link resumeVault} matching the on-chain
+ * `reactivate_vault` instruction name. Prefer `reactivateVault` in new
+ * code; `resumeVault` is retained for backwards compatibility.
+ */
+export async function reactivateVault(
+  rpc: Rpc<SolanaRpcApi>,
+  vault: Address,
+  owner: TransactionSigner,
+  network: "devnet" | "mainnet",
+  newAgent?: { address: Address; permissions: CapabilityTier },
+  opts?: TxOpts,
+): Promise<TxResult> {
+  return resumeVault(rpc, vault, owner, network, newAgent, opts);
+}
+
+/**
+ * Phase 8 owner-side observe-only toggle. Setting `newValue: true` puts
+ * the vault into read-only mode (all `validate_and_authorize` calls reject
+ * with `ErrObserveOnlyEnabled`). Setting `newValue: false` resumes
+ * spending. Bumps `policy_version` so concurrent validate_and_authorize
+ * calls fail fast with `PolicyVersionMismatch`.
+ */
+export async function setObserveOnly(
+  rpc: Rpc<SolanaRpcApi>,
+  vault: Address,
+  owner: TransactionSigner,
+  network: "devnet" | "mainnet",
+  newValue: boolean,
+  opts?: TxOpts,
+): Promise<TxResult> {
+  const ix = await getSetObserveOnlyInstructionAsync({
+    vault,
+    owner,
+    newValue,
+  });
+  return run(rpc, owner, network, [ix], opts);
+}
+
+/**
+ * Phase 8 owner-side queue of a new agent capability grant. The grant
+ * becomes effective after `apply_agent_grant` is called (subject to the
+ * cosign_required gate if enabled on the policy).
+ *
+ * `capability` is the on-chain `AgentCapability` discriminant:
+ *   - 0 = READ_ONLY
+ *   - 1 = OPERATOR
+ *   - 2 = FULL
+ * `spendingLimitUsd` is in 6-decimal USDC units (e.g. `$500 = 500_000_000n`).
+ */
+export async function queueAgentGrant(
+  rpc: Rpc<SolanaRpcApi>,
+  vault: Address,
+  owner: TransactionSigner,
+  network: "devnet" | "mainnet",
+  agent: Address,
+  capability: number,
+  spendingLimitUsd: bigint,
+  opts?: TxOpts,
+): Promise<TxResult> {
+  const ix = await getQueueAgentGrantInstructionAsync({
+    owner,
+    vault,
+    agent,
+    capability,
+    spendingLimitUsd,
+  });
+  return run(rpc, owner, network, [ix], opts);
+}
+
+/**
+ * Phase 8 owner-side apply of a previously-queued agent capability grant.
+ * The grant must have been queued via {@link queueAgentGrant}; the apply
+ * handler verifies the PendingAgentGrant PDA exists and that any cosign
+ * requirement on the policy has been satisfied (or that the grant lowers
+ * — not raises — privilege so cosign is bypassable per F-AT-1).
+ */
+export async function applyAgentGrant(
+  rpc: Rpc<SolanaRpcApi>,
+  vault: Address,
+  owner: TransactionSigner,
+  network: "devnet" | "mainnet",
+  opts?: TxOpts,
+): Promise<TxResult> {
+  const [agentSpendOverlay] = await getAgentOverlayPDA(vault);
+  const ix = await getApplyAgentGrantInstructionAsync({
+    owner,
+    vault,
+    agentSpendOverlay,
+  });
+  return run(rpc, owner, network, [ix], opts);
+}
+
+/**
+ * Phase 8 owner-side cancel of a previously-queued agent capability
+ * grant. Closes the PendingAgentGrant PDA and returns rent to the owner.
+ */
+export async function cancelAgentGrant(
+  rpc: Rpc<SolanaRpcApi>,
+  vault: Address,
+  owner: TransactionSigner,
+  network: "devnet" | "mainnet",
+  opts?: TxOpts,
+): Promise<TxResult> {
+  const ix = await getCancelAgentGrantInstructionAsync({
+    owner,
+    vault,
   });
   return run(rpc, owner, network, [ix], opts);
 }
