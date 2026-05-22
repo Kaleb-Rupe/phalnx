@@ -76,6 +76,17 @@ function seedU8(value: number): Seed {
  *   from `AgentVault.vault_authority`.
  * @param vaultId — the same `u64` passed to `initialize_vault`.
  * @param programAddress — defaults to the canonical Sigil program id.
+ *
+ * @deprecated NH-4 close (Bucket 2 re-audit 2026-05-21): the parameter
+ *   was renamed `owner → vaultAuthority` in 0.16.0 to make the LBL-01
+ *   contract explicit at the type level. Direct callers that historically
+ *   passed `vault.owner` will now silently derive the WRONG PDA for any
+ *   ownership-transferred vault. Use {@link getVaultPdaFromState} which
+ *   takes a `{ vaultAuthority, vaultId }` shape — the field name forces
+ *   the caller to read the immutable seed from on-chain state rather
+ *   than assume `owner == vault_authority`. This function stays for
+ *   pre-LBL-01 backward compatibility (init-time call sites where the
+ *   two are equal by construction) and will be removed in v0.18.
  */
 export async function getVaultPDA(
   vaultAuthority: Address,

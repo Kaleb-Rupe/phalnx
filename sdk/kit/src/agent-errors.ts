@@ -92,7 +92,7 @@ export const SIGIL_ON_CHAIN_ERROR_MIN = 6000;
  * derives the expected count from `target/idl/sigil.json` so adding a
  * new error code on-chain without updating this map fails at test time.
  */
-export const SIGIL_ON_CHAIN_ERROR_MAX = 6110;
+export const SIGIL_ON_CHAIN_ERROR_MAX = 6114;
 
 interface ErrorMapping {
   name: string;
@@ -1895,6 +1895,82 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
         action: "remove_protected_pda_from_destinations",
         description:
           "Remove any pubkey from allowed_destinations that matches a Sigil-protected PDA for this vault. Use a plain EOA or external program owner instead.",
+      },
+    ],
+  },
+  // D-1 + D-6 close (Bucket 2 audit 2026-05-21): AL3 on-chain scalar intent-
+  // digest mismatch. The wallet's preview-time digest doesn't match the
+  // digest the on-chain verifier recomputed from validate_and_authorize's
+  // args. Most likely: man-in-the-middle (compromised agent / browser ext)
+  // swapped one of the scalar fields (mint, amount, target_protocol)
+  // between preview and submit. Less likely: cross-network replay
+  // (mainnet digest sent through a devnet program).
+  6111: {
+    name: "ErrIntentDigestMismatch",
+    message:
+      "AL3 intent-digest mismatch — wallet preview digest does not match the executed bundle's scalars.",
+    category: "POLICY_VIOLATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "rebuild_seal_from_fresh_preview",
+        description:
+          "Re-run the wallet preview to refresh the intent digest, then resubmit. If the mismatch persists after a fresh preview, suspect a compromised middleware/agent — pause the agent and investigate.",
+      },
+    ],
+  },
+  // M-4 close (Bucket 2 audit 2026-05-21, PEN-CROSS-3):
+  // apply_constraints_update rejected because the recomputed digest of the
+  // PendingConstraintsUpdate content does not match the digest stored at
+  // queue time. Defense-in-depth against discriminator-collision overwrite.
+  6112: {
+    name: "ErrPendingConstraintsDigestMismatch",
+    message:
+      "PendingConstraintsUpdate content tampered between queue and apply — digest mismatch.",
+    category: "POLICY_VIOLATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "cancel_and_requeue_constraints",
+        description:
+          "Cancel the pending update via cancel_constraints_update, then queue a fresh constraints update with the intended entries.",
+      },
+    ],
+  },
+  // M-5 close (Bucket 2 audit 2026-05-21, PEN-CROSS-3): apply_agent_grant
+  // rejected because the recomputed digest of PendingAgentGrant content
+  // doesn't match the queue-time digest. Same class as 6112.
+  6113: {
+    name: "ErrPendingAgentGrantDigestMismatch",
+    message:
+      "PendingAgentGrant content tampered between queue and apply — digest mismatch.",
+    category: "POLICY_VIOLATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "cancel_and_requeue_agent_grant",
+        description:
+          "Cancel the pending grant via cancel_agent_grant, then queue a fresh grant with the intended agent + capability.",
+      },
+    ],
+  },
+  // D-5 close (Bucket 2 audit 2026-05-21, F-RP3-1): reactivate_vault
+  // rejected a FULL_CAPABILITY agent graft because no non-owner signer was
+  // present. Defaults-on safety (NH-1): any FULL_CAPABILITY grant on
+  // reactivate requires a second signer, regardless of whether
+  // policy.cosign_session_pubkey was pre-configured. Closes the phished-
+  // owner freeze→reactivate(attacker, FULL) single-signature foot-gun.
+  6114: {
+    name: "ErrReactivateCosignRequiredForFullCapability",
+    message:
+      "Reactivate with a FULL_CAPABILITY new agent requires a non-owner cosigner.",
+    category: "ESCALATION_REQUIRED",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "include_second_signer_in_remaining_accounts",
+        description:
+          "Re-sign the reactivate transaction with a second non-owner signer in remaining_accounts. If policy.cosign_session_pubkey is set, the signer must match it.",
       },
     ],
   },

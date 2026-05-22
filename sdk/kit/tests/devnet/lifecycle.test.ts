@@ -182,6 +182,11 @@ describe("Kit SDK Devnet — Vault Lifecycle", function () {
       // pass null for fall-through. cosign opt-in is left at the
       // initial-vault value for this lifecycle test.
       cosignRequired: null,
+      // D-5 (Bucket 2 audit 2026-05-21, F-RP3-1): non-elevated path —
+      // pass null for fall-through. Owner sets cosign_session_pubkey via
+      // a dedicated elevated helper that verifies the new pubkey isn't a
+      // Sigil-protected PDA at queue time.
+      cosignSessionPubkey: null,
       // TA-09 (Phase 3): zero pubkey for non-elevated path.
       cosignSession: "11111111111111111111111111111111" as unknown as Address,
       newPolicyPreviewDigest,

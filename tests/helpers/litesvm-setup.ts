@@ -693,7 +693,7 @@ export function resetCUMeasurements(): void {
 import { createHash } from "crypto";
 
 const CONSTRAINTS_SIZE = 35_888;
-const PENDING_CONSTRAINTS_SIZE = 35_912;
+const PENDING_CONSTRAINTS_SIZE = 35_944;
 const MAX_CPI_SIZE = 10_240;
 
 function anchorDisc(name: string): Buffer {
@@ -962,6 +962,16 @@ export function autoSiblingHandlerDigest(
     .update(Buffer.concat(agentParts))
     .digest();
   parts.push(agentSetHash);
+  // D-5 close (Bucket 2 audit 2026-05-21, F-RP3-1): cosign_session_pubkey
+  // at canonical position 22. Sibling handlers (constraints /
+  // post-assertions flips) never mutate this — pass through from live
+  // policy. Pre-Bucket-2 helper output was 32 bytes short here too;
+  // closes the helper-vs-async-helper divergence (see Phase 8 §RP
+  // Fix-Up B note above on the position 21 fix).
+  const cosignSessionPubkey =
+    (policy as { cosignSessionPubkey?: PublicKey }).cosignSessionPubkey ??
+    PublicKey.default;
+  parts.push(cosignSessionPubkey.toBuffer());
   const buf = Buffer.concat(parts);
   return Array.from(crypto.createHash("sha256").update(buf).digest());
 }

@@ -82,7 +82,7 @@ export const CONSTRAINTS_SIZE = 35_888;
  *       + 6 padding + 8 created_at + 8 queued_at_slot [F-10] + 8 effective_at
  *       = 35,912.
  */
-export const PENDING_CONSTRAINTS_SIZE = 35_912;
+export const PENDING_CONSTRAINTS_SIZE = 35_944;
 
 /**
  * `MAX_CPI_ACCOUNT_SIZE` — initial alloc + max growth per `extend_pda` call.

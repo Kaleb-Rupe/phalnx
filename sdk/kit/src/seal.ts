@@ -39,7 +39,10 @@ import {
 import { VaultStatus } from "./generated/types/vaultStatus.js";
 import { getValidateAndAuthorizeInstructionAsync } from "./generated/instructions/validateAndAuthorize.js";
 import { getFinalizeSessionInstructionAsync } from "./generated/instructions/finalizeSession.js";
-import { computeSealInputDigest } from "./seal/intent-digest.js";
+import {
+  computeScalarIntentDigest,
+  computeSealInputDigest,
+} from "./seal/intent-digest.js";
 import {
   deriveNetworkIdentity,
   type SigilCaip2Chain,
@@ -790,6 +793,26 @@ export async function seal(params: SealParams): Promise<SealResult> {
   // steady-state flow. Phase 8 ownership-transfer flow (M-5) reuses the
   // same field with non-close semantics; that path will resolve the stored
   // value off-chain before calling `seal`.
+  //
+  // D-1 + D-6 (Bucket 2 audit 2026-05-21): AL3 scalar intent digest. We
+  // compute SHA-256 over the canonical SealInput SCALARS (magic prefix +
+  // intent_version + network + vault + agent + token_mint + amount +
+  // target_protocol) — the on-chain verifier in `validate_and_authorize`
+  // recomputes the same digest from its handler args and rejects on byte-
+  // equal mismatch with `ErrIntentDigestMismatch` (6111). This closes the
+  // preview→execute scalar-tamper class (recipient/amount/mint/protocol
+  // swap between the user's signed preview and the submitted bundle).
+  // The full ix-bound digest (`computeSealInputDigest` above) remains
+  // client-side only — ATA-rewrite mapping for on-chain ix binding is
+  // v0.17 work.
+  const scalarIntentDigest = computeScalarIntentDigest({
+    vault: params.vault,
+    agent: params.agent.address,
+    tokenMint: params.tokenMint,
+    amount: params.amount,
+    targetProtocol,
+    network: params.network,
+  });
   const validateIxBase = await getValidateAndAuthorizeInstructionAsync({
     agent: params.agent,
     vault: params.vault,
@@ -804,6 +827,7 @@ export async function seal(params: SealParams): Promise<SealResult> {
     targetProtocol,
     expectedPolicyVersion: state.policy.policyVersion ?? 0n,
     expectedNonce: 0n,
+    expectedIntentDigest: scalarIntentDigest,
   });
 
   // Step 8b: When the vault has instruction constraints configured, the on-chain

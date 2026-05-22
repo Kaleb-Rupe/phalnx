@@ -126,6 +126,9 @@ function mockState(): ResolvedVaultState {
       perRecipientDailyCapUsd: 0n,
       // G6 (audit 2026-05-18 cosign opt-in): mock default false (low-friction).
       cosignRequired: false,
+      // D-5 (Bucket 2 audit 2026-05-21, F-RP3-1): mock default unset.
+      cosignSessionPubkey:
+        "11111111111111111111111111111111" as unknown as Address,
     },
     tracker: null,
     overlay: null,
