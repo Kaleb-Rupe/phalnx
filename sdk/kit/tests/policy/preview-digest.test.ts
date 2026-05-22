@@ -24,10 +24,10 @@ import {
   EMPTY_AGENT_SET_HASH,
 } from "../../src/policy/compute-policy-preview-digest.js";
 
-// Post-Phase-8-PEN-CROSS-1 (audit 2026-05-19): agent_set_hash appended at
-// position 21 of the canonical encoding. Both fixtures use the empty-vault
-// agent_set_hash (`EMPTY_AGENT_SET_HASH` — SHA-256 of [0x00,0x00,0x00,0x00])
-// because no agents are registered in these fixture vaults.
+// Post-D-5 (audit 2026-05-19, F-RP3-1): cosign_session_pubkey appended at
+// position 22 of the canonical encoding. Both fixtures use
+// `PublicKey.default` (32 zero bytes) because the reactivate-cosign gate
+// is OFF by default at init; owners opt in via `queue_policy_update`.
 // Prior values:
 //   Pre-PEN-CROSS-6:
 //     HEX_MINIMAL   = 29f9a0caa6851902abe7de24ac30380ef50c220d25d541f8fe1762793152b623
@@ -53,13 +53,16 @@ import {
 //   Post-G6 (pre-PEN-CROSS-1):
 //     HEX_MINIMAL   = 19c70cb767358d1ce2a4c736b067172e0f87ddad8ae6f98292a62bd5f9bae355
 //     HEX_REALISTIC = 15ab9e4290b8bc9229adc64e46cf785edb1adc78596eb339e7bdd4df2a2cab62
+//   Post-PEN-CROSS-1 (pre-D-5):
+//     HEX_MINIMAL   = a9d8654da866751cbec1c45dcae0b7c3b6e45ee98c2b284b8cd9f8f09d894f83
+//     HEX_REALISTIC = 503ff364c055085089576e5af684383e10b7dd65ed796bd57c53927e879cdb0e
 //
 // Cross-impl byte-equality pinned against Rust unit tests in
 // `programs/sigil/src/utils/policy_digest.rs::digest_known_value_*`.
 const HEX_MINIMAL =
-  "a9d8654da866751cbec1c45dcae0b7c3b6e45ee98c2b284b8cd9f8f09d894f83";
+  "f36f0bce45b2ccd681891f2b4922b733563ad21485e6801e4f5f43f475ca0949";
 const HEX_REALISTIC =
-  "503ff364c055085089576e5af684383e10b7dd65ed796bd57c53927e879cdb0e";
+  "68778cdd2c3fc158756997c3f851d6b67235cbac7f5217a9c4614afd39a344c4";
 /**
  * Phase 8 PEN-CROSS-1 (audit 2026-05-19): empty-vault agent_set_hash.
  * SHA-256 of [0x00,0x00,0x00,0x00]. Mirrors Rust
@@ -603,6 +606,9 @@ function referenceDigest(fields: {
   perRecipientDailyCapUsd: bigint;
   cosignRequired: boolean;
   agentSetHash: Uint8Array;
+  // D-5 (audit 2026-05-19, F-RP3-1): owner-chosen reactivate-time
+  // cosigner pubkey, encoded as 32 raw bytes at canonical position 22.
+  cosignSessionPubkey: Uint8Array;
 }): string {
   const parts: number[] = [];
   const pushU64 = (v: bigint) => {
@@ -661,6 +667,13 @@ function referenceDigest(fields: {
     );
   }
   for (const x of fields.agentSetHash) parts.push(x);
+  // D-5 (audit 2026-05-19, F-RP3-1): cosign_session_pubkey at position 22.
+  if (fields.cosignSessionPubkey.length !== 32) {
+    throw new Error(
+      `referenceDigest: cosignSessionPubkey must be 32 bytes, got ${fields.cosignSessionPubkey.length}`,
+    );
+  }
+  for (const x of fields.cosignSessionPubkey) parts.push(x);
 
   const buf = Buffer.from(parts);
   return createHash("sha256").update(buf).digest("hex");
@@ -695,6 +708,7 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
         fc.bigUint({ max: (1n << 64n) - 1n }), // per_recipient_daily_cap_usd (TA-14)
         fc.boolean(), // cosign_required (G6 audit 2026-05-18 cosign opt-in)
         fc.uint8Array({ minLength: 32, maxLength: 32 }), // agent_set_hash (PEN-CROSS-1)
+        fc.uint8Array({ minLength: 32, maxLength: 32 }), // cosign_session_pubkey (D-5 audit 2026-05-19, F-RP3-1)
         (
           dailyCap,
           maxTx,
@@ -717,6 +731,7 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
           perRecipientDailyCapUsd,
           cosignRequired,
           agentSetHash,
+          cosignSessionPubkey,
         ) => {
           const sdkDigest = computePolicyPreviewDigest({
             dailySpendingCapUsd: dailyCap,
@@ -742,6 +757,10 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
             perRecipientDailyCapUsd,
             cosignRequired,
             agentSetHash,
+            // D-5 (audit 2026-05-19, F-RP3-1): pass the random 32 bytes
+            // directly to the encoder; the SDK helper accepts both raw
+            // Uint8Array and base58-string shapes.
+            cosignSessionPubkey,
           });
           const refDigest = referenceDigest({
             dailySpendingCapUsd: dailyCap,
@@ -765,6 +784,7 @@ describe("TA-19 — property test: SDK encoder == reference encoder (PEN-CROSS-7
             perRecipientDailyCapUsd,
             cosignRequired,
             agentSetHash,
+            cosignSessionPubkey,
           });
           const sdkHex = Array.from(sdkDigest)
             .map((x) => x.toString(16).padStart(2, "0"))

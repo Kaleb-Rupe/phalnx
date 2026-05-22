@@ -28,6 +28,7 @@
  *   19. per_recipient_daily_cap_usd: u64 LE — TA-14 (Phase 5 post-exec)
  *   20. cosign_required: bool (1 byte 0/1) — G6 (audit 2026-05-18 cosign opt-in)
  *   21. agent_set_hash: [u8; 32] — Phase 8 PEN-CROSS-1 (audit 2026-05-19)
+ *   22. cosign_session_pubkey: Pubkey (32 bytes) — D-5 (audit 2026-05-19, F-RP3-1)
  */
 
 import { createHash } from "crypto";
@@ -139,6 +140,13 @@ export interface PolicyDigestFields {
    * fixtures (no agents) continue to produce the canonical digest.
    */
   agentSetHash?: Buffer;
+  /**
+   * D-5 (audit 2026-05-19, F-RP3-1): owner-chosen reactivate-time
+   * cosigner pubkey. Default `PublicKey.default` (32 zero bytes) when
+   * omitted, matching the on-chain init state. Bound at digest
+   * position 22.
+   */
+  cosignSessionPubkey?: PublicKey;
 }
 
 function u64le(v: BN | bigint | number): Buffer {
@@ -218,6 +226,19 @@ export function computePolicyPreviewDigest(
     );
   }
   parts.push(agentSetHash);
+  // D-5 (audit 2026-05-19, F-RP3-1): cosign_session_pubkey at position
+  // 22. Defaults to PublicKey.default (32 zero bytes) so legacy fixtures
+  // that don't opt into the reactivate-cosign gate produce the canonical
+  // digest. Bound by TA-19.
+  const cosignSessionBuf = (
+    fields.cosignSessionPubkey ?? PublicKey.default
+  ).toBuffer();
+  if (cosignSessionBuf.length !== 32) {
+    throw new Error(
+      `cosignSessionPubkey must serialise to exactly 32 bytes, got ${cosignSessionBuf.length}`,
+    );
+  }
+  parts.push(cosignSessionBuf);
 
   const buf = Buffer.concat(parts);
   return Array.from(createHash("sha256").update(buf).digest());
@@ -296,6 +317,16 @@ export function initVaultPreviewDigest(args: {
    * `EMPTY_AGENT_SET_HASH` — vault starts with zero agents.
    */
   agentSetHash?: Buffer;
+  /**
+   * D-5 (audit 2026-05-19, F-RP3-1): cosign_session_pubkey at init time.
+   * Default `PublicKey.default` — the reactivate-cosign gate is OFF
+   * for fresh vaults. The on-chain `initialize_vault` handler hard-codes
+   * `Pubkey::default()`, so any non-default value here will diverge the
+   * digest from the handler-recomputed value and the
+   * `PolicyPreviewMismatch` check rejects. Tests should leave this
+   * unset at init and opt in later via `queue_policy_update`.
+   */
+  cosignSessionPubkey?: PublicKey;
 }): number[] {
   return computePolicyPreviewDigest({
     dailySpendingCapUsd: args.dailySpendingCapUsd,
@@ -325,6 +356,11 @@ export function initVaultPreviewDigest(args: {
     // to the empty-Vec hash. Tests that exercise non-empty agent sets
     // override explicitly.
     agentSetHash: args.agentSetHash ?? EMPTY_AGENT_SET_HASH,
+    // D-5 (audit 2026-05-19, F-RP3-1): at init the on-chain handler
+    // hard-codes `Pubkey::default()` for the reactivate-cosign gate.
+    // Default here mirrors that — owners opt in later via
+    // `queue_policy_update`.
+    cosignSessionPubkey: args.cosignSessionPubkey ?? PublicKey.default,
   });
 }
 
@@ -373,6 +409,8 @@ export interface LiveLikePolicy {
   cosignRequired?: boolean;
   /** Phase 8 PEN-CROSS-1: bound at canonical digest position 21. */
   agentSetHash?: Buffer;
+  /** D-5 (audit 2026-05-19, F-RP3-1): bound at canonical digest position 22. */
+  cosignSessionPubkey?: PublicKey;
 }
 
 export interface QueueOverride {
@@ -410,6 +448,12 @@ export interface QueueOverride {
    * `ErrCosignRequired` if cosign isn't provided.
    */
   cosignRequired?: boolean | null;
+  /**
+   * D-5 (audit 2026-05-19, F-RP3-1): cosign_session_pubkey override.
+   * null = pass-through from live policy. Setting to `PublicKey.default`
+   * explicitly disables the gate; any other pubkey enables it.
+   */
+  cosignSessionPubkey?: PublicKey | null;
 }
 
 function pick<T>(override: T | null | undefined, fallback: T): T {
@@ -422,14 +466,20 @@ export function queuePolicyMergedDigest(
   observeOnly: boolean,
 ): number[] {
   return computePolicyPreviewDigest({
-    dailySpendingCapUsd: pick(override.dailySpendingCapUsd, live.dailySpendingCapUsd),
+    dailySpendingCapUsd: pick(
+      override.dailySpendingCapUsd,
+      live.dailySpendingCapUsd,
+    ),
     maxTransactionSizeUsd: pick(
       override.maxTransactionSizeUsd,
       live.maxTransactionSizeUsd,
     ),
     maxSlippageBps: pick(override.maxSlippageBps, live.maxSlippageBps),
     // PEN-CROSS-6: developer_fee_rate flows through the merge identically.
-    developerFeeRate: pick(override.developerFeeRate, live.developerFeeRate ?? 0),
+    developerFeeRate: pick(
+      override.developerFeeRate,
+      live.developerFeeRate ?? 0,
+    ),
     protocolMode: pick(override.protocolMode, live.protocolMode),
     protocols: pick(override.protocols, live.protocols),
     destinationMode: pick(override.destinationMode, live.destinationMode),
@@ -472,13 +522,17 @@ export function queuePolicyMergedDigest(
       live.perRecipientDailyCapUsd ?? 0,
     ),
     // G6 (audit 2026-05-18 cosign opt-in): merged-effective cosign_required.
-    cosignRequired: pick(
-      override.cosignRequired,
-      live.cosignRequired ?? false,
-    ),
+    cosignRequired: pick(override.cosignRequired, live.cosignRequired ?? false),
     // Phase 8 PEN-CROSS-1: queue_policy_update does NOT mutate the agent
     // set — pass through from live policy snapshot.
     agentSetHash: live.agentSetHash ?? EMPTY_AGENT_SET_HASH,
+    // D-5 (audit 2026-05-19, F-RP3-1): merged-effective cosign_session_pubkey.
+    // null override = pass-through from live policy. Defaults to
+    // PublicKey.default (gate disabled) when live is unset.
+    cosignSessionPubkey: pick(
+      override.cosignSessionPubkey,
+      live.cosignSessionPubkey ?? PublicKey.default,
+    ),
   });
 }
 
@@ -537,9 +591,18 @@ export async function siblingHandlerDigest(
     // Compute from `vault.agents` (which Anchor decodes into the AgentEntry
     // shape with `pubkey`/`capability` fields).
     agentSetHash: computeAgentSetHash(
-      (vault.agents as ReadonlyArray<{ pubkey: PublicKey; capability: number }>) ??
-        [],
+      (vault.agents as ReadonlyArray<{
+        pubkey: PublicKey;
+        capability: number;
+      }>) ?? [],
     ),
+    // D-5 (audit 2026-05-19, F-RP3-1): pass-through from live policy.
+    // Sibling handlers never mutate cosign_session_pubkey. Default
+    // PublicKey.default when the live field is absent (legacy account
+    // decoded against pre-D-5 IDL).
+    cosignSessionPubkey:
+      (policy.cosignSessionPubkey as PublicKey | undefined) ??
+      PublicKey.default,
   });
 }
 
@@ -581,9 +644,17 @@ export async function fetchAndComputeQueueDigest(
     cosignRequired: !!policy.cosignRequired,
     // Phase 8 PEN-CROSS-1: snapshot agent_set_hash from live vault.
     agentSetHash: computeAgentSetHash(
-      (vault.agents as ReadonlyArray<{ pubkey: PublicKey; capability: number }>) ??
-        [],
+      (vault.agents as ReadonlyArray<{
+        pubkey: PublicKey;
+        capability: number;
+      }>) ?? [],
     ),
+    // D-5 (audit 2026-05-19, F-RP3-1): snapshot cosign_session_pubkey
+    // from live policy. Falls back to PublicKey.default when the field
+    // is absent (legacy account / pre-D-5 IDL deserialization).
+    cosignSessionPubkey:
+      (policy.cosignSessionPubkey as PublicKey | undefined) ??
+      PublicKey.default,
   };
   return queuePolicyMergedDigest(live, override, !!vault.observeOnly);
 }

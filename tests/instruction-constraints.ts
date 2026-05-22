@@ -165,36 +165,37 @@ describe("instruction-constraints", () => {
     // rejects every spending action with ProtocolNotAllowed before the
     // constraint-PDA scan ever runs).
     await program.methods
-      .initializeVault(vaultId,
-          new BN(500_000_000),
-          new BN(100_000_000),
-          1,
-          [jupiterProgramId],
-          0,
-          100,
-          new BN(1800),
-          [],
-          [],
-          false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
-          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
-          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
-          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
-          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
-          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
-          initVaultPreviewDigest({
-            dailySpendingCapUsd: new BN(500_000_000),
-            maxTransactionSizeUsd: new BN(100_000_000),
-            maxSlippageBps: 100,
-            protocolMode: 1,
-            protocols: [jupiterProgramId],
-            allowedDestinations: [],
-            timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
-            autoPromoteGrays: false,
-            autoRevokeThreshold: 5,
-          }),
-        )
+      .initializeVault(
+        vaultId,
+        new BN(500_000_000),
+        new BN(100_000_000),
+        1,
+        [jupiterProgramId],
+        0,
+        100,
+        new BN(1800),
+        [],
+        [],
+        false, // observeOnly (Phase 2 TA-19)
+        0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
+        false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+        5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+        new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+        new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+        false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
+        initVaultPreviewDigest({
+          dailySpendingCapUsd: new BN(500_000_000),
+          maxTransactionSizeUsd: new BN(100_000_000),
+          maxSlippageBps: 100,
+          protocolMode: 1,
+          protocols: [jupiterProgramId],
+          allowedDestinations: [],
+          timelockDuration: new BN(1800),
+          operatingHours: 0x00ffffff,
+          autoPromoteGrays: false,
+          autoRevokeThreshold: 5,
+        }),
+      )
       .accounts({
         owner: owner.publicKey,
         vault: vaultPda,
@@ -286,7 +287,13 @@ describe("instruction-constraints", () => {
       program.programId,
     );
     let builder = program.methods
-      .validateAndAuthorize(usdcMint, amount, targetProtocol, await pv(), new BN(0))
+      .validateAndAuthorize(
+        usdcMint,
+        amount,
+        targetProtocol,
+        await pv(),
+        new BN(0),
+      )
       .accounts({
         agent: agent.publicKey,
         vault: vaultPda,
@@ -363,12 +370,9 @@ describe("instruction-constraints", () => {
       .rpc();
     advanceTime(svm, timelockSeconds + 1);
     // PEN-CROSS-3: compute the owner-signed digest for has_constraints=false.
-    const closeDigest = await siblingHandlerDigest(
-      program,
-      policy,
-      vault,
-      { hasConstraints: false },
-    );
+    const closeDigest = await siblingHandlerDigest(program, policy, vault, {
+      hasConstraints: false,
+    });
     await program.methods
       .applyCloseConstraints(closeDigest)
       .accounts({
@@ -628,7 +632,8 @@ describe("instruction-constraints", () => {
         program.programId,
       );
       await program.methods
-        .initializeVault(vaultId2,
+        .initializeVault(
+          vaultId2,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
@@ -639,7 +644,7 @@ describe("instruction-constraints", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -653,7 +658,7 @@ describe("instruction-constraints", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -843,23 +848,16 @@ describe("instruction-constraints", () => {
         );
       }
       const exactValue = Buffer.alloc(32, 0xab);
-      createConstraintsAccount(
-        program,
-        svm,
-        owner.payer,
-        vaultPda,
-        policyPda,
-        [
-          {
-            programId: jupiterProgramId,
-            dataConstraints: [
-              { offset: 0, operator: { eq: {} }, value: exactValue },
-            ],
-            accountConstraints: [],
-            discriminatorFormat: { anchor8: {} },
-          },
-        ],
-      );
+      createConstraintsAccount(program, svm, owner.payer, vaultPda, policyPda, [
+        {
+          programId: jupiterProgramId,
+          dataConstraints: [
+            { offset: 0, operator: { eq: {} }, value: exactValue },
+          ],
+          accountConstraints: [],
+          discriminatorFormat: { anchor8: {} },
+        },
+      ]);
 
       const acct = await fetchConstraints(program, constraintsPda);
       expect(
@@ -949,7 +947,8 @@ describe("instruction-constraints", () => {
 
       // Init vault with timelock = 1800 seconds (MIN_TIMELOCK_DURATION)
       await program.methods
-        .initializeVault(tlVaultId,
+        .initializeVault(
+          tlVaultId,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
@@ -960,7 +959,7 @@ describe("instruction-constraints", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -974,7 +973,7 @@ describe("instruction-constraints", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -1158,36 +1157,37 @@ describe("instruction-constraints", () => {
 
       try {
         await program.methods
-          .initializeVault(noTlVaultId,
-          new BN(500_000_000),
-          new BN(100_000_000),
-          1,
-          [jupiterProgramId],
-          0,
-          100,
-          new BN(0),
-          [],
-          [],
-          false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
-          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
-          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
-          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
-          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
-          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
-          initVaultPreviewDigest({
-            dailySpendingCapUsd: new BN(500_000_000),
-            maxTransactionSizeUsd: new BN(100_000_000),
-            maxSlippageBps: 100,
-            protocolMode: 1,
-            protocols: [jupiterProgramId],
-            allowedDestinations: [],
-            timelockDuration: new BN(0),
-            operatingHours: 0x00FFFFFF,
-            autoPromoteGrays: false,
-            autoRevokeThreshold: 5,
-          }),
-        )
+          .initializeVault(
+            noTlVaultId,
+            new BN(500_000_000),
+            new BN(100_000_000),
+            1,
+            [jupiterProgramId],
+            0,
+            100,
+            new BN(0),
+            [],
+            [],
+            false, // observeOnly (Phase 2 TA-19)
+            0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
+            false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+            5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+            new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+            new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+            false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
+            initVaultPreviewDigest({
+              dailySpendingCapUsd: new BN(500_000_000),
+              maxTransactionSizeUsd: new BN(100_000_000),
+              maxSlippageBps: 100,
+              protocolMode: 1,
+              protocols: [jupiterProgramId],
+              allowedDestinations: [],
+              timelockDuration: new BN(0),
+              operatingHours: 0x00ffffff,
+              autoPromoteGrays: false,
+              autoRevokeThreshold: 5,
+            }),
+          )
           .accounts({
             owner: owner.publicKey,
             vault: noTlVault,
@@ -1233,23 +1233,16 @@ describe("instruction-constraints", () => {
         pendingCloseConstraintsPda,
       );
 
-      createConstraintsAccount(
-        program,
-        svm,
-        owner.payer,
-        vaultPda,
-        policyPda,
-        [
-          {
-            programId: jupiterProgramId,
-            dataConstraints: [], // No data constraints — any instruction from Jupiter passes
-            accountConstraints: [
-              { index: 0, isWritableRequired: 0, expected: jupiterProgramId },
-            ],
-            discriminatorFormat: { anchor8: {} },
-          },
-        ],
-      );
+      createConstraintsAccount(program, svm, owner.payer, vaultPda, policyPda, [
+        {
+          programId: jupiterProgramId,
+          dataConstraints: [], // No data constraints — any instruction from Jupiter passes
+          accountConstraints: [
+            { index: 0, isWritableRequired: 0, expected: jupiterProgramId },
+          ],
+          discriminatorFormat: { anchor8: {} },
+        },
+      ]);
 
       // This should succeed — constraints PDA exists but no data constraints
       const validateIx = await buildValidateIx(
@@ -1279,27 +1272,20 @@ describe("instruction-constraints", () => {
         );
       }
 
-      createConstraintsAccount(
-        program,
-        svm,
-        owner.payer,
-        vaultPda,
-        policyPda,
-        [
-          {
-            programId: unrelatedProgram,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { eq: {} },
-                value: Buffer.from([0xff, 0, 0, 0, 0, 0, 0, 0]),
-              },
-            ],
-            accountConstraints: [],
-            discriminatorFormat: { anchor8: {} },
-          },
-        ],
-      );
+      createConstraintsAccount(program, svm, owner.payer, vaultPda, policyPda, [
+        {
+          programId: unrelatedProgram,
+          dataConstraints: [
+            {
+              offset: 0,
+              operator: { eq: {} },
+              value: Buffer.from([0xff, 0, 0, 0, 0, 0, 0, 0]),
+            },
+          ],
+          accountConstraints: [],
+          discriminatorFormat: { anchor8: {} },
+        },
+      ]);
 
       // Should succeed — unrelated program not in TX, no constraint check fires
       const validateIx = await buildValidateIx(
@@ -1365,27 +1351,20 @@ describe("instruction-constraints", () => {
       }
 
       // Re-create constraints for subsequent tests
-      createConstraintsAccount(
-        program,
-        svm,
-        owner.payer,
-        vaultPda,
-        policyPda,
-        [
-          {
-            programId: jupiterProgramId,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { eq: {} },
-                value: Buffer.from([0x01, 0x02, 0, 0, 0, 0, 0, 0]),
-              },
-            ],
-            accountConstraints: [],
-            discriminatorFormat: { anchor8: {} },
-          },
-        ],
-      );
+      createConstraintsAccount(program, svm, owner.payer, vaultPda, policyPda, [
+        {
+          programId: jupiterProgramId,
+          dataConstraints: [
+            {
+              offset: 0,
+              operator: { eq: {} },
+              value: Buffer.from([0x01, 0x02, 0, 0, 0, 0, 0, 0]),
+            },
+          ],
+          accountConstraints: [],
+          discriminatorFormat: { anchor8: {} },
+        },
+      ]);
     });
 
     it("non-owner cannot update constraints", async () => {
@@ -1545,27 +1524,20 @@ describe("instruction-constraints", () => {
         pendingCloseConstraintsPda,
       );
 
-      createConstraintsAccount(
-        program,
-        svm,
-        owner.payer,
-        vaultPda,
-        policyPda,
-        [
-          {
-            programId: jupiterProgramId,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { eq: {} },
-                value: Buffer.from([0x01, 0x02, 0, 0, 0, 0, 0, 0]),
-              },
-            ],
-            accountConstraints: [],
-            discriminatorFormat: { anchor8: {} },
-          },
-        ],
-      );
+      createConstraintsAccount(program, svm, owner.payer, vaultPda, policyPda, [
+        {
+          programId: jupiterProgramId,
+          dataConstraints: [
+            {
+              offset: 0,
+              operator: { eq: {} },
+              value: Buffer.from([0x01, 0x02, 0, 0, 0, 0, 0, 0]),
+            },
+          ],
+          accountConstraints: [],
+          discriminatorFormat: { anchor8: {} },
+        },
+      ]);
 
       const constraintsAcct = await fetchConstraints(program, constraintsPda);
       // V2 (REVAMP_PLAN §2.2): strict_mode field removed — recreated entries
@@ -1720,27 +1692,20 @@ describe("instruction-constraints", () => {
       const negTen = Buffer.alloc(8);
       negTen.writeBigInt64LE(-10n);
 
-      createConstraintsAccount(
-        program,
-        svm,
-        owner.payer,
-        vaultPda,
-        policyPda,
-        [
-          {
-            programId: signedTestProgram,
-            dataConstraints: [
-              {
-                offset: 8,
-                operator: { gteSigned: {} },
-                value: negTen,
-              },
-            ],
-            accountConstraints: [],
-            discriminatorFormat: { anchor8: {} },
-          },
-        ],
-      );
+      createConstraintsAccount(program, svm, owner.payer, vaultPda, policyPda, [
+        {
+          programId: signedTestProgram,
+          dataConstraints: [
+            {
+              offset: 8,
+              operator: { gteSigned: {} },
+              value: negTen,
+            },
+          ],
+          accountConstraints: [],
+          discriminatorFormat: { anchor8: {} },
+        },
+      ]);
 
       const acct = await fetchConstraints(program, constraintsPda);
       expect(acct.entries.length).to.equal(1);
@@ -1762,27 +1727,20 @@ describe("instruction-constraints", () => {
       const thousand = Buffer.alloc(8);
       thousand.writeBigInt64LE(1000n);
 
-      createConstraintsAccount(
-        program,
-        svm,
-        owner.payer,
-        vaultPda,
-        policyPda,
-        [
-          {
-            programId: signedTestProgram,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { lteSigned: {} },
-                value: thousand,
-              },
-            ],
-            accountConstraints: [],
-            discriminatorFormat: { anchor8: {} },
-          },
-        ],
-      );
+      createConstraintsAccount(program, svm, owner.payer, vaultPda, policyPda, [
+        {
+          programId: signedTestProgram,
+          dataConstraints: [
+            {
+              offset: 0,
+              operator: { lteSigned: {} },
+              value: thousand,
+            },
+          ],
+          accountConstraints: [],
+          discriminatorFormat: { anchor8: {} },
+        },
+      ]);
 
       const acct = await fetchConstraints(program, constraintsPda);
       const dc = acct.entries[0].dataConstraints[0];
@@ -1799,27 +1757,20 @@ describe("instruction-constraints", () => {
       );
 
       // Bitmask: require bits 0 and 2 set (0x05)
-      createConstraintsAccount(
-        program,
-        svm,
-        owner.payer,
-        vaultPda,
-        policyPda,
-        [
-          {
-            programId: bitmaskTestProgram,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { bitmask: {} },
-                value: Buffer.from([0x05]),
-              },
-            ],
-            accountConstraints: [],
-            discriminatorFormat: { anchor8: {} },
-          },
-        ],
-      );
+      createConstraintsAccount(program, svm, owner.payer, vaultPda, policyPda, [
+        {
+          programId: bitmaskTestProgram,
+          dataConstraints: [
+            {
+              offset: 0,
+              operator: { bitmask: {} },
+              value: Buffer.from([0x05]),
+            },
+          ],
+          accountConstraints: [],
+          discriminatorFormat: { anchor8: {} },
+        },
+      ]);
 
       const acct = await fetchConstraints(program, constraintsPda);
       const dc = acct.entries[0].dataConstraints[0];
@@ -1845,27 +1796,20 @@ describe("instruction-constraints", () => {
       const negFive = Buffer.alloc(8);
       negFive.writeBigInt64LE(-5n);
 
-      createConstraintsAccount(
-        program,
-        svm,
-        owner.payer,
-        vaultPda,
-        policyPda,
-        [
-          {
-            programId: signedTestProgram,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { gteSigned: {} },
-                value: negFive,
-              },
-            ],
-            accountConstraints: [],
-            discriminatorFormat: { anchor8: {} },
-          },
-        ],
-      );
+      createConstraintsAccount(program, svm, owner.payer, vaultPda, policyPda, [
+        {
+          programId: signedTestProgram,
+          dataConstraints: [
+            {
+              offset: 0,
+              operator: { gteSigned: {} },
+              value: negFive,
+            },
+          ],
+          accountConstraints: [],
+          discriminatorFormat: { anchor8: {} },
+        },
+      ]);
 
       const validateIx = await buildValidateIx(
         new BN(10_000_000),
@@ -1884,27 +1828,20 @@ describe("instruction-constraints", () => {
         pendingCloseConstraintsPda,
       );
 
-      createConstraintsAccount(
-        program,
-        svm,
-        owner.payer,
-        vaultPda,
-        policyPda,
-        [
-          {
-            programId: bitmaskTestProgram,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { bitmask: {} },
-                value: Buffer.from([0x0f]),
-              },
-            ],
-            accountConstraints: [],
-            discriminatorFormat: { anchor8: {} },
-          },
-        ],
-      );
+      createConstraintsAccount(program, svm, owner.payer, vaultPda, policyPda, [
+        {
+          programId: bitmaskTestProgram,
+          dataConstraints: [
+            {
+              offset: 0,
+              operator: { bitmask: {} },
+              value: Buffer.from([0x0f]),
+            },
+          ],
+          accountConstraints: [],
+          discriminatorFormat: { anchor8: {} },
+        },
+      ]);
 
       const validateIx = await buildValidateIx(
         new BN(10_000_000),
@@ -1927,39 +1864,32 @@ describe("instruction-constraints", () => {
       negHundred.writeBigInt64LE(-100n);
 
       // Two entries for same program: GteSigned OR Bitmask (OR logic)
-      createConstraintsAccount(
-        program,
-        svm,
-        owner.payer,
-        vaultPda,
-        policyPda,
-        [
-          {
-            programId: signedTestProgram,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { gteSigned: {} },
-                value: negHundred,
-              },
-            ],
-            accountConstraints: [],
-            discriminatorFormat: { anchor8: {} },
-          },
-          {
-            programId: signedTestProgram,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { bitmask: {} },
-                value: Buffer.from([0x01, 0x80]),
-              },
-            ],
-            accountConstraints: [],
-            discriminatorFormat: { anchor8: {} },
-          },
-        ],
-      );
+      createConstraintsAccount(program, svm, owner.payer, vaultPda, policyPda, [
+        {
+          programId: signedTestProgram,
+          dataConstraints: [
+            {
+              offset: 0,
+              operator: { gteSigned: {} },
+              value: negHundred,
+            },
+          ],
+          accountConstraints: [],
+          discriminatorFormat: { anchor8: {} },
+        },
+        {
+          programId: signedTestProgram,
+          dataConstraints: [
+            {
+              offset: 0,
+              operator: { bitmask: {} },
+              value: Buffer.from([0x01, 0x80]),
+            },
+          ],
+          accountConstraints: [],
+          discriminatorFormat: { anchor8: {} },
+        },
+      ]);
 
       // Verify both entries stored with OR structure
       const acct = await fetchConstraints(program, constraintsPda);
@@ -1990,32 +1920,25 @@ describe("instruction-constraints", () => {
       posFifty.writeBigInt64LE(50n);
 
       // Eq on discriminator (offset 0) + GteSigned on amount (offset 8) — AND
-      createConstraintsAccount(
-        program,
-        svm,
-        owner.payer,
-        vaultPda,
-        policyPda,
-        [
-          {
-            programId: signedTestProgram,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { eq: {} },
-                value: Buffer.from([0xaa, 0xbb, 0xcc, 0xdd, 0, 0, 0, 0]),
-              },
-              {
-                offset: 8,
-                operator: { gteSigned: {} },
-                value: posFifty,
-              },
-            ],
-            accountConstraints: [],
-            discriminatorFormat: { anchor8: {} },
-          },
-        ],
-      );
+      createConstraintsAccount(program, svm, owner.payer, vaultPda, policyPda, [
+        {
+          programId: signedTestProgram,
+          dataConstraints: [
+            {
+              offset: 0,
+              operator: { eq: {} },
+              value: Buffer.from([0xaa, 0xbb, 0xcc, 0xdd, 0, 0, 0, 0]),
+            },
+            {
+              offset: 8,
+              operator: { gteSigned: {} },
+              value: posFifty,
+            },
+          ],
+          accountConstraints: [],
+          discriminatorFormat: { anchor8: {} },
+        },
+      ]);
 
       // Verify both constraints stored with AND
       const acct = await fetchConstraints(program, constraintsPda);
@@ -2038,53 +1961,46 @@ describe("instruction-constraints", () => {
       );
 
       // Create entry with all 7 operators (max 8 per entry)
-      createConstraintsAccount(
-        program,
-        svm,
-        owner.payer,
-        vaultPda,
-        policyPda,
-        [
-          {
-            programId: signedTestProgram,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { eq: {} },
-                value: Buffer.from([0x01, 0, 0, 0, 0, 0, 0, 0]),
-              },
-              { offset: 1, operator: { ne: {} }, value: Buffer.from([0x02]) },
-              {
-                offset: 2,
-                operator: { gte: {} },
-                value: Buffer.from([0x03]),
-              },
-              {
-                offset: 3,
-                operator: { lte: {} },
-                value: Buffer.from([0x04]),
-              },
-              {
-                offset: 4,
-                operator: { gteSigned: {} },
-                value: Buffer.from([0x05]),
-              },
-              {
-                offset: 5,
-                operator: { lteSigned: {} },
-                value: Buffer.from([0x06]),
-              },
-              {
-                offset: 6,
-                operator: { bitmask: {} },
-                value: Buffer.from([0x07]),
-              },
-            ],
-            accountConstraints: [],
-            discriminatorFormat: { anchor8: {} },
-          },
-        ],
-      );
+      createConstraintsAccount(program, svm, owner.payer, vaultPda, policyPda, [
+        {
+          programId: signedTestProgram,
+          dataConstraints: [
+            {
+              offset: 0,
+              operator: { eq: {} },
+              value: Buffer.from([0x01, 0, 0, 0, 0, 0, 0, 0]),
+            },
+            { offset: 1, operator: { ne: {} }, value: Buffer.from([0x02]) },
+            {
+              offset: 2,
+              operator: { gte: {} },
+              value: Buffer.from([0x03]),
+            },
+            {
+              offset: 3,
+              operator: { lte: {} },
+              value: Buffer.from([0x04]),
+            },
+            {
+              offset: 4,
+              operator: { gteSigned: {} },
+              value: Buffer.from([0x05]),
+            },
+            {
+              offset: 5,
+              operator: { lteSigned: {} },
+              value: Buffer.from([0x06]),
+            },
+            {
+              offset: 6,
+              operator: { bitmask: {} },
+              value: Buffer.from([0x07]),
+            },
+          ],
+          accountConstraints: [],
+          discriminatorFormat: { anchor8: {} },
+        },
+      ]);
 
       const acct = await fetchConstraints(program, constraintsPda);
       const dcs = acct.entries[0].dataConstraints;
@@ -2157,7 +2073,8 @@ describe("instruction-constraints", () => {
         "2pB26qKW73sToF7ETcdhXQTj8biYwAk9TCArVwgHBe24",
       );
       await program.methods
-        .initializeVault(cvVaultId,
+        .initializeVault(
+          cvVaultId,
           new BN(1_000_000_000),
           new BN(500_000_000),
           1,
@@ -2168,7 +2085,7 @@ describe("instruction-constraints", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -2179,10 +2096,14 @@ describe("instruction-constraints", () => {
             maxTransactionSizeUsd: new BN(500_000_000),
             maxSlippageBps: 100,
             protocolMode: 1,
-            protocols: [jupiterProgramId, program.programId, M5_MOCK_DEFI_PROGRAM_ID],
+            protocols: [
+              jupiterProgramId,
+              program.programId,
+              M5_MOCK_DEFI_PROGRAM_ID,
+            ],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -2307,27 +2228,20 @@ describe("instruction-constraints", () => {
     // C-4: ConstraintViolated via composed TX
     it("ConstraintViolated when intermediate ix data mismatches constraint (C-4)", async () => {
       // Create constraints requiring data[0]==0xAA for the sigil program
-      createConstraintsAccount(
-        program,
-        svm,
-        owner.payer,
-        cvVault,
-        cvPolicy,
-        [
-          {
-            programId: program.programId,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { eq: {} },
-                value: Buffer.from([0xaa, 0, 0, 0, 0, 0, 0, 0]),
-              },
-            ],
-            accountConstraints: [],
-            discriminatorFormat: { anchor8: {} },
-          },
-        ],
-      );
+      createConstraintsAccount(program, svm, owner.payer, cvVault, cvPolicy, [
+        {
+          programId: program.programId,
+          dataConstraints: [
+            {
+              offset: 0,
+              operator: { eq: {} },
+              value: Buffer.from([0xaa, 0, 0, 0, 0, 0, 0, 0]),
+            },
+          ],
+          accountConstraints: [],
+          discriminatorFormat: { anchor8: {} },
+        },
+      ]);
 
       // Intermediate ix targets sigil program with data[0]=0xBB (violates Eq 0xAA)
       const mockDeFiIx = new TransactionInstruction({
@@ -2364,27 +2278,20 @@ describe("instruction-constraints", () => {
       // Constraints only cover jupiterProgramId. Every entry is strictly
       // enforced — an intermediate ix targeting a different program (here
       // sigil itself) has no matching entry and is rejected.
-      createConstraintsAccount(
-        program,
-        svm,
-        owner.payer,
-        cvVault,
-        cvPolicy,
-        [
-          {
-            programId: jupiterProgramId, // only constrained program
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { eq: {} },
-                value: Buffer.from([0x01, 0, 0, 0, 0, 0, 0, 0]),
-              },
-            ],
-            accountConstraints: [],
-            discriminatorFormat: { anchor8: {} },
-          },
-        ],
-      );
+      createConstraintsAccount(program, svm, owner.payer, cvVault, cvPolicy, [
+        {
+          programId: jupiterProgramId, // only constrained program
+          dataConstraints: [
+            {
+              offset: 0,
+              operator: { eq: {} },
+              value: Buffer.from([0x01, 0, 0, 0, 0, 0, 0, 0]),
+            },
+          ],
+          accountConstraints: [],
+          discriminatorFormat: { anchor8: {} },
+        },
+      ]);
 
       // Intermediate ix targets sigil program (not in constraints → strict blocks it)
       const mockDeFiIx = new TransactionInstruction({
@@ -2641,7 +2548,8 @@ describe("instruction-constraints", () => {
 
       // Init vault with timelock=1800 (MIN_TIMELOCK_DURATION)
       await program.methods
-        .initializeVault(tlVaultId,
+        .initializeVault(
+          tlVaultId,
           new BN(1_000_000_000),
           new BN(500_000_000),
           1,
@@ -2652,7 +2560,7 @@ describe("instruction-constraints", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -2666,7 +2574,7 @@ describe("instruction-constraints", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -2683,27 +2591,20 @@ describe("instruction-constraints", () => {
         .rpc();
 
       // Create constraints
-      createConstraintsAccount(
-        program,
-        svm,
-        owner.payer,
-        tlVault,
-        tlPolicy,
-        [
-          {
-            programId: jupiterProgramId,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { eq: {} },
-                value: Buffer.from([0x01, 0, 0, 0, 0, 0, 0, 0]),
-              },
-            ],
-            accountConstraints: [],
-            discriminatorFormat: { anchor8: {} },
-          },
-        ],
-      );
+      createConstraintsAccount(program, svm, owner.payer, tlVault, tlPolicy, [
+        {
+          programId: jupiterProgramId,
+          dataConstraints: [
+            {
+              offset: 0,
+              operator: { eq: {} },
+              value: Buffer.from([0x01, 0, 0, 0, 0, 0, 0, 0]),
+            },
+          ],
+          accountConstraints: [],
+          discriminatorFormat: { anchor8: {} },
+        },
+      ]);
 
       // Queue first update — distinct 8-byte discriminator to prove update worked
       queueConstraintsUpdateMultiIx(
@@ -2883,7 +2784,8 @@ describe("instruction-constraints", () => {
       );
 
       await program.methods
-        .initializeVault(id,
+        .initializeVault(
+          id,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
@@ -2894,7 +2796,7 @@ describe("instruction-constraints", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -2908,7 +2810,7 @@ describe("instruction-constraints", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -3302,7 +3204,8 @@ describe("instruction-constraints", () => {
       );
 
       await program.methods
-        .initializeVault(id,
+        .initializeVault(
+          id,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
@@ -3313,7 +3216,7 @@ describe("instruction-constraints", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -3327,7 +3230,7 @@ describe("instruction-constraints", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -3769,7 +3672,8 @@ describe("instruction-constraints", () => {
       // as the spending target; it MUST be in the allowlist or validate rejects
       // with ProtocolNotAllowed before the discriminator-defense scan runs.
       await program.methods
-        .initializeVault(f1VaultId,
+        .initializeVault(
+          f1VaultId,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
@@ -3780,7 +3684,7 @@ describe("instruction-constraints", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -3794,7 +3698,7 @@ describe("instruction-constraints", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -3841,27 +3745,20 @@ describe("instruction-constraints", () => {
         .rpc();
 
       // Create a legit constraints PDA (must succeed before corruption)
-      createConstraintsAccount(
-        program,
-        svm,
-        owner.payer,
-        f1Vault,
-        f1Policy,
-        [
-          {
-            programId: jupiterProgramId,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { eq: {} },
-                value: Buffer.from([0x01, 0x02, 0, 0, 0, 0, 0, 0]),
-              },
-            ],
-            accountConstraints: [],
-            discriminatorFormat: { anchor8: {} },
-          },
-        ] as any,
-      );
+      createConstraintsAccount(program, svm, owner.payer, f1Vault, f1Policy, [
+        {
+          programId: jupiterProgramId,
+          dataConstraints: [
+            {
+              offset: 0,
+              operator: { eq: {} },
+              value: Buffer.from([0x01, 0x02, 0, 0, 0, 0, 0, 0]),
+            },
+          ],
+          accountConstraints: [],
+          discriminatorFormat: { anchor8: {} },
+        },
+      ] as any);
     });
 
     // Local helpers — F-1 vault uses different PDAs than the file-scope ones
@@ -3913,7 +3810,13 @@ describe("instruction-constraints", () => {
       const policyAccount = await program.account.policyConfig.fetch(f1Policy);
       const policyVer = (policyAccount as any).policyVersion ?? new BN(0);
       return program.methods
-        .validateAndAuthorize(usdcMint, amount, jupiterProgramId, policyVer, new BN(0))
+        .validateAndAuthorize(
+          usdcMint,
+          amount,
+          jupiterProgramId,
+          policyVer,
+          new BN(0),
+        )
         .accounts({
           agent: f1Agent.publicKey,
           vault: f1Vault,
@@ -4148,7 +4051,8 @@ describe("instruction-constraints", () => {
       );
 
       await program.methods
-        .initializeVault(id,
+        .initializeVault(
+          id,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
@@ -4159,7 +4063,7 @@ describe("instruction-constraints", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -4173,7 +4077,7 @@ describe("instruction-constraints", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -4292,27 +4196,20 @@ describe("instruction-constraints", () => {
       // Set up real, populated constraints (NOT an orphan).
       // is_spending byte was removed from ConstraintEntry in V2 Option A — the
       // helper no longer requires it.
-      createConstraintsAccount(
-        program,
-        svm,
-        owner.payer,
-        f.vault,
-        f.policy,
-        [
-          {
-            programId: jupiterProgramId,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { eq: {} },
-                value: Buffer.from([0xaa, 0, 0, 0, 0, 0, 0, 0]),
-              },
-            ],
-            accountConstraints: [],
-            discriminatorFormat: { anchor8: {} },
-          },
-        ],
-      );
+      createConstraintsAccount(program, svm, owner.payer, f.vault, f.policy, [
+        {
+          programId: jupiterProgramId,
+          dataConstraints: [
+            {
+              offset: 0,
+              operator: { eq: {} },
+              value: Buffer.from([0xaa, 0, 0, 0, 0, 0, 0, 0]),
+            },
+          ],
+          accountConstraints: [],
+          discriminatorFormat: { anchor8: {} },
+        },
+      ]);
 
       // policy.has_constraints is now true; cleanup must reject
       try {
@@ -4419,27 +4316,20 @@ describe("instruction-constraints", () => {
       // this exercises allocate + extend chain + populate end-to-end on
       // the previously-orphaned PDA address. is_spending byte was removed
       // from ConstraintEntry in V2 Option A.
-      createConstraintsAccount(
-        program,
-        svm,
-        owner.payer,
-        f.vault,
-        f.policy,
-        [
-          {
-            programId: jupiterProgramId,
-            dataConstraints: [
-              {
-                offset: 0,
-                operator: { eq: {} },
-                value: Buffer.from([0xcc, 0xdd, 0, 0, 0, 0, 0, 0]),
-              },
-            ],
-            accountConstraints: [],
-            discriminatorFormat: { anchor8: {} },
-          },
-        ],
-      );
+      createConstraintsAccount(program, svm, owner.payer, f.vault, f.policy, [
+        {
+          programId: jupiterProgramId,
+          dataConstraints: [
+            {
+              offset: 0,
+              operator: { eq: {} },
+              value: Buffer.from([0xcc, 0xdd, 0, 0, 0, 0, 0, 0]),
+            },
+          ],
+          accountConstraints: [],
+          discriminatorFormat: { anchor8: {} },
+        },
+      ]);
 
       // Step 5: verify the constraints PDA is healthy and policy flags correct
       const ca = await fetchConstraints(program, f.constraints);

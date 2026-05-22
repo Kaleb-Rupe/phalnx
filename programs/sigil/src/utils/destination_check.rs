@@ -241,6 +241,10 @@ mod h1_hard_reject_tests {
             stable_balance_floor: 0,
             per_recipient_daily_cap_usd: 0,
             cosign_required: false,
+            // D-5 (audit 2026-05-19, F-RP3-1): mock policy disables the
+            // reactivate-cosign gate. Tests below exercise the destination
+            // check before any policy field is read, so this is inert here.
+            cosign_session_pubkey: Pubkey::default(),
         }
     }
 

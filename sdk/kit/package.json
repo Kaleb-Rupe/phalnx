@@ -71,7 +71,7 @@
     "check-surface": "node --import tsx scripts/check-surface.ts",
     "verify-lockfile-pins": "node --import tsx scripts/verify-lockfile-pins.ts",
     "pretest": "pnpm run codegen:errors && tsc -p tsconfig.test.json --noEmit",
-    "test": "mocha --require tsx --require tests/global-setup.ts 'tests/*.test.ts' 'tests/core/*.test.ts' 'tests/dashboard/*.test.ts' 'tests/errors/*.test.ts' 'tests/experimental/*.test.ts' 'tests/helpers/*.test.ts' 'tests/policy/*.test.ts' --timeout 30000",
+    "test": "mocha --require tsx --require tests/global-setup.ts 'tests/*.test.ts' 'tests/al-envelope/*.test.ts' 'tests/core/*.test.ts' 'tests/dashboard/*.test.ts' 'tests/errors/*.test.ts' 'tests/experimental/*.test.ts' 'tests/helpers/*.test.ts' 'tests/policy/*.test.ts' --timeout 30000",
     "test:devnet": "mocha --require tsx tests/devnet/**/*.test.ts --timeout 300000",
     "test:experimental": "mocha --require tsx tests/experimental/**/*.test.ts --timeout 30000",
     "check:examples": "tsc -p tsconfig.examples.json"

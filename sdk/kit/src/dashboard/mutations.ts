@@ -79,6 +79,15 @@ import { getApplyCloseConstraintsInstructionAsync } from "../generated/instructi
 import { getCancelCloseConstraintsInstructionAsync } from "../generated/instructions/cancelCloseConstraints.js";
 import { getCreatePostAssertionsInstructionAsync } from "../generated/instructions/createPostAssertions.js";
 import { getClosePostAssertionsInstructionAsync } from "../generated/instructions/closePostAssertions.js";
+
+// M-2 (pre-redeploy audit 2026-05-21): Phase 8 ownership-transfer ix builders.
+// The on-chain handlers live at programs/sigil/src/instructions/
+// {initiate,accept,cancel}_ownership_transfer.rs plus the Squads V4
+// accept-multisig variant.
+import { getInitiateOwnershipTransferInstructionAsync } from "../generated/instructions/initiateOwnershipTransfer.js";
+import { getAcceptOwnershipTransferInstructionAsync } from "../generated/instructions/acceptOwnershipTransfer.js";
+import { getAcceptOwnershipTransferMultisigInstructionAsync } from "../generated/instructions/acceptOwnershipTransferMultisig.js";
+import { getCancelOwnershipTransferInstructionAsync } from "../generated/instructions/cancelOwnershipTransfer.js";
 import type { PostAssertionEntry } from "../generated/types/postAssertionEntry.js";
 import { validatePostAssertionEntries } from "./post-assertion-validation.js";
 import {
@@ -156,6 +165,10 @@ async function siblingHandlerExpectedDigest(
     // Sibling handlers never mutate cosign_required — the user changes
     // this via `queue_policy_update` only.
     cosignRequired: livePolicy.data.cosignRequired,
+    // D-5 (Bucket 2 audit 2026-05-21, F-RP3-1): pass-through from live
+    // policy. Position 22 of the canonical TA-19 digest. Sibling handlers
+    // never mutate this — owner sets via queue_policy_update only.
+    cosignSessionPubkey: livePolicy.data.cosignSessionPubkey,
   });
 }
 
@@ -759,10 +772,8 @@ export async function queuePolicyUpdate(
   const effDestinations =
     changes.allowedDestinations ?? livePolicy.data.allowedDestinations;
   const effDaily = changes.dailyCap ?? livePolicy.data.dailySpendingCapUsd;
-  const effMaxTx =
-    changes.maxPerTrade ?? livePolicy.data.maxTransactionSizeUsd;
-  const effMaxSlip =
-    changes.maxSlippageBps ?? livePolicy.data.maxSlippageBps;
+  const effMaxTx = changes.maxPerTrade ?? livePolicy.data.maxTransactionSizeUsd;
+  const effMaxSlip = changes.maxSlippageBps ?? livePolicy.data.maxSlippageBps;
   // PEN-CROSS-6: developer_fee_rate is now part of the digest. Project the
   // merged-effective value the same way as other Option<…> fields.
   const effDeveloperFeeRate =
@@ -842,6 +853,11 @@ export async function queuePolicyUpdate(
     // aware of the one-way-ratchet semantics (true→false requires
     // cosign; false→true does not).
     cosignRequired: null,
+    // D-5 (Bucket 2 audit 2026-05-21, F-RP3-1): not mutated by this
+    // non-elevated surface — pass null to keep live policy value. Owner
+    // sets cosign_session_pubkey via a dedicated elevated helper that
+    // verifies the new pubkey isn't a Sigil-protected PDA at queue time.
+    cosignSessionPubkey: null,
     // TA-09 (Phase 3): non-elevated path by default — pass the
     // System Program / zero-pubkey ("11111111111111111111111111111111").
     // Elevated mutations through this dashboard surface require a
@@ -863,8 +879,7 @@ export async function queuePolicyUpdate(
     //     queue surfaces `InvalidPermissions` (6088). INTENTIONAL — the
     //     on-chain handler refuses to silently downgrade a caller's
     //     declared intent (Option A behaviour).
-    cosignSession:
-      "11111111111111111111111111111111" as unknown as Address,
+    cosignSession: "11111111111111111111111111111111" as unknown as Address,
     newPolicyPreviewDigest,
   });
   return run(rpc, owner, network, [ix], opts);
@@ -936,8 +951,7 @@ export async function queueAgentPermissions(
     //     non-elevated queue surfaces `InvalidPermissions` (6088).
     //     INTENTIONAL — the on-chain handler refuses to silently
     //     downgrade a caller's declared intent (Option A behaviour).
-    cosignSession:
-      "11111111111111111111111111111111" as unknown as Address,
+    cosignSession: "11111111111111111111111111111111" as unknown as Address,
   });
   return run(rpc, owner, network, [ix], opts);
 }
@@ -1216,4 +1230,154 @@ export async function closePostAssertions(
     expectedDigest,
   });
   return run(rpc, owner, network, [ix], opts);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// M-2 (pre-redeploy audit 2026-05-21): Phase 8 ownership-transfer mutations.
+//
+// On-chain reference: programs/sigil/src/instructions/
+//   - initiate_ownership_transfer.rs (owner queues transfer + 48h timelock)
+//   - accept_ownership_transfer.rs   (new wallet-owner finalises after timelock)
+//   - accept_ownership_transfer_multisig.rs (Squads V4 PDA accepts via CPI)
+//   - cancel_ownership_transfer.rs   (current owner aborts during timelock)
+//
+// Cosign gate: when `policy.cosign_required = true`, `queue_policy_update`
+// AND `initiate_ownership_transfer` BOTH require a non-owner co-signer in
+// `remaining_accounts` (D4 symmetric cosign gate). The mutations below
+// expose the `cosignSession` parameter; pass `undefined` when the policy
+// does not require cosign.
+//
+// LBL-01: all four ix derive vault state by reading
+// `vault.vault_authority` (immutable) — the on-chain accept handler
+// overwrites `vault.owner` but the PDA address stays put.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Queue an ownership transfer for `vault`. The pending PDA carries the
+ * target `newOwner` plus the configured timelock (default 48h). The
+ * transfer is finalised only by a follow-up `acceptOwnershipTransfer`
+ * (wallet) or `acceptOwnershipTransferMultisig` (Squads V4).
+ *
+ * @param newOwner          The pubkey that will become `vault.owner` after
+ *                          accept. MUST NOT be a system program / sysvar
+ *                          (rejected on-chain by `ErrInvalidOwnershipTarget`).
+ * @param isMultisigTarget  Set to `true` when `newOwner` is a Squads V4
+ *                          multisig PDA — the on-chain handler enforces
+ *                          that the matching accept variant is used.
+ *
+ * Cosign behaviour: when `policy.cosign_required = true`, the on-chain
+ * handler enforces a non-owner co-signer; pass the cosign session pubkey
+ * via the SDK's transaction-signing layer when building the tx. Pre-G6
+ * (audit 2026-05-18) policies without cosign opt-in succeed without one.
+ *
+ * Replays the H-3 "no double-initiate" rule: a second initiate without
+ * an intervening `cancelOwnershipTransfer` fails with
+ * `ErrPendingOwnershipExists` (6103).
+ */
+export async function initiateOwnershipTransfer(
+  rpc: Rpc<SolanaRpcApi>,
+  vault: Address,
+  owner: TransactionSigner,
+  network: "devnet" | "mainnet",
+  newOwner: Address,
+  isMultisigTarget: boolean,
+  opts?: TxOpts,
+): Promise<TxResult> {
+  const ix = await getInitiateOwnershipTransferInstructionAsync({
+    owner,
+    vault,
+    newOwner,
+    isMultisigTarget,
+  });
+  return run(rpc, owner, network, [ix], opts);
+}
+
+/**
+ * Finalise a previously-initiated ownership transfer when the incoming
+ * owner is a wallet (keypair) signer. The new owner MUST be the signer
+ * of the enclosing transaction; the on-chain handler verifies their key
+ * matches `pending.new_owner`.
+ *
+ * Timelock: the transfer is only accepted after the configured timelock
+ * has elapsed (default 48h). Calls before the window expires fail with
+ * `ErrPendingOwnershipNotReady` (6104).
+ *
+ * Note: the `owner` argument on this function is the NEW owner who
+ * accepts — kept as `owner` for parity with the rest of the mutations
+ * surface, but semantically `newOwner.address` is what lands on-chain
+ * as `vault.owner`. `vault.vault_authority` (the immutable PDA seed)
+ * is unchanged by this ix.
+ */
+export async function acceptOwnershipTransfer(
+  rpc: Rpc<SolanaRpcApi>,
+  vault: Address,
+  newOwner: TransactionSigner,
+  network: "devnet" | "mainnet",
+  opts?: TxOpts,
+): Promise<TxResult> {
+  const ix = await getAcceptOwnershipTransferInstructionAsync({
+    newOwner,
+    vault,
+  });
+  return run(rpc, newOwner, network, [ix], opts);
+}
+
+/**
+ * Finalise a previously-initiated ownership transfer when the incoming
+ * owner is a Squads V4 multisig PDA (NOT a wallet signer). The Squads
+ * program is the CPI caller; the multisig PDA itself has no private key.
+ *
+ * The on-chain handler verifies:
+ *   1. `multisig_pda.owner == SQUADS_V4_PROGRAM_ID`
+ *   2. `multisig_pda.key() == pending.new_owner`
+ *   3. `pending.is_multisig_target == true`
+ *
+ * Caller is responsible for routing this ix through the Squads V4
+ * proposal flow so it reaches the on-chain handler under the Squads
+ * program signer seeds. The `feePayer` MUST be a wallet signer that
+ * funds the tx; this SDK call accepts that signer separately so the
+ * Squads PDA is NOT a signer at the kit transaction-signing layer.
+ *
+ * Timelock + cosign rules identical to {@link acceptOwnershipTransfer}.
+ */
+export async function acceptOwnershipTransferMultisig(
+  rpc: Rpc<SolanaRpcApi>,
+  vault: Address,
+  multisigPda: Address,
+  feePayer: TransactionSigner,
+  network: "devnet" | "mainnet",
+  opts?: TxOpts,
+): Promise<TxResult> {
+  const ix = await getAcceptOwnershipTransferMultisigInstructionAsync({
+    multisigPda,
+    vault,
+  });
+  return run(rpc, feePayer, network, [ix], opts);
+}
+
+/**
+ * Cancel a queued ownership transfer during the timelock window. The
+ * `currentOwner` (signer) MUST match `pending.current_owner` (the
+ * pubkey that called `initiateOwnershipTransfer`); the on-chain handler
+ * rejects with a require-keys-eq violation otherwise.
+ *
+ * Closes the pending PDA and returns rent to the current owner. After
+ * this ix lands, `initiateOwnershipTransfer` is callable again to queue
+ * a different target.
+ *
+ * Cosign behaviour (D4 symmetric gate): if `policy.cosign_required`,
+ * cancellation also requires a non-owner co-signer.
+ */
+export async function cancelOwnershipTransfer(
+  rpc: Rpc<SolanaRpcApi>,
+  vault: Address,
+  currentOwner: TransactionSigner,
+  network: "devnet" | "mainnet",
+  opts?: TxOpts,
+): Promise<TxResult> {
+  const ix = await getCancelOwnershipTransferInstructionAsync({
+    currentOwner,
+    vault,
+  });
+  return run(rpc, currentOwner, network, [ix], opts);
 }

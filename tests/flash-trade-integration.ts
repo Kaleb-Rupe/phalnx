@@ -139,7 +139,13 @@ describe("flash-trade-integration", () => {
     const currentVersion = (polAcct as any).policyVersion ?? new BN(0);
 
     const validateIx = await program.methods
-      .validateAndAuthorize(tokenMint, amount, targetProtocol, currentVersion, new BN(0))
+      .validateAndAuthorize(
+        tokenMint,
+        amount,
+        targetProtocol,
+        currentVersion,
+        new BN(0),
+      )
       .accountsPartial({
         agent: agentKp.publicKey,
         vault,
@@ -240,36 +246,37 @@ describe("flash-trade-integration", () => {
 
     // Initialize vault with perp-friendly policy
     await program.methods
-      .initializeVault(vaultId,
-          new BN(1_000_000_000),
-          new BN(500_000_000),
-          1,
-          [flashProtocol],
-          0,
-          100,
-          new BN(1800),
-          [],
-          [],
-          false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
-          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
-          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
-          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
-          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
-          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
-          initVaultPreviewDigest({
-            dailySpendingCapUsd: new BN(1_000_000_000),
-            maxTransactionSizeUsd: new BN(500_000_000),
-            maxSlippageBps: 100,
-            protocolMode: 1,
-            protocols: [flashProtocol],
-            allowedDestinations: [],
-            timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
-            autoPromoteGrays: false,
-            autoRevokeThreshold: 5,
-          }),
-        )
+      .initializeVault(
+        vaultId,
+        new BN(1_000_000_000),
+        new BN(500_000_000),
+        1,
+        [flashProtocol],
+        0,
+        100,
+        new BN(1800),
+        [],
+        [],
+        false, // observeOnly (Phase 2 TA-19)
+        0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
+        false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+        5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+        new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+        new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+        false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
+        initVaultPreviewDigest({
+          dailySpendingCapUsd: new BN(1_000_000_000),
+          maxTransactionSizeUsd: new BN(500_000_000),
+          maxSlippageBps: 100,
+          protocolMode: 1,
+          protocols: [flashProtocol],
+          allowedDestinations: [],
+          timelockDuration: new BN(1800),
+          operatingHours: 0x00ffffff,
+          autoPromoteGrays: false,
+          autoRevokeThreshold: 5,
+        }),
+      )
       .accountsPartial({
         owner: owner.publicKey,
         vault: vaultPda,
@@ -436,7 +443,8 @@ describe("flash-trade-integration", () => {
       );
 
       await program.methods
-        .initializeVault(frozenVaultId,
+        .initializeVault(
+          frozenVaultId,
           new BN(1_000_000_000),
           new BN(500_000_000),
           1,
@@ -447,7 +455,7 @@ describe("flash-trade-integration", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -461,7 +469,7 @@ describe("flash-trade-integration", () => {
             protocols: [flashProtocol],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -625,7 +633,8 @@ describe("flash-trade-integration", () => {
       // (Phase 2 Option A: protocol_mode is hard-coded to 1 = ALLOWLIST; "all
       // protocols allowed" is no longer expressible — owners must enumerate.)
       await program.methods
-        .initializeVault(capVaultId,
+        .initializeVault(
+          capVaultId,
           new BN(200_000_000),
           new BN(200_000_000),
           1,
@@ -636,7 +645,7 @@ describe("flash-trade-integration", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -650,7 +659,7 @@ describe("flash-trade-integration", () => {
             protocols: [mockProtocol],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),

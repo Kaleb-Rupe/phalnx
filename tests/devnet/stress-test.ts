@@ -111,7 +111,7 @@ async function createVault(opts: {
         protocols: [],
         allowedDestinations: opts.destinations ?? [],
         timelockDuration: new BN(1800),
-        operatingHours: 0x00FFFFFF,
+        operatingHours: 0x00ffffff,
         autoPromoteGrays: false,
         autoRevokeThreshold: 5,
       }),
@@ -678,7 +678,9 @@ describe("🔥 SIGIL DEVNET STRESS TEST — Real Tokens, Real Limits", function 
       // cooldown (ErrReactivateCooldownActive 6106). Devnet stress test runs
       // ad-hoc, not in CI; 5-min wall-clock wait is acceptable here. No clock
       // mocking available on devnet validator.
-      console.log("    ⏳ Waiting 301s for reactivate cooldown (devnet wall-clock)...");
+      console.log(
+        "    ⏳ Waiting 301s for reactivate cooldown (devnet wall-clock)...",
+      );
       await new Promise((r) => setTimeout(r, 301_000));
 
       // Reactivate (unfreeze) — pass null for optional new agent params

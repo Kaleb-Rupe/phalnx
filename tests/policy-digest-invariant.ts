@@ -135,7 +135,7 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
         // Phase 3 (TA-05/TA-07/TA-17): operating_hours, auto_promote_grays,
         // auto_revoke_threshold are now positional args BEFORE preview_digest.
         // Values MUST match the helper below.
-        0x00FFFFFF, // operatingHours — all 24h
+        0x00ffffff, // operatingHours — all 24h
         false, // autoPromoteGrays
         5, // autoRevokeThreshold — must be in [3, 20]
         new BN(0), // stableBalanceFloor (TA-12 Phase 5 — no reserve)
@@ -150,7 +150,7 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
           allowedDestinations: [],
           timelockDuration: new BN(1800),
           observeOnly: true,
-          operatingHours: 0x00FFFFFF,
+          operatingHours: 0x00ffffff,
           autoPromoteGrays: false,
           autoRevokeThreshold: 5,
         }),
@@ -323,12 +323,8 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
   });
 
   it("apply_close_constraints recomputes policy_preview_digest", async () => {
-    const {
-      vaultPda,
-      policyPda,
-      constraintsPda,
-      pendingCloseConstraintsPda,
-    } = await freshVault(901);
+    const { vaultPda, policyPda, constraintsPda, pendingCloseConstraintsPda } =
+      await freshVault(901);
 
     // Establish constraints (this also recomputes digest; we use the post-create
     // state as the "before" baseline for the close path).
@@ -758,7 +754,7 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
         observeOnly,
         // Phase 3 (TA-05/TA-07/TA-17): operating_hours, auto_promote_grays,
         // auto_revoke_threshold are now positional args BEFORE preview_digest.
-        0x00FFFFFF, // operatingHours — all 24h
+        0x00ffffff, // operatingHours — all 24h
         false, // autoPromoteGrays
         5, // autoRevokeThreshold — must be in [3, 20]
         new BN(0), // stableBalanceFloor (TA-12 Phase 5 — no reserve)
@@ -773,7 +769,7 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
           allowedDestinations: [],
           timelockDuration: new BN(1800),
           observeOnly,
-          operatingHours: 0x00FFFFFF,
+          operatingHours: 0x00ffffff,
           autoPromoteGrays: false,
           autoRevokeThreshold: 5,
         }),
@@ -873,7 +869,13 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
     );
 
     const validateIx = await program.methods
-      .validateAndAuthorize(usdcMint, new BN(0), dummyProtocol, currentVersion, new BN(0))
+      .validateAndAuthorize(
+        usdcMint,
+        new BN(0),
+        dummyProtocol,
+        currentVersion,
+        new BN(0),
+      )
       .accounts({
         agent: agent.publicKey,
         vault: vault.vaultPda,
@@ -904,9 +906,10 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
         `expected ObserveOnlyModeBlocksExecute (6081), got: ${msg}`,
       );
     }
-    expect(threw, "validate_and_authorize MUST reject on observe_only").to.equal(
-      true,
-    );
+    expect(
+      threw,
+      "validate_and_authorize MUST reject on observe_only",
+    ).to.equal(true);
   });
 
   // ---------------------------------------------------------------------------
@@ -1113,7 +1116,13 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
     let threw = false;
     try {
       await program.methods
-        .queueAgentPermissionsUpdate(agent.publicKey, 5, new BN(0), new BN(0), PublicKey.default)
+        .queueAgentPermissionsUpdate(
+          agent.publicKey,
+          5,
+          new BN(0),
+          new BN(0),
+          PublicKey.default,
+        )
         .accounts({
           owner: owner.publicKey,
           vault: vault.vaultPda,
@@ -1201,9 +1210,8 @@ describe("PEN-CROSS-2 — close+reinit replay protection", () => {
 
     // Advance slot — simulates: "owner closed vault, then time passed, then
     // tried to re-init". Even a single-slot delta produces a mismatch.
-    const advancePastSlotFn = (
-      await import("./helpers/litesvm-setup")
-    ).advancePastSlot;
+    const advancePastSlotFn = (await import("./helpers/litesvm-setup"))
+      .advancePastSlot;
     advancePastSlotFn(svm, oldSlot + 5);
 
     // Build the STALE signed init: digest encodes oldSlot. The attacker
@@ -1219,7 +1227,7 @@ describe("PEN-CROSS-2 — close+reinit replay protection", () => {
       timelockDuration: new BN(1800),
       observeOnly: false,
       createdAtSlot: oldSlot,
-      operatingHours: 0x00FFFFFF,
+      operatingHours: 0x00ffffff,
       autoPromoteGrays: false,
       autoRevokeThreshold: 5,
     });
@@ -1243,7 +1251,7 @@ describe("PEN-CROSS-2 — close+reinit replay protection", () => {
           // helper above (operatingHours=0x00FFFFFF, autoPromoteGrays=false,
           // autoRevokeThreshold=5). The mismatch here is intentional on
           // `createdAtSlot`, not on the Phase 3 fields.
-          0x00FFFFFF,
+          0x00ffffff,
           false,
           5,
           new BN(0), // stableBalanceFloor (TA-12 Phase 5 — no reserve)
@@ -1318,7 +1326,7 @@ describe("PEN-CROSS-2 — close+reinit replay protection", () => {
       timelockDuration: new BN(1800),
       observeOnly: false,
       createdAtSlot: currentSlot,
-      operatingHours: 0x00FFFFFF,
+      operatingHours: 0x00ffffff,
       autoPromoteGrays: false,
       autoRevokeThreshold: 5,
     });
@@ -1338,7 +1346,7 @@ describe("PEN-CROSS-2 — close+reinit replay protection", () => {
         // Phase 3 (TA-05/TA-07/TA-17): positional args match goodInit helper
         // (operatingHours=0x00FFFFFF, autoPromoteGrays=false,
         // autoRevokeThreshold=5).
-        0x00FFFFFF,
+        0x00ffffff,
         false,
         5,
         new BN(0), // stableBalanceFloor (TA-12 Phase 5 — no reserve)
@@ -1435,7 +1443,7 @@ describe("PEN-CROSS-2 — close+reinit replay protection", () => {
       timelockDuration: new BN(1800),
       observeOnly: false,
       createdAtSlot: currentSlot,
-      operatingHours: 0x00FFFFFF,
+      operatingHours: 0x00ffffff,
       autoPromoteGrays: false,
       autoRevokeThreshold: 5,
     });
@@ -1456,7 +1464,7 @@ describe("PEN-CROSS-2 — close+reinit replay protection", () => {
         // Phase 3 (TA-05/TA-07/TA-17): positional args match goodDigest helper
         // (operatingHours=0x00FFFFFF, autoPromoteGrays=false,
         // autoRevokeThreshold=5).
-        0x00FFFFFF,
+        0x00ffffff,
         false,
         5,
         new BN(0), // stableBalanceFloor (TA-12 Phase 5 — no reserve)

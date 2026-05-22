@@ -228,8 +228,10 @@ pub fn handler(
     }
     drop(tracker);
 
-    // Build vault PDA signer seeds
-    let owner_key = vault.owner;
+    // Build vault PDA signer seeds — LBL-01: must use vault.vault_authority
+    // (immutable PDA seed), NOT vault.owner (mutates on ownership transfer).
+    // See full rationale in freeze_vault.rs:76-86.
+    let vault_authority = vault.vault_authority;
     let vault_id_bytes = vault.vault_id.to_le_bytes();
     let vault_bump = vault.bump;
     let vault_fee_destination = vault.fee_destination;
@@ -238,7 +240,7 @@ pub fn handler(
     let bump_slice = [vault_bump];
     let signer_seeds = [
         b"vault" as &[u8],
-        owner_key.as_ref(),
+        vault_authority.as_ref(),
         vault_id_bytes.as_ref(),
         bump_slice.as_ref(),
     ];
@@ -402,9 +404,26 @@ pub fn handler(
         //
         // Pre-seed `seen` with src_ata_key so source-1 (already counted
         // above) is never re-counted via remaining_accounts.
+        //
+        // M-12 close (audit 2026-05-21, defense-in-depth): explicit
+        // iteration cap. The implicit bound is Solana's per-tx 64-account
+        // limit (≈35 usable after fixed accounts), but an explicit cap
+        // gives a deterministic ceiling independent of tx-size mechanics
+        // and is cheap (single u32 increment per iteration). The cap of
+        // 16 matches V1's destination-meta budget and is well above any
+        // legitimate use (an agent_transfer never needs more than 2-3
+        // stablecoin ATAs).
+        const MAX_STABLE_FLOOR_WALK_ITERATIONS: usize = 16;
+        let mut walk_iterations: usize = 0;
+
         let mut seen: Vec<Pubkey> = Vec::with_capacity(2);
         seen.push(src_ata_key);
         for info in ctx.remaining_accounts.iter() {
+            require!(
+                walk_iterations < MAX_STABLE_FLOOR_WALK_ITERATIONS,
+                SigilError::IxMetaCountExceeded
+            );
+            walk_iterations = walk_iterations.saturating_add(1);
             if seen.contains(&info.key()) {
                 continue;
             }

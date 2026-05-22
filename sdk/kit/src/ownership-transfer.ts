@@ -79,7 +79,9 @@ export function buildInitiateOwnershipTransferIx(
     auditLogSuccess: inputs.auditLogSuccess,
     newOwner: inputs.newOwner,
     isMultisigTarget: inputs.isMultisigTarget,
-  } as Parameters<typeof getInitiateOwnershipTransferInstruction>[0]) as InitiateOwnershipTransferInstruction;
+  } as Parameters<
+    typeof getInitiateOwnershipTransferInstruction
+  >[0]) as InitiateOwnershipTransferInstruction;
 }
 
 // ── 2. Accept (wallet signer) ────────────────────────────────────────────────
@@ -101,7 +103,9 @@ export function buildAcceptOwnershipTransferIx(
     policy: inputs.policy,
     pending: inputs.pending,
     auditLogSuccess: inputs.auditLogSuccess,
-  } as Parameters<typeof getAcceptOwnershipTransferInstruction>[0]) as AcceptOwnershipTransferInstruction;
+  } as Parameters<
+    typeof getAcceptOwnershipTransferInstruction
+  >[0]) as AcceptOwnershipTransferInstruction;
 }
 
 // ── 3. Accept (Squads V4 multisig variant) ──────────────────────────────────
@@ -129,7 +133,9 @@ export function buildAcceptOwnershipTransferMultisigIx(
     policy: inputs.policy,
     pending: inputs.pending,
     auditLogSuccess: inputs.auditLogSuccess,
-  } as Parameters<typeof getAcceptOwnershipTransferMultisigInstruction>[0]) as AcceptOwnershipTransferMultisigInstruction;
+  } as Parameters<
+    typeof getAcceptOwnershipTransferMultisigInstruction
+  >[0]) as AcceptOwnershipTransferMultisigInstruction;
 }
 
 // ── 4. Cancel ────────────────────────────────────────────────────────────────
@@ -155,5 +161,7 @@ export function buildCancelOwnershipTransferIx(
     policy: inputs.policy,
     pending: inputs.pending,
     auditLogSuccess: inputs.auditLogSuccess,
-  } as Parameters<typeof getCancelOwnershipTransferInstruction>[0]) as CancelOwnershipTransferInstruction;
+  } as Parameters<
+    typeof getCancelOwnershipTransferInstruction
+  >[0]) as CancelOwnershipTransferInstruction;
 }

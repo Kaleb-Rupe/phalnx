@@ -107,9 +107,10 @@ const AGENT_VAULT_SIZE = 634;
  *       + 1 auto_promote_grays [TA-07] + 1 auto_revoke_threshold [TA-17]
  *       + 8 stable_balance_floor [TA-12 Phase 5]
  *       + 8 per_recipient_daily_cap_usd [TA-14 Phase 5]
- *       + 1 cosign_required [G6 audit 2026-05-18] = 1,290.
+ *       + 1 cosign_required [G6 audit 2026-05-18]
+ *       + 32 cosign_session_pubkey [D-5 audit 2026-05-19, F-RP3-1] = 1,322.
  */
-const POLICY_CONFIG_SIZE = 1_290;
+const POLICY_CONFIG_SIZE = 1_322;
 
 /**
  * `SpendTracker::SIZE` from `programs/sigil/src/state/tracker.rs:200-214`.

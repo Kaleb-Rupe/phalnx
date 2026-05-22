@@ -21,7 +21,13 @@
  * never leaves this file unencrypted; future versions will optionally
  * encrypt with a passphrase (xchacha20-poly1305) and prompt on load.
  */
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 

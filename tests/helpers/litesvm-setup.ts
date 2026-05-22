@@ -937,7 +937,10 @@ export function autoSiblingHandlerDigest(
   // `policy-digest.ts::siblingHandlerDigest`, AND this synchronous
   // helper).
   const agentList: ReadonlyArray<{ pubkey: PublicKey; capability: number }> =
-    (vault.agents as ReadonlyArray<{ pubkey: PublicKey; capability: number }>) ?? [];
+    (vault.agents as ReadonlyArray<{
+      pubkey: PublicKey;
+      capability: number;
+    }>) ?? [];
   const sorted = [...agentList].sort((a, b) => {
     const ab = a.pubkey.toBuffer();
     const bb = b.pubkey.toBuffer();

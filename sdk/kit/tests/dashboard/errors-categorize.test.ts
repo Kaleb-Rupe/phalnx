@@ -40,12 +40,24 @@ describe("isOnChainReverted — exact range boundaries", () => {
     expect(isOnChainReverted(5999)).to.equal(false);
   });
 
-  it("true at 6108 (post-Phase-8 ceiling, ErrTooManyRevokePairs)", () => {
+  it("true at 6108 (ErrTooManyRevokePairs)", () => {
     expect(isOnChainReverted(6108)).to.equal(true);
   });
 
-  it("false at 6109 (one above the post-Phase-8 V2 ceiling)", () => {
-    expect(isOnChainReverted(6109)).to.equal(false);
+  it("true at 6109 (ErrPostAssertionsNotClosed)", () => {
+    expect(isOnChainReverted(6109)).to.equal(true);
+  });
+
+  it("true at 6110 (ErrDestinationIsProtectedPda)", () => {
+    expect(isOnChainReverted(6110)).to.equal(true);
+  });
+
+  it("true at 6114 (Bucket-2 ceiling, ErrReactivateCosignRequiredForFullCapability)", () => {
+    expect(isOnChainReverted(6114)).to.equal(true);
+  });
+
+  it("false at 6115 (one above the post-Bucket-2 V2 ceiling)", () => {
+    expect(isOnChainReverted(6115)).to.equal(false);
   });
 
   it("CRIT-3 invariant: every code in SIGIL_ERRORS classifies as on-chain", async () => {
@@ -101,7 +113,11 @@ describe("categorizeDxError — exact range boundaries", () => {
     { code: 6050, category: "program", description: "mid program range" },
     { code: 6097, category: "program", description: "Phase 6 R-1" },
     { code: 6101, category: "program", description: "Phase 6 R-4" },
-    { code: 6105, category: "program", description: "Phase 8 freeze hardening" },
+    {
+      code: 6105,
+      category: "program",
+      description: "Phase 8 freeze hardening",
+    },
 
     // User / SDK range (7000-7099)
     { code: 7000, category: "user", description: "user lower bound" },
@@ -115,7 +131,7 @@ describe("categorizeDxError — exact range boundaries", () => {
 
     // Unknown — outside all defined ranges
     { code: 5999, category: "unknown", description: "one below program range" },
-    { code: 6109, category: "unknown", description: "one above program range" },
+    { code: 6115, category: "unknown", description: "one above program range" },
     { code: 6999, category: "unknown", description: "one below user range" },
     { code: 7200, category: "unknown", description: "one above network range" },
     { code: 7999, category: "unknown", description: "DX_ERROR_CODE_UNMAPPED" },

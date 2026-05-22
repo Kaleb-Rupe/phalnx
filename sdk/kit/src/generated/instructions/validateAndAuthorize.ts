@@ -135,6 +135,7 @@ export type ValidateAndAuthorizeInstructionData = {
   targetProtocol: Address;
   expectedPolicyVersion: bigint;
   expectedNonce: bigint;
+  expectedIntentDigest: ReadonlyUint8Array;
 };
 
 export type ValidateAndAuthorizeInstructionDataArgs = {
@@ -143,6 +144,7 @@ export type ValidateAndAuthorizeInstructionDataArgs = {
   targetProtocol: Address;
   expectedPolicyVersion: number | bigint;
   expectedNonce: number | bigint;
+  expectedIntentDigest: ReadonlyUint8Array;
 };
 
 export function getValidateAndAuthorizeInstructionDataEncoder(): FixedSizeEncoder<ValidateAndAuthorizeInstructionDataArgs> {
@@ -154,6 +156,7 @@ export function getValidateAndAuthorizeInstructionDataEncoder(): FixedSizeEncode
       ["targetProtocol", getAddressEncoder()],
       ["expectedPolicyVersion", getU64Encoder()],
       ["expectedNonce", getU64Encoder()],
+      ["expectedIntentDigest", fixEncoderSize(getBytesEncoder(), 32)],
     ]),
     (value) => ({
       ...value,
@@ -170,6 +173,7 @@ export function getValidateAndAuthorizeInstructionDataDecoder(): FixedSizeDecode
     ["targetProtocol", getAddressDecoder()],
     ["expectedPolicyVersion", getU64Decoder()],
     ["expectedNonce", getU64Decoder()],
+    ["expectedIntentDigest", fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }
 
@@ -201,6 +205,13 @@ export type ValidateAndAuthorizeAsyncInput<
 > = {
   agent: TransactionSigner<TAccountAgent>;
   vault: Address<TAccountVault>;
+  /**
+   * Boxed to keep the `ValidateAndAuthorize::try_accounts` stack frame
+   * below BPF's 4 KB ceiling. Phase 10 D-5 added 32 bytes
+   * (`cosign_session_pubkey`) to PolicyConfig, pushing the codegen
+   * frame from 4072 to 4104 bytes (8 over). `Box` moves the deserialized
+   * wrapper to the heap, restoring headroom.
+   */
   policy?: Address<TAccountPolicy>;
   /** Zero-copy SpendTracker */
   tracker?: Address<TAccountTracker>;
@@ -236,6 +247,7 @@ export type ValidateAndAuthorizeAsyncInput<
   targetProtocol: ValidateAndAuthorizeInstructionDataArgs["targetProtocol"];
   expectedPolicyVersion: ValidateAndAuthorizeInstructionDataArgs["expectedPolicyVersion"];
   expectedNonce: ValidateAndAuthorizeInstructionDataArgs["expectedNonce"];
+  expectedIntentDigest: ValidateAndAuthorizeInstructionDataArgs["expectedIntentDigest"];
 };
 
 export async function getValidateAndAuthorizeInstructionAsync<
@@ -477,6 +489,13 @@ export type ValidateAndAuthorizeInput<
 > = {
   agent: TransactionSigner<TAccountAgent>;
   vault: Address<TAccountVault>;
+  /**
+   * Boxed to keep the `ValidateAndAuthorize::try_accounts` stack frame
+   * below BPF's 4 KB ceiling. Phase 10 D-5 added 32 bytes
+   * (`cosign_session_pubkey`) to PolicyConfig, pushing the codegen
+   * frame from 4072 to 4104 bytes (8 over). `Box` moves the deserialized
+   * wrapper to the heap, restoring headroom.
+   */
   policy: Address<TAccountPolicy>;
   /** Zero-copy SpendTracker */
   tracker: Address<TAccountTracker>;
@@ -512,6 +531,7 @@ export type ValidateAndAuthorizeInput<
   targetProtocol: ValidateAndAuthorizeInstructionDataArgs["targetProtocol"];
   expectedPolicyVersion: ValidateAndAuthorizeInstructionDataArgs["expectedPolicyVersion"];
   expectedNonce: ValidateAndAuthorizeInstructionDataArgs["expectedNonce"];
+  expectedIntentDigest: ValidateAndAuthorizeInstructionDataArgs["expectedIntentDigest"];
 };
 
 export function getValidateAndAuthorizeInstruction<
@@ -686,6 +706,13 @@ export type ParsedValidateAndAuthorizeInstruction<
   accounts: {
     agent: TAccountMetas[0];
     vault: TAccountMetas[1];
+    /**
+     * Boxed to keep the `ValidateAndAuthorize::try_accounts` stack frame
+     * below BPF's 4 KB ceiling. Phase 10 D-5 added 32 bytes
+     * (`cosign_session_pubkey`) to PolicyConfig, pushing the codegen
+     * frame from 4072 to 4104 bytes (8 over). `Box` moves the deserialized
+     * wrapper to the heap, restoring headroom.
+     */
     policy: TAccountMetas[2];
     /** Zero-copy SpendTracker */
     tracker: TAccountMetas[3];

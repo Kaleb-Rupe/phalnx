@@ -44,7 +44,8 @@ import {
 const VAULT_ADDR = "11111111111111111111111111111112" as Address; // 31 ones + 2
 const AGENT_ADDR = "11111111111111111111111111111113" as Address;
 const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" as Address; // mainnet USDC
-const JUPITER_PROGRAM = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" as Address;
+const JUPITER_PROGRAM =
+  "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" as Address;
 const SYSTEM_PROGRAM = "11111111111111111111111111111111" as Address;
 const RECIPIENT_A = "DRiP2Pn2K6fuMLKQmt5rZWxa91q2hHC1mU9hZuMHFmGw" as Address;
 const RECIPIENT_B = "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM" as Address;
@@ -404,8 +405,7 @@ describe("AL3 — implementation discipline checks (NEVER JSON.stringify)", () =
     const { readFileSync } = require("node:fs") as typeof import("node:fs");
     const { resolve, dirname } =
       require("node:path") as typeof import("node:path");
-    const { fileURLToPath } =
-      require("node:url") as typeof import("node:url");
+    const { fileURLToPath } = require("node:url") as typeof import("node:url");
     const thisFile = fileURLToPath((import.meta as { url: string }).url);
     const here = dirname(thisFile);
     const src = readFileSync(

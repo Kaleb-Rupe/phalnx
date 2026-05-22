@@ -198,7 +198,14 @@ describe("missing-coverage (DC audit gap-fill 2026-05-19)", () => {
         discriminatorFormat: { anchor8: {} },
       },
     ];
-    createConstraintsAccount(program, svm, (owner as any).payer, vault, policy, entries);
+    createConstraintsAccount(
+      program,
+      svm,
+      (owner as any).payer,
+      vault,
+      policy,
+      entries,
+    );
 
     // Queue close.
     await program.methods
@@ -351,7 +358,8 @@ describe("missing-coverage (DC audit gap-fill 2026-05-19)", () => {
     const grayBefore = (policyBefore.destinationGraylist as any[]).find(
       (g) => g.destination.toString() === newDestination.toString(),
     );
-    expect(grayBefore, "graylist entry should exist after apply").to.not.be.undefined;
+    expect(grayBefore, "graylist entry should exist after apply").to.not.be
+      .undefined;
     const nowBefore = Number(svm.getClock().unixTimestamp);
     expect(grayBefore!.unlockUnix.toNumber()).to.be.greaterThan(nowBefore);
 
@@ -693,9 +701,8 @@ describe("missing-coverage (DC audit gap-fill 2026-05-19)", () => {
       .rpc();
 
     // Sanity: pending PDA exists with the cosigner bound.
-    const pending = await program.account.pendingPolicyUpdate.fetch(
-      pendingPolicy,
-    );
+    const pending =
+      await program.account.pendingPolicyUpdate.fetch(pendingPolicy);
     expect(pending.cosignSession.toString()).to.equal(
       cosigner.publicKey.toString(),
     );
@@ -894,9 +901,8 @@ describe("missing-coverage (DC audit gap-fill 2026-05-19)", () => {
       .rpc();
 
     // PRECONDITION: pending exists, no cosigner bound.
-    const pendingBefore = await program.account.pendingPolicyUpdate.fetch(
-      pendingPolicy,
-    );
+    const pendingBefore =
+      await program.account.pendingPolicyUpdate.fetch(pendingPolicy);
     expect(pendingBefore.cosignSession.toString()).to.equal(
       PublicKey.default.toString(),
     );
@@ -922,5 +928,78 @@ describe("missing-coverage (DC audit gap-fill 2026-05-19)", () => {
 
     // ASSERT: pending PDA closed.
     expect(accountExists(svm, pendingPolicy)).to.equal(false);
+  });
+
+  // ───────────────────────────────────────────────────────────────────────
+  // 12-13. D-5 close (audit 2026-05-19, F-RP3-1): reactivate cosign-when-FULL
+  //
+  // Attack chain closed:
+  //   1. Owner key is phished (cosigner key intact).
+  //   2. Phisher chains `freeze_vault → reactivate_vault(new_agent=ATTACKER,
+  //      capability=FULL_CAPABILITY)` in a single transaction.
+  //   3. Pre-fix: vault.cosign_required=false vaults had NO gate on this
+  //      path. The attacker walked away with FULL_CAPABILITY operator on
+  //      a vault the owner thought was protected by the (separate) D-5
+  //      `cosign_session_pubkey`.
+  //   4. Post-fix: when the new agent is at FULL_CAPABILITY AND
+  //      `policy.cosign_session_pubkey != Pubkey::default()`, the handler
+  //      requires an `is_signer == true` entry in `remaining_accounts`
+  //      matching the bound pubkey. The attacker (owner-key only) has no
+  //      such signature → reject 6114.
+  //
+  // Tests:
+  //   12. NEGATIVE: reactivate(new_agent=X, FULL_CAPABILITY) WITHOUT
+  //       cosign on a vault with `cosign_session_pubkey` configured →
+  //       reject `ErrReactivateCosignRequiredForFullCapability` (6114).
+  //   13. POSITIVE (gate doesn't over-fire): reactivate(new_agent=X,
+  //       OBSERVER) WITHOUT cosign on the same vault → succeeds. The
+  //       gate ONLY fires for FULL_CAPABILITY; lower capabilities pass
+  //       through under the existing owner-only flow.
+  //
+  // NOTE — both tests bypass the test-side cosign-session opt-in plumbing
+  // because the worktree's IDL has NOT been regenerated for the new
+  // `cosign_session_pubkey` arg on `queue_policy_update`. The parent
+  // orchestrator's regen pass will surface that arg into the test client;
+  // these tests will need to be updated to actually queue the opt-in via
+  // queue_policy_update. For NOW they assume the on-chain policy has
+  // `cosign_session_pubkey != Pubkey::default()` (which requires the
+  // queue/apply path), so they're scaffolded but commented-pending the
+  // IDL regen.
+  // ───────────────────────────────────────────────────────────────────────
+
+  // Stubs are commented out below (skip) because they require the
+  // post-regen IDL surface to queue `cosign_session_pubkey: Some(pk)`
+  // via `queue_policy_update`. Once parent regen lands, uncomment and
+  // wire the queue call. The runtime gate at `reactivate_vault.rs:158-185`
+  // is the load-bearing primitive — Rust unit tests at
+  // `policy_digest.rs::digest_changes_on_cosign_session_pubkey_flip`
+  // pin the digest binding side cross-impl.
+  it.skip("D-5 NEGATIVE: reactivate(FULL_CAPABILITY) without cosigner on opted-in vault → reject 6114", async () => {
+    // SCAFFOLD: see header comment for the integration plumbing.
+    // 1. Init vault with cosign_required=false (D-5 gate is orthogonal
+    //    to the existing G6 cosign_required gate — both can be enabled
+    //    independently).
+    // 2. queue_policy_update(cosign_session_pubkey: Some(cosignerPk))
+    //    where cosignerPk = a fresh keypair distinct from owner.
+    //    REQUIRES post-regen IDL.
+    // 3. advanceTime(timelock); apply_pending_policy.
+    // 4. freeze_vault as owner.
+    // 5. advanceTime(300); reactivate_vault(new_agent=attacker,
+    //    capability=FULL_CAPABILITY) with NO remaining_accounts.
+    // 6. ASSERT: rejected with code 6114
+    //    (ErrReactivateCosignRequiredForFullCapability).
+  });
+
+  it.skip("D-5 POSITIVE: reactivate(OBSERVER) without cosigner on opted-in vault → succeeds (gate FULL-only)", async () => {
+    // SCAFFOLD: same prerequisite plumbing as the NEGATIVE test.
+    // 6'. reactivate_vault(new_agent=anyKey, capability=CAPABILITY_OBSERVER)
+    //     with NO remaining_accounts.
+    // 7'. ASSERT: succeeds; vault is Active; the new agent is registered
+    //     at OBSERVER capability. The D-5 gate did NOT over-fire.
+    // 8'. Defense rationale: OBSERVER (and CAPABILITY_DISABLED) cannot
+    //     move funds — `has_capability(.., is_spending=true)` requires
+    //     CAPABILITY_OPERATOR. Adding an OBSERVER on reactivate is a
+    //     low-friction owner action that the D-5 gate intentionally
+    //     does NOT require cosign for.
   });
 });

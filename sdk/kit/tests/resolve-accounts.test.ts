@@ -2,6 +2,7 @@ import { expect } from "chai";
 import type { Address } from "@solana/kit";
 import {
   getVaultPDA,
+  getVaultPdaFromState,
   getPolicyPDA,
   getTrackerPDA,
   getSessionPDA,
@@ -34,6 +35,40 @@ describe("resolve-accounts", () => {
 
     it("returns a bump value", async () => {
       const [, bump] = await getVaultPDA(OWNER, 1n);
+      expect(bump).to.be.a("number");
+      expect(bump).to.be.greaterThanOrEqual(0);
+      expect(bump).to.be.lessThanOrEqual(255);
+    });
+  });
+
+  describe("getVaultPdaFromState (H-5: post-ownership-transfer)", () => {
+    it("derives same PDA as getVaultPDA when authority === owner (pre-transfer)", async () => {
+      const [pdaPre] = await getVaultPDA(OWNER, 3n);
+      const [pdaState] = await getVaultPdaFromState({
+        vaultAuthority: OWNER,
+        vaultId: 3n,
+      });
+      expect(pdaState).to.equal(pdaPre);
+    });
+
+    it("derives different PDA than current owner when authority diverges (post-transfer)", async () => {
+      // After accept_ownership_transfer, vault.owner = AGENT (new owner)
+      // but vault.vault_authority stays pinned to OWNER (original initializer).
+      // Passing the NEW owner to getVaultPDA would produce a wrong PDA;
+      // getVaultPdaFromState with the original authority resolves correctly.
+      const [pdaWrongIfDerivedFromNewOwner] = await getVaultPDA(AGENT, 3n);
+      const [pdaCorrect] = await getVaultPdaFromState({
+        vaultAuthority: OWNER,
+        vaultId: 3n,
+      });
+      expect(pdaCorrect).to.not.equal(pdaWrongIfDerivedFromNewOwner);
+    });
+
+    it("returns a bump value", async () => {
+      const [, bump] = await getVaultPdaFromState({
+        vaultAuthority: OWNER,
+        vaultId: 1n,
+      });
       expect(bump).to.be.a("number");
       expect(bump).to.be.greaterThanOrEqual(0);
       expect(bump).to.be.lessThanOrEqual(255);

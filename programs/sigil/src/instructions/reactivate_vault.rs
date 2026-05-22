@@ -155,6 +155,84 @@ pub fn handler(
             !vault.is_agent(&agent_key),
             SigilError::AgentAlreadyRegistered
         );
+
+        // D-5 close (audit 2026-05-19, F-RP3-1): the FULL_CAPABILITY
+        // reactivate-cosign gate.
+        //
+        // THREAT: a phished owner key could otherwise chain
+        //   `freeze_vault → reactivate_vault(new_agent=ATTACKER, FULL_CAPABILITY)`
+        // in a single transaction. The earlier `policy.cosign_required`
+        // gate at the top of this handler catches that for vaults that
+        // opted into TA-09 cosign — but NOT for vaults whose owners want
+        // to keep the low-friction `cosign_required: false` posture while
+        // still defending against the freeze→reactivate FULL escalation.
+        //
+        // DEFENSE: when the new agent is being grafted at FULL_CAPABILITY,
+        // AND the owner has opted in via `policy.cosign_session_pubkey !=
+        // Pubkey::default()`, require an `is_signer == true` entry in
+        // `remaining_accounts` whose key equals the bound pubkey. The
+        // pubkey itself is TA-19-bound (canonical position 22) so a
+        // tampered SDK cannot silently flip the gate between owner
+        // approval and on-chain landing.
+        //
+        // Defaults preserved: vaults with `cosign_session_pubkey ==
+        // Pubkey::default()` retain today's behavior — no gate fires on
+        // the reactivate path. The gate is strictly opt-in via
+        // `queue_policy_update`.
+        //
+        // OPERATOR (and lower) capability is NOT gated here — only the
+        // FULL_CAPABILITY escalation is. Owners who want broader
+        // reactivate-time cosign should additionally enable
+        // `cosign_required` (the broader gate at the top of the handler).
+        if capability == FULL_CAPABILITY {
+            // NH-1 close (Bucket 2 re-audit 2026-05-21): the FULL_CAPABILITY
+            // grant on the reactivate path is the highest-impact operation
+            // a phished owner can be tricked into authorizing in a single
+            // transaction. Default-on safety requires the gate to fire
+            // REGARDLESS of whether `cosign_session_pubkey` has been
+            // configured — otherwise a freshly-initialized vault (with
+            // `cosign_session_pubkey == Pubkey::default()`) provides ZERO
+            // protection against a single-signature freeze→reactivate
+            // phishing attack.
+            //
+            // Behavior matrix (intentional):
+            //   1. `cosign_session_pubkey != Pubkey::default()` AND a
+            //      signer in `remaining_accounts` matches → OK.
+            //   2. `cosign_session_pubkey == Pubkey::default()` AND any
+            //      non-owner signer present in `remaining_accounts` → OK
+            //      (defaults-on: a second human approver defeats single-
+            //      signature phishing without forcing the owner to
+            //      pre-configure a specific cosign key).
+            //   3. Either: no matching/non-owner signer present → reject
+            //      with `ErrReactivateCosignRequiredForFullCapability`
+            //      (6114) so the rejection is distinct from the broader
+            //      `cosign_required` flow at the top of the handler.
+            //
+            // Owners who want STRONG binding (specific key only) configure
+            // `cosign_session_pubkey` via `queue_policy_update`. Owners
+            // who want the default (any second signer) just need to
+            // include a non-owner signer in the reactivate tx.
+            let cosign_session_pubkey =
+                ctx.accounts.policy.cosign_session_pubkey;
+            let owner_key = ctx.accounts.owner.key();
+            let cosign_ok = if cosign_session_pubkey != Pubkey::default() {
+                // Bound to a specific pubkey — match exactly.
+                ctx.remaining_accounts.iter().any(|ai| {
+                    ai.key == &cosign_session_pubkey && ai.is_signer
+                })
+            } else {
+                // Default policy — any non-owner signer counts.
+                crate::instructions::register_agent::has_non_owner_signer(
+                    ctx.remaining_accounts,
+                    &owner_key,
+                )
+            };
+            require!(
+                cosign_ok,
+                SigilError::ErrReactivateCosignRequiredForFullCapability
+            );
+        }
+
         vault.agents.push(AgentEntry {
             pubkey: agent_key,
             capability,
@@ -167,6 +245,23 @@ pub fn handler(
 
     // 5. Guard against soft-lock: cannot activate with no agents
     require!(!vault.agents.is_empty(), SigilError::NoAgentRegistered);
+
+    // M-9 close (audit 2026-05-21, defense-in-depth): mirror F-11 from
+    // set_observe_only.rs:80-84 — an Active vault MUST have at least one
+    // populated allowlist (protocols or destinations). Reactivate cannot
+    // mutate these allowlists, so this check is bullet-proofing against
+    // future code changes that might enable allowlist mutation on the
+    // reactivate path (e.g., a follow-up that lets owners trim allowlists
+    // during freeze). Today the invariant is preserved by virtue of the
+    // freeze handler not touching policy.protocols / policy.allowed_destinations,
+    // but enforcement here makes the invariant load-bearing on the path.
+    {
+        let policy = &ctx.accounts.policy;
+        require!(
+            !policy.protocols.is_empty() || !policy.allowed_destinations.is_empty(),
+            SigilError::ActiveVaultRequiresAllowlist
+        );
+    }
 
     // 6. Mutate status only after all checks pass
     vault.status = VaultStatus::Active;
@@ -212,6 +307,11 @@ pub fn handler(
             per_recipient_daily_cap_usd: policy.per_recipient_daily_cap_usd,
             cosign_required: policy.cosign_required,
             agent_set_hash: new_agent_set_hash,
+            // D-5 (audit 2026-05-19, F-RP3-1): cosign_session_pubkey bound
+            // at canonical position 22 — reactivate_vault never mutates
+            // it, so pass-through from live policy keeps the re-bind
+            // digest matching the queue-time digest.
+            cosign_session_pubkey: policy.cosign_session_pubkey,
         });
         policy.policy_preview_digest = new_digest;
         policy.policy_version = policy

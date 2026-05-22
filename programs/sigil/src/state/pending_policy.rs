@@ -104,6 +104,26 @@ pub struct PendingPolicyUpdate {
     ///
     /// APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
     pub cosign_required: Option<bool>,
+
+    /// D-5 close (audit 2026-05-19, F-RP3-1): optional update to
+    /// `PolicyConfig.cosign_session_pubkey`. None = preserve live value;
+    /// Some(pubkey) = set the reactivate-cosign pubkey for elevated
+    /// capability grants. `Pubkey::default()` is permitted as a value
+    /// (disables the gate); any other pubkey enables it.
+    ///
+    /// Setting this field is NOT classified as elevated by the existing
+    /// 7-trigger gate in `queue_policy_update` — owners opt INTO friction
+    /// (the gate fires LATER on `reactivate_vault`). Disabling it
+    /// (`Some(Pubkey::default())`) on a live policy where the field is
+    /// currently non-default IS, however, a one-way-ratchet violation if
+    /// the vault is otherwise cosign-opted-in; deferred to Phase 9
+    /// alongside the broader ratchet polish — the present batch closes
+    /// only the reactivate-time gate.
+    ///
+    /// Bound by TA-19 at canonical digest position 22.
+    ///
+    /// APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
+    pub cosign_session_pubkey: Option<Pubkey>,
 }
 
 impl PendingPolicyUpdate {
@@ -132,7 +152,8 @@ impl PendingPolicyUpdate {
         + 32 // cosign_session [TA-09, Phase 3]
         + (1 + 8) // stable_balance_floor [TA-12, Phase 5]
         + (1 + 8) // per_recipient_daily_cap_usd [TA-14, Phase 5]
-        + (1 + 1); // cosign_required Option<bool> [G6, 2026-05-18 audit]
+        + (1 + 1) // cosign_required Option<bool> [G6, 2026-05-18 audit]
+        + (1 + 32); // cosign_session_pubkey Option<Pubkey> [D-5, 2026-05-19 audit, F-RP3-1]
 
     /// Returns true if the timelock period has expired and the update
     /// can be applied.

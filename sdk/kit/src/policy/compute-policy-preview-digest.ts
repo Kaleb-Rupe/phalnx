@@ -40,6 +40,7 @@
  *   19. per_recipient_daily_cap_usd: u64 LE (8 bytes) — TA-14 (Phase 5 post-exec)
  *   20. cosign_required: bool (1 byte 0/1) — G6 (audit 2026-05-18 cosign opt-in)
  *   21. agent_set_hash: [u8; 32] — Phase 8 PEN-CROSS-1 (audit 2026-05-19)
+ *   22. cosign_session_pubkey: Pubkey (32 bytes) — D-5 (audit 2026-05-19, F-RP3-1)
  *
  * Phase 3 append-only additions (TA-05/07/17): operating_hours,
  * auto_promote_grays, auto_revoke_threshold are appended at positions 15-17
@@ -65,6 +66,17 @@
  * grant operator-class without diverging the digest from the last value
  * the owner signed. Empty Vec produces a deterministic 32-byte hash
  * (`EMPTY_AGENT_SET_HASH` — SHA-256 of [0x00,0x00,0x00,0x00]).
+ *
+ * D-5 append-only addition (audit 2026-05-19, F-RP3-1): the
+ * `cosign_session_pubkey` at position 22 binds the owner's chosen
+ * reactivate-time cosigner pubkey into the signed digest. The
+ * `reactivate_vault` handler reads this pubkey at runtime and requires
+ * a matching `is_signer == true` entry in `remaining_accounts` whenever
+ * the operation grafts a new agent at `FULL_CAPABILITY`. A tampered SDK
+ * cannot silently flip the gate between owner approval and on-chain
+ * landing — the digest mismatch closes that gap. Default
+ * `Pubkey::default()` (32 zero bytes) means the gate is OFF; owners
+ * opt in via `queue_policy_update`.
  *
  * The `destination_graylist: Vec<(Pubkey, i64)>` is intentionally NOT in
  * the digest. Graylist entries are derived/ephemeral — they auto-populate
@@ -188,6 +200,19 @@ export interface PolicyPreviewFields {
    * fixtures (no agents) continue to compute the canonical digest.
    */
   agentSetHash?: Uint8Array;
+  /**
+   * D-5 (audit 2026-05-19, F-RP3-1): the owner-chosen reactivate-time
+   * cosigner pubkey. Default `Pubkey::default()` (zero pubkey, encoded
+   * as 32 zero bytes) when omitted, matching the on-chain init state
+   * where the gate is disabled. Owners opt in by passing a non-default
+   * pubkey via `queue_policy_update` (the SDK helper here mirrors that
+   * value into the digest). Bound at canonical position 22.
+   *
+   * Type: base58 string (e.g. an Address) OR a 32-byte raw Uint8Array.
+   * The encoder accepts both shapes for parity with the protocols /
+   * allowedDestinations fields.
+   */
+  cosignSessionPubkey?: Address | string | Uint8Array;
 }
 
 // Base58 decode + sha256 + cursor writers now live in `../canonical-encode.ts`
@@ -221,7 +246,7 @@ export interface PolicyPreviewFields {
 // load.
 
 /** Mirrors `policy_digest.rs::POLICY_PREVIEW_FIELD_COUNT`. */
-export const POLICY_PREVIEW_FIELD_COUNT = 21;
+export const POLICY_PREVIEW_FIELD_COUNT = 22;
 
 /**
  * Phase 8 PEN-CROSS-1 (Council ISC-141): SHA-256 of the Borsh-encoded
@@ -307,6 +332,7 @@ const PER_FIELD_FIXED_SIZES = [
   8, // 19. per_recipient_daily_cap_usd  (u64 LE) TA-14
   1, // 20. cosign_required              (bool as u8) G6
   32, // 21. agent_set_hash              ([u8;32]) Phase 8 PEN-CROSS-1
+  32, // 22. cosign_session_pubkey       (Pubkey)  D-5 (audit 2026-05-19, F-RP3-1)
 ] as const;
 
 /** Derived sum — must match the encoder's `fixedSize` exactly. */
@@ -414,6 +440,28 @@ export function computePolicyPreviewDigest(
     );
   }
   buf.set(agentSetHash, off);
+  off += 32;
+  // D-5 (audit 2026-05-19, F-RP3-1): cosign_session_pubkey at position
+  // 22. Default `Pubkey::default()` (32 zero bytes) so legacy callers
+  // that don't opt into the reactivate-cosign gate continue to produce
+  // the canonical digest. Owner opt-in passes a base58 string OR a
+  // 32-byte Uint8Array; the encoder normalises both into the canonical
+  // 32-byte buffer.
+  const cosignSessionRaw = fields.cosignSessionPubkey;
+  let cosignSessionBytes: Uint8Array;
+  if (cosignSessionRaw === undefined) {
+    cosignSessionBytes = new Uint8Array(32); // Pubkey::default()
+  } else if (cosignSessionRaw instanceof Uint8Array) {
+    cosignSessionBytes = cosignSessionRaw;
+  } else {
+    cosignSessionBytes = base58Decode(cosignSessionRaw as string);
+  }
+  if (cosignSessionBytes.length !== 32) {
+    throw new Error(
+      `cosignSessionPubkey must decode to exactly 32 bytes, got ${cosignSessionBytes.length}`,
+    );
+  }
+  buf.set(cosignSessionBytes, off);
   off += 32;
 
   // §RP-2 L-NEW-1 forward-looking ratchet: the encoder MUST write

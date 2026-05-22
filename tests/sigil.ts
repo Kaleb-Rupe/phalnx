@@ -20,7 +20,10 @@ import {
 } from "@solana/spl-token";
 import { expect } from "chai";
 import BN from "bn.js";
-import { initVaultPreviewDigest, fetchAndComputeQueueDigest } from "./helpers/policy-digest";
+import {
+  initVaultPreviewDigest,
+  fetchAndComputeQueueDigest,
+} from "./helpers/policy-digest";
 import {
   createTestEnv,
   airdropSol,
@@ -174,7 +177,8 @@ describe("sigil", () => {
       const maxTxSize = new BN(100_000_000); // 100 USDC
 
       await program.methods
-        .initializeVault(vaultId,
+        .initializeVault(
+          vaultId,
           dailyCap,
           maxTxSize,
           1,
@@ -185,7 +189,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -199,7 +203,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -247,36 +251,37 @@ describe("sigil", () => {
     it("rejects duplicate vault_id (PDA already exists)", async () => {
       try {
         await program.methods
-          .initializeVault(vaultId,
-          new BN(100),
-          new BN(100),
-          1,
-          [jupiterProgramId],
-          0,
-          100,
-          new BN(1800),
-          [],
-          [],
-          false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
-          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
-          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
-          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
-          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
-          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
-          initVaultPreviewDigest({
-            dailySpendingCapUsd: new BN(100),
-            maxTransactionSizeUsd: new BN(100),
-            maxSlippageBps: 100,
-            protocolMode: 1,
-            protocols: [jupiterProgramId],
-            allowedDestinations: [],
-            timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
-            autoPromoteGrays: false,
-            autoRevokeThreshold: 5,
-          }),
-        )
+          .initializeVault(
+            vaultId,
+            new BN(100),
+            new BN(100),
+            1,
+            [jupiterProgramId],
+            0,
+            100,
+            new BN(1800),
+            [],
+            [],
+            false, // observeOnly (Phase 2 TA-19)
+            0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
+            false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+            5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+            new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+            new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+            false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
+            initVaultPreviewDigest({
+              dailySpendingCapUsd: new BN(100),
+              maxTransactionSizeUsd: new BN(100),
+              maxSlippageBps: 100,
+              protocolMode: 1,
+              protocols: [jupiterProgramId],
+              allowedDestinations: [],
+              timelockDuration: new BN(1800),
+              operatingHours: 0x00ffffff,
+              autoPromoteGrays: false,
+              autoRevokeThreshold: 5,
+            }),
+          )
           .accounts({
             owner: owner.publicKey,
             vault: vaultPda,
@@ -320,36 +325,37 @@ describe("sigil", () => {
       // protocol_mode = 3 is invalid (valid values: 0=all, 1=allowlist, 2=denylist)
       try {
         await program.methods
-          .initializeVault(vaultId2,
-          new BN(100),
-          new BN(100),
-          3,
-          [],
-          0,
-          100,
-          new BN(1800),
-          [],
-          [],
-          false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
-          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
-          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
-          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
-          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
-          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
-          initVaultPreviewDigest({
-            dailySpendingCapUsd: new BN(100),
-            maxTransactionSizeUsd: new BN(100),
-            maxSlippageBps: 100,
-            protocolMode: 3,
-            protocols: [],
-            allowedDestinations: [],
-            timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
-            autoPromoteGrays: false,
-            autoRevokeThreshold: 5,
-          }),
-        )
+          .initializeVault(
+            vaultId2,
+            new BN(100),
+            new BN(100),
+            3,
+            [],
+            0,
+            100,
+            new BN(1800),
+            [],
+            [],
+            false, // observeOnly (Phase 2 TA-19)
+            0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
+            false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+            5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+            new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+            new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+            false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
+            initVaultPreviewDigest({
+              dailySpendingCapUsd: new BN(100),
+              maxTransactionSizeUsd: new BN(100),
+              maxSlippageBps: 100,
+              protocolMode: 3,
+              protocols: [],
+              allowedDestinations: [],
+              timelockDuration: new BN(1800),
+              operatingHours: 0x00ffffff,
+              autoPromoteGrays: false,
+              autoRevokeThreshold: 5,
+            }),
+          )
           .accounts({
             owner: owner.publicKey,
             vault: vault2,
@@ -503,7 +509,8 @@ describe("sigil", () => {
 
       // First create the vault
       await program.methods
-        .initializeVault(vid,
+        .initializeVault(
+          vid,
           new BN(1000),
           new BN(1000),
           1,
@@ -514,7 +521,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -528,7 +535,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -551,7 +558,10 @@ describe("sigil", () => {
           .accounts({
             owner: unauthorizedUser.publicKey,
             vault: v,
-            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), v.toBuffer()], program.programId)[0],
+            policy: PublicKey.findProgramAddressSync(
+              [Buffer.from("policy"), v.toBuffer()],
+              program.programId,
+            )[0],
             agentSpendOverlay: vOverlay,
           } as any)
           .signers([unauthorizedUser])
@@ -581,7 +591,8 @@ describe("sigil", () => {
 
     it("updates individual policy fields via queue+apply", async () => {
       await program.methods
-        .queuePolicyUpdate(new BN(200_000_000),
+        .queuePolicyUpdate(
+          new BN(200_000_000),
           null,
           null,
           null,
@@ -598,7 +609,9 @@ describe("sigil", () => {
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
-          (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { dailySpendingCapUsd: new BN(200_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
+          await fetchAndComputeQueueDigest(program, policyPda, vaultPda, {
+            dailySpendingCapUsd: new BN(200_000_000),
+          }), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -635,25 +648,28 @@ describe("sigil", () => {
       );
       try {
         await program.methods
-          .queuePolicyUpdate(new BN(999),
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null, // operating_hours (TA-05 Phase 3)
-          null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
-          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
-          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
-          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
-          (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { dailySpendingCapUsd: new BN(999) })), // newPolicyPreviewDigest (Phase 2 TA-19)
-        )
+          .queuePolicyUpdate(
+            new BN(999),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null, // operating_hours (TA-05 Phase 3)
+            null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+            null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+            null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+            PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
+            await fetchAndComputeQueueDigest(program, policyPda, vaultPda, {
+              dailySpendingCapUsd: new BN(999),
+            }), // newPolicyPreviewDigest (Phase 2 TA-19)
+          )
           .accounts({
             owner: unauthorizedUser.publicKey,
             vault: vaultPda,
@@ -679,25 +695,28 @@ describe("sigil", () => {
       );
       try {
         await program.methods
-          .queuePolicyUpdate(null,
-          null,
-          null,
-          tooManyProtocols,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null, // operating_hours (TA-05 Phase 3)
-          null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
-          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
-          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
-          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
-          (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { protocols: tooManyProtocols })), // newPolicyPreviewDigest (Phase 2 TA-19)
-        )
+          .queuePolicyUpdate(
+            null,
+            null,
+            null,
+            tooManyProtocols,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null, // operating_hours (TA-05 Phase 3)
+            null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+            null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+            null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+            PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
+            await fetchAndComputeQueueDigest(program, policyPda, vaultPda, {
+              protocols: tooManyProtocols,
+            }), // newPolicyPreviewDigest (Phase 2 TA-19)
+          )
           .accounts({
             owner: owner.publicKey,
             vault: vaultPda,
@@ -749,7 +768,8 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(revokeVaultId,
+        .initializeVault(
+          revokeVaultId,
           new BN(1000),
           new BN(1000),
           1,
@@ -760,7 +780,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -774,7 +794,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -794,7 +814,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: revokeVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), revokeVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), revokeVaultPda.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: revokeOverlay,
         } as any)
         .rpc();
@@ -806,7 +829,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: revokeVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), revokeVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), revokeVaultPda.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: revokeOverlay,
         } as any)
         .rpc();
@@ -824,7 +850,10 @@ describe("sigil", () => {
           .accounts({
             owner: owner.publicKey,
             vault: revokeVaultPda,
-            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), revokeVaultPda.toBuffer()], program.programId)[0],
+            policy: PublicKey.findProgramAddressSync(
+              [Buffer.from("policy"), revokeVaultPda.toBuffer()],
+              program.programId,
+            )[0],
             agentSpendOverlay: revokeOverlay,
           } as any)
           .rpc();
@@ -841,7 +870,10 @@ describe("sigil", () => {
           .accounts({
             owner: unauthorizedUser.publicKey,
             vault: revokeVaultPda,
-            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), revokeVaultPda.toBuffer()], program.programId)[0],
+            policy: PublicKey.findProgramAddressSync(
+              [Buffer.from("policy"), revokeVaultPda.toBuffer()],
+              program.programId,
+            )[0],
             agentSpendOverlay: revokeOverlay,
           } as any)
           .signers([unauthorizedUser])
@@ -891,7 +923,8 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(reactVaultId,
+        .initializeVault(
+          reactVaultId,
           new BN(1000),
           new BN(1000),
           1,
@@ -902,7 +935,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -916,7 +949,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -938,7 +971,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: reactVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), reactVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), reactVaultPda.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: reactOverlay,
         } as any)
         .rpc();
@@ -948,7 +984,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: reactVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), reactVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), reactVaultPda.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: reactOverlay,
         } as any)
         .rpc();
@@ -985,7 +1024,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: reactVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), reactVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), reactVaultPda.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: reactOverlay,
         } as any)
         .rpc();
@@ -1017,7 +1059,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: reactVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), reactVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), reactVaultPda.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: reactOverlay,
         } as any)
         .rpc();
@@ -1679,7 +1724,8 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(closeVaultId,
+        .initializeVault(
+          closeVaultId,
           new BN(1000),
           new BN(1000),
           1,
@@ -1690,7 +1736,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -1704,7 +1750,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -1771,7 +1817,8 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(vid,
+        .initializeVault(
+          vid,
           new BN(1000),
           new BN(1000),
           1,
@@ -1782,7 +1829,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -1796,7 +1843,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -1870,7 +1917,8 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(feeVaultId,
+        .initializeVault(
+          feeVaultId,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
@@ -1881,7 +1929,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -1896,7 +1944,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -1941,36 +1989,37 @@ describe("sigil", () => {
 
       try {
         await program.methods
-          .initializeVault(badVaultId,
-          new BN(1000),
-          new BN(1000),
-          1,
-          [],
-          501,
-          100,
-          new BN(1800),
-          [],
-          [],
-          false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
-          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
-          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
-          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
-          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
-          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
-          initVaultPreviewDigest({
-            dailySpendingCapUsd: new BN(1000),
-            maxTransactionSizeUsd: new BN(1000),
-            maxSlippageBps: 100,
-            protocolMode: 1,
-            protocols: [jupiterProgramId],
-            allowedDestinations: [],
-            timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
-            autoPromoteGrays: false,
-            autoRevokeThreshold: 5,
-          }),
-        )
+          .initializeVault(
+            badVaultId,
+            new BN(1000),
+            new BN(1000),
+            1,
+            [],
+            501,
+            100,
+            new BN(1800),
+            [],
+            [],
+            false, // observeOnly (Phase 2 TA-19)
+            0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
+            false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+            5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+            new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+            new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+            false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
+            initVaultPreviewDigest({
+              dailySpendingCapUsd: new BN(1000),
+              maxTransactionSizeUsd: new BN(1000),
+              maxSlippageBps: 100,
+              protocolMode: 1,
+              protocols: [jupiterProgramId],
+              allowedDestinations: [],
+              timelockDuration: new BN(1800),
+              operatingHours: 0x00ffffff,
+              autoPromoteGrays: false,
+              autoRevokeThreshold: 5,
+            }),
+          )
           .accounts({
             owner: owner.publicKey,
             vault: bv,
@@ -1995,7 +2044,8 @@ describe("sigil", () => {
 
       // Use the fee vault created above, first set to 0
       await program.methods
-        .queuePolicyUpdate(null,
+        .queuePolicyUpdate(
+          null,
           null,
           null,
           null,
@@ -2012,7 +2062,9 @@ describe("sigil", () => {
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
-          (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, { developerFeeRate: 0 })), // newPolicyPreviewDigest (Phase 2 TA-19)
+          await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, {
+            developerFeeRate: 0,
+          }), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -2041,7 +2093,8 @@ describe("sigil", () => {
 
       // Now update to 30
       await program.methods
-        .queuePolicyUpdate(null,
+        .queuePolicyUpdate(
+          null,
           null,
           null,
           null,
@@ -2058,7 +2111,9 @@ describe("sigil", () => {
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
-          (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, { developerFeeRate: 30 })), // newPolicyPreviewDigest (Phase 2 TA-19)
+          await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, {
+            developerFeeRate: 30,
+          }), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -2093,25 +2148,31 @@ describe("sigil", () => {
       );
       try {
         await program.methods
-          .queuePolicyUpdate(null,
-          null,
-          null,
-          null,
-          501,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null, // operating_hours (TA-05 Phase 3)
-          null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
-          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
-          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
-          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
-          (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
-        )
+          .queuePolicyUpdate(
+            null,
+            null,
+            null,
+            null,
+            501,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null, // operating_hours (TA-05 Phase 3)
+            null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+            null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+            null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+            PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
+            await fetchAndComputeQueueDigest(
+              program,
+              feePolicyPda,
+              feeVaultPda,
+              {},
+            ), // newPolicyPreviewDigest (Phase 2 TA-19)
+          )
           .accounts({
             owner: owner.publicKey,
             vault: feeVaultPda,
@@ -2133,7 +2194,8 @@ describe("sigil", () => {
       );
       // Set developer fee to 0
       await program.methods
-        .queuePolicyUpdate(null,
+        .queuePolicyUpdate(
+          null,
           null,
           null,
           null,
@@ -2150,7 +2212,9 @@ describe("sigil", () => {
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
-          (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, { developerFeeRate: 0 })), // newPolicyPreviewDigest (Phase 2 TA-19)
+          await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, {
+            developerFeeRate: 0,
+          }), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -2184,7 +2248,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: feeVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), feeVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), feeVaultPda.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: feeOverlay,
         } as any)
         .rpc();
@@ -2282,7 +2349,8 @@ describe("sigil", () => {
       );
       // Set developer fee to 500 (max, 5 BPS)
       await program.methods
-        .queuePolicyUpdate(null,
+        .queuePolicyUpdate(
+          null,
           null,
           null,
           null,
@@ -2299,7 +2367,9 @@ describe("sigil", () => {
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
-          (await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, { developerFeeRate: 500 })), // newPolicyPreviewDigest (Phase 2 TA-19)
+          await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, {
+            developerFeeRate: 500,
+          }), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -2494,7 +2564,8 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(maxFeeVaultId,
+        .initializeVault(
+          maxFeeVaultId,
           new BN(1000),
           new BN(1000),
           1,
@@ -2505,7 +2576,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -2520,7 +2591,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -2594,7 +2665,8 @@ describe("sigil", () => {
 
       // Create vault with USDC allowed
       await program.methods
-        .initializeVault(lifecycleVaultId,
+        .initializeVault(
+          lifecycleVaultId,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
@@ -2605,7 +2677,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -2619,7 +2691,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -2641,7 +2713,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: lifecycleVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), lifecycleVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), lifecycleVaultPda.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: lifecycleOverlay,
         } as any)
         .rpc();
@@ -2861,7 +2936,8 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(vid,
+        .initializeVault(
+          vid,
           new BN(1000),
           new BN(1000),
           1,
@@ -2872,7 +2948,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -2886,7 +2962,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -2907,7 +2983,10 @@ describe("sigil", () => {
           .accounts({
             owner: owner.publicKey,
             vault: v,
-            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), v.toBuffer()], program.programId)[0],
+            policy: PublicKey.findProgramAddressSync(
+              [Buffer.from("policy"), v.toBuffer()],
+              program.programId,
+            )[0],
             agentSpendOverlay: vOverlay2,
           } as any)
           .rpc();
@@ -2953,7 +3032,10 @@ describe("sigil", () => {
           .accounts({
             owner: owner.publicKey,
             vault: rv,
-            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), rv.toBuffer()], program.programId)[0],
+            policy: PublicKey.findProgramAddressSync(
+              [Buffer.from("policy"), rv.toBuffer()],
+              program.programId,
+            )[0],
             agentSpendOverlay: rvOverlay,
           } as any)
           .rpc();
@@ -3047,7 +3129,8 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(frozenVaultId,
+        .initializeVault(
+          frozenVaultId,
           new BN(1000),
           new BN(1000),
           1,
@@ -3058,7 +3141,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -3072,7 +3155,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -3094,7 +3177,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: fv,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), fv.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), fv.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: fvOverlay,
         } as any)
         .rpc();
@@ -3104,7 +3190,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: fv,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), fv.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), fv.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: fvOverlay,
         } as any)
         .rpc();
@@ -3157,7 +3246,8 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(closedVaultId,
+        .initializeVault(
+          closedVaultId,
           new BN(1000),
           new BN(1000),
           1,
@@ -3168,7 +3258,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -3182,7 +3272,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -3274,7 +3364,8 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(closedVaultId,
+        .initializeVault(
+          closedVaultId,
           new BN(1000),
           new BN(1000),
           1,
@@ -3285,7 +3376,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -3299,7 +3390,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -3321,7 +3412,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: cv,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), cv.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), cv.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: cvOverlay,
         } as any)
         .rpc();
@@ -3416,7 +3510,8 @@ describe("sigil", () => {
         program.programId,
       );
       await program.methods
-        .initializeVault(ringVaultId,
+        .initializeVault(
+          ringVaultId,
           new BN(999_000_000_000),
           new BN(100_000_000),
           1,
@@ -3427,7 +3522,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -3441,7 +3536,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -3461,7 +3556,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: ringVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), ringVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), ringVaultPda.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: ringOverlay,
         } as any)
         .rpc();
@@ -3596,7 +3694,8 @@ describe("sigil", () => {
         program.programId,
       );
       await program.methods
-        .initializeVault(feeEdgeVaultId,
+        .initializeVault(
+          feeEdgeVaultId,
           new BN(999_000_000),
           new BN(100_000_000),
           1,
@@ -3607,7 +3706,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -3621,7 +3720,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -3641,7 +3740,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: feeEdgeVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), feeEdgeVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), feeEdgeVaultPda.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: feeEdgeOverlay,
         } as any)
         .rpc();
@@ -3892,7 +3994,8 @@ describe("sigil", () => {
         program.programId,
       );
       await program.methods
-        .initializeVault(tlVaultId,
+        .initializeVault(
+          tlVaultId,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
@@ -3903,7 +4006,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -3917,7 +4020,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -3937,7 +4040,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: tlVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), tlVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), tlVaultPda.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: tlOverlay,
         } as any)
         .rpc();
@@ -3945,7 +4051,8 @@ describe("sigil", () => {
 
     it("queue policy update succeeds when timelock > 0", async () => {
       await program.methods
-        .queuePolicyUpdate(new BN(200_000_000),
+        .queuePolicyUpdate(
+          new BN(200_000_000),
           null,
           null,
           null,
@@ -3962,7 +4069,9 @@ describe("sigil", () => {
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
-          (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(200_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
+          await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, {
+            dailySpendingCapUsd: new BN(200_000_000),
+          }), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -4031,7 +4140,8 @@ describe("sigil", () => {
       // TA-09 (Phase 3) elevated-mutation guard does not fire — this test
       // exercises the cancel-rent-return path, not the cosign workflow.
       await program.methods
-        .queuePolicyUpdate(new BN(100_000_000),
+        .queuePolicyUpdate(
+          new BN(100_000_000),
           null,
           null,
           null,
@@ -4048,7 +4158,9 @@ describe("sigil", () => {
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
-          (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(100_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
+          await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, {
+            dailySpendingCapUsd: new BN(100_000_000),
+          }), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -4085,7 +4197,8 @@ describe("sigil", () => {
       // mutation guard does not fire — this test exercises the
       // single-pending-PDA invariant, not the cosign workflow.
       await program.methods
-        .queuePolicyUpdate(new BN(150_000_000),
+        .queuePolicyUpdate(
+          new BN(150_000_000),
           null,
           null,
           null,
@@ -4102,7 +4215,9 @@ describe("sigil", () => {
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
-          (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(150_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
+          await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, {
+            dailySpendingCapUsd: new BN(150_000_000),
+          }), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -4116,25 +4231,28 @@ describe("sigil", () => {
       // Try to queue another (should fail — PDA already exists)
       try {
         await program.methods
-          .queuePolicyUpdate(new BN(500_000_000),
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null, // operating_hours (TA-05 Phase 3)
-          null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
-          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
-          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
-          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
-          (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(500_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
-        )
+          .queuePolicyUpdate(
+            new BN(500_000_000),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null, // operating_hours (TA-05 Phase 3)
+            null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+            null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+            null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+            PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
+            await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, {
+              dailySpendingCapUsd: new BN(500_000_000),
+            }), // newPolicyPreviewDigest (Phase 2 TA-19)
+          )
           .accounts({
             owner: owner.publicKey,
             vault: tlVaultPda,
@@ -4186,36 +4304,37 @@ describe("sigil", () => {
 
       try {
         await program.methods
-          .initializeVault(noTlVaultId,
-          new BN(1000),
-          new BN(1000),
-          1,
-          [jupiterProgramId],
-          0,
-          100,
-          new BN(0),
-          [],
-          [],
-          false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
-          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
-          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
-          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
-          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
-          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
-          initVaultPreviewDigest({
-            dailySpendingCapUsd: new BN(1000),
-            maxTransactionSizeUsd: new BN(1000),
-            maxSlippageBps: 100,
-            protocolMode: 1,
-            protocols: [jupiterProgramId],
-            allowedDestinations: [],
-            timelockDuration: new BN(0),
-            operatingHours: 0x00FFFFFF,
-            autoPromoteGrays: false,
-            autoRevokeThreshold: 5,
-          }),
-        )
+          .initializeVault(
+            noTlVaultId,
+            new BN(1000),
+            new BN(1000),
+            1,
+            [jupiterProgramId],
+            0,
+            100,
+            new BN(0),
+            [],
+            [],
+            false, // observeOnly (Phase 2 TA-19)
+            0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
+            false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+            5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+            new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+            new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+            false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
+            initVaultPreviewDigest({
+              dailySpendingCapUsd: new BN(1000),
+              maxTransactionSizeUsd: new BN(1000),
+              maxSlippageBps: 100,
+              protocolMode: 1,
+              protocols: [jupiterProgramId],
+              allowedDestinations: [],
+              timelockDuration: new BN(0),
+              operatingHours: 0x00ffffff,
+              autoPromoteGrays: false,
+              autoRevokeThreshold: 5,
+            }),
+          )
           .accounts({
             owner: owner.publicKey,
             vault: noTlVault,
@@ -4235,7 +4354,8 @@ describe("sigil", () => {
     it("changing timelock_duration itself goes through queue", async () => {
       // Queue a timelock change from 1800 to 3600
       await program.methods
-        .queuePolicyUpdate(null,
+        .queuePolicyUpdate(
+          null,
           null,
           null,
           null,
@@ -4252,7 +4372,9 @@ describe("sigil", () => {
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
-          (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { timelockDuration: new BN(3600) })), // newPolicyPreviewDigest (Phase 2 TA-19)
+          await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, {
+            timelockDuration: new BN(3600),
+          }), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -4283,7 +4405,8 @@ describe("sigil", () => {
     it("lowering timelock back to MIN via queue", async () => {
       // Queue timelock change from 3600 back to 1800 (MIN_TIMELOCK_DURATION)
       await program.methods
-        .queuePolicyUpdate(null,
+        .queuePolicyUpdate(
+          null,
           null,
           null,
           null,
@@ -4300,7 +4423,9 @@ describe("sigil", () => {
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
-          (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { timelockDuration: new BN(1800) })), // newPolicyPreviewDigest (Phase 2 TA-19)
+          await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, {
+            timelockDuration: new BN(1800),
+          }), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -4332,7 +4457,8 @@ describe("sigil", () => {
       // not fire — this assertion exercises queue/apply round-trip on
       // daily_spending_cap_usd, not the cosign workflow.
       await program.methods
-        .queuePolicyUpdate(new BN(50_000_000),
+        .queuePolicyUpdate(
+          new BN(50_000_000),
           null,
           null,
           null,
@@ -4349,7 +4475,9 @@ describe("sigil", () => {
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
-          (await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, { dailySpendingCapUsd: new BN(50_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
+          await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, {
+            dailySpendingCapUsd: new BN(50_000_000),
+          }), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: owner.publicKey,
@@ -4385,7 +4513,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: tlVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), tlVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), tlVaultPda.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: tlOverlay,
         } as any)
         .rpc();
@@ -4449,7 +4580,8 @@ describe("sigil", () => {
         program.programId,
       );
       await program.methods
-        .initializeVault(destVaultId,
+        .initializeVault(
+          destVaultId,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
@@ -4460,7 +4592,7 @@ describe("sigil", () => {
           [allowedDest.publicKey],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -4474,7 +4606,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [allowedDest.publicKey],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -4494,7 +4626,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: destVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), destVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), destVaultPda.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: destOverlay,
         } as any)
         .rpc();
@@ -4538,7 +4673,11 @@ describe("sigil", () => {
       const balBefore = getTokenBalance(svm, allowedDestAta);
 
       await program.methods
-        .agentTransfer(new BN(10_000_000), ((await program.account.policyConfig.fetch(destPolicyPda)).policyVersion as BN) ?? new BN(0)) // 10 USDC
+        .agentTransfer(
+          new BN(10_000_000),
+          ((await program.account.policyConfig.fetch(destPolicyPda))
+            .policyVersion as BN) ?? new BN(0),
+        ) // 10 USDC
         .accounts({
           agent: destAgent.publicKey,
           vault: destVaultPda,
@@ -4564,7 +4703,11 @@ describe("sigil", () => {
     it("agent_transfer to non-allowed destination fails", async () => {
       try {
         await program.methods
-          .agentTransfer(new BN(10_000_000), ((await program.account.policyConfig.fetch(destPolicyPda)).policyVersion as BN) ?? new BN(0))
+          .agentTransfer(
+            new BN(10_000_000),
+            ((await program.account.policyConfig.fetch(destPolicyPda))
+              .policyVersion as BN) ?? new BN(0),
+          )
           .accounts({
             agent: destAgent.publicKey,
             vault: destVaultPda,
@@ -4614,7 +4757,8 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(anyDestVaultId,
+        .initializeVault(
+          anyDestVaultId,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
@@ -4625,7 +4769,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -4639,7 +4783,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -4659,7 +4803,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: anyVault,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), anyVault.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), anyVault.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: anyOverlay,
         } as any)
         .rpc();
@@ -4692,7 +4839,11 @@ describe("sigil", () => {
       // succeeded and drained up to the daily cap.
       try {
         await program.methods
-          .agentTransfer(new BN(5_000_000), ((await program.account.policyConfig.fetch(anyPolicy)).policyVersion as BN) ?? new BN(0))
+          .agentTransfer(
+            new BN(5_000_000),
+            ((await program.account.policyConfig.fetch(anyPolicy))
+              .policyVersion as BN) ?? new BN(0),
+          )
           .accounts({
             agent: destAgent.publicKey,
             vault: anyVault,
@@ -4738,25 +4889,28 @@ describe("sigil", () => {
 
       try {
         await program.methods
-          .queuePolicyUpdate(null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          1,
-          null, // operating_hours (TA-05 Phase 3)
-          null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
-          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
-          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
-          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
-          (await fetchAndComputeQueueDigest(program, anyPolicy, anyVault, { destinationMode: 1 })), // newPolicyPreviewDigest (Phase 2 TA-19)
-        )
+          .queuePolicyUpdate(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            1,
+            null, // operating_hours (TA-05 Phase 3)
+            null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+            null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+            null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+            PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
+            await fetchAndComputeQueueDigest(program, anyPolicy, anyVault, {
+              destinationMode: 1,
+            }), // newPolicyPreviewDigest (Phase 2 TA-19)
+          )
           .accounts({
             owner: owner.publicKey,
             vault: anyVault,
@@ -4781,25 +4935,28 @@ describe("sigil", () => {
 
       try {
         await program.methods
-          .queuePolicyUpdate(null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          2,
-          null, // operating_hours (TA-05 Phase 3)
-          null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
-          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
-          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
-          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
-          (await fetchAndComputeQueueDigest(program, anyPolicy, anyVault, { destinationMode: 2 })), // newPolicyPreviewDigest (Phase 2 TA-19)
-        )
+          .queuePolicyUpdate(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            2,
+            null, // operating_hours (TA-05 Phase 3)
+            null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+            null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+            null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+            PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
+            await fetchAndComputeQueueDigest(program, anyPolicy, anyVault, {
+              destinationMode: 2,
+            }), // newPolicyPreviewDigest (Phase 2 TA-19)
+          )
           .accounts({
             owner: owner.publicKey,
             vault: anyVault,
@@ -4845,36 +5002,37 @@ describe("sigil", () => {
 
       try {
         await program.methods
-          .initializeVault(badVid,
-          new BN(1000),
-          new BN(1000),
-          1,
-          [jupiterProgramId],
-          0,
-          100,
-          new BN(1800),
-          tooMany,
-          [],
-          false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
-          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
-          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
-          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
-          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
-          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
-          initVaultPreviewDigest({
-            dailySpendingCapUsd: new BN(1000),
-            maxTransactionSizeUsd: new BN(1000),
-            maxSlippageBps: 100,
-            protocolMode: 1,
-            protocols: [jupiterProgramId],
-            allowedDestinations: tooMany,
-            timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
-            autoPromoteGrays: false,
-            autoRevokeThreshold: 5,
-          }),
-        )
+          .initializeVault(
+            badVid,
+            new BN(1000),
+            new BN(1000),
+            1,
+            [jupiterProgramId],
+            0,
+            100,
+            new BN(1800),
+            tooMany,
+            [],
+            false, // observeOnly (Phase 2 TA-19)
+            0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
+            false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+            5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+            new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+            new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+            false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
+            initVaultPreviewDigest({
+              dailySpendingCapUsd: new BN(1000),
+              maxTransactionSizeUsd: new BN(1000),
+              maxSlippageBps: 100,
+              protocolMode: 1,
+              protocols: [jupiterProgramId],
+              allowedDestinations: tooMany,
+              timelockDuration: new BN(1800),
+              operatingHours: 0x00ffffff,
+              autoPromoteGrays: false,
+              autoRevokeThreshold: 5,
+            }),
+          )
           .accounts({
             owner: owner.publicKey,
             vault: bv,
@@ -4898,7 +5056,11 @@ describe("sigil", () => {
       // push total to 510 USDC (exceeding 500 cap).
       for (let i = 0; i < 4; i++) {
         await program.methods
-          .agentTransfer(new BN(100_000_000), ((await program.account.policyConfig.fetch(destPolicyPda)).policyVersion as BN) ?? new BN(0)) // 100 USDC each
+          .agentTransfer(
+            new BN(100_000_000),
+            ((await program.account.policyConfig.fetch(destPolicyPda))
+              .policyVersion as BN) ?? new BN(0),
+          ) // 100 USDC each
           .accounts({
             agent: destAgent.publicKey,
             vault: destVaultPda,
@@ -4919,7 +5081,11 @@ describe("sigil", () => {
       // Try 100 USDC → total would be 510 > 500 cap
       try {
         await program.methods
-          .agentTransfer(new BN(100_000_000), ((await program.account.policyConfig.fetch(destPolicyPda)).policyVersion as BN) ?? new BN(0)) // 100 USDC (would push past cap)
+          .agentTransfer(
+            new BN(100_000_000),
+            ((await program.account.policyConfig.fetch(destPolicyPda))
+              .policyVersion as BN) ?? new BN(0),
+          ) // 100 USDC (would push past cap)
           .accounts({
             agent: destAgent.publicKey,
             vault: destVaultPda,
@@ -4945,7 +5111,11 @@ describe("sigil", () => {
       // Max tx size is 100 USDC
       try {
         await program.methods
-          .agentTransfer(new BN(101_000_000), ((await program.account.policyConfig.fetch(destPolicyPda)).policyVersion as BN) ?? new BN(0)) // 101 USDC (exceeds max tx)
+          .agentTransfer(
+            new BN(101_000_000),
+            ((await program.account.policyConfig.fetch(destPolicyPda))
+              .policyVersion as BN) ?? new BN(0),
+          ) // 101 USDC (exceeds max tx)
           .accounts({
             agent: destAgent.publicKey,
             vault: destVaultPda,
@@ -5001,7 +5171,8 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(feeDestVaultId,
+        .initializeVault(
+          feeDestVaultId,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
@@ -5012,7 +5183,7 @@ describe("sigil", () => {
           [allowedDest.publicKey],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -5027,7 +5198,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [allowedDest.publicKey],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -5047,7 +5218,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: fv,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), fv.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), fv.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: fvOverlay2,
         } as any)
         .rpc();
@@ -5090,7 +5264,11 @@ describe("sigil", () => {
       // developer_fee = 10_000_000 * 500 / 1_000_000 = 5_000
       // net = 10_000_000 - 2_000 - 5_000 = 9_993_000
       await program.methods
-        .agentTransfer(new BN(10_000_000), ((await program.account.policyConfig.fetch(fp)).policyVersion as BN) ?? new BN(0))
+        .agentTransfer(
+          new BN(10_000_000),
+          ((await program.account.policyConfig.fetch(fp))
+            .policyVersion as BN) ?? new BN(0),
+        )
         .accounts({
           agent: destAgent.publicKey,
           vault: fv,
@@ -5157,7 +5335,8 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(maVaultId,
+        .initializeVault(
+          maVaultId,
           new BN(1_000_000_000),
           new BN(500_000_000),
           1,
@@ -5168,7 +5347,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -5182,7 +5361,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -5227,7 +5406,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: maVault,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), maVault.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), maVault.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: maOverlay,
         } as any)
         .rpc();
@@ -5238,7 +5420,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: maVault,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), maVault.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), maVault.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: maOverlay,
         } as any)
         .rpc();
@@ -5387,7 +5572,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: maVault,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), maVault.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), maVault.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: maOverlay,
         } as any)
         .rpc();
@@ -5406,7 +5594,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: maVault,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), maVault.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), maVault.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: maOverlay,
         } as any)
         .rpc();
@@ -5436,7 +5627,10 @@ describe("sigil", () => {
           .accounts({
             owner: owner.publicKey,
             vault: maVault,
-            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), maVault.toBuffer()], program.programId)[0],
+            policy: PublicKey.findProgramAddressSync(
+              [Buffer.from("policy"), maVault.toBuffer()],
+              program.programId,
+            )[0],
             agentSpendOverlay: maOverlay,
           } as any)
           .rpc();
@@ -5454,7 +5648,10 @@ describe("sigil", () => {
           .accounts({
             owner: owner.publicKey,
             vault: maVault,
-            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), maVault.toBuffer()], program.programId)[0],
+            policy: PublicKey.findProgramAddressSync(
+              [Buffer.from("policy"), maVault.toBuffer()],
+              program.programId,
+            )[0],
             agentSpendOverlay: maOverlay,
           } as any)
           .rpc();
@@ -5473,7 +5670,10 @@ describe("sigil", () => {
           .accounts({
             owner: owner.publicKey,
             vault: maVault,
-            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), maVault.toBuffer()], program.programId)[0],
+            policy: PublicKey.findProgramAddressSync(
+              [Buffer.from("policy"), maVault.toBuffer()],
+              program.programId,
+            )[0],
             agentSpendOverlay: maOverlay,
           } as any)
           .rpc();
@@ -5507,7 +5707,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: maVault,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), maVault.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), maVault.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: maOverlay,
         } as any)
         .rpc();
@@ -5570,7 +5773,10 @@ describe("sigil", () => {
           .accounts({
             owner: owner.publicKey,
             vault: maVault,
-            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), maVault.toBuffer()], program.programId)[0],
+            policy: PublicKey.findProgramAddressSync(
+              [Buffer.from("policy"), maVault.toBuffer()],
+              program.programId,
+            )[0],
             agentSpendOverlay: maOverlay,
           } as any)
           .rpc();
@@ -5635,7 +5841,8 @@ describe("sigil", () => {
 
       // Create vault with $2000 daily cap, $1000 per-tx limit
       await program.methods
-        .initializeVault(epochVaultId,
+        .initializeVault(
+          epochVaultId,
           new BN(2_000_000_000),
           new BN(1_000_000_000),
           1,
@@ -5646,7 +5853,7 @@ describe("sigil", () => {
           [epochDest.publicKey],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -5660,7 +5867,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [epochDest.publicKey],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -5686,7 +5893,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: epochVault,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), epochVault.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), epochVault.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: epochOverlay,
         } as any)
         .rpc();
@@ -5725,7 +5935,11 @@ describe("sigil", () => {
     it("accumulates spend across multiple epochs (catches old bug)", async () => {
       // Epoch 0: spend $500
       await program.methods
-        .agentTransfer(new BN(500_000_000), ((await program.account.policyConfig.fetch(epochPolicy)).policyVersion as BN) ?? new BN(0))
+        .agentTransfer(
+          new BN(500_000_000),
+          ((await program.account.policyConfig.fetch(epochPolicy))
+            .policyVersion as BN) ?? new BN(0),
+        )
         .accounts({
           agent: epochAgent.publicKey,
           vault: epochVault,
@@ -5748,7 +5962,11 @@ describe("sigil", () => {
 
       // Epoch 1: spend $300
       await program.methods
-        .agentTransfer(new BN(300_000_000), ((await program.account.policyConfig.fetch(epochPolicy)).policyVersion as BN) ?? new BN(0))
+        .agentTransfer(
+          new BN(300_000_000),
+          ((await program.account.policyConfig.fetch(epochPolicy))
+            .policyVersion as BN) ?? new BN(0),
+        )
         .accounts({
           agent: epochAgent.publicKey,
           vault: epochVault,
@@ -5773,7 +5991,11 @@ describe("sigil", () => {
       // exceeds the $1000 per-agent limit.
       try {
         await program.methods
-          .agentTransfer(new BN(250_000_000), ((await program.account.policyConfig.fetch(epochPolicy)).policyVersion as BN) ?? new BN(0))
+          .agentTransfer(
+            new BN(250_000_000),
+            ((await program.account.policyConfig.fetch(epochPolicy))
+              .policyVersion as BN) ?? new BN(0),
+          )
           .accounts({
             agent: epochAgent.publicKey,
             vault: epochVault,
@@ -5797,7 +6019,11 @@ describe("sigil", () => {
 
       // But spending $150 (total = $950 < $1000) should succeed
       await program.methods
-        .agentTransfer(new BN(150_000_000), ((await program.account.policyConfig.fetch(epochPolicy)).policyVersion as BN) ?? new BN(0))
+        .agentTransfer(
+          new BN(150_000_000),
+          ((await program.account.policyConfig.fetch(epochPolicy))
+            .policyVersion as BN) ?? new BN(0),
+        )
         .accounts({
           agent: epochAgent.publicKey,
           vault: epochVault,
@@ -5826,7 +6052,11 @@ describe("sigil", () => {
       // Total rolling: $450 (300 + 150 from ~23h ago).
       // Spending $500 more (total ~$950) should succeed since $500 expired.
       await program.methods
-        .agentTransfer(new BN(100_000_000), ((await program.account.policyConfig.fetch(epochPolicy)).policyVersion as BN) ?? new BN(0)) // $100 — safe amount to verify window works
+        .agentTransfer(
+          new BN(100_000_000),
+          ((await program.account.policyConfig.fetch(epochPolicy))
+            .policyVersion as BN) ?? new BN(0),
+        ) // $100 — safe amount to verify window works
         .accounts({
           agent: epochAgent.publicKey,
           vault: epochVault,
@@ -5850,7 +6080,11 @@ describe("sigil", () => {
       // Now everything should be expired. Spending $999 (under $1000 limit) should succeed
       // even though we've spent $1050 total historically.
       await program.methods
-        .agentTransfer(new BN(100_000_000), ((await program.account.policyConfig.fetch(epochPolicy)).policyVersion as BN) ?? new BN(0)) // $100
+        .agentTransfer(
+          new BN(100_000_000),
+          ((await program.account.policyConfig.fetch(epochPolicy))
+            .policyVersion as BN) ?? new BN(0),
+        ) // $100
         .accounts({
           agent: epochAgent.publicKey,
           vault: epochVault,
@@ -5969,7 +6203,8 @@ describe("sigil", () => {
       // non-elevated fallback. After the flip, removing protoCapCosigner
       // from those tests WOULD trip ErrCosignRequired.
       await program.methods
-        .initializeVault(protoCapVaultId,
+        .initializeVault(
+          protoCapVaultId,
           new BN(1_000_000_000),
           new BN(500_000_000),
           1,
@@ -5980,7 +6215,7 @@ describe("sigil", () => {
           [],
           [new BN(100_000_000), new BN(200_000_000)],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -5994,7 +6229,7 @@ describe("sigil", () => {
             protocols: [protocolA, protocolB],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
             // G6 §RP-2 P2 supplementary: match on-chain init.
@@ -6072,7 +6307,13 @@ describe("sigil", () => {
       );
 
       const validateIx = await program.methods
-        .validateAndAuthorize(usdcMint, amount, protocol, await pv(pcPolicy), new BN(0))
+        .validateAndAuthorize(
+          usdcMint,
+          amount,
+          protocol,
+          await pv(pcPolicy),
+          new BN(0),
+        )
         .accountsPartial({
           agent: protoCapAgent.publicKey,
           vault: pcVault,
@@ -6138,7 +6379,8 @@ describe("sigil", () => {
       // `cosignRequired: true` at init — this `weakens_protocol_caps` queue
       // now GENUINELY exercises the G6 elevation gate.
       await program.methods
-        .queuePolicyUpdate(null,
+        .queuePolicyUpdate(
+          null,
           null,
           null,
           null,
@@ -6155,7 +6397,7 @@ describe("sigil", () => {
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 — pass-through; live=true after §RP-2 P2 flip at vault init)
           protoCapCosigner.publicKey, // cosign_session (TA-09 — ELEVATED, weakens_protocol_caps on cosign-opted-in vault)
-          (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
+          await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {}), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: protoCapOwner.publicKey,
@@ -6165,7 +6407,11 @@ describe("sigil", () => {
           systemProgram: SystemProgram.programId,
         } as any)
         .remainingAccounts([
-          { pubkey: protoCapCosigner.publicKey, isSigner: true, isWritable: false },
+          {
+            pubkey: protoCapCosigner.publicKey,
+            isSigner: true,
+            isWritable: false,
+          },
         ])
         .signers([protoCapOwner, protoCapCosigner])
         .rpc();
@@ -6196,7 +6442,8 @@ describe("sigil", () => {
       // here (tightening only) and disables_cosign is false, so is_elevated
       // remains false. No cosign needed despite live=true.
       await program.methods
-        .queuePolicyUpdate(null,
+        .queuePolicyUpdate(
+          null,
           null,
           null,
           null,
@@ -6213,7 +6460,7 @@ describe("sigil", () => {
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 — pass-through; live=true but no elevation trigger fires)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated, tightening)
-          (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
+          await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {}), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: protoCapOwner.publicKey,
@@ -6261,7 +6508,8 @@ describe("sigil", () => {
       // `cosignRequired: true` at init — this `weakens_protocol_caps`
       // (master-switch disable) now GENUINELY exercises the G6 elevation gate.
       await program.methods
-        .queuePolicyUpdate(null,
+        .queuePolicyUpdate(
+          null,
           null,
           null,
           null,
@@ -6278,7 +6526,7 @@ describe("sigil", () => {
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 — pass-through; live=true after §RP-2 P2 flip at vault init)
           protoCapCosigner.publicKey, // cosign_session (TA-09 — ELEVATED, weakens_protocol_caps via has_protocol_caps=false on cosign-opted-in vault)
-          (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
+          await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {}), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: protoCapOwner.publicKey,
@@ -6288,7 +6536,11 @@ describe("sigil", () => {
           systemProgram: SystemProgram.programId,
         } as any)
         .remainingAccounts([
-          { pubkey: protoCapCosigner.publicKey, isSigner: true, isWritable: false },
+          {
+            pubkey: protoCapCosigner.publicKey,
+            isSigner: true,
+            isWritable: false,
+          },
         ])
         .signers([protoCapOwner, protoCapCosigner])
         .rpc();
@@ -6318,7 +6570,8 @@ describe("sigil", () => {
       // G6 §RP-2 P2 supplementary (2026-05-18): pcVault has live=true but no
       // elevation trigger fires here, so is_elevated remains false.
       await program.methods
-        .queuePolicyUpdate(null,
+        .queuePolicyUpdate(
+          null,
           null,
           null,
           null,
@@ -6335,7 +6588,7 @@ describe("sigil", () => {
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 — pass-through; live=true but no elevation trigger fires)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated, tightening)
-          (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
+          await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {}), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: protoCapOwner.publicKey,
@@ -6374,25 +6627,26 @@ describe("sigil", () => {
       // so cosign session is moot — the basic validation rejects first.
       try {
         await program.methods
-          .queuePolicyUpdate(null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          true,
-          [new BN(100_000_000)],
-          null,
-          null, // operating_hours (TA-05 Phase 3)
-          null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
-          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
-          null, // cosign_required (G6 — pass-through; mismatch fires before elevation check)
-          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated; never reached)
-          (await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {  })), // newPolicyPreviewDigest (Phase 2 TA-19)
-        )
+          .queuePolicyUpdate(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            true,
+            [new BN(100_000_000)],
+            null,
+            null, // operating_hours (TA-05 Phase 3)
+            null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
+            null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
+            null, // cosign_required (G6 — pass-through; mismatch fires before elevation check)
+            PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated; never reached)
+            await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {}), // newPolicyPreviewDigest (Phase 2 TA-19)
+          )
           .accounts({
             owner: protoCapOwner.publicKey,
             vault: pcVault,
@@ -6439,36 +6693,37 @@ describe("sigil", () => {
 
       try {
         await program.methods
-          .initializeVault(badVaultId,
-          new BN(1_000_000_000),
-          new BN(500_000_000),
-          1,
-          [],
-          0,
-          100,
-          new BN(1800),
-          [],
-          [new BN(100_000_000)],
-          false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
-          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
-          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
-          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
-          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
-          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
-          initVaultPreviewDigest({
-            dailySpendingCapUsd: new BN(1_000_000_000),
-            maxTransactionSizeUsd: new BN(500_000_000),
-            maxSlippageBps: 100,
-            protocolMode: 1,
-            protocols: [],
-            allowedDestinations: [],
-            timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
-            autoPromoteGrays: false,
-            autoRevokeThreshold: 5,
-          }),
-        )
+          .initializeVault(
+            badVaultId,
+            new BN(1_000_000_000),
+            new BN(500_000_000),
+            1,
+            [],
+            0,
+            100,
+            new BN(1800),
+            [],
+            [new BN(100_000_000)],
+            false, // observeOnly (Phase 2 TA-19)
+            0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
+            false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+            5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+            new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+            new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+            false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
+            initVaultPreviewDigest({
+              dailySpendingCapUsd: new BN(1_000_000_000),
+              maxTransactionSizeUsd: new BN(500_000_000),
+              maxSlippageBps: 100,
+              protocolMode: 1,
+              protocols: [],
+              allowedDestinations: [],
+              timelockDuration: new BN(1800),
+              operatingHours: 0x00ffffff,
+              autoPromoteGrays: false,
+              autoRevokeThreshold: 5,
+            }),
+          )
           .accounts({
             owner: protoCapOwner.publicKey,
             vault: bv,
@@ -6524,12 +6779,28 @@ describe("sigil", () => {
       airdropSol(svm, ta13Agent.publicKey, 10 * LAMPORTS_PER_SOL);
       airdropSol(svm, ta13Fee.publicKey, 2 * LAMPORTS_PER_SOL);
 
-      ta13OwnerUsdc = createAtaHelper(svm, ta13Owner, usdcMint, ta13Owner.publicKey);
-      mintToHelper(svm, (owner as any).payer, usdcMint, ta13OwnerUsdc, owner.publicKey, 10_000_000_000n);
+      ta13OwnerUsdc = createAtaHelper(
+        svm,
+        ta13Owner,
+        usdcMint,
+        ta13Owner.publicKey,
+      );
+      mintToHelper(
+        svm,
+        (owner as any).payer,
+        usdcMint,
+        ta13OwnerUsdc,
+        owner.publicKey,
+        10_000_000_000n,
+      );
       ta13FeeUsdc = createAtaHelper(svm, ta13Fee, usdcMint, ta13Fee.publicKey);
 
       [ta13Vault] = PublicKey.findProgramAddressSync(
-        [Buffer.from("vault"), ta13Owner.publicKey.toBuffer(), ta13VaultId.toArrayLike(Buffer, "le", 8)],
+        [
+          Buffer.from("vault"),
+          ta13Owner.publicKey.toBuffer(),
+          ta13VaultId.toArrayLike(Buffer, "le", 8),
+        ],
         program.programId,
       );
       [ta13Policy] = PublicKey.findProgramAddressSync(
@@ -6549,8 +6820,21 @@ describe("sigil", () => {
         program.programId,
       );
 
-      ta13VaultUsdc = createAtaHelper(svm, ta13Owner, usdcMint, ta13Vault, true);
-      mintToHelper(svm, (owner as any).payer, usdcMint, ta13VaultUsdc, owner.publicKey, 5_000_000_000n);
+      ta13VaultUsdc = createAtaHelper(
+        svm,
+        ta13Owner,
+        usdcMint,
+        ta13Vault,
+        true,
+      );
+      mintToHelper(
+        svm,
+        (owner as any).payer,
+        usdcMint,
+        ta13VaultUsdc,
+        owner.publicKey,
+        5_000_000_000n,
+      );
 
       // F-15 fixture: daily_cap=$1000, max_tx=$501, protocols=[Jupiter, Drift],
       // protocol_caps=[$500, $500]. Bumped max_tx from $500 to $501 so a
@@ -6561,7 +6845,7 @@ describe("sigil", () => {
         .initializeVault(
           ta13VaultId,
           new BN(1_000_000_000), // daily_cap = $1000
-          new BN(501_000_000),   // max_tx = $501 (HEADROOM for $500 protocol cap)
+          new BN(501_000_000), // max_tx = $501 (HEADROOM for $500 protocol cap)
           1,
           [jupiterProtocol, driftProtocol],
           0,
@@ -6570,7 +6854,7 @@ describe("sigil", () => {
           [],
           [new BN(500_000_000), new BN(500_000_000)], // Jupiter $500, Drift $500
           false,
-          0x00FFFFFF,
+          0x00ffffff,
           false,
           5,
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -6584,7 +6868,7 @@ describe("sigil", () => {
             protocols: [jupiterProtocol, driftProtocol],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -6615,11 +6899,22 @@ describe("sigil", () => {
 
     const ta13Spend = async (protocol: PublicKey, amount: BN) => {
       const [sessionPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("session"), ta13Vault.toBuffer(), ta13Agent.publicKey.toBuffer(), usdcMint.toBuffer()],
+        [
+          Buffer.from("session"),
+          ta13Vault.toBuffer(),
+          ta13Agent.publicKey.toBuffer(),
+          usdcMint.toBuffer(),
+        ],
         program.programId,
       );
       const validateIx = await program.methods
-        .validateAndAuthorize(usdcMint, amount, protocol, await pv(ta13Policy), new BN(0))
+        .validateAndAuthorize(
+          usdcMint,
+          amount,
+          protocol,
+          await pv(ta13Policy),
+          new BN(0),
+        )
         .accountsPartial({
           agent: ta13Agent.publicKey,
           vault: ta13Vault,
@@ -6670,7 +6965,8 @@ describe("sigil", () => {
         // The new dedicated error variant for per-protocol rolling cap.
         const msg = err?.message ?? String(err);
         expect(msg).to.satisfy(
-          (m: string) => m.includes("ErrDailyCapExceeded") || m.includes("6095"),
+          (m: string) =>
+            m.includes("ErrDailyCapExceeded") || m.includes("6095"),
           `expected ErrDailyCapExceeded (6095), got: ${msg}`,
         );
       }
@@ -6700,9 +6996,19 @@ describe("sigil", () => {
       // wiring.
       await program.methods
         .queuePolicyUpdate(
-          null, null, null, null, null, null, null, null, null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
           false, // has_protocol_caps = false (master-switch disable)
-          null, null, null,
+          null,
+          null,
+          null,
           null, // stable_balance_floor (TA-12 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through)
@@ -6746,11 +7052,21 @@ describe("sigil", () => {
       // First re-enable caps (S3 disabled them).
       await program.methods
         .queuePolicyUpdate(
-          null, null, null, null, null, null, null, null, null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
           true, // has_protocol_caps = true
           [new BN(500_000_000), new BN(500_000_000)],
-          null, null,
-          null, null,
+          null,
+          null,
+          null,
+          null,
           null, // cosign_required (G6 audit 2026-05-18 — pass-through)
           PublicKey.default,
           await fetchAndComputeQueueDigest(program, ta13Policy, ta13Vault, {}),
@@ -6803,11 +7119,21 @@ describe("sigil", () => {
       // — pass `PublicKey.default` and drop cosigner wiring.
       await program.methods
         .queuePolicyUpdate(
-          null, null, null, null, null, null, null, null, null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
           true,
           [new BN(0), new BN(500_000_000)], // Jupiter cap = $0 (unlimited)
-          null, null,
-          null, null,
+          null,
+          null,
+          null,
+          null,
           null, // cosign_required (G6 audit 2026-05-18 — pass-through)
           PublicKey.default, // cosign_session (B4 F-3: non-elevated → must be default)
           await fetchAndComputeQueueDigest(program, ta13Policy, ta13Vault, {}),
@@ -6884,7 +7210,8 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(freezeVaultId,
+        .initializeVault(
+          freezeVaultId,
           new BN(1000_000_000),
           new BN(1000_000_000),
           1,
@@ -6895,7 +7222,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -6909,7 +7236,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -6930,7 +7257,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: freezeVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), freezeVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), freezeVaultPda.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: freezeOverlay,
         } as any)
         .rpc();
@@ -6940,7 +7270,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: freezeVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), freezeVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), freezeVaultPda.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: freezeOverlay,
         } as any)
         .rpc();
@@ -7135,7 +7468,8 @@ describe("sigil", () => {
       );
 
       await program.methods
-        .initializeVault(pauseVaultId,
+        .initializeVault(
+          pauseVaultId,
           new BN(1000_000_000),
           new BN(1000_000_000),
           1,
@@ -7146,7 +7480,7 @@ describe("sigil", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -7160,7 +7494,7 @@ describe("sigil", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -7181,7 +7515,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: pauseVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), pauseVaultPda.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: pauseOverlay,
         } as any)
         .rpc();
@@ -7191,7 +7528,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: pauseVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), pauseVaultPda.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: pauseOverlay,
         } as any)
         .rpc();
@@ -7203,7 +7543,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: pauseVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), pauseVaultPda.toBuffer()],
+            program.programId,
+          )[0],
         } as any)
         .rpc();
 
@@ -7221,7 +7564,10 @@ describe("sigil", () => {
           .accounts({
             owner: owner.publicKey,
             vault: pauseVaultPda,
-            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
+            policy: PublicKey.findProgramAddressSync(
+              [Buffer.from("policy"), pauseVaultPda.toBuffer()],
+              program.programId,
+            )[0],
           } as any)
           .rpc();
         expect.fail("Should have thrown");
@@ -7238,7 +7584,10 @@ describe("sigil", () => {
           .accounts({
             owner: owner.publicKey,
             vault: pauseVaultPda,
-            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
+            policy: PublicKey.findProgramAddressSync(
+              [Buffer.from("policy"), pauseVaultPda.toBuffer()],
+              program.programId,
+            )[0],
           } as any)
           .rpc();
         expect.fail("Should have thrown");
@@ -7254,7 +7603,10 @@ describe("sigil", () => {
           .accounts({
             owner: unauthorizedUser.publicKey,
             vault: pauseVaultPda,
-            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
+            policy: PublicKey.findProgramAddressSync(
+              [Buffer.from("policy"), pauseVaultPda.toBuffer()],
+              program.programId,
+            )[0],
           } as any)
           .signers([unauthorizedUser])
           .rpc();
@@ -7322,7 +7674,11 @@ describe("sigil", () => {
 
       try {
         await program.methods
-          .agentTransfer(new BN(100_000), ((await program.account.policyConfig.fetch(pausePolicyPda)).policyVersion as BN) ?? new BN(0))
+          .agentTransfer(
+            new BN(100_000),
+            ((await program.account.policyConfig.fetch(pausePolicyPda))
+              .policyVersion as BN) ?? new BN(0),
+          )
           .accounts({
             agent: pauseAgent.publicKey,
             vault: pauseVaultPda,
@@ -7360,7 +7716,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: pauseVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), pauseVaultPda.toBuffer()],
+            program.programId,
+          )[0],
         } as any)
         .rpc();
 
@@ -7383,7 +7742,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: pauseVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), pauseVaultPda.toBuffer()],
+            program.programId,
+          )[0],
         } as any)
         .rpc();
     });
@@ -7394,7 +7756,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: pauseVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), pauseVaultPda.toBuffer()],
+            program.programId,
+          )[0],
         } as any)
         .rpc();
 
@@ -7412,7 +7777,10 @@ describe("sigil", () => {
           .accounts({
             owner: owner.publicKey,
             vault: pauseVaultPda,
-            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
+            policy: PublicKey.findProgramAddressSync(
+              [Buffer.from("policy"), pauseVaultPda.toBuffer()],
+              program.programId,
+            )[0],
           } as any)
           .rpc();
         expect.fail("Should have thrown");
@@ -7428,7 +7796,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: pauseVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), pauseVaultPda.toBuffer()],
+            program.programId,
+          )[0],
         } as any)
         .rpc();
 
@@ -7438,7 +7809,10 @@ describe("sigil", () => {
           .accounts({
             owner: unauthorizedUser.publicKey,
             vault: pauseVaultPda,
-            policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
+            policy: PublicKey.findProgramAddressSync(
+              [Buffer.from("policy"), pauseVaultPda.toBuffer()],
+              program.programId,
+            )[0],
           } as any)
           .signers([unauthorizedUser])
           .rpc();
@@ -7456,7 +7830,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: pauseVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), pauseVaultPda.toBuffer()],
+            program.programId,
+          )[0],
         } as any)
         .rpc();
     });
@@ -7468,7 +7845,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: pauseVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), pauseVaultPda.toBuffer()],
+            program.programId,
+          )[0],
         } as any)
         .rpc();
 
@@ -7477,7 +7857,10 @@ describe("sigil", () => {
         .accounts({
           owner: owner.publicKey,
           vault: pauseVaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pauseVaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), pauseVaultPda.toBuffer()],
+            program.programId,
+          )[0],
         } as any)
         .rpc();
 

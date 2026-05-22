@@ -114,21 +114,13 @@ export function writeU32Le(view: DataView, offset: number, v: number): number {
 }
 
 /** Write u64 little-endian. Returns new offset. */
-export function writeU64Le(
-  view: DataView,
-  offset: number,
-  v: bigint,
-): number {
+export function writeU64Le(view: DataView, offset: number, v: bigint): number {
   view.setBigUint64(offset, v, true);
   return offset + 8;
 }
 
 /** Write a bool as a single 0/1 byte. Returns new offset. */
-export function writeBool(
-  view: DataView,
-  offset: number,
-  v: boolean,
-): number {
+export function writeBool(view: DataView, offset: number, v: boolean): number {
   view.setUint8(offset, v ? 1 : 0);
   return offset + 1;
 }

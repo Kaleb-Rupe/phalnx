@@ -113,6 +113,7 @@ pub struct AgentPermsCosignDigestFields<'a> {
 ///   3. new_capability       (1 byte)
 ///   4. spending_limit_usd   (8 bytes u64 LE)
 ///   5. cooldown_seconds     (8 bytes u64 LE)
+///
 /// = 81 bytes deterministic input.
 pub fn compute_agent_perms_cosign_digest(
     fields: &AgentPermsCosignDigestFields<'_>,

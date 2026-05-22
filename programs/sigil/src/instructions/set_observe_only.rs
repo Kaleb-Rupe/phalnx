@@ -125,6 +125,11 @@ pub fn handler(ctx: Context<SetObserveOnly>, new_value: bool) -> Result<()> {
         // 21. set_observe_only never mutates the agent set — re-derive
         // from live vault.
         agent_set_hash: compute_agent_set_hash(&vault.agents),
+        // D-5 (audit 2026-05-19, F-RP3-1): cosign_session_pubkey bound at
+        // canonical position 22 — set_observe_only never mutates it, so
+        // pass-through from live policy keeps the re-bind digest matching
+        // the queue-time digest.
+        cosign_session_pubkey: policy.cosign_session_pubkey,
     });
     policy.policy_preview_digest = recomputed_digest;
     policy.policy_version = policy

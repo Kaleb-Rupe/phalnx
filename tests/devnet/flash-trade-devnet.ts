@@ -236,7 +236,7 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
             protocols: [FLASH_TRADE_DEVNET, FLASH_COMPOSABILITY_DEVNET],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -333,7 +333,8 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
           FLASH_USDC_DEVNET,
           new BN(500_000), // $0.50
           FLASH_TRADE_DEVNET,
-          ((await program.account.policyConfig.fetch(policyPda)).policyVersion as BN) ?? new BN(0), // expectedPolicyVersion
+          ((await program.account.policyConfig.fetch(policyPda))
+            .policyVersion as BN) ?? new BN(0), // expectedPolicyVersion
           new BN(0), // AC-10 expectedNonce (fresh session)
         )
         .accounts({
@@ -623,7 +624,7 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
             protocols: [FLASH_TRADE_DEVNET, FLASH_COMPOSABILITY_DEVNET],
             allowedDestinations: [],
             timelockDuration: new BN(0),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -852,7 +853,7 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
             protocols: [FLASH_TRADE_DEVNET],
             allowedDestinations: [],
             timelockDuration: new BN(0),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -873,7 +874,10 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
         .accounts({
           owner: owner.publicKey,
           vault: pdas.vaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pdas.vaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), pdas.vaultPda.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: overlay,
         } as any)
         .rpc();
@@ -913,7 +917,8 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
           FLASH_USDC_DEVNET,
           new BN(100_000),
           FLASH_TRADE_DEVNET,
-          ((await program.account.policyConfig.fetch(pdas.policyPda)).policyVersion as BN) ?? new BN(0),
+          ((await program.account.policyConfig.fetch(pdas.policyPda))
+            .policyVersion as BN) ?? new BN(0),
           new BN(0), // AC-10 expectedNonce
         )
         .accounts({
@@ -1005,7 +1010,7 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
             protocols: [FLASH_TRADE_DEVNET],
             allowedDestinations: [],
             timelockDuration: new BN(0),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -1026,7 +1031,10 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
         .accounts({
           owner: owner.publicKey,
           vault: pdas.vaultPda,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pdas.vaultPda.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), pdas.vaultPda.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: overlay,
         } as any)
         .rpc();
@@ -1064,7 +1072,9 @@ describe("⚡ FLASH TRADE DEVNET — Real Perpetuals Through Sigil", function ()
           .validateAndAuthorize(
             FLASH_USDC_DEVNET,
             new BN(100_000),
-            randomProgram, ((await program.account.policyConfig.fetch(pdas.policyPda)).policyVersion as BN) ?? new BN(0),
+            randomProgram,
+            ((await program.account.policyConfig.fetch(pdas.policyPda))
+              .policyVersion as BN) ?? new BN(0),
             new BN(0), // AC-10 expectedNonce
           )
           .accounts({

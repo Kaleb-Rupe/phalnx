@@ -17,21 +17,27 @@ describe("agent-errors", () => {
   // ─── On-chain error map completeness ──────────────────────────────────────
 
   describe("ON_CHAIN_ERROR_MAP completeness", () => {
-    it("maps all 109 error codes (6000-6108) post-Phase-8", () => {
+    it("maps all 115 error codes (6000-6114) post-Bucket-2", () => {
       const codes = getAllOnChainErrorCodes();
-      // 6000-6108 inclusive = 109 codes. Phase 5 added 6094/6095/6096.
+      // 6000-6114 inclusive = 115 codes. Phase 5 added 6094/6095/6096.
       // Phase 6 added 6097-6101 (R-1/R-2/R-3/R-4 + MintDeltaCapMisconfigured).
       // Audit 2026-05-19 H-1 added 6102 IxMetaCountExceeded.
       // Phase 8 Batches 1-5 added 6103-6108 (ownership transfer + freeze
       // hardening); SDK mappings landed in Phase 8 Batch 6 alongside the
       // PEN-CROSS-1 agent-grant work (audit 2026-05-19).
-      expect(codes).to.have.lengthOf(109);
+      // Pre-redeploy audit 2026-05-21 H-3 added 6109 ErrPostAssertionsNotClosed.
+      // Bucket-1 cleanup 2026-05-21 H-4 added 6110 ErrDestinationIsProtectedPda.
+      // Bucket-2 2026-05-21 added 6111 ErrIntentDigestMismatch (D-1 AL3
+      // verifier), 6112 ErrPendingConstraintsDigestMismatch (M-4),
+      // 6113 ErrPendingAgentGrantDigestMismatch (M-5),
+      // 6114 ErrReactivateCosignRequiredForFullCapability (D-5).
+      expect(codes).to.have.lengthOf(115);
       expect(codes[0]).to.equal(6000);
-      expect(codes[codes.length - 1]).to.equal(6108);
+      expect(codes[codes.length - 1]).to.equal(6114);
     });
 
-    it("every code from 6000-6108 is present with no gaps post-Phase-8", () => {
-      for (let code = 6000; code <= 6108; code++) {
+    it("every code from 6000-6114 is present with no gaps post-Bucket-2", () => {
+      for (let code = 6000; code <= 6114; code++) {
         const entry = ON_CHAIN_ERROR_MAP[code];
         expect(entry, `Missing error code ${code}`).to.exist;
         expect(entry.name).to.be.a("string").and.not.be.empty;
@@ -58,6 +64,27 @@ describe("agent-errors", () => {
         generatedCodeCount,
         `ON_CHAIN_ERROR_MAP has ${handMaintainedCount} entries but generated code has ${generatedCodeCount} SIGIL_ERROR__* numeric constants — sync required`,
       );
+    });
+
+    // H-10 (pre-redeploy audit 2026-05-21): 6096 has three trigger
+    // branches inside finalize_session.rs (cap exceeded, multiple-distinct
+    // recipients, tracker array full). The SDK error mapping must surface
+    // a recovery action for the "multiple distinct recipients in one tx"
+    // branch — splitting the bundle — which the pre-H-10 mapping did not.
+    it("6096 (ErrRecipientCapExceeded) exposes the H-10 split-into-separate-transactions recovery", () => {
+      const entry = ON_CHAIN_ERROR_MAP[6096];
+      expect(entry, "6096 must be mapped").to.exist;
+      const actions = entry.recovery_actions.map((a) => a.action);
+      expect(actions).to.include(
+        "split_into_separate_transactions",
+        "H-10: bundle-splitting recovery must be in the action list",
+      );
+      // Existing actions remain — the H-10 fix is purely additive.
+      expect(actions).to.include("reduce_amount");
+      expect(actions).to.include("use_different_recipient");
+      expect(actions).to.include("wait");
+      // The message must reflect the triple-cause disambiguation.
+      expect(entry.message).to.match(/single-recipient/i);
     });
 
     // Drift guard — ensures the highest numeric code in ON_CHAIN_ERROR_MAP

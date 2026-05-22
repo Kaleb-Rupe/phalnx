@@ -399,7 +399,9 @@ export function getSecurityPosture(state: ResolvedVaultState): SecurityPosture {
       // are always strictly enforced when present. The remaining gap is
       // protocol mode ALL paired with NO constraints at all — agents would
       // hit no allowlist filter and no entry-match check.
-      passed: policy.protocolMode !== 0 /* PROTOCOL_MODE_ALL */ || constraints !== null,
+      passed:
+        policy.protocolMode !== 0 /* PROTOCOL_MODE_ALL */ ||
+        constraints !== null,
       severity: "critical",
       detail:
         "Protocol mode ALL allows agents to call any program. Without InstructionConstraints, " +

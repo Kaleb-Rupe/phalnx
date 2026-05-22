@@ -37,12 +37,16 @@ import {
   PublicKey,
   SystemProgram,
   LAMPORTS_PER_SOL,
+  SYSVAR_INSTRUCTIONS_PUBKEY,
 } from "@solana/web3.js";
+import {
+  TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddressSync,
+} from "@solana/spl-token";
 import { expect } from "chai";
 import BN from "bn.js";
-import {
-  initVaultPreviewDigest,
-} from "./helpers/policy-digest";
+import { initVaultPreviewDigest } from "./helpers/policy-digest";
 import {
   createTestEnv,
   airdropSol,
@@ -50,6 +54,11 @@ import {
   DEVNET_USDC_MINT,
   advanceTime,
   accountExists,
+  createAtaHelper,
+  createAtaIdempotentHelper,
+  mintToHelper,
+  getTokenBalance,
+  sendVersionedTx,
   TestEnv,
   LiteSVM,
 } from "./helpers/litesvm-setup";
@@ -61,15 +70,31 @@ const STANDARD_INIT_TIMELOCK = new BN(1800);
 // Mirrors PendingOwnershipTransfer::DEFAULT_MIN_DELAY (48h).
 const DEFAULT_MIN_DELAY = 172_800;
 
+// CAPABILITY_OPERATOR (mirrors AgentCapability::Operator) — required for the
+// LBL-01 spending tests because validate_and_authorize / agent_transfer both
+// gate on has_capability(.., is_spending=true).
+const FULL_CAPABILITY = 2;
+
 // Audit-log discriminators (mirrors state/audit_log_success.rs).
 const DISC_OWNERSHIP_INITIATE = 7;
 const DISC_OWNERSHIP_ACCEPT = 8;
 const DISC_OWNERSHIP_CANCEL = 9;
+// Spending-path discriminators (mirrors state/audit_log_success.rs):
+//   AUDIT_DISC_FINALIZE_SUCCESS = 2, AUDIT_DISC_WITHDRAW = 4.
+const DISC_WITHDRAW = 4;
+const DISC_FINALIZE_SUCCESS = 2;
 
 // Per-entry layout — must match programs/sigil/src/state/audit_log_success.rs.
 const ENTRY_SIZE = 64;
 const SUCCESS_CAPACITY = 128;
 const ENTRIES_OFFSET = 8 + 32; // after disc + vault
+
+// Protocol treasury — must match the PROTOCOL_TREASURY constant in
+// programs/sigil/src/state/constants.rs. agent_transfer + validate_and_authorize
+// both require the treasury ATA when a protocol fee > 0 is collected.
+const PROTOCOL_TREASURY = new PublicKey(
+  "ASHie1dFTnDSnrHMPGmniJhMgfJVGPm3rAaEPnrtWDiT",
+);
 
 /** Decode the last-written audit-log success buffer entry's discriminator. */
 function lastSuccessDisc(svm: LiteSVM, auditSuccess: PublicKey): number {
@@ -94,6 +119,13 @@ describe("ownership-transfer (Phase 8 Batch 3 — C26)", () => {
   const feeDestination = Keypair.generate();
   const jupiterProgramId = Keypair.generate().publicKey;
 
+  // LBL-01 spending tests need the owner to hold USDC (for the deposit step)
+  // and the protocol treasury to have a valid ATA (for fee transfers). Both
+  // are seeded once in the top-level before() so they're available to every
+  // spending test that calls `prepareSpendingVault(...)`.
+  let ownerUsdcAta: PublicKey;
+  let protocolTreasuryUsdcAta: PublicKey;
+
   before(async () => {
     env = createTestEnv();
     svm = env.svm;
@@ -104,17 +136,55 @@ describe("ownership-transfer (Phase 8 Batch 3 — C26)", () => {
     airdropSol(svm, feeDestination.publicKey, 2 * LAMPORTS_PER_SOL);
 
     createMintAtAddress(svm, DEVNET_USDC_MINT, owner.publicKey, 6);
+
+    // Seed the owner's USDC ATA with enough liquidity to deposit into every
+    // spending-test vault below. Each vault deposit is 600 USDC; 10K is
+    // generous headroom across all 4 LBL-01 spending tests.
+    ownerUsdcAta = createAtaHelper(
+      svm,
+      (owner as any).payer,
+      DEVNET_USDC_MINT,
+      owner.publicKey,
+    );
+    mintToHelper(
+      svm,
+      (owner as any).payer,
+      DEVNET_USDC_MINT,
+      ownerUsdcAta,
+      owner.publicKey,
+      10_000_000_000n, // 10K USDC
+    );
+
+    // Protocol treasury ATA — off-curve (PROTOCOL_TREASURY is a non-PDA
+    // hardcoded pubkey, but agent_transfer asserts ownership at runtime, so
+    // we pass allowOwnerOffCurve=true to let the ATA creation succeed).
+    protocolTreasuryUsdcAta = createAtaIdempotentHelper(
+      svm,
+      (owner as any).payer,
+      DEVNET_USDC_MINT,
+      PROTOCOL_TREASURY,
+      true,
+    );
   });
 
   /**
    * Initialize a fresh vault with optional cosign-required override. Returns
    * the PDAs the ownership-transfer handlers consume.
+   *
+   * The LBL-01 spending tests (added 2026-05-21) also use this helper, which
+   * is why it now accepts an optional `allowedDestinations` list: agent_transfer
+   * gates on `policy.is_destination_allowed(...)`, so that test needs a
+   * destination wallet baked into the policy at init time.
    */
   async function initVault(
     vaultId: BN,
-    opts: { cosignRequired?: boolean } = {},
+    opts: {
+      cosignRequired?: boolean;
+      allowedDestinations?: PublicKey[];
+    } = {},
   ) {
     const cosignRequired = opts.cosignRequired ?? false;
+    const allowedDestinations = opts.allowedDestinations ?? [];
 
     const [vault] = PublicKey.findProgramAddressSync(
       [
@@ -159,7 +229,7 @@ describe("ownership-transfer (Phase 8 Batch 3 — C26)", () => {
         0,
         100,
         STANDARD_INIT_TIMELOCK,
-        [],
+        allowedDestinations,
         [],
         false, // observeOnly
         0x00ffffff,
@@ -174,7 +244,7 @@ describe("ownership-transfer (Phase 8 Batch 3 — C26)", () => {
           maxSlippageBps: 100,
           protocolMode: 1,
           protocols: [jupiterProgramId],
-          allowedDestinations: [],
+          allowedDestinations,
           timelockDuration: STANDARD_INIT_TIMELOCK,
           operatingHours: 0x00ffffff,
           autoPromoteGrays: false,
@@ -222,9 +292,8 @@ describe("ownership-transfer (Phase 8 Batch 3 — C26)", () => {
       .rpc();
 
     // ASSERT — pending PDA populated + audit disc=7 written.
-    const pendingState = await program.account.pendingOwnershipTransfer.fetch(
-      pendingOwner,
-    );
+    const pendingState =
+      await program.account.pendingOwnershipTransfer.fetch(pendingOwner);
     expect(pendingState.vault.toString()).to.equal(vault.toString());
     expect(pendingState.currentOwner.toString()).to.equal(
       owner.publicKey.toString(),
@@ -236,7 +305,9 @@ describe("ownership-transfer (Phase 8 Batch 3 — C26)", () => {
     expect(pendingState.minDelaySeconds.toString()).to.equal(
       DEFAULT_MIN_DELAY.toString(),
     );
-    expect(lastSuccessDisc(svm, auditSuccess)).to.equal(DISC_OWNERSHIP_INITIATE);
+    expect(lastSuccessDisc(svm, auditSuccess)).to.equal(
+      DISC_OWNERSHIP_INITIATE,
+    );
 
     // ACT — wait + accept.
     advanceTime(svm, DEFAULT_MIN_DELAY);
@@ -383,6 +454,394 @@ describe("ownership-transfer (Phase 8 Batch 3 — C26)", () => {
   });
 
   // ─────────────────────────────────────────────────────────────────────────
+  // LBL-01 SPENDING REGRESSION GUARDS (added 2026-05-21 — H-6 from
+  // pre-redeploy audit at HEAD 48c62cc).
+  //
+  // CRITICAL fixes C-1..C-4 swapped the inline CPI signer_seeds in 4
+  // spending handlers from `vault.owner` (mutates on ownership transfer)
+  // to `vault.vault_authority` (immutable PDA seed-key per LBL-01):
+  //   - withdraw_funds.rs
+  //   - agent_transfer.rs
+  //   - validate_and_authorize.rs (Approve CPI for delegated sessions)
+  //   - finalize_session.rs (Revoke CPI + outcome-check)
+  //
+  // The pre-existing LBL-01 test above exercises 3 owner-side ix
+  // (register_agent / pause_agent / freeze_vault) that already used the
+  // correct Fix-Up B pattern; it does NOT exercise the 4 SPENDING paths
+  // that were broken. These 3 new tests close that gap:
+  //   - withdraw_funds: owner-side spending CPI
+  //   - agent_transfer: agent-side spending CPI
+  //   - seal() = validate + finalize: composed-tx spending CPI (covers
+  //     both validate_and_authorize Approve and finalize_session Revoke +
+  //     outcome-based settlement)
+  //
+  // Pre-fix failure mode for ALL 3: signer_seeds derived from
+  // `vault.owner = new_owner` produces a DIFFERENT signer pubkey than
+  // the vault PDA's actual address (which is derived from the original
+  // owner = vault_authority). The CPI then fails its signature check
+  // with MissingRequiredSignature (token::transfer / token::approve /
+  // token::revoke all require the vault PDA to sign as `authority`).
+  // ─────────────────────────────────────────────────────────────────────────
+  describe("LBL-01: post-transfer spending paths", () => {
+    /**
+     * Set up a vault that is funded, has a registered spending agent, and
+     * (optionally) has a destination allowlist. Returns everything callers
+     * need to (a) transfer ownership and (b) drive any of the 4 spending
+     * handlers post-transfer.
+     *
+     * Why register the agent BEFORE the transfer: the new owner is a
+     * fresh keypair and the LBL-01 audit fix applies to spending handlers
+     * regardless of which owner registered the agent. Registering the
+     * agent in this setup keeps the test focused on the spending CPI
+     * signer_seeds rather than mixing in owner-side register_agent
+     * coverage (which is already pinned by the LBL-01 test above).
+     */
+    async function prepareSpendingVault(
+      vaultId: BN,
+      opts: { allowedDestinations?: PublicKey[] } = {},
+    ) {
+      const ctx = await initVault(vaultId, {
+        allowedDestinations: opts.allowedDestinations,
+      });
+      const vaultUsdcAta = getAssociatedTokenAddressSync(
+        DEVNET_USDC_MINT,
+        ctx.vault,
+        true, // allowOwnerOffCurve — vault is a PDA
+      );
+      // Deposit 600 USDC (well over the 100 USDC max_tx + headroom for
+      // protocol fees on the seal() outcome-check path).
+      await program.methods
+        .depositFunds(new BN(600_000_000))
+        .accounts({
+          owner: owner.publicKey,
+          vault: ctx.vault,
+          mint: DEVNET_USDC_MINT,
+          ownerTokenAccount: ownerUsdcAta,
+          vaultTokenAccount: vaultUsdcAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+      // Register a spending agent (FULL_CAPABILITY = Operator).
+      const agent = Keypair.generate();
+      airdropSol(svm, agent.publicKey, 5 * LAMPORTS_PER_SOL);
+      await program.methods
+        .registerAgent(agent.publicKey, FULL_CAPABILITY, new BN(0))
+        .accounts({
+          owner: owner.publicKey,
+          vault: ctx.vault,
+          policy: ctx.policy,
+          agentSpendOverlay: ctx.overlay,
+        } as any)
+        .rpc();
+      return { ...ctx, vaultUsdcAta, agent };
+    }
+
+    /**
+     * Initiate + wait + accept ownership transfer to `newOwner`. Shared
+     * by every spending test below.
+     */
+    async function transferOwnership(args: {
+      vault: PublicKey;
+      policy: PublicKey;
+      auditSuccess: PublicKey;
+      pendingOwner: PublicKey;
+      newOwner: Keypair;
+    }) {
+      await program.methods
+        .initiateOwnershipTransfer(args.newOwner.publicKey, false)
+        .accounts({
+          owner: owner.publicKey,
+          vault: args.vault,
+          policy: args.policy,
+          pending: args.pendingOwner,
+          auditLogSuccess: args.auditSuccess,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+      advanceTime(svm, DEFAULT_MIN_DELAY);
+      await program.methods
+        .acceptOwnershipTransfer()
+        .accounts({
+          newOwner: args.newOwner.publicKey,
+          vault: args.vault,
+          policy: args.policy,
+          pending: args.pendingOwner,
+          auditLogSuccess: args.auditSuccess,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .signers([args.newOwner])
+        .rpc();
+    }
+
+    // ───────────────────────────────────────────────────────────────────
+    // LBL-01 spending #1 — withdraw_funds (owner-side spending CPI).
+    //
+    // Pre-fix: signer_seeds = [b"vault", vault.owner=new_owner, ...] →
+    // derives a different pubkey than the vault PDA address (which uses
+    // vault_authority = original_owner). The token::transfer CPI fails
+    // with MissingRequiredSignature.
+    //
+    // Post-fix: signer_seeds = [b"vault", vault.vault_authority, ...] →
+    // derives the correct vault PDA → CPI succeeds.
+    // ───────────────────────────────────────────────────────────────────
+    it("LBL-01 spending: withdraw_funds works post-transfer", async () => {
+      const ctx = await prepareSpendingVault(new BN(9100));
+      const newOwner = Keypair.generate();
+      airdropSol(svm, newOwner.publicKey, 5 * LAMPORTS_PER_SOL);
+      // New-owner USDC ATA — the destination for withdraw_funds.
+      const newOwnerUsdcAta = createAtaHelper(
+        svm,
+        (owner as any).payer,
+        DEVNET_USDC_MINT,
+        newOwner.publicKey,
+      );
+
+      await transferOwnership({
+        vault: ctx.vault,
+        policy: ctx.policy,
+        auditSuccess: ctx.auditSuccess,
+        pendingOwner: ctx.pendingOwner,
+        newOwner,
+      });
+
+      // Sanity: post-transfer vault.owner is new, vault_authority unchanged.
+      const v = await program.account.agentVault.fetch(ctx.vault);
+      expect(v.owner.toString()).to.equal(newOwner.publicKey.toString());
+      expect((v as any).vaultAuthority.toString()).to.equal(
+        owner.publicKey.toString(),
+      );
+
+      const vaultBalBefore = getTokenBalance(svm, ctx.vaultUsdcAta);
+      const recipientBalBefore = getTokenBalance(svm, newOwnerUsdcAta);
+
+      const withdrawAmount = new BN(10_000_000); // 10 USDC
+      await program.methods
+        .withdrawFunds(withdrawAmount)
+        .accounts({
+          owner: newOwner.publicKey,
+          vault: ctx.vault,
+          mint: DEVNET_USDC_MINT,
+          vaultTokenAccount: ctx.vaultUsdcAta,
+          ownerTokenAccount: newOwnerUsdcAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        } as any)
+        .signers([newOwner])
+        .rpc();
+
+      const vaultBalAfter = getTokenBalance(svm, ctx.vaultUsdcAta);
+      const recipientBalAfter = getTokenBalance(svm, newOwnerUsdcAta);
+      expect(Number(vaultBalBefore - vaultBalAfter)).to.equal(10_000_000);
+      expect(Number(recipientBalAfter - recipientBalBefore)).to.equal(
+        10_000_000,
+      );
+      // Audit log entry written by handler — discriminator = 6 (withdraw).
+      expect(lastSuccessDisc(svm, ctx.auditSuccess)).to.equal(DISC_WITHDRAW);
+    });
+
+    // ───────────────────────────────────────────────────────────────────
+    // LBL-01 spending #2 — agent_transfer (agent-side spending CPI).
+    //
+    // The agent signer is unaffected by ownership transfer (agents are a
+    // vault-level concept and survive the transfer). The break is on the
+    // inline CPI signer_seeds for the vault PDA, identical to #1.
+    // ───────────────────────────────────────────────────────────────────
+    it("LBL-01 spending: agent_transfer works post-transfer", async () => {
+      // Allowlisted recipient — must be baked into the policy at init time
+      // because we transfer ownership BEFORE issuing the agent_transfer,
+      // and the new owner would have to drive queue_destination_update +
+      // timelock to add a destination post-transfer (out of scope here).
+      const recipient = Keypair.generate();
+      airdropSol(svm, recipient.publicKey, 1 * LAMPORTS_PER_SOL);
+
+      const ctx = await prepareSpendingVault(new BN(9101), {
+        allowedDestinations: [recipient.publicKey],
+      });
+      const recipientUsdcAta = createAtaHelper(
+        svm,
+        (owner as any).payer,
+        DEVNET_USDC_MINT,
+        recipient.publicKey,
+      );
+
+      const newOwner = Keypair.generate();
+      airdropSol(svm, newOwner.publicKey, 1 * LAMPORTS_PER_SOL);
+      await transferOwnership({
+        vault: ctx.vault,
+        policy: ctx.policy,
+        auditSuccess: ctx.auditSuccess,
+        pendingOwner: ctx.pendingOwner,
+        newOwner,
+      });
+
+      const recipientBalBefore = getTokenBalance(svm, recipientUsdcAta);
+      const transferAmount = new BN(10_000_000); // 10 USDC
+
+      const policyVersion =
+        ((await program.account.policyConfig.fetch(ctx.policy))
+          .policyVersion as BN) ?? new BN(0);
+
+      await program.methods
+        .agentTransfer(transferAmount, policyVersion)
+        .accounts({
+          agent: ctx.agent.publicKey,
+          vault: ctx.vault,
+          policy: ctx.policy,
+          tracker: ctx.tracker,
+          agentSpendOverlay: ctx.overlay,
+          vaultTokenAccount: ctx.vaultUsdcAta,
+          tokenMintAccount: DEVNET_USDC_MINT,
+          destinationTokenAccount: recipientUsdcAta,
+          feeDestinationTokenAccount: null,
+          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        } as any)
+        .signers([ctx.agent])
+        .rpc();
+
+      // Net = amount - protocol_fee (rate = 200 / 1_000_000 ceiling-div).
+      // 10_000_000 * 200 / 1_000_000 = 2_000 fee → net 9_998_000.
+      const recipientBalAfter = getTokenBalance(svm, recipientUsdcAta);
+      expect(Number(recipientBalAfter - recipientBalBefore)).to.equal(
+        9_998_000,
+      );
+    });
+
+    // ───────────────────────────────────────────────────────────────────
+    // LBL-01 spending #3 — validate_and_authorize + finalize_session
+    // (composed seal()-style transaction).
+    //
+    // Two CPI signer_seeds sites are exercised by this atomic transaction:
+    //   - validate_and_authorize:  token::approve (delegation to agent)
+    //   - finalize_session:        token::revoke (undelegation) AND the
+    //                              outcome-based settlement read path
+    //
+    // The composed [validate, finalize] tx mirrors the sigil.ts seal()
+    // happy-path test at lines 1131-1205 (validate+finalize with no
+    // intervening DeFi ix — mock DeFi is a no-op so the protocol fee is
+    // the only balance change).
+    //
+    // Post-transfer assertions:
+    //   - composed tx succeeds atomically (both CPIs signed correctly)
+    //   - session PDA is closed (finalize ran)
+    //   - audit-log success entry is the finalize discriminator (= 2)
+    //   - vault.totalTransactions incremented
+    //   - vault balance decreased by exactly the protocol fee (10K)
+    // ───────────────────────────────────────────────────────────────────
+    it("LBL-01 spending: validate_and_authorize + finalize_session works post-transfer (seal pattern)", async () => {
+      const ctx = await prepareSpendingVault(new BN(9102));
+      const newOwner = Keypair.generate();
+      airdropSol(svm, newOwner.publicKey, 1 * LAMPORTS_PER_SOL);
+
+      await transferOwnership({
+        vault: ctx.vault,
+        policy: ctx.policy,
+        auditSuccess: ctx.auditSuccess,
+        pendingOwner: ctx.pendingOwner,
+        newOwner,
+      });
+
+      const [sessionPda] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("session"),
+          ctx.vault.toBuffer(),
+          ctx.agent.publicKey.toBuffer(),
+          DEVNET_USDC_MINT.toBuffer(),
+        ],
+        program.programId,
+      );
+
+      const policyVersion =
+        ((await program.account.policyConfig.fetch(ctx.policy))
+          .policyVersion as BN) ?? new BN(0);
+      const amount = new BN(50_000_000); // 50 USDC
+
+      const validateIx = await program.methods
+        .validateAndAuthorize(
+          DEVNET_USDC_MINT,
+          amount,
+          jupiterProgramId,
+          policyVersion,
+          new BN(0), // expectedNonce — fresh session
+        )
+        .accountsPartial({
+          agent: ctx.agent.publicKey,
+          vault: ctx.vault,
+          policy: ctx.policy,
+          tracker: ctx.tracker,
+          session: sessionPda,
+          vaultTokenAccount: ctx.vaultUsdcAta,
+          tokenMintAccount: DEVNET_USDC_MINT,
+          protocolTreasuryTokenAccount: protocolTreasuryUsdcAta,
+          feeDestinationTokenAccount: null,
+          outputStablecoinAccount: null,
+          agentSpendOverlay: ctx.overlay,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+          instructionsSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
+        })
+        .instruction();
+
+      const finalizeIx = await program.methods
+        .finalizeSession()
+        .accountsPartial({
+          payer: ctx.agent.publicKey,
+          vault: ctx.vault,
+          session: sessionPda,
+          sessionRentRecipient: ctx.agent.publicKey,
+          policy: ctx.policy,
+          tracker: ctx.tracker,
+          vaultTokenAccount: ctx.vaultUsdcAta,
+          agentSpendOverlay: ctx.overlay,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+          instructionsSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
+          outputStablecoinAccount: null,
+        })
+        .instruction();
+
+      const vaultBalBefore = getTokenBalance(svm, ctx.vaultUsdcAta);
+      const txResult = sendVersionedTx(
+        svm,
+        [validateIx, finalizeIx],
+        ctx.agent,
+      );
+      expect(txResult).to.exist;
+
+      // Balance delta = protocol fee only (mock DeFi is a no-op).
+      // 50_000_000 * 200 / 1_000_000 = 10_000.
+      const vaultBalAfter = getTokenBalance(svm, ctx.vaultUsdcAta);
+      expect(Number(vaultBalBefore - vaultBalAfter)).to.equal(10_000);
+
+      // Session PDA closed by finalize.
+      expect(svm.getAccount(sessionPda)).to.be.null;
+
+      // FOCUSED finalize_session settlement assertion (test #4 spec, folded
+      // into this test as the prompt allows): finalize wrote a success entry
+      // with the finalize discriminator (= 2). This is the
+      // settlement-CPI-success signal — if the Revoke CPI inside finalize
+      // had failed (pre-LBL-01 signer_seeds bug), the entire tx would have
+      // reverted and this assertion would never run.
+      expect(lastSuccessDisc(svm, ctx.auditSuccess)).to.equal(
+        DISC_FINALIZE_SUCCESS,
+      );
+
+      // Outcome-based settlement bumped the vault counters.
+      const vaultState = await program.account.agentVault.fetch(ctx.vault);
+      expect(vaultState.totalTransactions.toNumber()).to.be.greaterThan(0);
+      // vault.owner is still the new owner (unchanged by finalize).
+      expect(vaultState.owner.toString()).to.equal(
+        newOwner.publicKey.toString(),
+      );
+      // vault_authority is still the original owner (immutable LBL-01 seed).
+      expect((vaultState as any).vaultAuthority.toString()).to.equal(
+        owner.publicKey.toString(),
+      );
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
   // 2. BOUNDARY REJECT — accept one second before timelock elapses.
   // ─────────────────────────────────────────────────────────────────────────
   it("boundary: accept at queued_at + min_delay - 1 → reject 6104", async () => {
@@ -513,9 +972,8 @@ describe("ownership-transfer (Phase 8 Batch 3 — C26)", () => {
     expect(rejected, "double-initiate MUST reject").to.equal(true);
 
     // ASSERT — the first pending PDA still bound to newOwner1 (unchanged).
-    const pendingState = await program.account.pendingOwnershipTransfer.fetch(
-      pendingOwner,
-    );
+    const pendingState =
+      await program.account.pendingOwnershipTransfer.fetch(pendingOwner);
     expect(pendingState.newOwner.toString()).to.equal(
       newOwner1.publicKey.toString(),
     );
@@ -739,9 +1197,8 @@ describe("ownership-transfer (Phase 8 Batch 3 — C26)", () => {
       .signers([cosigner])
       .rpc();
 
-    const pendingState = await program.account.pendingOwnershipTransfer.fetch(
-      pendingOwner,
-    );
+    const pendingState =
+      await program.account.pendingOwnershipTransfer.fetch(pendingOwner);
     expect(pendingState.newOwner.toString()).to.equal(
       newOwner.publicKey.toString(),
     );

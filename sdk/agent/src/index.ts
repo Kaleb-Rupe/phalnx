@@ -60,7 +60,7 @@ async function main(): Promise<void> {
       console.error(
         "[sigil-agent] `setup` not yet implemented. Coming in v0.2.\n" +
           "For now, manually create ~/.sigil/agents/<vault>.json with shape:\n" +
-          '  { vaultAddress, ownerAddress, network, agent: { address, secretKey: [...] }, createdAt }\n',
+          "  { vaultAddress, ownerAddress, network, agent: { address, secretKey: [...] }, createdAt }\n",
       );
       process.exit(1);
       break;

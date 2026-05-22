@@ -98,6 +98,10 @@ export type {
 // ─── PDA Resolution ───────────────────────────────────────────────────────────
 export {
   getVaultPDA,
+  // H-5 (audit 2026-05-21): post-ownership-transfer PDA helper.
+  // Use this AFTER an ownership transfer — derives from the IMMUTABLE
+  // `vault.vault_authority` instead of the mutable `vault.owner`.
+  getVaultPdaFromState,
   getPolicyPDA,
   getTrackerPDA,
   getSessionPDA,
@@ -108,13 +112,15 @@ export {
   getAuditLogSuccessPDA,
   getAuditLogRejectedPDA,
 } from "./resolve-accounts.js";
+export type { VaultPdaSeedSource } from "./resolve-accounts.js";
 
 // ─── Phase 7 — Audit Log ─────────────────────────────────────────────────────
 export {
   fetchAuditLogSuccess,
   fetchAuditLogRejected,
   subjectBytes,
-  targetProtocolBytes,
+  // `targetProtocolBytes` alias removed in Phase 10 Bucket 1 (D-item cleanup;
+  // §RP-1 HIGH-2 2026-05-19 deprecation promised removal). Use `subjectBytes`.
   AUDIT_DISC_RESERVED_ZERO,
   AUDIT_DISC_VALIDATE,
   AUDIT_DISC_FINALIZE_SUCCESS,
@@ -385,6 +391,16 @@ export {
 } from "./seal/intent-digest.js";
 export type { SealIntentInput } from "./seal/intent-digest.js";
 
+// ─── Phase 9 Batch H — TA-19 policy preview digest helpers ──────────────────
+// `computeAgentSetHash` is the canonical client-side mirror of the on-chain
+// `compute_agent_set_hash`. It was previously reachable only via deep import
+// (`@usesigil/kit/policy/compute-policy-preview-digest`); promoting it to
+// the root barrel keeps the TA-19 binding contract symmetric with the
+// `buildCosignBundle` surface and matches the D-9 root-export audit (Phase
+// 10 Bucket 1). `computePolicyPreviewDigest` and friends remain reachable
+// via the deep import for advanced consumers building custom preview UIs.
+export { computeAgentSetHash } from "./policy/compute-policy-preview-digest.js";
+
 // ─── Phase 9 Batch K — AL2 mainnet confirmation gate error codes ────────────
 export {
   SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED,
@@ -400,8 +416,25 @@ export {
   toCaip2,
   isMainnetCaip2,
   deriveNetworkIdentity,
+  // Phase 10 Bucket 1 (D-7): Wallet Standard chain identifier helper.
+  // Identity transform over CAIP-2 today; the explicit helper localizes
+  // any future wallet-standard surface changes.
+  toWalletStandardChain,
+  // M-3 (audit 2026-05-21): opt-in genesis-hash verification helper +
+  // canonical hash constants. Additive; does not change default seal()
+  // behaviour — assertGenesisHash still gates the createSigilClientAsync
+  // factory path. Use verifyNetworkIdentity for preflight checks in
+  // raw-tx-building flows that bypass the client factory.
+  verifyNetworkIdentity,
+  SOLANA_GENESIS_HASHES,
 } from "./caip2-network.js";
-export type { SigilCaip2Chain } from "./caip2-network.js";
+export type {
+  SigilCaip2Chain,
+  SigilNetwork,
+  SigilActualNetwork,
+  NetworkIdentityResult,
+  GenesisRpc,
+} from "./caip2-network.js";
 
 // ─── Phase 9 Batch E — multisig / session / attestation / ownership helpers ─
 // `SQUADS_V4_PROGRAM_ID`, `detectSquadsV4Owner`, and `SquadsDetectionResult`

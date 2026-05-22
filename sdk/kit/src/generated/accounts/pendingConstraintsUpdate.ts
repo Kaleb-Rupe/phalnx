@@ -83,6 +83,25 @@ export type PendingConstraintsUpdate = {
    * Already 8-byte aligned (follows two i64 fields).
    */
   queuedAtSlot: bigint;
+  /**
+   * M-4 close (Bucket 2, Phase 10 PEN-CROSS-3): SHA-256 over the canonical
+   * byte encoding of the pending content (vault + entry_count + active
+   * entries[0..entry_count]). Written once at `queue_constraints_update`
+   * and re-asserted at `apply_constraints_update` before any byte is
+   * copied into the live `InstructionConstraints` PDA.
+   *
+   * Defense-in-depth against discriminator-collision overwrite of this
+   * pending PDA's body between queue and apply: even if a future bug
+   * allowed a same-seed CPI to rewrite the entries slab, the digest
+   * recorded at queue time pins the owner-attested content, and the
+   * apply-time recompute would diverge and reject with
+   * `ErrPendingConstraintsDigestMismatch`.
+   *
+   * Alignment: follows a u64 at struct offset 35896, so byte offset
+   * 35904..35936 is 8-aligned. `[u8; 32]` has alignment 1, no padding
+   * required.
+   */
+  pendingContentDigest: ReadonlyUint8Array;
 };
 
 export type PendingConstraintsUpdateArgs = {
@@ -110,6 +129,25 @@ export type PendingConstraintsUpdateArgs = {
    * Already 8-byte aligned (follows two i64 fields).
    */
   queuedAtSlot: number | bigint;
+  /**
+   * M-4 close (Bucket 2, Phase 10 PEN-CROSS-3): SHA-256 over the canonical
+   * byte encoding of the pending content (vault + entry_count + active
+   * entries[0..entry_count]). Written once at `queue_constraints_update`
+   * and re-asserted at `apply_constraints_update` before any byte is
+   * copied into the live `InstructionConstraints` PDA.
+   *
+   * Defense-in-depth against discriminator-collision overwrite of this
+   * pending PDA's body between queue and apply: even if a future bug
+   * allowed a same-seed CPI to rewrite the entries slab, the digest
+   * recorded at queue time pins the owner-attested content, and the
+   * apply-time recompute would diverge and reject with
+   * `ErrPendingConstraintsDigestMismatch`.
+   *
+   * Alignment: follows a u64 at struct offset 35896, so byte offset
+   * 35904..35936 is 8-aligned. `[u8; 32]` has alignment 1, no padding
+   * required.
+   */
+  pendingContentDigest: ReadonlyUint8Array;
 };
 
 /** Gets the encoder for {@link PendingConstraintsUpdateArgs} account data. */
@@ -125,6 +163,7 @@ export function getPendingConstraintsUpdateEncoder(): FixedSizeEncoder<PendingCo
       ["queuedAt", getI64Encoder()],
       ["executesAt", getI64Encoder()],
       ["queuedAtSlot", getU64Encoder()],
+      ["pendingContentDigest", fixEncoderSize(getBytesEncoder(), 32)],
     ]),
     (value) => ({
       ...value,
@@ -145,6 +184,7 @@ export function getPendingConstraintsUpdateDecoder(): FixedSizeDecoder<PendingCo
     ["queuedAt", getI64Decoder()],
     ["executesAt", getI64Decoder()],
     ["queuedAtSlot", getU64Decoder()],
+    ["pendingContentDigest", fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }
 
@@ -235,5 +275,5 @@ export async function fetchAllMaybePendingConstraintsUpdate(
 }
 
 export function getPendingConstraintsUpdateSize(): number {
-  return 35912;
+  return 35944;
 }

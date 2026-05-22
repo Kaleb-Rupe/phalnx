@@ -639,4 +639,68 @@ pub enum SigilError {
     /// silently dropped so callers immediately see the capacity error.
     #[msg("freeze_internal MAX_REVOKE_PAIRS = 10 exceeded (Council ISC-136)")]
     ErrTooManyRevokePairs,
+
+    /// 6109 — H-3 close (audit 2026-05-21): symmetric to `ConstraintsNotClosed`
+    /// at code 6058. `close_vault` rejects if `policy.has_post_assertions != 0`
+    /// because the 672-byte `PostExecutionAssertions` zero-copy PDA must be
+    /// drained via `close_post_assertions` first — otherwise it would be
+    /// orphaned (post-close vault cannot reinit; the PDA's rent becomes
+    /// unreclaimable). Symmetric class to the SFH-01 (Phase 8) pending_owner
+    /// / pending_agent_grant drain bug already fixed via inline drain logic
+    /// in close_vault. Post-assertions has its own dedicated close handler
+    /// (`close_post_assertions.rs`) so a require!() guard is the closer
+    /// pattern match — mirrors line 84's `has_constraints` check.
+    #[msg("PostExecutionAssertions PDA still active — call close_post_assertions first")]
+    ErrPostAssertionsNotClosed,
+
+    /// 6110 — H-4 close (audit 2026-05-21, Bucket 1): `queue_policy_update`
+    /// rejects if any entry in `allowed_destinations` is the address of a
+    /// Sigil-owned protected PDA for this vault. Closes the owner-self-foot-
+    /// gun where a phished owner allowlists a Sigil PDA (e.g. `vault`,
+    /// `policy`, `pending_owner`), enabling an agent to lock funds at the
+    /// PDA via a token transfer the destination check would otherwise
+    /// approve. Validation covers the 13 single-seed vault-keyed protected
+    /// PDAs from `PROTECTED_SEED_PREFIXES`. Multi-seed PDAs (session,
+    /// pending_agent_perms) are not enumerated at queue time because they
+    /// require an extra seed (agent) the attacker is less likely to social-
+    /// engineer alongside the destination spoof; TA-11 still rejects them
+    /// at execute time.
+    #[msg("Destination is a Sigil-protected PDA — rejected at queue time")]
+    ErrDestinationIsProtectedPda,
+
+    /// 6111 — D-1 close (Bucket 2, audit 2026-05-21): AL3 on-chain intent-
+    /// digest verifier rejected the bundle. `validate_and_authorize` accepts
+    /// `expected_intent_digest: [u8; 32]` from the caller (TS SDK computes
+    /// SHA-256 over the canonical SealInput at preview time) and recomputes
+    /// the same digest from the sibling DeFi instruction introspected via
+    /// the instructions sysvar. Mismatch = prompt-injection or in-flight
+    /// tamper between preview and execute; reject before any CPI. Bundled
+    /// with D-6 "SIG1" magic prefix at intent_version=2.
+    #[msg("AL3 intent-digest mismatch — preview digest does not match executed bundle")]
+    ErrIntentDigestMismatch,
+
+    /// 6112 — M-4 close (Bucket 2, PEN-CROSS-3): apply_constraints_update
+    /// rejected because the recomputed digest of pending content does not
+    /// match the digest stored at queue time. Defense-in-depth against
+    /// discriminator-collision overwrite of `PendingConstraintsUpdate`
+    /// content between queue and apply.
+    #[msg("PendingConstraintsUpdate digest mismatch between queue and apply")]
+    ErrPendingConstraintsDigestMismatch,
+
+    /// 6113 — M-5 close (Bucket 2, PEN-CROSS-3): apply_agent_grant rejected
+    /// because the recomputed digest of pending content does not match the
+    /// digest stored at queue time. Defense-in-depth against discriminator-
+    /// collision overwrite of `PendingAgentGrant` content between queue
+    /// and apply.
+    #[msg("PendingAgentGrant digest mismatch between queue and apply")]
+    ErrPendingAgentGrantDigestMismatch,
+
+    /// 6114 — D-5 close (Bucket 2, F-RP3-1): `reactivate_vault` rejected
+    /// because the operation grafts a new agent at FULL_CAPABILITY without
+    /// the required cosign signature. Closes the phished-owner foot-gun
+    /// where freeze→reactivate(new_agent=ATTACKER, FULL_CAPABILITY) in one
+    /// transaction silently elevates an attacker-controlled agent. Cosign
+    /// pubkey is configured via `policy.cosign_session_pubkey`.
+    #[msg("Reactivate with FULL_CAPABILITY new agent requires cosign")]
+    ErrReactivateCosignRequiredForFullCapability,
 }

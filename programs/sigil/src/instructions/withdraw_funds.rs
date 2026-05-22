@@ -100,13 +100,15 @@ pub fn handler(ctx: Context<WithdrawFunds>, amount: u64) -> Result<()> {
         SigilError::InsufficientBalance
     );
 
-    // PDA signer seeds
-    let owner_key = vault.owner;
+    // PDA signer seeds — LBL-01: must use vault.vault_authority (immutable PDA
+    // seed), NOT vault.owner (mutates on ownership transfer). See full rationale
+    // in freeze_vault.rs:76-86.
+    let vault_authority = vault.vault_authority;
     let vault_id_bytes = vault.vault_id.to_le_bytes();
     let bump = [vault.bump];
     let signer_seeds = [
         b"vault" as &[u8],
-        owner_key.as_ref(),
+        vault_authority.as_ref(),
         vault_id_bytes.as_ref(),
         bump.as_ref(),
     ];

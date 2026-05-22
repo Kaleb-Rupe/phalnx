@@ -413,22 +413,22 @@ impl SpendTracker {
     /// Algorithm:
     ///   1. If the recipient already has a slot:
     ///      a. If the slot's window has elapsed (≥ 24h since window_start),
-    ///         reset to a fresh window starting at `now` with
-    ///         `window_spend_usd = usd_amount`.
+    ///      reset to a fresh window starting at `now` with
+    ///      `window_spend_usd = usd_amount`.
     ///      b. Otherwise accumulate `usd_amount` into the active window
-    ///         (checked add — `Overflow` on u64::MAX overflow).
+    ///      (checked add — `Overflow` on u64::MAX overflow).
     ///   2. If the recipient has no slot:
     ///      a. If `per_recipient_count < MAX_PER_RECIPIENT_ENTRIES`,
-    ///         allocate the next free slot at index `per_recipient_count`
-    ///         and increment.
+    ///      allocate the next free slot at index `per_recipient_count`
+    ///      and increment.
     ///      b. Otherwise scan for an entry whose window has elapsed
-    ///         (`now - window_start >= 86400`) — among eligible entries,
-    ///         pick the one with the OLDEST `window_start`. Overwrite
-    ///         it with the new recipient.
+    ///      (`now - window_start >= 86400`) — among eligible entries,
+    ///      pick the one with the OLDEST `window_start`. Overwrite
+    ///      it with the new recipient.
     ///      c. If NO entry has an elapsed window, REJECT with
-    ///         `ErrRecipientCapExceeded`. Critical: this is the no-churn
-    ///         guarantee — an attacker who has filled all 10 slots within
-    ///         the last 24h cannot recycle them by paying new recipients.
+    ///      `ErrRecipientCapExceeded`. Critical: this is the no-churn
+    ///      guarantee — an attacker who has filled all 10 slots within
+    ///      the last 24h cannot recycle them by paying new recipients.
     ///
     /// Caller is expected to perform the cap-vs-spend check BEFORE this
     /// record helper (so the cap rejection happens at the require! site

@@ -207,6 +207,20 @@ jobs:
       - name: Verify error-code drift (IDL to TypeScript map)
         run: pnpm run verify:error-drift
 
+      # Phase 9 Batch L (ISC-145, 146): assert security-critical kit
+      # dependencies (@noble/hashes, codama renderers) stay pinned to
+      # the expected major versions in pnpm-lock.yaml. A silent drift
+      # here (e.g. @noble/hashes 1.x → 2.x via a transitive bump)
+      # would invalidate the cross-impl byte-equality guarantees for
+      # AL3 intent-digest and TA-19 policy-preview-digest. Runs BEFORE
+      # the test step so a lockfile drift fails the gate even if some
+      # unrelated test would also fail.
+      - name: Verify lockfile pins (security-critical deps)
+        if: >-
+          needs.changes.outputs.sdk-kit == 'true' ||
+          github.event_name == 'push'
+        run: pnpm -C sdk/kit run verify-lockfile-pins
+
       - name: Kit SDK tests (1784 tests)
         if: >-
           needs.changes.outputs.sdk-kit == 'true' ||
@@ -419,9 +433,14 @@ jobs:
             tests/policy-digest-invariant.ts \
             tests/post-assertions-r-variants.ts \
             tests/post-assertions-sandwich.ts \
+            tests/sandwich-integration.ts \
             tests/sysvar-scan-bound.ts \
             tests/toctou-security.ts \
-            tests/audit-log.ts
+            tests/audit-log.ts \
+            tests/audit-log-burst.ts \
+            tests/audit-log-coverage.ts \
+            tests/ownership-transfer.ts \
+            tests/ownership-transfer-multisig.ts
 
       - name: Check for IDL drift
         run: |

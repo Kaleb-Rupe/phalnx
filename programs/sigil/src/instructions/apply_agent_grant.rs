@@ -2,6 +2,8 @@ use anchor_lang::prelude::*;
 
 use crate::errors::SigilError;
 use crate::events::AgentGrantApplied;
+use crate::state::pending_agent_grant::compute_pending_agent_grant_digest;
+use crate::state::pending_constraints::ct_eq_32;
 use crate::state::*;
 use crate::utils::audit_log::build_audit_entry;
 use crate::utils::policy_digest::{
@@ -107,6 +109,27 @@ pub fn handler(ctx: Context<ApplyAgentGrant>) -> Result<()> {
         SigilError::TimelockNotExpired,
     );
 
+    // 1.5. M-5 close (Bucket 2, Phase 10 PEN-CROSS-3): re-assert the
+    // pending content digest BEFORE any mutation of `vault.agents`. The
+    // digest was sealed by `queue_agent_grant` over the owner-attested
+    // (vault, agent, capability, spending_limit_usd, queued_at,
+    // min_delay_seconds) tuple; if a future discriminator-collision bug
+    // or a same-seed CPI overwrite mutated those fields between queue
+    // and apply (e.g. flipping `agent` to an attacker pubkey or raising
+    // `capability` to FULL_CAPABILITY), the recomputed digest diverges
+    // and we reject with `ErrPendingAgentGrantDigestMismatch`. Constant-
+    // time compare via `ct_eq_32` to deny timing side-channels.
+    //
+    // Note: timelock + cosign at queue-time are the primary
+    // authorizations; this digest check is defense-in-depth, closing
+    // the discriminator-collision class identified in the Bucket 2
+    // pen-test (PEN-CROSS-3).
+    let recomputed = compute_pending_agent_grant_digest(pending);
+    require!(
+        ct_eq_32(&recomputed, &pending.pending_content_digest),
+        SigilError::ErrPendingAgentGrantDigestMismatch
+    );
+
     // Snapshot pending fields BEFORE the mutate so the audit-log entry +
     // event payload have the queue-time values even after pending closes.
     let agent = pending.agent;
@@ -202,6 +225,14 @@ pub fn handler(ctx: Context<ApplyAgentGrant>) -> Result<()> {
         per_recipient_daily_cap_usd: policy.per_recipient_daily_cap_usd,
         cosign_required: policy.cosign_required,
         agent_set_hash: new_agent_set_hash,
+        // D-5 (audit 2026-05-19, F-RP3-1): cosign_session_pubkey bound at
+        // canonical position 22 — apply_agent_grant never mutates it, so
+        // pass-through from live policy keeps the re-bind digest matching
+        // the queue-time digest. NOTE: this file is owned by another
+        // subagent in the D-5 batch; the orchestrator will harmonize on
+        // merge — the one-line struct-field addition here is the minimum
+        // needed for the new `PolicyPreviewFields` shape to type-check.
+        cosign_session_pubkey: policy.cosign_session_pubkey,
     });
     policy.policy_preview_digest = new_digest;
     policy.policy_version = policy

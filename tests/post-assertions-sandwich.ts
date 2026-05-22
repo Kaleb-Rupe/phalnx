@@ -66,7 +66,8 @@ import type { Address } from "@solana/kit";
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
 /** A non-default base58 pubkey — value doesn't matter for validation tests. */
-const NONZERO_PUBKEY: Address = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address;
+const NONZERO_PUBKEY: Address =
+  "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address;
 
 /** The Solana zero pubkey base58 form — the System Program ID. */
 const ZERO_PUBKEY: Address = "11111111111111111111111111111111" as Address;
@@ -190,13 +191,49 @@ describe("post-assertions: §RP SDK validator + sandwich scaffolding", () => {
     it("PASS: 8 mixed-mode entries are accepted (was previously rejected at >4)", () => {
       const entries: PostAssertionEntry[] = [
         // R-1
-        { targetAccount: ZERO_PUBKEY, offset: 0, valueLen: 0, operator: 0, expectedValue: nonzeroPubkeyBytes(), assertionMode: 4, auxValue: u64Le(1n), auxByte: 0 },
+        {
+          targetAccount: ZERO_PUBKEY,
+          offset: 0,
+          valueLen: 0,
+          operator: 0,
+          expectedValue: nonzeroPubkeyBytes(),
+          assertionMode: 4,
+          auxValue: u64Le(1n),
+          auxByte: 0,
+        },
         // R-2
-        { targetAccount: NONZERO_PUBKEY, offset: 0, valueLen: 0, operator: 0, expectedValue: new Uint8Array(0), assertionMode: 5, auxValue: ZERO_AUX_VALUE, auxByte: 0 },
+        {
+          targetAccount: NONZERO_PUBKEY,
+          offset: 0,
+          valueLen: 0,
+          operator: 0,
+          expectedValue: new Uint8Array(0),
+          assertionMode: 5,
+          auxValue: ZERO_AUX_VALUE,
+          auxByte: 0,
+        },
         // R-3
-        { targetAccount: NONZERO_PUBKEY, offset: 0, valueLen: 0, operator: 0, expectedValue: nonzeroPubkeyBytes(), assertionMode: 6, auxValue: u64Le(1n), auxByte: 0 },
+        {
+          targetAccount: NONZERO_PUBKEY,
+          offset: 0,
+          valueLen: 0,
+          operator: 0,
+          expectedValue: nonzeroPubkeyBytes(),
+          assertionMode: 6,
+          auxValue: u64Le(1n),
+          auxByte: 0,
+        },
         // R-4
-        { targetAccount: NONZERO_PUBKEY, offset: 0, valueLen: 0, operator: 0, expectedValue: nonzeroPubkeyBytes(), assertionMode: 7, auxValue: ZERO_AUX_VALUE, auxByte: 0 },
+        {
+          targetAccount: NONZERO_PUBKEY,
+          offset: 0,
+          valueLen: 0,
+          operator: 0,
+          expectedValue: nonzeroPubkeyBytes(),
+          assertionMode: 7,
+          auxValue: ZERO_AUX_VALUE,
+          auxByte: 0,
+        },
         // 4× legacy mode-0
         ...Array.from({ length: 4 }, () => ({
           targetAccount: NONZERO_PUBKEY,
@@ -223,7 +260,9 @@ describe("post-assertions: §RP SDK validator + sandwich scaffolding", () => {
         auxValue: ZERO_AUX_VALUE,
         auxByte: 0,
       }));
-      expect(captureValidationCode(() => validatePostAssertionEntries(entries))).to.equal("entry_count_out_of_range");
+      expect(
+        captureValidationCode(() => validatePostAssertionEntries(entries)),
+      ).to.equal("entry_count_out_of_range");
     });
 
     it("REJECT: mode 8 (above MAX_ASSERTION_MODE_VALUE=7) is rejected", () => {
@@ -237,7 +276,9 @@ describe("post-assertions: §RP SDK validator + sandwich scaffolding", () => {
         auxValue: ZERO_AUX_VALUE,
         auxByte: 0,
       };
-      expect(captureValidationCode(() => validatePostAssertionEntries([entry]))).to.equal("assertion_mode_out_of_range");
+      expect(
+        captureValidationCode(() => validatePostAssertionEntries([entry])),
+      ).to.equal("assertion_mode_out_of_range");
     });
   });
 
@@ -255,7 +296,9 @@ describe("post-assertions: §RP SDK validator + sandwich scaffolding", () => {
         auxValue: u64Le(1n),
         auxByte: 2,
       };
-      expect(captureValidationCode(() => validatePostAssertionEntries([entry]))).to.equal("mintdeltacap_scope_out_of_range");
+      expect(
+        captureValidationCode(() => validatePostAssertionEntries([entry])),
+      ).to.equal("mintdeltacap_scope_out_of_range");
     });
 
     it("REJECT: mode 4 with max_net_decrease=0 rejects", () => {
@@ -269,7 +312,9 @@ describe("post-assertions: §RP SDK validator + sandwich scaffolding", () => {
         auxValue: ZERO_AUX_VALUE,
         auxByte: 0,
       };
-      expect(captureValidationCode(() => validatePostAssertionEntries([entry]))).to.equal("mintdeltacap_zero_max_net_decrease");
+      expect(
+        captureValidationCode(() => validatePostAssertionEntries([entry])),
+      ).to.equal("mintdeltacap_zero_max_net_decrease");
     });
 
     it("REJECT: mode 4 with expected_value < 32 bytes rejects", () => {
@@ -283,7 +328,9 @@ describe("post-assertions: §RP SDK validator + sandwich scaffolding", () => {
         auxValue: u64Le(1n),
         auxByte: 0,
       };
-      expect(captureValidationCode(() => validatePostAssertionEntries([entry]))).to.equal("mintdeltacap_mint_too_short");
+      expect(
+        captureValidationCode(() => validatePostAssertionEntries([entry])),
+      ).to.equal("mintdeltacap_mint_too_short");
     });
   });
 
@@ -299,7 +346,9 @@ describe("post-assertions: §RP SDK validator + sandwich scaffolding", () => {
         auxValue: ZERO_AUX_VALUE,
         auxByte: 0,
       };
-      expect(captureValidationCode(() => validatePostAssertionEntries([entry]))).to.equal("ata_authority_pin_default_target");
+      expect(
+        captureValidationCode(() => validatePostAssertionEntries([entry])),
+      ).to.equal("ata_authority_pin_default_target");
     });
 
     it("REJECT: mode 5 with non-zero aux_value rejects", () => {
@@ -313,7 +362,9 @@ describe("post-assertions: §RP SDK validator + sandwich scaffolding", () => {
         auxValue: u64Le(1n),
         auxByte: 0,
       };
-      expect(captureValidationCode(() => validatePostAssertionEntries([entry]))).to.equal("ata_authority_pin_aux_must_be_zero");
+      expect(
+        captureValidationCode(() => validatePostAssertionEntries([entry])),
+      ).to.equal("ata_authority_pin_aux_must_be_zero");
     });
 
     it("REJECT: mode 5 with non-zero aux_byte rejects", () => {
@@ -327,7 +378,9 @@ describe("post-assertions: §RP SDK validator + sandwich scaffolding", () => {
         auxValue: ZERO_AUX_VALUE,
         auxByte: 1,
       };
-      expect(captureValidationCode(() => validatePostAssertionEntries([entry]))).to.equal("ata_authority_pin_aux_must_be_zero");
+      expect(
+        captureValidationCode(() => validatePostAssertionEntries([entry])),
+      ).to.equal("ata_authority_pin_aux_must_be_zero");
     });
   });
 
@@ -343,7 +396,9 @@ describe("post-assertions: §RP SDK validator + sandwich scaffolding", () => {
         auxValue: u64Le(1n),
         auxByte: 0,
       };
-      expect(captureValidationCode(() => validatePostAssertionEntries([entry]))).to.equal("output_balance_floor_default_target");
+      expect(
+        captureValidationCode(() => validatePostAssertionEntries([entry])),
+      ).to.equal("output_balance_floor_default_target");
     });
 
     it("REJECT: mode 6 with min_increase=0 rejects", () => {
@@ -357,7 +412,9 @@ describe("post-assertions: §RP SDK validator + sandwich scaffolding", () => {
         auxValue: ZERO_AUX_VALUE,
         auxByte: 0,
       };
-      expect(captureValidationCode(() => validatePostAssertionEntries([entry]))).to.equal("output_balance_floor_zero_min_increase");
+      expect(
+        captureValidationCode(() => validatePostAssertionEntries([entry])),
+      ).to.equal("output_balance_floor_zero_min_increase");
     });
 
     it("REJECT: mode 6 with non-zero aux_byte rejects", () => {
@@ -371,7 +428,9 @@ describe("post-assertions: §RP SDK validator + sandwich scaffolding", () => {
         auxValue: u64Le(1n),
         auxByte: 1,
       };
-      expect(captureValidationCode(() => validatePostAssertionEntries([entry]))).to.equal("output_balance_floor_aux_byte_must_be_zero");
+      expect(
+        captureValidationCode(() => validatePostAssertionEntries([entry])),
+      ).to.equal("output_balance_floor_aux_byte_must_be_zero");
     });
   });
 
@@ -387,7 +446,9 @@ describe("post-assertions: §RP SDK validator + sandwich scaffolding", () => {
         auxValue: ZERO_AUX_VALUE,
         auxByte: 0,
       };
-      expect(captureValidationCode(() => validatePostAssertionEntries([entry]))).to.equal("declaration_default_recipient");
+      expect(
+        captureValidationCode(() => validatePostAssertionEntries([entry])),
+      ).to.equal("declaration_default_recipient");
     });
 
     it("REJECT: mode 7 with declared_mint=0 rejects", () => {
@@ -401,7 +462,9 @@ describe("post-assertions: §RP SDK validator + sandwich scaffolding", () => {
         auxValue: ZERO_AUX_VALUE,
         auxByte: 0,
       };
-      expect(captureValidationCode(() => validatePostAssertionEntries([entry]))).to.equal("declaration_zero_mint");
+      expect(
+        captureValidationCode(() => validatePostAssertionEntries([entry])),
+      ).to.equal("declaration_zero_mint");
     });
 
     it("REJECT: mode 7 with meta_index >= 64 rejects", () => {
@@ -415,7 +478,9 @@ describe("post-assertions: §RP SDK validator + sandwich scaffolding", () => {
         auxValue: ZERO_AUX_VALUE,
         auxByte: 64,
       };
-      expect(captureValidationCode(() => validatePostAssertionEntries([entry]))).to.equal("declaration_meta_index_too_large");
+      expect(
+        captureValidationCode(() => validatePostAssertionEntries([entry])),
+      ).to.equal("declaration_meta_index_too_large");
     });
 
     it("REJECT: mode 7 with non-zero aux_value rejects", () => {
@@ -429,7 +494,9 @@ describe("post-assertions: §RP SDK validator + sandwich scaffolding", () => {
         auxValue: u64Le(1n),
         auxByte: 0,
       };
-      expect(captureValidationCode(() => validatePostAssertionEntries([entry]))).to.equal("declaration_aux_value_must_be_zero");
+      expect(
+        captureValidationCode(() => validatePostAssertionEntries([entry])),
+      ).to.equal("declaration_aux_value_must_be_zero");
     });
   });
 
@@ -447,7 +514,9 @@ describe("post-assertions: §RP SDK validator + sandwich scaffolding", () => {
         auxValue: u64Le(1n),
         auxByte: 0,
       };
-      expect(captureValidationCode(() => validatePostAssertionEntries([entry]))).to.equal("legacy_mode_aux_value_must_be_zero");
+      expect(
+        captureValidationCode(() => validatePostAssertionEntries([entry])),
+      ).to.equal("legacy_mode_aux_value_must_be_zero");
     });
 
     it("REJECT: mode 2 with non-zero aux_byte rejects", () => {
@@ -461,7 +530,9 @@ describe("post-assertions: §RP SDK validator + sandwich scaffolding", () => {
         auxValue: ZERO_AUX_VALUE,
         auxByte: 1,
       };
-      expect(captureValidationCode(() => validatePostAssertionEntries([entry]))).to.equal("legacy_mode_aux_byte_must_be_zero");
+      expect(
+        captureValidationCode(() => validatePostAssertionEntries([entry])),
+      ).to.equal("legacy_mode_aux_byte_must_be_zero");
     });
   });
 

@@ -21,7 +21,7 @@ describe("multisig-detection — invariants", () => {
     expect(SQUADS_V4_MULTISIG_DISCRIMINATOR).to.have.lengthOf(8);
   });
 
-  it("discriminator derives deterministically from sha256(\"account:Multisig\")", () => {
+  it('discriminator derives deterministically from sha256("account:Multisig")', () => {
     // Re-derive in-test to confirm the module-load computation matches
     // the documented formula. Any drift (e.g. someone changing the tag
     // string or the slice length) fails this test, not silently in prod.

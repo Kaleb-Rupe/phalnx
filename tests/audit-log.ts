@@ -25,9 +25,7 @@ import {
 } from "@solana/web3.js";
 import { expect } from "chai";
 import BN from "bn.js";
-import {
-  initVaultPreviewDigest,
-} from "./helpers/policy-digest";
+import { initVaultPreviewDigest } from "./helpers/policy-digest";
 import {
   createTestEnv,
   airdropSol,
@@ -253,8 +251,7 @@ describe("audit-log (Phase 7)", () => {
     expect(log.head).to.equal(1);
     const entry = log.rawEntries[0];
     expect(entry.discriminator).to.equal(DISC_FREEZE);
-    expect(Buffer.from(entry.subject).equals(vault.toBuffer())).to.be
-      .true;
+    expect(Buffer.from(entry.subject).equals(vault.toBuffer())).to.be.true;
   });
 
   it("register_agent appends an entry with disc=13 + agent in subject slot", async () => {
@@ -277,8 +274,8 @@ describe("audit-log (Phase 7)", () => {
     expect(log.count).to.equal(1);
     const entry = log.rawEntries[0];
     expect(entry.discriminator).to.equal(DISC_REGISTER_AGENT);
-    expect(Buffer.from(entry.subject).equals(agent.publicKey.toBuffer()))
-      .to.be.true;
+    expect(Buffer.from(entry.subject).equals(agent.publicKey.toBuffer())).to.be
+      .true;
   });
 
   it("buffer wraps correctly after CAPACITY writes (success path)", async () => {

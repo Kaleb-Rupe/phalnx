@@ -36,10 +36,7 @@ import {
 } from "@solana/web3.js";
 import { expect } from "chai";
 import BN from "bn.js";
-import {
-  expectAnchorError,
-  expectSigilError,
-} from "./helpers/strict-errors";
+import { expectAnchorError, expectSigilError } from "./helpers/strict-errors";
 import {
   initVaultPreviewDigest,
   siblingHandlerDigest,

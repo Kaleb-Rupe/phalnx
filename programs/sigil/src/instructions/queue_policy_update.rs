@@ -89,6 +89,16 @@ pub fn handler(
     // live is true = DISABLE (ELEVATED — one-way ratchet, cosign
     // required to disable cosign). Bound by TA-19 at digest position 20.
     cosign_required: Option<bool>,
+    // D-5 (audit 2026-05-19, F-RP3-1): owner-controlled reactivate-time
+    // cosigner pubkey. None = pass through from live policy; Some(pubkey)
+    // = set to the supplied value (Pubkey::default() disables the gate,
+    // any other pubkey enables it). Bound by TA-19 at digest position 22.
+    //
+    // Setting this is NOT classified as elevated by the current 7-trigger
+    // gate — owners opt INTO friction. The reactivate-time cosign gate
+    // fires at `reactivate_vault` when the operation grafts a new agent
+    // at FULL_CAPABILITY (see `reactivate_vault.rs`).
+    cosign_session_pubkey: Option<Pubkey>,
     // TA-09 (Phase 3): the cosigning session pubkey. `Pubkey::default()`
     // means "no cosign required" (non-elevated mutation). For elevated
     // mutations the caller MUST pass a non-default pubkey AND include
@@ -149,6 +159,22 @@ pub fn handler(
             destinations.len() <= MAX_ALLOWED_DESTINATIONS,
             SigilError::TooManyDestinations
         );
+        // H-4 close (audit 2026-05-21, Bucket 1): reject if any destination
+        // is the address of a Sigil-owned protected PDA for this vault.
+        // Closes the owner-self-foot-gun where a phished owner allowlists
+        // a Sigil PDA (e.g. `vault`, `policy`, `pending_owner`), enabling
+        // an agent to lock funds at the PDA via a token transfer that the
+        // destination check would otherwise approve. See helper docstring
+        // for the 13 PDAs enumerated and the residual multi-seed gap.
+        let vault_key = ctx.accounts.vault.key();
+        let protected_pdas =
+            derive_vault_keyed_protected_pdas(&vault_key, ctx.program_id);
+        for dest in destinations.iter() {
+            require!(
+                !protected_pdas.contains(dest),
+                SigilError::ErrDestinationIsProtectedPda
+            );
+        }
     }
     if let Some(ref tl) = timelock_duration {
         require!(*tl >= MIN_TIMELOCK_DURATION, SigilError::TimelockTooShort);
@@ -243,6 +269,13 @@ pub fn handler(
     // elevation check below uses BOTH the live and effective values to
     // implement the one-way-ratchet (disable IS elevated, enable is not).
     let eff_cosign_required = cosign_required.unwrap_or(policy.cosign_required);
+    // D-5 (audit 2026-05-19, F-RP3-1): merged-effective cosign_session_pubkey.
+    // None = pass through from live; Some(pk) = the queued value (which may
+    // legitimately be `Pubkey::default()` to disable the gate). Bound by
+    // TA-19 at canonical digest position 22 so a tampered SDK cannot
+    // silently flip the gate between owner approval and on-chain landing.
+    let eff_cosign_session_pubkey =
+        cosign_session_pubkey.unwrap_or(policy.cosign_session_pubkey);
 
     // ─── TA-09 (Phase 3): elevated mutation detection + cosign binding ─
     //
@@ -365,7 +398,12 @@ pub fn handler(
             || weakens_protocol_caps))
         || disables_cosign;
 
-    let (cosign_session_pubkey, cosign_digest_bound): (Pubkey, [u8; 32]) = if is_elevated {
+    // D-5 (audit 2026-05-19, F-RP3-1): renamed from prior `cosign_session_pubkey`
+    // to `bound_cosign_session` to avoid name collision with the new ix arg
+    // `cosign_session_pubkey: Option<Pubkey>` (which is the D-5 reactivate-time
+    // cosigner pubkey update — a separate concept from the TA-09 queue-time
+    // cosign session pubkey persisted on the pending PDA).
+    let (bound_cosign_session, cosign_digest_bound): (Pubkey, [u8; 32]) = if is_elevated {
         // Elevated mutation: cosign_session MUST be a non-default pubkey.
         require_keys_neq!(
             cosign_session,
@@ -475,6 +513,12 @@ pub fn handler(
         // from live vault. The SDK off-chain computes the same projection
         // when it builds the signed digest.
         agent_set_hash: compute_agent_set_hash(&vault.agents),
+        // D-5 (audit 2026-05-19, F-RP3-1): cosign_session_pubkey bound at
+        // canonical position 22. Owner's chosen reactivate-time cosigner
+        // pubkey is part of the signed digest — a tampered SDK cannot
+        // silently flip the gate between owner approval and on-chain
+        // landing.
+        cosign_session_pubkey: eff_cosign_session_pubkey,
     });
     require!(
         recomputed_digest == new_policy_preview_digest,
@@ -511,7 +555,7 @@ pub fn handler(
     // TA-09 (Phase 3): persist cosign binding. `[0; 32]` + default
     // session = non-elevated; non-zero values = bound to this cosign.
     pending.cosign_digest = cosign_digest_bound;
-    pending.cosign_session = cosign_session_pubkey;
+    pending.cosign_session = bound_cosign_session;
     // Phase 2 TA-19: store the validated owner-signed digest. `apply_pending_policy`
     // re-asserts it after the timelock against the merged-effective policy.
     pending.new_policy_preview_digest = new_policy_preview_digest;
@@ -525,6 +569,11 @@ pub fn handler(
     // `policy.cosign_required` before the second-pass TA-19 digest
     // recompute (which binds the merged value at canonical position 20).
     pending.cosign_required = cosign_required;
+    // D-5 (audit 2026-05-19, F-RP3-1): persist optional cosign_session_pubkey
+    // update. apply_pending_policy reads this and writes through to
+    // `policy.cosign_session_pubkey` before the second-pass TA-19 digest
+    // recompute (which binds the merged value at canonical position 22).
+    pending.cosign_session_pubkey = cosign_session_pubkey;
 
     ctx.accounts.policy.has_pending_policy = true;
 
@@ -597,7 +646,7 @@ pub fn weakens_protocol_caps_predicate(new_caps: &[u64], live_caps: &[u64]) -> b
 
 /// G6 (audit 2026-05-18 cosign opt-in): pure-function variant of the
 /// `is_elevated` decision in `handler()`. Extracted so the cosign-gating
-/// + one-way-ratchet semantics can be unit-tested without spinning up a
+/// and one-way-ratchet semantics can be unit-tested without spinning up a
 /// full Anchor `Context` + `PolicyConfig` scaffold.
 ///
 /// Mirrors the in-handler logic exactly:
@@ -658,6 +707,56 @@ pub fn disables_cosign_predicate(new: Option<bool>, live: bool) -> bool {
 /// `disables_cosign_predicate` for the false→true direction. Always
 /// non-elevated (safety improvement), but exposed for symmetry +
 /// future analytics / audit-log emission.
+/// Derive the 13 single-seed vault-keyed Sigil-protected PDAs for queue-time
+/// `allowed_destinations` validation (H-4 close, audit 2026-05-21).
+///
+/// Returns a `Vec<Pubkey>` rather than a fixed array to keep the caller's
+/// stack frame small — `queue_policy_update` is much less stack-constrained
+/// than `validate_and_authorize`, but heap-allocating for consistency with
+/// the TA-11 helper at `validate_and_authorize.rs:build_ta11_protected_set`.
+///
+/// Enumerates the single-seed entries from `PROTECTED_SEED_PREFIXES`
+/// (state/mod.rs:226). Multi-seed PDAs (`session [vault, agent, mint]`,
+/// `pending_agent_perms [vault, agent]`) are intentionally NOT enumerated
+/// here because:
+///   1. Enumerating session would require iterating all (agent, mint)
+///      tuples — combinatorial and brittle.
+///   2. Enumerating pending_agent_perms for every agent in `vault.agents`
+///      is feasible but the socially-engineered owner is unlikely to
+///      allowlist a pubkey derived from an agent key they also control —
+///      most realistic foot-gun is the vault-keyed single-seed family.
+///   3. The TA-11 protected-writable scan at execute time STILL rejects
+///      multi-seed PDAs if they appear as writable in a sibling ix
+///      (see `validate_and_authorize.rs:build_ta11_protected_set`).
+///
+/// Forward-compat families `cosign` and `recipient` are omitted (no live
+/// PDAs in V2; would produce false negatives).
+#[inline(never)]
+fn derive_vault_keyed_protected_pdas(vault: &Pubkey, program_id: &Pubkey) -> Vec<Pubkey> {
+    let vault_seed = vault.as_ref();
+    let seeds: [&[u8]; 13] = [
+        b"vault",
+        b"policy",
+        b"tracker",
+        b"post_assertions",
+        b"audit_success",
+        b"audit_rejected",
+        b"pending_policy",
+        b"pending_constraints",
+        b"pending_close_constraints",
+        b"pending_owner",
+        b"pending_agent_grant",
+        b"constraints",
+        b"agent_spend",
+    ];
+    let mut pdas: Vec<Pubkey> = Vec::with_capacity(13);
+    for seed in seeds.iter() {
+        let (pda, _) = Pubkey::find_program_address(&[seed, vault_seed], program_id);
+        pdas.push(pda);
+    }
+    pdas
+}
+
 pub fn enables_cosign_predicate(new: Option<bool>, live: bool) -> bool {
     new.is_some_and(|n| n && !live)
 }

@@ -247,14 +247,15 @@ pub fn handler<'a, 'b, 'c, 'info>(
     //
     // Phase 8 Batch 2 (F-7): mutation is routed through the shared
     // `freeze_internal` helper. The helper REQUIRES a `FreezeReason` arg so
-    // a future sibling-handler (e.g. EmergencyBoard, Batch 3) cannot
-    // silently omit the reason byte. `revoke_pairs_count = 0` here because
-    // the per-session delegation revocation above already happened and was
-    // not bounded by the helper's MAX_REVOKE_PAIRS cap — the existing loop
-    // walks active sessions, not a caller-supplied pair list.
+    // a future sibling-handler (e.g. EmergencyBoard) cannot silently omit
+    // the reason byte. `revoke_pairs_count = 0` here because the per-session
+    // delegation revocation above already happened and was not bounded by
+    // the helper's MAX_REVOKE_PAIRS cap — the existing loop walks active
+    // sessions, not a caller-supplied pair list.
     //
-    // TODO (Batch 3): cancel PendingOwnershipTransfer if account present in
-    // `remaining_accounts`. The PDA doesn't exist until Batch 3 adds it.
+    // PendingOwnershipTransfer cancellation: closed by Fix-Up B (commit
+    // `1362dac` FIX-9) — the optional `pending_owner` cancel block at lines
+    // 121-145 above atomically closes any active transfer when freeze fires.
     let vault = &mut ctx.accounts.vault;
     freeze_internal(vault, FreezeReason::Manual, &clock, 0)?;
 

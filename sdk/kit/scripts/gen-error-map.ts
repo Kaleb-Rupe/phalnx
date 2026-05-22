@@ -33,10 +33,7 @@ const __filename = fileURLToPath((import.meta as { url: string }).url);
 const __dirname = dirname(__filename);
 
 const IDL_PATH = resolve(__dirname, "../../../target/idl/sigil.json");
-const OUT_PATH = resolve(
-  __dirname,
-  "../src/errors/agent-errors.generated.ts",
-);
+const OUT_PATH = resolve(__dirname, "../src/errors/agent-errors.generated.ts");
 
 interface IdlError {
   code: number;
@@ -84,9 +81,7 @@ function main(): void {
     "  Object.freeze({",
     ...errors.map((e) => {
       const msgFragment =
-        e.msg === undefined
-          ? ""
-          : `, msg: ${JSON.stringify(e.msg)}`;
+        e.msg === undefined ? "" : `, msg: ${JSON.stringify(e.msg)}`;
       return `    ${e.code}: { code: ${e.code}, name: ${JSON.stringify(e.name)}${msgFragment} },`;
     }),
     "  });",
@@ -106,9 +101,7 @@ function main(): void {
   writeFileSync(OUT_PATH, lines.join("\n"));
 
   // eslint-disable-next-line no-console
-  console.log(
-    `gen-error-map: wrote ${errors.length} entries to ${OUT_PATH}`,
-  );
+  console.log(`gen-error-map: wrote ${errors.length} entries to ${OUT_PATH}`);
 }
 
 main();

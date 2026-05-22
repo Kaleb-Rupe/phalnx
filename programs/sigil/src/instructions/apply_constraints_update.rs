@@ -2,6 +2,9 @@ use anchor_lang::prelude::*;
 
 use crate::errors::SigilError;
 use crate::events::ConstraintsChangeApplied;
+use crate::state::pending_constraints::{
+    compute_pending_constraints_digest, ct_eq_32,
+};
 use crate::state::*;
 use crate::utils::audit_log::build_audit_entry;
 
@@ -60,7 +63,8 @@ pub fn handler(ctx: Context<ApplyConstraintsUpdate>) -> Result<()> {
     let clock = Clock::get()?;
     let vault_key = ctx.accounts.vault.key();
 
-    // Read pending: verify vault + timelock + slot freshness, extract scalar fields
+    // Read pending: verify vault + timelock + slot freshness + content digest,
+    // extract scalar fields.
     let new_entry_count = {
         let pending = ctx.accounts.pending_constraints.load()?;
         require!(
@@ -77,6 +81,24 @@ pub fn handler(ctx: Context<ApplyConstraintsUpdate>) -> Result<()> {
             clock.slot.saturating_sub(pending.queued_at_slot) < MAX_APPLY_AGE_SLOTS,
             SigilError::QueuedUpdateExpired,
         );
+
+        // M-4 close (Bucket 2, Phase 10 PEN-CROSS-3): re-assert the
+        // pending content digest BEFORE any byte is copied into the live
+        // `InstructionConstraints` PDA. The digest was sealed by
+        // `queue_constraints_update` over the owner-attested
+        // (vault, entry_count, entries[0..entry_count]) tuple; if a
+        // future discriminator-collision bug or a same-seed CPI overwrite
+        // mutated the entries slab between queue and apply, the
+        // recomputed digest diverges and we reject with
+        // `ErrPendingConstraintsDigestMismatch`. Constant-time compare
+        // via `ct_eq_32` to deny timing side-channels (32-byte hash, ~30
+        // CU on BPF — negligible relative to the 1.4M CU budget).
+        let recomputed = compute_pending_constraints_digest(&pending)?;
+        require!(
+            ct_eq_32(&recomputed, &pending.pending_content_digest),
+            SigilError::ErrPendingConstraintsDigestMismatch
+        );
+
         pending.entry_count
     };
 

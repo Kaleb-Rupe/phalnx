@@ -73,6 +73,9 @@ export type AuditEntry = {
    * disc=17 (agent_grant_queue)→ agent pubkey (Phase 8 PEN-CROSS-1 Batch 6)
    * disc=18 (agent_grant_apply)→ agent pubkey (Phase 8 PEN-CROSS-1 Batch 6)
    * disc=19 (agent_grant_cancel)→ agent pubkey (Phase 8 §RP Fix-Up B / PEN-02b)
+   * disc=20 (agent_perms_apply)→ agent pubkey (M-6 close, audit 2026-05-21)
+   * disc=21 (constraints_close_apply)→ vault pubkey (M-7 close, audit 2026-05-21)
+   * disc=22 (agent_auto_revoked) → agent pubkey (M-8 close, audit 2026-05-21)
    */
   subject: ReadonlyUint8Array;
   /** Stablecoin delta IN (e.g. swap output, deposit). 0 when not applicable. */
@@ -112,6 +115,9 @@ export type AuditEntryArgs = {
    * disc=17 (agent_grant_queue)→ agent pubkey (Phase 8 PEN-CROSS-1 Batch 6)
    * disc=18 (agent_grant_apply)→ agent pubkey (Phase 8 PEN-CROSS-1 Batch 6)
    * disc=19 (agent_grant_cancel)→ agent pubkey (Phase 8 §RP Fix-Up B / PEN-02b)
+   * disc=20 (agent_perms_apply)→ agent pubkey (M-6 close, audit 2026-05-21)
+   * disc=21 (constraints_close_apply)→ vault pubkey (M-7 close, audit 2026-05-21)
+   * disc=22 (agent_auto_revoked) → agent pubkey (M-8 close, audit 2026-05-21)
    */
   subject: ReadonlyUint8Array;
   /** Stablecoin delta IN (e.g. swap output, deposit). 0 when not applicable. */

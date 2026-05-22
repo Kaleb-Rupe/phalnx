@@ -232,6 +232,18 @@ export const SIGIL_ERROR__ERR_REACTIVATE_COOLDOWN_ACTIVE = 0x17da; // 6106
 export const SIGIL_ERROR__ERR_INVALID_OWNERSHIP_TARGET = 0x17db; // 6107
 /** ErrTooManyRevokePairs: freeze_internal MAX_REVOKE_PAIRS = 10 exceeded (Council ISC-136) */
 export const SIGIL_ERROR__ERR_TOO_MANY_REVOKE_PAIRS = 0x17dc; // 6108
+/** ErrPostAssertionsNotClosed: PostExecutionAssertions PDA still active — call close_post_assertions first */
+export const SIGIL_ERROR__ERR_POST_ASSERTIONS_NOT_CLOSED = 0x17dd; // 6109
+/** ErrDestinationIsProtectedPda: Destination is a Sigil-protected PDA — rejected at queue time */
+export const SIGIL_ERROR__ERR_DESTINATION_IS_PROTECTED_PDA = 0x17de; // 6110
+/** ErrIntentDigestMismatch: AL3 intent-digest mismatch — preview digest does not match executed bundle */
+export const SIGIL_ERROR__ERR_INTENT_DIGEST_MISMATCH = 0x17df; // 6111
+/** ErrPendingConstraintsDigestMismatch: PendingConstraintsUpdate digest mismatch between queue and apply */
+export const SIGIL_ERROR__ERR_PENDING_CONSTRAINTS_DIGEST_MISMATCH = 0x17e0; // 6112
+/** ErrPendingAgentGrantDigestMismatch: PendingAgentGrant digest mismatch between queue and apply */
+export const SIGIL_ERROR__ERR_PENDING_AGENT_GRANT_DIGEST_MISMATCH = 0x17e1; // 6113
+/** ErrReactivateCosignRequiredForFullCapability: Reactivate with FULL_CAPABILITY new agent requires cosign */
+export const SIGIL_ERROR__ERR_REACTIVATE_COSIGN_REQUIRED_FOR_FULL_CAPABILITY = 0x17e2; // 6114
 
 export type SigilError =
   | typeof SIGIL_ERROR__ACCOUNT_WRITABILITY_MISMATCH
@@ -260,18 +272,24 @@ export type SigilError =
   | typeof SIGIL_ERROR__ERR_COSIGN_REQUIRED
   | typeof SIGIL_ERROR__ERR_DAILY_CAP_EXCEEDED
   | typeof SIGIL_ERROR__ERR_DECLARATION_INCONSISTENT
+  | typeof SIGIL_ERROR__ERR_DESTINATION_IS_PROTECTED_PDA
   | typeof SIGIL_ERROR__ERR_GRAYLIST_FRICTION
   | typeof SIGIL_ERROR__ERR_GRAYLIST_FULL
+  | typeof SIGIL_ERROR__ERR_INTENT_DIGEST_MISMATCH
   | typeof SIGIL_ERROR__ERR_INVALID_FREEZE_REASON
   | typeof SIGIL_ERROR__ERR_INVALID_OWNERSHIP_TARGET
   | typeof SIGIL_ERROR__ERR_MINT_DELTA_CAP_EXCEEDED
   | typeof SIGIL_ERROR__ERR_MINT_NOT_PINNED
   | typeof SIGIL_ERROR__ERR_OUTPUT_BELOW_FLOOR
   | typeof SIGIL_ERROR__ERR_OUTSIDE_OPERATING_HOURS
+  | typeof SIGIL_ERROR__ERR_PENDING_AGENT_GRANT_DIGEST_MISMATCH
+  | typeof SIGIL_ERROR__ERR_PENDING_CONSTRAINTS_DIGEST_MISMATCH
   | typeof SIGIL_ERROR__ERR_PENDING_OWNERSHIP_EXISTS
   | typeof SIGIL_ERROR__ERR_PENDING_OWNERSHIP_NOT_READY
+  | typeof SIGIL_ERROR__ERR_POST_ASSERTIONS_NOT_CLOSED
   | typeof SIGIL_ERROR__ERR_PROTECTED_WRITABLE
   | typeof SIGIL_ERROR__ERR_REACTIVATE_COOLDOWN_ACTIVE
+  | typeof SIGIL_ERROR__ERR_REACTIVATE_COSIGN_REQUIRED_FOR_FULL_CAPABILITY
   | typeof SIGIL_ERROR__ERR_RECIPIENT_CAP_EXCEEDED
   | typeof SIGIL_ERROR__ERR_SANDWICH_INTEGRITY
   | typeof SIGIL_ERROR__ERR_SESSION_NONCE_MISMATCH
@@ -373,18 +391,24 @@ if (process.env.NODE_ENV !== "production") {
     [SIGIL_ERROR__ERR_COSIGN_REQUIRED]: `Elevated policy mutation requires an owner-signed cosigning session`,
     [SIGIL_ERROR__ERR_DAILY_CAP_EXCEEDED]: `Per-protocol daily spending cap would be exceeded (rolling 24h)`,
     [SIGIL_ERROR__ERR_DECLARATION_INCONSISTENT]: `R-4 DeclarationConsistency: declared recipient/mint does not match CPI account-meta`,
+    [SIGIL_ERROR__ERR_DESTINATION_IS_PROTECTED_PDA]: `Destination is a Sigil-protected PDA — rejected at queue time`,
     [SIGIL_ERROR__ERR_GRAYLIST_FRICTION]: `Destination is graylisted (24h friction window — awaiting promote_graylist_destination or unlock)`,
     [SIGIL_ERROR__ERR_GRAYLIST_FULL]: `Destination graylist is full (max 10 entries) — wait for an existing entry to unlock or promote`,
+    [SIGIL_ERROR__ERR_INTENT_DIGEST_MISMATCH]: `AL3 intent-digest mismatch — preview digest does not match executed bundle`,
     [SIGIL_ERROR__ERR_INVALID_FREEZE_REASON]: `freeze_reason value out of {{0,1,2}}`,
     [SIGIL_ERROR__ERR_INVALID_OWNERSHIP_TARGET]: `new_owner cannot be system/program/sysvar addresses (Council ISC-128)`,
     [SIGIL_ERROR__ERR_MINT_DELTA_CAP_EXCEEDED]: `R-1 MintDeltaCap: vault-mint balance decreased by more than max_net_decrease`,
     [SIGIL_ERROR__ERR_MINT_NOT_PINNED]: `Deposit mint is not a build-time-pinned stablecoin (USDC or USDT)`,
     [SIGIL_ERROR__ERR_OUTPUT_BELOW_FLOOR]: `R-3 OutputBalanceFloor: post-execution balance increase fell below the configured min_increase floor`,
     [SIGIL_ERROR__ERR_OUTSIDE_OPERATING_HOURS]: `Current UTC hour is outside the policy's operating_hours bitmask`,
+    [SIGIL_ERROR__ERR_PENDING_AGENT_GRANT_DIGEST_MISMATCH]: `PendingAgentGrant digest mismatch between queue and apply`,
+    [SIGIL_ERROR__ERR_PENDING_CONSTRAINTS_DIGEST_MISMATCH]: `PendingConstraintsUpdate digest mismatch between queue and apply`,
     [SIGIL_ERROR__ERR_PENDING_OWNERSHIP_EXISTS]: `An ownership transfer is already pending; cancel it first`,
     [SIGIL_ERROR__ERR_PENDING_OWNERSHIP_NOT_READY]: `Ownership transfer timelock has not elapsed`,
+    [SIGIL_ERROR__ERR_POST_ASSERTIONS_NOT_CLOSED]: `PostExecutionAssertions PDA still active — call close_post_assertions first`,
     [SIGIL_ERROR__ERR_PROTECTED_WRITABLE]: `Protected Sigil PDA passed as writable to a foreign instruction between validate and finalize`,
     [SIGIL_ERROR__ERR_REACTIVATE_COOLDOWN_ACTIVE]: `Reactivate requires 5-minute observation cooldown to elapse`,
+    [SIGIL_ERROR__ERR_REACTIVATE_COSIGN_REQUIRED_FOR_FULL_CAPABILITY]: `Reactivate with FULL_CAPABILITY new agent requires cosign`,
     [SIGIL_ERROR__ERR_RECIPIENT_CAP_EXCEEDED]: `Per-recipient daily cap exceeded — recipient outflow would breach policy.per_recipient_daily_cap_usd within the rolling 24h window, or per_recipient array full with no expired slot to evict`,
     [SIGIL_ERROR__ERR_SANDWICH_INTEGRITY]: `Bundle integrity violation: multiple validate_and_authorize instructions for the same (vault, agent, mint) tuple in one transaction`,
     [SIGIL_ERROR__ERR_SESSION_NONCE_MISMATCH]: `Session nonce mismatch — caller's expected_nonce does not match the session's stored nonce (durable-nonce replay defense)`,

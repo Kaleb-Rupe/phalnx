@@ -162,15 +162,17 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
     let vault_key = ctx.accounts.vault.key();
     let vault = &mut ctx.accounts.vault;
 
-    // Extract vault PDA seeds data upfront
-    let owner_key = vault.owner;
+    // Extract vault PDA seeds data upfront — LBL-01: must use
+    // vault.vault_authority (immutable PDA seed), NOT vault.owner (mutates on
+    // ownership transfer). See full rationale in freeze_vault.rs:76-86.
+    let vault_authority = vault.vault_authority;
     let vault_id_bytes = vault.vault_id.to_le_bytes();
     let vault_bump = vault.bump;
 
     let bump_slice = [vault_bump];
     let signer_seeds = [
         b"vault" as &[u8],
-        owner_key.as_ref(),
+        vault_authority.as_ref(),
         vault_id_bytes.as_ref(),
         bump_slice.as_ref(),
     ];

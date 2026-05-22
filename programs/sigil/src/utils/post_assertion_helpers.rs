@@ -85,7 +85,15 @@ pub fn verify_ata_authority_pin(
     );
 
     let target_data = target.try_borrow_data()?;
-    require!(target_data.len() >= 64, SigilError::ErrAtaAuthorityChanged);
+    // R-2 length-check tighten (audit 2026-05-21 L-5 defense-in-depth):
+    // The authority field lives at bytes 32..64, so `>= 64` is technically
+    // sufficient to read the slice. We tighten to `>= 165` (the SPL Token
+    // packed `Account` length) to reject malformed/truncated token-account
+    // buffers earlier. Both SPL Token (always 165) and Token-2022 (base
+    // 165, may carry TLV extensions after byte 165) satisfy this bound —
+    // the owner-program check above already guarantees we're looking at a
+    // known token account, not an arbitrary 64-byte struct.
+    require!(target_data.len() >= 165, SigilError::ErrAtaAuthorityChanged);
     let mut authority_bytes = [0u8; 32];
     authority_bytes.copy_from_slice(&target_data[32..64]);
     let authority = Pubkey::new_from_array(authority_bytes);
@@ -219,8 +227,17 @@ pub fn verify_declaration_consistency(
         SigilError::ErrDeclarationInconsistent
     );
     let target_data = target.try_borrow_data()?;
+    // L-5 follow-up (Phase 6-9 re-audit 2026-05-21): symmetric tightening
+    // to the R-2 site at line 96. Reading bytes 0..64 (mint + owner) is
+    // technically satisfied by >= 64, but SPL Token packed length is 165
+    // and Token-2022 base layout is also >= 165 (TLV extensions live
+    // AFTER byte 165). Reject malformed/short token-account buffers
+    // earlier. The owner-program check above already prevents arbitrary
+    // 64-byte structs from reaching this require! — this is defense in
+    // depth against a future caller-passed account that happens to be
+    // owned by Token program but truncated.
     require!(
-        target_data.len() >= 64,
+        target_data.len() >= 165,
         SigilError::ErrDeclarationInconsistent
     );
 

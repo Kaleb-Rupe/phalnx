@@ -76,7 +76,10 @@ describe("error-map-drift — IDL ↔ generated ↔ hand-maintained", () => {
         missing.push(e.code);
       }
     }
-    expect(missing, `IDL codes missing from generated map: ${missing.join(", ")}`).to.have.lengthOf(0);
+    expect(
+      missing,
+      `IDL codes missing from generated map: ${missing.join(", ")}`,
+    ).to.have.lengthOf(0);
   });
 
   it("generated map names match the IDL names byte-for-byte", () => {
@@ -87,7 +90,9 @@ describe("error-map-drift — IDL ↔ generated ↔ hand-maintained", () => {
         mismatches.push(`${e.code}: IDL=${e.name} vs generated=${entry.name}`);
       }
     }
-    expect(mismatches, `Name drift: ${mismatches.join("; ")}`).to.have.lengthOf(0);
+    expect(mismatches, `Name drift: ${mismatches.join("; ")}`).to.have.lengthOf(
+      0,
+    );
   });
 
   it("hand-maintained ON_CHAIN_ERROR_MAP covers every IDL code", () => {
@@ -127,6 +132,9 @@ describe("error-map-drift — IDL ↔ generated ↔ hand-maintained", () => {
         violations.push(`${code}: empty message`);
       }
     }
-    expect(violations, `Hand-map shape violations: ${violations.join("; ")}`).to.have.lengthOf(0);
+    expect(
+      violations,
+      `Hand-map shape violations: ${violations.join("; ")}`,
+    ).to.have.lengthOf(0);
   });
 });

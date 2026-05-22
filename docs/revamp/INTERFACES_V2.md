@@ -100,6 +100,29 @@ Protected set: **16 PROTECTED_SEED_PREFIXES** (G5 audit fix 2026-05-18 — prior
 ### TA-14 — Per-recipient daily cap
 `SpendTracker.per_recipient: [PerRecipientCounter; 10]` (fixed-size array, NOT Vec) with explicit `count: u8`. Applies uniformly.
 
+**V1 constraint — single recipient per finalize (H-10, audit 2026-05-21):**
+`finalize_session` enforces AT MOST ONE distinct allowlisted recipient per transaction. A bundle whose DeFi instruction touches two distinct allowlisted recipients in the same finalize hard-rejects with `ErrRecipientCapExceeded` (6096) at `finalize_session.rs:638`, BEFORE the rolling-24h cap is even consulted. This is a per-tx cap-attribution invariant — the per-recipient counter slot is updated against exactly one recipient pubkey, so attributing a single CPI's outflow across two recipients would be ambiguous.
+
+**Resolution (caller-side):** split the multi-recipient batch into N transactions, each touching a single recipient. The total 24h spend across the N tx is unchanged; the per-recipient counter receives clean attribution.
+
+```ts
+// V1 — REJECTED (6096): single CPI sends to two distinct recipients.
+const bundle = await composer.composeBundle({
+  destinations: [
+    { recipient: aliceAta, amount: 100_000_000n },
+    { recipient: bobAta, amount: 200_000_000n },
+  ],
+});
+
+// V1 — CORRECT: two finalize calls, each with one recipient.
+await client.seal({ destinations: [{ recipient: aliceAta, amount: 100_000_000n }] });
+await client.seal({ destinations: [{ recipient: bobAta, amount: 200_000_000n }] });
+```
+
+The `@usesigil/kit` error mapping for 6096 includes `split_into_separate_transactions` in its `recovery_actions` array so AI agents and dashboard consumers can route to the correct remediation automatically. Note: the same 6096 code is also emitted by two other branches (rolling-24h cap exceeded, `per_recipient` tracker array full with no expired slot) — see `sdk/kit/src/agent-errors.ts` (6096 entry) for the full TRIPLE-CAUSE disambiguation comment.
+
+**V1.1 follow-up:** lifting the single-recipient-per-tx rule requires per-CPI outflow attribution (e.g. tracking each transfer instruction's amount + destination ATA owner separately). Not in V1 scope.
+
 ### TA-15 — Audit-log separate PDAs (with N1 temporal binding per C22)
 **Per L-12 + C24 LOCKED disposition: two SEPARATE PDAs, NOT fields on AgentVault.**
 - `AuditLogSuccess` PDA at seeds `[b"audit_success", vault]`: 128 entries × 64 bytes = **8,192 bytes** (account payload).

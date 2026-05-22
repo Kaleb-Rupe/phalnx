@@ -16,7 +16,12 @@
  * the discriminator allocation differ.
  */
 
-import type { Address, ReadonlyUint8Array, Rpc, SolanaRpcApi } from "./kit-adapter.js";
+import type {
+  Address,
+  ReadonlyUint8Array,
+  Rpc,
+  SolanaRpcApi,
+} from "./kit-adapter.js";
 import {
   fetchAuditLogSuccess as fetchRawSuccess,
   fetchAuditLogRejected as fetchRawRejected,
@@ -176,12 +181,7 @@ export function subjectBytes(entry: AuditEntry): ReadonlyUint8Array {
   return entry.subject;
 }
 
-/**
- * @deprecated §RP-1 HIGH-2 (2026-05-19) — the `target_protocol` field was
- * renamed to `subject` since it holds a mint / agent / vault pubkey
- * depending on the discriminator, not just a protocol pubkey. Use
- * {@link subjectBytes} instead. Will be removed in Phase 9.
- */
-export function targetProtocolBytes(entry: AuditEntry): ReadonlyUint8Array {
-  return entry.subject;
-}
+// §RP-1 HIGH-2 (2026-05-19) — removed `targetProtocolBytes` alias in Phase
+// 10 Bucket 1 (deferred from Phase 9 D-items). The `target_protocol` field
+// was renamed to `subject` since it holds a mint / agent / vault pubkey
+// depending on the discriminator. Use {@link subjectBytes} instead.

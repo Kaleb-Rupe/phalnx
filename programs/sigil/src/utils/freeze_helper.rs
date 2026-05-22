@@ -36,15 +36,17 @@
 //! - Provides `parse_token_account_raw` for Batch 3 to use during
 //!   delegation revocation.
 //!
-//! ## What this batch DOES NOT do (Batch 3)
+//! ## Closed in Fix-Up B (commit `1362dac`)
 //!
-//! - PendingOwnershipTransfer cancellation (rent → current owner) — the PDA
-//!   doesn't exist until Batch 3 lands. `freeze_vault.rs` carries a TODO
-//!   comment so reviewers can see the deferral.
-//! - SPL token delegation revocation iteration — requires `remaining_accounts`
-//!   wiring + CPI signer seeds that belong inside the Anchor handler context,
-//!   not in this helper. Bound (`MAX_REVOKE_PAIRS`) is enforced here; the
-//!   per-pair loop is Batch 3.
+//! Both of the original Batch-3 deferrals have since landed:
+//! - PendingOwnershipTransfer cancellation routes through the optional
+//!   `pending_owner` cancel block in `freeze_vault.rs:121-145` (rent →
+//!   current owner, atomic with the status flip).
+//! - SPL token delegation revocation iteration runs inside `freeze_vault.rs`
+//!   per-session via the active-sessions loop, bounded by `MAX_REVOKE_PAIRS`.
+//!   The helper's `revoke_pairs_count` argument is preserved for callers
+//!   that need an explicit (agent, mint) revocation list — currently no
+//!   handler exercises that path (all freeze sites pass `0`).
 
 use anchor_lang::prelude::*;
 

@@ -27,7 +27,10 @@ import {
 } from "@solana/spl-token";
 import { expect } from "chai";
 import BN from "bn.js";
-import { initVaultPreviewDigest, fetchAndComputeQueueDigest } from "./helpers/policy-digest";
+import {
+  initVaultPreviewDigest,
+  fetchAndComputeQueueDigest,
+} from "./helpers/policy-digest";
 import {
   createTestEnv,
   airdropSol,
@@ -154,36 +157,37 @@ describe("TOCTOU Security Fix", () => {
     );
 
     await program.methods
-      .initializeVault(pdas.vaultId,
-          new BN(500_000_000),
-          new BN(100_000_000),
-          1,
-          [jupiterProgramId],
-          0,
-          500,
-          new BN(timelockDuration),
-          [],
-          [],
-          false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
-          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
-          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
-          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
-          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
-          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
-          initVaultPreviewDigest({
-            dailySpendingCapUsd: new BN(500_000_000),
-            maxTransactionSizeUsd: new BN(100_000_000),
-            maxSlippageBps: 500,
-            protocolMode: 1,
-            protocols: [jupiterProgramId],
-            allowedDestinations: [],
-            timelockDuration: new BN(timelockDuration),
-            operatingHours: 0x00FFFFFF,
-            autoPromoteGrays: false,
-            autoRevokeThreshold: 5,
-          }),
-        )
+      .initializeVault(
+        pdas.vaultId,
+        new BN(500_000_000),
+        new BN(100_000_000),
+        1,
+        [jupiterProgramId],
+        0,
+        500,
+        new BN(timelockDuration),
+        [],
+        [],
+        false, // observeOnly (Phase 2 TA-19)
+        0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
+        false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+        5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+        new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+        new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+        false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
+        initVaultPreviewDigest({
+          dailySpendingCapUsd: new BN(500_000_000),
+          maxTransactionSizeUsd: new BN(100_000_000),
+          maxSlippageBps: 500,
+          protocolMode: 1,
+          protocols: [jupiterProgramId],
+          allowedDestinations: [],
+          timelockDuration: new BN(timelockDuration),
+          operatingHours: 0x00ffffff,
+          autoPromoteGrays: false,
+          autoRevokeThreshold: 5,
+        }),
+      )
       .accounts({
         owner: owner.publicKey,
         vault: pdas.vaultPda,
@@ -200,7 +204,10 @@ describe("TOCTOU Security Fix", () => {
       .accountsPartial({
         owner: owner.publicKey,
         vault: pdas.vaultPda,
-        policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), pdas.vaultPda.toBuffer()], program.programId)[0],
+        policy: PublicKey.findProgramAddressSync(
+          [Buffer.from("policy"), pdas.vaultPda.toBuffer()],
+          program.programId,
+        )[0],
         agentSpendOverlay: pdas.overlayPda,
       })
       .rpc();
@@ -240,25 +247,26 @@ describe("TOCTOU Security Fix", () => {
       { dailySpendingCapUsd: dailyCap ?? null },
     );
     await program.methods
-      .queuePolicyUpdate(dailyCap ?? null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null, // destinationMode,
-          null, // operating_hours (TA-05 Phase 3 — null pass-through)
-          null, // stable_balance_floor (TA-12 Phase 5 — null pass-through)
-          null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — null pass-through)
-          null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
-          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
-          newDigest,
-        )
+      .queuePolicyUpdate(
+        dailyCap ?? null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null, // destinationMode,
+        null, // operating_hours (TA-05 Phase 3 — null pass-through)
+        null, // stable_balance_floor (TA-12 Phase 5 — null pass-through)
+        null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — null pass-through)
+        null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+        PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
+        newDigest,
+      )
       .accounts({
         owner: owner.publicKey,
         vault: v.vaultPda,
@@ -366,7 +374,8 @@ describe("TOCTOU Security Fix", () => {
 
     try {
       await program.methods
-        .initializeVault(pdas.vaultId,
+        .initializeVault(
+          pdas.vaultId,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
@@ -377,7 +386,7 @@ describe("TOCTOU Security Fix", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -391,7 +400,7 @@ describe("TOCTOU Security Fix", () => {
             protocols: [jupiterProgramId],
             allowedDestinations: [],
             timelockDuration: new BN(0),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -419,7 +428,8 @@ describe("TOCTOU Security Fix", () => {
 
     try {
       await program.methods
-        .queuePolicyUpdate(null,
+        .queuePolicyUpdate(
+          null,
           null,
           null,
           null,
@@ -459,7 +469,8 @@ describe("TOCTOU Security Fix", () => {
 
     try {
       await program.methods
-        .queuePolicyUpdate(null,
+        .queuePolicyUpdate(
+          null,
           null,
           null,
           null,

@@ -109,14 +109,27 @@ import {
   writeU64Le,
   writeU8,
 } from "../canonical-encode.js";
+import { SigilSdkDomainError } from "../errors/sdk.js";
+import {
+  SIGIL_ERROR__SDK__INVALID_AMOUNT,
+  SIGIL_ERROR__SDK__INVALID_NETWORK,
+  SIGIL_ERROR__SDK__INVALID_PARAMS,
+} from "../errors/codes.js";
 
 /**
  * Network discriminant used at canonical position 2. Devnet and mainnet
  * are the two values bound by the digest; testnet and localnet are
  * coerced to devnet for digest purposes (the cap/allowlist contract is
  * the same on all non-mainnet networks).
+ *
+ * @internal The numeric discriminants are an encoding detail of the
+ * canonical digest layout. Callers should pass `network: "devnet" |
+ * "mainnet"` to {@link computeSealInputDigest} and let the encoder map
+ * to the wire value. Consumers wanting a CAIP-2 string for cross-system
+ * binding should use `CAIP2_SOLANA_*` from `../caip2-network.js`.
  */
 export const NETWORK_ID_DEVNET = 0 as const;
+/** @internal See {@link NETWORK_ID_DEVNET}. */
 export const NETWORK_ID_MAINNET = 1 as const;
 
 /**
@@ -142,14 +155,30 @@ export interface SealIntentInput {
   amount: bigint;
   targetProtocol?: Address | string;
   network: "devnet" | "mainnet";
-  instructions: readonly Pick<Instruction, "programAddress" | "accounts" | "data">[];
+  instructions: readonly Pick<
+    Instruction,
+    "programAddress" | "accounts" | "data"
+  >[];
 }
 
 /** Canonical default for an omitted `targetProtocol` — the system program ID. */
 const SYSTEM_PROGRAM_ZEROS = new Uint8Array(32);
 
-/** The single intent version byte we encode at canonical position 1. */
-const INTENT_VERSION_V1 = 1;
+/**
+ * Magic prefix prepended to the canonical encoding (D-6 close, Bucket 2
+ * 2026-05-21). Protects against cross-format digest collisions if Sigil ever
+ * introduces a different SHA-256-based digest with the same field shape.
+ * Mirror of `INTENT_DIGEST_MAGIC` in `programs/sigil/src/utils/intent_digest.rs:33`.
+ */
+const INTENT_DIGEST_MAGIC = new Uint8Array([0x53, 0x49, 0x47, 0x31]); // "SIG1"
+
+/**
+ * Intent format version. Bucket 2 bumped from v1 → v2 to discriminate the
+ * magic-prefix addition and the on-chain scalar verifier ABI. v1 was the
+ * prior client-only digest without prefix; any old v1 fixture is now
+ * unverifiable on-chain by construction.
+ */
+const INTENT_VERSION_V2 = 2;
 
 /**
  * Compute the canonical AL3 intent digest over a `SealIntentInput`.
@@ -162,8 +191,16 @@ const INTENT_VERSION_V1 = 1;
  */
 export function computeSealInputDigest(input: SealIntentInput): Uint8Array {
   if (input.amount < 0n) {
-    throw new Error(
+    throw new SigilSdkDomainError(
+      SIGIL_ERROR__SDK__INVALID_AMOUNT,
       `computeSealInputDigest: amount must be non-negative, got ${input.amount}`,
+      {
+        context: {
+          operation: "computeSealInputDigest",
+          field: "amount",
+          received: input.amount.toString(),
+        } as never,
+      },
     );
   }
   const networkId =
@@ -173,8 +210,15 @@ export function computeSealInputDigest(input: SealIntentInput): Uint8Array {
         ? NETWORK_ID_DEVNET
         : -1;
   if (networkId < 0) {
-    throw new Error(
+    throw new SigilSdkDomainError(
+      SIGIL_ERROR__SDK__INVALID_NETWORK,
       `computeSealInputDigest: network must be 'devnet' or 'mainnet', got ${String(input.network)}`,
+      {
+        context: {
+          operation: "computeSealInputDigest",
+          received: String(input.network),
+        } as never,
+      },
     );
   }
 
@@ -198,21 +242,47 @@ export function computeSealInputDigest(input: SealIntentInput): Uint8Array {
   }
   const decodedIxs: DecodedIx[] = input.instructions.map((ix, idx) => {
     if (!ix.programAddress) {
-      throw new Error(
+      throw new SigilSdkDomainError(
+        SIGIL_ERROR__SDK__INVALID_PARAMS,
         `computeSealInputDigest: ix[${idx}].programAddress is required`,
+        {
+          context: {
+            operation: "computeSealInputDigest",
+            field: `ix[${idx}].programAddress`,
+            ixIndex: idx,
+          } as never,
+        },
       );
     }
     const programAddress = base58Decode32(ix.programAddress as string);
     const accounts = (ix.accounts ?? []).map((acc, accIdx) => {
       if (!acc.address) {
-        throw new Error(
+        throw new SigilSdkDomainError(
+          SIGIL_ERROR__SDK__INVALID_PARAMS,
           `computeSealInputDigest: ix[${idx}].accounts[${accIdx}].address is required`,
+          {
+            context: {
+              operation: "computeSealInputDigest",
+              field: `ix[${idx}].accounts[${accIdx}].address`,
+              ixIndex: idx,
+              accountIndex: accIdx,
+            } as never,
+          },
         );
       }
       const role = acc.role;
       if (role === undefined || role === null) {
-        throw new Error(
+        throw new SigilSdkDomainError(
+          SIGIL_ERROR__SDK__INVALID_PARAMS,
           `computeSealInputDigest: ix[${idx}].accounts[${accIdx}].role is required`,
+          {
+            context: {
+              operation: "computeSealInputDigest",
+              field: `ix[${idx}].accounts[${accIdx}].role`,
+              ixIndex: idx,
+              accountIndex: accIdx,
+            } as never,
+          },
         );
       }
       // §RP Batch I L-1: AccountRole enum values are 0..3 (READONLY,
@@ -223,8 +293,18 @@ export function computeSealInputDigest(input: SealIntentInput): Uint8Array {
       // digest then masks bit-pattern information that a future
       // verifier might rely on.
       if (typeof role !== "number" || role < 0 || role > 3) {
-        throw new Error(
+        throw new SigilSdkDomainError(
+          SIGIL_ERROR__SDK__INVALID_PARAMS,
           `computeSealInputDigest: ix[${idx}].accounts[${accIdx}].role must be an AccountRole (0..3), got ${String(role)}`,
+          {
+            context: {
+              operation: "computeSealInputDigest",
+              field: `ix[${idx}].accounts[${accIdx}].role`,
+              ixIndex: idx,
+              accountIndex: accIdx,
+              received: String(role),
+            } as never,
+          },
         );
       }
       return {
@@ -237,12 +317,14 @@ export function computeSealInputDigest(input: SealIntentInput): Uint8Array {
   });
 
   // Compute exact buffer size:
-  //   1 (intent_version) + 1 (network_id) + 32 (vault) + 32 (agent) +
-  //   32 (token_mint) + 8 (amount) + 32 (target_protocol) + 4 (ix count)
-  //   + sum over ixs of [32 (programAddress) + 4 (accounts count) +
-  //                       sum (33 per account) + 4 (data length) +
-  //                       data.length]
-  const FIXED = 1 + 1 + 32 + 32 + 32 + 8 + 32 + 4;
+  //   4 (magic "SIG1") + 1 (intent_version) + 1 (network_id) + 32 (vault) +
+  //   32 (agent) + 32 (token_mint) + 8 (amount) + 32 (target_protocol) +
+  //   4 (ix count) + sum over ixs of [32 (programAddress) + 4 (accounts
+  //   count) + sum (33 per account) + 4 (data length) + data.length]
+  //
+  // D-6 close (Bucket 2 2026-05-21): the leading `INTENT_DIGEST_MAGIC`
+  // bytes ("SIG1") bring fixed header to 146 (was 142). v2 encoder.
+  const FIXED = 4 + 1 + 1 + 32 + 32 + 32 + 8 + 32 + 4;
   let ixsBytes = 0;
   for (const ix of decodedIxs) {
     ixsBytes += 32 + 4 + ix.accounts.length * 33 + 4 + ix.data.length;
@@ -251,7 +333,9 @@ export function computeSealInputDigest(input: SealIntentInput): Uint8Array {
   const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
 
   let off = 0;
-  off = writeU8(view, off, INTENT_VERSION_V1);
+  buf.set(INTENT_DIGEST_MAGIC, off);
+  off += 4;
+  off = writeU8(view, off, INTENT_VERSION_V2);
   off = writeU8(view, off, networkId);
   buf.set(vaultBytes, off);
   off += 32;
@@ -278,10 +362,140 @@ export function computeSealInputDigest(input: SealIntentInput): Uint8Array {
   }
 
   if (off !== buf.length) {
-    throw new Error(
+    throw new SigilSdkDomainError(
+      SIGIL_ERROR__SDK__INVALID_PARAMS,
       `computeSealInputDigest: encoded ${off} bytes, expected ${buf.length}. ` +
         `If you added a field to SealIntentInput, update the FIXED/ixsBytes ` +
         `sizing AND the encoder body in the SAME commit.`,
+      {
+        context: {
+          operation: "computeSealInputDigest",
+          field: "encoder_size_invariant",
+          encoded: off,
+          expected: buf.length,
+        } as never,
+      },
+    );
+  }
+
+  return sha256(buf);
+}
+
+/**
+ * Inputs to {@link computeScalarIntentDigest} — the on-chain-verifiable
+ * SCALAR subset of {@link SealIntentInput}.
+ *
+ * Drops the `instructions` array because the on-chain verifier does not
+ * (yet) recompute the full ix-bound digest — that requires the ATA-rewrite
+ * mapping table to cross the seal()/validate_and_authorize boundary, which
+ * is v0.17+ work. The scalar subset binds the recipient/amount/mint/protocol
+ * fields the user approves in the preview UI; ix-data tamper is still
+ * gated by R-1..R-4 + TA-12 + TA-14 post-execution invariants.
+ */
+export interface ScalarIntentInput {
+  vault: Address | string;
+  agent: Address | string;
+  tokenMint: Address | string;
+  amount: bigint;
+  targetProtocol?: Address | string;
+  network: "devnet" | "mainnet";
+}
+
+/**
+ * Compute the canonical scalar AL3 intent digest (D-1 + D-6 close, Bucket
+ * 2 2026-05-21).
+ *
+ * SHA-256 over: `b"SIG1" || u8(2) || u8(network_id) || vault || agent ||
+ * token_mint || u64_le(amount) || target_protocol`. Total 142 bytes.
+ *
+ * The on-chain verifier at `programs/sigil/src/utils/intent_digest.rs`
+ * recomputes this same digest from `validate_and_authorize`'s typed
+ * arguments and rejects bundle execution on byte-equal mismatch
+ * (`ErrIntentDigestMismatch` code 6111). Network discriminant is derived
+ * on-chain from the program's build feature; the caller does NOT pin it
+ * — the encoder here just writes the byte the caller's wallet computed,
+ * and Rust verifies the byte matches its own network. Wrong-network
+ * digests fail by construction.
+ *
+ * @returns 32-byte SHA-256 digest, byte-equal to the Rust verifier output.
+ *
+ * @throws if any pubkey doesn't base58-decode to 32 bytes, if `amount`
+ *   is negative, or if `network` isn't `"devnet"` or `"mainnet"`.
+ */
+export function computeScalarIntentDigest(
+  input: ScalarIntentInput,
+): Uint8Array {
+  if (input.amount < 0n) {
+    throw new SigilSdkDomainError(
+      SIGIL_ERROR__SDK__INVALID_AMOUNT,
+      `computeScalarIntentDigest: amount must be non-negative, got ${input.amount}`,
+      {
+        context: {
+          operation: "computeScalarIntentDigest",
+          field: "amount",
+          received: input.amount.toString(),
+        } as never,
+      },
+    );
+  }
+  const networkId =
+    input.network === "mainnet"
+      ? NETWORK_ID_MAINNET
+      : input.network === "devnet"
+        ? NETWORK_ID_DEVNET
+        : -1;
+  if (networkId < 0) {
+    throw new SigilSdkDomainError(
+      SIGIL_ERROR__SDK__INVALID_NETWORK,
+      `computeScalarIntentDigest: network must be 'devnet' or 'mainnet', got ${String(input.network)}`,
+      {
+        context: {
+          operation: "computeScalarIntentDigest",
+          received: String(input.network),
+        } as never,
+      },
+    );
+  }
+
+  const vaultBytes = base58Decode32(input.vault as string);
+  const agentBytes = base58Decode32(input.agent as string);
+  const tokenMintBytes = base58Decode32(input.tokenMint as string);
+  const targetProtocolBytes =
+    input.targetProtocol === undefined
+      ? SYSTEM_PROGRAM_ZEROS
+      : base58Decode32(input.targetProtocol as string);
+
+  // 4 magic + 1 version + 1 network_id + 32 + 32 + 32 + 8 + 32 = 142 bytes.
+  const buf = new Uint8Array(142);
+  const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+
+  let off = 0;
+  buf.set(INTENT_DIGEST_MAGIC, off);
+  off += 4;
+  off = writeU8(view, off, INTENT_VERSION_V2);
+  off = writeU8(view, off, networkId);
+  buf.set(vaultBytes, off);
+  off += 32;
+  buf.set(agentBytes, off);
+  off += 32;
+  buf.set(tokenMintBytes, off);
+  off += 32;
+  off = writeU64Le(view, off, input.amount);
+  buf.set(targetProtocolBytes, off);
+  off += 32;
+
+  if (off !== 142) {
+    throw new SigilSdkDomainError(
+      SIGIL_ERROR__SDK__INVALID_PARAMS,
+      `computeScalarIntentDigest: encoded ${off} bytes, expected 142.`,
+      {
+        context: {
+          operation: "computeScalarIntentDigest",
+          field: "encoder_size_invariant",
+          encoded: off,
+          expected: 142,
+        } as never,
+      },
     );
   }
 

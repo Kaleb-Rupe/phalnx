@@ -165,6 +165,27 @@ export type PendingPolicyUpdate = {
    * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
    */
   cosignRequired: Option<boolean>;
+  /**
+   * D-5 close (audit 2026-05-19, F-RP3-1): optional update to
+   * `PolicyConfig.cosign_session_pubkey`. None = preserve live value;
+   * Some(pubkey) = set the reactivate-cosign pubkey for elevated
+   * capability grants. `Pubkey::default()` is permitted as a value
+   * (disables the gate); any other pubkey enables it.
+   *
+   * Setting this field is NOT classified as elevated by the existing
+   * 7-trigger gate in `queue_policy_update` — owners opt INTO friction
+   * (the gate fires LATER on `reactivate_vault`). Disabling it
+   * (`Some(Pubkey::default())`) on a live policy where the field is
+   * currently non-default IS, however, a one-way-ratchet violation if
+   * the vault is otherwise cosign-opted-in; deferred to Phase 9
+   * alongside the broader ratchet polish — the present batch closes
+   * only the reactivate-time gate.
+   *
+   * Bound by TA-19 at canonical digest position 22.
+   *
+   * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  cosignSessionPubkey: Option<Address>;
 };
 
 export type PendingPolicyUpdateArgs = {
@@ -268,6 +289,27 @@ export type PendingPolicyUpdateArgs = {
    * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
    */
   cosignRequired: OptionOrNullable<boolean>;
+  /**
+   * D-5 close (audit 2026-05-19, F-RP3-1): optional update to
+   * `PolicyConfig.cosign_session_pubkey`. None = preserve live value;
+   * Some(pubkey) = set the reactivate-cosign pubkey for elevated
+   * capability grants. `Pubkey::default()` is permitted as a value
+   * (disables the gate); any other pubkey enables it.
+   *
+   * Setting this field is NOT classified as elevated by the existing
+   * 7-trigger gate in `queue_policy_update` — owners opt INTO friction
+   * (the gate fires LATER on `reactivate_vault`). Disabling it
+   * (`Some(Pubkey::default())`) on a live policy where the field is
+   * currently non-default IS, however, a one-way-ratchet violation if
+   * the vault is otherwise cosign-opted-in; deferred to Phase 9
+   * alongside the broader ratchet polish — the present batch closes
+   * only the reactivate-time gate.
+   *
+   * Bound by TA-19 at canonical digest position 22.
+   *
+   * APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  cosignSessionPubkey: OptionOrNullable<Address>;
 };
 
 /** Gets the encoder for {@link PendingPolicyUpdateArgs} account data. */
@@ -302,6 +344,7 @@ export function getPendingPolicyUpdateEncoder(): Encoder<PendingPolicyUpdateArgs
       ["stableBalanceFloor", getOptionEncoder(getU64Encoder())],
       ["perRecipientDailyCapUsd", getOptionEncoder(getU64Encoder())],
       ["cosignRequired", getOptionEncoder(getBooleanEncoder())],
+      ["cosignSessionPubkey", getOptionEncoder(getAddressEncoder())],
     ]),
     (value) => ({
       ...value,
@@ -341,6 +384,7 @@ export function getPendingPolicyUpdateDecoder(): Decoder<PendingPolicyUpdate> {
     ["stableBalanceFloor", getOptionDecoder(getU64Decoder())],
     ["perRecipientDailyCapUsd", getOptionDecoder(getU64Decoder())],
     ["cosignRequired", getOptionDecoder(getBooleanDecoder())],
+    ["cosignSessionPubkey", getOptionDecoder(getAddressDecoder())],
   ]);
 }
 

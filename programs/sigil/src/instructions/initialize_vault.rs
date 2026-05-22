@@ -242,6 +242,11 @@ pub fn handler(
         // empty-Vec SHA-256 (`compute_agent_set_hash(&[])`). The off-chain
         // SDK computes the same empty value when building the init digest.
         agent_set_hash: compute_agent_set_hash(&[]),
+        // D-5 (audit 2026-05-19, F-RP3-1): at init the reactivate-cosign
+        // gate is disabled (`Pubkey::default()`). Owners opt in later via
+        // `queue_policy_update` by setting a non-default pubkey. Bound at
+        // canonical digest position 22.
+        cosign_session_pubkey: Pubkey::default(),
     });
     require!(
         recomputed_digest == preview_digest,
@@ -338,6 +343,13 @@ pub fn handler(
     // creation, or later via `queue_policy_update` (where the false→true
     // direction is non-elevated and the true→false direction IS elevated).
     policy.cosign_required = cosign_required;
+    // D-5 (audit 2026-05-19, F-RP3-1): initialize the reactivate-cosign
+    // pubkey to `Pubkey::default()` so the gate at `reactivate_vault` is
+    // OFF for fresh vaults. Owners opt in via `queue_policy_update` by
+    // setting a non-default pubkey. Bound by TA-19 at canonical digest
+    // position 22 (the init recomputed digest above also encodes
+    // `Pubkey::default()` so the assertion passes).
+    policy.cosign_session_pubkey = Pubkey::default();
 
     // Initialize zero-copy tracker (buckets + protocol_counters zero-initialized by allocator)
     let mut tracker = ctx.accounts.tracker.load_init()?;

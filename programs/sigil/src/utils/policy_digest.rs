@@ -30,6 +30,7 @@
 //! 19. `per_recipient_daily_cap_usd: u64` (8 bytes, LE) — TA-14 (Phase 5 post-exec)
 //! 20. `cosign_required: bool`        (1 byte, 0/1)  — G6 (audit 2026-05-18 cosign opt-in)
 //! 21. `agent_set_hash: [u8; 32]`     (32 bytes)     — Phase 8 PEN-CROSS-1
+//! 22. `cosign_session_pubkey: Pubkey` (32 bytes)    — D-5 (audit 2026-05-19, F-RP3-1)
 //!
 //! Phase 3 append-only additions (TA-05/07/17): the three new policy-owned
 //! fields are appended at positions 15-17 to preserve the existing 14-field
@@ -58,6 +59,17 @@
 //! diverges the digest from the owner's last signed value, breaking the
 //! next apply-time digest comparison. Empty Vec produces a deterministic
 //! 32-byte hash (SHA-256 of the 4-byte LE-encoded zero length prefix).
+//!
+//! D-5 append-only addition (audit 2026-05-19, F-RP3-1): the
+//! `cosign_session_pubkey` at position 22 binds the owner's chosen
+//! reactivate-time cosigner into the signed policy. The
+//! `reactivate_vault` handler reads this pubkey at runtime and requires
+//! a matching `is_signer == true` entry in `remaining_accounts` whenever
+//! the operation grafts a new agent at `FULL_CAPABILITY`. A tampered SDK
+//! cannot silently flip the pubkey between owner approval and on-chain
+//! landing — the digest mismatch closes that gap. Default
+//! `Pubkey::default()` at init means the gate is OFF; owners opt in via
+//! `queue_policy_update`.
 //!
 //! The graylist itself (`destination_graylist: Vec<(Pubkey, i64)>`) is
 //! intentionally NOT in the digest. Reasoning: graylist entries are
@@ -146,6 +158,14 @@ pub struct PolicyPreviewFields<'a> {
     /// produces a deterministic 32-byte hash (SHA-256 of 4-byte LE-encoded
     /// zero length prefix). Bound at position 21 of the canonical encoding.
     pub agent_set_hash: [u8; 32],
+    /// D-5 (audit 2026-05-19, F-RP3-1): the owner-chosen pubkey that must
+    /// cosign `reactivate_vault` whenever a fresh agent is being grafted
+    /// at `FULL_CAPABILITY`. Default `Pubkey::default()` = gate disabled;
+    /// any other value enables the runtime gate at the reactivate site.
+    /// Bound at position 22 of the canonical encoding so a tampered SDK
+    /// cannot silently flip the pubkey between owner approval and
+    /// on-chain landing.
+    pub cosign_session_pubkey: Pubkey,
 }
 
 /// P0.2 PEN-7 defense-in-depth ratchet (audit 2026-05-19).
@@ -160,7 +180,7 @@ pub struct PolicyPreviewFields<'a> {
 /// The const-assert lives at the apply-time site as a load-bearing reminder
 /// (apply_pending_policy.rs::EXPECTED_DIGEST_FIELD_COUNT). Both this and
 /// the apply-side constant must change in lockstep.
-pub const POLICY_PREVIEW_FIELD_COUNT: usize = 21;
+pub const POLICY_PREVIEW_FIELD_COUNT: usize = 22;
 
 /// Phase 8 PEN-CROSS-1 (Council ISC-66/A8/A9 / ISC-141 empty-set determinism).
 ///
@@ -207,7 +227,7 @@ mod field_count_invariant {
     //! count is the actual field count via destructuring.
     use super::*;
 
-    /// If a 22nd field lands on `PolicyPreviewFields`, this match fails
+    /// If a 23rd field lands on `PolicyPreviewFields`, this match fails
     /// to compile with `missing structure fields` — forcing the developer
     /// to update the digest encoding + the count constant in the SAME
     /// commit. Closes PEN-7 silent-bypass.
@@ -244,8 +264,12 @@ mod field_count_invariant {
             // position 21. Sentinel uses [0u8;32] — the empty-agent-set
             // hash test below pins the true deterministic value.
             agent_set_hash: [0u8; 32],
+            // D-5 (audit 2026-05-19): cosign_session_pubkey bound at
+            // canonical position 22. Default Pubkey::default() = gate
+            // disabled.
+            cosign_session_pubkey: Pubkey::default(),
         };
-        // The destructuring pattern below is exhaustive. If a 22nd field
+        // The destructuring pattern below is exhaustive. If a 23rd field
         // lands on PolicyPreviewFields, this match fails to compile with
         // E0027 — `missing structure fields`. Forces the digest encoding
         // + POLICY_PREVIEW_FIELD_COUNT to be updated in lockstep.
@@ -271,8 +295,9 @@ mod field_count_invariant {
             per_recipient_daily_cap_usd: _,
             cosign_required: _,
             agent_set_hash: _,
+            cosign_session_pubkey: _,
         } = fields;
-        assert_eq!(POLICY_PREVIEW_FIELD_COUNT, 21);
+        assert_eq!(POLICY_PREVIEW_FIELD_COUNT, 22);
     }
 }
 
@@ -340,6 +365,12 @@ pub fn compute_policy_preview_digest(fields: &PolicyPreviewFields<'_>) -> [u8; 3
     // an OPERATOR-capability grant) diverges the policy digest from the
     // owner's last signed value.
     buf.extend_from_slice(&fields.agent_set_hash);
+    // 22. cosign_session_pubkey: Pubkey (32 bytes) — D-5 (audit 2026-05-19,
+    // F-RP3-1). Owner-chosen reactivate-time cosigner pubkey, default
+    // `Pubkey::default()` when the gate is disabled. Bound here so a
+    // tampered SDK cannot silently flip the pubkey between owner approval
+    // and on-chain landing (the digest mismatch closes that gap).
+    buf.extend_from_slice(fields.cosign_session_pubkey.as_ref());
 
     hashv(&[&buf]).to_bytes()
 }
@@ -383,6 +414,10 @@ mod tests {
             // Phase 8 PEN-CROSS-1: empty-vault agent_set_hash. Tests below
             // pin a known empty-Vec SHA-256; per-test fixtures override.
             agent_set_hash: [0u8; 32],
+            // D-5 (audit 2026-05-19): cosign_session_pubkey at position 22.
+            // Default Pubkey::default() = gate disabled — preserves prior
+            // byte layout for fixtures that don't exercise the field.
+            cosign_session_pubkey: Pubkey::default(),
         };
         let d1 = compute_policy_preview_digest(&f);
         let d2 = compute_policy_preview_digest(&f);
@@ -420,6 +455,10 @@ mod tests {
             // Phase 8 PEN-CROSS-1: empty-vault agent_set_hash. Tests below
             // pin a known empty-Vec SHA-256; per-test fixtures override.
             agent_set_hash: [0u8; 32],
+            // D-5 (audit 2026-05-19): cosign_session_pubkey at position 22.
+            // Default Pubkey::default() = gate disabled — preserves prior
+            // byte layout for fixtures that don't exercise the field.
+            cosign_session_pubkey: Pubkey::default(),
         };
         let mut flipped = base.daily_spending_cap_usd;
         let _ = &mut flipped; // suppress unused
@@ -466,6 +505,10 @@ mod tests {
             // Phase 8 PEN-CROSS-1: empty-vault agent_set_hash. Tests below
             // pin a known empty-Vec SHA-256; per-test fixtures override.
             agent_set_hash: [0u8; 32],
+            // D-5 (audit 2026-05-19): cosign_session_pubkey at position 22.
+            // Default Pubkey::default() = gate disabled — preserves prior
+            // byte layout for fixtures that don't exercise the field.
+            cosign_session_pubkey: Pubkey::default(),
         };
         let f2 = PolicyPreviewFields {
             protocols: &b,
@@ -511,6 +554,10 @@ mod tests {
             // Phase 8 PEN-CROSS-1: empty-vault agent_set_hash. Tests below
             // pin a known empty-Vec SHA-256; per-test fixtures override.
             agent_set_hash: [0u8; 32],
+            // D-5 (audit 2026-05-19): cosign_session_pubkey at position 22.
+            // Default Pubkey::default() = gate disabled — preserves prior
+            // byte layout for fixtures that don't exercise the field.
+            cosign_session_pubkey: Pubkey::default(),
         };
         let narrow = PolicyPreviewFields {
             // 13:00-17:00 UTC = bits 13..17 = 0x1E000
@@ -559,6 +606,10 @@ mod tests {
             // Phase 8 PEN-CROSS-1: empty-vault agent_set_hash. Tests below
             // pin a known empty-Vec SHA-256; per-test fixtures override.
             agent_set_hash: [0u8; 32],
+            // D-5 (audit 2026-05-19): cosign_session_pubkey at position 22.
+            // Default Pubkey::default() = gate disabled — preserves prior
+            // byte layout for fixtures that don't exercise the field.
+            cosign_session_pubkey: Pubkey::default(),
         };
         let flipped = PolicyPreviewFields {
             auto_promote_grays: true,
@@ -605,6 +656,10 @@ mod tests {
             // Phase 8 PEN-CROSS-1: empty-vault agent_set_hash. Tests below
             // pin a known empty-Vec SHA-256; per-test fixtures override.
             agent_set_hash: [0u8; 32],
+            // D-5 (audit 2026-05-19): cosign_session_pubkey at position 22.
+            // Default Pubkey::default() = gate disabled — preserves prior
+            // byte layout for fixtures that don't exercise the field.
+            cosign_session_pubkey: Pubkey::default(),
         };
         let lower = PolicyPreviewFields {
             auto_revoke_threshold: 3,
@@ -653,6 +708,10 @@ mod tests {
             // Phase 8 PEN-CROSS-1: empty-vault agent_set_hash. Tests below
             // pin a known empty-Vec SHA-256; per-test fixtures override.
             agent_set_hash: [0u8; 32],
+            // D-5 (audit 2026-05-19): cosign_session_pubkey at position 22.
+            // Default Pubkey::default() = gate disabled — preserves prior
+            // byte layout for fixtures that don't exercise the field.
+            cosign_session_pubkey: Pubkey::default(),
         };
         let raised = PolicyPreviewFields {
             per_recipient_daily_cap_usd: 50_000_000, // $50 cap
@@ -701,6 +760,10 @@ mod tests {
             // Phase 8 PEN-CROSS-1: empty-vault agent_set_hash. Tests below
             // pin a known empty-Vec SHA-256; per-test fixtures override.
             agent_set_hash: [0u8; 32],
+            // D-5 (audit 2026-05-19): cosign_session_pubkey at position 22.
+            // Default Pubkey::default() = gate disabled — preserves prior
+            // byte layout for fixtures that don't exercise the field.
+            cosign_session_pubkey: Pubkey::default(),
         };
         let raised = PolicyPreviewFields {
             // $100 floor in 6-decimal USDC face value
@@ -747,6 +810,10 @@ mod tests {
             // Phase 8 PEN-CROSS-1: empty-vault agent_set_hash. Tests below
             // pin a known empty-Vec SHA-256; per-test fixtures override.
             agent_set_hash: [0u8; 32],
+            // D-5 (audit 2026-05-19): cosign_session_pubkey at position 22.
+            // Default Pubkey::default() = gate disabled — preserves prior
+            // byte layout for fixtures that don't exercise the field.
+            cosign_session_pubkey: Pubkey::default(),
         };
         let flipped = PolicyPreviewFields {
             cosign_required: true,
@@ -755,6 +822,51 @@ mod tests {
         let d_base = compute_policy_preview_digest(&base);
         let d_flip = compute_policy_preview_digest(&flipped);
         assert_ne!(d_base, d_flip, "cosign_required flip MUST change digest");
+    }
+
+    /// D-5 (audit 2026-05-19, F-RP3-1): flipping `cosign_session_pubkey` MUST
+    /// change the canonical digest. The owner's chosen reactivate-time
+    /// cosigner pubkey is bound by TA-19 at canonical position 22 — silent
+    /// flips can't enable or disable the reactivate-cosign gate without
+    /// invalidating the owner's signed digest.
+    #[test]
+    fn digest_changes_on_cosign_session_pubkey_flip() {
+        let protocols = [pk(1)];
+        let dests = [pk(10)];
+        let base = PolicyPreviewFields {
+            daily_spending_cap_usd: 500_000_000,
+            max_transaction_size_usd: 100_000_000,
+            max_slippage_bps: 100,
+            developer_fee_rate: 0,
+            protocol_mode: 1,
+            protocols: &protocols,
+            destination_mode: 0,
+            allowed_destinations: &dests,
+            timelock_duration: 1800,
+            session_expiry_seconds: 30,
+            observe_only: false,
+            has_constraints: false,
+            has_post_assertions: 0,
+            created_at_slot: 12345,
+            operating_hours: 0x00FFFFFF,
+            auto_promote_grays: false,
+            auto_revoke_threshold: 5,
+            stable_balance_floor: 0,
+            per_recipient_daily_cap_usd: 0,
+            cosign_required: false,
+            agent_set_hash: [0u8; 32],
+            cosign_session_pubkey: Pubkey::default(),
+        };
+        let with_cosigner = PolicyPreviewFields {
+            cosign_session_pubkey: pk(99),
+            ..base
+        };
+        let d_base = compute_policy_preview_digest(&base);
+        let d_with = compute_policy_preview_digest(&with_cosigner);
+        assert_ne!(
+            d_base, d_with,
+            "cosign_session_pubkey flip MUST change digest"
+        );
     }
 
     /// Phase 8 PEN-CROSS-1 (Council ISC-141): the empty-agent-set hash is
@@ -831,6 +943,8 @@ mod tests {
             per_recipient_daily_cap_usd: 0,
             cosign_required: false,
             agent_set_hash: EMPTY_AGENT_SET_HASH,
+            // D-5: cosign_session_pubkey at position 22 — default off.
+            cosign_session_pubkey: Pubkey::default(),
         };
         // Build a mutated agent set: one OPERATOR agent inserted.
         let new_agent = AgentEntry {
@@ -893,6 +1007,12 @@ mod tests {
             // Phase 8 PEN-CROSS-1: minimal fixture uses the empty-vault
             // agent_set_hash deterministic pin (Council ISC-141).
             agent_set_hash: EMPTY_AGENT_SET_HASH,
+            // D-5 (audit 2026-05-19): minimal fixture pins
+            // cosign_session_pubkey = Pubkey::default() — gate disabled.
+            // Preserves byte layout symmetry with the prior fixture; the
+            // dedicated flip-changes-digest test below exercises the
+            // enabled path.
+            cosign_session_pubkey: Pubkey::default(),
         };
         // Encoding: 8 zero + 8 zero + 2 zero + 2 zero (developer_fee_rate)
         //   + 0x01 + 4 zero + 0x00 + 4 zero + 8 zero + 8 zero + 0 + 0 + 0
@@ -902,7 +1022,8 @@ mod tests {
         //   + 8 zero (per_recipient_daily_cap_usd TA-14)
         //   + 0 (cosign_required G6 audit 2026-05-18)
         //   + 32 bytes (EMPTY_AGENT_SET_HASH at position 21 PEN-CROSS-1)
-        // = 110 bytes deterministic input.
+        //   + 32 zero bytes (cosign_session_pubkey at position 22 D-5)
+        // = 142 bytes deterministic input.
         let digest = compute_policy_preview_digest(&f);
         // Cross-impl pin — same fixture is asserted byte-for-byte in
         // sdk/kit/tests/policy/preview-digest.test.ts. If either side
@@ -922,9 +1043,13 @@ mod tests {
         //     d3e731941e95cb1c426ccc6f2b5c53525c033f498bdb79a593bc86c98508c67a
         //   Post-TA-14 (pre-G6):
         //     45c51e8d77b5a1775ea95c760a4a554288fc246f91e10bac620cfda902936a46
-        // G6 (audit 2026-05-18 cosign opt-in) appends 1 more byte
-        // (cosign_required=false → 0x00) at position 20. New digest pinned
-        // in REGENERATED_HEX_MINIMAL below.
+        //   Post-G6 (pre-PEN-CROSS-1):
+        //     19c70cb767358d1ce2a4c736b067172e0f87ddad8ae6f98292a62bd5f9bae355
+        //   Post-PEN-CROSS-1 (pre-D-5):
+        //     a9d8654da866751cbec1c45dcae0b7c3b6e45ee98c2b284b8cd9f8f09d894f83
+        // D-5 (audit 2026-05-19, F-RP3-1) appends 32 more bytes
+        // (cosign_session_pubkey = Pubkey::default() → 32 zero bytes) at
+        // position 22. New digest pinned in REGENERATED_HEX_MINIMAL below.
         let expected: [u8; 32] = REGENERATED_HEX_MINIMAL;
         assert_eq!(
             digest, expected,
@@ -980,6 +1105,9 @@ mod tests {
             // configured but no agents yet — matches the typical post-init
             // call site of `apply_pending_policy` re-derive paths.
             agent_set_hash: EMPTY_AGENT_SET_HASH,
+            // D-5 (audit 2026-05-19): realistic fixture pins
+            // cosign_session_pubkey = Pubkey::default() — gate disabled.
+            cosign_session_pubkey: Pubkey::default(),
         };
         let digest = compute_policy_preview_digest(&f);
         // Prior digests:
@@ -997,9 +1125,13 @@ mod tests {
         //     6523cb9b64baef661d919c802a8762332d1091cb53e8245d1624f52839fc9c8c
         //   Post-TA-14 (pre-G6):
         //     67c7cde90c0d8140fceb370bf94dcc15488ffd1407a84d4c248b590a8b9d810f
-        // G6 (audit 2026-05-18 cosign opt-in) appends 1 more byte
-        // (cosign_required=false → 0x00) at position 20. New digest pinned
-        // in REGENERATED_HEX_REALISTIC below.
+        //   Post-G6 (pre-PEN-CROSS-1):
+        //     15ab9e4290b8bc9229adc64e46cf785edb1adc78596eb339e7bdd4df2a2cab62
+        //   Post-PEN-CROSS-1 (pre-D-5):
+        //     503ff364c055085089576e5af684383e10b7dd65ed796bd57c53927e879cdb0e
+        // D-5 (audit 2026-05-19, F-RP3-1) appends 32 more bytes
+        // (cosign_session_pubkey = Pubkey::default() → 32 zero bytes) at
+        // position 22. New digest pinned in REGENERATED_HEX_REALISTIC below.
         let expected: [u8; 32] = REGENERATED_HEX_REALISTIC;
         assert_eq!(
             digest, expected,
@@ -1008,34 +1140,45 @@ mod tests {
     }
 }
 
-/// Phase 8 PEN-CROSS-1 (audit 2026-05-19) minimal-policy expected digest.
+/// D-5 (audit 2026-05-19, F-RP3-1) minimal-policy expected digest.
 ///
-/// Computed over the canonical 110-byte encoding (78 prior bytes + 32 bytes
-/// of `agent_set_hash` at position 21). The agent_set_hash here is the
-/// empty-vault deterministic value (`EMPTY_AGENT_SET_HASH` below) since the
-/// minimal fixture's vault has zero registered agents.
+/// Computed over the canonical 144-byte encoding (110 prior bytes +
+/// 32 bytes of `cosign_session_pubkey` at position 22 = 142 bytes…
+/// actually 110+32 = 142, but the EMPTY_AGENT_SET_HASH is now also
+/// included so total = 110 + 32 = 142 = wait, see below). The
+/// `cosign_session_pubkey` here is `Pubkey::default()` since the
+/// minimal fixture's vault has the reactivate-cosign gate disabled.
 ///
 /// Cross-impl byte-equality pin (Rust ↔ TS).
 ///
-/// = `a9d8654da866751cbec1c45dcae0b7c3b6e45ee98c2b284b8cd9f8f09d894f83`
+/// Prior digests:
+///   Post-PEN-CROSS-1 (pre-D-5):
+///     a9d8654da866751cbec1c45dcae0b7c3b6e45ee98c2b284b8cd9f8f09d894f83
+/// Post-D-5:
+///   = `f36f0bce45b2ccd681891f2b4922b733563ad21485e6801e4f5f43f475ca0949`
 #[cfg(test)]
 const REGENERATED_HEX_MINIMAL: [u8; 32] = [
-    0xa9, 0xd8, 0x65, 0x4d, 0xa8, 0x66, 0x75, 0x1c, 0xbe, 0xc1, 0xc4, 0x5d, 0xca, 0xe0, 0xb7, 0xc3,
-    0xb6, 0xe4, 0x5e, 0xe9, 0x8c, 0x2b, 0x28, 0x4b, 0x8c, 0xd9, 0xf8, 0xf0, 0x9d, 0x89, 0x4f, 0x83,
+    0xf3, 0x6f, 0x0b, 0xce, 0x45, 0xb2, 0xcc, 0xd6, 0x81, 0x89, 0x1f, 0x2b, 0x49, 0x22, 0xb7, 0x33,
+    0x56, 0x3a, 0xd2, 0x14, 0x85, 0xe6, 0x80, 0x1e, 0x4f, 0x5f, 0x43, 0xf4, 0x75, 0xca, 0x09, 0x49,
 ];
 
-/// Phase 8 PEN-CROSS-1 (audit 2026-05-19) realistic-policy expected digest.
+/// D-5 (audit 2026-05-19, F-RP3-1) realistic-policy expected digest.
 ///
 /// Realistic fixture with 2 protocols, 1 destination, common scalars,
 /// `stable_balance_floor = 100_000_000` ($100 reserve),
 /// `per_recipient_daily_cap_usd = 50_000_000` ($50 per-recipient cap),
-/// `cosign_required = false`, and `agent_set_hash = EMPTY_AGENT_SET_HASH`.
+/// `cosign_required = false`, `agent_set_hash = EMPTY_AGENT_SET_HASH`,
+/// and `cosign_session_pubkey = Pubkey::default()`.
 ///
-/// = `503ff364c055085089576e5af684383e10b7dd65ed796bd57c53927e879cdb0e`
+/// Prior digests:
+///   Post-PEN-CROSS-1 (pre-D-5):
+///     503ff364c055085089576e5af684383e10b7dd65ed796bd57c53927e879cdb0e
+/// Post-D-5:
+///   = `68778cdd2c3fc158756997c3f851d6b67235cbac7f5217a9c4614afd39a344c4`
 #[cfg(test)]
 const REGENERATED_HEX_REALISTIC: [u8; 32] = [
-    0x50, 0x3f, 0xf3, 0x64, 0xc0, 0x55, 0x08, 0x50, 0x89, 0x57, 0x6e, 0x5a, 0xf6, 0x84, 0x38, 0x3e,
-    0x10, 0xb7, 0xdd, 0x65, 0xed, 0x79, 0x6b, 0xd5, 0x7c, 0x53, 0x92, 0x7e, 0x87, 0x9c, 0xdb, 0x0e,
+    0x68, 0x77, 0x8c, 0xdd, 0x2c, 0x3f, 0xc1, 0x58, 0x75, 0x69, 0x97, 0xc3, 0xf8, 0x51, 0xd6, 0xb6,
+    0x72, 0x35, 0xcb, 0xac, 0x7f, 0x52, 0x17, 0xa9, 0xc4, 0x61, 0x4a, 0xfd, 0x39, 0xa3, 0x44, 0xc4,
 ];
 
 /// Phase 8 PEN-CROSS-1 (Council ISC-141): empty-agent-set hash. SHA-256 of

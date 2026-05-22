@@ -27,7 +27,11 @@ import {
 } from "@solana/spl-token";
 import { expect } from "chai";
 import BN from "bn.js";
-import { initVaultPreviewDigest, fetchAndComputeQueueDigest, siblingHandlerDigest } from "./helpers/policy-digest";
+import {
+  initVaultPreviewDigest,
+  fetchAndComputeQueueDigest,
+  siblingHandlerDigest,
+} from "./helpers/policy-digest";
 import {
   createSurfpoolTestEnv,
   SurfpoolTestEnv,
@@ -142,7 +146,8 @@ describe("surfpool-integration", function () {
       const maxTxSize = new BN(100_000_000); // 100 USDC
 
       await program.methods
-        .initializeVault(vaultId,
+        .initializeVault(
+          vaultId,
           dailyCap,
           maxTxSize,
           1,
@@ -153,7 +158,7 @@ describe("surfpool-integration", function () {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -167,7 +172,7 @@ describe("surfpool-integration", function () {
             protocols: [],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -339,7 +344,8 @@ describe("surfpool-integration", function () {
 
       // Initialize vault
       await program.methods
-        .initializeVault(vaultId,
+        .initializeVault(
+          vaultId,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
@@ -350,7 +356,7 @@ describe("surfpool-integration", function () {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -364,7 +370,7 @@ describe("surfpool-integration", function () {
             protocols: [],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -625,7 +631,8 @@ describe("surfpool-integration", function () {
       );
 
       await program.methods
-        .initializeVault(vaultId,
+        .initializeVault(
+          vaultId,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
@@ -636,7 +643,7 @@ describe("surfpool-integration", function () {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -650,7 +657,7 @@ describe("surfpool-integration", function () {
             protocols: [],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -939,7 +946,8 @@ describe("surfpool-integration", function () {
       );
 
       await program.methods
-        .initializeVault(vaultId,
+        .initializeVault(
+          vaultId,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
@@ -950,7 +958,7 @@ describe("surfpool-integration", function () {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -964,7 +972,7 @@ describe("surfpool-integration", function () {
             protocols: [],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -1136,7 +1144,8 @@ describe("surfpool-integration", function () {
       );
 
       await program.methods
-        .initializeVault(vaultId,
+        .initializeVault(
+          vaultId,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
@@ -1147,7 +1156,7 @@ describe("surfpool-integration", function () {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -1161,7 +1170,7 @@ describe("surfpool-integration", function () {
             protocols: [],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -1302,7 +1311,8 @@ describe("surfpool-integration", function () {
       );
 
       const tx = await program.methods
-        .initializeVault(profileVaultId,
+        .initializeVault(
+          profileVaultId,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
@@ -1313,7 +1323,7 @@ describe("surfpool-integration", function () {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -1327,7 +1337,7 @@ describe("surfpool-integration", function () {
             protocols: [],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -1398,7 +1408,8 @@ describe("surfpool-integration", function () {
       );
 
       await program.methods
-        .initializeVault(testVaultId,
+        .initializeVault(
+          testVaultId,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
@@ -1409,7 +1420,7 @@ describe("surfpool-integration", function () {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -1423,7 +1434,7 @@ describe("surfpool-integration", function () {
             protocols: [],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -1469,7 +1480,8 @@ describe("surfpool-integration", function () {
       );
 
       await program.methods
-        .initializeVault(preResetVaultId,
+        .initializeVault(
+          preResetVaultId,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
@@ -1480,7 +1492,7 @@ describe("surfpool-integration", function () {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -1494,7 +1506,7 @@ describe("surfpool-integration", function () {
             protocols: [],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -1555,7 +1567,8 @@ describe("surfpool-integration", function () {
       );
 
       await program.methods
-        .initializeVault(postResetVaultId,
+        .initializeVault(
+          postResetVaultId,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
@@ -1566,7 +1579,7 @@ describe("surfpool-integration", function () {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -1580,7 +1593,7 @@ describe("surfpool-integration", function () {
             protocols: [],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -1631,7 +1644,8 @@ describe("surfpool-integration", function () {
 
       // Create vault WITH timelock (1800 seconds = MIN_TIMELOCK_DURATION)
       await program.methods
-        .initializeVault(vaultId,
+        .initializeVault(
+          vaultId,
           new BN(500_000_000),
           new BN(100_000_000),
           1,
@@ -1642,7 +1656,7 @@ describe("surfpool-integration", function () {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -1656,7 +1670,7 @@ describe("surfpool-integration", function () {
             protocols: [],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -1676,7 +1690,8 @@ describe("surfpool-integration", function () {
     it("queue + time travel + apply succeeds", async () => {
       // Queue policy update
       await program.methods
-        .queuePolicyUpdate(new BN(200_000_000),
+        .queuePolicyUpdate(
+          new BN(200_000_000),
           null,
           null,
           null,
@@ -1693,7 +1708,9 @@ describe("surfpool-integration", function () {
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
-          (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { dailySpendingCapUsd: new BN(200_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
+          await fetchAndComputeQueueDigest(program, policyPda, vaultPda, {
+            dailySpendingCapUsd: new BN(200_000_000),
+          }), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: env.payer.publicKey,
@@ -1736,7 +1753,8 @@ describe("surfpool-integration", function () {
       // Queue another update (use sendVersionedTx since Anchor .rpc()
       // can have issues after time travel)
       const queueIx = await program.methods
-        .queuePolicyUpdate(new BN(300_000_000),
+        .queuePolicyUpdate(
+          new BN(300_000_000),
           null,
           null,
           null,
@@ -1753,7 +1771,9 @@ describe("surfpool-integration", function () {
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
-          (await fetchAndComputeQueueDigest(program, policyPda, vaultPda, { dailySpendingCapUsd: new BN(300_000_000) })), // newPolicyPreviewDigest (Phase 2 TA-19)
+          await fetchAndComputeQueueDigest(program, policyPda, vaultPda, {
+            dailySpendingCapUsd: new BN(300_000_000),
+          }), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
         .accounts({
           owner: env.payer.publicKey,

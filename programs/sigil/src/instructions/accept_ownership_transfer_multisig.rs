@@ -69,6 +69,7 @@ pub struct AcceptOwnershipTransferMultisig<'info> {
     ///   1. `owner == SQUADS_V4_PROGRAM_ID` (verified in handler)
     ///   2. `key() == pending.new_owner` (verified in handler)
     ///   3. `pending.is_multisig_target == true` (verified in handler)
+    ///
     /// Marked `mut` so the closed `pending` PDA's rent returns here.
     #[account(mut)]
     pub multisig_pda: UncheckedAccount<'info>,
@@ -85,8 +86,8 @@ pub struct AcceptOwnershipTransferMultisig<'info> {
     )]
     pub vault: Account<'info, AgentVault>,
 
-    /// Policy is mutated (policy_version bump). Batch 6 will also recompute
-    /// `policy_preview_digest` here — see handler TODO.
+    /// Policy is mutated (policy_version bump + `policy_preview_digest`
+    /// recompute — see handler lines 180-230, mirroring the EOA path).
     #[account(
         mut,
         seeds = [b"policy", vault.key().as_ref()],
@@ -238,6 +239,11 @@ pub fn handler(ctx: Context<AcceptOwnershipTransferMultisig>) -> Result<()> {
             per_recipient_daily_cap_usd: policy.per_recipient_daily_cap_usd,
             cosign_required: policy.cosign_required,
             agent_set_hash: new_agent_set_hash,
+            // D-5 (audit 2026-05-19, F-RP3-1): cosign_session_pubkey bound
+            // at canonical position 22 — accept_ownership_transfer_multisig
+            // never mutates it, so pass-through from live policy keeps the
+            // re-bind digest matching the queue-time digest.
+            cosign_session_pubkey: policy.cosign_session_pubkey,
         });
         policy.policy_preview_digest = new_digest;
         policy.policy_version = policy

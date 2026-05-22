@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 use crate::errors::SigilError;
 use crate::events::CloseConstraintsApplied;
 use crate::state::*;
+use crate::utils::audit_log::build_audit_entry;
 use crate::utils::policy_digest::{
     compute_agent_set_hash, compute_policy_preview_digest, PolicyPreviewFields,
 };
@@ -43,6 +44,20 @@ pub struct ApplyCloseConstraints<'info> {
         close = owner,
     )]
     pub pending_close_constraints: Account<'info, PendingCloseConstraints>,
+
+    /// M-7 (audit 2026-05-21) — success audit log; entry appended after
+    /// `has_constraints` flips to false and policy_version is bumped.
+    #[account(
+        mut,
+        seeds = [b"audit_success", vault.key().as_ref()],
+        bump = audit_log_success.load()?.bump,
+    )]
+    pub audit_log_success: AccountLoader<'info, AuditLogSuccess>,
+
+    /// CHECK: M-7 — slot_hashes sysvar; address-pinned so the framework
+    /// rejects any mismatched sysvar pubkey before the handler runs.
+    #[account(address = anchor_lang::solana_program::sysvar::slot_hashes::id())]
+    pub slot_hashes_sysvar: UncheckedAccount<'info>,
 }
 
 pub fn handler(
@@ -125,6 +140,11 @@ pub fn handler(
         // 21. Sibling handler never mutates the agent set — re-derive
         // from live vault.
         agent_set_hash: compute_agent_set_hash(&ctx.accounts.vault.agents),
+        // D-5 (audit 2026-05-19, F-RP3-1): cosign_session_pubkey bound at
+        // canonical position 22 — sibling handler never mutates it, so
+        // pass-through from live policy keeps the re-bind digest matching
+        // the queue-time digest.
+        cosign_session_pubkey: policy.cosign_session_pubkey,
     });
     // PEN-CROSS-3: owner must have signed the post-mutation digest.
     require!(
@@ -138,6 +158,27 @@ pub fn handler(
         .policy_version
         .checked_add(1)
         .ok_or(error!(SigilError::Overflow))?;
+
+    // M-7 close (audit 2026-05-21) — append disc=21 audit entry AFTER
+    // `has_constraints` flip + policy_version bump, BEFORE `emit!`
+    // (ISC-144 ordering). Subject = vault pubkey because the mutation is
+    // vault-wide, mirroring disc=15 `AUDIT_DISC_CONSTRAINTS_APPLY` and
+    // disc=14 `AUDIT_DISC_POLICY_APPLY` precedent.
+    {
+        let vault_key = ctx.accounts.vault.key();
+        let entry = build_audit_entry(
+            AUDIT_DISC_CONSTRAINTS_CLOSE_APPLY,
+            vault_key,
+            0,
+            0,
+            clock.unix_timestamp,
+            &ctx.accounts.slot_hashes_sysvar.to_account_info(),
+        )?;
+        let mut log = ctx.accounts.audit_log_success.load_mut()?;
+        // §RP-1 I-2: defense-in-depth guard against future seeds drift.
+        require_keys_eq!(log.vault, vault_key, SigilError::ZeroCopyVaultMismatch);
+        log.append(entry);
+    }
 
     emit!(CloseConstraintsApplied {
         vault: ctx.accounts.vault.key(),

@@ -135,6 +135,7 @@ export type AcceptOwnershipTransferMultisigAsyncInput<
    * 1. `owner == SQUADS_V4_PROGRAM_ID` (verified in handler)
    * 2. `key() == pending.new_owner` (verified in handler)
    * 3. `pending.is_multisig_target == true` (verified in handler)
+   *
    * Marked `mut` so the closed `pending` PDA's rent returns here.
    */
   multisigPda: Address<TAccountMultisigPda>;
@@ -147,8 +148,8 @@ export type AcceptOwnershipTransferMultisigAsyncInput<
    */
   vault: Address<TAccountVault>;
   /**
-   * Policy is mutated (policy_version bump). Batch 6 will also recompute
-   * `policy_preview_digest` here — see handler TODO.
+   * Policy is mutated (policy_version bump + `policy_preview_digest`
+   * recompute — see handler lines 180-230, mirroring the EOA path).
    */
   policy?: Address<TAccountPolicy>;
   /**
@@ -315,6 +316,7 @@ export type AcceptOwnershipTransferMultisigInput<
    * 1. `owner == SQUADS_V4_PROGRAM_ID` (verified in handler)
    * 2. `key() == pending.new_owner` (verified in handler)
    * 3. `pending.is_multisig_target == true` (verified in handler)
+   *
    * Marked `mut` so the closed `pending` PDA's rent returns here.
    */
   multisigPda: Address<TAccountMultisigPda>;
@@ -327,8 +329,8 @@ export type AcceptOwnershipTransferMultisigInput<
    */
   vault: Address<TAccountVault>;
   /**
-   * Policy is mutated (policy_version bump). Batch 6 will also recompute
-   * `policy_preview_digest` here — see handler TODO.
+   * Policy is mutated (policy_version bump + `policy_preview_digest`
+   * recompute — see handler lines 180-230, mirroring the EOA path).
    */
   policy: Address<TAccountPolicy>;
   /**
@@ -440,6 +442,7 @@ export type ParsedAcceptOwnershipTransferMultisigInstruction<
      * 1. `owner == SQUADS_V4_PROGRAM_ID` (verified in handler)
      * 2. `key() == pending.new_owner` (verified in handler)
      * 3. `pending.is_multisig_target == true` (verified in handler)
+     *
      * Marked `mut` so the closed `pending` PDA's rent returns here.
      */
     multisigPda: TAccountMetas[0];
@@ -452,8 +455,8 @@ export type ParsedAcceptOwnershipTransferMultisigInstruction<
      */
     vault: TAccountMetas[1];
     /**
-     * Policy is mutated (policy_version bump). Batch 6 will also recompute
-     * `policy_preview_digest` here — see handler TODO.
+     * Policy is mutated (policy_version bump + `policy_preview_digest`
+     * recompute — see handler lines 180-230, mirroring the EOA path).
      */
     policy: TAccountMetas[2];
     /**

@@ -39,9 +39,7 @@ import {
 } from "@solana/web3.js";
 import { expect } from "chai";
 import BN from "bn.js";
-import {
-  initVaultPreviewDigest,
-} from "./helpers/policy-digest";
+import { initVaultPreviewDigest } from "./helpers/policy-digest";
 import {
   createTestEnv,
   airdropSol,
@@ -102,10 +100,7 @@ function lastSuccessDisc(svm: LiteSVM, auditSuccess: PublicKey): number {
  *
  * Returns the forged pubkey.
  */
-function forgeMockMultisig(
-  svm: LiteSVM,
-  ownerProgram: PublicKey,
-): PublicKey {
+function forgeMockMultisig(svm: LiteSVM, ownerProgram: PublicKey): PublicKey {
   const kp = Keypair.generate();
   const data = Buffer.alloc(200); // arbitrary opaque payload
   // Rent-exempt for 200 bytes (LiteSVM uses Solana's standard rent math).
@@ -253,9 +248,8 @@ describe("ownership-transfer-multisig (Phase 8 Batch 4 — Squads V4 accept)", (
       .rpc();
 
     // ASSERT — pending PDA bound to multisig + flag set.
-    const pendingState = await program.account.pendingOwnershipTransfer.fetch(
-      pendingOwner,
-    );
+    const pendingState =
+      await program.account.pendingOwnershipTransfer.fetch(pendingOwner);
     expect(pendingState.newOwner.toString()).to.equal(mockMultisig.toString());
     expect(pendingState.isMultisigTarget).to.equal(true);
 
@@ -439,8 +433,10 @@ describe("ownership-transfer-multisig (Phase 8 Batch 4 — Squads V4 accept)", (
     } catch (err: any) {
       caughtCode = err?.error?.errorCode?.number ?? null;
     }
-    expect(caughtCode, "standard-target pending on multisig handler MUST reject")
-      .to.not.be.null;
+    expect(
+      caughtCode,
+      "standard-target pending on multisig handler MUST reject",
+    ).to.not.be.null;
     expect(caughtCode).to.equal(6104); // ErrPendingOwnershipNotReady
 
     expect(accountExists(svm, pendingOwner)).to.equal(true);

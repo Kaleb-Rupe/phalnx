@@ -24,6 +24,26 @@ export interface OwnerClientConfig {
   vault: Address;
   owner: TransactionSigner;
   network: "devnet" | "mainnet";
+  /**
+   * AL2 mainnet confirmation gate (H-9, Phase 10 Bucket 1). Mirrors the
+   * `SigilClientConfig.requireMainnetConfirmation` knob on the seal-side
+   * client so destructive owner mutations get the same opt-in
+   * confirmation barrier.
+   *
+   * Three states:
+   *   - `true`  → every mutation on mainnet MUST be called with
+   *               `{ mainnetConfirmed: true }` or it throws
+   *               `SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED`.
+   *   - `false` → explicit opt-out; no throw, no warn (e.g. CI fixtures
+   *               that intentionally exercise mainnet codepaths).
+   *   - `undefined` (default in 0.16.x) → no throw, but mainnet mutations
+   *               called without `mainnetConfirmed: true` emit a warning
+   *               via {@link getSigilModuleLogger}. v1.0 will flip the
+   *               default to `true`; adopt early by setting `true` here.
+   *
+   * On devnet the gate is ignored regardless of this setting.
+   */
+  requireMainnetConfirmation?: boolean;
 }
 
 // ─── Transaction Types ───────────────────────────────────────────────────────
@@ -40,6 +60,13 @@ export interface TxOpts {
   priorityFeeMicroLamports?: number;
   // strictMode option removed in V2 (REVAMP_PLAN §2.2): every constraint
   // entry is strictly enforced on-chain. Callers no longer pass a mode flag.
+  /**
+   * AL2 mainnet confirmation gate (H-9, Phase 10 Bucket 1). Set to
+   * `true` to confirm a mutation is intentional on mainnet. Required
+   * when `OwnerClientConfig.requireMainnetConfirmation === true`. See
+   * the field docs on `OwnerClientConfig` for the full state matrix.
+   */
+  mainnetConfirmed?: boolean;
 }
 
 // ─── Vault State ─────────────────────────────────────────────────────────────

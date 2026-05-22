@@ -64,8 +64,8 @@ pub struct AcceptOwnershipTransfer<'info> {
     )]
     pub vault: Account<'info, AgentVault>,
 
-    /// Policy is mutated (policy_version bump). Batch 6 will also recompute
-    /// `policy_preview_digest` here — see handler TODO.
+    /// Policy is mutated (policy_version bump + `policy_preview_digest`
+    /// recompute — see handler lines 173-223).
     #[account(
         mut,
         seeds = [b"policy", vault.key().as_ref()],
@@ -214,6 +214,11 @@ pub fn handler(ctx: Context<AcceptOwnershipTransfer>) -> Result<()> {
             per_recipient_daily_cap_usd: policy.per_recipient_daily_cap_usd,
             cosign_required: policy.cosign_required,
             agent_set_hash: new_agent_set_hash,
+            // D-5 (audit 2026-05-19, F-RP3-1): cosign_session_pubkey bound
+            // at canonical position 22 — accept_ownership_transfer never
+            // mutates it, so pass-through from live policy keeps the
+            // re-bind digest matching the queue-time digest.
+            cosign_session_pubkey: policy.cosign_session_pubkey,
         });
         policy.policy_preview_digest = new_digest;
         policy.policy_version = policy

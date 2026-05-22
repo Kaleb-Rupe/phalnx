@@ -781,33 +781,34 @@ export async function setupVaultWithAgent(
   // sidestep this). DO NOT attempt to fix here — touching the chain only
   // resurfaces the same error elsewhere.
   await program.methods
-    .initializeVault(vaultId,
-          dailyCap,
-          maxTxSize,
-          1,
-          opts.protocols ?? [],
-          developerFeeRate,
-          maxSlippageBps,
-          timelockDuration,
-          allowedDestinations,
-          protocolCaps,
-          false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
-          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
-          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
-          initVaultPreviewDigest({
-            dailySpendingCapUsd: dailyCap,
-            maxTransactionSizeUsd: maxTxSize,
-            maxSlippageBps: maxSlippageBps,
-            protocolMode: 1,
-            protocols: opts.protocols ?? [],
-            allowedDestinations: allowedDestinations,
-            timelockDuration: timelockDuration,
-            operatingHours: 0x00FFFFFF,
-            autoPromoteGrays: false,
-            autoRevokeThreshold: 5,
-          }),
-        )
+    .initializeVault(
+      vaultId,
+      dailyCap,
+      maxTxSize,
+      1,
+      opts.protocols ?? [],
+      developerFeeRate,
+      maxSlippageBps,
+      timelockDuration,
+      allowedDestinations,
+      protocolCaps,
+      false, // observeOnly (Phase 2 TA-19)
+      0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
+      false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+      5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+      initVaultPreviewDigest({
+        dailySpendingCapUsd: dailyCap,
+        maxTransactionSizeUsd: maxTxSize,
+        maxSlippageBps: maxSlippageBps,
+        protocolMode: 1,
+        protocols: opts.protocols ?? [],
+        allowedDestinations: allowedDestinations,
+        timelockDuration: timelockDuration,
+        operatingHours: 0x00ffffff,
+        autoPromoteGrays: false,
+        autoRevokeThreshold: 5,
+      }),
+    )
     .accounts({
       owner: owner.publicKey,
       vault: pdas.vaultPda,

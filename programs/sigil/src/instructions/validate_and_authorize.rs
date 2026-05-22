@@ -49,7 +49,12 @@ pub struct ValidateAndAuthorize<'info> {
         seeds = [b"policy", vault.key().as_ref()],
         bump = policy.bump,
     )]
-    pub policy: Account<'info, PolicyConfig>,
+    /// Boxed to keep the `ValidateAndAuthorize::try_accounts` stack frame
+    /// below BPF's 4 KB ceiling. Phase 10 D-5 added 32 bytes
+    /// (`cosign_session_pubkey`) to PolicyConfig, pushing the codegen
+    /// frame from 4072 to 4104 bytes (8 over). `Box` moves the deserialized
+    /// wrapper to the heap, restoring headroom.
+    pub policy: Box<Account<'info, PolicyConfig>>,
 
     /// Zero-copy SpendTracker
     #[account(
@@ -139,6 +144,10 @@ pub fn handler(
     // ownership-transfer flow (M-5) extension can extend the contract
     // without breaking the on-chain shape.
     expected_nonce: u64,
+    // D-1 + D-6 (Bucket 2 2026-05-21): AL3 scalar intent digest. See
+    // `lib.rs:validate_and_authorize` docstring for the full canonical
+    // encoding. Verified below before any state-of-record mutation.
+    expected_intent_digest: [u8; 32],
 ) -> Result<()> {
     // 0. Reject CPI calls — only top-level transaction instructions allowed.
     require!(
@@ -146,6 +155,40 @@ pub fn handler(
             == anchor_lang::solana_program::instruction::TRANSACTION_LEVEL_STACK_HEIGHT,
         SigilError::CpiCallNotAllowed
     );
+
+    // D-1 close: AL3 scalar intent-digest verifier. Recompute the same
+    // SHA-256 the wallet UI computed at preview time over the SCALAR
+    // SealInput projection (vault, agent, token_mint, amount,
+    // target_protocol, network) and reject on byte-equal mismatch.
+    //
+    // The check runs FIRST so a recipient/amount/mint/protocol-swap
+    // preview-vs-execute attack costs no CU beyond the digest hash. We
+    // hold off touching policy/tracker state until the digest matches.
+    //
+    // Network discriminant is derived on-chain from the program's build
+    // feature — the caller doesn't pin it. A mainnet-targeted digest sent
+    // to a devnet program (or vice-versa) reproducibly fails the byte-
+    // equal check, closing the cross-network replay class.
+    {
+        let vault_key = ctx.accounts.vault.key();
+        let agent_key = ctx.accounts.agent.key();
+        let scalar_input = crate::utils::intent_digest::ScalarIntentInput {
+            vault: &vault_key,
+            agent: &agent_key,
+            token_mint: &token_mint,
+            amount,
+            target_protocol: &target_protocol,
+        };
+        let recomputed =
+            crate::utils::intent_digest::compute_scalar_intent_digest(&scalar_input);
+        require!(
+            crate::utils::intent_digest::digests_equal(
+                &recomputed,
+                &expected_intent_digest
+            ),
+            SigilError::ErrIntentDigestMismatch
+        );
+    }
 
     let vault = &ctx.accounts.vault;
     let policy = &ctx.accounts.policy;
@@ -526,17 +569,19 @@ pub fn handler(
     // documentation but the derivation step is skipped because no PDA of
     // that family yet exists for the current vault (Phase 7+ ship them).
     //
-    // **Prefix count (SA4 H1 update, audit 2026-05-19).** PROTECTED_SEED_PREFIXES
-    // currently lists 16 entries split as **14 active + 2 forward-compat**:
-    //   ACTIVE (14): vault, policy, tracker, session, post_assertions,
+    // **Prefix count (C-5 close + L-2, audit 2026-05-21).** PROTECTED_SEED_PREFIXES
+    // currently lists 17 entries split as **15 active + 2 forward-compat**:
+    //   ACTIVE (15): vault, policy, tracker, session, post_assertions,
     //     pending_policy, pending_constraints, pending_agent_perms,
-    //     pending_close_constraints, pending_owner, constraints, agent_spend,
-    //     audit_success, audit_rejected (the last two added when Phase 7
-    //     audit-log PDAs went live — see finalize_session.rs:91-107).
+    //     pending_close_constraints, pending_owner, pending_agent_grant,
+    //     constraints, agent_spend, audit_success, audit_rejected (audit_*
+    //     pair landed when Phase 7 audit-log PDAs went live; pending_agent_grant
+    //     landed in Phase 8 PEN-CROSS-1 — see queue_agent_grant.rs:56 / line
+    //     245 of state/mod.rs).
     //   FORWARD-COMPAT (2): cosign (Phase 3 cosign session — no live PDA in
     //     V2 register yet), recipient (post-exec per-recipient cap).
-    // The runtime `protected: [Pubkey; 14]` array below is the derived view:
-    // 14 real keys, zero sentinel slots. The prior single `Pubkey::default()`
+    // The runtime `protected: [Pubkey; 15]` array below is the derived view:
+    // 15 real keys, zero sentinel slots. The prior single `Pubkey::default()`
     // sentinel that stood in for the 4 forward-compat families was dropped
     // when audit_success / audit_rejected became live; the remaining 2
     // forward-compat families will land as additional derivations + array
@@ -544,16 +589,20 @@ pub fn handler(
     //
     // **CU profile (measured 2026-05-19 via LiteSVM in
     // tests/sysvar-scan-bound.ts "TA-11 protected-writable scan CU profile"
-    // after SA4 H1 audit_success+audit_rejected derivations added).**
+    // after SA4 H1 audit_success+audit_rejected derivations added; updated
+    // C-5 close 2026-05-21 — added pending_agent_grant derivation +
+    // helper extraction to keep validate_and_authorize stack frame under
+    // BPF 4 KB ceiling).**
     //   - 30-sibling-noop bundle end-to-end: ~181K CU (validate + finalize +
     //     30 SystemProgram noops + 3 sysvar scans). Pre-SA4 baseline ~169K.
     //   - TA-11 scan delta for 20 extra siblings: ~61K CU (3K per extra ix).
-    //   - 9 lazy find_program_address derivations: ~45K CU (paid once per
-    //     validate). Up from 7 derivations × 6K = ~42K CU pre-SA4.
-    //   - Per-meta protected-set lookup (14 entries × pubkey-equality
-    //     compare): < 220 CU per meta. Up from 13 entries × < 200 CU.
-    //   - Worst-case 8 sibling ixs × 16 metas/ix ≈ 9K (scan-loop) + 45K
-    //     (derivations) ≈ 50-55K total. Even doubling stays under the
+    //   - 10 lazy find_program_address derivations: ~50K CU (paid once per
+    //     validate). Up from 9 × 5K = ~45K CU pre-C-5 (pending_agent_grant
+    //     derivation added in C-5 fix).
+    //   - Per-meta protected-set lookup (15 entries × pubkey-equality
+    //     compare): < 240 CU per meta. Up from 14 entries × < 220 CU.
+    //   - Worst-case 8 sibling ixs × 16 metas/ix ≈ 9K (scan-loop) + 50K
+    //     (derivations) ≈ 55-60K total. Even doubling stays under the
     //     prompt's 90K budget; leaves > 1.3M CU for the actual sandwich.
     //     Bounded by MAX_SYSVAR_SCAN_ITERATIONS (64).
     //
@@ -566,69 +615,21 @@ pub fn handler(
     // operating_hours / cooldown but BEFORE constraints PDA loading or
     // any CPI. Failure rejects the bundle before paying any fee.
     {
-        use anchor_lang::solana_program::pubkey::Pubkey as SP;
-        let policy_key = ctx.accounts.policy.key();
-        let tracker_key = ctx.accounts.tracker.key();
-        let overlay_key = ctx.accounts.agent_spend_overlay.key();
-        let session_key = ctx.accounts.session.key();
-
-        // Lazy-derived families (one find_program_address each).
-        // The derivation cost is paid only once per validate.
-        let (constraints_key, _) =
-            SP::find_program_address(&[b"constraints", vault_key.as_ref()], &crate::ID);
-        let (pending_policy_key, _) =
-            SP::find_program_address(&[b"pending_policy", vault_key.as_ref()], &crate::ID);
-        let (pending_constraints_key, _) =
-            SP::find_program_address(&[b"pending_constraints", vault_key.as_ref()], &crate::ID);
-        let (pending_close_constraints_key, _) = SP::find_program_address(
-            &[b"pending_close_constraints", vault_key.as_ref()],
-            &crate::ID,
-        );
-        let (post_assertions_key, _) =
-            SP::find_program_address(&[b"post_assertions", vault_key.as_ref()], &crate::ID);
-        let (pending_owner_key, _) =
-            SP::find_program_address(&[b"pending_owner", vault_key.as_ref()], &crate::ID);
-        let (pending_agent_perms_key, _) = SP::find_program_address(
-            &[
-                b"pending_agent_perms",
-                vault_key.as_ref(),
-                current_agent_key.as_ref(),
-            ],
-            &crate::ID,
-        );
-        // Phase 7 audit-log PDAs (post-audit-2026-05-19 SA4 H1 fix). Both
-        // are LIVE Anchor `AccountLoader` accounts on `finalize_session`
-        // (see finalize_session.rs:91-107). Foreign instructions attempting
-        // to mark either writable must be rejected by TA-11 in addition to
-        // Solana's own owner-check at runtime.
-        let (audit_success_key, _) =
-            SP::find_program_address(&[b"audit_success", vault_key.as_ref()], &crate::ID);
-        let (audit_rejected_key, _) =
-            SP::find_program_address(&[b"audit_rejected", vault_key.as_ref()], &crate::ID);
-
-        // Cheap pubkey-equality membership test: linear scan of a small
-        // (14-entry) array. With 14 entries × 32-byte compare, this is
-        // <220 CU per meta lookup.
-        //
-        // Forward-looking families `cosign` / `recipient` remain unfilled
-        // (declared in `PROTECTED_SEED_PREFIXES` but not yet live as PDAs).
-        // When they ship, add their derivations here and grow the array.
-        let protected: [Pubkey; 14] = [
+        // TA-11 protected set built by an out-of-line helper to keep the
+        // (now up-to-25) `find_program_address` derivations + Vec growth out
+        // of `validate_and_authorize`'s already-tight stack frame (C-5 close
+        // 2026-05-21, FINDING-B follow-up 2026-05-21 — adding
+        // `pending_agent_grant` + per-agent pending_agent_perms expansion
+        // both grew the helper's heap footprint; main handler stack stays
+        // at the 24-byte Vec header regardless).
+        let protected = build_ta11_protected_set(
             vault_key,
-            policy_key,
-            tracker_key,
-            overlay_key,
-            session_key,
-            constraints_key,
-            pending_policy_key,
-            pending_constraints_key,
-            pending_close_constraints_key,
-            post_assertions_key,
-            pending_owner_key,
-            pending_agent_perms_key,
-            audit_success_key,
-            audit_rejected_key,
-        ];
+            ctx.accounts.policy.key(),
+            ctx.accounts.tracker.key(),
+            ctx.accounts.agent_spend_overlay.key(),
+            ctx.accounts.session.key(),
+            &ctx.accounts.vault.agents,
+        );
 
         let mut ta11_iter: usize = 0;
         let mut ix_idx: usize = 0;
@@ -1016,8 +1017,10 @@ pub fn handler(
     // which compiles runtime byte-level CrossFieldLte assertions per protocol.
     // See Plans/we-need-to-plan-serialized-summit.md for rationale.
 
-    // Extract vault PDA seeds data upfront
-    let owner_key = vault.owner;
+    // Extract vault PDA seeds data upfront — LBL-01: must use
+    // vault.vault_authority (immutable PDA seed), NOT vault.owner (mutates on
+    // ownership transfer). See full rationale in freeze_vault.rs:76-86.
+    let vault_authority = vault.vault_authority;
     let vault_id_bytes = vault.vault_id.to_le_bytes();
     let vault_bump = vault.bump;
     let vault_fee_destination = vault.fee_destination;
@@ -1026,7 +1029,7 @@ pub fn handler(
     let bump_slice = [vault_bump];
     let signer_seeds = [
         b"vault" as &[u8],
-        owner_key.as_ref(),
+        vault_authority.as_ref(),
         vault_id_bytes.as_ref(),
         bump_slice.as_ref(),
     ];
@@ -1387,4 +1390,108 @@ pub fn handler(
     }
 
     Ok(())
+}
+
+/// Build the TA-11 protected-PDA set for the active vault.
+///
+/// Lives in its own stack frame (via `#[inline(never)]`) to keep the lazy
+/// `find_program_address` calls + heap-growing `Vec<Pubkey>` out of the
+/// caller's frame. Without the separate frame, `validate_and_authorize`'s
+/// inline construction pushes the BPF stack over the 4 KB limit (caught by
+/// the C-5 audit 2026-05-21 when `pending_agent_grant` was added).
+///
+/// Derivations are pinned to `PROTECTED_SEED_PREFIXES` in `state/mod.rs:226`
+/// (17 entries: 15 active + 2 forward-compat `cosign` / `recipient`). When a
+/// forward-compat family ships, add its `find_program_address` + `push`
+/// below.
+///
+/// **FINDING-B close (audit 2026-05-21 Bucket 1):** `pending_agent_perms` is
+/// a per-agent family — each of up to `MAX_AGENTS_PER_VAULT` agents may have
+/// its own PDA at `[b"pending_agent_perms", vault, AGENT]`. We walk
+/// `vault.agents` and derive each so the full per-agent family is rejected
+/// at TA-11 time, not just at the slower BPF runtime owner-check. CU budget:
+/// 10 agents × ~5K CU = ~50K worst case, well within the 90K TA-11 envelope.
+#[inline(never)]
+fn build_ta11_protected_set(
+    vault_key: Pubkey,
+    policy_key: Pubkey,
+    tracker_key: Pubkey,
+    overlay_key: Pubkey,
+    session_key: Pubkey,
+    agents: &[AgentEntry],
+) -> Vec<Pubkey> {
+    use anchor_lang::solana_program::pubkey::Pubkey as SP;
+
+    let vault_seed = vault_key.as_ref();
+    let (constraints_key, _) = SP::find_program_address(&[b"constraints", vault_seed], &crate::ID);
+    let (pending_policy_key, _) =
+        SP::find_program_address(&[b"pending_policy", vault_seed], &crate::ID);
+    let (pending_constraints_key, _) =
+        SP::find_program_address(&[b"pending_constraints", vault_seed], &crate::ID);
+    let (pending_close_constraints_key, _) =
+        SP::find_program_address(&[b"pending_close_constraints", vault_seed], &crate::ID);
+    let (post_assertions_key, _) =
+        SP::find_program_address(&[b"post_assertions", vault_seed], &crate::ID);
+    let (pending_owner_key, _) =
+        SP::find_program_address(&[b"pending_owner", vault_seed], &crate::ID);
+    // FINDING-B close (audit 2026-05-21 Bucket 1): pending_agent_perms is a
+    // PER-AGENT family — derive one PDA per agent in vault.agents. The
+    // walker is bounded by MAX_AGENTS_PER_VAULT (10) so worst-case CU cost
+    // is ~50K, well within the TA-11 envelope. This closes the prior fast-
+    // fail gap where a sibling foreign ix smuggling agent B's
+    // pending_agent_perms PDA as writable would only be caught by the
+    // slower BPF runtime owner-check, not by TA-11 itself.
+    let mut pending_agent_perms_keys: Vec<Pubkey> =
+        Vec::with_capacity(agents.len());
+    for agent_entry in agents.iter() {
+        let (key, _) = SP::find_program_address(
+            &[
+                b"pending_agent_perms",
+                vault_seed,
+                agent_entry.pubkey.as_ref(),
+            ],
+            &crate::ID,
+        );
+        pending_agent_perms_keys.push(key);
+    }
+    // Phase 7 audit-log PDAs (post-audit-2026-05-19 SA4 H1 fix). Both are
+    // LIVE Anchor `AccountLoader` accounts on `finalize_session` (see
+    // finalize_session.rs:91-107). Foreign instructions attempting to mark
+    // either writable must be rejected by TA-11 in addition to Solana's own
+    // owner-check at runtime.
+    let (audit_success_key, _) =
+        SP::find_program_address(&[b"audit_success", vault_seed], &crate::ID);
+    let (audit_rejected_key, _) =
+        SP::find_program_address(&[b"audit_rejected", vault_seed], &crate::ID);
+    // Phase 8 PEN-CROSS-1 OPERATOR-grant PDA (C-5 close, audit 2026-05-21).
+    // Declared in PROTECTED_SEED_PREFIXES at state/mod.rs:245 but missing
+    // from this runtime derivation prior to C-5 fix, leaving the TA-11
+    // defense-in-depth check open for `pending_agent_grant` writable-meta
+    // smuggling between validate and finalize. Seed schema verified in
+    // queue_agent_grant.rs:56 / apply_agent_grant.rs:63.
+    let (pending_agent_grant_key, _) =
+        SP::find_program_address(&[b"pending_agent_grant", vault_seed], &crate::ID);
+
+    // 14 base entries (vault-keyed) + N per-agent pending_agent_perms entries.
+    // Capacity sized for the worst case (MAX_AGENTS_PER_VAULT = 10) so the
+    // Vec never reallocates during the per-agent push loop below.
+    let mut protected: Vec<Pubkey> = Vec::with_capacity(14 + agents.len());
+    protected.push(vault_key);
+    protected.push(policy_key);
+    protected.push(tracker_key);
+    protected.push(overlay_key);
+    protected.push(session_key);
+    protected.push(constraints_key);
+    protected.push(pending_policy_key);
+    protected.push(pending_constraints_key);
+    protected.push(pending_close_constraints_key);
+    protected.push(post_assertions_key);
+    protected.push(pending_owner_key);
+    protected.push(pending_agent_grant_key);
+    protected.push(audit_success_key);
+    protected.push(audit_rejected_key);
+    for key in pending_agent_perms_keys.into_iter() {
+        protected.push(key);
+    }
+    protected
 }

@@ -81,22 +81,23 @@ describe("devnet-timelock", () => {
 
     // Queue policy change (12 args — includes sessionExpirySeconds)
     await program.methods
-      .queuePolicyUpdate(newDailyCap,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null, // destinationMode,
-          null, // operating_hours (TA-05 Phase 3)
-          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
-          new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
-        )
+      .queuePolicyUpdate(
+        newDailyCap,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null, // destinationMode,
+        null, // operating_hours (TA-05 Phase 3)
+        PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
+        new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
+      )
       .accounts({
         owner: owner.publicKey,
         vault: vault.vaultPda,
@@ -133,22 +134,23 @@ describe("devnet-timelock", () => {
 
     // Queue
     await program.methods
-      .queuePolicyUpdate(new BN(888_000_000),
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null, // destinationMode,
-          null, // operating_hours (TA-05 Phase 3)
-          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
-          new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
-        )
+      .queuePolicyUpdate(
+        new BN(888_000_000),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null, // destinationMode,
+        null, // operating_hours (TA-05 Phase 3)
+        PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
+        new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
+      )
       .accounts({
         owner: owner.publicKey,
         vault: vault.vaultPda,
@@ -192,22 +194,23 @@ describe("devnet-timelock", () => {
 
     // Queue
     await program.methods
-      .queuePolicyUpdate(new BN(777_000_000),
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null, // destinationMode,
-          null, // operating_hours (TA-05 Phase 3)
-          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
-          new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
-        )
+      .queuePolicyUpdate(
+        new BN(777_000_000),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null, // destinationMode,
+        null, // operating_hours (TA-05 Phase 3)
+        PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
+        new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
+      )
       .accounts({
         owner: owner.publicKey,
         vault: vault.vaultPda,

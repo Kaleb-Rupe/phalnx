@@ -113,6 +113,20 @@ pub mod sigil {
         // resets to 0 between validates. Phase 8 ownership-transfer flow
         // (M-5) reuses the same field for replay protection.
         expected_nonce: u64,
+        // D-1 + D-6 (Bucket 2 audit 2026-05-21) — AL3 scalar intent digest.
+        // 32-byte SHA-256 over the canonical SealInput SCALARS the wallet
+        // approved at preview time (`b"SIG1"` magic prefix + intent_version
+        // = 2 + network_id + vault + agent + token_mint + amount +
+        // target_protocol). The on-chain verifier in
+        // `validate_and_authorize::handler` recomputes the same digest from
+        // these args and rejects on byte-equal mismatch (6111
+        // ErrIntentDigestMismatch). Closes the preview→execute scalar
+        // tamper class (recipient/amount/mint/protocol swap between the
+        // user's signed preview and the submitted bundle). The full
+        // ix-bound digest remains client-side only — see
+        // `sdk/kit/src/seal/intent-digest.ts`'s `computeSealInputDigest`
+        // for the full envelope and the v0.17 plan for on-chain ix binding.
+        expected_intent_digest: [u8; 32],
     ) -> Result<()> {
         instructions::validate_and_authorize::handler(
             ctx,
@@ -121,6 +135,7 @@ pub mod sigil {
             target_protocol,
             expected_policy_version,
             expected_nonce,
+            expected_intent_digest,
         )
     }
 
@@ -186,6 +201,12 @@ pub mod sigil {
         // = enable (non-elevated); Some(false) when live is true =
         // disable (ELEVATED — one-way ratchet).
         cosign_required: Option<bool>,
+        // D-5 (audit 2026-05-19, F-RP3-1): optional update to
+        // PolicyConfig.cosign_session_pubkey. None = pass-through;
+        // Some(pubkey) = set (Pubkey::default() disables the reactivate
+        // cosign gate, any other pubkey enables it). Bound by TA-19 at
+        // canonical digest position 22.
+        cosign_session_pubkey: Option<Pubkey>,
         cosign_session: Pubkey,
         new_policy_preview_digest: [u8; 32],
     ) -> Result<()> {
@@ -207,6 +228,7 @@ pub mod sigil {
             stable_balance_floor,
             per_recipient_daily_cap_usd,
             cosign_required,
+            cosign_session_pubkey,
             cosign_session,
             new_policy_preview_digest,
         )

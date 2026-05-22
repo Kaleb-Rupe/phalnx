@@ -69,6 +69,7 @@ pub enum AssertionMode {
     ///   3. Resolve the account in `remaining_accounts` and require its
     ///      token-account `mint == expected_value[0..32]` AND
     ///      `owner == target_account` (the declared recipient).
+    ///
     /// Closes "declaration dishonesty": agent declares "recipient: alice"
     /// to satisfy a destination-allowlist check, but inserts attacker_ata
     /// into the CPI metas. Maestro verify_cpi_token_accounts equivalent.

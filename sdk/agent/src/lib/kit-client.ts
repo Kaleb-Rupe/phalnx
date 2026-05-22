@@ -37,9 +37,7 @@ const PUBLIC_RPC: Record<"devnet" | "mainnet", string> = {
  * Helius / QuickNode URL via SIGIL_RPC_URL env var for mainnet
  * production traffic.
  */
-export function buildReadClient(
-  config: AgentConfig,
-): {
+export function buildReadClient(config: AgentConfig): {
   readonly client: ReturnType<typeof createOwnerClient>;
   readonly rpc: Rpc<SolanaRpcApi>;
   readonly vault: Address;

@@ -1,4 +1,8 @@
 use anchor_lang::prelude::*;
+// Note: `anchor_lang::solana_program::hash` is NOT re-exported in Anchor 0.32.1.
+// Use the `solana-program` direct dep (declared in Cargo.toml) — same
+// pattern as `utils/policy_digest.rs` and `state/pending_constraints.rs`.
+use solana_program::hash::hash as sha256_hash;
 
 /// Phase 8 PEN-CROSS-1 (Council ISC-58..65) — queued OPERATOR-class agent grant.
 ///
@@ -58,12 +62,31 @@ pub struct PendingAgentGrant {
     /// 6-byte alignment cushion + additive headroom for future v1.1
     /// extensions (e.g. cooldown_seconds binding). Zero-init on `init`.
     pub _padding: [u8; 6], // 6
+    /// M-5 close (Bucket 2, Phase 10 PEN-CROSS-3): SHA-256 over the
+    /// canonical byte encoding of the pending content (vault + agent +
+    /// capability + spending_limit_usd + queued_at + min_delay_seconds).
+    /// Written once at `queue_agent_grant` and re-asserted at
+    /// `apply_agent_grant` before any mutation of `vault.agents`.
+    ///
+    /// Defense-in-depth against discriminator-collision overwrite of
+    /// this pending PDA's body between queue and apply: even if a future
+    /// bug allowed a same-seed CPI to rewrite the grant fields, the
+    /// digest recorded at queue time pins the owner-attested content,
+    /// and the apply-time recompute would diverge and reject with
+    /// `ErrPendingAgentGrantDigestMismatch`.
+    ///
+    /// Alignment: Anchor's `#[account]` uses Borsh on-the-wire layout, so
+    /// the byte arithmetic is purely additive: 104 + 32 = 136 bytes total.
+    /// `[u8; 32]` has alignment 1, so no padding is required regardless of
+    /// the preceding `u8` + `[u8; 6]` shape.
+    pub pending_content_digest: [u8; 32], // 32
 }
 
 impl PendingAgentGrant {
     /// Account discriminator (8) + Pubkey×2 (64) + u8 (1) + u64 (8) +
-    /// i64 (8) + u64 (8) + u8 (1) + padding[6] (6) = 104 bytes.
-    pub const SIZE: usize = 8 + 32 + 32 + 1 + 8 + 8 + 8 + 1 + 6;
+    /// i64 (8) + u64 (8) + u8 (1) + padding[6] (6) + digest[32] (32) = 136 bytes.
+    /// M-5 close (Bucket 2, PEN-CROSS-3): +32 bytes for `pending_content_digest`.
+    pub const SIZE: usize = 8 + 32 + 32 + 1 + 8 + 8 + 8 + 1 + 6 + 32;
 
     /// Default timelock: 48 hours (matches
     /// `PendingOwnershipTransfer::DEFAULT_MIN_DELAY`). OPERATOR-class agent
@@ -79,7 +102,71 @@ impl PendingAgentGrant {
 
 // Compile-time pin — drift in the documented byte layout breaks the build.
 // Mirrors the §RP-1 pattern used for `PendingOwnershipTransfer`.
+//
+// M-5 close (Bucket 2, PEN-CROSS-3): bumped from 104 → 136 bytes (+32 for
+// `pending_content_digest`). This is the load-bearing reminder that any new
+// field on `PendingAgentGrant` MUST also be folded into the
+// `canonical_bytes_of_pending_agent_grant` encoding below, else the
+// queue/apply digest invariant silently regresses.
 const _PENDING_AGENT_GRANT_SIZE_PIN: () = assert!(
-    PendingAgentGrant::SIZE == 104,
-    "PendingAgentGrant::SIZE drifted from documented 104 bytes",
+    PendingAgentGrant::SIZE == 136,
+    "PendingAgentGrant::SIZE drifted from documented 136 bytes (M-5 Bucket 2 PEN-CROSS-3 baseline)",
 );
+
+/// M-5 close (Bucket 2, Phase 10 PEN-CROSS-3) — canonical byte encoding of the
+/// content fields of a `PendingAgentGrant` PDA.
+///
+/// COVERS:
+///   1. `vault: Pubkey`              (32 bytes)
+///   2. `agent: Pubkey`              (32 bytes)
+///   3. `capability: u8`             (1 byte)
+///   4. `spending_limit_usd: u64`    (8 bytes, LE)
+///   5. `queued_at: i64`             (8 bytes, LE)
+///   6. `min_delay_seconds: u64`     (8 bytes, LE)
+///
+/// EXCLUDES (intentional — these are re-applied at apply time or are
+/// alignment-only and would defeat the apply-time recompute):
+///   - `bump`                            (re-derived by Anchor at apply time)
+///   - `_padding[6]`                     (alignment-only)
+///   - `pending_content_digest` itself   (the field being asserted)
+///
+/// Total fixed-size canonical encoding: 89 bytes.
+///
+/// CALL SITES:
+///   - `queue_agent_grant.rs`   — writes the digest after populating the
+///     pending PDA. Recorded as the owner-attested grant snapshot.
+///   - `apply_agent_grant.rs`   — recomputes the digest from the live
+///     pending PDA bytes and rejects with
+///     `ErrPendingAgentGrantDigestMismatch` if the recomputed value
+///     diverges from the stored one. Constant-time compare via
+///     `ct_eq_32` (shared from `state::pending_constraints`) to deny
+///     timing side-channels.
+pub fn canonical_bytes_of_pending_agent_grant(pending: &PendingAgentGrant) -> Vec<u8> {
+    // 89-byte fixed-size buffer. No bounded-list inputs → exact size.
+    let mut buf: Vec<u8> = Vec::with_capacity(32 + 32 + 1 + 8 + 8 + 8);
+
+    // 1. vault: Pubkey (32 bytes, raw)
+    buf.extend_from_slice(pending.vault.as_ref());
+    // 2. agent: Pubkey (32 bytes, raw)
+    buf.extend_from_slice(pending.agent.as_ref());
+    // 3. capability: u8
+    buf.push(pending.capability);
+    // 4. spending_limit_usd: u64 LE
+    buf.extend_from_slice(&pending.spending_limit_usd.to_le_bytes());
+    // 5. queued_at: i64 LE
+    buf.extend_from_slice(&pending.queued_at.to_le_bytes());
+    // 6. min_delay_seconds: u64 LE
+    buf.extend_from_slice(&pending.min_delay_seconds.to_le_bytes());
+
+    buf
+}
+
+/// M-5 close (Bucket 2, PEN-CROSS-3) — SHA-256 over the canonical encoding.
+///
+/// Wraps `canonical_bytes_of_pending_agent_grant` + solana_program::hash::hash.
+/// Used by BOTH `queue_agent_grant` (record) and `apply_agent_grant` (verify)
+/// to guarantee a deterministic queue↔apply digest comparison.
+pub fn compute_pending_agent_grant_digest(pending: &PendingAgentGrant) -> [u8; 32] {
+    let bytes = canonical_bytes_of_pending_agent_grant(pending);
+    sha256_hash(&bytes).to_bytes()
+}

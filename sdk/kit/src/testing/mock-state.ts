@@ -136,6 +136,14 @@ export function createMockVaultState(
       // (low-friction). Matches the production default; tests exercising
       // the cosign-required path should override at construction time.
       cosignRequired: false,
+      // D-5 (audit 2026-05-19, F-RP3-1): mock default = `Pubkey::default()`
+      // (gate disabled). The base58 encoding of 32 zero bytes is
+      // "11111111111111111111111111111111" (the System Program pubkey).
+      // Matches the on-chain init default; tests exercising the
+      // reactivate-cosign gate should override here AND construct a vault
+      // that has queued+applied the opt-in via `queue_policy_update`.
+      cosignSessionPubkey:
+        "11111111111111111111111111111111" as unknown as Address,
     },
     tracker: null,
     overlay: null,

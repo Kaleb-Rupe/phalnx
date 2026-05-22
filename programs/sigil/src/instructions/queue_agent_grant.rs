@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::errors::SigilError;
 use crate::events::AgentGrantQueued;
+use crate::state::pending_agent_grant::compute_pending_agent_grant_digest;
 use crate::state::*;
 use crate::utils::audit_log::build_audit_entry;
 
@@ -156,6 +157,21 @@ pub fn handler(
         pending.queued_at = clock.unix_timestamp;
         pending.min_delay_seconds = PendingAgentGrant::DEFAULT_MIN_DELAY;
         pending.bump = ctx.bumps.pending;
+
+        // M-5 close (Bucket 2, Phase 10 PEN-CROSS-3): bind the pending
+        // content digest AFTER all content fields are populated. The
+        // canonical encoding covers (vault, agent, capability,
+        // spending_limit_usd, queued_at, min_delay_seconds) — the full
+        // owner-attested grant tuple. Any later mutation (including a
+        // discriminator-collision overwrite that flips `agent` to an
+        // attacker pubkey or raises `capability` to FULL_CAPABILITY)
+        // will diverge the apply-time recompute and reject. The
+        // canonical encoder does NOT include `pending_content_digest`
+        // itself, so the prior value of that field is irrelevant to
+        // the digest input — and Anchor's `init` zero-initializes the
+        // entire account data slab before this handler runs, so
+        // `pending_content_digest` is already [0u8; 32] here.
+        pending.pending_content_digest = compute_pending_agent_grant_digest(pending);
     }
 
     // 6. Phase 7 — audit-log entry BEFORE `emit!` (ISC-144 ordering). Subject

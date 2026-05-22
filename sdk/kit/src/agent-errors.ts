@@ -92,7 +92,7 @@ export const SIGIL_ON_CHAIN_ERROR_MIN = 6000;
  * derives the expected count from `target/idl/sigil.json` so adding a
  * new error code on-chain without updating this map fails at test time.
  */
-export const SIGIL_ON_CHAIN_ERROR_MAX = 6108;
+export const SIGIL_ON_CHAIN_ERROR_MAX = 6110;
 
 interface ErrorMapping {
   name: string;
@@ -1303,7 +1303,8 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
   // Phase 2 TA-19: observe_only mode rejects all validate_and_authorize calls.
   6081: {
     name: "ObserveOnlyModeBlocksExecute",
-    message: "Vault is in observe_only mode — validate_and_authorize is blocked.",
+    message:
+      "Vault is in observe_only mode — validate_and_authorize is blocked.",
     category: "POLICY_VIOLATION",
     retryable: false,
     recovery_actions: [
@@ -1539,8 +1540,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
    */
   6095: {
     name: "ErrDailyCapExceeded",
-    message:
-      "Per-protocol daily spending cap would be exceeded (rolling 24h)",
+    message: "Per-protocol daily spending cap would be exceeded (rolling 24h)",
     category: "SPENDING_CAP",
     retryable: true,
     retry_after_ms: 3_600_000,
@@ -1569,11 +1569,33 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
    * destination ATA), NOT the meta pubkey. Eviction is age-based, never
    * LRU — array-full with no expired slot returns this code too,
    * preventing churn-eviction bypass.
+   *
+   * **H-10 (pre-redeploy audit 2026-05-21) — TRIPLE-CAUSE DISAMBIGUATION:**
+   * The same code (6096) fires from THREE distinct branches inside
+   * `programs/sigil/src/instructions/finalize_session.rs`:
+   *
+   *   1. **Cap exceeded** (`finalize_session.rs:654`): cumulative 24h
+   *      recipient outflow + this transfer > policy cap. Recovery: shrink
+   *      the amount, route via a different allowed recipient with cap
+   *      headroom, or wait for the rolling window to release capacity.
+   *   2. **Multiple distinct recipients in one tx** (`finalize_session.rs:638`):
+   *      V1 enforces single-recipient-per-tx for per-recipient cap
+   *      attribution sanity. Recovery: SPLIT the bundle so each finalize
+   *      touches at most one allowlisted recipient
+   *      (`split_into_separate_transactions`).
+   *   3. **`per_recipient` array full with no expired slot**
+   *      (`finalize_session.rs:658` via `tracker.record_recipient_spend`):
+   *      the fixed-size 10-slot tracker has no entry eligible for
+   *      age-based eviction. Recovery: wait for an entry to age out
+   *      (same `wait` action as cause 1).
+   *
+   * UX-side: callers cannot distinguish the three branches from the
+   * error code alone — the recovery list below covers all three.
    */
   6096: {
     name: "ErrRecipientCapExceeded",
     message:
-      "Per-recipient daily cap exceeded — recipient outflow would breach policy.per_recipient_daily_cap_usd within rolling 24h window",
+      "Per-recipient cap blocked — three possible causes: (a) recipient outflow would breach policy.per_recipient_daily_cap_usd within rolling 24h window; (b) bundle touches multiple distinct allowlisted recipients in one finalize (V1 single-recipient-per-tx rule); (c) per_recipient tracker array full with no expired slot to evict",
     category: "SPENDING_CAP",
     retryable: true,
     retry_after_ms: 3_600_000,
@@ -1584,6 +1606,11 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
           "Reduce the transfer amount so the recipient's 24h rolling outflow stays under policy.per_recipient_daily_cap_usd",
       },
       {
+        action: "split_into_separate_transactions",
+        description:
+          "If the bundle touches multiple distinct allowlisted recipients in one finalize, split it so each transaction touches at most one recipient. V1 enforces single-recipient-per-tx for per-recipient cap attribution.",
+      },
+      {
         action: "use_different_recipient",
         description:
           "Route the transfer to a different allowed destination that has remaining 24h cap headroom",
@@ -1591,7 +1618,7 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
       {
         action: "wait",
         description:
-          "Wait for the recipient's rolling 24h window to release spent capacity",
+          "Wait for the recipient's rolling 24h window to release spent capacity (also remediates the array-full / no-evictable-slot case)",
       },
     ],
   },
@@ -1831,6 +1858,43 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
         action: "split_revoke_batch",
         description:
           "Split the (session_pda, token_account) pairs across multiple freeze_internal calls.",
+      },
+    ],
+  },
+  // H-3 close (pre-redeploy audit 2026-05-21): symmetric to 6058
+  // ConstraintsNotClosed. close_vault rejects if policy.has_post_assertions != 0
+  // because the 672-byte PostExecutionAssertions zero-copy PDA must be drained
+  // via close_post_assertions first; otherwise it would be orphaned on close.
+  6109: {
+    name: "ErrPostAssertionsNotClosed",
+    message:
+      "PostExecutionAssertions PDA still active — call close_post_assertions before close_vault.",
+    category: "RESOURCE_NOT_FOUND",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "close_post_assertions",
+        description:
+          "Invoke the close_post_assertions instruction to drain the 672-byte PostExecutionAssertions PDA, then retry close_vault.",
+      },
+    ],
+  },
+  // H-4 close (pre-redeploy audit 2026-05-21, Bucket 1): queue_policy_update
+  // rejects if any allowed_destinations entry is the address of a Sigil-owned
+  // protected PDA for this vault. Closes the owner-self-foot-gun where a
+  // phished owner allowlists a Sigil PDA, enabling an agent to lock funds
+  // at the PDA via a token transfer.
+  6110: {
+    name: "ErrDestinationIsProtectedPda",
+    message:
+      "allowed_destinations entry is a Sigil-protected PDA — owner attempted to allowlist a vault/policy/pending_* PDA.",
+    category: "INPUT_VALIDATION",
+    retryable: false,
+    recovery_actions: [
+      {
+        action: "remove_protected_pda_from_destinations",
+        description:
+          "Remove any pubkey from allowed_destinations that matches a Sigil-protected PDA for this vault. Use a plain EOA or external program owner instead.",
       },
     ],
   },
@@ -2730,10 +2794,7 @@ function extractErrorCode(error: unknown): number | null {
     const match = e.message.match(/custom program error: 0x([0-9a-fA-F]+)/);
     if (match) {
       const code = parseInt(match[1], 16);
-      if (
-        code >= SIGIL_ON_CHAIN_ERROR_MIN &&
-        code <= SIGIL_ON_CHAIN_ERROR_MAX
-      )
+      if (code >= SIGIL_ON_CHAIN_ERROR_MIN && code <= SIGIL_ON_CHAIN_ERROR_MAX)
         return code;
     }
   }
@@ -2984,9 +3045,9 @@ export function toSigilAgentError(err: unknown): SigilSdkError {
   if (
     err instanceof Error &&
     typeof (err as unknown as { code?: unknown }).code === "string" &&
-    (
-      (err as unknown as { code: string }).code as string
-    ).startsWith("SIGIL_ERROR__")
+    ((err as unknown as { code: string }).code as string).startsWith(
+      "SIGIL_ERROR__",
+    )
   ) {
     const sigilErr = err as unknown as Error & {
       code: string;

@@ -340,7 +340,9 @@ export function getPermissionEscalationLatency(
       continue;
     const permEvent = events[i].fields!;
     const agent = permEvent.agent as string;
-    const grantTimestamp = Number(permEvent.appliedAt ?? permEvent.timestamp ?? 0);
+    const grantTimestamp = Number(
+      permEvent.appliedAt ?? permEvent.timestamp ?? 0,
+    );
 
     let firstUseTimestamp: number | null = null;
     for (let j = i + 1; j < events.length; j++) {

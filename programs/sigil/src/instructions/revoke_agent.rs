@@ -125,6 +125,11 @@ pub fn handler(ctx: Context<RevokeAgent>, agent_to_remove: Pubkey) -> Result<()>
         per_recipient_daily_cap_usd: policy.per_recipient_daily_cap_usd,
         cosign_required: policy.cosign_required,
         agent_set_hash: new_agent_set_hash,
+        // D-5 (audit 2026-05-19, F-RP3-1): cosign_session_pubkey bound at
+        // canonical position 22 — revoke_agent never mutates it, so
+        // pass-through from live policy keeps the re-bind digest matching
+        // the queue-time digest.
+        cosign_session_pubkey: policy.cosign_session_pubkey,
     });
     policy.policy_preview_digest = new_digest;
 

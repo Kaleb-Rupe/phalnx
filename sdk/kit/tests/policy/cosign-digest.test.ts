@@ -558,15 +558,13 @@ describe("TA-09 — property test: SDK encoder == reference encoder (G4)", () =>
               destOpt === null
                 ? null
                 : destOpt.map(
-                    (b: Uint8Array) =>
-                      base58Encode(b) as unknown as Address,
+                    (b: Uint8Array) => base58Encode(b) as unknown as Address,
                   ),
             protocols:
               protoOpt === null
                 ? null
                 : protoOpt.map(
-                    (b: Uint8Array) =>
-                      base58Encode(b) as unknown as Address,
+                    (b: Uint8Array) => base58Encode(b) as unknown as Address,
                   ),
             stableBalanceFloor: stableFloorOpt,
             perRecipientDailyCapUsd: perRecipCapOpt,

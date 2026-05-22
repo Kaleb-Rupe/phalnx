@@ -85,8 +85,8 @@ export type Sigil = {
         {
           "name": "policy",
           "docs": [
-            "Policy is mutated (policy_version bump). Batch 6 will also recompute",
-            "`policy_preview_digest` here — see handler TODO."
+            "Policy is mutated (policy_version bump + `policy_preview_digest`",
+            "recompute — see handler lines 173-223)."
           ],
           "writable": true,
           "pda": {
@@ -220,6 +220,7 @@ export type Sigil = {
             "1. `owner == SQUADS_V4_PROGRAM_ID` (verified in handler)",
             "2. `key() == pending.new_owner` (verified in handler)",
             "3. `pending.is_multisig_target == true` (verified in handler)",
+            "",
             "Marked `mut` so the closed `pending` PDA's rent returns here."
           ],
           "writable": true
@@ -265,8 +266,8 @@ export type Sigil = {
         {
           "name": "policy",
           "docs": [
-            "Policy is mutated (policy_version bump). Batch 6 will also recompute",
-            "`policy_preview_digest` here — see handler TODO."
+            "Policy is mutated (policy_version bump + `policy_preview_digest`",
+            "recompute — see handler lines 180-230, mirroring the EOA path)."
           ],
           "writable": true,
           "pda": {
@@ -1093,6 +1094,47 @@ export type Sigil = {
             "Agent spend overlay — per-agent tracking slot."
           ],
           "writable": true
+        },
+        {
+          "name": "auditLogSuccess",
+          "docs": [
+            "M-6 (audit 2026-05-21) — success audit log; entry appended after",
+            "the capability / spending_limit / policy_version mutations land."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  100,
+                  105,
+                  116,
+                  95,
+                  115,
+                  117,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "slotHashesSysvar",
+          "docs": [
+            "rejects any mismatched sysvar pubkey before the handler runs."
+          ],
+          "address": "SysvarS1otHashes111111111111111111111111111"
         }
       ],
       "args": []
@@ -1244,6 +1286,47 @@ export type Sigil = {
               }
             ]
           }
+        },
+        {
+          "name": "auditLogSuccess",
+          "docs": [
+            "M-7 (audit 2026-05-21) — success audit log; entry appended after",
+            "`has_constraints` flips to false and policy_version is bumped."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  100,
+                  105,
+                  116,
+                  95,
+                  115,
+                  117,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "slotHashesSysvar",
+          "docs": [
+            "rejects any mismatched sysvar pubkey before the handler runs."
+          ],
+          "address": "SysvarS1otHashes111111111111111111111111111"
         }
       ],
       "args": [
@@ -5293,6 +5376,12 @@ export type Sigil = {
           }
         },
         {
+          "name": "cosignSessionPubkey",
+          "type": {
+            "option": "pubkey"
+          }
+        },
+        {
           "name": "cosignSession",
           "type": "pubkey"
         },
@@ -5533,6 +5622,49 @@ export type Sigil = {
               }
             ]
           }
+        },
+        {
+          "name": "auditLogSuccess",
+          "docs": [
+            "M-8 (audit 2026-05-21) — success audit log; entry appended ONLY",
+            "when the failure counter trips `auto_revoke_threshold` and the",
+            "agent is forcibly disabled. Non-trip increments don't write here",
+            "(policy state is unchanged in that branch)."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  100,
+                  105,
+                  116,
+                  95,
+                  115,
+                  117,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "slotHashesSysvar",
+          "docs": [
+            "rejects any mismatched sysvar pubkey before the handler runs."
+          ],
+          "address": "SysvarS1otHashes111111111111111111111111111"
         }
       ],
       "args": [
@@ -6107,6 +6239,13 @@ export type Sigil = {
         },
         {
           "name": "policy",
+          "docs": [
+            "Boxed to keep the `ValidateAndAuthorize::try_accounts` stack frame",
+            "below BPF's 4 KB ceiling. Phase 10 D-5 added 32 bytes",
+            "(`cosign_session_pubkey`) to PolicyConfig, pushing the codegen",
+            "frame from 4072 to 4104 bytes (8 over). `Box` moves the deserialized",
+            "wrapper to the heap, restoring headroom."
+          ],
           "pda": {
             "seeds": [
               {
@@ -6272,6 +6411,15 @@ export type Sigil = {
         {
           "name": "expectedNonce",
           "type": "u64"
+        },
+        {
+          "name": "expectedIntentDigest",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
         }
       ]
     },
@@ -7926,6 +8074,36 @@ export type Sigil = {
       "code": 6108,
       "name": "errTooManyRevokePairs",
       "msg": "freeze_internal MAX_REVOKE_PAIRS = 10 exceeded (Council ISC-136)"
+    },
+    {
+      "code": 6109,
+      "name": "errPostAssertionsNotClosed",
+      "msg": "PostExecutionAssertions PDA still active — call close_post_assertions first"
+    },
+    {
+      "code": 6110,
+      "name": "errDestinationIsProtectedPda",
+      "msg": "Destination is a Sigil-protected PDA — rejected at queue time"
+    },
+    {
+      "code": 6111,
+      "name": "errIntentDigestMismatch",
+      "msg": "AL3 intent-digest mismatch — preview digest does not match executed bundle"
+    },
+    {
+      "code": 6112,
+      "name": "errPendingConstraintsDigestMismatch",
+      "msg": "PendingConstraintsUpdate digest mismatch between queue and apply"
+    },
+    {
+      "code": 6113,
+      "name": "errPendingAgentGrantDigestMismatch",
+      "msg": "PendingAgentGrant digest mismatch between queue and apply"
+    },
+    {
+      "code": 6114,
+      "name": "errReactivateCosignRequiredForFullCapability",
+      "msg": "Reactivate with FULL_CAPABILITY new agent requires cosign"
     }
   ],
   "types": [
@@ -8939,7 +9117,10 @@ export type Sigil = {
               "disc=7..=9 (ownership_*)   → ownership initiate/accept/cancel",
               "disc=17 (agent_grant_queue)→ agent pubkey (Phase 8 PEN-CROSS-1 Batch 6)",
               "disc=18 (agent_grant_apply)→ agent pubkey (Phase 8 PEN-CROSS-1 Batch 6)",
-              "disc=19 (agent_grant_cancel)→ agent pubkey (Phase 8 §RP Fix-Up B / PEN-02b)"
+              "disc=19 (agent_grant_cancel)→ agent pubkey (Phase 8 §RP Fix-Up B / PEN-02b)",
+              "disc=20 (agent_perms_apply)→ agent pubkey (M-6 close, audit 2026-05-21)",
+              "disc=21 (constraints_close_apply)→ vault pubkey (M-7 close, audit 2026-05-21)",
+              "disc=22 (agent_auto_revoked) → agent pubkey (M-8 close, audit 2026-05-21)"
             ],
             "type": {
               "array": [
@@ -10224,6 +10405,34 @@ export type Sigil = {
                 6
               ]
             }
+          },
+          {
+            "name": "pendingContentDigest",
+            "docs": [
+              "M-5 close (Bucket 2, Phase 10 PEN-CROSS-3): SHA-256 over the",
+              "canonical byte encoding of the pending content (vault + agent +",
+              "capability + spending_limit_usd + queued_at + min_delay_seconds).",
+              "Written once at `queue_agent_grant` and re-asserted at",
+              "`apply_agent_grant` before any mutation of `vault.agents`.",
+              "",
+              "Defense-in-depth against discriminator-collision overwrite of",
+              "this pending PDA's body between queue and apply: even if a future",
+              "bug allowed a same-seed CPI to rewrite the grant fields, the",
+              "digest recorded at queue time pins the owner-attested content,",
+              "and the apply-time recompute would diverge and reject with",
+              "`ErrPendingAgentGrantDigestMismatch`.",
+              "",
+              "Alignment: Anchor's `#[account]` uses Borsh on-the-wire layout, so",
+              "the byte arithmetic is purely additive: 104 + 32 = 136 bytes total.",
+              "`[u8; 32]` has alignment 1, so no padding is required regardless of",
+              "the preceding `u8` + `[u8; 6]` shape."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
           }
         ]
       }
@@ -10466,6 +10675,33 @@ export type Sigil = {
               "Already 8-byte aligned (follows two i64 fields)."
             ],
             "type": "u64"
+          },
+          {
+            "name": "pendingContentDigest",
+            "docs": [
+              "M-4 close (Bucket 2, Phase 10 PEN-CROSS-3): SHA-256 over the canonical",
+              "byte encoding of the pending content (vault + entry_count + active",
+              "entries[0..entry_count]). Written once at `queue_constraints_update`",
+              "and re-asserted at `apply_constraints_update` before any byte is",
+              "copied into the live `InstructionConstraints` PDA.",
+              "",
+              "Defense-in-depth against discriminator-collision overwrite of this",
+              "pending PDA's body between queue and apply: even if a future bug",
+              "allowed a same-seed CPI to rewrite the entries slab, the digest",
+              "recorded at queue time pins the owner-attested content, and the",
+              "apply-time recompute would diverge and reject with",
+              "`ErrPendingConstraintsDigestMismatch`.",
+              "",
+              "Alignment: follows a u64 at struct offset 35896, so byte offset",
+              "35904..35936 is 8-aligned. `[u8; 32]` has alignment 1, no padding",
+              "required."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
           }
         ]
       }
@@ -10813,6 +11049,32 @@ export type Sigil = {
             ],
             "type": {
               "option": "bool"
+            }
+          },
+          {
+            "name": "cosignSessionPubkey",
+            "docs": [
+              "D-5 close (audit 2026-05-19, F-RP3-1): optional update to",
+              "`PolicyConfig.cosign_session_pubkey`. None = preserve live value;",
+              "Some(pubkey) = set the reactivate-cosign pubkey for elevated",
+              "capability grants. `Pubkey::default()` is permitted as a value",
+              "(disables the gate); any other pubkey enables it.",
+              "",
+              "Setting this field is NOT classified as elevated by the existing",
+              "7-trigger gate in `queue_policy_update` — owners opt INTO friction",
+              "(the gate fires LATER on `reactivate_vault`). Disabling it",
+              "(`Some(Pubkey::default())`) on a live policy where the field is",
+              "currently non-default IS, however, a one-way-ratchet violation if",
+              "the vault is otherwise cosign-opted-in; deferred to Phase 9",
+              "alongside the broader ratchet polish — the present batch closes",
+              "only the reactivate-time gate.",
+              "",
+              "Bound by TA-19 at canonical digest position 22.",
+              "",
+              "APPENDED at end of struct per F-14 APPEND-ONLY rule for Borsh stability."
+            ],
+            "type": {
+              "option": "pubkey"
             }
           }
         ]
@@ -11301,6 +11563,39 @@ export type Sigil = {
               "of struct per F-14 APPEND-ONLY rule for Borsh stability."
             ],
             "type": "bool"
+          },
+          {
+            "name": "cosignSessionPubkey",
+            "docs": [
+              "D-5 close (audit 2026-05-19, F-RP3-1): the cosign-session pubkey",
+              "gating elevated capability grants on the `reactivate_vault` path.",
+              "",
+              "THREAT: a phished/leaked owner key can chain",
+              "`freeze_vault → reactivate_vault(new_agent=ATTACKER, FULL_CAPABILITY)`",
+              "in a single transaction. The vault's `cosign_required` flag gates",
+              "elevated MUTATIONS via `queue_policy_update`, but the reactivate",
+              "path grafts a new agent at FULL_CAPABILITY directly — no timelock,",
+              "no cosign — yielding an instant operator-class grant.",
+              "",
+              "DEFENSE: when `cosign_session_pubkey != Pubkey::default()` AND the",
+              "reactivate ix passes `capability == FULL_CAPABILITY` for the new",
+              "agent, the handler REQUIRES a matching signer in",
+              "`ctx.remaining_accounts` whose key equals this pubkey AND",
+              "`is_signer == true`. Otherwise rejects with",
+              "`ErrReactivateCosignRequiredForFullCapability` (6114).",
+              "",
+              "Default `Pubkey::default()` at `initialize_vault` time means",
+              "existing vaults retain today's behavior (no cosign gate on",
+              "reactivate). Owners opt in by setting a non-default value via",
+              "`queue_policy_update`. Setting a non-default value here is",
+              "orthogonal to `cosign_required` — the two gate different ix paths",
+              "(queue/apply vs reactivate) and use different pubkey sources",
+              "(`pending.cosign_session` vs this field).",
+              "",
+              "Bound by TA-19 at canonical digest position 22. APPENDED at end",
+              "of struct per F-14 APPEND-ONLY rule for Borsh stability."
+            ],
+            "type": "pubkey"
           }
         ]
       }

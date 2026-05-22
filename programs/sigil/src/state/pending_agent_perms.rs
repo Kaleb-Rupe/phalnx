@@ -50,7 +50,7 @@ impl PendingAgentPermissionsUpdate {
     /// + 8 (spending_limit_usd) + 8 (queued_at) + 8 (executes_at)
     /// + 8 (queued_at_slot, F-10) + 1 (bump) + 8 (cooldown_seconds TA-06)
     /// + 32 (cosign_digest, F-RP3-2) + 32 (cosign_session, F-RP3-2)
-    /// = 185 bytes
+    ///   = 185 bytes
     pub const SIZE: usize = 185;
 
     pub fn is_ready(&self, current_timestamp: i64) -> bool {

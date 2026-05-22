@@ -31,6 +31,7 @@ import {
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
+  type ReadonlyAccount,
   type ReadonlySignerAccount,
   type ReadonlyUint8Array,
   type TransactionSigner,
@@ -58,6 +59,9 @@ export type RecordAgentViolationInstruction<
   TAccountOwner extends string | AccountMeta<string> = string,
   TAccountVault extends string | AccountMeta<string> = string,
   TAccountPolicy extends string | AccountMeta<string> = string,
+  TAccountAuditLogSuccess extends string | AccountMeta<string> = string,
+  TAccountSlotHashesSysvar extends string | AccountMeta<string> =
+    "SysvarS1otHashes111111111111111111111111111",
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
@@ -73,6 +77,12 @@ export type RecordAgentViolationInstruction<
       TAccountPolicy extends string
         ? WritableAccount<TAccountPolicy>
         : TAccountPolicy,
+      TAccountAuditLogSuccess extends string
+        ? WritableAccount<TAccountAuditLogSuccess>
+        : TAccountAuditLogSuccess,
+      TAccountSlotHashesSysvar extends string
+        ? ReadonlyAccount<TAccountSlotHashesSysvar>
+        : TAccountSlotHashesSysvar,
       ...TRemainingAccounts,
     ]
   >;
@@ -124,10 +134,21 @@ export type RecordAgentViolationAsyncInput<
   TAccountOwner extends string = string,
   TAccountVault extends string = string,
   TAccountPolicy extends string = string,
+  TAccountAuditLogSuccess extends string = string,
+  TAccountSlotHashesSysvar extends string = string,
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
   policy?: Address<TAccountPolicy>;
+  /**
+   * M-8 (audit 2026-05-21) — success audit log; entry appended ONLY
+   * when the failure counter trips `auto_revoke_threshold` and the
+   * agent is forcibly disabled. Non-trip increments don't write here
+   * (policy state is unchanged in that branch).
+   */
+  auditLogSuccess?: Address<TAccountAuditLogSuccess>;
+  /** rejects any mismatched sysvar pubkey before the handler runs. */
+  slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
   agent: RecordAgentViolationInstructionDataArgs["agent"];
   errorCode: RecordAgentViolationInstructionDataArgs["errorCode"];
 };
@@ -136,12 +157,16 @@ export async function getRecordAgentViolationInstructionAsync<
   TAccountOwner extends string,
   TAccountVault extends string,
   TAccountPolicy extends string,
+  TAccountAuditLogSuccess extends string,
+  TAccountSlotHashesSysvar extends string,
   TProgramAddress extends Address = typeof SIGIL_PROGRAM_ADDRESS,
 >(
   input: RecordAgentViolationAsyncInput<
     TAccountOwner,
     TAccountVault,
-    TAccountPolicy
+    TAccountPolicy,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar
   >,
   config?: { programAddress?: TProgramAddress },
 ): Promise<
@@ -149,7 +174,9 @@ export async function getRecordAgentViolationInstructionAsync<
     TProgramAddress,
     TAccountOwner,
     TAccountVault,
-    TAccountPolicy
+    TAccountPolicy,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar
   >
 > {
   // Program address.
@@ -160,6 +187,11 @@ export async function getRecordAgentViolationInstructionAsync<
     owner: { value: input.owner ?? null, isWritable: false },
     vault: { value: input.vault ?? null, isWritable: true },
     policy: { value: input.policy ?? null, isWritable: true },
+    auditLogSuccess: { value: input.auditLogSuccess ?? null, isWritable: true },
+    slotHashesSysvar: {
+      value: input.slotHashesSysvar ?? null,
+      isWritable: false,
+    },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -184,6 +216,28 @@ export async function getRecordAgentViolationInstructionAsync<
       ],
     });
   }
+  if (!accounts.auditLogSuccess.value) {
+    accounts.auditLogSuccess.value = await getProgramDerivedAddress({
+      programAddress,
+      seeds: [
+        getBytesEncoder().encode(
+          new Uint8Array([
+            97, 117, 100, 105, 116, 95, 115, 117, 99, 99, 101, 115, 115,
+          ]),
+        ),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            "vault",
+            accounts.vault.value,
+          ),
+        ),
+      ],
+    });
+  }
+  if (!accounts.slotHashesSysvar.value) {
+    accounts.slotHashesSysvar.value =
+      "SysvarS1otHashes111111111111111111111111111" as Address<"SysvarS1otHashes111111111111111111111111111">;
+  }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, "programId");
   return Object.freeze({
@@ -191,6 +245,8 @@ export async function getRecordAgentViolationInstructionAsync<
       getAccountMeta("owner", accounts.owner),
       getAccountMeta("vault", accounts.vault),
       getAccountMeta("policy", accounts.policy),
+      getAccountMeta("auditLogSuccess", accounts.auditLogSuccess),
+      getAccountMeta("slotHashesSysvar", accounts.slotHashesSysvar),
     ],
     data: getRecordAgentViolationInstructionDataEncoder().encode(
       args as RecordAgentViolationInstructionDataArgs,
@@ -200,7 +256,9 @@ export async function getRecordAgentViolationInstructionAsync<
     TProgramAddress,
     TAccountOwner,
     TAccountVault,
-    TAccountPolicy
+    TAccountPolicy,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar
   >);
 }
 
@@ -208,10 +266,21 @@ export type RecordAgentViolationInput<
   TAccountOwner extends string = string,
   TAccountVault extends string = string,
   TAccountPolicy extends string = string,
+  TAccountAuditLogSuccess extends string = string,
+  TAccountSlotHashesSysvar extends string = string,
 > = {
   owner: TransactionSigner<TAccountOwner>;
   vault: Address<TAccountVault>;
   policy: Address<TAccountPolicy>;
+  /**
+   * M-8 (audit 2026-05-21) — success audit log; entry appended ONLY
+   * when the failure counter trips `auto_revoke_threshold` and the
+   * agent is forcibly disabled. Non-trip increments don't write here
+   * (policy state is unchanged in that branch).
+   */
+  auditLogSuccess: Address<TAccountAuditLogSuccess>;
+  /** rejects any mismatched sysvar pubkey before the handler runs. */
+  slotHashesSysvar?: Address<TAccountSlotHashesSysvar>;
   agent: RecordAgentViolationInstructionDataArgs["agent"];
   errorCode: RecordAgentViolationInstructionDataArgs["errorCode"];
 };
@@ -220,19 +289,25 @@ export function getRecordAgentViolationInstruction<
   TAccountOwner extends string,
   TAccountVault extends string,
   TAccountPolicy extends string,
+  TAccountAuditLogSuccess extends string,
+  TAccountSlotHashesSysvar extends string,
   TProgramAddress extends Address = typeof SIGIL_PROGRAM_ADDRESS,
 >(
   input: RecordAgentViolationInput<
     TAccountOwner,
     TAccountVault,
-    TAccountPolicy
+    TAccountPolicy,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar
   >,
   config?: { programAddress?: TProgramAddress },
 ): RecordAgentViolationInstruction<
   TProgramAddress,
   TAccountOwner,
   TAccountVault,
-  TAccountPolicy
+  TAccountPolicy,
+  TAccountAuditLogSuccess,
+  TAccountSlotHashesSysvar
 > {
   // Program address.
   const programAddress = config?.programAddress ?? SIGIL_PROGRAM_ADDRESS;
@@ -242,6 +317,11 @@ export function getRecordAgentViolationInstruction<
     owner: { value: input.owner ?? null, isWritable: false },
     vault: { value: input.vault ?? null, isWritable: true },
     policy: { value: input.policy ?? null, isWritable: true },
+    auditLogSuccess: { value: input.auditLogSuccess ?? null, isWritable: true },
+    slotHashesSysvar: {
+      value: input.slotHashesSysvar ?? null,
+      isWritable: false,
+    },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -251,12 +331,20 @@ export function getRecordAgentViolationInstruction<
   // Original args.
   const args = { ...input };
 
+  // Resolve default values.
+  if (!accounts.slotHashesSysvar.value) {
+    accounts.slotHashesSysvar.value =
+      "SysvarS1otHashes111111111111111111111111111" as Address<"SysvarS1otHashes111111111111111111111111111">;
+  }
+
   const getAccountMeta = getAccountMetaFactory(programAddress, "programId");
   return Object.freeze({
     accounts: [
       getAccountMeta("owner", accounts.owner),
       getAccountMeta("vault", accounts.vault),
       getAccountMeta("policy", accounts.policy),
+      getAccountMeta("auditLogSuccess", accounts.auditLogSuccess),
+      getAccountMeta("slotHashesSysvar", accounts.slotHashesSysvar),
     ],
     data: getRecordAgentViolationInstructionDataEncoder().encode(
       args as RecordAgentViolationInstructionDataArgs,
@@ -266,7 +354,9 @@ export function getRecordAgentViolationInstruction<
     TProgramAddress,
     TAccountOwner,
     TAccountVault,
-    TAccountPolicy
+    TAccountPolicy,
+    TAccountAuditLogSuccess,
+    TAccountSlotHashesSysvar
   >);
 }
 
@@ -279,6 +369,15 @@ export type ParsedRecordAgentViolationInstruction<
     owner: TAccountMetas[0];
     vault: TAccountMetas[1];
     policy: TAccountMetas[2];
+    /**
+     * M-8 (audit 2026-05-21) — success audit log; entry appended ONLY
+     * when the failure counter trips `auto_revoke_threshold` and the
+     * agent is forcibly disabled. Non-trip increments don't write here
+     * (policy state is unchanged in that branch).
+     */
+    auditLogSuccess: TAccountMetas[3];
+    /** rejects any mismatched sysvar pubkey before the handler runs. */
+    slotHashesSysvar: TAccountMetas[4];
   };
   data: RecordAgentViolationInstructionData;
 };
@@ -291,12 +390,12 @@ export function parseRecordAgentViolationInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedRecordAgentViolationInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 3) {
+  if (instruction.accounts.length < 5) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 3,
+        expectedAccountMetas: 5,
       },
     );
   }
@@ -312,6 +411,8 @@ export function parseRecordAgentViolationInstruction<
       owner: getNextAccount(),
       vault: getNextAccount(),
       policy: getNextAccount(),
+      auditLogSuccess: getNextAccount(),
+      slotHashesSysvar: getNextAccount(),
     },
     data: getRecordAgentViolationInstructionDataDecoder().decode(
       instruction.data,

@@ -37,7 +37,20 @@ pub const AUDIT_LOG_SUCCESS_CAPACITY: usize = 128;
 /// 19     = cancel_agent_grant (Phase 8 §RP Fix-Up B / PEN-02b CRITICAL —
 ///          OPERATOR-class grant cancelled during timelock window before
 ///          apply could land. Symmetric with disc=9 ownership cancel.)
-/// 20..=255 = reserved (extensible)
+/// 20     = apply_agent_permissions_update (M-6 close, audit 2026-05-21 —
+///          timelocked apply of a queued agent capability / spending_limit /
+///          cooldown change. Subject = agent pubkey for correlation with the
+///          earlier queue_agent_permissions_update audit signal off-chain.)
+/// 21     = apply_close_constraints (M-7 close, audit 2026-05-21 — timelocked
+///          apply that flips `has_constraints` to false and closes the
+///          `InstructionConstraints` PDA. Subject = vault pubkey because the
+///          mutation is vault-wide, mirroring disc=15 constraints_apply.)
+/// 22     = record_agent_violation (auto-revoke trip) (M-8 close, audit
+///          2026-05-21 — written ONLY when the failure counter crossed
+///          `auto_revoke_threshold` and the agent was forcibly disabled.
+///          Non-trip increments emit no audit entry (the policy state is
+///          unchanged). Subject = agent pubkey.)
+/// 23..=255 = reserved (extensible)
 pub const AUDIT_DISC_RESERVED_ZERO: u8 = 0;
 pub const AUDIT_DISC_VALIDATE: u8 = 1;
 pub const AUDIT_DISC_FINALIZE_SUCCESS: u8 = 2;
@@ -67,6 +80,27 @@ pub const AUDIT_DISC_AGENT_GRANT_APPLY: u8 = 18;
 /// `AUDIT_DISC_OWNERSHIP_CANCEL`; written by `cancel_agent_grant` AFTER the
 /// pending PDA closes and rent returns to the owner.
 pub const AUDIT_DISC_AGENT_GRANT_CANCEL: u8 = 19;
+/// M-6 close (audit 2026-05-21) — `apply_agent_permissions_update` lands a
+/// timelocked agent capability / spending_limit / cooldown change. Subject
+/// is the agent pubkey so off-chain monitors can correlate this entry with
+/// the earlier queue audit signal. Written AFTER policy_version bump,
+/// BEFORE the `AgentPermissionsChangeApplied` emit (ISC-144 ordering).
+pub const AUDIT_DISC_AGENT_PERMS_APPLY: u8 = 20;
+/// M-7 close (audit 2026-05-21) — `apply_close_constraints` flips
+/// `has_constraints` to false and closes the InstructionConstraints PDA.
+/// Subject is the vault pubkey because the mutation is vault-wide,
+/// mirroring disc=15 `AUDIT_DISC_CONSTRAINTS_APPLY` and disc=14
+/// `AUDIT_DISC_POLICY_APPLY` precedent. Written AFTER policy_version bump,
+/// BEFORE the `CloseConstraintsApplied` emit.
+pub const AUDIT_DISC_CONSTRAINTS_CLOSE_APPLY: u8 = 21;
+/// M-8 close (audit 2026-05-21) — `record_agent_violation` tripped the
+/// `auto_revoke_threshold` and forcibly disabled the agent. Written ONLY
+/// inside the `if tripped` branch (non-trip increments leave policy state
+/// unchanged and emit no audit entry — they remain observable off-chain
+/// via the absence of an `AgentAutoRevoked` event). Subject is the agent
+/// pubkey for correlation with earlier disc=12 `AUDIT_DISC_REVOKE_AGENT`
+/// (manual revoke) and disc=10/11 pause/unpause entries.
+pub const AUDIT_DISC_AGENT_AUTO_REVOKED: u8 = 22;
 
 /// Single audit-log entry. Zero-copy, fixed-size 64 bytes per entry.
 ///
@@ -117,6 +151,9 @@ pub struct AuditEntry {
     ///   disc=17 (agent_grant_queue)→ agent pubkey (Phase 8 PEN-CROSS-1 Batch 6)
     ///   disc=18 (agent_grant_apply)→ agent pubkey (Phase 8 PEN-CROSS-1 Batch 6)
     ///   disc=19 (agent_grant_cancel)→ agent pubkey (Phase 8 §RP Fix-Up B / PEN-02b)
+    ///   disc=20 (agent_perms_apply)→ agent pubkey (M-6 close, audit 2026-05-21)
+    ///   disc=21 (constraints_close_apply)→ vault pubkey (M-7 close, audit 2026-05-21)
+    ///   disc=22 (agent_auto_revoked) → agent pubkey (M-8 close, audit 2026-05-21)
     pub subject: [u8; 32],
     /// Stablecoin delta IN (e.g. swap output, deposit). 0 when not applicable.
     pub balance_delta_in: i64,

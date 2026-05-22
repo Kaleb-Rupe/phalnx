@@ -242,36 +242,37 @@ describe("jupiter-lend-integration", () => {
 
     // Initialize vault with Jupiter Lend in allowlist
     await program.methods
-      .initializeVault(vaultId,
-          new BN(500_000_000),
-          new BN(200_000_000),
-          1,
-          [lendProtocol],
-          0,
-          100,
-          new BN(1800),
-          [],
-          [],
-          false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
-          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
-          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
-          new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
-          new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
-          false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
-          initVaultPreviewDigest({
-            dailySpendingCapUsd: new BN(500_000_000),
-            maxTransactionSizeUsd: new BN(200_000_000),
-            maxSlippageBps: 100,
-            protocolMode: 1,
-            protocols: [lendProtocol],
-            allowedDestinations: [],
-            timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
-            autoPromoteGrays: false,
-            autoRevokeThreshold: 5,
-          }),
-        )
+      .initializeVault(
+        vaultId,
+        new BN(500_000_000),
+        new BN(200_000_000),
+        1,
+        [lendProtocol],
+        0,
+        100,
+        new BN(1800),
+        [],
+        [],
+        false, // observeOnly (Phase 2 TA-19)
+        0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
+        false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+        5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+        new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
+        new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — no cap)
+        false, // cosignRequired (G6 audit 2026-05-18 — opt-in, default off)
+        initVaultPreviewDigest({
+          dailySpendingCapUsd: new BN(500_000_000),
+          maxTransactionSizeUsd: new BN(200_000_000),
+          maxSlippageBps: 100,
+          protocolMode: 1,
+          protocols: [lendProtocol],
+          allowedDestinations: [],
+          timelockDuration: new BN(1800),
+          operatingHours: 0x00ffffff,
+          autoPromoteGrays: false,
+          autoRevokeThreshold: 5,
+        }),
+      )
       .accountsPartial({
         owner: owner.publicKey,
         vault: vaultPda,
@@ -485,7 +486,8 @@ describe("jupiter-lend-integration", () => {
       );
 
       await program.methods
-        .initializeVault(frozenVaultId,
+        .initializeVault(
+          frozenVaultId,
           new BN(500_000_000),
           new BN(200_000_000),
           1,
@@ -496,7 +498,7 @@ describe("jupiter-lend-integration", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -510,7 +512,7 @@ describe("jupiter-lend-integration", () => {
             protocols: [lendProtocol],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -531,7 +533,10 @@ describe("jupiter-lend-integration", () => {
         .accountsPartial({
           owner: owner.publicKey,
           vault: frozenVault,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), frozenVault.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), frozenVault.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: frozenOverlay,
         })
         .rpc();
@@ -546,7 +551,10 @@ describe("jupiter-lend-integration", () => {
         .accountsPartial({
           owner: owner.publicKey,
           vault: frozenVault,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), frozenVault.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), frozenVault.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: frozenOverlayRevoke,
         })
         .rpc();
@@ -622,7 +630,8 @@ describe("jupiter-lend-integration", () => {
 
       // Create vault with tight cap: 100 USDC daily, 60 USDC max tx
       await program.methods
-        .initializeVault(rollingVaultId,
+        .initializeVault(
+          rollingVaultId,
           new BN(100_000_000),
           new BN(60_000_000),
           1,
@@ -633,7 +642,7 @@ describe("jupiter-lend-integration", () => {
           [],
           [],
           false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
+          0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
           false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
           5, // auto_revoke_threshold (TA-17 Phase 3 — default)
           new BN(0), // stable_balance_floor (TA-12 Phase 5 — no reserve)
@@ -647,7 +656,7 @@ describe("jupiter-lend-integration", () => {
             protocols: [lendProtocol],
             allowedDestinations: [],
             timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
+            operatingHours: 0x00ffffff,
             autoPromoteGrays: false,
             autoRevokeThreshold: 5,
           }),
@@ -668,7 +677,10 @@ describe("jupiter-lend-integration", () => {
         .accountsPartial({
           owner: owner.publicKey,
           vault: rollingVault,
-          policy: PublicKey.findProgramAddressSync([Buffer.from("policy"), rollingVault.toBuffer()], program.programId)[0],
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), rollingVault.toBuffer()],
+            program.programId,
+          )[0],
           agentSpendOverlay: rollingOverlay,
         })
         .rpc();

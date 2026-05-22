@@ -244,24 +244,27 @@ describe("previewCreateVault — cost math", () => {
     expect(r.totalCostUsd).to.equal(expected);
   });
 
-  it("totalCostUsd fixture: rent ~58.8M + fee 0 + price $250 → known value", async () => {
+  it("totalCostUsd fixture: rent ~59.0M + fee 0 + price $250 → known value", async () => {
     // pin a single concrete value so a future drift triggers a test failure.
-    // Post-Phase-6 + audit closure: SDK SIZE constants now match on-chain:
-    //   AgentVault 634, PolicyConfig 1290, SpendTracker 3328, AgentSpendOverlay 2688.
+    // Post-D-5 (audit 2026-05-19, F-RP3-1): PolicyConfig grew 32 bytes for
+    // the new `cosign_session_pubkey` field — SDK SIZE constants now match
+    // on-chain:
+    //   AgentVault 634, PolicyConfig 1322, SpendTracker 3328, AgentSpendOverlay 2688.
     // Sum of rent for the 4 PDAs at default mock formula =
-    //   ((634+128) + (1290+128) + (3328+128) + (2688+128)) × 6960
-    // = (762 + 1418 + 3456 + 2816) × 6960
-    // = 8452 × 6960 = 58_825_920 lamports.
-    // totalCostUsd = 58_825_920 × 250_000_000 / 1_000_000_000 = 14_706_480
-    // (= $14.70648 in 6-decimal USD).
+    //   ((634+128) + (1322+128) + (3328+128) + (2688+128)) × 6960
+    // = (762 + 1450 + 3456 + 2816) × 6960
+    // = 8484 × 6960 = 59_048_640 lamports.
+    // totalCostUsd = 59_048_640 × 250_000_000 / 1_000_000_000 = 14_762_160
+    // (= $14.76216 in 6-decimal USD).
+    // Prior pin (pre-D-5): rentLamports = 58_825_920, totalCostUsd = 14_706_480.
     const r = await previewCreateVault(
       baseConfig({
         priorityFeeMicroLamports: 0,
         solPriceUsd: 250_000_000n,
       }),
     );
-    expect(r.rentLamports).to.equal(58_825_920n);
-    expect(r.totalCostUsd).to.equal(14_706_480n);
+    expect(r.rentLamports).to.equal(59_048_640n);
+    expect(r.totalCostUsd).to.equal(14_762_160n);
   });
 
   it("totalCostUsd is bigint (never number)", async () => {

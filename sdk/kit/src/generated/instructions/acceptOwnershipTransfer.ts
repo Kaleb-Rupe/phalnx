@@ -150,8 +150,8 @@ export type AcceptOwnershipTransferAsyncInput<
    */
   vault: Address<TAccountVault>;
   /**
-   * Policy is mutated (policy_version bump). Batch 6 will also recompute
-   * `policy_preview_digest` here — see handler TODO.
+   * Policy is mutated (policy_version bump + `policy_preview_digest`
+   * recompute — see handler lines 173-223).
    */
   policy?: Address<TAccountPolicy>;
   /**
@@ -331,8 +331,8 @@ export type AcceptOwnershipTransferInput<
    */
   vault: Address<TAccountVault>;
   /**
-   * Policy is mutated (policy_version bump). Batch 6 will also recompute
-   * `policy_preview_digest` here — see handler TODO.
+   * Policy is mutated (policy_version bump + `policy_preview_digest`
+   * recompute — see handler lines 173-223).
    */
   policy: Address<TAccountPolicy>;
   /**
@@ -457,8 +457,8 @@ export type ParsedAcceptOwnershipTransferInstruction<
      */
     vault: TAccountMetas[1];
     /**
-     * Policy is mutated (policy_version bump). Batch 6 will also recompute
-     * `policy_preview_digest` here — see handler TODO.
+     * Policy is mutated (policy_version bump + `policy_preview_digest`
+     * recompute — see handler lines 173-223).
      */
     policy: TAccountMetas[2];
     /**

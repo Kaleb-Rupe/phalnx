@@ -324,9 +324,7 @@ describe("pen-cross-1-absorption (Phase 8 Batch 6)", () => {
     expect(vaultState.agents).to.have.lengthOf(0);
 
     // Audit disc=17 (queue) written.
-    expect(lastSuccessDisc(svm, auditSuccess)).to.equal(
-      DISC_AGENT_GRANT_QUEUE,
-    );
+    expect(lastSuccessDisc(svm, auditSuccess)).to.equal(DISC_AGENT_GRANT_QUEUE);
   });
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -439,9 +437,7 @@ describe("pen-cross-1-absorption (Phase 8 Batch 6)", () => {
     );
 
     // ASSERT — audit disc=18 (apply) written.
-    expect(lastSuccessDisc(svm, auditSuccess)).to.equal(
-      DISC_AGENT_GRANT_APPLY,
-    );
+    expect(lastSuccessDisc(svm, auditSuccess)).to.equal(DISC_AGENT_GRANT_APPLY);
   });
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -607,9 +603,7 @@ describe("pen-cross-1-absorption (Phase 8 Batch 6)", () => {
     } catch (err: any) {
       errMessage = err?.message ?? String(err);
     }
-    expect(
-      errMessage,
-      "second queue MUST reject (account already in use)",
-    ).to.not.be.null;
+    expect(errMessage, "second queue MUST reject (account already in use)").to
+      .not.be.null;
   });
 });

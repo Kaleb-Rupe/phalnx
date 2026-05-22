@@ -404,7 +404,13 @@ function validateSingleEntry(entry: PostAssertionEntry, index: number): void {
  */
 function validatePhase6Entry(entry: PostAssertionEntry, index: number): void {
   // aux_byte is structurally a u8 in the on-chain layout; mirror that here.
-  requireUintInRange(entry.auxByte, "aux_byte", 0xff, "assertion_mode_out_of_range", index);
+  requireUintInRange(
+    entry.auxByte,
+    "aux_byte",
+    0xff,
+    "assertion_mode_out_of_range",
+    index,
+  );
 
   switch (entry.assertionMode) {
     case 4: {

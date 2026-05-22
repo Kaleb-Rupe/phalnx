@@ -270,9 +270,7 @@ export function computeCosignDigest(fields: CosignDigestFields): Uint8Array {
   // `null` BOTH map to Option::None (tag 0). `false`, `true`, or `0n`
   // map to Option::Some.
   const stableFloor =
-    fields.stableBalanceFloor === undefined
-      ? null
-      : fields.stableBalanceFloor;
+    fields.stableBalanceFloor === undefined ? null : fields.stableBalanceFloor;
   const perRecipCap =
     fields.perRecipientDailyCapUsd === undefined
       ? null

@@ -338,6 +338,36 @@ export type PolicyConfig = {
    * of struct per F-14 APPEND-ONLY rule for Borsh stability.
    */
   cosignRequired: boolean;
+  /**
+   * D-5 close (audit 2026-05-19, F-RP3-1): the cosign-session pubkey
+   * gating elevated capability grants on the `reactivate_vault` path.
+   *
+   * THREAT: a phished/leaked owner key can chain
+   * `freeze_vault → reactivate_vault(new_agent=ATTACKER, FULL_CAPABILITY)`
+   * in a single transaction. The vault's `cosign_required` flag gates
+   * elevated MUTATIONS via `queue_policy_update`, but the reactivate
+   * path grafts a new agent at FULL_CAPABILITY directly — no timelock,
+   * no cosign — yielding an instant operator-class grant.
+   *
+   * DEFENSE: when `cosign_session_pubkey != Pubkey::default()` AND the
+   * reactivate ix passes `capability == FULL_CAPABILITY` for the new
+   * agent, the handler REQUIRES a matching signer in
+   * `ctx.remaining_accounts` whose key equals this pubkey AND
+   * `is_signer == true`. Otherwise rejects with
+   * `ErrReactivateCosignRequiredForFullCapability` (6114).
+   *
+   * Default `Pubkey::default()` at `initialize_vault` time means
+   * existing vaults retain today's behavior (no cosign gate on
+   * reactivate). Owners opt in by setting a non-default value via
+   * `queue_policy_update`. Setting a non-default value here is
+   * orthogonal to `cosign_required` — the two gate different ix paths
+   * (queue/apply vs reactivate) and use different pubkey sources
+   * (`pending.cosign_session` vs this field).
+   *
+   * Bound by TA-19 at canonical digest position 22. APPENDED at end
+   * of struct per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  cosignSessionPubkey: Address;
 };
 
 export type PolicyConfigArgs = {
@@ -614,6 +644,36 @@ export type PolicyConfigArgs = {
    * of struct per F-14 APPEND-ONLY rule for Borsh stability.
    */
   cosignRequired: boolean;
+  /**
+   * D-5 close (audit 2026-05-19, F-RP3-1): the cosign-session pubkey
+   * gating elevated capability grants on the `reactivate_vault` path.
+   *
+   * THREAT: a phished/leaked owner key can chain
+   * `freeze_vault → reactivate_vault(new_agent=ATTACKER, FULL_CAPABILITY)`
+   * in a single transaction. The vault's `cosign_required` flag gates
+   * elevated MUTATIONS via `queue_policy_update`, but the reactivate
+   * path grafts a new agent at FULL_CAPABILITY directly — no timelock,
+   * no cosign — yielding an instant operator-class grant.
+   *
+   * DEFENSE: when `cosign_session_pubkey != Pubkey::default()` AND the
+   * reactivate ix passes `capability == FULL_CAPABILITY` for the new
+   * agent, the handler REQUIRES a matching signer in
+   * `ctx.remaining_accounts` whose key equals this pubkey AND
+   * `is_signer == true`. Otherwise rejects with
+   * `ErrReactivateCosignRequiredForFullCapability` (6114).
+   *
+   * Default `Pubkey::default()` at `initialize_vault` time means
+   * existing vaults retain today's behavior (no cosign gate on
+   * reactivate). Owners opt in by setting a non-default value via
+   * `queue_policy_update`. Setting a non-default value here is
+   * orthogonal to `cosign_required` — the two gate different ix paths
+   * (queue/apply vs reactivate) and use different pubkey sources
+   * (`pending.cosign_session` vs this field).
+   *
+   * Bound by TA-19 at canonical digest position 22. APPENDED at end
+   * of struct per F-14 APPEND-ONLY rule for Borsh stability.
+   */
+  cosignSessionPubkey: Address;
 };
 
 /** Gets the encoder for {@link PolicyConfigArgs} account data. */
@@ -651,6 +711,7 @@ export function getPolicyConfigEncoder(): Encoder<PolicyConfigArgs> {
       ["stableBalanceFloor", getU64Encoder()],
       ["perRecipientDailyCapUsd", getU64Encoder()],
       ["cosignRequired", getBooleanEncoder()],
+      ["cosignSessionPubkey", getAddressEncoder()],
     ]),
     (value) => ({ ...value, discriminator: POLICY_CONFIG_DISCRIMINATOR }),
   );
@@ -690,6 +751,7 @@ export function getPolicyConfigDecoder(): Decoder<PolicyConfig> {
     ["stableBalanceFloor", getU64Decoder()],
     ["perRecipientDailyCapUsd", getU64Decoder()],
     ["cosignRequired", getBooleanDecoder()],
+    ["cosignSessionPubkey", getAddressDecoder()],
   ]);
 }
 

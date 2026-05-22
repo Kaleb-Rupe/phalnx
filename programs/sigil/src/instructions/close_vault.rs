@@ -84,6 +84,16 @@ pub fn handler(ctx: Context<CloseVault>) -> Result<()> {
         !ctx.accounts.policy.has_constraints,
         SigilError::ConstraintsNotClosed
     );
+    // H-3 close (audit 2026-05-21): symmetric to has_constraints. The 672-byte
+    // PostExecutionAssertions PDA has its own dedicated close handler
+    // (close_post_assertions.rs) and must be drained before vault close to
+    // avoid orphaning the PDA. Pre-fix, owners could close the vault while
+    // policy.has_post_assertions == 1 — the PDA would persist on-chain with
+    // no path to reclaim rent (post-close vault cannot re-init).
+    require!(
+        ctx.accounts.policy.has_post_assertions == 0,
+        SigilError::ErrPostAssertionsNotClosed
+    );
 
     // If pending policy exists, caller MUST provide it in remaining_accounts for cleanup
     if ctx.accounts.policy.has_pending_policy {

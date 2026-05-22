@@ -363,8 +363,7 @@ const ANCHOR_ERROR_MAP: Record<number, { name: string; suggestion: string }> = {
   },
   6064: {
     name: "ZeroCopyVaultMismatch",
-    suggestion:
-      "ZeroCopyVaultMismatch — see Sigil error-code documentation.",
+    suggestion: "ZeroCopyVaultMismatch — see Sigil error-code documentation.",
   },
   6065: {
     name: "BlockedSplOpcode",

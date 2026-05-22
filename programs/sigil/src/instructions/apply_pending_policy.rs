@@ -34,11 +34,17 @@ use crate::utils::policy_digest::{
 // silently grant an attacker operator-class on a cosign-opted-in vault
 // without diverging the digest.
 //
+// D-5 (audit 2026-05-19, F-RP3-1): bumped from 21 → 22 to bind
+// `cosign_session_pubkey` into the canonical digest. Closes the
+// silent-replacement vector where a tampered SDK could flip the
+// owner's chosen reactivate-time cosigner pubkey between approval and
+// on-chain landing, neutralizing the reactivate-cosign gate.
+//
 // The actual `const _: () = assert!(...)` enforcement lives near
 // `PolicyPreviewFields` in `utils/policy_digest.rs`. This constant
 // is re-asserted here at the apply-time site as a load-bearing reminder.
 #[allow(dead_code)]
-const EXPECTED_DIGEST_FIELD_COUNT: usize = 21;
+const EXPECTED_DIGEST_FIELD_COUNT: usize = 22;
 const _: () = assert!(
     EXPECTED_DIGEST_FIELD_COUNT
         == crate::utils::policy_digest::POLICY_PREVIEW_FIELD_COUNT,
@@ -316,6 +322,16 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
             .any(|ai| ai.key == &cosign_session && ai.is_signer);
         require!(cosign_present, SigilError::ErrCosignRequired);
     }
+    // D-5 (audit 2026-05-19, F-RP3-1): apply optional cosign_session_pubkey
+    // update. None preserves the live value; Some(_) overwrites unconditionally
+    // (default Pubkey::default() is a valid value meaning "gate disabled").
+    // The second-pass TA-19 digest below binds the merged value at canonical
+    // position 22, so a tampered pending PDA that flipped this between queue
+    // and apply produces a digest mismatch and `PolicyPreviewMismatch`.
+    if let Some(new_cosign_pubkey) = pending.cosign_session_pubkey {
+        policy.cosign_session_pubkey = new_cosign_pubkey;
+    }
+
     // Phase 2 Option A: defense-in-depth — re-validate protocol_mode if pending overrode it.
     if let Some(mode) = pending.protocol_mode {
         require!(
@@ -386,6 +402,11 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
         // the queue-time digest (which the SDK computed against the same
         // live agent set).
         agent_set_hash: compute_agent_set_hash(&ctx.accounts.vault.agents),
+        // D-5 (audit 2026-05-19, F-RP3-1): cosign_session_pubkey bound at
+        // canonical position 22. Read live (post-merge) value so the
+        // second-pass digest matches whatever the queue handler signed
+        // against.
+        cosign_session_pubkey: policy.cosign_session_pubkey,
     });
     require!(
         recomputed_digest == pending.new_policy_preview_digest,

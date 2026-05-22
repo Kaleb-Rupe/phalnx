@@ -147,6 +147,11 @@ pub fn handler(
         // 21. Sibling handler never mutates the agent set — re-derive
         // from live vault.
         agent_set_hash: compute_agent_set_hash(&ctx.accounts.vault.agents),
+        // D-5 (audit 2026-05-19, F-RP3-1): cosign_session_pubkey bound at
+        // canonical position 22 — sibling handler never mutates it, so
+        // pass-through from live policy keeps the re-bind digest matching
+        // the queue-time digest.
+        cosign_session_pubkey: policy.cosign_session_pubkey,
     });
     // PEN-CROSS-3: owner must have signed the post-mutation digest. Reject
     // if the caller's signed digest does not match. Closes the owner

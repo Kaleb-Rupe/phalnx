@@ -42,7 +42,9 @@ interface SubpathSpec {
 }
 
 function loadSubpaths(): SubpathSpec[] {
-  const pkg = JSON.parse(readFileSync(resolve(KIT_ROOT, "package.json"), "utf8")) as {
+  const pkg = JSON.parse(
+    readFileSync(resolve(KIT_ROOT, "package.json"), "utf8"),
+  ) as {
     exports?: Record<string, { types?: string }>;
   };
   const out: SubpathSpec[] = [];
@@ -115,9 +117,7 @@ function main(): void {
   mkdirSync(dirname(OUT_PATH), { recursive: true });
 
   if (CHECK_MODE) {
-    const existing = existsSync(OUT_PATH)
-      ? readFileSync(OUT_PATH, "utf8")
-      : "";
+    const existing = existsSync(OUT_PATH) ? readFileSync(OUT_PATH, "utf8") : "";
     if (existing === manifest) {
       // eslint-disable-next-line no-console
       console.log("check-surface: ✓ no drift");

@@ -140,33 +140,34 @@ describe("devnet-smoke-test", () => {
       program.programId,
     );
     await program.methods
-      .initializeVault(vaultId,
-          new BN(500_000_000),
-          new BN(100_000_000),
-          1,
-          [jupiterProgramId],
-          0,
-          500,
-          new BN(1800),
-          [],
-          [],
-          false, // observeOnly (Phase 2 TA-19)
-          0x00FFFFFF, // operating_hours (TA-05 Phase 3 — all 24h)
-          false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
-          5, // auto_revoke_threshold (TA-17 Phase 3 — default)
-          initVaultPreviewDigest({
-            dailySpendingCapUsd: new BN(500_000_000),
-            maxTransactionSizeUsd: new BN(100_000_000),
-            maxSlippageBps: 500,
-            protocolMode: 1,
-            protocols: [jupiterProgramId],
-            allowedDestinations: [],
-            timelockDuration: new BN(1800),
-            operatingHours: 0x00FFFFFF,
-            autoPromoteGrays: false,
-            autoRevokeThreshold: 5,
-          }),
-        )
+      .initializeVault(
+        vaultId,
+        new BN(500_000_000),
+        new BN(100_000_000),
+        1,
+        [jupiterProgramId],
+        0,
+        500,
+        new BN(1800),
+        [],
+        [],
+        false, // observeOnly (Phase 2 TA-19)
+        0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
+        false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
+        5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+        initVaultPreviewDigest({
+          dailySpendingCapUsd: new BN(500_000_000),
+          maxTransactionSizeUsd: new BN(100_000_000),
+          maxSlippageBps: 500,
+          protocolMode: 1,
+          protocols: [jupiterProgramId],
+          allowedDestinations: [],
+          timelockDuration: new BN(1800),
+          operatingHours: 0x00ffffff,
+          autoPromoteGrays: false,
+          autoRevokeThreshold: 5,
+        }),
+      )
       .accounts({
         owner: owner.publicKey,
         vault: vaultPda,
@@ -229,22 +230,23 @@ describe("devnet-smoke-test", () => {
     // updatePolicy deleted; all mutations go through queue/apply.
     // With timelockDuration=1800, we can't apply in a test — just verify the queue.
     await program.methods
-      .queuePolicyUpdate(null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null, // destinationMode,
-          null, // operating_hours (TA-05 Phase 3)
-          PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
-          new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
-        )
+      .queuePolicyUpdate(
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null, // destinationMode,
+        null, // operating_hours (TA-05 Phase 3)
+        PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
+        new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
+      )
       .accounts({
         owner: owner.publicKey,
         vault: vaultPda,

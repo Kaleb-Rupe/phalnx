@@ -125,15 +125,12 @@ describe("Kit SDK Devnet — Vault Lifecycle", function () {
     // Phase 2 TA-19: re-compute the merged policy digest off-chain and bind
     // it to the queue. We fetch live policy + vault so the projection is
     // accurate; only daily_spending_cap_usd is changing in this test.
-    const { fetchAgentVault } = await import(
-      "../../src/generated/accounts/agentVault.js"
-    );
-    const { fetchPolicyConfig } = await import(
-      "../../src/generated/accounts/policyConfig.js"
-    );
-    const { computePolicyPreviewDigest } = await import(
-      "../../src/policy/compute-policy-preview-digest.js"
-    );
+    const { fetchAgentVault } =
+      await import("../../src/generated/accounts/agentVault.js");
+    const { fetchPolicyConfig } =
+      await import("../../src/generated/accounts/policyConfig.js");
+    const { computePolicyPreviewDigest } =
+      await import("../../src/policy/compute-policy-preview-digest.js");
     const livePolicy = await fetchPolicyConfig(rpc, vault.policyAddress);
     const liveVault = await fetchAgentVault(rpc, vault.vaultAddress);
     const newPolicyPreviewDigest = computePolicyPreviewDigest({
@@ -186,8 +183,7 @@ describe("Kit SDK Devnet — Vault Lifecycle", function () {
       // initial-vault value for this lifecycle test.
       cosignRequired: null,
       // TA-09 (Phase 3): zero pubkey for non-elevated path.
-      cosignSession:
-        "11111111111111111111111111111111" as unknown as Address,
+      cosignSession: "11111111111111111111111111111111" as unknown as Address,
       newPolicyPreviewDigest,
     });
 

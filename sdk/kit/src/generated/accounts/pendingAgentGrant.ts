@@ -101,6 +101,26 @@ export type PendingAgentGrant = {
    * extensions (e.g. cooldown_seconds binding). Zero-init on `init`.
    */
   padding: ReadonlyUint8Array;
+  /**
+   * M-5 close (Bucket 2, Phase 10 PEN-CROSS-3): SHA-256 over the
+   * canonical byte encoding of the pending content (vault + agent +
+   * capability + spending_limit_usd + queued_at + min_delay_seconds).
+   * Written once at `queue_agent_grant` and re-asserted at
+   * `apply_agent_grant` before any mutation of `vault.agents`.
+   *
+   * Defense-in-depth against discriminator-collision overwrite of
+   * this pending PDA's body between queue and apply: even if a future
+   * bug allowed a same-seed CPI to rewrite the grant fields, the
+   * digest recorded at queue time pins the owner-attested content,
+   * and the apply-time recompute would diverge and reject with
+   * `ErrPendingAgentGrantDigestMismatch`.
+   *
+   * Alignment: Anchor's `#[account]` uses Borsh on-the-wire layout, so
+   * the byte arithmetic is purely additive: 104 + 32 = 136 bytes total.
+   * `[u8; 32]` has alignment 1, so no padding is required regardless of
+   * the preceding `u8` + `[u8; 6]` shape.
+   */
+  pendingContentDigest: ReadonlyUint8Array;
 };
 
 export type PendingAgentGrantArgs = {
@@ -152,6 +172,26 @@ export type PendingAgentGrantArgs = {
    * extensions (e.g. cooldown_seconds binding). Zero-init on `init`.
    */
   padding: ReadonlyUint8Array;
+  /**
+   * M-5 close (Bucket 2, Phase 10 PEN-CROSS-3): SHA-256 over the
+   * canonical byte encoding of the pending content (vault + agent +
+   * capability + spending_limit_usd + queued_at + min_delay_seconds).
+   * Written once at `queue_agent_grant` and re-asserted at
+   * `apply_agent_grant` before any mutation of `vault.agents`.
+   *
+   * Defense-in-depth against discriminator-collision overwrite of
+   * this pending PDA's body between queue and apply: even if a future
+   * bug allowed a same-seed CPI to rewrite the grant fields, the
+   * digest recorded at queue time pins the owner-attested content,
+   * and the apply-time recompute would diverge and reject with
+   * `ErrPendingAgentGrantDigestMismatch`.
+   *
+   * Alignment: Anchor's `#[account]` uses Borsh on-the-wire layout, so
+   * the byte arithmetic is purely additive: 104 + 32 = 136 bytes total.
+   * `[u8; 32]` has alignment 1, so no padding is required regardless of
+   * the preceding `u8` + `[u8; 6]` shape.
+   */
+  pendingContentDigest: ReadonlyUint8Array;
 };
 
 /** Gets the encoder for {@link PendingAgentGrantArgs} account data. */
@@ -167,6 +207,7 @@ export function getPendingAgentGrantEncoder(): FixedSizeEncoder<PendingAgentGran
       ["minDelaySeconds", getU64Encoder()],
       ["bump", getU8Encoder()],
       ["padding", fixEncoderSize(getBytesEncoder(), 6)],
+      ["pendingContentDigest", fixEncoderSize(getBytesEncoder(), 32)],
     ]),
     (value) => ({ ...value, discriminator: PENDING_AGENT_GRANT_DISCRIMINATOR }),
   );
@@ -184,6 +225,7 @@ export function getPendingAgentGrantDecoder(): FixedSizeDecoder<PendingAgentGran
     ["minDelaySeconds", getU64Decoder()],
     ["bump", getU8Decoder()],
     ["padding", fixDecoderSize(getBytesDecoder(), 6)],
+    ["pendingContentDigest", fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }
 
@@ -262,5 +304,5 @@ export async function fetchAllMaybePendingAgentGrant(
 }
 
 export function getPendingAgentGrantSize(): number {
-  return 104;
+  return 136;
 }

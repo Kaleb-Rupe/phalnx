@@ -119,6 +119,7 @@ export type QueuePolicyUpdateInstructionData = {
   stableBalanceFloor: Option<bigint>;
   perRecipientDailyCapUsd: Option<bigint>;
   cosignRequired: Option<boolean>;
+  cosignSessionPubkey: Option<Address>;
   cosignSession: Address;
   newPolicyPreviewDigest: ReadonlyUint8Array;
 };
@@ -140,6 +141,7 @@ export type QueuePolicyUpdateInstructionDataArgs = {
   stableBalanceFloor: OptionOrNullable<number | bigint>;
   perRecipientDailyCapUsd: OptionOrNullable<number | bigint>;
   cosignRequired: OptionOrNullable<boolean>;
+  cosignSessionPubkey: OptionOrNullable<Address>;
   cosignSession: Address;
   newPolicyPreviewDigest: ReadonlyUint8Array;
 };
@@ -167,6 +169,7 @@ export function getQueuePolicyUpdateInstructionDataEncoder(): Encoder<QueuePolic
       ["stableBalanceFloor", getOptionEncoder(getU64Encoder())],
       ["perRecipientDailyCapUsd", getOptionEncoder(getU64Encoder())],
       ["cosignRequired", getOptionEncoder(getBooleanEncoder())],
+      ["cosignSessionPubkey", getOptionEncoder(getAddressEncoder())],
       ["cosignSession", getAddressEncoder()],
       ["newPolicyPreviewDigest", fixEncoderSize(getBytesEncoder(), 32)],
     ]),
@@ -196,6 +199,7 @@ export function getQueuePolicyUpdateInstructionDataDecoder(): Decoder<QueuePolic
     ["stableBalanceFloor", getOptionDecoder(getU64Decoder())],
     ["perRecipientDailyCapUsd", getOptionDecoder(getU64Decoder())],
     ["cosignRequired", getOptionDecoder(getBooleanDecoder())],
+    ["cosignSessionPubkey", getOptionDecoder(getAddressDecoder())],
     ["cosignSession", getAddressDecoder()],
     ["newPolicyPreviewDigest", fixDecoderSize(getBytesDecoder(), 32)],
   ]);
@@ -239,6 +243,7 @@ export type QueuePolicyUpdateAsyncInput<
   stableBalanceFloor: QueuePolicyUpdateInstructionDataArgs["stableBalanceFloor"];
   perRecipientDailyCapUsd: QueuePolicyUpdateInstructionDataArgs["perRecipientDailyCapUsd"];
   cosignRequired: QueuePolicyUpdateInstructionDataArgs["cosignRequired"];
+  cosignSessionPubkey: QueuePolicyUpdateInstructionDataArgs["cosignSessionPubkey"];
   cosignSession: QueuePolicyUpdateInstructionDataArgs["cosignSession"];
   newPolicyPreviewDigest: QueuePolicyUpdateInstructionDataArgs["newPolicyPreviewDigest"];
 };
@@ -377,6 +382,7 @@ export type QueuePolicyUpdateInput<
   stableBalanceFloor: QueuePolicyUpdateInstructionDataArgs["stableBalanceFloor"];
   perRecipientDailyCapUsd: QueuePolicyUpdateInstructionDataArgs["perRecipientDailyCapUsd"];
   cosignRequired: QueuePolicyUpdateInstructionDataArgs["cosignRequired"];
+  cosignSessionPubkey: QueuePolicyUpdateInstructionDataArgs["cosignSessionPubkey"];
   cosignSession: QueuePolicyUpdateInstructionDataArgs["cosignSession"];
   newPolicyPreviewDigest: QueuePolicyUpdateInstructionDataArgs["newPolicyPreviewDigest"];
 };

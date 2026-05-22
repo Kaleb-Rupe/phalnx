@@ -62,6 +62,7 @@ import {
 } from "./errors/codes.js";
 import {
   getVaultPDA,
+  getVaultPdaFromState,
   getPolicyPDA,
   getTrackerPDA,
   getAgentOverlayPDA,
@@ -747,11 +748,36 @@ export interface VaultLocator {
  */
 export type DiscoveredVault = VaultLocator;
 
-/** AgentVault account size (bytes) — used for dataSize filter. */
-const AGENT_VAULT_SIZE = 634;
+/**
+ * AgentVault account size (bytes) — used for the GPA `dataSize` filter.
+ *
+ * Pinned to 675 to match the Phase 8 LBL-01 layout
+ * (`programs/sigil/src/state/vault.rs:319` — `AgentVault::SIZE == 675`
+ * with compile-time assertion). The post-LBL-01 layout adds 32 bytes
+ * for `vault_authority` at the tail; pre-LBL-01 vaults at 634 bytes no
+ * longer exist on-chain (Phase 10 will redeploy under a new program ID
+ * with fresh state).
+ *
+ * Cross-cutting regression hunt fix (audit 2026-05-21): previously held
+ * the stale 634 value, which caused `findVaultsByOwner` to silently return
+ * `[]` on every call against a real RPC (the mock RPC used by the test
+ * suite ignores filters, masking the regression). Closed by promoting the
+ * documented invariant to live code.
+ */
+const AGENT_VAULT_SIZE = 675;
 
 /** Byte offset of the `vault_id` field in AgentVault (after 8 disc + 32 owner). */
 const VAULT_ID_OFFSET = 40;
+
+/**
+ * Byte offset of the `vault_authority` field in AgentVault — Phase 8
+ * LBL-01 appended this `Pubkey` (32 bytes) at the tail of the layout,
+ * so the field sits at `AgentVault::SIZE - 32 = 643`. Used by H-5 to
+ * re-derive vault PDAs from the IMMUTABLE seed key (which survives
+ * `accept_ownership_transfer`) rather than the mutable `vault.owner`
+ * byte at offset 8.
+ */
+const VAULT_AUTHORITY_OFFSET = 643;
 
 const u64Decoder = getU64Decoder();
 
@@ -823,11 +849,24 @@ export async function findVaultsByOwner(
   const cappedProbe = Math.min(Math.max(0, maxProbe), 100);
   const ownerBase64 = uint8ToBase64(addressEncoder.encode(owner));
 
-  // Strategy A: getProgramAccounts with memcmp filter
+  // Strategy A: getProgramAccounts with memcmp filter.
+  //
+  // H-5 (pre-redeploy audit 2026-05-21): the `memcmp` at offset 8 filters
+  // by the MUTABLE `vault.owner` byte field, so vaults the caller
+  // currently owns appear here (including those received via
+  // `accept_ownership_transfer`). The V-1 re-derivation below MUST use
+  // the IMMUTABLE Phase 8 LBL-01 seed-key `vault.vault_authority`
+  // (offset 643), NOT the current `owner` — passing `owner` for a
+  // transferred vault produces a PDA address that doesn't match the
+  // entry's `pubkey` and the entry would be silently dropped.
+  //
+  // To get both `vault_id` AND `vault_authority` in one RPC round we
+  // drop the `dataSlice` and parse both fields from the full account
+  // body. Bandwidth cost is bounded — vaults per owner are O(1) in
+  // practice and the full body is ~675 bytes.
   try {
     const accounts = await rpc
       .getProgramAccounts(SIGIL_PROGRAM_ADDRESS, {
-        dataSlice: { offset: VAULT_ID_OFFSET, length: 8 },
         filters: [
           { dataSize: BigInt(AGENT_VAULT_SIZE) },
           {
@@ -842,21 +881,38 @@ export async function findVaultsByOwner(
       })
       .send();
 
+    // H-5 verification: parse `vault_id` at offset 40 AND
+    // `vault_authority` at offset 643 from each returned account, then
+    // re-derive the PDA from `vault_authority` (NOT `owner`). Drop any
+    // entry whose body is too short to contain `vault_authority` (a
+    // malformed / truncated response or a malicious RPC).
     const parsed = (
       accounts as { pubkey: Address; account: { data: [string, string] } }[]
-    ).map((entry) => {
+    ).flatMap((entry) => {
       const raw = base64ToUint8(entry.account.data[0]);
-      const vaultId = u64Decoder.decode(raw);
-      return { vaultAddress: entry.pubkey, vaultId };
+      if (raw.length < VAULT_AUTHORITY_OFFSET + 32) return [];
+      const vaultId = u64Decoder.decode(raw.subarray(VAULT_ID_OFFSET));
+      const vaultAuthority = addressDecoder.decode(
+        raw.subarray(VAULT_AUTHORITY_OFFSET, VAULT_AUTHORITY_OFFSET + 32),
+      ) as Address;
+      return [{ vaultAddress: entry.pubkey, vaultId, vaultAuthority }];
     });
 
-    // V-1 fix: Re-derive PDAs to verify RPC-returned pubkeys are legitimate vault addresses.
-    // A malicious RPC could return fabricated pubkeys that don't correspond to real vault PDAs.
+    // V-1 + H-5: re-derive PDAs from `vault_authority` (the immutable
+    // PDA seed) to verify RPC-returned pubkeys are legitimate vault
+    // addresses. A malicious RPC could otherwise return fabricated
+    // pubkeys that don't correspond to real vault PDAs.
     const verified: VaultLocator[] = [];
     for (const entry of parsed) {
-      const [expectedPda] = await getVaultPDA(owner, entry.vaultId);
+      const [expectedPda] = await getVaultPdaFromState({
+        vaultAuthority: entry.vaultAuthority,
+        vaultId: entry.vaultId,
+      });
       if (expectedPda === entry.vaultAddress) {
-        verified.push(entry);
+        verified.push({
+          vaultAddress: entry.vaultAddress,
+          vaultId: entry.vaultId,
+        });
       }
     }
 
@@ -880,7 +936,16 @@ export async function findVaultsByOwner(
     }
   }
 
-  // Strategy B: PDA probing fallback — derive all candidate PDAs in parallel
+  // Strategy B: PDA probing fallback — derive all candidate PDAs in parallel.
+  //
+  // H-5 note: probing seeds with the CALLER's `owner` only finds vaults
+  // for which `vault.vault_authority == owner` — i.e. vaults the caller
+  // originally initialized. Vaults the caller received via
+  // `accept_ownership_transfer` are invisible to probing because the
+  // immutable seed-key still belongs to the original initializer; there
+  // is no way to probe with an unknown seed-key. RPCs that support
+  // `getProgramAccounts` (Strategy A above) handle the transferred case
+  // correctly via the H-5 `vault_authority` re-derivation.
   const pdas = await Promise.all(
     Array.from({ length: cappedProbe }, async (_, i) => {
       const [pda] = await getVaultPDA(owner, BigInt(i));

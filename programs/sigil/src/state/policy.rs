@@ -9,6 +9,7 @@ use anchor_lang::prelude::*;
 ///   - ALL mode bypassed the protocol allowlist entirely (Audit #2 F-4 vector).
 ///   - DENYLIST mode required Sigil to enumerate every hostile program — an
 ///     unbounded set — defeating the security primitive.
+///
 /// Vaults MUST use ALLOWLIST. Handlers (`initialize_vault`, `queue_policy_update`,
 /// `apply_pending_policy`) reject any other value with `InvalidProtocolMode`.
 pub const PROTOCOL_MODE_ALLOWLIST: u8 = 1;
@@ -279,6 +280,35 @@ pub struct PolicyConfig {
     /// Bound by TA-19 at canonical digest position 20. APPENDED at end
     /// of struct per F-14 APPEND-ONLY rule for Borsh stability.
     pub cosign_required: bool,
+
+    /// D-5 close (audit 2026-05-19, F-RP3-1): the cosign-session pubkey
+    /// gating elevated capability grants on the `reactivate_vault` path.
+    ///
+    /// THREAT: a phished/leaked owner key can chain
+    ///   `freeze_vault → reactivate_vault(new_agent=ATTACKER, FULL_CAPABILITY)`
+    /// in a single transaction. The vault's `cosign_required` flag gates
+    /// elevated MUTATIONS via `queue_policy_update`, but the reactivate
+    /// path grafts a new agent at FULL_CAPABILITY directly — no timelock,
+    /// no cosign — yielding an instant operator-class grant.
+    ///
+    /// DEFENSE: when `cosign_session_pubkey != Pubkey::default()` AND the
+    /// reactivate ix passes `capability == FULL_CAPABILITY` for the new
+    /// agent, the handler REQUIRES a matching signer in
+    /// `ctx.remaining_accounts` whose key equals this pubkey AND
+    /// `is_signer == true`. Otherwise rejects with
+    /// `ErrReactivateCosignRequiredForFullCapability` (6114).
+    ///
+    /// Default `Pubkey::default()` at `initialize_vault` time means
+    /// existing vaults retain today's behavior (no cosign gate on
+    /// reactivate). Owners opt in by setting a non-default value via
+    /// `queue_policy_update`. Setting a non-default value here is
+    /// orthogonal to `cosign_required` — the two gate different ix paths
+    /// (queue/apply vs reactivate) and use different pubkey sources
+    /// (`pending.cosign_session` vs this field).
+    ///
+    /// Bound by TA-19 at canonical digest position 22. APPENDED at end
+    /// of struct per F-14 APPEND-ONLY rule for Borsh stability.
+    pub cosign_session_pubkey: Pubkey,
 }
 
 /// TA-07 (Phase 3): one entry in `PolicyConfig.destination_graylist`.
@@ -316,10 +346,12 @@ impl PolicyConfig {
     /// auto_promote_grays (1) + auto_revoke_threshold (1) +
     /// stable_balance_floor (8) [TA-12 Phase 5] +
     /// per_recipient_daily_cap_usd (8) [TA-14 Phase 5] +
-    /// cosign_required (1) [G6 audit 2026-05-18]
+    /// cosign_required (1) [G6 audit 2026-05-18] +
+    /// cosign_session_pubkey (32) [D-5 close audit 2026-05-19, F-RP3-1]
     /// [TA-19, Phase 2; PEN-CROSS-2 Phase 2 close-up;
     ///  TA-05/07/17 Phase 3 pre-exec; TA-12/TA-14 Phase 5;
-    ///  G6 cosign opt-in 2026-05-18 audit]
+    ///  G6 cosign opt-in 2026-05-18 audit;
+    ///  D-5 reactivate cosign-when-FULL 2026-05-19 audit]
     pub const SIZE: usize = 8
         + 32
         + 8
@@ -347,7 +379,8 @@ impl PolicyConfig {
         + 1 // auto_revoke_threshold [TA-17]
         + 8 // stable_balance_floor [TA-12 Phase 5]
         + 8 // per_recipient_daily_cap_usd [TA-14 Phase 5]
-        + 1; // cosign_required [G6 audit 2026-05-18]
+        + 1 // cosign_required [G6 audit 2026-05-18]
+        + 32; // cosign_session_pubkey [D-5 audit 2026-05-19, F-RP3-1]
 
     /// Check if a protocol is allowed.
     ///

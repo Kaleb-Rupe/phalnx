@@ -1,6 +1,6 @@
-# Error Codes (6000-6102)
+# Error Codes (6000-6114)
 
-All 103 custom errors defined in `programs/sigil/src/errors.rs`. Use `require!(condition, SigilError::Name)`.
+All 115 custom errors defined in `programs/sigil/src/errors.rs`. Use `require!(condition, SigilError::Name)`.
 
 Source of truth: `target/idl/sigil.json` (regenerate this file by running `bash scripts/regen-error-codes-doc.sh` after any change to `errors.rs`).
 
@@ -109,3 +109,15 @@ Source of truth: `target/idl/sigil.json` (regenerate this file by running `bash 
 | 6100 | `ErrOutputBelowFloor` | R-3 OutputBalanceFloor: post-execution balance increase fell below the configured min_increase floor |
 | 6101 | `ErrDeclarationInconsistent` | R-4 DeclarationConsistency: declared recipient/mint does not match CPI account-meta |
 | 6102 | `IxMetaCountExceeded` | Foreign DeFi instruction passed more account metas than the destination-check budget (16) allows; truncate the ix or split into shorter ixs |
+| 6103 | `ErrPendingOwnershipExists` | An ownership transfer is already pending; cancel it first |
+| 6104 | `ErrPendingOwnershipNotReady` | Ownership transfer timelock has not elapsed |
+| 6105 | `ErrInvalidFreezeReason` | freeze_reason value out of {{0,1,2}} |
+| 6106 | `ErrReactivateCooldownActive` | Reactivate requires 5-minute observation cooldown to elapse |
+| 6107 | `ErrInvalidOwnershipTarget` | new_owner cannot be system/program/sysvar addresses (Council ISC-128) |
+| 6108 | `ErrTooManyRevokePairs` | freeze_internal MAX_REVOKE_PAIRS = 10 exceeded (Council ISC-136) |
+| 6109 | `ErrPostAssertionsNotClosed` | PostExecutionAssertions PDA still active — call close_post_assertions first |
+| 6110 | `ErrDestinationIsProtectedPda` | Destination is a Sigil-protected PDA — rejected at queue time |
+| 6111 | `ErrIntentDigestMismatch` | AL3 intent-digest mismatch — preview digest does not match executed bundle |
+| 6112 | `ErrPendingConstraintsDigestMismatch` | PendingConstraintsUpdate digest mismatch between queue and apply |
+| 6113 | `ErrPendingAgentGrantDigestMismatch` | PendingAgentGrant digest mismatch between queue and apply |
+| 6114 | `ErrReactivateCosignRequiredForFullCapability` | Reactivate with FULL_CAPABILITY new agent requires cosign |

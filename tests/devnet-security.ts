@@ -107,7 +107,8 @@ describe("devnet-security", () => {
   it("1. non-owner cannot queue_policy_update", async () => {
     try {
       await program.methods
-        .queuePolicyUpdate(null,
+        .queuePolicyUpdate(
+          null,
           null,
           null,
           null,
@@ -249,7 +250,8 @@ describe("devnet-security", () => {
   it("6. agent cannot call queue_policy_update (owner-only)", async () => {
     try {
       await program.methods
-        .queuePolicyUpdate(null,
+        .queuePolicyUpdate(
+          null,
           null,
           null,
           null,
