@@ -32,6 +32,10 @@ import {
   fetchAndComputeQueueDigest,
 } from "./helpers/policy-digest";
 import {
+  buildExpectedIntentDigest,
+  digestAsArgs,
+} from "./helpers/intent-digest-fixture";
+import {
   createTestEnv,
   airdropSol,
   createMintAtAddress,
@@ -321,6 +325,15 @@ describe("TOCTOU Security Fix", () => {
           jupiterProgramId,
           new BN(0), // STALE: policy is now at version 1
           new BN(0), // AC-10 expectedNonce (fresh session)
+          digestAsArgs(
+            buildExpectedIntentDigest({
+              vault: v.vaultPda,
+              agent: agent.publicKey,
+              tokenMint: usdcMint,
+              amount: new BN(10_000_000),
+              targetProtocol: jupiterProgramId,
+            }),
+          ),
         )
         .accountsPartial({
           agent: agent.publicKey,
