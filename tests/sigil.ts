@@ -25,6 +25,10 @@ import {
   fetchAndComputeQueueDigest,
 } from "./helpers/policy-digest";
 import {
+  buildExpectedIntentDigest,
+  digestAsArgs,
+} from "./helpers/intent-digest-fixture";
+import {
   createTestEnv,
   airdropSol,
   createMintHelper,
@@ -1186,6 +1190,15 @@ describe("sigil", () => {
           jupiterProgramId,
           await pv(), // expectedPolicyVersion
           new BN(0), // AC-10 expectedNonce (fresh session)
+          digestAsArgs(
+            buildExpectedIntentDigest({
+              vault: vaultPda,
+              agent: agent.publicKey,
+              tokenMint: usdcMint,
+              amount,
+              targetProtocol: jupiterProgramId,
+            }),
+          ),
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -1275,6 +1288,15 @@ describe("sigil", () => {
           jupiterProgramId,
           await pv(), // restored pv() v2
           new BN(0), // AC-10 expectedNonce (fresh session)
+          digestAsArgs(
+            buildExpectedIntentDigest({
+              vault: vaultPda,
+              agent: agent.publicKey,
+              tokenMint: usdcMint,
+              amount,
+              targetProtocol: jupiterProgramId,
+            }),
+          ),
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -1417,6 +1439,15 @@ describe("sigil", () => {
             jupiterProgramId,
             await pv(),
             new BN(0), // AC-10 expectedNonce
+            digestAsArgs(
+              buildExpectedIntentDigest({
+                vault: vaultPda,
+                agent: agent.publicKey,
+                tokenMint: solMint,
+                amount: new BN(1_000_000),
+                targetProtocol: jupiterProgramId,
+              }),
+            ),
           )
           .accounts({
             agent: agent.publicKey,
@@ -1453,6 +1484,15 @@ describe("sigil", () => {
             fakeProtocol, // not in protocols
             await pv(),
             new BN(0), // AC-10 expectedNonce
+            digestAsArgs(
+              buildExpectedIntentDigest({
+                vault: vaultPda,
+                agent: agent.publicKey,
+                tokenMint: usdcMint,
+                amount: new BN(1_000_000),
+                targetProtocol: fakeProtocol,
+              }),
+            ),
           )
           .accounts({
             agent: agent.publicKey,
@@ -1489,6 +1529,15 @@ describe("sigil", () => {
             jupiterProgramId,
             await pv(),
             new BN(0), // AC-10 expectedNonce
+            digestAsArgs(
+              buildExpectedIntentDigest({
+                vault: vaultPda,
+                agent: agent.publicKey,
+                tokenMint: usdcMint,
+                amount: new BN(200_000_000),
+                targetProtocol: jupiterProgramId,
+              }),
+            ),
           )
           .accounts({
             agent: agent.publicKey,
@@ -1528,6 +1577,15 @@ describe("sigil", () => {
             jupiterProgramId,
             await pv(),
             new BN(0), // AC-10 expectedNonce
+            digestAsArgs(
+              buildExpectedIntentDigest({
+                vault: vaultPda,
+                agent: agent.publicKey,
+                tokenMint: usdcMint,
+                amount: new BN(100_000_000),
+                targetProtocol: jupiterProgramId,
+              }),
+            ),
           )
           .accounts({
             agent: agent.publicKey,
@@ -1577,6 +1635,15 @@ describe("sigil", () => {
             jupiterProgramId,
             await pv(),
             new BN(0), // AC-10 expectedNonce
+            digestAsArgs(
+              buildExpectedIntentDigest({
+                vault: vaultPda,
+                agent: fakeAgent.publicKey,
+                tokenMint: usdcMint,
+                amount: new BN(1_000_000),
+                targetProtocol: jupiterProgramId,
+              }),
+            ),
           )
           .accounts({
             agent: fakeAgent.publicKey,
@@ -1657,6 +1724,15 @@ describe("sigil", () => {
             jupiterProgramId,
             await pv(),
             new BN(0), // AC-10 expectedNonce
+            digestAsArgs(
+              buildExpectedIntentDigest({
+                vault: frozenVault,
+                agent: agent.publicKey,
+                tokenMint: usdcMint,
+                amount: new BN(1_000_000),
+                targetProtocol: jupiterProgramId,
+              }),
+            ),
           )
           .accounts({
             agent: agent.publicKey,
@@ -2302,6 +2378,15 @@ describe("sigil", () => {
           jupiterProgramId,
           await pv(feePolicyPda),
           new BN(0), // AC-10 expectedNonce
+          digestAsArgs(
+            buildExpectedIntentDigest({
+              vault: feeVaultPda,
+              agent: agent.publicKey,
+              tokenMint: usdcMint,
+              amount: new BN(10_000_000),
+              targetProtocol: jupiterProgramId,
+            }),
+          ),
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -2436,6 +2521,15 @@ describe("sigil", () => {
           jupiterProgramId,
           await pv(feePolicyPda),
           new BN(0), // AC-10 expectedNonce
+          digestAsArgs(
+            buildExpectedIntentDigest({
+              vault: feeVaultPda,
+              agent: agent.publicKey,
+              tokenMint: usdcMint,
+              amount: new BN(10_000_000),
+              targetProtocol: jupiterProgramId,
+            }),
+          ),
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -2504,6 +2598,15 @@ describe("sigil", () => {
           jupiterProgramId,
           await pv(feePolicyPda),
           new BN(0), // AC-10 expectedNonce
+          digestAsArgs(
+            buildExpectedIntentDigest({
+              vault: feeVaultPda,
+              agent: agent.publicKey,
+              tokenMint: usdcMint,
+              amount: new BN(10_000_000),
+              targetProtocol: jupiterProgramId,
+            }),
+          ),
         )
         .accountsPartial({
           agent: agent.publicKey,
@@ -2758,6 +2861,15 @@ describe("sigil", () => {
           jupiterProgramId,
           await pv(lifecyclePolicyPda),
           new BN(0), // AC-10 expectedNonce
+          digestAsArgs(
+            buildExpectedIntentDigest({
+              vault: lifecycleVaultPda,
+              agent: lifecycleAgent.publicKey,
+              tokenMint: usdcMint,
+              amount: new BN(10_000_000),
+              targetProtocol: jupiterProgramId,
+            }),
+          ),
         )
         .accountsPartial({
           agent: lifecycleAgent.publicKey,
@@ -2815,6 +2927,15 @@ describe("sigil", () => {
           jupiterProgramId,
           await pv(lifecyclePolicyPda),
           new BN(0), // AC-10 expectedNonce
+          digestAsArgs(
+            buildExpectedIntentDigest({
+              vault: lifecycleVaultPda,
+              agent: lifecycleAgent.publicKey,
+              tokenMint: usdcMint,
+              amount: new BN(5_000_000),
+              targetProtocol: jupiterProgramId,
+            }),
+          ),
         )
         .accountsPartial({
           agent: lifecycleAgent.publicKey,
@@ -2870,6 +2991,15 @@ describe("sigil", () => {
             jupiterProgramId,
             await pv(lifecyclePolicyPda),
             new BN(0), // AC-10 expectedNonce
+            digestAsArgs(
+              buildExpectedIntentDigest({
+                vault: lifecycleVaultPda,
+                agent: lifecycleAgent.publicKey,
+                tokenMint: usdcMint,
+                amount: new BN(5_000_000),
+                targetProtocol: jupiterProgramId,
+              }),
+            ),
           )
           .accountsPartial({
             agent: lifecycleAgent.publicKey,
@@ -3078,6 +3208,15 @@ describe("sigil", () => {
             jupiterProgramId,
             await pv(),
             new BN(0), // AC-10 expectedNonce
+            digestAsArgs(
+              buildExpectedIntentDigest({
+                vault: rv,
+                agent: agent.publicKey,
+                tokenMint: usdcMint,
+                amount: new BN(1_000_000),
+                targetProtocol: jupiterProgramId,
+              }),
+            ),
           )
           .accounts({
             agent: agent.publicKey,
@@ -3448,6 +3587,15 @@ describe("sigil", () => {
             jupiterProgramId,
             await pv(),
             new BN(0), // AC-10 expectedNonce
+            digestAsArgs(
+              buildExpectedIntentDigest({
+                vault: cv,
+                agent: agent.publicKey,
+                tokenMint: usdcMint,
+                amount: new BN(1_000_000),
+                targetProtocol: jupiterProgramId,
+              }),
+            ),
           )
           .accounts({
             agent: agent.publicKey,
@@ -3613,6 +3761,15 @@ describe("sigil", () => {
             jupiterProgramId,
             await pv(ringPolicyPda),
             new BN(0), // AC-10 expectedNonce
+            digestAsArgs(
+              buildExpectedIntentDigest({
+                vault: ringVaultPda,
+                agent: ringAgent.publicKey,
+                tokenMint: usdcMint,
+                amount: new BN(1_000_000),
+                targetProtocol: jupiterProgramId,
+              }),
+            ),
           )
           .accountsPartial({
             agent: ringAgent.publicKey,
@@ -3799,6 +3956,15 @@ describe("sigil", () => {
           jupiterProgramId,
           await pv(feeEdgePolicyPda),
           new BN(0), // AC-10 expectedNonce
+          digestAsArgs(
+            buildExpectedIntentDigest({
+              vault: feeEdgeVaultPda,
+              agent: feeEdgeAgent.publicKey,
+              tokenMint: usdcMint,
+              amount: new BN(1),
+              targetProtocol: jupiterProgramId,
+            }),
+          ),
         )
         .accountsPartial({
           agent: feeEdgeAgent.publicKey,
@@ -3865,6 +4031,15 @@ describe("sigil", () => {
           jupiterProgramId,
           await pv(feeEdgePolicyPda),
           new BN(0), // AC-10 expectedNonce
+          digestAsArgs(
+            buildExpectedIntentDigest({
+              vault: feeEdgeVaultPda,
+              agent: feeEdgeAgent.publicKey,
+              tokenMint: usdcMint,
+              amount: new BN(4_999),
+              targetProtocol: jupiterProgramId,
+            }),
+          ),
         )
         .accountsPartial({
           agent: feeEdgeAgent.publicKey,
@@ -3915,6 +4090,15 @@ describe("sigil", () => {
           jupiterProgramId,
           await pv(feeEdgePolicyPda),
           new BN(0), // AC-10 expectedNonce
+          digestAsArgs(
+            buildExpectedIntentDigest({
+              vault: feeEdgeVaultPda,
+              agent: feeEdgeAgent.publicKey,
+              tokenMint: usdcMint,
+              amount: new BN(5_000),
+              targetProtocol: jupiterProgramId,
+            }),
+          ),
         )
         .accountsPartial({
           agent: feeEdgeAgent.publicKey,
@@ -5475,6 +5659,15 @@ describe("sigil", () => {
           jupiterProgramId,
           await pv(maPolicy),
           new BN(0), // AC-10 expectedNonce
+          digestAsArgs(
+            buildExpectedIntentDigest({
+              vault: maVault,
+              agent: agent.publicKey,
+              tokenMint: usdcMint,
+              amount: new BN(0),
+              targetProtocol: jupiterProgramId,
+            }),
+          ),
         )
         .accounts({
           agent: agent.publicKey,
@@ -5536,6 +5729,15 @@ describe("sigil", () => {
           jupiterProgramId,
           await pv(maPolicy),
           new BN(0), // AC-10 expectedNonce
+          digestAsArgs(
+            buildExpectedIntentDigest({
+              vault: maVault,
+              agent: agent.publicKey,
+              tokenMint: usdcMint,
+              amount: new BN(1_000_000),
+              targetProtocol: jupiterProgramId,
+            }),
+          ),
         )
         .accounts({
           agent: agent.publicKey,
@@ -6330,6 +6532,15 @@ describe("sigil", () => {
           protocol,
           await pv(pcPolicy),
           new BN(0),
+          digestAsArgs(
+            buildExpectedIntentDigest({
+              vault: pcVault,
+              agent: protoCapAgent.publicKey,
+              tokenMint: usdcMint,
+              amount,
+              targetProtocol: protocol,
+            }),
+          ),
         )
         .accountsPartial({
           agent: protoCapAgent.publicKey,
@@ -6936,6 +7147,15 @@ describe("sigil", () => {
           protocol,
           await pv(ta13Policy),
           new BN(0),
+          digestAsArgs(
+            buildExpectedIntentDigest({
+              vault: ta13Vault,
+              agent: ta13Agent.publicKey,
+              tokenMint: usdcMint,
+              amount,
+              targetProtocol: protocol,
+            }),
+          ),
         )
         .accountsPartial({
           agent: ta13Agent.publicKey,
