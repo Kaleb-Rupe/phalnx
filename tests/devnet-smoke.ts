@@ -159,6 +159,9 @@ describe("devnet-smoke-test", () => {
         0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
         false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
         5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+        new BN(0), // stable_balance_floor (TA-12 Phase 5 — disabled)
+        new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — disabled)
+        false, // cosign_required (G6 audit 2026-05-18 — not opted in)
         initVaultPreviewDigest({
           dailySpendingCapUsd: new BN(500_000_000),
           maxTransactionSizeUsd: new BN(100_000_000),
@@ -248,6 +251,10 @@ describe("devnet-smoke-test", () => {
         null,
         null, // destinationMode,
         null, // operating_hours (TA-05 Phase 3)
+        null, // stable_balance_floor (TA-12 Phase 5)
+        null, // per_recipient_daily_cap_usd (TA-14 Phase 5)
+        null, // cosign_required (G6 audit 2026-05-18)
+        null, // cosign_session_pubkey (D-5 Phase 10a-B7)
         PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
         new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
       )

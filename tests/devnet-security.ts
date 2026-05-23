@@ -125,6 +125,10 @@ describe("devnet-security", () => {
           null,
           null, // destinationMode,
           null, // operating_hours (TA-05 Phase 3)
+          null, // stable_balance_floor (TA-12 Phase 5)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5)
+          null, // cosign_required (G6 audit 2026-05-18)
+          null, // cosign_session_pubkey (D-5 Phase 10a-B7)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
         )
@@ -278,6 +282,10 @@ describe("devnet-security", () => {
           null,
           null, // destinationMode,
           null, // operating_hours (TA-05 Phase 3)
+          null, // stable_balance_floor (TA-12 Phase 5)
+          null, // per_recipient_daily_cap_usd (TA-14 Phase 5)
+          null, // cosign_required (G6 audit 2026-05-18)
+          null, // cosign_session_pubkey (D-5 Phase 10a-B7)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           new Array(32).fill(0), // newPolicyPreviewDigest (Phase 2 TA-19 placeholder)
         )

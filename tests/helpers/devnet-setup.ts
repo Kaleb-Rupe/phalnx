@@ -354,6 +354,9 @@ export async function createFullVault(
       0x00ffffff, // operating_hours (TA-05 Phase 3 — all 24h)
       false, // auto_promote_grays (TA-07 Phase 3 — friction enabled)
       5, // auto_revoke_threshold (TA-17 Phase 3 — default)
+      new BN(0), // stable_balance_floor (TA-12 Phase 5 — disabled)
+      new BN(0), // per_recipient_daily_cap_usd (TA-14 Phase 5 — disabled)
+      false, // cosign_required (G6 audit 2026-05-18 — not opted in)
       initVaultPreviewDigest({
         dailySpendingCapUsd: dailyCap,
         maxTransactionSizeUsd: maxTx,
