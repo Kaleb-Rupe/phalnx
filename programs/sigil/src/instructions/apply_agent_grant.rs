@@ -96,6 +96,27 @@ pub fn handler(ctx: Context<ApplyAgentGrant>) -> Result<()> {
     let clock = Clock::get()?;
     let pending = &ctx.accounts.pending;
 
+    // 0. CH-1 close (Bucket-3 audit 2026-05-23): F-10 freshness — bounds the
+    // slot delta between queue and apply using the WIDER
+    // `MAX_APPLY_AGE_SLOTS_TIMELOCKED_ADMIN = 700_000` (~78h) ceiling.
+    // The narrower 216_000-slot (~24h) `MAX_APPLY_AGE_SLOTS` used by the
+    // non-admin pending PDAs would reject a legitimate apply that lands
+    // AFTER the 48h timelock matures — see state/mod.rs rationale.
+    //
+    // This check FRONT-RUNS the timelock check below so a stale-slot
+    // attack surfaces with `QueuedUpdateExpired` (the diagnostic answer)
+    // rather than `TimelockNotExpired`. Defends against the
+    // Drift-April-2026 durable-nonce pre-signing class: a compromised
+    // owner key pre-signs queue+apply in the same slot, queues NOW, and
+    // tries to replay the pre-signed apply weeks/months later. The
+    // slot-based ceiling forces a re-queue (with fresh signatures) any
+    // time the apply lands beyond the ~78h window.
+    require!(
+        clock.slot.saturating_sub(pending.queued_at_slot)
+            < crate::state::MAX_APPLY_AGE_SLOTS_TIMELOCKED_ADMIN,
+        SigilError::QueuedUpdateExpired,
+    );
+
     // 1. Timelock check — `>=` boundary matches the rest of the program's
     // timelock surface (PendingPolicyUpdate, PendingAgentPermissionsUpdate,
     // PendingOwnershipTransfer). Checked i64 sub guards against rare devnet

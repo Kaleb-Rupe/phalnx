@@ -185,6 +185,14 @@ pub fn handler(
         pending.min_delay_seconds = PendingOwnershipTransfer::DEFAULT_MIN_DELAY;
         pending.is_multisig_target = is_multisig_target;
         pending.bump = ctx.bumps.pending;
+        // CH-1 close (Bucket-3 audit 2026-05-23): capture slot at queue
+        // time. Paired with `MAX_APPLY_AGE_SLOTS_TIMELOCKED_ADMIN` at the
+        // accept_ownership_transfer{,_multisig} handlers to bound the
+        // pre-sign + replay window (Drift-April-2026 durable-nonce class).
+        // PendingOwnershipTransfer has NO M-5 content digest, so the slot
+        // is NOT digest-bound here — defense rests on the 48h timelock
+        // (primary) + slot freshness ceiling (supplementary).
+        pending.queued_at_slot = clock.slot;
     }
 
     // 5. Phase 7 — write success audit-log entry BEFORE the `emit!` call so

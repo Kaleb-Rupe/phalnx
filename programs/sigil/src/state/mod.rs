@@ -103,6 +103,19 @@ pub const MIN_TIMELOCK_DURATION: u64 = 1800;
 /// update is stale and must be re-queued by the owner.
 pub const MAX_APPLY_AGE_SLOTS: u64 = 216_000;
 
+/// CH-1 close (Bucket-3 audit 2026-05-23): F-10 freshness window for the
+/// two TIMELOCKED-ADMIN pending PDA families (PendingAgentGrant +
+/// PendingOwnershipTransfer). These default to MIN_DELAY = 172_800s (48h),
+/// so the normal 216_000-slot (~24h) freshness window would reject
+/// legitimate apply attempts that come AFTER the timelock matures.
+///
+/// 700_000 slots ≈ 78 hours at 400ms/slot — leaves 48h timelock + 24h
+/// owner-grace + 6h network-clock-skew margin. Wider than the 216_000
+/// non-admin window because the 48h timelock is the PRIMARY defense for
+/// these elevation primitives; F-10 is supplementary (caps the pre-sign
+/// hold window, not the timelock itself).
+pub const MAX_APPLY_AGE_SLOTS_TIMELOCKED_ADMIN: u64 = 700_000;
+
 /// TA-07 (Phase 3): 24-hour graylist friction window in seconds.
 ///
 /// New destinations added to `allowed_destinations` via

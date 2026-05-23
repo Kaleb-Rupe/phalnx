@@ -157,20 +157,32 @@ pub fn handler(
         pending.queued_at = clock.unix_timestamp;
         pending.min_delay_seconds = PendingAgentGrant::DEFAULT_MIN_DELAY;
         pending.bump = ctx.bumps.pending;
+        // CH-1 close (Bucket-3 audit 2026-05-23): capture slot at queue
+        // time alongside `queued_at` unix-timestamp. Paired with
+        // `MAX_APPLY_AGE_SLOTS_TIMELOCKED_ADMIN` at apply to bound the
+        // pre-sign + replay window (Drift-April-2026 durable-nonce class).
+        // MUST be set BEFORE the digest recompute below so the digest
+        // binds the slot — a tampered slot then fails the apply-time
+        // recompute with `ErrPendingAgentGrantDigestMismatch`.
+        pending.queued_at_slot = clock.slot;
 
         // M-5 close (Bucket 2, Phase 10 PEN-CROSS-3): bind the pending
         // content digest AFTER all content fields are populated. The
         // canonical encoding covers (vault, agent, capability,
-        // spending_limit_usd, queued_at, min_delay_seconds) — the full
-        // owner-attested grant tuple. Any later mutation (including a
-        // discriminator-collision overwrite that flips `agent` to an
-        // attacker pubkey or raises `capability` to FULL_CAPABILITY)
-        // will diverge the apply-time recompute and reject. The
-        // canonical encoder does NOT include `pending_content_digest`
-        // itself, so the prior value of that field is irrelevant to
-        // the digest input — and Anchor's `init` zero-initializes the
-        // entire account data slab before this handler runs, so
-        // `pending_content_digest` is already [0u8; 32] here.
+        // spending_limit_usd, queued_at, min_delay_seconds, queued_at_slot)
+        // — the full owner-attested grant tuple. Any later mutation
+        // (including a discriminator-collision overwrite that flips
+        // `agent` to an attacker pubkey or raises `capability` to
+        // FULL_CAPABILITY) will diverge the apply-time recompute and
+        // reject. The canonical encoder does NOT include
+        // `pending_content_digest` itself, so the prior value of that
+        // field is irrelevant to the digest input — and Anchor's `init`
+        // zero-initializes the entire account data slab before this
+        // handler runs, so `pending_content_digest` is already [0u8; 32]
+        // here.
+        // CH-1 close (Bucket-3 audit 2026-05-23): canonical encoder now
+        // covers `queued_at_slot` (position 7); set above before this
+        // line so the digest binds the new field.
         pending.pending_content_digest = compute_pending_agent_grant_digest(pending);
     }
 

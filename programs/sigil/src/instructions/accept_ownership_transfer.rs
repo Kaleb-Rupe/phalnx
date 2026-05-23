@@ -141,6 +141,21 @@ pub fn handler(ctx: Context<AcceptOwnershipTransfer>) -> Result<()> {
 
     let clock = Clock::get()?;
 
+    // CH-1 close (Bucket-3 audit 2026-05-23): F-10 freshness — bounds the
+    // slot delta between initiate and accept using the WIDER
+    // `MAX_APPLY_AGE_SLOTS_TIMELOCKED_ADMIN = 700_000` (~78h) ceiling.
+    // The 48h timelock primary defense is below; this is the supplementary
+    // pre-sign cap defending against the Drift-April-2026 durable-nonce
+    // replay class. Front-run the timelock check so the stale-slot reject
+    // surfaces with `QueuedUpdateExpired` (the diagnostic answer).
+    // PendingOwnershipTransfer has no M-5 digest, so the new field is NOT
+    // digest-bound — defense is timelock (primary) + slot ceiling.
+    require!(
+        clock.slot.saturating_sub(ctx.accounts.pending.queued_at_slot)
+            < crate::state::MAX_APPLY_AGE_SLOTS_TIMELOCKED_ADMIN,
+        SigilError::QueuedUpdateExpired,
+    );
+
     // Timelock check — `>=` boundary matches the rest of the program's
     // timelock surface (PendingPolicyUpdate, PendingAgentPermissionsUpdate).
     // Use checked arithmetic on i64 — clock can in principle move backward

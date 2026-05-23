@@ -60,12 +60,17 @@ pub struct PendingOwnershipTransfer {
     /// (e.g. cooldown packing, multisig-attestation digest). Zero-init on
     /// `init` and unread today.
     pub _padding: [u8; 6],         // 6
+
+    /// CH-1 close (Bucket-3 audit 2026-05-23): slot at queue time for
+    /// F-10 freshness. See pending_agent_grant.rs for the threat model.
+    pub queued_at_slot: u64,           // 8
 }
 
 impl PendingOwnershipTransfer {
     /// Account discriminator (8) + Pubkey×3 (96) + i64 (8) + u64 (8) +
-    /// bool (1) + u8 (1) + padding[6] (6) = 128 bytes.
-    pub const SIZE: usize = 8 + 32 + 32 + 32 + 8 + 8 + 1 + 1 + 6;
+    /// bool (1) + u8 (1) + padding[6] (6) + queued_at_slot (8) = 136 bytes.
+    /// CH-1 close (Bucket-3 audit 2026-05-23): +8 bytes for `queued_at_slot`.
+    pub const SIZE: usize = 8 + 32 + 32 + 32 + 8 + 8 + 1 + 1 + 6 + 8;
 
     /// Default timelock: 48 hours (matches the policy-update / agent-perms
     /// pattern used elsewhere in the program and gives the owner a clear
@@ -75,7 +80,9 @@ impl PendingOwnershipTransfer {
 
 /// Compile-time pin — any drift in the documented byte layout breaks the
 /// build. Mirrors the §RP-1 pattern used for AuditEntry / SessionAuthority.
+/// CH-1 close (Bucket-3 audit 2026-05-23): bumped 128 → 136 bytes (+8 for
+/// `queued_at_slot`).
 const _PENDING_OWNERSHIP_SIZE_PIN: () = assert!(
-    PendingOwnershipTransfer::SIZE == 128,
-    "PendingOwnershipTransfer::SIZE drifted from documented 128 bytes",
+    PendingOwnershipTransfer::SIZE == 136,
+    "PendingOwnershipTransfer::SIZE drifted from documented 136 bytes (CH-1 Bucket-3 baseline)",
 );

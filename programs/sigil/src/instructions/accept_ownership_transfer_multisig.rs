@@ -177,6 +177,21 @@ pub fn handler(ctx: Context<AcceptOwnershipTransferMultisig>) -> Result<()> {
 
     let clock = Clock::get()?;
 
+    // 3.5. CH-1 close (Bucket-3 audit 2026-05-23): F-10 freshness — same
+    //      cap as the EOA accept path. Slot delta bound by
+    //      `MAX_APPLY_AGE_SLOTS_TIMELOCKED_ADMIN = 700_000` (~78h), wider
+    //      than the 216_000-slot (~24h) non-admin window because the 48h
+    //      timelock is the primary defense and an apply landing AFTER
+    //      the timelock matures (24h..78h post-queue) is legitimate. Front-
+    //      runs the timelock so a stale-slot reject surfaces with the
+    //      diagnostic `QueuedUpdateExpired` rather than the misleading
+    //      `ErrPendingOwnershipNotReady`.
+    require!(
+        clock.slot.saturating_sub(ctx.accounts.pending.queued_at_slot)
+            < crate::state::MAX_APPLY_AGE_SLOTS_TIMELOCKED_ADMIN,
+        SigilError::QueuedUpdateExpired,
+    );
+
     // 4. Timelock — identical to the EOA accept path. Checked arithmetic
     //    on i64 to guard against backward-moving clocks (rare devnet anomaly).
     let queued_at = ctx.accounts.pending.queued_at;

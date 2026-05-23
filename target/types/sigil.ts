@@ -10433,6 +10433,23 @@ export type Sigil = {
                 32
               ]
             }
+          },
+          {
+            "name": "queuedAtSlot",
+            "docs": [
+              "CH-1 close (Bucket-3 audit 2026-05-23): slot at queue time for",
+              "F-10 freshness check. Paired with `MAX_APPLY_AGE_SLOTS_TIMELOCKED_ADMIN`",
+              "to defend against the Drift-April-2026 durable-nonce pre-signing",
+              "attack class: a compromised owner key can pre-sign queue+apply ix",
+              "in the same slot, queue NOW, then replay the pre-signed apply",
+              "weeks later. Slot-based F-10 catches the \"weeks later\" case.",
+              "",
+              "Note: `queued_at: i64` above is the existing unix-timestamp used",
+              "by the 48h timelock countdown — that semantic is unchanged. This",
+              "slot field is additive and load-bearing only for the F-10 fresh-",
+              "ness check."
+            ],
+            "type": "u64"
           }
         ]
       }
@@ -10807,6 +10824,14 @@ export type Sigil = {
                 6
               ]
             }
+          },
+          {
+            "name": "queuedAtSlot",
+            "docs": [
+              "CH-1 close (Bucket-3 audit 2026-05-23): slot at queue time for",
+              "F-10 freshness. See pending_agent_grant.rs for the threat model."
+            ],
+            "type": "u64"
           }
         ]
       }

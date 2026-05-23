@@ -80,13 +80,28 @@ pub struct PendingAgentGrant {
     /// `[u8; 32]` has alignment 1, so no padding is required regardless of
     /// the preceding `u8` + `[u8; 6]` shape.
     pub pending_content_digest: [u8; 32], // 32
+
+    /// CH-1 close (Bucket-3 audit 2026-05-23): slot at queue time for
+    /// F-10 freshness check. Paired with `MAX_APPLY_AGE_SLOTS_TIMELOCKED_ADMIN`
+    /// to defend against the Drift-April-2026 durable-nonce pre-signing
+    /// attack class: a compromised owner key can pre-sign queue+apply ix
+    /// in the same slot, queue NOW, then replay the pre-signed apply
+    /// weeks later. Slot-based F-10 catches the "weeks later" case.
+    ///
+    /// Note: `queued_at: i64` above is the existing unix-timestamp used
+    /// by the 48h timelock countdown — that semantic is unchanged. This
+    /// slot field is additive and load-bearing only for the F-10 fresh-
+    /// ness check.
+    pub queued_at_slot: u64,           // 8
 }
 
 impl PendingAgentGrant {
     /// Account discriminator (8) + Pubkey×2 (64) + u8 (1) + u64 (8) +
-    /// i64 (8) + u64 (8) + u8 (1) + padding[6] (6) + digest[32] (32) = 136 bytes.
+    /// i64 (8) + u64 (8) + u8 (1) + padding[6] (6) + digest[32] (32) +
+    /// queued_at_slot (8) = 144 bytes.
     /// M-5 close (Bucket 2, PEN-CROSS-3): +32 bytes for `pending_content_digest`.
-    pub const SIZE: usize = 8 + 32 + 32 + 1 + 8 + 8 + 8 + 1 + 6 + 32;
+    /// CH-1 close (Bucket-3 audit 2026-05-23): +8 bytes for `queued_at_slot`.
+    pub const SIZE: usize = 8 + 32 + 32 + 1 + 8 + 8 + 8 + 1 + 6 + 32 + 8;
 
     /// Default timelock: 48 hours (matches
     /// `PendingOwnershipTransfer::DEFAULT_MIN_DELAY`). OPERATOR-class agent
@@ -108,9 +123,12 @@ impl PendingAgentGrant {
 // field on `PendingAgentGrant` MUST also be folded into the
 // `canonical_bytes_of_pending_agent_grant` encoding below, else the
 // queue/apply digest invariant silently regresses.
+// CH-1 close (Bucket-3 audit 2026-05-23): bumped 136 → 144 bytes (+8 for
+// `queued_at_slot`). The new slot field IS folded into the canonical bytes
+// (position 7) so a tampered slot fails the apply-time digest recompute.
 const _PENDING_AGENT_GRANT_SIZE_PIN: () = assert!(
-    PendingAgentGrant::SIZE == 136,
-    "PendingAgentGrant::SIZE drifted from documented 136 bytes (M-5 Bucket 2 PEN-CROSS-3 baseline)",
+    PendingAgentGrant::SIZE == 144,
+    "PendingAgentGrant::SIZE drifted from documented 144 bytes (CH-1 Bucket-3 baseline)",
 );
 
 /// M-5 close (Bucket 2, Phase 10 PEN-CROSS-3) — canonical byte encoding of the
@@ -123,6 +141,7 @@ const _PENDING_AGENT_GRANT_SIZE_PIN: () = assert!(
 ///   4. `spending_limit_usd: u64`    (8 bytes, LE)
 ///   5. `queued_at: i64`             (8 bytes, LE)
 ///   6. `min_delay_seconds: u64`     (8 bytes, LE)
+///   7. `queued_at_slot: u64`        (8 bytes, LE)  [CH-1 close, Bucket-3 2026-05-23]
 ///
 /// EXCLUDES (intentional — these are re-applied at apply time or are
 /// alignment-only and would defeat the apply-time recompute):
@@ -130,7 +149,15 @@ const _PENDING_AGENT_GRANT_SIZE_PIN: () = assert!(
 ///   - `_padding[6]`                     (alignment-only)
 ///   - `pending_content_digest` itself   (the field being asserted)
 ///
-/// Total fixed-size canonical encoding: 89 bytes.
+/// INCLUDES (intentional — these ARE content and tampering them must fail
+/// the apply-time digest recompute):
+///   - `queued_at_slot` [CH-1 close]: an attacker who rewrites the slot
+///     between queue and apply to evade the F-10 staleness check would
+///     also have to forge a matching digest. By folding the slot into
+///     the canonical encoding, we make that forgery infeasible without
+///     also defeating SHA-256.
+///
+/// Total fixed-size canonical encoding: 97 bytes.
 ///
 /// CALL SITES:
 ///   - `queue_agent_grant.rs`   — writes the digest after populating the
@@ -142,8 +169,8 @@ const _PENDING_AGENT_GRANT_SIZE_PIN: () = assert!(
 ///     `ct_eq_32` (shared from `state::pending_constraints`) to deny
 ///     timing side-channels.
 pub fn canonical_bytes_of_pending_agent_grant(pending: &PendingAgentGrant) -> Vec<u8> {
-    // 89-byte fixed-size buffer. No bounded-list inputs → exact size.
-    let mut buf: Vec<u8> = Vec::with_capacity(32 + 32 + 1 + 8 + 8 + 8);
+    // 97-byte fixed-size buffer. No bounded-list inputs → exact size.
+    let mut buf: Vec<u8> = Vec::with_capacity(32 + 32 + 1 + 8 + 8 + 8 + 8);
 
     // 1. vault: Pubkey (32 bytes, raw)
     buf.extend_from_slice(pending.vault.as_ref());
@@ -157,6 +184,8 @@ pub fn canonical_bytes_of_pending_agent_grant(pending: &PendingAgentGrant) -> Ve
     buf.extend_from_slice(&pending.queued_at.to_le_bytes());
     // 6. min_delay_seconds: u64 LE
     buf.extend_from_slice(&pending.min_delay_seconds.to_le_bytes());
+    // 7. queued_at_slot: u64 LE  [CH-1 close, Bucket-3 2026-05-23]
+    buf.extend_from_slice(&pending.queued_at_slot.to_le_bytes());
 
     buf
 }
