@@ -14,7 +14,7 @@
  */
 
 // ────────────────────────────────────────────────────────────────
-// Sigil program errors (6000-6102)
+// Sigil program errors (6000-6114)
 // ────────────────────────────────────────────────────────────────
 
 export const SIGIL_ERRORS = {
@@ -121,6 +121,18 @@ export const SIGIL_ERRORS = {
   ErrOutputBelowFloor: 6100,
   ErrDeclarationInconsistent: 6101,
   IxMetaCountExceeded: 6102,
+  ErrPendingOwnershipExists: 6103,
+  ErrPendingOwnershipNotReady: 6104,
+  ErrInvalidFreezeReason: 6105,
+  ErrReactivateCooldownActive: 6106,
+  ErrInvalidOwnershipTarget: 6107,
+  ErrTooManyRevokePairs: 6108,
+  ErrPostAssertionsNotClosed: 6109,
+  ErrDestinationIsProtectedPda: 6110,
+  ErrIntentDigestMismatch: 6111,
+  ErrPendingConstraintsDigestMismatch: 6112,
+  ErrPendingAgentGrantDigestMismatch: 6113,
+  ErrReactivateCosignRequiredForFullCapability: 6114,
 } as const;
 
 /**

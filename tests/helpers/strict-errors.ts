@@ -149,6 +149,20 @@ export const SIGIL_ERRORS = {
   ErrDeclarationInconsistent: 6101,
   // Audit 2026-05-19 P1 HIGH fixes (H-1 hard-reject)
   IxMetaCountExceeded: 6102,
+  // Phase 8 + Council ISC closes (ownership transfer, freeze reasons, post-assertions)
+  ErrPendingOwnershipExists: 6103,
+  ErrPendingOwnershipNotReady: 6104,
+  ErrInvalidFreezeReason: 6105,
+  ErrReactivateCooldownActive: 6106,
+  ErrInvalidOwnershipTarget: 6107,
+  ErrTooManyRevokePairs: 6108,
+  ErrPostAssertionsNotClosed: 6109,
+  ErrDestinationIsProtectedPda: 6110,
+  ErrIntentDigestMismatch: 6111,
+  ErrPendingConstraintsDigestMismatch: 6112,
+  ErrPendingAgentGrantDigestMismatch: 6113,
+  // NH-1 close (Bucket 2 re-audit 2026-05-21): reactivate FULL_CAPABILITY cosign gate
+  ErrReactivateCosignRequiredForFullCapability: 6114,
 } as const;
 
 export type SigilErrorName = keyof typeof SIGIL_ERRORS;

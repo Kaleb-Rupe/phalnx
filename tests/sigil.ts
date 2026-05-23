@@ -1003,9 +1003,23 @@ describe("sigil", () => {
     it("reactivates a frozen vault", async () => {
       // Phase 8 C28: advance past 5-min reactivate cooldown
       advanceTime(svm, 301);
+      // NH-1 (Bucket 2 re-audit 2026-05-21): FULL_CAPABILITY reactivate
+      // requires a non-owner cosigner in remaining_accounts.
+      const reactCosignerR1 = Keypair.generate();
+      expect(reactCosignerR1.publicKey.toBase58()).to.not.equal(
+        owner.publicKey.toBase58(),
+      );
       await program.methods
         .reactivateVault(agent.publicKey, FULL_CAPABILITY)
         .accounts({ owner: owner.publicKey, vault: reactVaultPda } as any)
+        .remainingAccounts([
+          {
+            pubkey: reactCosignerR1.publicKey,
+            isSigner: true,
+            isWritable: false,
+          },
+        ])
+        .signers([reactCosignerR1])
         .rpc();
 
       const vault = await program.account.agentVault.fetch(reactVaultPda);
@@ -1053,9 +1067,22 @@ describe("sigil", () => {
       }
 
       // Clean up: reactivate with new agent for subsequent tests
+      // NH-1: FULL_CAPABILITY reactivate requires a non-owner cosigner.
+      const reactCosignerR2 = Keypair.generate();
+      expect(reactCosignerR2.publicKey.toBase58()).to.not.equal(
+        owner.publicKey.toBase58(),
+      );
       await program.methods
         .reactivateVault(agent.publicKey, FULL_CAPABILITY)
         .accounts({ owner: owner.publicKey, vault: reactVaultPda } as any)
+        .remainingAccounts([
+          {
+            pubkey: reactCosignerR2.publicKey,
+            isSigner: true,
+            isWritable: false,
+          },
+        ])
+        .signers([reactCosignerR2])
         .rpc();
     });
 
@@ -1078,9 +1105,22 @@ describe("sigil", () => {
       advanceTime(svm, 301);
 
       const newAgent = Keypair.generate();
+      // NH-1: FULL_CAPABILITY reactivate requires a non-owner cosigner.
+      const reactCosignerR3 = Keypair.generate();
+      expect(reactCosignerR3.publicKey.toBase58()).to.not.equal(
+        owner.publicKey.toBase58(),
+      );
       await program.methods
         .reactivateVault(newAgent.publicKey, FULL_CAPABILITY)
         .accounts({ owner: owner.publicKey, vault: reactVaultPda } as any)
+        .remainingAccounts([
+          {
+            pubkey: reactCosignerR3.publicKey,
+            isSigner: true,
+            isWritable: false,
+          },
+        ])
+        .signers([reactCosignerR3])
         .rpc();
 
       const vault = await program.account.agentVault.fetch(reactVaultPda);
@@ -1088,6 +1128,62 @@ describe("sigil", () => {
         newAgent.publicKey.toString(),
       );
       expect(vault.status).to.have.property("active");
+    });
+
+    it("NH-1: rejects FULL_CAPABILITY reactivate without non-owner cosigner", async () => {
+      // Read the current (rotated) agent from chain — prior test rotated
+      // the agent to a fresh keypair whose handle is block-scoped, so we
+      // re-derive from chain state.
+      const activeVault =
+        await program.account.agentVault.fetch(reactVaultPda);
+      const currentAgentPk = new PublicKey(activeVault.agents[0].pubkey);
+      // Freeze the vault first so the reactivate path is reachable.
+      await program.methods
+        .revokeAgent(currentAgentPk)
+        .accounts({
+          owner: owner.publicKey,
+          vault: reactVaultPda,
+          policy: PublicKey.findProgramAddressSync(
+            [Buffer.from("policy"), reactVaultPda.toBuffer()],
+            program.programId,
+          )[0],
+          agentSpendOverlay: reactOverlay,
+        } as any)
+        .rpc();
+      // Advance past 5-min reactivate cooldown (Phase 8 C28).
+      advanceTime(svm, 301);
+      // Attempt FULL_CAPABILITY reactivate WITHOUT cosigner — must fail
+      // with 6114 (NH-1 Bucket 2 re-audit 2026-05-21).
+      const newAgentPk = Keypair.generate().publicKey;
+      try {
+        await program.methods
+          .reactivateVault(newAgentPk, FULL_CAPABILITY)
+          .accounts({ owner: owner.publicKey, vault: reactVaultPda } as any)
+          .rpc();
+        expect.fail("Should have thrown NH-1");
+      } catch (err: any) {
+        expectSigilError(err, {
+          name: "ErrReactivateCosignRequiredForFullCapability",
+        });
+      }
+      // Clean up: reactivate with cosigner so subsequent tests have a
+      // viable vault. ISC-A-7: cosigner is NEVER the owner.
+      const cleanupCosigner = Keypair.generate();
+      expect(cleanupCosigner.publicKey.toBase58()).to.not.equal(
+        owner.publicKey.toBase58(),
+      );
+      await program.methods
+        .reactivateVault(newAgentPk, FULL_CAPABILITY)
+        .accounts({ owner: owner.publicKey, vault: reactVaultPda } as any)
+        .remainingAccounts([
+          {
+            pubkey: cleanupCosigner.publicKey,
+            isSigner: true,
+            isWritable: false,
+          },
+        ])
+        .signers([cleanupCosigner])
+        .rpc();
     });
   });
 
@@ -3184,9 +3280,22 @@ describe("sigil", () => {
       // Phase 8 Batch 5: advance past 5-min reactivate cooldown (ErrReactivateCooldownActive 6106)
       advanceTime(svm, 301);
 
+      // NH-1: FULL_CAPABILITY reactivate requires a non-owner cosigner.
+      const reactCosignerR4 = Keypair.generate();
+      expect(reactCosignerR4.publicKey.toBase58()).to.not.equal(
+        owner.publicKey.toBase58(),
+      );
       await program.methods
         .reactivateVault(newAgent.publicKey, FULL_CAPABILITY)
         .accounts({ owner: owner.publicKey, vault: rv } as any)
+        .remainingAccounts([
+          {
+            pubkey: reactCosignerR4.publicKey,
+            isSigner: true,
+            isWritable: false,
+          },
+        ])
+        .signers([reactCosignerR4])
         .rpc();
 
       // Now try to use the ORIGINAL agent (who was revoked)
@@ -5832,9 +5941,22 @@ describe("sigil", () => {
       advanceTime(svm, 301);
 
       // Reactivate first
+      // NH-1: FULL_CAPABILITY reactivate requires a non-owner cosigner.
+      const reactCosignerR5 = Keypair.generate();
+      expect(reactCosignerR5.publicKey.toBase58()).to.not.equal(
+        owner.publicKey.toBase58(),
+      );
       await program.methods
         .reactivateVault(agent.publicKey, FULL_CAPABILITY)
         .accounts({ owner: owner.publicKey, vault: maVault } as any)
+        .remainingAccounts([
+          {
+            pubkey: reactCosignerR5.publicKey,
+            isSigner: true,
+            isWritable: false,
+          },
+        ])
+        .signers([reactCosignerR5])
         .rpc();
 
       // Register 9 more (total 10 with the agent from reactivate)
