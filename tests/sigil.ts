@@ -608,6 +608,7 @@ describe("sigil", () => {
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+          null, // cosign_session_pubkey (D-5: pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           await fetchAndComputeQueueDigest(program, policyPda, vaultPda, {
             dailySpendingCapUsd: new BN(200_000_000),
@@ -665,6 +666,7 @@ describe("sigil", () => {
             null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
             null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
             null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+            null, // cosign_session_pubkey (D-5: pass-through)
             PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
             await fetchAndComputeQueueDigest(program, policyPda, vaultPda, {
               dailySpendingCapUsd: new BN(999),
@@ -712,6 +714,7 @@ describe("sigil", () => {
             null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
             null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
             null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+            null, // cosign_session_pubkey (D-5: pass-through)
             PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
             await fetchAndComputeQueueDigest(program, policyPda, vaultPda, {
               protocols: tooManyProtocols,
@@ -2061,6 +2064,7 @@ describe("sigil", () => {
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+          null, // cosign_session_pubkey (D-5: pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, {
             developerFeeRate: 0,
@@ -2110,6 +2114,7 @@ describe("sigil", () => {
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+          null, // cosign_session_pubkey (D-5: pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, {
             developerFeeRate: 30,
@@ -2165,6 +2170,7 @@ describe("sigil", () => {
             null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
             null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
             null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+            null, // cosign_session_pubkey (D-5: pass-through)
             PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
             await fetchAndComputeQueueDigest(
               program,
@@ -2211,6 +2217,7 @@ describe("sigil", () => {
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+          null, // cosign_session_pubkey (D-5: pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, {
             developerFeeRate: 0,
@@ -2366,6 +2373,7 @@ describe("sigil", () => {
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+          null, // cosign_session_pubkey (D-5: pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           await fetchAndComputeQueueDigest(program, feePolicyPda, feeVaultPda, {
             developerFeeRate: 500,
@@ -4068,6 +4076,7 @@ describe("sigil", () => {
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+          null, // cosign_session_pubkey (D-5: pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, {
             dailySpendingCapUsd: new BN(200_000_000),
@@ -4157,6 +4166,7 @@ describe("sigil", () => {
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+          null, // cosign_session_pubkey (D-5: pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, {
             dailySpendingCapUsd: new BN(100_000_000),
@@ -4214,6 +4224,7 @@ describe("sigil", () => {
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+          null, // cosign_session_pubkey (D-5: pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, {
             dailySpendingCapUsd: new BN(150_000_000),
@@ -4248,6 +4259,7 @@ describe("sigil", () => {
             null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
             null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
             null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+            null, // cosign_session_pubkey (D-5: pass-through)
             PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
             await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, {
               dailySpendingCapUsd: new BN(500_000_000),
@@ -4371,6 +4383,7 @@ describe("sigil", () => {
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+          null, // cosign_session_pubkey (D-5: pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, {
             timelockDuration: new BN(3600),
@@ -4422,6 +4435,7 @@ describe("sigil", () => {
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+          null, // cosign_session_pubkey (D-5: pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, {
             timelockDuration: new BN(1800),
@@ -4474,6 +4488,7 @@ describe("sigil", () => {
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+          null, // cosign_session_pubkey (D-5: pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
           await fetchAndComputeQueueDigest(program, tlPolicyPda, tlVaultPda, {
             dailySpendingCapUsd: new BN(50_000_000),
@@ -4906,6 +4921,7 @@ describe("sigil", () => {
             null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
             null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
             null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+            null, // cosign_session_pubkey (D-5: pass-through)
             PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
             await fetchAndComputeQueueDigest(program, anyPolicy, anyVault, {
               destinationMode: 1,
@@ -4952,6 +4968,7 @@ describe("sigil", () => {
             null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
             null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
             null, // cosign_required (G6 audit 2026-05-18 — pass-through, default off)
+            null, // cosign_session_pubkey (D-5: pass-through)
             PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated)
             await fetchAndComputeQueueDigest(program, anyPolicy, anyVault, {
               destinationMode: 2,
@@ -6396,6 +6413,7 @@ describe("sigil", () => {
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 — pass-through; live=true after §RP-2 P2 flip at vault init)
+          null, // cosign_session_pubkey (D-5: pass-through)
           protoCapCosigner.publicKey, // cosign_session (TA-09 — ELEVATED, weakens_protocol_caps on cosign-opted-in vault)
           await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {}), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -6459,6 +6477,7 @@ describe("sigil", () => {
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 — pass-through; live=true but no elevation trigger fires)
+          null, // cosign_session_pubkey (D-5: pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated, tightening)
           await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {}), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -6525,6 +6544,7 @@ describe("sigil", () => {
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 — pass-through; live=true after §RP-2 P2 flip at vault init)
+          null, // cosign_session_pubkey (D-5: pass-through)
           protoCapCosigner.publicKey, // cosign_session (TA-09 — ELEVATED, weakens_protocol_caps via has_protocol_caps=false on cosign-opted-in vault)
           await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {}), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -6587,6 +6607,7 @@ describe("sigil", () => {
           null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
           null, // cosign_required (G6 — pass-through; live=true but no elevation trigger fires)
+          null, // cosign_session_pubkey (D-5: pass-through)
           PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated, tightening)
           await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {}), // newPolicyPreviewDigest (Phase 2 TA-19)
         )
@@ -6644,6 +6665,7 @@ describe("sigil", () => {
             null, // stable_balance_floor (TA-12 Phase 5 — pass-through)
             null, // per_recipient_daily_cap_usd (TA-14 Phase 5 — pass-through)
             null, // cosign_required (G6 — pass-through; mismatch fires before elevation check)
+            null, // cosign_session_pubkey (D-5: pass-through)
             PublicKey.default, // cosign_session (TA-09 Phase 3 — non-elevated; never reached)
             await fetchAndComputeQueueDigest(program, pcPolicy, pcVault, {}), // newPolicyPreviewDigest (Phase 2 TA-19)
           )
@@ -7012,6 +7034,7 @@ describe("sigil", () => {
           null, // stable_balance_floor (TA-12 — pass-through)
           null, // per_recipient_daily_cap_usd (TA-14 — pass-through)
           null, // cosign_required (G6 audit 2026-05-18 — pass-through)
+          null, // cosign_session_pubkey (D-5: pass-through)
           PublicKey.default, // cosign_session (B4 F-3: non-elevated → must be default)
           await fetchAndComputeQueueDigest(program, ta13Policy, ta13Vault, {}),
         )
@@ -7068,6 +7091,7 @@ describe("sigil", () => {
           null,
           null,
           null, // cosign_required (G6 audit 2026-05-18 — pass-through)
+          null, // cosign_session_pubkey (D-5: pass-through)
           PublicKey.default,
           await fetchAndComputeQueueDigest(program, ta13Policy, ta13Vault, {}),
         )
@@ -7135,6 +7159,7 @@ describe("sigil", () => {
           null,
           null,
           null, // cosign_required (G6 audit 2026-05-18 — pass-through)
+          null, // cosign_session_pubkey (D-5: pass-through)
           PublicKey.default, // cosign_session (B4 F-3: non-elevated → must be default)
           await fetchAndComputeQueueDigest(program, ta13Policy, ta13Vault, {}),
         )
