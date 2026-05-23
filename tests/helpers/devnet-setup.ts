@@ -30,6 +30,10 @@ import {
 import { expect } from "chai";
 import BN from "bn.js";
 import { initVaultPreviewDigest } from "./policy-digest";
+import {
+  buildExpectedIntentDigest,
+  digestAsArgs,
+} from "./intent-digest-fixture";
 
 // ─── Test-controlled stablecoin mint keypairs ────────────────────────────────
 // These pubkeys MUST match the Rust USDC_MINT and USDT_MINT devnet constants
@@ -485,7 +489,22 @@ export async function buildAuthorizeIx(opts: AuthorizeOpts) {
     program.programId,
   );
   return program.methods
-    .validateAndAuthorize(mint, amount, protocol, policyVersion, new BN(0))
+    .validateAndAuthorize(
+      mint,
+      amount,
+      protocol,
+      policyVersion,
+      new BN(0),
+      digestAsArgs(
+        buildExpectedIntentDigest({
+          vault: vaultPda,
+          agent: agent.publicKey,
+          tokenMint: mint,
+          amount,
+          targetProtocol: protocol,
+        }),
+      ),
+    )
     .accounts({
       agent: agent.publicKey,
       vault: vaultPda,
