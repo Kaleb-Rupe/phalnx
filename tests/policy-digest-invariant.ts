@@ -42,6 +42,10 @@ import {
   siblingHandlerDigest,
 } from "./helpers/policy-digest";
 import {
+  buildExpectedIntentDigest,
+  digestAsArgs,
+} from "./helpers/intent-digest-fixture";
+import {
   createTestEnv,
   airdropSol,
   createMintAtAddress,
@@ -875,6 +879,15 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
         dummyProtocol,
         currentVersion,
         new BN(0),
+        digestAsArgs(
+          buildExpectedIntentDigest({
+            vault: vault.vaultPda,
+            agent: agent.publicKey,
+            tokenMint: usdcMint,
+            amount: new BN(0),
+            targetProtocol: dummyProtocol,
+          }),
+        ),
       )
       .accounts({
         agent: agent.publicKey,
