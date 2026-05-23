@@ -61,6 +61,22 @@ export const AUDIT_DISC_CONSTRAINTS_APPLY = 15;
  *  §RP-1 HIGH-1 (2026-05-19): replaces the prior reuse of disc=1
  *  `AUDIT_DISC_VALIDATE` which was forensically ambiguous. */
 export const AUDIT_DISC_FINALIZE_REJECT = 16;
+// Phase 8 PEN-CROSS-1 (audit 2026-05-19) Batch 6 — queue/apply OPERATOR-class
+// agent grant. See state/audit_log_success.rs lines 72-77.
+export const AUDIT_DISC_AGENT_GRANT_QUEUE = 17;
+export const AUDIT_DISC_AGENT_GRANT_APPLY = 18;
+// Phase 8 §RP Fix-Up B (PEN-02b CRITICAL, audit 2026-05-19) — cancel of a
+// queued OPERATOR-class agent grant.
+export const AUDIT_DISC_AGENT_GRANT_CANCEL = 19;
+// M-6 close (audit 2026-05-21) — apply_agent_permissions_update lands a
+// per-agent permissions update.
+export const AUDIT_DISC_AGENT_PERMS_APPLY = 20;
+// M-7 close (audit 2026-05-21) — apply_close_constraints flips
+// has_constraints=false and clears the constraints PDA.
+export const AUDIT_DISC_CONSTRAINTS_CLOSE_APPLY = 21;
+// M-8 close (audit 2026-05-21) — record_agent_violation tripped the
+// auto-revoke threshold.
+export const AUDIT_DISC_AGENT_AUTO_REVOKED = 22;
 
 /** Capacity of the SUCCESS audit-log buffer (entries before wrap). */
 export const AUDIT_LOG_SUCCESS_CAPACITY = 128;

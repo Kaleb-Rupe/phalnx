@@ -184,9 +184,9 @@ describe("previewCreateVault — on-chain account sizes", () => {
     expect(r.pdaList[0]!.sizeBytes).to.equal(634);
   });
 
-  it("PolicyConfig sizeBytes equals 1,290 (Phase 2-5 + G6 additions)", async () => {
+  it("PolicyConfig sizeBytes equals 1,322 (Phase 2-5 + G6 + D-5 cosign_session_pubkey)", async () => {
     const r = await previewCreateVault(baseConfig());
-    expect(r.pdaList[1]!.sizeBytes).to.equal(1_290);
+    expect(r.pdaList[1]!.sizeBytes).to.equal(1_322);
   });
 
   it("SpendTracker sizeBytes equals 3,328 (TA-14 per_recipient added)", async () => {

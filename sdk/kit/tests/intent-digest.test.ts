@@ -291,11 +291,13 @@ describe("AL3 computeSealInputDigest — discipline invariants", () => {
       network: "devnet",
       instructions: [],
     });
-    // Pinned 2026-05-20. Any drift in the canonical encoder or the
+    // Pinned 2026-05-23 (LM-4 fix). Updated from the pre-D-6 v1 value
+    // (`f78e2d6e...`) to the post-D-6 v2 value with `SIG1` magic prefix
+    // and `intent_version=2`. Any drift in the canonical encoder or the
     // SHA-256 backend (currently @noble/hashes/sha2) WILL break this
     // and require a CHANGELOG entry.
     expect(toHex(digest)).to.equal(
-      "f78e2d6e8fbd39cf379ac5c0619e33e9bf0fe02af81ad4f6ac7ceca707e540bb",
+      "43bccf7066cc32899902e9d308445aa487f967e8e2ee8469ce56440f8bdab0f2",
     );
   });
 

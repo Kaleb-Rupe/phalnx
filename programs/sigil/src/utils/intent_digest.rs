@@ -50,7 +50,9 @@
 //! The TypeScript counterpart at `sdk/kit/src/seal/intent-digest.ts`
 //! (`computeScalarIntentDigest`) MUST emit the same bytes in the same
 //! order. The byte-equal contract is enforced by the cross-impl property
-//! test at `tests/intent-digest-cross-impl.ts`.
+//! test at `tests/intent-digest-parity.ts` (created Phase 10a-B7.1 —
+//! 13 parity assertions against 4 pinned hex vectors in
+//! `tests/fixtures/intent-digest.json`, byte-equal Rust↔TS).
 //!
 //! ## Network discriminant
 //!
@@ -173,7 +175,7 @@ mod tests {
         // Cargo.toml default-features), so network_id=0 in this fixture.
         // Mainnet build will compute a different digest — the test
         // intentionally pins ONE network for byte stability and the
-        // mainnet variant lives in tests/intent-digest-cross-impl.ts.
+        // mainnet variant lives in tests/intent-digest-parity.ts.
         assert_eq!(digest.len(), 32);
         // The all-zero input under devnet network MUST be non-zero
         // (SHA-256 of "SIG1" + 0u8 + 0u8 + 142 zero bytes is non-zero).

@@ -25,7 +25,7 @@ import { describe, it } from "mocha";
 import { expect } from "chai";
 import { PENDING_CONSTRAINTS_SIZE } from "../src/dashboard/constraint-builders.js";
 
-const EXPECTED_PENDING_CONSTRAINTS_SIZE = 35_912;
+const EXPECTED_PENDING_CONSTRAINTS_SIZE = 35_944;
 
 describe("Sized account invariants — drift gate for on-chain schema changes", () => {
   it("PENDING_CONSTRAINTS_SIZE matches the on-chain handler assertion", () => {

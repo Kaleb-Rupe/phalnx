@@ -356,10 +356,10 @@ describe("buildQueueConstraintsUpdateIxs", () => {
       ixs[3]! as Parameters<typeof parseExtendPdaInstruction>[0],
     );
     expect(lastExtend.data.targetSize).to.equal(PENDING_CONSTRAINTS_SIZE);
-    expect(lastExtend.data.targetSize).to.equal(35_912);
+    expect(lastExtend.data.targetSize).to.equal(35_944);
   });
 
-  it("differentiates final extend size between create (35_888) and queue (35_912)", async () => {
+  it("differentiates final extend size between create (35_888) and queue (35_944)", async () => {
     const createIxs = await buildCreateConstraintsIxs({
       owner,
       vault: VAULT,
@@ -379,8 +379,8 @@ describe("buildQueueConstraintsUpdateIxs", () => {
     const queueFinal = parseExtendPdaInstruction(
       queueIxs[3]! as Parameters<typeof parseExtendPdaInstruction>[0],
     ).data.targetSize;
-    // queue adds queued_at_slot (8 bytes) + extends to created_at + effective_at;
-    // queue PDA = constraints PDA + 24 bytes overhead (8+8+8 ≅ TOCTOU fields).
-    expect(queueFinal - createFinal).to.equal(24);
+    // queue PDA = constraints PDA + 56 bytes overhead (24 timestamp/bump
+    // fields + 32-byte M-5 pending_content_digest added Bucket 2 PEN-CROSS-3).
+    expect(queueFinal - createFinal).to.equal(56);
   });
 });
