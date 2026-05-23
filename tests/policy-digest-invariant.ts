@@ -444,7 +444,7 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
             operator: 3, // ConstraintOperator::Lte (PostAssertionEntry.operator is u8)
             expectedValue: Buffer.from(new BN(1_000_000).toArray("le", 8)),
             assertionMode: 0,
-            auxValue: new Uint8Array(8), // Phase 6: modes 0..3 must zero aux fields
+            auxValue: Array.from(new Uint8Array(8)), // Phase 6: modes 0..3 must zero aux fields
             auxByte: 0,
           },
         ],
@@ -502,7 +502,7 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
             operator: 3, // ConstraintOperator::Lte (PostAssertionEntry.operator is u8)
             expectedValue: Buffer.from(new BN(1_000_000).toArray("le", 8)),
             assertionMode: 0,
-            auxValue: new Uint8Array(8), // Phase 6: modes 0..3 must zero aux fields
+            auxValue: Array.from(new Uint8Array(8)), // Phase 6: modes 0..3 must zero aux fields
             auxByte: 0,
           },
         ],
@@ -1052,7 +1052,7 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
             operator: 3, // ConstraintOperator::Lte (PostAssertionEntry.operator is u8)
             expectedValue: Buffer.from(new BN(1).toArray("le", 8)),
             assertionMode: 0,
-            auxValue: new Uint8Array(8), // Phase 6: modes 0..3 must zero aux fields
+            auxValue: Array.from(new Uint8Array(8)), // Phase 6: modes 0..3 must zero aux fields
             auxByte: 0,
           },
         ],

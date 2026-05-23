@@ -16,7 +16,8 @@
       ],
       "@usesigil/kit/post-assertions": [
         "./sdk/kit/dist/post-assertions/index.d.ts"
-      ]
+      ],
+      "@usesigil/kit/dashboard": ["./sdk/kit/dist/dashboard/index.d.ts"]
     }
   }
 }
