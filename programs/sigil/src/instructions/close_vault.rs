@@ -230,6 +230,37 @@ pub fn handler(ctx: Context<CloseVault>) -> Result<()> {
         }
     }
 
+    // CH-2 close (Bucket-3 audit 2026-05-23): drain pending_constraints
+    // PDA if present. Without this, an in-flight constraints UPDATE
+    // (queued via queue_constraints_update) at close time would leave a
+    // stale 35,944-byte PDA whose rent is unreclaimable by the original
+    // owner. Mirrors the SFH-01 pattern that closes pending_owner +
+    // pending_agent_grant.
+    //
+    // Per Security council Jordan (2026-05-23): `lamports() > 0` is the
+    // silent-skip guard. If the SDK doesn't pass this remaining_account,
+    // the loop just falls through without error. The SDK close_vault
+    // builder MUST be updated to send the pending_constraints PDA as a
+    // positional account when present — see sdk/kit/src/dashboard/
+    // close-vault.ts companion change.
+    let (expected_pending_constraints_pda, _) = Pubkey::find_program_address(
+        &[b"pending_constraints", vault.key().as_ref()],
+        ctx.program_id,
+    );
+    for pending_info in ctx.remaining_accounts.iter().skip(start_idx) {
+        if pending_info.key() == expected_pending_constraints_pda && pending_info.lamports() > 0 {
+            let owner_info = ctx.accounts.owner.to_account_info();
+            let dest_lamports = owner_info.lamports();
+            **owner_info.try_borrow_mut_lamports()? = dest_lamports
+                .checked_add(pending_info.lamports())
+                .ok_or(error!(SigilError::Overflow))?;
+            **pending_info.try_borrow_mut_lamports()? = 0;
+            pending_info.assign(&anchor_lang::system_program::ID);
+            pending_info.resize(0)?;
+            break;
+        }
+    }
+
     let clock = Clock::get()?;
     emit!(VaultClosed {
         vault: vault.key(),
