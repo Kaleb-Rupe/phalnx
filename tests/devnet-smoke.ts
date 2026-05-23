@@ -32,6 +32,10 @@ import { expect } from "chai";
 import BN from "bn.js";
 import { initVaultPreviewDigest } from "./helpers/policy-digest";
 import {
+  buildExpectedIntentDigest,
+  digestAsArgs,
+} from "./helpers/intent-digest-fixture";
+import {
   PROTOCOL_TREASURY,
   getDevnetProvider,
   derivePDAs,
@@ -284,6 +288,16 @@ describe("devnet-smoke-test", () => {
         new BN(50_000_000), // 50 tokens
         jupiterProgramId,
         new BN(0),
+        new BN(0),
+        digestAsArgs(
+          buildExpectedIntentDigest({
+            vault: vaultPda,
+            agent: agent.publicKey,
+            tokenMint: usdcMint,
+            amount: new BN(50_000_000),
+            targetProtocol: jupiterProgramId,
+          }),
+        ),
       )
       .accounts({
         agent: agent.publicKey,
