@@ -61,6 +61,10 @@ import * as path from "path";
 import { FailedTransactionMetadata } from "litesvm";
 import { initVaultPreviewDigest } from "./helpers/policy-digest";
 import {
+  buildExpectedIntentDigest,
+  digestAsArgs,
+} from "./helpers/intent-digest-fixture";
+import {
   createTestEnv,
   airdropSol,
   createMintAtAddress,
@@ -477,6 +481,15 @@ describe("cu-budget", () => {
         ((await program.account.policyConfig.fetch(ctx.policy))
           .policyVersion as BN) ?? new BN(0),
         new BN(0),
+        digestAsArgs(
+          buildExpectedIntentDigest({
+            vault: ctx.vault,
+            agent: agent.publicKey,
+            tokenMint: usdcMint,
+            amount,
+            targetProtocol,
+          }),
+        ),
       )
       .accountsPartial({
         agent: agent.publicKey,
