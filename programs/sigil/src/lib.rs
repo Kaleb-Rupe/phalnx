@@ -532,11 +532,7 @@ pub mod sigil {
         new_owner: Pubkey,
         is_multisig_target: bool,
     ) -> Result<()> {
-        instructions::initiate_ownership_transfer::handler(
-            ctx,
-            new_owner,
-            is_multisig_target,
-        )
+        instructions::initiate_ownership_transfer::handler(ctx, new_owner, is_multisig_target)
     }
 
     /// Phase 8 C26 — accept a queued ownership transfer (standard EOA path).
@@ -544,9 +540,7 @@ pub mod sigil {
     /// when `pending.is_multisig_target == true` (use the Batch 4 multisig
     /// variant instead). Pending PDA closes; rent returns to `new_owner`.
     /// Vault.owner is overwritten; policy.policy_version bumps.
-    pub fn accept_ownership_transfer(
-        ctx: Context<AcceptOwnershipTransfer>,
-    ) -> Result<()> {
+    pub fn accept_ownership_transfer(ctx: Context<AcceptOwnershipTransfer>) -> Result<()> {
         instructions::accept_ownership_transfer::handler(ctx)
     }
 
@@ -568,9 +562,7 @@ pub mod sigil {
     /// owner signs. Symmetric with `initiate_ownership_transfer` on cosign
     /// (D4 decision — closes the phished-key cancel-and-re-initiate bypass).
     /// Pending PDA closes; rent returns to `current_owner`.
-    pub fn cancel_ownership_transfer(
-        ctx: Context<CancelOwnershipTransfer>,
-    ) -> Result<()> {
+    pub fn cancel_ownership_transfer(ctx: Context<CancelOwnershipTransfer>) -> Result<()> {
         instructions::cancel_ownership_transfer::handler(ctx)
     }
 }

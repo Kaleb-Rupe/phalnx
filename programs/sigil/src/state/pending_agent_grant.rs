@@ -92,7 +92,7 @@ pub struct PendingAgentGrant {
     /// by the 48h timelock countdown — that semantic is unchanged. This
     /// slot field is additive and load-bearing only for the F-10 fresh-
     /// ness check.
-    pub queued_at_slot: u64,           // 8
+    pub queued_at_slot: u64, // 8
 }
 
 impl PendingAgentGrant {

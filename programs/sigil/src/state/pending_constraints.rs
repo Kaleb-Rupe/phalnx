@@ -155,9 +155,7 @@ pub fn canonical_bytes_of_pending_constraints(
 /// Used by BOTH `queue_constraints_update` (record) and
 /// `apply_constraints_update` (verify) to guarantee a deterministic
 /// queue↔apply digest comparison.
-pub fn compute_pending_constraints_digest(
-    pending: &PendingConstraintsUpdate,
-) -> Result<[u8; 32]> {
+pub fn compute_pending_constraints_digest(pending: &PendingConstraintsUpdate) -> Result<[u8; 32]> {
     let bytes = canonical_bytes_of_pending_constraints(pending)?;
     Ok(sha256_hash(&bytes).to_bytes())
 }

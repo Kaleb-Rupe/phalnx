@@ -178,7 +178,7 @@ pub struct InstructionConstraints {
     pub vault: [u8; 32],                                      // 32
     pub entries: [ConstraintEntryZC; MAX_CONSTRAINT_ENTRIES], // 64 * 560 = 35,840
     pub entry_count: u8,                                      // 1 (active entries, 0..=64)
-    pub bump: u8, // 1
+    pub bump: u8,                                             // 1
     /// Constraint schema version. Always 1 for new deployments.
     pub constraint_version: u8, // 1
     /// Alignment padding (5 bytes — keeps total fields = 35,880, an even

@@ -106,7 +106,6 @@ pub enum SigilError {
     //
     // InvalidJupiterInstruction (was 6031) DELETED in Phase 1 Option A demolition —
     // Jupiter swap instruction parser removed entirely.
-
     #[msg("Top-level SPL Token transfer not allowed between validate and finalize")]
     UnauthorizedTokenTransfer,
 
@@ -303,7 +302,6 @@ pub enum SigilError {
 
     // --- Phase 2 additions (TA-04 + TA-19) ---
     // Appended at the END of the enum to preserve existing error codes 6000-6078.
-
     /// 6079 — TA-04: Reserved AgentEntry.capability values 3..=255 explicitly
     /// rejected at register/queue/apply. Replaces the prior silent zero-coerce
     /// behaviour (values >2 were treated as 0 by `has_capability`).
@@ -332,7 +330,6 @@ pub enum SigilError {
 
     // --- Phase 3 (Option A pre-execution guards TA-03/05/06/07/08/09/17) ---
     // Appended at END to preserve existing error codes 6000-6082.
-
     /// 6083 — TA-03: deposit mint must be a build-time-pinned stablecoin
     /// (USDC or USDT). With `devnet-testing` feature, any mint accepted.
     /// Rejects exotic / hostile / typosquatted mints at the entry point so
@@ -396,7 +393,6 @@ pub enum SigilError {
 
     // --- Phase 4 (bundle integrity TA-10 + TA-11 + AC-10) ---
     // Appended at END to preserve existing error codes 6000-6090.
-
     /// 6091 — TA-10: sandwich-integrity uniqueness. At most ONE
     /// `validate_and_authorize` instruction may exist per (vault, agent,
     /// mint) tuple per transaction. Multiple validates against the same
@@ -427,7 +423,6 @@ pub enum SigilError {
 
     // --- Phase 5 (post-execution invariants TA-12 + TA-13 + TA-14) ---
     // Appended at END to preserve existing error codes 6000-6093.
-
     /// 6094 — TA-12: combined USDC+USDT vault balance dropped below the
     /// owner-configured `policy.stable_balance_floor` after a finalize.
     /// This is the HARD reserve — no combination of attacks (CPI drain,
@@ -486,7 +481,6 @@ pub enum SigilError {
 
     // --- Phase 6 (Maestro borrows R-1/R-2/R-3/R-4) ---
     // Appended at END to preserve existing error codes 6000-6096.
-
     /// 6097 — R-1 MintDeltaCap: combined balance of vault-owned ATAs for the
     /// configured mint dropped by more than `max_net_decrease` between
     /// `validate_and_authorize` (pre-snap sum) and `finalize_session` (post sum).
@@ -573,7 +567,6 @@ pub enum SigilError {
 
     // --- Audit 2026-05-19 (P1 HIGH fixes) ---
     // Appended at END to preserve existing error codes 6000-6101.
-
     /// 6102 — H-1 hard-reject (audit 2026-05-19): the foreign DeFi
     /// instruction passed more account metas than
     /// `MAX_DESTINATION_CHECK_METAS_PER_IX` (16). Previously the

@@ -303,9 +303,8 @@ describe("close-vault helpers (CH-2 Bucket-3 audit 2026-05-23)", () => {
   const VALID_VAULT = "11111111111111111111111111111112" as Address;
 
   it("CLOSE_VAULT_PENDING_PDA_ORDER pins the 6-step drain layout", async () => {
-    const { CLOSE_VAULT_PENDING_PDA_ORDER } = await import(
-      "../../src/dashboard/close-vault.js"
-    );
+    const { CLOSE_VAULT_PENDING_PDA_ORDER } =
+      await import("../../src/dashboard/close-vault.js");
 
     // Lock the array shape so reviewers catch drift between the SDK
     // helper and the Rust drain blocks in close_vault.rs.
@@ -320,12 +319,10 @@ describe("close-vault helpers (CH-2 Bucket-3 audit 2026-05-23)", () => {
   });
 
   it("findPendingConstraintsPdaForClose is deterministic + uses the close_vault seed", async () => {
-    const { findPendingConstraintsPdaForClose } = await import(
-      "../../src/dashboard/close-vault.js"
-    );
-    const { findPendingConstraintsPda } = await import(
-      "../../src/dashboard/constraint-reads.js"
-    );
+    const { findPendingConstraintsPdaForClose } =
+      await import("../../src/dashboard/close-vault.js");
+    const { findPendingConstraintsPda } =
+      await import("../../src/dashboard/constraint-reads.js");
 
     const a = await findPendingConstraintsPdaForClose(VALID_VAULT);
     const b = await findPendingConstraintsPdaForClose(VALID_VAULT);
@@ -362,9 +359,8 @@ describe("close-vault helpers (CH-2 Bucket-3 audit 2026-05-23)", () => {
   });
 
   it("enumerateExistingPendingPdasForClose returns only PDAs that exist on-chain", async () => {
-    const { enumerateExistingPendingPdasForClose } = await import(
-      "../../src/dashboard/close-vault.js"
-    );
+    const { enumerateExistingPendingPdasForClose } =
+      await import("../../src/dashboard/close-vault.js");
 
     // Mock RPC that says: pending_owner does NOT exist, pending_agent_grant
     // DOES exist, pending_constraints DOES exist. The helper should
@@ -372,7 +368,15 @@ describe("close-vault helpers (CH-2 Bucket-3 audit 2026-05-23)", () => {
     const fakeAccountInfo = (exists: boolean) => ({
       send: async () =>
         exists
-          ? { value: { data: ["", "base64"], lamports: 1n, owner: "x", executable: false, rentEpoch: 0n } }
+          ? {
+              value: {
+                data: ["", "base64"],
+                lamports: 1n,
+                owner: "x",
+                executable: false,
+                rentEpoch: 0n,
+              },
+            }
           : { value: null },
     });
 
@@ -411,19 +415,15 @@ describe("close-vault helpers (CH-2 Bucket-3 audit 2026-05-23)", () => {
 
     expect(result).to.have.length(2);
     const kinds = result.map((r) => r.kind).sort();
-    expect(kinds).to.deep.equal([
-      "pending_agent_grant",
-      "pending_constraints",
-    ]);
+    expect(kinds).to.deep.equal(["pending_agent_grant", "pending_constraints"]);
     for (const entry of result) {
       expect(entry.role).to.equal(AccountRole.WRITABLE);
     }
   });
 
   it("enumerateExistingPendingPdasForClose treats RPC errors as 'absent'", async () => {
-    const { enumerateExistingPendingPdasForClose } = await import(
-      "../../src/dashboard/close-vault.js"
-    );
+    const { enumerateExistingPendingPdasForClose } =
+      await import("../../src/dashboard/close-vault.js");
 
     const erroringRpc = {
       getAccountInfo: (_address: Address, _opts: unknown) => ({

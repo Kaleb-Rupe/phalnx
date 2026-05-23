@@ -187,7 +187,9 @@ pub fn handler(ctx: Context<AcceptOwnershipTransferMultisig>) -> Result<()> {
     //      diagnostic `QueuedUpdateExpired` rather than the misleading
     //      `ErrPendingOwnershipNotReady`.
     require!(
-        clock.slot.saturating_sub(ctx.accounts.pending.queued_at_slot)
+        clock
+            .slot
+            .saturating_sub(ctx.accounts.pending.queued_at_slot)
             < crate::state::MAX_APPLY_AGE_SLOTS_TIMELOCKED_ADMIN,
         SigilError::QueuedUpdateExpired,
     );
@@ -283,11 +285,7 @@ pub fn handler(ctx: Context<AcceptOwnershipTransferMultisig>) -> Result<()> {
         )?;
         let mut log = ctx.accounts.audit_log_success.load_mut()?;
         // §RP-1 I-2: defense-in-depth guard against future seeds drift.
-        require_keys_eq!(
-            log.vault,
-            vault_key,
-            SigilError::ZeroCopyVaultMismatch,
-        );
+        require_keys_eq!(log.vault, vault_key, SigilError::ZeroCopyVaultMismatch,);
         log.append(entry);
     }
 

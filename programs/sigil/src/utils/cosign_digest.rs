@@ -115,9 +115,7 @@ pub struct AgentPermsCosignDigestFields<'a> {
 ///   5. cooldown_seconds     (8 bytes u64 LE)
 ///
 /// = 81 bytes deterministic input.
-pub fn compute_agent_perms_cosign_digest(
-    fields: &AgentPermsCosignDigestFields<'_>,
-) -> [u8; 32] {
+pub fn compute_agent_perms_cosign_digest(fields: &AgentPermsCosignDigestFields<'_>) -> [u8; 32] {
     let mut buf: Vec<u8> = Vec::with_capacity(81);
     // 1. cosign_session (32 bytes raw)
     buf.extend_from_slice(fields.cosign_session.as_ref());

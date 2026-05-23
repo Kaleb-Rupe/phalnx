@@ -131,7 +131,11 @@ pub fn compute_scalar_intent_digest(input: &ScalarIntentInput<'_>) -> [u8; 32] {
     buf.extend_from_slice(input.token_mint.as_ref());
     buf.extend_from_slice(&input.amount.to_le_bytes());
     buf.extend_from_slice(input.target_protocol.as_ref());
-    debug_assert_eq!(buf.len(), 142, "canonical scalar intent encoding must be 142 bytes");
+    debug_assert_eq!(
+        buf.len(),
+        142,
+        "canonical scalar intent encoding must be 142 bytes"
+    );
     hashv(&[&buf]).to_bytes()
 }
 

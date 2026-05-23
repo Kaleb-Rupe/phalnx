@@ -46,8 +46,7 @@ use crate::utils::policy_digest::{
 #[allow(dead_code)]
 const EXPECTED_DIGEST_FIELD_COUNT: usize = 22;
 const _: () = assert!(
-    EXPECTED_DIGEST_FIELD_COUNT
-        == crate::utils::policy_digest::POLICY_PREVIEW_FIELD_COUNT,
+    EXPECTED_DIGEST_FIELD_COUNT == crate::utils::policy_digest::POLICY_PREVIEW_FIELD_COUNT,
     "P0.2 PEN-7: PolicyPreviewFields count diverged from TA-19 binding. \
      Either add the new field to the digest encoding in \
      utils/policy_digest.rs::compute_policy_preview_digest + bump \
@@ -129,8 +128,8 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
     // [0u8; 32] + Pubkey::default() == "no cosign required" (non-elevated
     // queue). For non-elevated pending, this check is a no-op.
     let zero_digest = [0u8; 32];
-    let no_cosign = pending.cosign_digest == zero_digest
-        && pending.cosign_session == Pubkey::default();
+    let no_cosign =
+        pending.cosign_digest == zero_digest && pending.cosign_session == Pubkey::default();
     if !no_cosign {
         // Round 2 B4 F-1 fix (audit 2026-05-19): re-bind digest now
         // includes 5 new elevation triggers. See compute_cosign_digest
@@ -307,8 +306,7 @@ pub fn handler(ctx: Context<ApplyPendingPolicy>) -> Result<()> {
     if let Some(new_cosign) = pending.cosign_required {
         policy.cosign_required = new_cosign;
     }
-    let disables_cosign =
-        pending.cosign_required == Some(false) && live_cosign_required;
+    let disables_cosign = pending.cosign_required == Some(false) && live_cosign_required;
     if disables_cosign {
         let cosign_session = pending.cosign_session;
         require_keys_neq!(

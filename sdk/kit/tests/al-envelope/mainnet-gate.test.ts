@@ -44,10 +44,7 @@ import { expect } from "chai";
 import type { Address, Instruction } from "@solana/kit";
 import { AccountRole } from "@solana/kit";
 
-import {
-  createSigilClient,
-  type SigilClientConfig,
-} from "../../src/seal.js";
+import { createSigilClient, type SigilClientConfig } from "../../src/seal.js";
 import {
   SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED,
   SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REJECTED,
@@ -451,9 +448,7 @@ describe("AL2 — executeAndConfirm gate matrix (12 cells)", () => {
         context?: Record<string, unknown>;
         message?: string;
       };
-      expect(e.code).to.equal(
-        SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED,
-      );
+      expect(e.code).to.equal(SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED);
       expect(e.context).to.exist;
       expect(e.context!.vault).to.equal(VAULT);
       expect(e.context!.network).to.equal("mainnet");

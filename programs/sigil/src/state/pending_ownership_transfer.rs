@@ -24,46 +24,46 @@ pub struct PendingOwnershipTransfer {
     /// PDA-bound vault. Defense-in-depth duplicate of the [b"pending_owner",
     /// vault.key()] seed — also lets handlers reject stale accounts that were
     /// re-created against a different vault during a close-then-reuse race.
-    pub vault: Pubkey,             // 32
+    pub vault: Pubkey, // 32
 
     /// Owner pubkey at queue time. `cancel_ownership_transfer` requires the
     /// signer match this field exactly (in addition to `has_one = owner` on
     /// the vault), and the PDA's rent reverts here on cancel.
-    pub current_owner: Pubkey,     // 32
+    pub current_owner: Pubkey, // 32
 
     /// Target owner. `accept_ownership_transfer` requires the signer match
     /// this field exactly (standard EOA path). Multisig variant in Batch 4
     /// will also bind here when `is_multisig_target == true`.
-    pub new_owner: Pubkey,         // 32
+    pub new_owner: Pubkey, // 32
 
     /// `Clock::unix_timestamp` at queue time. Timelock is enforced as
     /// `clock.unix_timestamp - queued_at >= min_delay_seconds`.
-    pub queued_at: i64,            // 8
+    pub queued_at: i64, // 8
 
     /// Owner-configurable timelock (seconds). Defaults to
     /// `Self::DEFAULT_MIN_DELAY` (172,800 / 48h). Owner can shorten in a
     /// future SDK call if `policy.timelock_duration` permits, but Batch 3
     /// pins the default — extension hook lives in Batch 4+.
-    pub min_delay_seconds: u64,    // 8
+    pub min_delay_seconds: u64, // 8
 
     /// `true` means the accept path will be `accept_ownership_transfer_multisig`
     /// (Batch 4 — Squads V4 vault-PDA-signs flow). `false` means the standard
     /// EOA accept path. Today's `accept_ownership_transfer` HARD-REJECTS when
     /// this is `true` so the multisig flow cannot be silently taken by the
     /// regular handler before Batch 4 ships.
-    pub is_multisig_target: bool,  // 1
+    pub is_multisig_target: bool, // 1
 
     /// PDA bump.
-    pub bump: u8,                  // 1
+    pub bump: u8, // 1
 
     /// 8-byte alignment cushion + additive headroom for Batch 4+ extensions
     /// (e.g. cooldown packing, multisig-attestation digest). Zero-init on
     /// `init` and unread today.
-    pub _padding: [u8; 6],         // 6
+    pub _padding: [u8; 6], // 6
 
     /// CH-1 close (Bucket-3 audit 2026-05-23): slot at queue time for
     /// F-10 freshness. See pending_agent_grant.rs for the threat model.
-    pub queued_at_slot: u64,           // 8
+    pub queued_at_slot: u64, // 8
 }
 
 impl PendingOwnershipTransfer {

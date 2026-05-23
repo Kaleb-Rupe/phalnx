@@ -275,11 +275,7 @@ pub fn handler(ctx: Context<ApplyAgentGrant>) -> Result<()> {
         )?;
         let mut log = ctx.accounts.audit_log_success.load_mut()?;
         // §RP-1 I-2: defense-in-depth guard against future seeds drift.
-        require_keys_eq!(
-            log.vault,
-            vault_key,
-            SigilError::ZeroCopyVaultMismatch
-        );
+        require_keys_eq!(log.vault, vault_key, SigilError::ZeroCopyVaultMismatch);
         log.append(entry);
     }
 

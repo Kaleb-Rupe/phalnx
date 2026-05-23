@@ -168,7 +168,9 @@ describe("AL3 — tampering detection at executeAndConfirm time", () => {
     // submits a bundle sending to RECIPIENT_B. The submitted SealResult
     // MUST carry a different intentDigest — that mismatch is the
     // signal a preview-verifying caller looks for.
-    const previewParams = baseParams({ instructions: [jupiterIx(RECIPIENT_A)] });
+    const previewParams = baseParams({
+      instructions: [jupiterIx(RECIPIENT_A)],
+    });
     const previewDigest = computeSealInputDigest({
       vault: previewParams.vault,
       agent: previewParams.agent.address,

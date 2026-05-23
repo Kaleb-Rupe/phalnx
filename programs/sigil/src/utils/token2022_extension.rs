@@ -165,10 +165,7 @@ pub fn enforce_token2022_extension_allowlist(mint_info: &AccountInfo<'_>) -> Res
             .checked_add(ext_len)
             .ok_or(error!(SigilError::ErrToken2022ExtensionForbidden))?;
         // Reject TLV that claims to extend past the buffer.
-        require!(
-            next <= data_len,
-            SigilError::ErrToken2022ExtensionForbidden
-        );
+        require!(next <= data_len, SigilError::ErrToken2022ExtensionForbidden);
 
         cursor = next;
     }

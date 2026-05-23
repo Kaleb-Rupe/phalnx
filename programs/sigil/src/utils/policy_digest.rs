@@ -195,10 +195,7 @@ pub const POLICY_PREVIEW_FIELD_COUNT: usize = 22;
 /// LE-encoded zero length prefix (an empty Borsh `Vec`). Tests pin this
 /// value cross-impl (Rust ↔ TypeScript byte equality).
 pub fn compute_agent_set_hash(agents: &[AgentEntry]) -> [u8; 32] {
-    let mut sorted: Vec<(Pubkey, u8)> = agents
-        .iter()
-        .map(|a| (a.pubkey, a.capability))
-        .collect();
+    let mut sorted: Vec<(Pubkey, u8)> = agents.iter().map(|a| (a.pubkey, a.capability)).collect();
     sorted.sort_by_key(|(pk, _)| *pk);
     // Borsh encode: u32 LE length prefix + each (Pubkey, u8). `try_to_vec`
     // produces the same byte layout as the canonical Borsh schema.
@@ -566,10 +563,7 @@ mod tests {
         };
         let d_base = compute_policy_preview_digest(&base);
         let d_narrow = compute_policy_preview_digest(&narrow);
-        assert_ne!(
-            d_base, d_narrow,
-            "operating_hours flip MUST change digest"
-        );
+        assert_ne!(d_base, d_narrow, "operating_hours flip MUST change digest");
     }
 
     /// TA-07 (Phase 3): flipping auto_promote_grays MUST change the digest.
@@ -617,10 +611,7 @@ mod tests {
         };
         let d_base = compute_policy_preview_digest(&base);
         let d_flip = compute_policy_preview_digest(&flipped);
-        assert_ne!(
-            d_base, d_flip,
-            "auto_promote_grays flip MUST change digest"
-        );
+        assert_ne!(d_base, d_flip, "auto_promote_grays flip MUST change digest");
     }
 
     /// TA-17 (Phase 3): auto_revoke_threshold is bound by the digest. A

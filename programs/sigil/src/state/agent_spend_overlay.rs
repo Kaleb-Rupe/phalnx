@@ -120,7 +120,7 @@ impl AgentSpendOverlay {
         + (8 * MAX_OVERLAY_ENTRIES) // lifetime_tx_count
         + (8 * MAX_OVERLAY_ENTRIES) // cooldown_seconds [TA-06]
         + (8 * MAX_OVERLAY_ENTRIES); // last_action_unix [TA-06]
-    // = 8 + 32 + 2320 + 1 + 7 + 80 + 80 + 80 + 80 = 2,688
+                                     // = 8 + 32 + 2320 + 1 + 7 + 80 + 80 + 80 + 80 = 2,688
 
     // LM-1 (Bucket-3 audit 2026-05-23): compile-time pin against silent
     // drift of the documented byte baseline. Any field addition that does

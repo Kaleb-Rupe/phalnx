@@ -105,10 +105,7 @@ pub fn handler(
     //   - reserved values (3..=255) — same TA-04 contract as register_agent
     //   - non-OPERATOR (0 = Disabled, 1 = Observer) — those go through the
     //     fast `register_agent` path
-    require!(
-        capability <= FULL_CAPABILITY,
-        SigilError::InvalidCapability
-    );
+    require!(capability <= FULL_CAPABILITY, SigilError::InvalidCapability);
     require!(
         capability >= CAPABILITY_OPERATOR,
         SigilError::InvalidPermissions
@@ -200,11 +197,7 @@ pub fn handler(
         )?;
         let mut log = ctx.accounts.audit_log_success.load_mut()?;
         // §RP-1 I-2: defense-in-depth guard against future seeds drift.
-        require_keys_eq!(
-            log.vault,
-            vault_key,
-            SigilError::ZeroCopyVaultMismatch
-        );
+        require_keys_eq!(log.vault, vault_key, SigilError::ZeroCopyVaultMismatch);
         log.append(entry);
     }
 

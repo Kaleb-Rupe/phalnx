@@ -38,7 +38,6 @@ pub struct QueuePolicyUpdate<'info> {
     pub pending_policy: Account<'info, PendingPolicyUpdate>,
 
     pub system_program: Program<'info, System>,
-
     // TA-09 (Phase 3): co-signing session is NOT a standalone account
     // here — it's surfaced via the `cosign_session` IX ARG (Pubkey) +
     // `ctx.remaining_accounts`. When elevated mutations are detected,
@@ -167,8 +166,7 @@ pub fn handler(
         // destination check would otherwise approve. See helper docstring
         // for the 13 PDAs enumerated and the residual multi-seed gap.
         let vault_key = ctx.accounts.vault.key();
-        let protected_pdas =
-            derive_vault_keyed_protected_pdas(&vault_key, ctx.program_id);
+        let protected_pdas = derive_vault_keyed_protected_pdas(&vault_key, ctx.program_id);
         for dest in destinations.iter() {
             require!(
                 !protected_pdas.contains(dest),
@@ -274,8 +272,7 @@ pub fn handler(
     // legitimately be `Pubkey::default()` to disable the gate). Bound by
     // TA-19 at canonical digest position 22 so a tampered SDK cannot
     // silently flip the gate between owner approval and on-chain landing.
-    let eff_cosign_session_pubkey =
-        cosign_session_pubkey.unwrap_or(policy.cosign_session_pubkey);
+    let eff_cosign_session_pubkey = cosign_session_pubkey.unwrap_or(policy.cosign_session_pubkey);
 
     // ─── TA-09 (Phase 3): elevated mutation detection + cosign binding ─
     //
@@ -297,20 +294,17 @@ pub fn handler(
     // signer to be present + is_signer == true, and binds the
     // cosign_digest to a sha256 over the canonical pending args + the
     // cosign pubkey. Apply re-validates.
-    let raises_daily_cap = daily_spending_cap_usd
-        .is_some_and(|new| new > policy.daily_spending_cap_usd);
-    let raises_max_tx = max_transaction_amount_usd
-        .is_some_and(|new| new > policy.max_transaction_size_usd);
+    let raises_daily_cap =
+        daily_spending_cap_usd.is_some_and(|new| new > policy.daily_spending_cap_usd);
+    let raises_max_tx =
+        max_transaction_amount_usd.is_some_and(|new| new > policy.max_transaction_size_usd);
     let expands_destinations = allowed_destinations.as_ref().is_some_and(|new| {
         // Larger set, or any pubkey not in current list
         new.len() > policy.allowed_destinations.len()
-            || new
-                .iter()
-                .any(|d| !policy.allowed_destinations.contains(d))
+            || new.iter().any(|d| !policy.allowed_destinations.contains(d))
     });
     let expands_protocols = protocols.as_ref().is_some_and(|new| {
-        new.len() > policy.protocols.len()
-            || new.iter().any(|p| !policy.protocols.contains(p))
+        new.len() > policy.protocols.len() || new.iter().any(|p| !policy.protocols.contains(p))
     });
     // G3 audit fix (2026-05-18): TA-12/14 elevation closure. Phase 5 shipped
     // stable_balance_floor + per_recipient_daily_cap_usd as queueable but did
@@ -333,14 +327,14 @@ pub fn handler(
     // the relationship is INVERSE — a SMALLER floor is weaker. The existing
     // `new < live` already catches `Some(0)` when live > 0 (since 0 < live)
     // and correctly rejects RAISING the floor (which is strengthening).
-    let lowers_floor =
-        stable_balance_floor.is_some_and(|new| new < policy.stable_balance_floor);
-    let weakens_per_recipient_cap = per_recipient_daily_cap_usd
-        .is_some_and(|new| weakens_per_recipient_cap_predicate(new, policy.per_recipient_daily_cap_usd));
+    let lowers_floor = stable_balance_floor.is_some_and(|new| new < policy.stable_balance_floor);
+    let weakens_per_recipient_cap = per_recipient_daily_cap_usd.is_some_and(|new| {
+        weakens_per_recipient_cap_predicate(new, policy.per_recipient_daily_cap_usd)
+    });
     let weakens_protocol_caps = has_protocol_caps.is_some_and(|new| !new)
-        || protocol_caps
-            .as_ref()
-            .is_some_and(|new_caps| weakens_protocol_caps_predicate(new_caps, &policy.protocol_caps));
+        || protocol_caps.as_ref().is_some_and(|new_caps| {
+            weakens_protocol_caps_predicate(new_caps, &policy.protocol_caps)
+        });
 
     // G6 (audit 2026-05-18 cosign opt-in): one-way-ratchet semantics for
     // toggling `cosign_required`.
@@ -364,10 +358,8 @@ pub fn handler(
     //   Variable declared for documentation and future analytics; the
     //   underscore prefix suppresses dead-code warnings while keeping
     //   the symmetry obvious.
-    let disables_cosign =
-        cosign_required.is_some_and(|new| !new && policy.cosign_required);
-    let _enables_cosign =
-        cosign_required.is_some_and(|new| new && !policy.cosign_required);
+    let disables_cosign = cosign_required.is_some_and(|new| !new && policy.cosign_required);
+    let _enables_cosign = cosign_required.is_some_and(|new| new && !policy.cosign_required);
 
     // G6 (audit 2026-05-18 cosign opt-in): the 7-trigger elevation check
     // (raises caps, expands allowlists, weakens floor / per-recipient /
@@ -423,9 +415,10 @@ pub fn handler(
         // The corresponding signer MUST be present in remaining_accounts
         // with `is_signer == true`. Solana enforces the signature; this
         // handler validates presence.
-        let cosign_present = ctx.remaining_accounts.iter().any(|ai| {
-            ai.key == &cosign_session && ai.is_signer
-        });
+        let cosign_present = ctx
+            .remaining_accounts
+            .iter()
+            .any(|ai| ai.key == &cosign_session && ai.is_signer);
         require!(cosign_present, SigilError::ErrCosignRequired);
 
         // Compute the cosign digest binding INSTRUCTION DATA HASH per
@@ -884,14 +877,10 @@ mod tests {
         // Spec case 1: cosign opted-out. All 7 conventional triggers true.
         // Result: NOT elevated. Owner-only mutation allowed.
         let elevated = is_elevated_decision(
-            /* live_cosign_required */ false,
-            /* raises_daily_cap */ true,
-            /* raises_max_tx */ true,
-            /* expands_destinations */ true,
-            /* expands_protocols */ true,
-            /* lowers_floor */ true,
-            /* weakens_per_recipient_cap */ true,
-            /* weakens_protocol_caps */ true,
+            /* live_cosign_required */ false, /* raises_daily_cap */ true,
+            /* raises_max_tx */ true, /* expands_destinations */ true,
+            /* expands_protocols */ true, /* lowers_floor */ true,
+            /* weakens_per_recipient_cap */ true, /* weakens_protocol_caps */ true,
             /* disables_cosign */ false,
         );
         assert!(
@@ -924,7 +913,11 @@ mod tests {
                 /* weakens_protocol_caps */ i == 6,
                 /* disables_cosign */ false,
             );
-            assert!(elevated, "{} alone must elevate when cosign is opted in", name);
+            assert!(
+                elevated,
+                "{} alone must elevate when cosign is opted in",
+                name
+            );
         }
     }
 
@@ -933,14 +926,10 @@ mod tests {
         // Spec case 3: disabling cosign on a live-true policy is elevated.
         // No other triggers active — disables_cosign alone carries the bit.
         let elevated = is_elevated_decision(
-            /* live_cosign_required */ true,
-            /* raises_daily_cap */ false,
-            /* raises_max_tx */ false,
-            /* expands_destinations */ false,
-            /* expands_protocols */ false,
-            /* lowers_floor */ false,
-            /* weakens_per_recipient_cap */ false,
-            /* weakens_protocol_caps */ false,
+            /* live_cosign_required */ true, /* raises_daily_cap */ false,
+            /* raises_max_tx */ false, /* expands_destinations */ false,
+            /* expands_protocols */ false, /* lowers_floor */ false,
+            /* weakens_per_recipient_cap */ false, /* weakens_protocol_caps */ false,
             /* disables_cosign */ true,
         );
         assert!(
@@ -963,14 +952,10 @@ mod tests {
         // the enable path.
         for live in [false, true] {
             let elevated = is_elevated_decision(
-                /* live_cosign_required */ live,
-                /* raises_daily_cap */ false,
-                /* raises_max_tx */ false,
-                /* expands_destinations */ false,
-                /* expands_protocols */ false,
-                /* lowers_floor */ false,
-                /* weakens_per_recipient_cap */ false,
-                /* weakens_protocol_caps */ false,
+                /* live_cosign_required */ live, /* raises_daily_cap */ false,
+                /* raises_max_tx */ false, /* expands_destinations */ false,
+                /* expands_protocols */ false, /* lowers_floor */ false,
+                /* weakens_per_recipient_cap */ false, /* weakens_protocol_caps */ false,
                 /* disables_cosign */ false,
             );
             assert!(

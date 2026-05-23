@@ -359,7 +359,9 @@ impl SpendTracker {
                 // Found existing counter.
                 // saturating_sub fail-closes on clock skew (would otherwise panic
                 // under release-mode overflow-checks=true).
-                if current_epoch.saturating_sub(self.protocol_counters[i].window_start) >= NUM_EPOCHS as i64 {
+                if current_epoch.saturating_sub(self.protocol_counters[i].window_start)
+                    >= NUM_EPOCHS as i64
+                {
                     // Window expired — reset
                     self.protocol_counters[i].window_start = current_epoch;
                     self.protocol_counters[i].window_spend = usd_amount;
@@ -578,7 +580,10 @@ mod per_recipient_counter_tests {
             "well past boundary is expired"
         );
         // Clock running backward: saturating_sub yields 0 < 86_400 → not expired.
-        assert!(!c.is_expired(500), "clock skew (now < start) is not expired");
+        assert!(
+            !c.is_expired(500),
+            "clock skew (now < start) is not expired"
+        );
     }
 
     /// `matches()` is byte-equality on the raw 32-byte key.
@@ -600,7 +605,9 @@ mod per_recipient_counter_tests {
         assert_eq!(c.window_spend_usd, 3_500);
 
         let mut overflow = counter([1u8; 32], 100, u64::MAX);
-        let err = overflow.accumulate(1).expect_err("u64::MAX + 1 must overflow");
+        let err = overflow
+            .accumulate(1)
+            .expect_err("u64::MAX + 1 must overflow");
         assert!(matches!(err, SigilError::Overflow), "expected Overflow");
         // State unchanged on overflow.
         assert_eq!(overflow.window_spend_usd, u64::MAX);

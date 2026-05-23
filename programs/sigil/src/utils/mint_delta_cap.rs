@@ -231,9 +231,7 @@ pub fn sum_vault_mint_balance(
                 let Some(amount) = read_token_amount(info) else {
                     continue;
                 };
-                sum = sum
-                    .checked_add(amount)
-                    .ok_or(SigilError::Overflow)?;
+                sum = sum.checked_add(amount).ok_or(SigilError::Overflow)?;
             }
             Ok(sum)
         }

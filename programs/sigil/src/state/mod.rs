@@ -205,8 +205,7 @@ pub const FINALIZE_SESSION_DISCRIMINATOR: [u8; 8] = [34, 148, 144, 47, 37, 130, 
 ///
 /// Verified against codama-generated `VALIDATE_AND_AUTHORIZE_DISCRIMINATOR`
 /// in `sdk/kit/src/generated/instructions/validateAndAuthorize.ts`.
-pub const VALIDATE_AND_AUTHORIZE_DISCRIMINATOR: [u8; 8] =
-    [22, 183, 48, 222, 218, 11, 197, 152];
+pub const VALIDATE_AND_AUTHORIZE_DISCRIMINATOR: [u8; 8] = [22, 183, 48, 222, 218, 11, 197, 152];
 
 /// TA-11 (Phase 4) — protected seed-prefix family for the dynamic
 /// writable-PDA check.
@@ -396,11 +395,17 @@ mod ta17_policy_violation_filter_tests {
     #[test]
     fn policy_violation_accepts_phase3_codes() {
         assert!(is_policy_violation_code(6083), "TA-03 ErrMintNotPinned");
-        assert!(is_policy_violation_code(6084), "TA-05 ErrOutsideOperatingHours");
+        assert!(
+            is_policy_violation_code(6084),
+            "TA-05 ErrOutsideOperatingHours"
+        );
         assert!(is_policy_violation_code(6085), "TA-06 ErrCooldownActive");
         assert!(is_policy_violation_code(6086), "TA-07 ErrGraylistFriction");
         assert!(is_policy_violation_code(6087), "TA-07 ErrGraylistFull");
-        assert!(is_policy_violation_code(6088), "TA-08 ErrToken2022ExtensionForbidden");
+        assert!(
+            is_policy_violation_code(6088),
+            "TA-08 ErrToken2022ExtensionForbidden"
+        );
         assert!(is_policy_violation_code(6089), "TA-09 ErrCosignRequired");
         assert!(is_policy_violation_code(6090), "TA-17 ErrAutoRevoked");
     }
@@ -409,7 +414,11 @@ mod ta17_policy_violation_filter_tests {
     #[test]
     fn policy_violation_accepts_reserved_phase45_range() {
         for code in 6091..=6100 {
-            assert!(is_policy_violation_code(code), "reserved {} must accept", code);
+            assert!(
+                is_policy_violation_code(code),
+                "reserved {} must accept",
+                code
+            );
         }
     }
 
@@ -438,7 +447,10 @@ mod ta17_policy_violation_filter_tests {
     /// TA-17: Codes outside 6083-6100 reject (lower boundary 6082).
     #[test]
     fn policy_violation_rejects_just_below_range() {
-        assert!(!is_policy_violation_code(6082), "ActiveVaultRequiresAllowlist");
+        assert!(
+            !is_policy_violation_code(6082),
+            "ActiveVaultRequiresAllowlist"
+        );
     }
 
     /// TA-17: Codes outside 6083-6100 reject (upper boundary 6101).
@@ -750,10 +762,8 @@ mod seed_uniqueness {
                     prefixes[i],
                     prefixes[j],
                     "PDA seed prefix collision: {:?} vs {:?}",
-                    std::str::from_utf8(prefixes[i])
-                        .unwrap_or("<non-utf8 prefix>"),
-                    std::str::from_utf8(prefixes[j])
-                        .unwrap_or("<non-utf8 prefix>"),
+                    std::str::from_utf8(prefixes[i]).unwrap_or("<non-utf8 prefix>"),
+                    std::str::from_utf8(prefixes[j]).unwrap_or("<non-utf8 prefix>"),
                 );
             }
         }
@@ -796,8 +806,7 @@ mod seed_uniqueness {
                 *want,
                 "PROTECTED_SEED_PREFIXES[{}] drift — got {:?}, expected {:?}",
                 i,
-                std::str::from_utf8(PROTECTED_SEED_PREFIXES[i])
-                    .unwrap_or("<non-utf8>"),
+                std::str::from_utf8(PROTECTED_SEED_PREFIXES[i]).unwrap_or("<non-utf8>"),
                 std::str::from_utf8(want).unwrap_or("<non-utf8>"),
             );
         }

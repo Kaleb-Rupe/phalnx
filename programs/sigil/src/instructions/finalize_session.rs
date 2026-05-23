@@ -258,10 +258,7 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
             let mut mint_bytes = [0u8; 32];
             mint_bytes.copy_from_slice(&data[0..32]);
             let mint_field = Pubkey::new_from_array(mint_bytes);
-            require!(
-                owner_field == vault_key,
-                SigilError::InvalidTokenAccount
-            );
+            require!(owner_field == vault_key, SigilError::InvalidTokenAccount);
             require!(
                 mint_field == session_authorized_token,
                 SigilError::InvalidTokenAccount
@@ -286,10 +283,7 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
             let mut mint_bytes = [0u8; 32];
             mint_bytes.copy_from_slice(&data[0..32]);
             let mint_field = Pubkey::new_from_array(mint_bytes);
-            require!(
-                owner_field == vault_key,
-                SigilError::InvalidTokenAccount
-            );
+            require!(owner_field == vault_key, SigilError::InvalidTokenAccount);
             require!(
                 mint_field == session_output_mint,
                 SigilError::InvalidTokenAccount
@@ -561,8 +555,7 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
         // we can scan backwards from `current_ix_index - 1`.
         let ix_sysvar_info_ta14 = ctx.accounts.instructions_sysvar.to_account_info();
         let current_index = load_current_index_checked(&ix_sysvar_info_ta14)
-            .map_err(|_| error!(SigilError::InvalidSession))?
-            as usize;
+            .map_err(|_| error!(SigilError::InvalidSession))? as usize;
         // The DeFi ix sits at current_index - 1 (the instruction
         // immediately before finalize_session in the sandwich
         // [validate, DeFi, finalize]).
@@ -593,7 +586,10 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
             // account data. If not present, skip (the floor check below
             // may still pass if this recipient isn't a vault stablecoin
             // ATA).
-            let Some(info) = ctx.remaining_accounts.iter().find(|a| a.key() == meta.pubkey)
+            let Some(info) = ctx
+                .remaining_accounts
+                .iter()
+                .find(|a| a.key() == meta.pubkey)
             else {
                 continue;
             };
@@ -955,9 +951,7 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
                 }
                 crate::state::post_assertions::AssertionMode::AtaAuthorityPin => {
                     crate::utils::post_assertion_helpers::verify_ata_authority_pin(
-                        entry,
-                        &vault_key,
-                        remaining,
+                        entry, &vault_key, remaining,
                     )?;
                     emit!(crate::events::PostAssertionChecked {
                         vault: vault_key,
@@ -1128,10 +1122,7 @@ pub fn handler(ctx: Context<FinalizeSession>) -> Result<()> {
     // audit 2026-05-19 compressed prior 4-line comment to this 3-line cite.
     {
         let session = &mut ctx.accounts.session;
-        session.nonce = session
-            .nonce
-            .checked_add(1)
-            .ok_or(SigilError::Overflow)?;
+        session.nonce = session.nonce.checked_add(1).ok_or(SigilError::Overflow)?;
     }
 
     // Phase 7 — write audit-log entry. SUCCESS path goes to audit_log_success

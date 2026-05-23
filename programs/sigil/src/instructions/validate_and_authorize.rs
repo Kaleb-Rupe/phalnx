@@ -179,13 +179,9 @@ pub fn handler(
             amount,
             target_protocol: &target_protocol,
         };
-        let recomputed =
-            crate::utils::intent_digest::compute_scalar_intent_digest(&scalar_input);
+        let recomputed = crate::utils::intent_digest::compute_scalar_intent_digest(&scalar_input);
         require!(
-            crate::utils::intent_digest::digests_equal(
-                &recomputed,
-                &expected_intent_digest
-            ),
+            crate::utils::intent_digest::digests_equal(&recomputed, &expected_intent_digest),
             SigilError::ErrIntentDigestMismatch
         );
     }
@@ -710,10 +706,7 @@ pub fn handler(
                     // layer; this is defense-in-depth.
                     None => FAIL_CLOSED_SIGIL_OWNED,
                 };
-                require!(
-                    !on_chain_owner_is_sigil,
-                    SigilError::ErrProtectedWritable
-                );
+                require!(!on_chain_owner_is_sigil, SigilError::ErrProtectedWritable);
             }
             ix_idx = ix_idx.saturating_add(1);
             ta11_iter = ta11_iter.saturating_add(1);
@@ -1221,8 +1214,7 @@ pub fn handler(
                         &Pubkey::new_from_array(entry.target_account),
                         ctx.remaining_accounts,
                     )?;
-                    session.assertion_snapshots[i][0..8]
-                        .copy_from_slice(&pre_sum.to_le_bytes());
+                    session.assertion_snapshots[i][0..8].copy_from_slice(&pre_sum.to_le_bytes());
                     session.snapshot_lens[i] = 8;
                     continue;
                 }
@@ -1242,10 +1234,7 @@ pub fn handler(
                         SigilError::PostAssertionFailed
                     );
                     let target_data = target.try_borrow_data()?;
-                    require!(
-                        target_data.len() >= 72,
-                        SigilError::PostAssertionFailed
-                    );
+                    require!(target_data.len() >= 72, SigilError::PostAssertionFailed);
                     // Sanity: the target_account.mint MUST equal the
                     // configured mint. A mismatch means the caller passed
                     // the wrong account; better to fail fast at validate.
@@ -1441,8 +1430,7 @@ fn build_ta11_protected_set(
     // fail gap where a sibling foreign ix smuggling agent B's
     // pending_agent_perms PDA as writable would only be caught by the
     // slower BPF runtime owner-check, not by TA-11 itself.
-    let mut pending_agent_perms_keys: Vec<Pubkey> =
-        Vec::with_capacity(agents.len());
+    let mut pending_agent_perms_keys: Vec<Pubkey> = Vec::with_capacity(agents.len());
     for agent_entry in agents.iter() {
         let (key, _) = SP::find_program_address(
             &[

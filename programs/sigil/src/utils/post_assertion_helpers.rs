@@ -79,8 +79,7 @@ pub fn verify_ata_authority_pin(
 
     // Owner-program must still be a known token program.
     require!(
-        target.owner == &anchor_spl::token::ID
-            || target.owner == &TOKEN_2022_PROGRAM_ID,
+        target.owner == &anchor_spl::token::ID || target.owner == &TOKEN_2022_PROGRAM_ID,
         SigilError::ErrAtaAuthorityChanged
     );
 
@@ -129,8 +128,7 @@ pub fn verify_output_balance_floor(
         .find(|a| a.key() == target_pubkey)
         .ok_or(error!(SigilError::PostAssertionFailed))?;
     require!(
-        target.owner == &anchor_spl::token::ID
-            || target.owner == &TOKEN_2022_PROGRAM_ID,
+        target.owner == &anchor_spl::token::ID || target.owner == &TOKEN_2022_PROGRAM_ID,
         SigilError::PostAssertionFailed
     );
     let target_data = target.try_borrow_data()?;
@@ -203,8 +201,7 @@ pub fn verify_declaration_consistency(
     remaining: &[AccountInfo],
 ) -> Result<()> {
     let cur_idx = load_current_index_checked(instructions_sysvar)
-        .map_err(|_| error!(SigilError::ErrDeclarationInconsistent))?
-        as usize;
+        .map_err(|_| error!(SigilError::ErrDeclarationInconsistent))? as usize;
     require!(cur_idx >= 1, SigilError::ErrDeclarationInconsistent);
     let defi_idx = cur_idx.saturating_sub(1);
     let defi_ix = load_instruction_at_checked(defi_idx, instructions_sysvar)
@@ -222,8 +219,7 @@ pub fn verify_declaration_consistency(
         .find(|a| a.key() == meta.pubkey)
         .ok_or(error!(SigilError::ErrDeclarationInconsistent))?;
     require!(
-        target.owner == &anchor_spl::token::ID
-            || target.owner == &TOKEN_2022_PROGRAM_ID,
+        target.owner == &anchor_spl::token::ID || target.owner == &TOKEN_2022_PROGRAM_ID,
         SigilError::ErrDeclarationInconsistent
     );
     let target_data = target.try_borrow_data()?;

@@ -440,10 +440,8 @@ describe("LM-5: ANCHOR_ERROR_MAP covers Phase 8 + Bucket-2 error codes", () => {
 
   it("covers the entire 6097-6114 range with no holes", () => {
     for (let code = 6097; code <= 6114; code++) {
-      expect(
-        ANCHOR_ERROR_MAP[code],
-        `ANCHOR_ERROR_MAP[${code}] missing`,
-      ).to.exist;
+      expect(ANCHOR_ERROR_MAP[code], `ANCHOR_ERROR_MAP[${code}] missing`).to
+        .exist;
     }
   });
 });

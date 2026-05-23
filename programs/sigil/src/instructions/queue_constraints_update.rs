@@ -48,10 +48,7 @@ pub struct QueueConstraintsUpdate<'info> {
     pub pending_constraints: UncheckedAccount<'info>,
 }
 
-pub fn handler(
-    ctx: Context<QueueConstraintsUpdate>,
-    entries: Vec<ConstraintEntry>,
-) -> Result<()> {
+pub fn handler(ctx: Context<QueueConstraintsUpdate>, entries: Vec<ConstraintEntry>) -> Result<()> {
     crate::reject_cpi!();
 
     let policy = &ctx.accounts.policy;

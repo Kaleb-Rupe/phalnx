@@ -61,7 +61,9 @@ import { redactCause } from "../network-errors.js";
 // ─── Seed constants ──────────────────────────────────────────────────────
 
 const PENDING_OWNER_SEED = new TextEncoder().encode("pending_owner");
-const PENDING_AGENT_GRANT_SEED = new TextEncoder().encode("pending_agent_grant");
+const PENDING_AGENT_GRANT_SEED = new TextEncoder().encode(
+  "pending_agent_grant",
+);
 const PENDING_CONSTRAINTS_SEED = new TextEncoder().encode(
   "pending_constraints",
 );

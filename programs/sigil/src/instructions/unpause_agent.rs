@@ -200,9 +200,8 @@ mod cosign_gate_tests {
         let cosigner = key_n(2);
         let mut lp = 0u64;
         let mut d: [u8; 0] = [];
-        let cosigner_info = AccountInfo::new(
-            &cosigner, true, false, &mut lp, &mut d, &cosigner, false, 0,
-        );
+        let cosigner_info =
+            AccountInfo::new(&cosigner, true, false, &mut lp, &mut d, &cosigner, false, 0);
         let remaining = vec![cosigner_info];
         assert!(
             gate_passes(true, &remaining, &owner),

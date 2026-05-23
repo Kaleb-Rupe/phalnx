@@ -188,8 +188,7 @@ pub fn enforce_destination_allowlist<'info>(
         // owner authorised it via allowlist add but it has not yet served
         // its 24h friction (unless auto_promote_grays or owner promoted via
         // promote_graylist_destination, which would have cleared the entry).
-        let (graylisted, _unlock) =
-            policy.is_destination_graylisted(&recipient_wallet, now);
+        let (graylisted, _unlock) = policy.is_destination_graylisted(&recipient_wallet, now);
         require!(!graylisted, SigilError::ErrGraylistFriction);
     }
 
@@ -260,13 +259,7 @@ mod h1_hard_reject_tests {
             .collect();
         let policy = mock_policy();
         let remaining: Vec<AccountInfo> = vec![];
-        let res = enforce_destination_allowlist(
-            &metas,
-            &remaining,
-            &vault_pubkey,
-            &policy,
-            0,
-        );
+        let res = enforce_destination_allowlist(&metas, &remaining, &vault_pubkey, &policy, 0);
         assert!(
             res.is_ok(),
             "ix at exactly the bound must accept (non-writable metas skip cleanly)"
@@ -279,20 +272,13 @@ mod h1_hard_reject_tests {
     #[test]
     fn one_over_cap_rejects_with_6102() {
         let vault_pubkey = pk(0xA);
-        let metas: Vec<AccountMeta> =
-            (0..(MAX_DESTINATION_CHECK_METAS_PER_IX + 1))
-                .map(|i| AccountMeta::new_readonly(pk(i as u8 + 16), false))
-                .collect();
+        let metas: Vec<AccountMeta> = (0..(MAX_DESTINATION_CHECK_METAS_PER_IX + 1))
+            .map(|i| AccountMeta::new_readonly(pk(i as u8 + 16), false))
+            .collect();
         let policy = mock_policy();
         let remaining: Vec<AccountInfo> = vec![];
-        let err = enforce_destination_allowlist(
-            &metas,
-            &remaining,
-            &vault_pubkey,
-            &policy,
-            0,
-        )
-        .expect_err("ix exceeding bound MUST reject");
+        let err = enforce_destination_allowlist(&metas, &remaining, &vault_pubkey, &policy, 0)
+            .expect_err("ix exceeding bound MUST reject");
         // Convert the AnchorError -> u32 error code via the standard
         // Anchor error projection. We pin the 6102 numeric for forward-
         // compat with off-chain monitors.
@@ -316,14 +302,8 @@ mod h1_hard_reject_tests {
             .collect();
         let policy = mock_policy();
         let remaining: Vec<AccountInfo> = vec![];
-        let err = enforce_destination_allowlist(
-            &metas,
-            &remaining,
-            &vault_pubkey,
-            &policy,
-            0,
-        )
-        .expect_err("25-meta ix MUST reject");
+        let err = enforce_destination_allowlist(&metas, &remaining, &vault_pubkey, &policy, 0)
+            .expect_err("25-meta ix MUST reject");
         let err_str = format!("{:?}", err);
         assert!(
             err_str.contains("IxMetaCountExceeded") || err_str.contains("6102"),

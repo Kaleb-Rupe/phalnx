@@ -184,10 +184,8 @@ pub fn handler(ctx: Context<CloseVault>) -> Result<()> {
     // Same drain pattern as pending_policy / pending_close_constraints
     // above: derive expected PDA, scan remaining_accounts for matching
     // pubkey, transfer lamports, zero the data, reassign to SystemProgram.
-    let (expected_pending_owner_pda, _) = Pubkey::find_program_address(
-        &[b"pending_owner", vault.key().as_ref()],
-        ctx.program_id,
-    );
+    let (expected_pending_owner_pda, _) =
+        Pubkey::find_program_address(&[b"pending_owner", vault.key().as_ref()], ctx.program_id);
     for pending_info in ctx.remaining_accounts.iter().skip(start_idx) {
         if pending_info.key() == expected_pending_owner_pda && pending_info.lamports() > 0 {
             let owner_info = ctx.accounts.owner.to_account_info();

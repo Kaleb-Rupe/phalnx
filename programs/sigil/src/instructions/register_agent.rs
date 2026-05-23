@@ -103,10 +103,7 @@ pub fn handler(
     );
     // Phase 2 TA-04: reserved capability values 3..=255 explicitly rejected.
     // Replaces prior silent zero-coerce behaviour in `has_capability`.
-    require!(
-        capability <= FULL_CAPABILITY,
-        SigilError::InvalidCapability
-    );
+    require!(capability <= FULL_CAPABILITY, SigilError::InvalidCapability);
     // Phase 8 PEN-CROSS-1 (audit 2026-05-19): on cosign-opted vaults,
     // `register_agent` is Observer-only — OPERATOR-class grants MUST route
     // through the `queue_agent_grant` → `apply_agent_grant` timelock-gated
@@ -261,10 +258,7 @@ pub fn handler(
 /// `set_observe_only` to enforce the interim cosign-required gate for vaults
 /// that opted into `policy.cosign_required == true`. Pure function on the
 /// `(is_signer, key)` projection — easy to unit test without LiteSVM.
-pub(crate) fn has_non_owner_signer(
-    accounts: &[AccountInfo<'_>],
-    owner_key: &Pubkey,
-) -> bool {
+pub(crate) fn has_non_owner_signer(accounts: &[AccountInfo<'_>], owner_key: &Pubkey) -> bool {
     accounts
         .iter()
         .any(|ai| ai.is_signer && ai.key() != *owner_key)
@@ -292,9 +286,7 @@ mod cosign_gate_predicate_tests {
         data: &'a mut [u8],
         owner: &'a Pubkey,
     ) -> AccountInfo<'a> {
-        AccountInfo::new(
-            key, is_signer, false, lamports, data, owner, false, 0,
-        )
+        AccountInfo::new(key, is_signer, false, lamports, data, owner, false, 0)
     }
 
     /// Gate rejects when no signer beyond owner is present.

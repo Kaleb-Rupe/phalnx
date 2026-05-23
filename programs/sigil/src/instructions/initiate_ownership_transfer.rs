@@ -97,11 +97,7 @@ pub fn handler(
         Pubkey::default(),
         SigilError::ErrInvalidOwnershipTarget,
     );
-    require_keys_neq!(
-        new_owner,
-        crate::ID,
-        SigilError::ErrInvalidOwnershipTarget,
-    );
+    require_keys_neq!(new_owner, crate::ID, SigilError::ErrInvalidOwnershipTarget,);
     require_keys_neq!(
         new_owner,
         anchor_lang::system_program::ID,
@@ -159,11 +155,7 @@ pub fn handler(
         // suspenders pattern) doesn't trigger the check.
         for ai in ctx.remaining_accounts.iter() {
             if ai.is_signer && ai.key() != owner_key {
-                require_keys_neq!(
-                    *ai.key,
-                    new_owner,
-                    SigilError::ErrInvalidOwnershipTarget,
-                );
+                require_keys_neq!(*ai.key, new_owner, SigilError::ErrInvalidOwnershipTarget,);
             }
         }
     }
@@ -211,11 +203,7 @@ pub fn handler(
         )?;
         let mut log = ctx.accounts.audit_log_success.load_mut()?;
         // §RP-1 I-2: defense-in-depth guard against future seeds drift.
-        require_keys_eq!(
-            log.vault,
-            vault_key,
-            SigilError::ZeroCopyVaultMismatch,
-        );
+        require_keys_eq!(log.vault, vault_key, SigilError::ZeroCopyVaultMismatch,);
         log.append(entry);
     }
 

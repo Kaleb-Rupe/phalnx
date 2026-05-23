@@ -2,9 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::errors::SigilError;
 use crate::events::ConstraintsChangeApplied;
-use crate::state::pending_constraints::{
-    compute_pending_constraints_digest, ct_eq_32,
-};
+use crate::state::pending_constraints::{compute_pending_constraints_digest, ct_eq_32};
 use crate::state::*;
 use crate::utils::audit_log::build_audit_entry;
 

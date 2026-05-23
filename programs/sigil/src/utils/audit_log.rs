@@ -36,9 +36,7 @@ use crate::state::audit_log_success::AuditEntry;
 /// never occurs in practice — there is always at least one slot hash in
 /// the cluster history). This is a defensive default; callers should not
 /// rely on it.
-pub fn read_slot_hash_head(
-    slot_hashes_sysvar: &AccountInfo,
-) -> Result<([u8; 4], [u8; 3])> {
+pub fn read_slot_hash_head(slot_hashes_sysvar: &AccountInfo) -> Result<([u8; 4], [u8; 3])> {
     let data = slot_hashes_sysvar.try_borrow_data()?;
 
     // SlotHashes serialised layout is:

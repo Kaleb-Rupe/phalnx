@@ -732,8 +732,7 @@ mod tests {
 
     #[test]
     fn validate_rejects_declaration_with_aux_value_set() {
-        let mut entry =
-            mk_declaration(Pubkey::new_unique(), Pubkey::new_unique(), 0);
+        let mut entry = mk_declaration(Pubkey::new_unique(), Pubkey::new_unique(), 0);
         entry.aux_value = [1u8; 8];
         let entries = vec![entry];
         assert!(PostExecutionAssertions::validate_entries(&entries).is_err());
@@ -760,7 +759,7 @@ mod tests {
         assert_eq!(AssertionMode::DeclarationConsistency as u8, 7);
         // Snapshot-bearing modes (write `session.assertion_snapshots[i]` at validate):
         let snapshot_modes = [4u8, 6u8]; // MintDeltaCap, OutputBalanceFloor
-        // Snapshot-free modes (validate-time `continue`):
+                                         // Snapshot-free modes (validate-time `continue`):
         let snapshot_free_modes = [5u8, 7u8]; // AtaAuthorityPin, DeclarationConsistency
         for m in snapshot_modes.iter().chain(snapshot_free_modes.iter()) {
             assert!(AssertionMode::try_from(*m).is_ok(), "mode {} must parse", m);

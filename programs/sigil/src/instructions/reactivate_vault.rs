@@ -212,14 +212,13 @@ pub fn handler(
             // `cosign_session_pubkey` via `queue_policy_update`. Owners
             // who want the default (any second signer) just need to
             // include a non-owner signer in the reactivate tx.
-            let cosign_session_pubkey =
-                ctx.accounts.policy.cosign_session_pubkey;
+            let cosign_session_pubkey = ctx.accounts.policy.cosign_session_pubkey;
             let owner_key = ctx.accounts.owner.key();
             let cosign_ok = if cosign_session_pubkey != Pubkey::default() {
                 // Bound to a specific pubkey — match exactly.
-                ctx.remaining_accounts.iter().any(|ai| {
-                    ai.key == &cosign_session_pubkey && ai.is_signer
-                })
+                ctx.remaining_accounts
+                    .iter()
+                    .any(|ai| ai.key == &cosign_session_pubkey && ai.is_signer)
             } else {
                 // Default policy — any non-owner signer counts.
                 crate::instructions::register_agent::has_non_owner_signer(

@@ -37,10 +37,7 @@ import {
   SIGIL_ERROR__SDK__INVALID_CONFIG,
 } from "../../src/errors/codes.js";
 import { SigilSdkDomainError } from "../../src/errors/sdk.js";
-import {
-  setSigilModuleLogger,
-  type SigilLogger,
-} from "../../src/logger.js";
+import { setSigilModuleLogger, type SigilLogger } from "../../src/logger.js";
 
 const VAULT = "11111111111111111111111111111112" as Address;
 const OWNER_ADDR = "11111111111111111111111111111114" as Address;
@@ -184,7 +181,9 @@ describe("AL2 — OwnerClient mainnet confirmation gate (H-9)", () => {
       } catch (err) {
         expect(err).to.be.instanceOf(SigilSdkDomainError);
         const e = err as SigilSdkDomainError;
-        expect(e.code).to.equal(SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED);
+        expect(e.code).to.equal(
+          SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED,
+        );
         expect(e.shortMessage).to.match(/setObserveOnly/);
       }
     });
@@ -245,85 +244,86 @@ describe("AL2 — OwnerClient mainnet confirmation gate (H-9)", () => {
     // One representative per cluster — full breadth confirms the gate is
     // wired uniformly. Each call MUST gate-throw because none pass
     // `mainnetConfirmed: true`.
-    const calls: { name: string; run: (c: OwnerClient) => Promise<unknown> }[] = [
-      { name: "freezeVault", run: (c) => c.freezeVault() },
-      { name: "resumeVault", run: (c) => c.resumeVault() },
-      { name: "reactivateVault", run: (c) => c.reactivateVault() },
-      { name: "setObserveOnly", run: (c) => c.setObserveOnly(true) },
-      {
-        name: "queueAgentGrant",
-        run: (c) => c.queueAgentGrant(AGENT_ADDR, 1, 0n),
-      },
-      { name: "applyAgentGrant", run: (c) => c.applyAgentGrant() },
-      { name: "cancelAgentGrant", run: (c) => c.cancelAgentGrant() },
-      { name: "closeVault", run: (c) => c.closeVault() },
-      { name: "deposit", run: (c) => c.deposit(VAULT, 1n) },
-      { name: "withdraw", run: (c) => c.withdraw(VAULT, 1n) },
-      {
-        name: "pauseAgent",
-        run: (c) => c.pauseAgent(AGENT_ADDR),
-      },
-      {
-        name: "unpauseAgent",
-        run: (c) => c.unpauseAgent(AGENT_ADDR),
-      },
-      {
-        name: "revokeAgent",
-        run: (c) => c.revokeAgent(AGENT_ADDR),
-      },
-      {
-        name: "applyAgentPermissions",
-        run: (c) => c.applyAgentPermissions(AGENT_ADDR),
-      },
-      {
-        name: "cancelAgentPermissions",
-        run: (c) => c.cancelAgentPermissions(AGENT_ADDR),
-      },
-      {
-        name: "applyPendingPolicy",
-        run: (c) => c.applyPendingPolicy(),
-      },
-      {
-        name: "cancelPendingPolicy",
-        run: (c) => c.cancelPendingPolicy(),
-      },
-      {
-        name: "applyConstraintsUpdate",
-        run: (c) => c.applyConstraintsUpdate(),
-      },
-      {
-        name: "cancelConstraintsUpdate",
-        run: (c) => c.cancelConstraintsUpdate(),
-      },
-      {
-        name: "queueCloseConstraints",
-        run: (c) => c.queueCloseConstraints(),
-      },
-      {
-        name: "applyCloseConstraints",
-        run: (c) => c.applyCloseConstraints(),
-      },
-      {
-        name: "cancelCloseConstraints",
-        run: (c) => c.cancelCloseConstraints(),
-      },
-      {
-        name: "initiateOwnershipTransfer",
-        run: (c) => c.initiateOwnershipTransfer(AGENT_ADDR, false),
-      },
-      {
-        name: "acceptOwnershipTransfer",
-        run: (c) => c.acceptOwnershipTransfer(),
-      },
-      {
-        name: "acceptOwnershipTransferMultisig",
-        run: (c) => c.acceptOwnershipTransferMultisig(AGENT_ADDR),
-      },
-      {
-        name: "cancelOwnershipTransfer",
-        run: (c) => c.cancelOwnershipTransfer(),
-      },
-    ];
+    const calls: { name: string; run: (c: OwnerClient) => Promise<unknown> }[] =
+      [
+        { name: "freezeVault", run: (c) => c.freezeVault() },
+        { name: "resumeVault", run: (c) => c.resumeVault() },
+        { name: "reactivateVault", run: (c) => c.reactivateVault() },
+        { name: "setObserveOnly", run: (c) => c.setObserveOnly(true) },
+        {
+          name: "queueAgentGrant",
+          run: (c) => c.queueAgentGrant(AGENT_ADDR, 1, 0n),
+        },
+        { name: "applyAgentGrant", run: (c) => c.applyAgentGrant() },
+        { name: "cancelAgentGrant", run: (c) => c.cancelAgentGrant() },
+        { name: "closeVault", run: (c) => c.closeVault() },
+        { name: "deposit", run: (c) => c.deposit(VAULT, 1n) },
+        { name: "withdraw", run: (c) => c.withdraw(VAULT, 1n) },
+        {
+          name: "pauseAgent",
+          run: (c) => c.pauseAgent(AGENT_ADDR),
+        },
+        {
+          name: "unpauseAgent",
+          run: (c) => c.unpauseAgent(AGENT_ADDR),
+        },
+        {
+          name: "revokeAgent",
+          run: (c) => c.revokeAgent(AGENT_ADDR),
+        },
+        {
+          name: "applyAgentPermissions",
+          run: (c) => c.applyAgentPermissions(AGENT_ADDR),
+        },
+        {
+          name: "cancelAgentPermissions",
+          run: (c) => c.cancelAgentPermissions(AGENT_ADDR),
+        },
+        {
+          name: "applyPendingPolicy",
+          run: (c) => c.applyPendingPolicy(),
+        },
+        {
+          name: "cancelPendingPolicy",
+          run: (c) => c.cancelPendingPolicy(),
+        },
+        {
+          name: "applyConstraintsUpdate",
+          run: (c) => c.applyConstraintsUpdate(),
+        },
+        {
+          name: "cancelConstraintsUpdate",
+          run: (c) => c.cancelConstraintsUpdate(),
+        },
+        {
+          name: "queueCloseConstraints",
+          run: (c) => c.queueCloseConstraints(),
+        },
+        {
+          name: "applyCloseConstraints",
+          run: (c) => c.applyCloseConstraints(),
+        },
+        {
+          name: "cancelCloseConstraints",
+          run: (c) => c.cancelCloseConstraints(),
+        },
+        {
+          name: "initiateOwnershipTransfer",
+          run: (c) => c.initiateOwnershipTransfer(AGENT_ADDR, false),
+        },
+        {
+          name: "acceptOwnershipTransfer",
+          run: (c) => c.acceptOwnershipTransfer(),
+        },
+        {
+          name: "acceptOwnershipTransferMultisig",
+          run: (c) => c.acceptOwnershipTransferMultisig(AGENT_ADDR),
+        },
+        {
+          name: "cancelOwnershipTransfer",
+          run: (c) => c.cancelOwnershipTransfer(),
+        },
+      ];
 
     for (const { name, run } of calls) {
       it(`OwnerClient.${name} → throws MAINNET_CONFIRMATION_REQUIRED when gateEnabled and unconfirmed`, async () => {
