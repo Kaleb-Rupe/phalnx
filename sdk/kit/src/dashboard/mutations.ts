@@ -102,10 +102,62 @@ import type {
   ConstraintEntry,
 } from "./types.js";
 import { toDxError } from "./errors.js";
+import { SigilSdkDomainError } from "../errors/sdk.js";
+import { SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED } from "../errors/codes.js";
 
 // ─── Shared Helper ───────────────────────────────────────────────────────────
 
 const CU_OWNER_ACTION = 200_000;
+
+/**
+ * CH-3 (Security audit 2026-05-23 / Jordan): AL2 mainnet confirmation gate
+ * embedded inside the mutation builder so direct `mutations.*` imports
+ * cannot bypass it. The OwnerClient wrapper layer has its own gate
+ * (`OwnerClient.assertMainnetConfirmed`) which catches consumers using the
+ * class API — this in-mutation gate is the safety net for consumers who
+ * import the mutation function directly.
+ *
+ * Behavior is intentionally STRICTER than the OwnerClient gate. The
+ * OwnerClient gate honours a `requireMainnetConfirmation: false` opt-out
+ * via the class config; this mutation-level gate has no such config (a
+ * standalone function takes no client config), so on mainnet the caller
+ * MUST pass `mainnetConfirmed: true` or the call throws. Devnet ignores
+ * the gate entirely.
+ *
+ * Currently only `createPostAssertions` + `closePostAssertions` invoke
+ * this — they are the only standalone mutations whose OwnerClient
+ * wrapper is missing (the rest of the mutations are gated at the
+ * wrapper). Future standalone mutations should also call this helper.
+ *
+ * Single source of truth: per the audit finding, the mutation-level gate
+ * is the canonical enforcement point. The OwnerClient wrapper gate (when
+ * a wrapper exists) double-asserts the same contract; passing
+ * `mainnetConfirmed: true` satisfies both layers idempotently.
+ */
+function assertMutationMainnetConfirmed(
+  methodName: string,
+  network: "devnet" | "mainnet",
+  vault: Address,
+  opts?: Pick<TxOpts, "mainnetConfirmed">,
+): void {
+  if (network !== "mainnet") return;
+  if (opts?.mainnetConfirmed === true) return;
+  throw new SigilSdkDomainError(
+    SIGIL_ERROR__SDK__MAINNET_CONFIRMATION_REQUIRED,
+    `mutations.${methodName} on mainnet requires \`mainnetConfirmed: true\` ` +
+      `in the per-call options. Direct imports of mutation builders do not ` +
+      `inherit OwnerClient's \`requireMainnetConfirmation\` opt-out — pass ` +
+      `\`mainnetConfirmed: true\` to acknowledge the destructive mainnet action. ` +
+      `Docs: https://github.com/Sigil-Trade/sigil/blob/main/sdk/kit/MIGRATION.md`,
+    {
+      context: {
+        method: methodName,
+        network: "mainnet",
+        vault: vault.toString(),
+      } as never,
+    },
+  );
+}
 
 /**
  * PEN-CROSS-3 (Phase 2 close-up): compute the post-mutation
@@ -1183,6 +1235,13 @@ export async function createPostAssertions(
   // entry" promise. See post-assertion-validation.ts docblock.
   validatePostAssertionEntries(entries);
 
+  // CH-3 (audit 2026-05-23): AL2 gate AFTER client-side validation so the
+  // caller learns about entry-shape mistakes (the cheap, fixable error)
+  // before they're forced to think about mainnet acknowledgement (the
+  // ceremonial gate). Order matches the OwnerClient pattern of running
+  // local validation before destructive-action confirmation.
+  assertMutationMainnetConfirmed("createPostAssertions", network, vault, opts);
+
   // PEN-CROSS-3: bind the post-mutation digest (`has_post_assertions=1`).
   const expectedDigest = await siblingHandlerExpectedDigest(rpc, vault, {
     hasPostAssertions: 1,
@@ -1220,6 +1279,10 @@ export async function closePostAssertions(
   network: "devnet" | "mainnet",
   opts?: TxOpts,
 ): Promise<TxResult> {
+  // CH-3 (audit 2026-05-23): AL2 gate. `closePostAssertions` has no
+  // client-side validation step (no entries arg), so the gate runs first.
+  assertMutationMainnetConfirmed("closePostAssertions", network, vault, opts);
+
   // PEN-CROSS-3: bind the post-mutation digest (`has_post_assertions=0`).
   const expectedDigest = await siblingHandlerExpectedDigest(rpc, vault, {
     hasPostAssertions: 0,
