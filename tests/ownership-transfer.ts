@@ -48,6 +48,10 @@ import { expect } from "chai";
 import BN from "bn.js";
 import { initVaultPreviewDigest } from "./helpers/policy-digest";
 import {
+  buildExpectedIntentDigest,
+  digestAsArgs,
+} from "./helpers/intent-digest-fixture";
+import {
   createTestEnv,
   airdropSol,
   createMintAtAddress,
@@ -764,6 +768,15 @@ describe("ownership-transfer (Phase 8 Batch 3 — C26)", () => {
           jupiterProgramId,
           policyVersion,
           new BN(0), // expectedNonce — fresh session
+          digestAsArgs(
+            buildExpectedIntentDigest({
+              vault: ctx.vault,
+              agent: ctx.agent.publicKey,
+              tokenMint: DEVNET_USDC_MINT,
+              amount,
+              targetProtocol: jupiterProgramId,
+            }),
+          ),
         )
         .accountsPartial({
           agent: ctx.agent.publicKey,
