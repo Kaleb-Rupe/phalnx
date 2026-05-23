@@ -16,6 +16,10 @@ import { expect } from "chai";
 import BN from "bn.js";
 import { initVaultPreviewDigest } from "./helpers/policy-digest";
 import {
+  buildExpectedIntentDigest,
+  digestAsArgs,
+} from "./helpers/intent-digest-fixture";
+import {
   createTestEnv,
   airdropSol,
   createMintAtAddress,
@@ -223,6 +227,15 @@ describe("analytics-counters", () => {
         jupiterProgramId,
         livePolicy.policyVersion,
         new BN(0),
+        digestAsArgs(
+          buildExpectedIntentDigest({
+            vault: vaultPda,
+            agent: agent.publicKey,
+            tokenMint: usdcMint,
+            amount,
+            targetProtocol: jupiterProgramId,
+          }),
+        ),
       )
       .accountsPartial({
         agent: agent.publicKey,
