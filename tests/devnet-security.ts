@@ -35,6 +35,10 @@ import {
   TEST_USDC_KEYPAIR,
   FullVaultResult,
 } from "./helpers/devnet-setup";
+import {
+  buildExpectedIntentDigest,
+  digestAsArgs,
+} from "./helpers/intent-digest-fixture";
 // Strict error helpers — see MEMORY/WORK/20260420-201121_test-assertion-precision-council/
 import {
   expectAnchorError,
@@ -221,6 +225,16 @@ describe("devnet-security", () => {
           new BN(10_000_000),
           jupiterProgramId,
           new BN(0),
+          new BN(0),
+          digestAsArgs(
+            buildExpectedIntentDigest({
+              vault: vault.vaultPda,
+              agent: attacker.publicKey,
+              tokenMint: mint,
+              amount: new BN(10_000_000),
+              targetProtocol: jupiterProgramId,
+            }),
+          ),
         )
         .accounts({
           agent: attacker.publicKey,
