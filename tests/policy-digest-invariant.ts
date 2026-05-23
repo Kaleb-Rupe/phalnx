@@ -629,6 +629,10 @@ describe("policy-digest invariant (TA-19 sibling-handler recompute)", () => {
         // G6 (audit 2026-05-18 cosign opt-in): cosign_required — null
         // pass-through. Toggling cosign goes through a separate test path.
         null,
+        // D-5 (audit 2026-05-19, F-RP3-1): cosign_session_pubkey — null
+        // pass-through from live policy. Reactivate-cosign gate is not
+        // exercised in this digest-invariant scope.
+        null,
         // Phase 3 (TA-09): cosign_session — PublicKey.default = non-elevated
         // (single-sig owner mutation; daily_cap is non-elevated).
         PublicKey.default,
@@ -1004,6 +1008,10 @@ describe("Phase 2 close-up — F-16 negative tests", () => {
         null,
         // G6 (audit 2026-05-18 cosign opt-in): cosign_required — null
         // pass-through. Toggling cosign goes through a separate test path.
+        null,
+        // D-5 (audit 2026-05-19, F-RP3-1): cosign_session_pubkey — null
+        // pass-through from live policy. Reactivate-cosign gate is not
+        // exercised in this digest-invariant scope.
         null,
         // Phase 3 (TA-09): cosign_session — PublicKey.default = non-elevated
         // (single-sig owner mutation; daily_cap is non-elevated).
