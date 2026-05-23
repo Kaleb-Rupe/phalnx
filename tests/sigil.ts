@@ -4387,7 +4387,7 @@ describe("sigil", () => {
       const pending =
         await program.account.pendingPolicyUpdate.fetch(tlPendingPda);
       expect(pending.vault.toString()).to.equal(tlVaultPda.toString());
-      expect(pending.dailySpendingCapUsd.toNumber()).to.equal(200_000_000);
+      expect(pending.dailySpendingCapUsd!.toNumber()).to.equal(200_000_000);
       expect(pending.executesAt.toNumber()).to.be.greaterThan(
         pending.queuedAt.toNumber(),
       );
@@ -7921,7 +7921,7 @@ describe("sigil", () => {
       const entry = vault.agents.find(
         (a: any) => a.pubkey.toString() === pauseAgent.publicKey.toString(),
       );
-      expect(entry.paused).to.equal(true);
+      expect(entry!.paused).to.equal(true);
     });
 
     it("cannot pause an already-paused agent", async () => {
@@ -7991,7 +7991,7 @@ describe("sigil", () => {
       const entry2 = vault.agents.find(
         (a: any) => a.pubkey.toString() === pauseAgent2.publicKey.toString(),
       );
-      expect(entry2.paused).to.equal(false);
+      expect(entry2!.paused).to.equal(false);
     });
 
     it("paused agent is blocked by agent_transfer (AgentPaused)", async () => {
@@ -8094,7 +8094,7 @@ describe("sigil", () => {
       const entry2 = vault.agents.find(
         (a: any) => a.pubkey.toString() === pauseAgent2.publicKey.toString(),
       );
-      expect(entry2.paused).to.equal(true);
+      expect(entry2!.paused).to.equal(true);
 
       // Phase 8 Batch 5: advance past 5-min reactivate cooldown (ErrReactivateCooldownActive 6106)
       advanceTime(svm, 301);
@@ -8134,7 +8134,7 @@ describe("sigil", () => {
       const entry = vault.agents.find(
         (a: any) => a.pubkey.toString() === pauseAgent.publicKey.toString(),
       );
-      expect(entry.paused).to.equal(false);
+      expect(entry!.paused).to.equal(false);
     });
 
     it("cannot unpause an agent that isn't paused", async () => {
@@ -8235,8 +8235,8 @@ describe("sigil", () => {
       const entry = vault.agents.find(
         (a: any) => a.pubkey.toString() === pauseAgent.publicKey.toString(),
       );
-      expect(entry.paused).to.equal(false);
-      expect(entry.capability).to.equal(FULL_CAPABILITY);
+      expect(entry!.paused).to.equal(false);
+      expect(entry!.capability).to.equal(FULL_CAPABILITY);
     });
   });
 });
