@@ -1079,18 +1079,20 @@ export const ON_CHAIN_ERROR_MAP: Record<number, ErrorMapping> = {
     ],
   },
 
-  // F-10 audit fix: durable-nonce pre-signing defense
+  // F-10 audit fix: durable-nonce pre-signing defense (extended Bucket-3
+  // 2026-05-23 to cover the 2 timelocked-admin PDAs via the wider
+  // MAX_APPLY_AGE_SLOTS_TIMELOCKED_ADMIN ceiling)
   6066: {
     name: "QueuedUpdateExpired",
     message:
-      "Queued update is too old (>MAX_APPLY_AGE_SLOTS) — re-queue to apply. Defends against durable-nonce pre-signing.",
+      "Queued update is too old (>MAX_APPLY_AGE_SLOTS / >MAX_APPLY_AGE_SLOTS_TIMELOCKED_ADMIN) — re-queue to apply. Defends against durable-nonce pre-signing.",
     category: "POLICY_VIOLATION",
     retryable: false,
     recovery_actions: [
       {
         action: "requeue",
         description:
-          "Re-queue the update via queue_policy_update / queue_constraints_update / queue_close_constraints / queue_agent_permissions_update — the original queued update is past the freshness window.",
+          "Re-queue the update via the matching ix for your flow: queue_policy_update / queue_constraints_update / queue_close_constraints / queue_agent_permissions_update / queue_agent_grant / initiate_ownership_transfer — the original queued update is past the freshness window.",
       },
     ],
   },

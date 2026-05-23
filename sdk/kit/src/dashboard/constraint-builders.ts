@@ -80,7 +80,8 @@ export const CONSTRAINTS_SIZE = 35_888;
  * Source: `programs/sigil/src/state/pending_constraints.rs:47`
  * Layout: 8 disc + 32 vault + (560 * 64) entries + 1 entries_count + 1 bump
  *       + 6 padding + 8 created_at + 8 queued_at_slot [F-10] + 8 effective_at
- *       = 35,912.
+ *       + 32 pending_content_digest [M-4 Bucket 2 PEN-CROSS-3]
+ *       = 35,944.
  */
 export const PENDING_CONSTRAINTS_SIZE = 35_944;
 

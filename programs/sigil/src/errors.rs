@@ -250,7 +250,7 @@ pub enum SigilError {
     BlockedSplOpcode,
 
     // --- F-10 audit fix: durable-nonce pre-signing defense ---
-    #[msg("Queued update is too old (>MAX_APPLY_AGE_SLOTS) — re-queue to apply. Defends against durable-nonce pre-signing.")]
+    #[msg("Queued update is too old (>MAX_APPLY_AGE_SLOTS / >MAX_APPLY_AGE_SLOTS_TIMELOCKED_ADMIN) — re-queue via the matching queue/initiate ix (queue_policy_update, queue_constraints_update, queue_close_constraints, queue_agent_permissions_update, queue_agent_grant, or initiate_ownership_transfer) to apply. Defends against durable-nonce pre-signing (CH-1 audit 2026-05-23 extended scope to timelocked-admin PDAs).")]
     QueuedUpdateExpired,
 
     // --- M5: Squads SAP parity — account writability enforcement ---

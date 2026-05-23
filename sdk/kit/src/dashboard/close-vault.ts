@@ -180,11 +180,19 @@ export interface CloseVaultPendingAccount {
  * module logger and treated as "absent" — the close TX still proceeds,
  * but the missed PDA's rent stays orphaned (same compromise as the
  * existing `mutations.ts::closeVault` handles for the other drains).
+ *
+ * HH-1 close (audit 2026-05-23): the optional `onRpcError` callback lets
+ * callers (e.g. `mutations.ts::closeVault`) escalate the visibility of
+ * an enumeration failure beyond the module logger — emit an
+ * ERROR-level log line with vault context, throw, or display a UI
+ * warning. Without the callback the existing best-effort drain
+ * semantic is preserved (warn-and-continue).
  */
 export async function enumerateExistingPendingPdasForClose(
   rpc: Rpc<SolanaRpcApi>,
   vault: Address,
   programAddress: Address = SIGIL_PROGRAM_ADDRESS,
+  onRpcError?: (kind: CloseVaultPendingAccount["kind"], address: Address, cause: unknown) => void,
 ): Promise<readonly CloseVaultPendingAccount[]> {
   const [pendingOwnerPda, pendingAgentGrantPda, pendingConstraintsPda] =
     await Promise.all([
@@ -222,6 +230,20 @@ export async function enumerateExistingPendingPdasForClose(
             cause.message ?? cause.name ?? cause.code ?? "unknown"
           }`,
         );
+        // HH-1 close (audit 2026-05-23): give callers a chance to
+        // escalate the RPC failure (e.g. emit error-level log with
+        // vault context, throw to abort close, surface in UI). The
+        // existing module logger is preserved as the default low-floor
+        // signal.
+        if (onRpcError !== undefined) {
+          try {
+            onRpcError(kind, address, err);
+          } catch {
+            // Caller's callback must not break the enumeration —
+            // swallow silently. Errors from the callback itself are
+            // a programming bug in the caller.
+          }
+        }
         return null;
       }
     }),

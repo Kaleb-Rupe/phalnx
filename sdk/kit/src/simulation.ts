@@ -391,7 +391,7 @@ export const ANCHOR_ERROR_MAP: Record<
   6066: {
     name: "QueuedUpdateExpired",
     suggestion:
-      "Queued update is too old — re-queue via queue_policy_update / queue_constraints_update / queue_close_constraints / queue_agent_permissions_update.",
+      "Queued update is too old — re-queue via queue_policy_update / queue_constraints_update / queue_close_constraints / queue_agent_permissions_update / queue_agent_grant / initiate_ownership_transfer (CH-1 audit 2026-05-23 extended to timelocked-admin PDAs).",
   },
   6067: {
     name: "AccountWritabilityMismatch",

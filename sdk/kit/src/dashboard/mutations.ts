@@ -601,10 +601,34 @@ export async function closeVault(
   // pending_constraints) silently no-op via the `lamports() > 0` guard,
   // orphaning their rent. Helper performs parallel getAccountInfo and only
   // includes accounts that exist.
+  //
+  // HH-1 close (audit 2026-05-23 §RP): the helper's silent-failure on RPC
+  // errors is now escalated to ERROR-level log with vault context. If a
+  // transient RPC failure during enumeration kept a PDA out of
+  // remainingAccounts, the on-chain drain falls through silently and rent
+  // is permanently orphaned. The ERROR-level log surfaces this to off-chain
+  // monitors / alerting; the close TX still proceeds (best-effort drain
+  // semantic preserved).
+  let ch2EnumerationHadRpcError = false;
   const ch2PendingAccounts = await enumerateExistingPendingPdasForClose(
     rpc,
     vault,
+    undefined,
+    (kind, address, cause) => {
+      ch2EnumerationHadRpcError = true;
+      const c = redactCause(cause);
+      getSigilModuleLogger().error(
+        `[closeVault] HH-1: RPC enumeration failed for ${kind} ${address} on vault ${vault} — close TX will proceed without it; rent for that PDA WILL stay orphaned if the PDA exists on-chain. Cause: ${
+          c.message ?? c.name ?? c.code ?? "unknown"
+        }`,
+      );
+    },
   );
+  if (ch2EnumerationHadRpcError) {
+    getSigilModuleLogger().error(
+      `[closeVault] HH-1: at least one pending-PDA enumeration RPC failed for vault ${vault} — verify rent reclamation via on-chain audit before considering close complete.`,
+    );
+  }
   for (const pa of ch2PendingAccounts) {
     remainingAccounts.push({ address: pa.address, role: pa.role });
   }

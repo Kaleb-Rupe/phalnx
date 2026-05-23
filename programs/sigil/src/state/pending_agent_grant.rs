@@ -64,7 +64,9 @@ pub struct PendingAgentGrant {
     pub _padding: [u8; 6], // 6
     /// M-5 close (Bucket 2, Phase 10 PEN-CROSS-3): SHA-256 over the
     /// canonical byte encoding of the pending content (vault + agent +
-    /// capability + spending_limit_usd + queued_at + min_delay_seconds).
+    /// capability + spending_limit_usd + queued_at + min_delay_seconds +
+    /// queued_at_slot — CH-1 close Bucket-3 audit 2026-05-23 folded
+    /// queued_at_slot into the canonical encoder at position 7).
     /// Written once at `queue_agent_grant` and re-asserted at
     /// `apply_agent_grant` before any mutation of `vault.agents`.
     ///
@@ -76,7 +78,8 @@ pub struct PendingAgentGrant {
     /// `ErrPendingAgentGrantDigestMismatch`.
     ///
     /// Alignment: Anchor's `#[account]` uses Borsh on-the-wire layout, so
-    /// the byte arithmetic is purely additive: 104 + 32 = 136 bytes total.
+    /// the byte arithmetic is purely additive: 104 + 32 + 8 = 144 bytes
+    /// total (CH-1 Bucket-3 added 8 bytes for queued_at_slot).
     /// `[u8; 32]` has alignment 1, so no padding is required regardless of
     /// the preceding `u8` + `[u8; 6]` shape.
     pub pending_content_digest: [u8; 32], // 32
