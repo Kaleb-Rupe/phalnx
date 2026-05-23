@@ -2,8 +2,8 @@
 // Regenerate via `pnpm -C sdk/kit codegen:errors` after IDL changes.
 //
 // Source: agent-middleware/target/idl/sigil.json
-// Generated: 2026-05-22T04:00:38.304Z
-// Codes: 109 (min 6000, max 6108)
+// Generated: 2026-05-23T04:05:51.162Z
+// Codes: 115 (min 6000, max 6114)
 
 /** Pure IDL projection of every Anchor error variant. */
 export interface IdlErrorEntry {
@@ -130,13 +130,19 @@ export const IDL_ERROR_MAP: Readonly<Record<number, IdlErrorEntry>> =
     6106: { code: 6106, name: "ErrReactivateCooldownActive", msg: "Reactivate requires 5-minute observation cooldown to elapse" },
     6107: { code: 6107, name: "ErrInvalidOwnershipTarget", msg: "new_owner cannot be system/program/sysvar addresses (Council ISC-128)" },
     6108: { code: 6108, name: "ErrTooManyRevokePairs", msg: "freeze_internal MAX_REVOKE_PAIRS = 10 exceeded (Council ISC-136)" },
+    6109: { code: 6109, name: "ErrPostAssertionsNotClosed", msg: "PostExecutionAssertions PDA still active — call close_post_assertions first" },
+    6110: { code: 6110, name: "ErrDestinationIsProtectedPda", msg: "Destination is a Sigil-protected PDA — rejected at queue time" },
+    6111: { code: 6111, name: "ErrIntentDigestMismatch", msg: "AL3 intent-digest mismatch — preview digest does not match executed bundle" },
+    6112: { code: 6112, name: "ErrPendingConstraintsDigestMismatch", msg: "PendingConstraintsUpdate digest mismatch between queue and apply" },
+    6113: { code: 6113, name: "ErrPendingAgentGrantDigestMismatch", msg: "PendingAgentGrant digest mismatch between queue and apply" },
+    6114: { code: 6114, name: "ErrReactivateCosignRequiredForFullCapability", msg: "Reactivate with FULL_CAPABILITY new agent requires cosign" },
   });
 
 /** Total error-code count derived from the IDL at generation time. */
-export const IDL_ERROR_COUNT = 109;
+export const IDL_ERROR_COUNT = 115;
 
 /** Lowest IDL error code. */
 export const IDL_ERROR_MIN = 6000;
 
 /** Highest IDL error code. */
-export const IDL_ERROR_MAX = 6108;
+export const IDL_ERROR_MAX = 6114;
