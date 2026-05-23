@@ -21,6 +21,10 @@ import {
 import { expect } from "chai";
 import BN from "bn.js";
 import { initVaultPreviewDigest } from "./helpers/policy-digest";
+import {
+  buildExpectedIntentDigest,
+  digestAsArgs,
+} from "./helpers/intent-digest-fixture";
 // Inlined constants — sdk/typescript was deleted in Phase 0 nuclear cleanup
 const FLASH_TRADE_PROGRAM_ID = new PublicKey(
   "FLASH6Lo6h3iasJKWDs2F8TkW2UKf3s15C8PMGuVfgBn",
@@ -145,6 +149,15 @@ describe("flash-trade-integration", () => {
         targetProtocol,
         currentVersion,
         new BN(0),
+        digestAsArgs(
+          buildExpectedIntentDigest({
+            vault,
+            agent: agentKp.publicKey,
+            tokenMint,
+            amount,
+            targetProtocol,
+          }),
+        ),
       )
       .accountsPartial({
         agent: agentKp.publicKey,
