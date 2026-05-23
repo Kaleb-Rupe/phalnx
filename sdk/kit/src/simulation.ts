@@ -91,7 +91,25 @@ export interface SimulationError {
 
 // ─── Anchor Error Map ────────────────────────────────────────────────────────
 
-const ANCHOR_ERROR_MAP: Record<number, { name: string; suggestion: string }> = {
+/**
+ * Anchor error code → diagnostic name + recovery suggestion. Exported so
+ * pre-flight-simulation tests can assert the map covers all on-chain
+ * error codes the SDK might surface during a `simulateBeforeSend` call.
+ *
+ * The full canonical error registry lives in
+ * `sdk/kit/src/agent-errors.ts` (`ON_CHAIN_ERROR_MAP`) — that map is the
+ * source-of-truth for runtime UX surfaces. This simulation-side map is a
+ * narrower DIAGNOSTIC table: it includes only the codes that can plausibly
+ * surface during a pre-flight transaction simulation (Anchor `require!`
+ * trips from `validate_and_authorize`, `agent_transfer`, `finalize_session`,
+ * etc.). Codes that only fire from owner-mutation paths (Phase 0/1)
+ * intentionally don't need a simulation suggestion because the caller is
+ * the owner and the error message ships directly from on-chain.
+ */
+export const ANCHOR_ERROR_MAP: Record<
+  number,
+  { name: string; suggestion: string }
+> = {
   6000: {
     name: "VaultNotActive",
     suggestion: "Check vault status — must be Active.",
@@ -457,6 +475,112 @@ const ANCHOR_ERROR_MAP: Record<number, { name: string; suggestion: string }> = {
     name: "ErrRecipientCapExceeded",
     suggestion:
       "Per-recipient daily cap exceeded — the recipient's rolling 24h outflow would breach policy.per_recipient_daily_cap_usd. Reduce the amount, route to a different allowed destination, or wait for the rolling window to release capacity.",
+  },
+
+  // ─── Phase 5 R-1..R-4 post-execution assertions (codes 6097-6101) ───
+  // Emitted from `finalize_session` after the DeFi instruction runs.
+  // Visible in simulation because the full sandwich (validate ix + DeFi ix +
+  // finalize ix) is simulated as one transaction.
+  6097: {
+    name: "ErrMintDeltaCapExceeded",
+    suggestion:
+      "R-1 MintDeltaCap: vault-mint balance decreased by more than the policy's `max_net_decrease` for this mint. Reduce the outflow, raise the cap on PolicyConfig, or split into smaller transactions.",
+  },
+  6098: {
+    name: "MintDeltaCapMisconfigured",
+    suggestion:
+      "R-1 MintDeltaCap target account is missing, has a mint mismatch, or has owner != vault. Re-derive the target token account and re-check the PolicyConfig entry.",
+  },
+  6099: {
+    name: "ErrAtaAuthorityChanged",
+    suggestion:
+      "R-2 AtaAuthorityPin: a vault-owned token account had its authority changed or was closed/reinitialized mid-sandwich. Re-check that no foreign instruction is touching the vault's ATAs in this transaction.",
+  },
+  6100: {
+    name: "ErrOutputBelowFloor",
+    suggestion:
+      "R-3 OutputBalanceFloor: the post-execution balance increase fell below the configured `min_increase` floor. Adjust slippage settings or raise the floor, then retry.",
+  },
+  6101: {
+    name: "ErrDeclarationInconsistent",
+    suggestion:
+      "R-4 DeclarationConsistency: the recipient/mint declared on validate_and_authorize does not match the actual CPI account-meta. Re-derive the declared accounts from the same accounts the DeFi instruction will consume.",
+  },
+
+  // ─── Phase 6 destination-check budget (code 6102) ───
+  6102: {
+    name: "IxMetaCountExceeded",
+    suggestion:
+      "Foreign DeFi instruction passed more account metas than the destination-check budget (16) allows. Truncate the instruction or split it into shorter ixs.",
+  },
+
+  // ─── Phase 8 ownership-transfer (codes 6103-6107) ───
+  6103: {
+    name: "ErrPendingOwnershipExists",
+    suggestion:
+      "An ownership transfer is already pending. Cancel the existing transfer with `cancelOwnershipTransfer` before initiating a new one.",
+  },
+  6104: {
+    name: "ErrPendingOwnershipNotReady",
+    suggestion:
+      "Ownership transfer timelock has not elapsed. Wait for the 48h cool-down to expire before calling `acceptOwnershipTransfer`.",
+  },
+  6105: {
+    name: "ErrInvalidFreezeReason",
+    suggestion:
+      "freeze_reason value must be one of {0, 1, 2}. Re-check the FreezeReason discriminant on freezeVault.",
+  },
+  6106: {
+    name: "ErrReactivateCooldownActive",
+    suggestion:
+      "Reactivate requires a 5-minute observation cooldown to elapse since the freeze. Wait, then retry.",
+  },
+  6107: {
+    name: "ErrInvalidOwnershipTarget",
+    suggestion:
+      "new_owner cannot be a system/program/sysvar address (Council ISC-128). Pass a real wallet pubkey.",
+  },
+
+  // ─── Phase 8 freeze + post-assertions (codes 6108-6110) ───
+  6108: {
+    name: "ErrTooManyRevokePairs",
+    suggestion:
+      "freeze_internal MAX_REVOKE_PAIRS = 10 exceeded (Council ISC-136). Split the freeze into multiple transactions revoking ≤10 token-account pairs each.",
+  },
+  6109: {
+    name: "ErrPostAssertionsNotClosed",
+    suggestion:
+      "PostExecutionAssertions PDA still active. Call `closePostAssertions` before closing the vault or creating a new assertions set.",
+  },
+  6110: {
+    name: "ErrDestinationIsProtectedPda",
+    suggestion:
+      "Destination is a Sigil-protected PDA — rejected at queue time. Pick a different recipient that is not a Sigil-owned account.",
+  },
+
+  // ─── Bucket-2 intent-digest binding (codes 6111-6114) ───
+  // D-1 codes: emitted when the digest signed at queue/preview does not
+  // match the digest recomputed at apply/execute. Surfaces during
+  // pre-flight simulation because the digest computation lives on-chain.
+  6111: {
+    name: "ErrIntentDigestMismatch",
+    suggestion:
+      "AL3 intent-digest mismatch — the preview digest signed at seal time does not match the executed bundle. Re-build the seal with the live instructions and re-sign.",
+  },
+  6112: {
+    name: "ErrPendingConstraintsDigestMismatch",
+    suggestion:
+      "PendingConstraintsUpdate digest mismatch between queue and apply. The constraints account changed between when you queued the update and when you tried to apply it — re-queue with the current constraints state.",
+  },
+  6113: {
+    name: "ErrPendingAgentGrantDigestMismatch",
+    suggestion:
+      "PendingAgentGrant digest mismatch between queue and apply. The agent grant state changed between queue and apply — re-queue with the current vault state.",
+  },
+  6114: {
+    name: "ErrReactivateCosignRequiredForFullCapability",
+    suggestion:
+      "Reactivate with a FULL_CAPABILITY new agent requires cosign. Pass a cosigner signature to `reactivateVault`, or use a lower capability tier for the new agent.",
   },
 };
 

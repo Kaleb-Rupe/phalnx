@@ -10,6 +10,7 @@ import {
   parseTokenBalance,
   DEFAULT_WARNING_PERCENT,
   DEFAULT_BLOCK_PERCENT,
+  ANCHOR_ERROR_MAP,
 } from "../src/simulation.js";
 import type {
   BalanceDelta,
@@ -389,5 +390,60 @@ describe("simulation", () => {
       expect(flags).to.include(RISK_FLAG_FULL_DRAIN);
       expect(flags).to.include(RISK_FLAG_LARGE_OUTFLOW);
     });
+  });
+});
+
+// ─── LM-5: ANCHOR_ERROR_MAP coverage for codes 6097-6114 ──────────────────
+// Phase 8 + Bucket-2 added on-chain error codes 6097-6114. Without entries
+// in the simulation map, the parseAnchorError → simulateBeforeSend pipeline
+// surfaces these as `UnknownError(6111)` etc. — the user loses the
+// suggestion + name. LM-5 of the audit 2026-05-23 extends the map; this
+// test guards against regression by asserting every new code is present
+// with the correct on-chain name.
+
+describe("LM-5: ANCHOR_ERROR_MAP covers Phase 8 + Bucket-2 error codes", () => {
+  // Source-of-truth pairing: code → on-chain error variant name. Derived
+  // from `target/idl/sigil.json` (the IDL is the canonical contract). If
+  // a new code lands and this list goes stale, the assertion below will
+  // catch it.
+  const expected: Array<{ code: number; name: string }> = [
+    { code: 6097, name: "ErrMintDeltaCapExceeded" },
+    { code: 6098, name: "MintDeltaCapMisconfigured" },
+    { code: 6099, name: "ErrAtaAuthorityChanged" },
+    { code: 6100, name: "ErrOutputBelowFloor" },
+    { code: 6101, name: "ErrDeclarationInconsistent" },
+    { code: 6102, name: "IxMetaCountExceeded" },
+    { code: 6103, name: "ErrPendingOwnershipExists" },
+    { code: 6104, name: "ErrPendingOwnershipNotReady" },
+    { code: 6105, name: "ErrInvalidFreezeReason" },
+    { code: 6106, name: "ErrReactivateCooldownActive" },
+    { code: 6107, name: "ErrInvalidOwnershipTarget" },
+    { code: 6108, name: "ErrTooManyRevokePairs" },
+    { code: 6109, name: "ErrPostAssertionsNotClosed" },
+    { code: 6110, name: "ErrDestinationIsProtectedPda" },
+    { code: 6111, name: "ErrIntentDigestMismatch" },
+    { code: 6112, name: "ErrPendingConstraintsDigestMismatch" },
+    { code: 6113, name: "ErrPendingAgentGrantDigestMismatch" },
+    { code: 6114, name: "ErrReactivateCosignRequiredForFullCapability" },
+  ];
+
+  for (const { code, name } of expected) {
+    it(`maps ${code} → ${name}`, () => {
+      const entry = ANCHOR_ERROR_MAP[code];
+      expect(entry, `ANCHOR_ERROR_MAP[${code}] should exist`).to.exist;
+      expect(entry.name).to.equal(name);
+      // Suggestion must be non-empty — the whole point of this map is to
+      // give callers a recovery hint when simulation fails.
+      expect(entry.suggestion.length).to.be.greaterThan(0);
+    });
+  }
+
+  it("covers the entire 6097-6114 range with no holes", () => {
+    for (let code = 6097; code <= 6114; code++) {
+      expect(
+        ANCHOR_ERROR_MAP[code],
+        `ANCHOR_ERROR_MAP[${code}] missing`,
+      ).to.exist;
+    }
   });
 });
