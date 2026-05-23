@@ -18,6 +18,10 @@ import {
 import { expect } from "chai";
 import BN from "bn.js";
 import { initVaultPreviewDigest } from "./helpers/policy-digest";
+import {
+  buildExpectedIntentDigest,
+  digestAsArgs,
+} from "./helpers/intent-digest-fixture";
 // Inlined constants — sdk/typescript was deleted in Phase 0 nuclear cleanup
 const JUPITER_LEND_PROGRAM_ID = new PublicKey(
   "JLend2fEim9xUFcaHsyGePEoBzFLvkjMi3MnPcSuCdu",
@@ -142,6 +146,15 @@ describe("jupiter-lend-integration", () => {
         targetProtocol,
         livePolicy.policyVersion, // expectedPolicyVersion (TOCTOU guard)
         new BN(0), // AC-10 expectedNonce (fresh session)
+        digestAsArgs(
+          buildExpectedIntentDigest({
+            vault,
+            agent: agentKp.publicKey,
+            tokenMint,
+            amount,
+            targetProtocol,
+          }),
+        ),
       )
       .accountsPartial({
         agent: agentKp.publicKey,
