@@ -294,3 +294,152 @@ describe("closeVault PDA seeds", () => {
     expect(pda1).to.equal(pda2);
   });
 });
+
+// ─── CH-2 (Bucket-3 audit 2026-05-23) — pending_constraints drain helpers ──
+
+describe("close-vault helpers (CH-2 Bucket-3 audit 2026-05-23)", () => {
+  // Same valid base58 vault used above; helpers are deterministic so
+  // we can compare addresses across two invocations.
+  const VALID_VAULT = "11111111111111111111111111111112" as Address;
+
+  it("CLOSE_VAULT_PENDING_PDA_ORDER pins the 6-step drain layout", async () => {
+    const { CLOSE_VAULT_PENDING_PDA_ORDER } = await import(
+      "../../src/dashboard/close-vault.js"
+    );
+
+    // Lock the array shape so reviewers catch drift between the SDK
+    // helper and the Rust drain blocks in close_vault.rs.
+    expect([...CLOSE_VAULT_PENDING_PDA_ORDER]).to.deep.equal([
+      "pending_policy",
+      "pending_agent_perms",
+      "pending_close_constraints",
+      "pending_owner",
+      "pending_agent_grant",
+      "pending_constraints",
+    ]);
+  });
+
+  it("findPendingConstraintsPdaForClose is deterministic + uses the close_vault seed", async () => {
+    const { findPendingConstraintsPdaForClose } = await import(
+      "../../src/dashboard/close-vault.js"
+    );
+    const { findPendingConstraintsPda } = await import(
+      "../../src/dashboard/constraint-reads.js"
+    );
+
+    const a = await findPendingConstraintsPdaForClose(VALID_VAULT);
+    const b = await findPendingConstraintsPdaForClose(VALID_VAULT);
+    expect(a).to.equal(b);
+
+    // The CH-2 close-vault helper MUST derive the same address as the
+    // pre-existing constraint-reads.ts helper — they both encode the
+    // `[b"pending_constraints", vault]` seed. If these ever diverge,
+    // the on-chain drain block in close_vault.rs would miss the PDA.
+    const existing = await findPendingConstraintsPda(VALID_VAULT);
+    expect(a).to.equal(existing);
+  });
+
+  it("findPendingOwnerPda + findPendingAgentGrantPda are deterministic and distinct from pending_constraints", async () => {
+    const {
+      findPendingOwnerPda,
+      findPendingAgentGrantPda,
+      findPendingConstraintsPdaForClose,
+    } = await import("../../src/dashboard/close-vault.js");
+
+    const ownerPda1 = await findPendingOwnerPda(VALID_VAULT);
+    const ownerPda2 = await findPendingOwnerPda(VALID_VAULT);
+    expect(ownerPda1).to.equal(ownerPda2);
+
+    const grantPda1 = await findPendingAgentGrantPda(VALID_VAULT);
+    const grantPda2 = await findPendingAgentGrantPda(VALID_VAULT);
+    expect(grantPda1).to.equal(grantPda2);
+
+    // Distinct PDAs (different seeds).
+    const constraintsPda = await findPendingConstraintsPdaForClose(VALID_VAULT);
+    expect(ownerPda1).to.not.equal(grantPda1);
+    expect(ownerPda1).to.not.equal(constraintsPda);
+    expect(grantPda1).to.not.equal(constraintsPda);
+  });
+
+  it("enumerateExistingPendingPdasForClose returns only PDAs that exist on-chain", async () => {
+    const { enumerateExistingPendingPdasForClose } = await import(
+      "../../src/dashboard/close-vault.js"
+    );
+
+    // Mock RPC that says: pending_owner does NOT exist, pending_agent_grant
+    // DOES exist, pending_constraints DOES exist. The helper should
+    // return exactly the two that exist.
+    const fakeAccountInfo = (exists: boolean) => ({
+      send: async () =>
+        exists
+          ? { value: { data: ["", "base64"], lamports: 1n, owner: "x", executable: false, rentEpoch: 0n } }
+          : { value: null },
+    });
+
+    type Probe = { kind: string; address: Address };
+    const probes: Probe[] = [];
+    const rpcMock = {
+      getAccountInfo: (address: Address, _opts: unknown) => {
+        probes.push({ kind: "?", address });
+        // pending_owner = null, others = exist
+        // We don't know the addresses yet — capture and decide below.
+        return fakeAccountInfo(true);
+      },
+    };
+
+    // First invocation captures the 3 candidate addresses.
+    await enumerateExistingPendingPdasForClose(
+      rpcMock as unknown as Rpc<SolanaRpcApi>,
+      VALID_VAULT,
+    );
+    expect(probes).to.have.length(3);
+
+    const [ownerProbe, grantProbe, constraintsProbe] = probes;
+    expect(ownerProbe).to.not.be.undefined;
+    expect(grantProbe).to.not.be.undefined;
+    expect(constraintsProbe).to.not.be.undefined;
+
+    // Second invocation with selective existence: owner absent, other two present.
+    const selectiveRpc = {
+      getAccountInfo: (address: Address, _opts: unknown) =>
+        fakeAccountInfo(address !== ownerProbe.address),
+    };
+    const result = await enumerateExistingPendingPdasForClose(
+      selectiveRpc as unknown as Rpc<SolanaRpcApi>,
+      VALID_VAULT,
+    );
+
+    expect(result).to.have.length(2);
+    const kinds = result.map((r) => r.kind).sort();
+    expect(kinds).to.deep.equal([
+      "pending_agent_grant",
+      "pending_constraints",
+    ]);
+    for (const entry of result) {
+      expect(entry.role).to.equal(AccountRole.WRITABLE);
+    }
+  });
+
+  it("enumerateExistingPendingPdasForClose treats RPC errors as 'absent'", async () => {
+    const { enumerateExistingPendingPdasForClose } = await import(
+      "../../src/dashboard/close-vault.js"
+    );
+
+    const erroringRpc = {
+      getAccountInfo: (_address: Address, _opts: unknown) => ({
+        send: async () => {
+          throw new Error("simulated RPC outage");
+        },
+      }),
+    };
+
+    const result = await enumerateExistingPendingPdasForClose(
+      erroringRpc as unknown as Rpc<SolanaRpcApi>,
+      VALID_VAULT,
+    );
+
+    // RPC errors → safe fallback: no entries returned, close TX still
+    // proceeds, drain blocks silently no-op on missing PDAs.
+    expect(result).to.deep.equal([]);
+  });
+});

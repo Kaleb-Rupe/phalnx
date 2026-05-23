@@ -131,6 +131,21 @@ export {
   fetchPendingCloseConstraints,
 } from "./constraint-reads.js";
 
+// ─── close_vault pending-PDA enumeration (CH-2 Bucket-3 audit 2026-05-23) ────
+// Stand-alone helpers for the CH-2 + SFH-01 pending PDAs (pending_owner /
+// pending_agent_grant / pending_constraints). Re-exported here so the
+// `closeVault` builder in mutations.ts (and external consumers building
+// custom close-vault flows) can enumerate every drainable PDA in one call.
+// See sdk/kit/src/dashboard/close-vault.ts for the full ordering contract.
+export type { CloseVaultPendingAccount } from "./close-vault.js";
+export {
+  CLOSE_VAULT_PENDING_PDA_ORDER,
+  findPendingOwnerPda,
+  findPendingAgentGrantPda,
+  findPendingConstraintsPdaForClose,
+  enumerateExistingPendingPdasForClose,
+} from "./close-vault.js";
+
 // ─── Post-execution assertion authoring (Phase 2) ────────────────────────────
 // Client-side validator that mirrors the on-chain validate_entries check so
 // callers fail fast before burning an RPC round-trip. Typed error surface
