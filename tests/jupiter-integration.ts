@@ -21,6 +21,10 @@ import {
 import { expect } from "chai";
 import BN from "bn.js";
 import { initVaultPreviewDigest } from "./helpers/policy-digest";
+import {
+  buildExpectedIntentDigest,
+  digestAsArgs,
+} from "./helpers/intent-digest-fixture";
 // Inlined constants — sdk/typescript was deleted in Phase 0 nuclear cleanup
 const JUPITER_PROGRAM_ID = new PublicKey(
   "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",
@@ -175,6 +179,15 @@ describe("jupiter-integration", () => {
         targetProtocol,
         livePolicy.policyVersion,
         new BN(0),
+        digestAsArgs(
+          buildExpectedIntentDigest({
+            vault,
+            agent: agentKp.publicKey,
+            tokenMint,
+            amount,
+            targetProtocol,
+          }),
+        ),
       )
       .accountsPartial({
         agent: agentKp.publicKey,
