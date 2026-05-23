@@ -45,6 +45,10 @@ import { expect } from "chai";
 import BN from "bn.js";
 import { initVaultPreviewDigest } from "./helpers/policy-digest";
 import {
+  buildExpectedIntentDigest,
+  digestAsArgs,
+} from "./helpers/intent-digest-fixture";
+import {
   createTestEnv,
   airdropSol,
   createMintAtAddress,
@@ -261,6 +265,15 @@ describe("sysvar-scan-bound (M11 / SIMD-0296 pad-attack guard)", () => {
         jupiterProgramId,
         await pv(),
         new BN(0), // AC-10 expectedNonce
+        digestAsArgs(
+          buildExpectedIntentDigest({
+            vault: vaultPda,
+            agent: agent.publicKey,
+            tokenMint: usdcMint,
+            amount: new BN(0),
+            targetProtocol: jupiterProgramId,
+          }),
+        ),
       )
       .accountsPartial({
         agent: agent.publicKey,
