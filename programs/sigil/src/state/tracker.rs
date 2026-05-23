@@ -213,6 +213,14 @@ impl SpendTracker {
         + 1 // per_recipient_count
         + 7; // _padding_recipient
 
+    // LM-1 (Bucket-3 audit 2026-05-23): compile-time pin against silent
+    // drift of the documented byte baseline. Any field addition that does
+    // not also update this assert breaks the build.
+    const _SPEND_TRACKER_SIZE_PIN: () = assert!(
+        SpendTracker::SIZE == 3_328,
+        "SpendTracker::SIZE drifted from documented baseline"
+    );
+
     /// Record a spend in the current epoch bucket.
     /// If the bucket is from a different epoch, reset it first.
     pub fn record_spend(&mut self, clock: &Clock, usd_amount: u64) -> Result<()> {

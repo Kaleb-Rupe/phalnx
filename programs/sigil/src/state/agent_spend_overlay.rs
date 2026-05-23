@@ -122,6 +122,15 @@ impl AgentSpendOverlay {
         + (8 * MAX_OVERLAY_ENTRIES); // last_action_unix [TA-06]
     // = 8 + 32 + 2320 + 1 + 7 + 80 + 80 + 80 + 80 = 2,688
 
+    // LM-1 (Bucket-3 audit 2026-05-23): compile-time pin against silent
+    // drift of the documented byte baseline. Any field addition that does
+    // not also update this assert breaks the build. Mirrors the §RP-1
+    // pattern used by PendingOwnershipTransfer + PendingAgentGrant.
+    const _AGENT_SPEND_OVERLAY_SIZE_PIN: () = assert!(
+        AgentSpendOverlay::SIZE == 2_688,
+        "AgentSpendOverlay::SIZE drifted from documented baseline"
+    );
+
     /// Find the slot index for a given agent, or None if not present.
     pub fn find_agent_slot(&self, agent: &Pubkey) -> Option<usize> {
         let agent_bytes = agent.to_bytes();

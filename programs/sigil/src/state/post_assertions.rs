@@ -199,6 +199,14 @@ pub struct PostExecutionAssertions {
 impl PostExecutionAssertions {
     pub const SIZE: usize = 8 + 32 + (78 * MAX_POST_ASSERTION_ENTRIES) + 1 + 1 + 6;
 
+    // LM-1 (Bucket-3 audit 2026-05-23): compile-time pin against silent
+    // drift of the documented byte baseline. Any field addition that does
+    // not also update this assert breaks the build.
+    const _POST_EXECUTION_ASSERTIONS_SIZE_PIN: () = assert!(
+        PostExecutionAssertions::SIZE == 672,
+        "PostExecutionAssertions::SIZE drifted from documented baseline"
+    );
+
     /// Validate a set of assertion entries before storing.
     pub fn validate_entries(entries: &[PostAssertionEntry]) -> Result<()> {
         // Must have at least 1 entry (creating empty assertions wastes rent)

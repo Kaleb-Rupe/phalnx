@@ -192,6 +192,14 @@ impl InstructionConstraints {
     // 8 (disc) + 32 (vault) + 35840 (entries) + 1 (entry_count) + 1 (bump) + 1 (constraint_version) + 5 (padding) = 35888
     pub const SIZE: usize = 8 + 32 + (560 * MAX_CONSTRAINT_ENTRIES) + 1 + 1 + 1 + 5;
 
+    // LM-1 (Bucket-3 audit 2026-05-23): compile-time pin against silent
+    // drift of the documented byte baseline. Any field addition that does
+    // not also update this assert breaks the build.
+    const _INSTRUCTION_CONSTRAINTS_SIZE_PIN: () = assert!(
+        InstructionConstraints::SIZE == 35_888,
+        "InstructionConstraints::SIZE drifted from documented baseline"
+    );
+
     /// Validate constraint entries in their Borsh-deserialized form (instruction parameters).
     /// Called before pack_entries() converts them to the zero-copy layout.
     pub fn validate_entries(entries: &[ConstraintEntry]) -> Result<()> {
