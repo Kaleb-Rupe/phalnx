@@ -2,15 +2,15 @@
   "suites": [
     {
       "name": "Core vault management & permission engine",
-      "count": 109,
+      "count": 116,
       "onChain": true,
       "claudePattern": "tests/sigil.ts` (ts-mocha + LiteSVM, no validator needed, %d tests)"
     },
     {
       "name": "Missing-coverage gap-fill (DC audit 2026-05-19)",
-      "count": 7,
+      "count": 13,
       "onChain": true,
-      "claudePattern": "tests/missing-coverage.ts` (ts-mocha + LiteSVM, %d tests — 5 happy-paths + TA-17 auto-revoke REJECT + PEN-8b cosign-gate REJECT)"
+      "claudePattern": "tests/missing-coverage.ts` (ts-mocha + LiteSVM, %d tests — happy-paths + TA-17 auto-revoke + PEN-8b cosign-gate + D-5 negative cases)"
     },
     {
       "name": "Jupiter integration (composed swaps)",
@@ -32,13 +32,13 @@
     },
     {
       "name": "Security exploit scenarios",
-      "count": 168,
+      "count": 171,
       "onChain": true,
       "claudePattern": "tests/security-exploits.ts` (ts-mocha + LiteSVM, %d tests)"
     },
     {
       "name": "Instruction constraints (generic enforcement)",
-      "count": 69,
+      "count": 70,
       "onChain": true,
       "claudePattern": "tests/instruction-constraints.ts` (ts-mocha + LiteSVM, %d tests)"
     },
@@ -61,12 +61,6 @@
       "claudePattern": "tests/analytics-counters.ts` (ts-mocha + LiteSVM, %d tests)"
     },
     {
-      "name": "Audit log (Phase 7 — TA-15 + N1 temporal binding)",
-      "count": 9,
-      "onChain": true,
-      "claudePattern": "tests/audit-log.ts` (ts-mocha + LiteSVM, %d tests — discriminator allocation + buffer wrap + F-19 separation + close_vault rent reclamation)"
-    },
-    {
       "name": "Post-execution assertions E2E (DELETED in Phase 1 Option A demolition — CrossFieldLte primitive removed)",
       "count": 0,
       "onChain": true,
@@ -79,7 +73,7 @@
     },
     {
       "name": "Surfpool integration tests (local Surfnet)",
-      "count": 52,
+      "count": 53,
       "surfpool": true,
       "claudePattern": "tests/surfpool-integration.ts` (ts-mocha + Surfnet, %d tests)"
     },
@@ -97,9 +91,9 @@
     },
     {
       "name": "Kit-native SDK (`@usesigil/kit` — includes merged core + dashboard)",
-      "count": 1654,
+      "count": 1809,
       "ciStepName": "Kit SDK tests",
-      "claudePattern": "sdk/kit/tests/` (mocha + tsx, %d tests — core + dashboard + errors + agent-bootstrap + preview-create-vault. Post-Phase-1: post-assertions/* + dashboard/mutations-post-assertions + dashboard/post-assertion-validation suites DELETED with the CrossFieldLte primitive)"
+      "claudePattern": "sdk/kit/tests/` (mocha + tsx, %d tests — core + dashboard + errors + agent-bootstrap + preview-create-vault + audit-2026-05-23 remediation suites)"
     },
     {
       "name": "Kit SDK devnet tests (`@usesigil/kit` devnet)",
@@ -115,9 +109,9 @@
     },
     {
       "name": "Rust unit tests (cargo test)",
-      "count": 110,
+      "count": 244,
       "onChain": true,
-      "claudePattern": "cargo test --manifest-path programs/sigil/Cargo.toml` (%d tests — post-Phase-1: -22 from deleted Jupiter slippage verifier inline unit tests, -7 from deleted Phase B3 CrossFieldLte tests)"
+      "claudePattern": "cargo test --manifest-path programs/sigil/Cargo.toml` (%d tests — Phase 8 + audit-2026-05-23 grew this from 110 to 244 via state-pin + canonical-encoder + intent-digest unit tests)"
     },
     {
       "name": "Devnet extended scenarios (flash-trade + stress)",
