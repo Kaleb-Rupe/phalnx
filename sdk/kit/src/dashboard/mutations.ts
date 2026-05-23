@@ -58,6 +58,7 @@ import { getQueueAgentGrantInstructionAsync } from "../generated/instructions/qu
 import { getApplyAgentGrantInstructionAsync } from "../generated/instructions/applyAgentGrant.js";
 import { getCancelAgentGrantInstructionAsync } from "../generated/instructions/cancelAgentGrant.js";
 import { getCloseVaultInstructionAsync } from "../generated/instructions/closeVault.js";
+import { enumerateExistingPendingPdasForClose } from "./close-vault.js";
 import { getPauseAgentInstructionAsync } from "../generated/instructions/pauseAgent.js";
 import { getUnpauseAgentInstructionAsync } from "../generated/instructions/unpauseAgent.js";
 import { getRevokeAgentInstructionAsync } from "../generated/instructions/revokeAgent.js";
@@ -591,6 +592,21 @@ export async function closeVault(
       address: existenceChecks[constraintsIdx]!,
       role: AccountRole.WRITABLE,
     });
+  }
+
+  // 4-6. CH-2 close (Bucket-3 audit 2026-05-23): enumerate pending_owner +
+  // pending_agent_grant + pending_constraints via the dedicated helper.
+  // Without these, the on-chain drain blocks at close_vault.rs:188 (SFH-01
+  // pending_owner), :216 (SFH-01 pending_agent_grant), and :233-262 (CH-2
+  // pending_constraints) silently no-op via the `lamports() > 0` guard,
+  // orphaning their rent. Helper performs parallel getAccountInfo and only
+  // includes accounts that exist.
+  const ch2PendingAccounts = await enumerateExistingPendingPdasForClose(
+    rpc,
+    vault,
+  );
+  for (const pa of ch2PendingAccounts) {
+    remainingAccounts.push({ address: pa.address, role: pa.role });
   }
 
   // Append remaining accounts to instruction if any exist
