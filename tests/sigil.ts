@@ -1134,8 +1134,7 @@ describe("sigil", () => {
       // Read the current (rotated) agent from chain — prior test rotated
       // the agent to a fresh keypair whose handle is block-scoped, so we
       // re-derive from chain state.
-      const activeVault =
-        await program.account.agentVault.fetch(reactVaultPda);
+      const activeVault = await program.account.agentVault.fetch(reactVaultPda);
       const currentAgentPk = new PublicKey(activeVault.agents[0].pubkey);
       // Freeze the vault first so the reactivate path is reachable.
       await program.methods

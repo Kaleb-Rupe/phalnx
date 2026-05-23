@@ -39,9 +39,7 @@ import {
 } from "@solana/web3.js";
 import { expect } from "chai";
 import BN from "bn.js";
-import {
-  initVaultPreviewDigest,
-} from "./helpers/policy-digest";
+import { initVaultPreviewDigest } from "./helpers/policy-digest";
 import {
   createTestEnv,
   airdropSol,
@@ -246,9 +244,15 @@ describe("close-vault-pending-drain (CH-2 Bucket-3 audit 2026-05-23)", () => {
 
     // PEN-CROSS-3: compute the owner-signed digest for has_constraints=false
     // (the about-to-flip flag). All other policy fields read live.
-    const closeDigest = autoSiblingHandlerDigest(svm, program, policyPda, vaultPda, {
-      hasConstraints: false,
-    });
+    const closeDigest = autoSiblingHandlerDigest(
+      svm,
+      program,
+      policyPda,
+      vaultPda,
+      {
+        hasConstraints: false,
+      },
+    );
 
     await program.methods
       .applyCloseConstraints(closeDigest)

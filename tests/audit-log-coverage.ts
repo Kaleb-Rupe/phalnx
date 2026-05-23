@@ -63,7 +63,10 @@ import {
   LAMPORTS_PER_SOL,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import {
+  TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 import { expect } from "chai";
 import BN from "bn.js";
 import { createHash } from "crypto";
@@ -451,7 +454,9 @@ describe("audit-log-coverage (Phase 7.1)", () => {
       .rpc();
 
     const entry = lastSuccessEntry(svm, auditSuccess);
-    expect(entry.discriminator, "disc=10 PAUSE_AGENT").to.equal(DISC_PAUSE_AGENT);
+    expect(entry.discriminator, "disc=10 PAUSE_AGENT").to.equal(
+      DISC_PAUSE_AGENT,
+    );
     expect(
       Buffer.from(entry.subject).equals(agent.publicKey.toBuffer()),
       "subject = agent pubkey",
@@ -573,9 +578,14 @@ describe("audit-log-coverage (Phase 7.1)", () => {
     //   pos 17  : Option<Pubkey> cosign_session_pubkey = None
     //   pos 18  : Pubkey cosign_session = Pubkey::default() (32×0)
     //   pos 19  : [u8;32] digest = computed below
-    const queueDigest = await fetchAndComputeQueueDigest(program, policy, vault, {
-      dailySpendingCapUsd: new BN(250_000_000),
-    });
+    const queueDigest = await fetchAndComputeQueueDigest(
+      program,
+      policy,
+      vault,
+      {
+        dailySpendingCapUsd: new BN(250_000_000),
+      },
+    );
     const queueData = Buffer.concat([
       anchorDisc("queue_policy_update"),
       // arg 1: daily_spending_cap_usd: Option<u64> = Some(250_000_000)

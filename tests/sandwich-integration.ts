@@ -539,12 +539,9 @@ describe("sandwich-integration (Phase 6.1)", () => {
       auxByte: number;
     },
   ): Promise<void> {
-    const digest = await siblingHandlerDigest(
-      program,
-      ctx.policy,
-      ctx.vault,
-      { hasPostAssertions: 1 },
-    );
+    const digest = await siblingHandlerDigest(program, ctx.policy, ctx.vault, {
+      hasPostAssertions: 1,
+    });
     await program.methods
       .createPostAssertions(
         [
@@ -590,7 +587,9 @@ describe("sandwich-integration (Phase 6.1)", () => {
     }[];
   }
 
-  async function buildValidateIx(opts: SandwichOpts): Promise<TransactionInstruction> {
+  async function buildValidateIx(
+    opts: SandwichOpts,
+  ): Promise<TransactionInstruction> {
     const { ctx, amount } = opts;
     const [sessionPda] = PublicKey.findProgramAddressSync(
       [
@@ -649,7 +648,9 @@ describe("sandwich-integration (Phase 6.1)", () => {
     return builder.instruction();
   }
 
-  async function buildFinalizeIx(opts: SandwichOpts): Promise<TransactionInstruction> {
+  async function buildFinalizeIx(
+    opts: SandwichOpts,
+  ): Promise<TransactionInstruction> {
     const { ctx } = opts;
     const [sessionPda] = PublicKey.findProgramAddressSync(
       [
@@ -660,22 +661,20 @@ describe("sandwich-integration (Phase 6.1)", () => {
       ],
       program.programId,
     );
-    let builder = program.methods
-      .finalizeSession()
-      .accountsPartial({
-        payer: ctx.agent.publicKey,
-        vault: ctx.vault,
-        session: sessionPda,
-        sessionRentRecipient: ctx.agent.publicKey,
-        policy: ctx.policy,
-        tracker: ctx.tracker,
-        agentSpendOverlay: ctx.overlay,
-        vaultTokenAccount: ctx.vaultUsdcAta,
-        outputStablecoinAccount: null,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SystemProgram.programId,
-        instructionsSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
-      });
+    let builder = program.methods.finalizeSession().accountsPartial({
+      payer: ctx.agent.publicKey,
+      vault: ctx.vault,
+      session: sessionPda,
+      sessionRentRecipient: ctx.agent.publicKey,
+      policy: ctx.policy,
+      tracker: ctx.tracker,
+      agentSpendOverlay: ctx.overlay,
+      vaultTokenAccount: ctx.vaultUsdcAta,
+      outputStablecoinAccount: null,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      systemProgram: SystemProgram.programId,
+      instructionsSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
+    });
     if (opts.finalizeRemainingAccounts) {
       builder = builder.remainingAccounts(opts.finalizeRemainingAccounts);
     }

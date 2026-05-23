@@ -74,7 +74,9 @@ export function digestAsArgs(digest: Buffer | Uint8Array): number[] {
   return Array.from(digest);
 }
 
-export function buildExpectedIntentDigestArgs(input: ScalarIntentInput): number[] {
+export function buildExpectedIntentDigestArgs(
+  input: ScalarIntentInput,
+): number[] {
   return digestAsArgs(buildExpectedIntentDigest(input));
 }
 

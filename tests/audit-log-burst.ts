@@ -382,9 +382,10 @@ describe("audit-log-burst (Phase 7.1)", () => {
       else if (e.discriminator === DISC_REACTIVATE) reactivateCount++;
     }
     // 128 retained entries, alternating, should be 64/64.
-    expect(freezeCount + reactivateCount, "all retained are freeze/react").to.equal(
-      SUCCESS_CAPACITY,
-    );
+    expect(
+      freezeCount + reactivateCount,
+      "all retained are freeze/react",
+    ).to.equal(SUCCESS_CAPACITY);
     expect(freezeCount, "even freezeCount").to.equal(64);
     expect(reactivateCount, "even reactivateCount").to.equal(64);
   });
@@ -512,7 +513,9 @@ describe("audit-log-burst (Phase 7.1)", () => {
 
     const log = decodeAuditLog(svm, auditSuccess);
     expect(log.count, "count saturates at CAPACITY").to.equal(SUCCESS_CAPACITY);
-    expect(log.head, "head wraps to 0 after exactly CAPACITY writes").to.equal(0);
+    expect(log.head, "head wraps to 0 after exactly CAPACITY writes").to.equal(
+      0,
+    );
 
     // All 128 entries retained, in physical buffer order = chronological order.
     const chronological = ordered(log);

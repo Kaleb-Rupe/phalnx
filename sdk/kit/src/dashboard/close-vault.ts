@@ -192,7 +192,11 @@ export async function enumerateExistingPendingPdasForClose(
   rpc: Rpc<SolanaRpcApi>,
   vault: Address,
   programAddress: Address = SIGIL_PROGRAM_ADDRESS,
-  onRpcError?: (kind: CloseVaultPendingAccount["kind"], address: Address, cause: unknown) => void,
+  onRpcError?: (
+    kind: CloseVaultPendingAccount["kind"],
+    address: Address,
+    cause: unknown,
+  ) => void,
 ): Promise<readonly CloseVaultPendingAccount[]> {
   const [pendingOwnerPda, pendingAgentGrantPda, pendingConstraintsPda] =
     await Promise.all([
