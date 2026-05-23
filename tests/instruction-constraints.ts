@@ -26,6 +26,10 @@ import {
   siblingHandlerDigest,
 } from "./helpers/policy-digest";
 import {
+  buildExpectedIntentDigest,
+  digestAsArgs,
+} from "./helpers/intent-digest-fixture";
+import {
   createTestEnv,
   airdropSol,
   createMintAtAddress,
@@ -293,6 +297,15 @@ describe("instruction-constraints", () => {
         targetProtocol,
         await pv(),
         new BN(0),
+        digestAsArgs(
+          buildExpectedIntentDigest({
+            vault: vaultPda,
+            agent: agent.publicKey,
+            tokenMint: usdcMint,
+            amount,
+            targetProtocol,
+          }),
+        ),
       )
       .accounts({
         agent: agent.publicKey,
@@ -2175,6 +2188,15 @@ describe("instruction-constraints", () => {
           targetProtocol,
           await pv(cvPolicy),
           new BN(0),
+          digestAsArgs(
+            buildExpectedIntentDigest({
+              vault: cvVault,
+              agent: cvAgent.publicKey,
+              tokenMint: usdcMint,
+              amount,
+              targetProtocol,
+            }),
+          ),
         )
         .accounts({
           agent: cvAgent.publicKey,
@@ -3816,6 +3838,15 @@ describe("instruction-constraints", () => {
           jupiterProgramId,
           policyVer,
           new BN(0),
+          digestAsArgs(
+            buildExpectedIntentDigest({
+              vault: f1Vault,
+              agent: f1Agent.publicKey,
+              tokenMint: usdcMint,
+              amount,
+              targetProtocol: jupiterProgramId,
+            }),
+          ),
         )
         .accounts({
           agent: f1Agent.publicKey,
