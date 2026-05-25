@@ -34,7 +34,7 @@ export const FEE_RATE_DENOMINATOR = 1_000_000;
 export const PROTOCOL_FEE_RATE = 200; // 2 BPS
 export const MAX_DEVELOPER_FEE_RATE = 500; // 5 BPS
 export const PROTOCOL_TREASURY =
-  "ASHie1dFTnDSnrHMPGmniJhMgfJVGPm3rAaEPnrtWDiT" as Address;
+  "6wrkKTM2pjkcCAbMfRz2j3AXspavu6pq3ePcuJUE3Azp" as Address;
 
 // ─── Branded Types (PR 2.B — H7-BRAND) ──────────────────────────────────────
 //

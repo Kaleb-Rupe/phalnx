@@ -130,7 +130,7 @@ function createThrottledFetch(): typeof fetch {
 // ─── Constants (mirrors programs/sigil/src/state/mod.rs) ─────────────
 
 export const PROTOCOL_TREASURY = new PublicKey(
-  "ASHie1dFTnDSnrHMPGmniJhMgfJVGPm3rAaEPnrtWDiT",
+  "6wrkKTM2pjkcCAbMfRz2j3AXspavu6pq3ePcuJUE3Azp",
 );
 export const PROTOCOL_FEE_RATE = 200;
 export const FEE_RATE_DENOMINATOR = 1_000_000;

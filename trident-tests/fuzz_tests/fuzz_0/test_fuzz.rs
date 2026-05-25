@@ -44,7 +44,7 @@ const INSTRUCTIONS_SYSVAR: Pubkey = Pubkey::new_from_array([
 ]);
 
 fn program_id() -> Pubkey {
-    "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL"
+    "7FtAXUcrann7P5HoLG7vnWcVpozwj9nqcNm6bPwA1wuK"
         .parse()
         .unwrap()
 }

@@ -87,7 +87,7 @@ describe("sysvar-scan-bound (M11 / SIMD-0296 pad-attack guard)", () => {
 
   // Protocol treasury (must match hardcoded constant in program)
   const protocolTreasury = new PublicKey(
-    "ASHie1dFTnDSnrHMPGmniJhMgfJVGPm3rAaEPnrtWDiT",
+    "6wrkKTM2pjkcCAbMfRz2j3AXspavu6pq3ePcuJUE3Azp",
   );
 
   /** Fetch the current policy_version for the TOCTOU check. */

@@ -35,7 +35,7 @@ import { initVaultPreviewDigest } from "./policy-digest";
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 const PROGRAM_ID = new PublicKey(
-  "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL",
+  "7FtAXUcrann7P5HoLG7vnWcVpozwj9nqcNm6bPwA1wuK",
 );
 
 const SURFPOOL_RPC_URL =
@@ -53,7 +53,7 @@ export const DEVNET_USDT_MINT = new PublicKey(
 
 /** Protocol treasury (must match on-chain constant) */
 export const PROTOCOL_TREASURY = new PublicKey(
-  "ASHie1dFTnDSnrHMPGmniJhMgfJVGPm3rAaEPnrtWDiT",
+  "6wrkKTM2pjkcCAbMfRz2j3AXspavu6pq3ePcuJUE3Azp",
 );
 
 export const PROTOCOL_FEE_RATE = 200;

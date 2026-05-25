@@ -47,7 +47,7 @@ import {
 
 // ─── Program constants ──────────────────────────────────────────────────────
 const PROGRAM_ID = new PublicKey(
-  "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL",
+  "7FtAXUcrann7P5HoLG7vnWcVpozwj9nqcNm6bPwA1wuK",
 );
 const PROGRAM_SO_PATH = path.resolve(__dirname, "../../target/deploy/sigil.so");
 

@@ -251,7 +251,7 @@ import {
 } from "../instructions/index.js";
 
 export const SIGIL_PROGRAM_ADDRESS =
-  "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL" as Address<"4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL">;
+  "7FtAXUcrann7P5HoLG7vnWcVpozwj9nqcNm6bPwA1wuK" as Address<"7FtAXUcrann7P5HoLG7vnWcVpozwj9nqcNm6bPwA1wuK">;
 
 export enum SigilAccount {
   AgentSpendOverlay,
@@ -964,7 +964,7 @@ export function identifySigilInstruction(
 }
 
 export type ParsedSigilInstruction<
-  TProgram extends string = "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL",
+  TProgram extends string = "7FtAXUcrann7P5HoLG7vnWcVpozwj9nqcNm6bPwA1wuK",
 > =
   | ({
       instructionType: SigilInstruction.AcceptOwnershipTransfer;

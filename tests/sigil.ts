@@ -95,7 +95,7 @@ describe("sigil", () => {
 
   // Protocol treasury (must match hardcoded constant in program)
   const protocolTreasury = new PublicKey(
-    "ASHie1dFTnDSnrHMPGmniJhMgfJVGPm3rAaEPnrtWDiT",
+    "6wrkKTM2pjkcCAbMfRz2j3AXspavu6pq3ePcuJUE3Azp",
   );
   let protocolTreasuryUsdcAta: PublicKey;
 

@@ -101,7 +101,7 @@ const MOCK_DEFI_DRAIN_DISC = anchorDisc("drain_via_delegation");
 
 // Protocol treasury (hardcoded in programs/sigil/src/state/constants.rs).
 const PROTOCOL_TREASURY = new PublicKey(
-  "ASHie1dFTnDSnrHMPGmniJhMgfJVGPm3rAaEPnrtWDiT",
+  "6wrkKTM2pjkcCAbMfRz2j3AXspavu6pq3ePcuJUE3Azp",
 );
 
 // ─── AL3 scalar intent digest (Bucket 2 / Phase 10 D-1 + D-6) ───────────────

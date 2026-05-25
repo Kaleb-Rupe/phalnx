@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/sigil.json`.
  */
 export type Sigil = {
-  "address": "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL",
+  "address": "7FtAXUcrann7P5HoLG7vnWcVpozwj9nqcNm6bPwA1wuK",
   "metadata": {
     "name": "sigil",
     "version": "0.1.0",
@@ -7863,7 +7863,7 @@ export type Sigil = {
     {
       "code": 6066,
       "name": "queuedUpdateExpired",
-      "msg": "Queued update is too old (>MAX_APPLY_AGE_SLOTS) — re-queue to apply. Defends against durable-nonce pre-signing."
+      "msg": "Queued update is too old (>MAX_APPLY_AGE_SLOTS / >MAX_APPLY_AGE_SLOTS_TIMELOCKED_ADMIN) — re-queue via the matching queue/initiate ix (queue_policy_update, queue_constraints_update, queue_close_constraints, queue_agent_permissions_update, queue_agent_grant, or initiate_ownership_transfer) to apply. Defends against durable-nonce pre-signing (CH-1 audit 2026-05-23 extended scope to timelocked-admin PDAs)."
     },
     {
       "code": 6067,
@@ -10411,7 +10411,9 @@ export type Sigil = {
             "docs": [
               "M-5 close (Bucket 2, Phase 10 PEN-CROSS-3): SHA-256 over the",
               "canonical byte encoding of the pending content (vault + agent +",
-              "capability + spending_limit_usd + queued_at + min_delay_seconds).",
+              "capability + spending_limit_usd + queued_at + min_delay_seconds +",
+              "queued_at_slot — CH-1 close Bucket-3 audit 2026-05-23 folded",
+              "queued_at_slot into the canonical encoder at position 7).",
               "Written once at `queue_agent_grant` and re-asserted at",
               "`apply_agent_grant` before any mutation of `vault.agents`.",
               "",
@@ -10423,7 +10425,8 @@ export type Sigil = {
               "`ErrPendingAgentGrantDigestMismatch`.",
               "",
               "Alignment: Anchor's `#[account]` uses Borsh on-the-wire layout, so",
-              "the byte arithmetic is purely additive: 104 + 32 = 136 bytes total.",
+              "the byte arithmetic is purely additive: 104 + 32 + 8 = 144 bytes",
+              "total (CH-1 Bucket-3 added 8 bytes for queued_at_slot).",
               "`[u8; 32]` has alignment 1, so no padding is required regardless of",
               "the preceding `u8` + `[u8; 6]` shape."
             ],

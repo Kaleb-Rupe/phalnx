@@ -284,10 +284,16 @@ compile_error!("devnet-testing is a devnet-only feature and cannot be combined w
 
 #[cfg(feature = "devnet")]
 /// Protocol treasury address (devnet)
-/// Base58: ASHie1dFTnDSnrHMPGmniJhMgfJVGPm3rAaEPnrtWDiT
+/// Base58: 6wrkKTM2pjkcCAbMfRz2j3AXspavu6pq3ePcuJUE3Azp
+///
+/// Phase 10b (audit 2026-05-23): swapped from `ASHie1dFTnDSnrHMPGmniJhMgfJVGPm3rAaEPnrtWDiT`
+/// (the prior devnet treasury keypair, no longer accessible to the team)
+/// to the user's wallet `6wrkKTM2pj...`. Treasury swap is BAKED INTO the
+/// same .so binary as the Phase 10 program-ID redeploy (CH-* findings
+/// closed at the same commit) — there is no runtime `set_treasury` ix.
 pub const PROTOCOL_TREASURY: Pubkey = Pubkey::new_from_array([
-    140, 51, 155, 5, 120, 99, 25, 69, 20, 4, 163, 87, 229, 124, 111, 239, 107, 28, 230, 192, 254,
-    239, 33, 251, 37, 93, 179, 29, 45, 226, 14, 172,
+    88, 88, 12, 26, 164, 64, 182, 168, 149, 18, 132, 97, 242, 247, 243, 69, 120, 91, 235, 116, 3,
+    15, 221, 72, 102, 252, 128, 127, 102, 40, 56, 157,
 ]);
 
 /// Protocol treasury address (mainnet).

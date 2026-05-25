@@ -236,7 +236,7 @@ export type AnchorFrameworkCodeFor<N extends AnchorFrameworkName> =
 // ────────────────────────────────────────────────────────────────
 
 export const SIGIL_PROGRAM_ID_BASE58 =
-  "4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL";
+  "7FtAXUcrann7P5HoLG7vnWcVpozwj9nqcNm6bPwA1wuK";
 
 interface ParsedAnchorError {
   code: number;

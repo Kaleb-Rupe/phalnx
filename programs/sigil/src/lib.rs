@@ -14,7 +14,7 @@ mod certora;
 use instructions::*;
 use state::post_assertions::PostAssertionEntry;
 
-declare_id!("4ZeVCqnjUgUtFrHHPG7jELUxvJeoVGHhGNgPrhBPwrHL");
+declare_id!("7FtAXUcrann7P5HoLG7vnWcVpozwj9nqcNm6bPwA1wuK");
 
 #[allow(clippy::too_many_arguments)]
 #[program]

@@ -97,7 +97,7 @@ const ENTRIES_OFFSET = 8 + 32; // after disc + vault
 // programs/sigil/src/state/constants.rs. agent_transfer + validate_and_authorize
 // both require the treasury ATA when a protocol fee > 0 is collected.
 const PROTOCOL_TREASURY = new PublicKey(
-  "ASHie1dFTnDSnrHMPGmniJhMgfJVGPm3rAaEPnrtWDiT",
+  "6wrkKTM2pjkcCAbMfRz2j3AXspavu6pq3ePcuJUE3Azp",
 );
 
 /** Decode the last-written audit-log success buffer entry's discriminator. */
