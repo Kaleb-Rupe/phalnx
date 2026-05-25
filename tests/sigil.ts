@@ -6630,7 +6630,20 @@ describe("sigil", () => {
           pending: pendingAgentGrantPda,
           agentSpendOverlay: pcOverlay,
         } as any)
-        .signers([protoCapOwner])
+        // H-1 close (audit 2026-05-25): policy.cosign_required=true + a
+        // bound cosign_session_pubkey at queue time requires the apply
+        // tx to include the same cosigner as a signer in
+        // remainingAccounts. Defends against the joint-compromise +
+        // cosign-rotation attack class — see apply_agent_grant.rs
+        // docstring.
+        .remainingAccounts([
+          {
+            pubkey: protoCapCosigner.publicKey,
+            isSigner: true,
+            isWritable: false,
+          },
+        ])
+        .signers([protoCapOwner, protoCapCosigner])
         .rpc();
     });
 

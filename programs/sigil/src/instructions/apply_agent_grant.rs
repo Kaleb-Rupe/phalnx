@@ -29,12 +29,38 @@ use crate::utils::policy_digest::{
 ///   6. Writes audit-log entry (disc=18) + emits `AgentGrantApplied` event.
 ///   7. Closes the pending PDA, returning rent to the owner.
 ///
-/// Cosign is NOT re-checked at apply: the queue-time cosign gate is the
-/// authoritative attestation. The apply path is timelock-protected; if a
-/// phished key tried to apply, the owner can call `cancel_agent_grant`
-/// (Phase 8 §RP Fix-Up B / PEN-02b CRITICAL) to abort during the 48h
-/// observation window. Combined with the audit-log signal at queue time,
-/// this is the V1 mechanism for phished-key recovery on agent grants.
+/// H-1 close (audit 2026-05-25): cosign IS re-checked at apply when
+/// `policy.cosign_required == true`. This defends against the joint-key
+/// compromise + cosign-rotation scenario:
+///   1. Attacker compromises owner+cosigner keys for a 6h window.
+///   2. Attacker queues PendingAgentGrant with valid cosign attestation
+///      from the compromised cosigner. M-5 seals the queue-time content
+///      digest; CH-1 seals the queue-time slot.
+///   3. Legitimate owner detects breach within the 48h timelock and
+///      ROTATES the cosigner via `queue_policy_update` +
+///      `apply_pending_policy` (changing `policy.cosign_session_pubkey`
+///      to a new key the attacker doesn't control).
+///   4. Attacker tries to apply the pre-signed apply tx at slot
+///      ≥ queued_at_slot + 432_000 (~48h, timelock matured).
+///   5. Pre-H-1: apply succeeded because cosign was a queue-only gate.
+///   6. Post-H-1: apply REJECTS because the LIVE policy's
+///      `cosign_session_pubkey` no longer matches the attacker's stale
+///      pre-signed cosigner attestation.
+///
+/// The rebind mirrors the NH-1 pattern in `reactivate_vault.rs:187-233`:
+///   - `cosign_session_pubkey != Pubkey::default()` → exact match required
+///     on a signer in `remaining_accounts`.
+///   - `cosign_session_pubkey == Pubkey::default()` (cosign_required=true
+///     but no specific binding) → any non-owner signer counts (default-on
+///     safety, same as NH-1).
+///   - `cosign_required == false` → no apply-time gate (V1 design;
+///     queue-time owner sig was the sole authorization).
+///
+/// Cancel still mirrors queue (cosign_required + cosign sig). Owner who
+/// detects a phished queue should call `cancel_agent_grant` during the
+/// 48h observation window; if cancel itself is blocked (e.g. owner key
+/// only without cosigner), the new apply-time check is the secondary
+/// defense.
 #[derive(Accounts)]
 pub struct ApplyAgentGrant<'info> {
     #[account(mut)]
@@ -129,6 +155,53 @@ pub fn handler(ctx: Context<ApplyAgentGrant>) -> Result<()> {
         elapsed >= pending.min_delay_seconds as i64,
         SigilError::TimelockNotExpired,
     );
+
+    // 1.25. H-1 close (audit 2026-05-25): re-bind cosign at apply time.
+    //
+    // If the policy requires cosign, the apply tx MUST include a signer
+    // matching the LIVE `policy.cosign_session_pubkey` in
+    // `remaining_accounts`. This catches the joint-compromise +
+    // cosign-rotation attack: attacker queues with cosign attestation
+    // from compromised cosigner key A; legitimate owner rotates to key B
+    // via `queue_policy_update`; attacker's pre-signed apply at the OLD
+    // session fails the live-policy strict match.
+    //
+    // Behavior matrix (mirrors NH-1 default-on safety at
+    // `reactivate_vault.rs:198-209`):
+    //   1. `cosign_required == false` → no gate (V1 default; queue-time
+    //      owner sig is the sole authorization).
+    //   2. `cosign_required == true && cosign_session_pubkey !=
+    //      Pubkey::default()` → exact pubkey match required on a signer
+    //      in `remaining_accounts`.
+    //   3. `cosign_required == true && cosign_session_pubkey ==
+    //      Pubkey::default()` → any non-owner signer counts (cosign
+    //      enforcement opted-in but specific key not yet bound).
+    //   4. None of the above match → reject with `ErrCosignRequired`.
+    //
+    // This runs BEFORE M-5 digest recompute (cheap pubkey check fails
+    // fast before the sha256) and AFTER F-10 + timelock (so the
+    // diagnostic error on a stale apply surfaces as `QueuedUpdateExpired`
+    // / `TimelockNotExpired` rather than `ErrCosignRequired`).
+    {
+        let policy = &ctx.accounts.policy;
+        if policy.cosign_required {
+            let cosign_session_pubkey = policy.cosign_session_pubkey;
+            let owner_key = ctx.accounts.owner.key();
+            let cosign_ok = if cosign_session_pubkey != Pubkey::default() {
+                // Bound to a specific pubkey — match exactly.
+                ctx.remaining_accounts
+                    .iter()
+                    .any(|ai| ai.key() == cosign_session_pubkey && ai.is_signer)
+            } else {
+                // Default policy — any non-owner signer counts.
+                crate::instructions::register_agent::has_non_owner_signer(
+                    ctx.remaining_accounts,
+                    &owner_key,
+                )
+            };
+            require!(cosign_ok, SigilError::ErrCosignRequired);
+        }
+    }
 
     // 1.5. M-5 close (Bucket 2, Phase 10 PEN-CROSS-3): re-assert the
     // pending content digest BEFORE any mutation of `vault.agents`. The
